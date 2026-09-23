@@ -696,22 +696,22 @@ Variables prefixed `--_` are internal composition outputs — `--_bg`, `--_fg`, 
 
 The shipped [aesthetic classes](docs/usage/aesthetics.md) set material tokens for you. Only aesthetics with a token listed below expose an aesthetic-specific token. Tune all other behavior through the shared material tokens above. Listed tokens are available only where that aesthetic's stylesheet is imported.
 
-| Token                    | Aesthetic       | Purpose                                                     | Default                            |
-| ------------------------ | --------------- | ----------------------------------------------------------- | ---------------------------------- |
-| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance the press travels.          | `4px`                              |
-| `--glass-radius`         | `.glass`        | Control corner radius.                                      | `0.75rem`                          |
-| `--glass-radius-surface` | `.glass`        | Surface corner radius.                                      | `1rem`                             |
-| `--pixel-unit`           | `.pixel`        | One pixel of the grid. The corner cut and the ring are one. | `4px`                              |
-| `--font-pixel`           | `.pixel`        | Consumer-supplied pixel font stack.                         | Falls back to the monospace stack  |
-| `--tile-radius`          | `.chunky-tile`  | Corner radius, on controls and surfaces alike.              | `0.75rem`                          |
-| `--tile-lift`            | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.       | `4px`                              |
-| `--font-rounded`         | `.chunky-tile`  | Consumer-supplied rounded font stack.                       | Falls back to the page stack       |
-| `--cyber-cut`            | `.cyber`        | Size of the cut, on controls and surfaces alike.            | `0.625rem`                         |
-| `--cyber-shape`          | `.cyber`        | Where controls take the cut: any `border-radius` value.     | `<cut> 0` (top-left, bottom-right) |
-| `--cyber-shape-surface`  | `.cyber`        | Where surfaces take the cut: any `border-radius` value.     | `0 <cut>` (top-right, bottom-left) |
-| `--cyber-glow`           | `.cyber`        | Blur of the glow.                                           | `10px`                             |
-| `--cyber-ink`            | `.cyber`        | Neutral line and glow colour, where no intent sets one.     | Theme ink (near-black, near-white) |
-| `--font-cyber`           | `.cyber`        | Consumer-supplied technical font stack.                     | Falls back to the monospace stack  |
+| Token                    | Aesthetic       | Purpose                                                                                       | Default                            |
+| ------------------------ | --------------- | --------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance the press travels.                                            | `4px`                              |
+| `--glass-radius`         | `.glass`        | Control corner radius.                                                                        | `0.75rem`                          |
+| `--glass-radius-surface` | `.glass`        | Surface corner radius.                                                                        | `1rem`                             |
+| `--pixel-unit`           | `.pixel`        | One pixel of the grid. The corner cut and the ring are one.                                   | `4px`                              |
+| `--font-pixel`           | `.pixel`        | Consumer-supplied pixel font stack.                                                           | Falls back to the monospace stack  |
+| `--tile-radius`          | `.chunky-tile`  | Corner radius, on controls and surfaces alike.                                                | `0.75rem`                          |
+| `--tile-lift`            | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.                                         | `4px`                              |
+| `--font-rounded`         | `.chunky-tile`  | Consumer-supplied rounded font stack.                                                         | Falls back to the page stack       |
+| `--cyber-cut`            | `.cyber`        | Largest cut, on controls and surfaces alike; the default shapes cap it at 25% of the element. | `0.625rem`                         |
+| `--cyber-shape`          | `.cyber`        | Where controls take the cut: any `border-radius` value.                                       | `<cut> 0` (top-left, bottom-right) |
+| `--cyber-shape-surface`  | `.cyber`        | Where surfaces take the cut: any `border-radius` value.                                       | `0 <cut>` (top-right, bottom-left) |
+| `--cyber-glow`           | `.cyber`        | Blur of the glow.                                                                             | `10px`                             |
+| `--cyber-ink`            | `.cyber`        | Neutral line and glow colour, where no intent sets one.                                       | Theme ink (near-black, near-white) |
+| `--font-cyber`           | `.cyber`        | Consumer-supplied technical font stack.                                                       | Falls back to the monospace stack  |
 
 Every aesthetic's knobs reach the same way: each knob is _read_ with its default as a `var()` fallback rather than declared, so it resolves once into a private on the aesthetic's own class (`--_pixel-unit`, `--_neo-offset`, `--_tile-radius`, `--_tile-lift`, and so on). Set a knob on the element carrying the aesthetic class, or on any ancestor including `:root`:
 
@@ -897,7 +897,7 @@ Bevelled corners, a 1px edge, and a glow in the component's own colour: a succes
 
 Controls and surfaces take the cut on opposite diagonals, so a button and the card around it read as the same material and as different things: buttons and fields cut top-left and bottom-right, cards, panels, and alerts top-right and bottom-left. Anything fully round cuts to points -- a radio, a switch knob, and the tooltip icon become diamonds, a pill button or a badge a pointed hexagon -- and chips square, so the checkbox reads as a plain square beside the diamond radio.
 
-`--cyber-cut` is the size of the cut, `0.625rem`. `--cyber-shape` and `--cyber-shape-surface` place it, and take any `border-radius` value. `--cyber-glow` is the glow's blur, `10px`. `--cyber-ink` is the neutral line and glow colour, which follows the theme by default -- near-black on light, near-white on dark -- and is where a neon neutral goes if you want one.
+`--cyber-cut` is the largest cut, `0.625rem`: the default shapes cap it at a quarter of the element's own box, so a normal button or a card takes the full cut and a small icon button a smaller one rather than losing its corners. `--cyber-shape` and `--cyber-shape-surface` place it, and take any `border-radius` value. `--cyber-glow` is the glow's blur, `10px`. `--cyber-ink` is the neutral line and glow colour, which follows the theme by default -- near-black on light, near-white on dark -- and is where a neon neutral goes if you want one.
 
 ```html
 <section class="cyber" style="--cyber-ink: rgb(0 229 255); --cyber-cut: 0.75rem">
@@ -905,7 +905,7 @@ Controls and surfaces take the cut on opposite diagonals, so a button and the ca
 </section>
 ```
 
-Other shapes are a value away. Set them on the `.cyber` element or any ancestor; `--ui-radius` set on one element changes just that element.
+Other shapes are a value away. Set them on the `.cyber` element or any ancestor; `--ui-radius` set on one element changes just that element. A shape you set is used as written, so wrap a length in `min(..., 25%)` if small controls should keep the cap.
 
 | Shape                  | Value                 |
 | ---------------------- | --------------------- |

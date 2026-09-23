@@ -1367,7 +1367,7 @@ test.describe("aesthetics", () => {
       const chips = await readCorners(page, CHIPS, "", "cyber");
 
       for (const corner of controls) {
-        expect(corner.topLeft, `${corner.name} top-left`).toBe(bevels ? "10px" : "0px");
+        expect(corner.topLeft, `${corner.name} top-left`).toBe(bevels ? "min(10px, 25%)" : "0px");
         expect(corner.topRight, `${corner.name} top-right`).toBe("0px");
         if (bevels) {
           expect(corner.shape, `${corner.name} shape`).toBe("bevel");
@@ -1375,7 +1375,7 @@ test.describe("aesthetics", () => {
       }
       for (const corner of surfaces) {
         expect(corner.topLeft, `${corner.name} top-left`).toBe("0px");
-        expect(corner.topRight, `${corner.name} top-right`).toBe(bevels ? "10px" : "0px");
+        expect(corner.topRight, `${corner.name} top-right`).toBe(bevels ? "min(10px, 25%)" : "0px");
         if (bevels) {
           expect(corner.shape, `${corner.name} shape`).toBe("bevel");
         }
@@ -1389,6 +1389,46 @@ test.describe("aesthetics", () => {
       for (const corner of chips) {
         expect(corner.topLeft, `${corner.name} squares`).toBe("0px");
       }
+    });
+
+    /* The cut is a ceiling: a quarter of the element's own box caps it, so a
+       small button keeps its corners. No computed style reports a used radius,
+       so this hit-tests inside the corner instead -- 2px in from the top-left
+       lies outside a full 10px cut and inside a capped one, and Chromium's hit
+       testing follows the bevel. */
+    test("caps the cut at a quarter of a small element's box", async ({ page, browserName }) => {
+      test.skip(browserName !== "chromium", "Only Chromium draws the bevel the cap is measured on.");
+      await page.goto(withAesthetic(BUTTONS_URL, "cyber"));
+
+      const hits = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const probe = (className: string, style = "") => {
+          const button = document.createElement("button");
+
+          button.className = className;
+          /* Pinned mid-viewport and on top, so the sticky playground header
+             cannot be what the hit test finds. */
+          button.setAttribute("style", `position: fixed; top: 50vh; left: 50vw; z-index: 2147483647; ${style}`);
+          button.textContent = "+";
+          host.append(button);
+
+          const box = button.getBoundingClientRect();
+          const hit = document.elementFromPoint(box.left + 2, box.top + 2) === button;
+
+          button.remove();
+          return hit;
+        };
+
+        return {
+          full: probe("btn"),
+          small: probe("btn icon p-xs"),
+          uncapped: probe("btn icon p-xs", "--ui-radius: 10px 0"),
+        };
+      });
+
+      expect(hits.full, "a full-size button takes the full cut").toBe(false);
+      expect(hits.small, "a small button takes a smaller cut").toBe(true);
+      expect(hits.uncapped, "the same button with the full cut").toBe(false);
     });
 
     /* The glow is depth, so it answers elevation like every shadow: the two
@@ -1461,8 +1501,8 @@ test.describe("aesthetics", () => {
         "cyber",
       );
 
-      expect(scaledButton!.topLeft, "cut reaches controls").toBe(bevels ? "4px" : "0px");
-      expect(scaledCard!.topRight, "cut reaches surfaces").toBe(bevels ? "4px" : "0px");
+      expect(scaledButton!.topLeft, "cut reaches controls").toBe(bevels ? "min(4px, 25%)" : "0px");
+      expect(scaledCard!.topRight, "cut reaches surfaces").toBe(bevels ? "min(4px, 25%)" : "0px");
       expect(shapedButton!.topRight, "control shape").toBe(bevels ? "6px" : "0px");
       expect(shapedButton!.topLeft, "control shape leaves the rest square").toBe("0px");
       expect(shapedCard!.bottomRight, "surface shape").toBe(bevels ? "20px" : "0px");

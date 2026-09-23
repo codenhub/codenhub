@@ -113,22 +113,22 @@ Variables prefixed `--_` are internal composition outputs — `--_bg`, `--_fg`, 
 
 The shipped [aesthetic classes](./aesthetics.md) set material tokens for you. Only aesthetics with a token listed below expose an aesthetic-specific token. Tune all other behavior through the shared material tokens above. Listed tokens are available only where that aesthetic's stylesheet is imported.
 
-| Token                    | Aesthetic       | Purpose                                                     | Default                            |
-| ------------------------ | --------------- | ----------------------------------------------------------- | ---------------------------------- |
-| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance the press travels.          | `4px`                              |
-| `--glass-radius`         | `.glass`        | Control corner radius.                                      | `0.75rem`                          |
-| `--glass-radius-surface` | `.glass`        | Surface corner radius.                                      | `1rem`                             |
-| `--pixel-unit`           | `.pixel`        | One pixel of the grid. The corner cut and the ring are one. | `4px`                              |
-| `--font-pixel`           | `.pixel`        | Consumer-supplied pixel font stack.                         | Falls back to the monospace stack  |
-| `--tile-radius`          | `.chunky-tile`  | Corner radius, on controls and surfaces alike.              | `0.75rem`                          |
-| `--tile-lift`            | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.       | `4px`                              |
-| `--font-rounded`         | `.chunky-tile`  | Consumer-supplied rounded font stack.                       | Falls back to the page stack       |
-| `--cyber-cut`            | `.cyber`        | Size of the cut, on controls and surfaces alike.            | `0.625rem`                         |
-| `--cyber-shape`          | `.cyber`        | Where controls take the cut: any `border-radius` value.     | `<cut> 0` (top-left, bottom-right) |
-| `--cyber-shape-surface`  | `.cyber`        | Where surfaces take the cut: any `border-radius` value.     | `0 <cut>` (top-right, bottom-left) |
-| `--cyber-glow`           | `.cyber`        | Blur of the glow.                                           | `10px`                             |
-| `--cyber-ink`            | `.cyber`        | Neutral line and glow colour, where no intent sets one.     | Theme ink (near-black, near-white) |
-| `--font-cyber`           | `.cyber`        | Consumer-supplied technical font stack.                     | Falls back to the monospace stack  |
+| Token                    | Aesthetic       | Purpose                                                                                       | Default                            |
+| ------------------------ | --------------- | --------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance the press travels.                                            | `4px`                              |
+| `--glass-radius`         | `.glass`        | Control corner radius.                                                                        | `0.75rem`                          |
+| `--glass-radius-surface` | `.glass`        | Surface corner radius.                                                                        | `1rem`                             |
+| `--pixel-unit`           | `.pixel`        | One pixel of the grid. The corner cut and the ring are one.                                   | `4px`                              |
+| `--font-pixel`           | `.pixel`        | Consumer-supplied pixel font stack.                                                           | Falls back to the monospace stack  |
+| `--tile-radius`          | `.chunky-tile`  | Corner radius, on controls and surfaces alike.                                                | `0.75rem`                          |
+| `--tile-lift`            | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.                                         | `4px`                              |
+| `--font-rounded`         | `.chunky-tile`  | Consumer-supplied rounded font stack.                                                         | Falls back to the page stack       |
+| `--cyber-cut`            | `.cyber`        | Largest cut, on controls and surfaces alike; the default shapes cap it at 25% of the element. | `0.625rem`                         |
+| `--cyber-shape`          | `.cyber`        | Where controls take the cut: any `border-radius` value.                                       | `<cut> 0` (top-left, bottom-right) |
+| `--cyber-shape-surface`  | `.cyber`        | Where surfaces take the cut: any `border-radius` value.                                       | `0 <cut>` (top-right, bottom-left) |
+| `--cyber-glow`           | `.cyber`        | Blur of the glow.                                                                             | `10px`                             |
+| `--cyber-ink`            | `.cyber`        | Neutral line and glow colour, where no intent sets one.                                       | Theme ink (near-black, near-white) |
+| `--font-cyber`           | `.cyber`        | Consumer-supplied technical font stack.                                                       | Falls back to the monospace stack  |
 
 Every aesthetic's knobs reach the same way: each knob is _read_ with its default as a `var()` fallback rather than declared, so it resolves once into a private on the aesthetic's own class (`--_pixel-unit`, `--_neo-offset`, `--_tile-radius`, `--_tile-lift`, and so on). Set a knob on the element carrying the aesthetic class, or on any ancestor including `:root`:
 

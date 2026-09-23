@@ -118,7 +118,7 @@ test.describe("solo utilities", () => {
     expect(cyber["border-top-left-radius"], "cyber top-left").toBe("0px");
     if (browserName === "chromium") {
       expect(cyber["corner-shape"], "cyber bevel").toBe("bevel");
-      expect(cyber["border-top-right-radius"], "cyber cut").toBe("10px");
+      expect(cyber["border-top-right-radius"], "cyber cut").toBe("min(10px, 25%)");
     } else {
       expect(cyber["border-top-right-radius"], "cyber squares where no bevel is drawn").toBe("0px");
     }
@@ -278,7 +278,7 @@ test.describe("solo utilities", () => {
 
     const action = await read(page, "#action", ["border-top-left-radius", "border-top-right-radius"]);
 
-    expect(action["border-top-left-radius"], "top-left").toBe(browserName === "chromium" ? "10px" : "0px");
+    expect(action["border-top-left-radius"], "top-left").toBe(browserName === "chromium" ? "min(10px, 25%)" : "0px");
     expect(action["border-top-right-radius"], "top-right").toBe("0px");
   });
 

@@ -718,7 +718,7 @@ Rounded slabs seated on a darker shade of themselves, pressed flat on click.
 Bevelled corners, a thin bright edge, and a glow in the component's own colour. See [Cyber](./cyber-aesthetic.md) for the decision.
 
 - The bevel is `corner-shape: bevel` through `--ui-corner-shape`, not a clip: a clip removes the glow and cannot draw the diagonal edge. The border, the glow, and the focus outline follow the cut.
-- `--cyber-cut` at `0.625rem` is the cut, placed by two shape knobs on opposite diagonals: controls top-left and bottom-right (`--cyber-shape`), surfaces top-right and bottom-left (`--cyber-shape-surface`). Both take any `border-radius` value, read with a fallback per [R8](#rules-for-aesthetics).
+- `--cyber-cut` at `0.625rem` is the largest cut -- the default shapes cap it at 25% of the element's box, so small controls keep their corners -- placed by two shape knobs on opposite diagonals: controls top-left and bottom-right (`--cyber-shape`), surfaces top-right and bottom-left (`--cyber-shape-surface`). Both take any `border-radius` value, read with a fallback per [R8](#rules-for-aesthetics).
 - What is fully round cuts to points through `--ui-radius-pill` -- a diamond radio, switch knob, and tooltip icon, a pointed hexagon for a pill or a badge -- and chips square through `--ui-radius-tight: 0`, which keeps the checkbox distinct from the radio.
 - Where `corner-shape` is not supported the control and surface radii go to zero, so those corners square rather than round; what is fully round stays round.
 - 1px edges in `--ui-ink`, which is the `--cyber-ink` knob over the theme-following neutral neobrutalism and pixel use. Hue stays with intent.
