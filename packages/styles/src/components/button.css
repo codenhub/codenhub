@@ -91,6 +91,9 @@
     }
   }
 
+  /* A pill is a shape the author asked for, so it outranks the aesthetic's
+     radius. It still takes the corner shape from `box`, so under a bevelling
+     aesthetic the full radius cuts to points at both ends. */
   &.pill {
     @apply rounded-full;
   }

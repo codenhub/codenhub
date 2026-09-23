@@ -487,8 +487,10 @@
 
   /* Capped at its own radius: a control radius is sized for a 40px control, and
      14px of it on a 16px box renders as a circle, which is the one shape a
-     checkbox must not be. A squaring aesthetic still reaches it. */
-  border-radius: min(var(--ui-radius, var(--radius-small)), var(--radius-small));
+     checkbox must not be. A squaring aesthetic still reaches it, through the
+     chip corner first -- `.cyber` squares chips outright, which is also what
+     tells its checkbox from its diamond radio. */
+  border-radius: min(var(--ui-radius-tight, var(--ui-radius, var(--radius-small))), var(--radius-small));
 
   /* Chip geometry: the tight silhouette, and an inset edge no thicker than the
      line the aesthetic draws elsewhere. A 16px box cannot spend four pixels a
@@ -554,6 +556,10 @@
   &::after {
     @apply block size-2 scale-0 rounded-full opacity-0 transition-[transform,opacity] duration-(--motion-duration-normal) ease-(--motion-ease);
 
+    /* The dot is the ring's shape at a smaller size: a diamond inside a diamond
+       under a bevelling aesthetic, a circle inside a circle otherwise. */
+    corner-shape: var(--ui-corner-shape, round);
+
     background-color: currentcolor;
     content: "";
   }
@@ -614,8 +620,10 @@
 
   height: var(--switch-height);
   width: var(--switch-width);
-  /* Pill by default; a squaring aesthetic reaches the track and the knob together. */
-  border-radius: var(--ui-radius, calc(infinity * 1px));
+  /* Pill by default; a squaring aesthetic reaches the track and the knob
+     together, and an aesthetic with a pill corner of its own reaches both
+     through that first. */
+  border-radius: var(--ui-radius-pill, var(--ui-radius, calc(infinity * 1px)));
 
   /* Chip geometry, for the reason given on `checkbox`: a 20px track has no more
      room for a thick inset edge than a 16px box does. */
@@ -636,7 +644,10 @@
        tone as the label beside it. Checked, it takes the mark colour like the
        other two toggles. */
     background-color: var(--color-text-secondary);
-    border-radius: var(--ui-radius, calc(infinity * 1px));
+    border-radius: var(--ui-radius-pill, var(--ui-radius, calc(infinity * 1px)));
+    /* A pseudo-element is not a box: the knob takes the track's corner shape
+       itself, so the two stay the same shape. */
+    corner-shape: var(--ui-corner-shape, round);
     content: "";
     height: var(--switch-knob);
     width: var(--switch-knob);

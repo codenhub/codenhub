@@ -419,6 +419,9 @@ An aesthetic declares material: lengths, shadows, shapes, font family, the neutr
 | ----------------------- | -------------------- | ----------------------------------------------------- |
 | `--ui-radius`           | `--radius-control`   | Corner radius for controls.                           |
 | `--ui-radius-surface`   | `--radius-surface`   | Corner radius for surfaces.                           |
+| `--ui-corner-shape`     | `round`              | What the radius draws: an arc, or a `bevel` cut.      |
+| `--ui-radius-pill`      | `--ui-radius`        | Corner for what is fully round by default.            |
+| `--ui-radius-tight`     | `--ui-radius`        | Corner for chips, before their `--radius-small` cap.  |
 | `--ui-border-width`     | `--border-width`     | Edge thickness.                                       |
 | `--ui-border-max`       | `100px`              | Ceiling on the computed edge width.                   |
 | `--ui-ink`              | `--color-border`     | Neutral line color when no intent is set.             |
@@ -490,7 +493,9 @@ Where an aesthetic must reach one kind of component and not another, the way to 
 | `clip-path: inset(4px)`                     | no               | **yes**          | 4                          |
 | `backdrop-filter: blur(2px)`                | **yes**          | **yes**          | **119**                    |
 
-The last two rows are controls: without them the probe would report "no cost" for a broken measurement. `clip-path` never establishes a containing block, even active -- only a stacking context. `backdrop-filter` is the property that does both, and the only one that costs layers. So a component may resolve either token unconditionally (R2), and the reason to keep an _active_ clip off every component is different and still real: it establishes a stacking context in all three engines and clips descendants, backgrounds, borders, shadows, and the focus outline.
+The last two rows are controls: without them the probe would report "no cost" for a broken measurement.
+
+`corner-shape` was measured the same way when `--ui-corner-shape` was added for `.cyber`, in 0.4.0, with `backdrop-filter: blur(2px)` as the control (which reported a containing block, a stacking context, and 407 Chromium layers for 400 hosts against a baseline of 5). `corner-shape: round`, `corner-shape: var(--ui-corner-shape, round)`, and an active `border-radius: 8px; corner-shape: bevel` all reported no containing block, no stacking context, and the baseline 5 layers, in all three engines -- in Firefox and WebKit because neither parses the property yet. Unlike a clip, even the active value costs nothing, so every radius site reads the token unconditionally (R2). `clip-path` never establishes a containing block, even active -- only a stacking context. `backdrop-filter` is the property that does both, and the only one that costs layers. So a component may resolve either token unconditionally (R2), and the reason to keep an _active_ clip off every component is different and still real: it establishes a stacking context in all three engines and clips descendants, backgrounds, borders, shadows, and the focus outline.
 
 ### Indirect tokens resolve once
 
@@ -708,6 +713,26 @@ Rounded slabs seated on a darker shade of themselves, pressed flat on click.
 - Hover holds still and the press moves: a seated slab has one gesture and it belongs to the press.
 - Actions are heavier and slightly tracked, through the one recorded selector list. Casing is left to the application.
 
+### `.cyber`
+
+Bevelled corners, a thin bright edge, and a glow in the component's own colour. See [Cyber](./cyber-aesthetic.md) for the decision.
+
+- The bevel is `corner-shape: bevel` through `--ui-corner-shape`, not a clip: a clip removes the glow and cannot draw the diagonal edge. The border, the glow, and the focus outline follow the cut.
+- `--cyber-cut` at `0.625rem` is the largest cut -- the default shapes cap it at 25% of the element's box, so small controls keep their corners -- placed by two shape knobs on opposite diagonals: controls top-left and bottom-right (`--cyber-shape`), surfaces top-right and bottom-left (`--cyber-shape-surface`). Both take any `border-radius` value, read with a fallback per [R8](#rules-for-aesthetics).
+- What is fully round cuts to points through `--ui-radius-pill` -- a diamond radio, switch knob, and tooltip icon, a pointed hexagon for a pill or a badge -- and chips square through `--ui-radius-tight: 0`, which keeps the checkbox distinct from the radio.
+- Where `corner-shape` is not supported the control and surface radii go to zero, so those corners square rather than round; what is fully round stays round.
+- 1px edges in `--ui-ink`, which is the `--cyber-ink` knob over the theme-following neutral neobrutalism and pixel use. Hue stays with intent.
+- The glow is `--ui-shadow-ink: 40%` toward a transparent `--elevation-color` -- the intent colour at 40% alpha -- blurred by `--cyber-glow` (`8px`) with no offset or spread. Elevation scales it, so it lights buttons, cards, and anything raised.
+- The press is the base `scale(0.97)`, restated, and `none` under reduced motion. The glow holds still on hover and on press.
+- Reads `--font-cyber` and falls back to monospace.
+- Every other aesthetic declares `--ui-corner-shape: round` and clears `--ui-radius-pill` and `--ui-radius-tight`, so a region nested inside `.cyber` inherits none of its corners.
+
+## Solo classes
+
+Every aesthetic ships a second class, `.<aesthetic>-solo`, which paints the aesthetic's material directly onto the element carrying it -- for an element this package does not style, where the token class changes nothing because nothing reads the tokens. See [Solo utilities](./solo-utilities.md) for the decision.
+
+A solo class is not an aesthetic in the sense the rules above govern. It names no component, but it writes painted properties rather than tokens, it reads no `--ui-*`, `--intent-*`, or `--elevation-color` (the first two are the aesthetic cascade's and the intent reset's, and a solo element has to look the same inside any aesthetic), and it is unlayered so it beats a foreign component's own rules. `registry.json` records each one as the aesthetic's `solo`, and `registry.test.ts` holds that the class exists and reads none of those tokens.
+
 ## What dies
 
 | Goes away                      | Replaced by                                                                                                        |
@@ -878,14 +903,14 @@ The spike wrote this as a tint colour and an amount -- `#000` at 26%, mixed over
 
 ### What the other aesthetics on the list will need
 
-Checked against the model rather than promised:
+Checked against the model rather than promised. The cyberpunk row first read "clipped corners"; a clip removes the glow, and `.cyber` shipped the bevel through `--ui-corner-shape` instead (see [Cyber](./cyber-aesthetic.md)):
 
-| Aesthetic    | Tier 1 covers                                     | Needs Tier 2 for                   |
-| ------------ | ------------------------------------------------- | ---------------------------------- |
-| Liquid glass | Blur, translucent ground, radius, hairline edge   | Specular highlight on surfaces     |
-| Cyberpunk    | Clipped corners, edge width, glow via shadow tint | Scanline background on surfaces    |
-| Synthwave    | Radius, glow, gradient ground                     | Gradient text or chrome on actions |
-| Chunky tile  | Everything above, and the shade under it          | Heavier, tracked action labels     |
+| Aesthetic    | Tier 1 covers                                      | Needs Tier 2 for                   |
+| ------------ | -------------------------------------------------- | ---------------------------------- |
+| Liquid glass | Blur, translucent ground, radius, hairline edge    | Specular highlight on surfaces     |
+| Cyberpunk    | Bevelled corners, edge width, glow via shadow tint | Scanline background on surfaces    |
+| Synthwave    | Radius, glow, gradient ground                      | Gradient text or chrome on actions |
+| Chunky tile  | Everything above, and the shade under it           | Heavier, tracked action labels     |
 
 Three of the four want a treatment on _surfaces_, which is a slot. Only the fourth wants one on actions, and `.btn` is the only action there is.
 

@@ -12,11 +12,11 @@ Read this before the usage guides. It explains the mental model every component,
 
 Every component separates three independent choices, so each can change without a component-specific variant:
 
-| Axis         | Question        | Classes                                                                                   | Inheritance  |
-| ------------ | --------------- | ----------------------------------------------------------------------------------------- | ------------ |
-| Intent       | Which color?    | `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.info`                 | Element only |
-| Presentation | How much of it? | `.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`                                        | Cascades     |
-| Aesthetic    | Made of what?   | `.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile` from an optional aesthetic stylesheet | Cascades     |
+| Axis         | Question        | Classes                                                                                             | Inheritance  |
+| ------------ | --------------- | --------------------------------------------------------------------------------------------------- | ------------ |
+| Intent       | Which color?    | `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.info`                           | Element only |
+| Presentation | How much of it? | `.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`                                                  | Cascades     |
+| Aesthetic    | Made of what?   | `.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`, `.cyber` from an optional aesthetic stylesheet | Cascades     |
 
 ```html
 <section class="soft pixel">
