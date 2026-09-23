@@ -72,6 +72,15 @@ function resolveTargets(
   return packages.length === 0 ? { error: "No selected package is published." } : { isFromTag: false, packages };
 }
 
+/**
+ * The npm page listing a package's versions with their status, "Validating" included.
+ * @param name Package name, such as `@codenhub/error`.
+ * @returns Absolute npmjs.com URL of the package's versions tab.
+ */
+function npmVersionsUrl(name: string): string {
+  return `https://www.npmjs.com/package/${name}?activeTab=versions`;
+}
+
 function reportPreflight(context: CommandContext, readiness: PackageReadiness): boolean {
   context.reporter.step(`${readiness.workspacePackage.name} preflight`);
   let isReady = true;
@@ -190,19 +199,22 @@ export function createPublishCommand(resolver?: CommandResolver, options: Publis
           `  published ${workspacePackage.name}@${version}${distTag === undefined ? "" : ` under dist-tag ${distTag}`}`,
         );
 
-        // A report, never a gate. Registry metadata propagates eventually, so a
-        // version that has not appeared yet means "look again in a moment"; the
-        // tarball is already on npm either way and failing here would only
-        // describe a successful publish as a failed one.
+        // A report, never a gate. A version npm accepted can stay unreadable for
+        // minutes, while registry metadata propagates or while npm's automated
+        // review holds it as "Validating"; failing here would only describe a
+        // successful publish as a failed one.
         const served = await (options.readPublished ?? readPublishedVersion)(
           workspacePackage,
           context.options.timeoutMs,
         );
-        context.reporter.detail(
-          served === version
-            ? `         the registry serves ${version}`
-            : `         the registry serves ${served ?? "nothing yet"}; metadata may still be propagating`,
-        );
+        if (served === version) {
+          context.reporter.detail(`         the registry serves ${version}`);
+        } else {
+          context.reporter.detail(`         the registry serves ${served ?? "nothing"}, not ${version} yet`);
+          context.reporter.detail(
+            `         npm may still be propagating it or holding it for automated review; its status shows at ${npmVersionsUrl(workspacePackage.name)}`,
+          );
+        }
         if (!isFromTag) {
           // Pushing is left to the person: it is outward-facing, and it runs the
           // publish workflow, which finds this version on npm and records it.
