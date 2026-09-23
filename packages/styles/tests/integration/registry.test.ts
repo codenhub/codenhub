@@ -43,6 +43,7 @@ interface ComponentEntry {
 interface AestheticEntry {
   class: string;
   completeShadow: boolean;
+  solo: string;
   completeShadowReason?: string;
   selectorReason?: string;
   selectors?: string[];
@@ -97,6 +98,7 @@ function shippedClassNames(): string[] {
     ...registry.components.flatMap((component) => component.art ?? []),
     ...(registry.helpers ?? []),
     ...(registry.aesthetics ?? []).map((aesthetic) => aesthetic.class),
+    ...(registry.aesthetics ?? []).map((aesthetic) => aesthetic.solo),
   ];
 }
 
@@ -774,6 +776,38 @@ test("an aesthetic names a component only with a recorded reason", async () => {
         .map((component) => `${name} records .${component}, which it no longer names`),
     );
   }
+  expect(problems).toEqual([]);
+});
+
+/* A solo class is the aesthetic painted onto one element the package does not
+   style, so it has to work with nothing else in scope. `--ui-*` and
+   `--elevation-color` belong to whichever aesthetic an ancestor carries -- a
+   solo glass pane inside a `.pixel` region would take pixel's zero radius, and
+   inside `.chunky-tile` it would cast a black shadow -- and `--intent-*` exists only where
+   the package's own reset declared it. Reading either would make the look
+   depend on surroundings the class exists to ignore. See
+   docs/internal/solo-utilities.md (S2). */
+test("every aesthetic ships its solo class, and the solo class reads no shared token", async () => {
+  const problems: string[] = [];
+
+  for (const { aesthetic, name, source } of await aestheticSources()) {
+    const rules = [...withoutComments(source).matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter(([, selector]) =>
+      selector!.includes(`.${aesthetic.solo}`),
+    );
+
+    if (aesthetic.solo !== `${name}-solo`) {
+      problems.push(`${name} names its solo class ${aesthetic.solo}, not ${name}-solo`);
+    }
+    if (rules.length === 0) {
+      problems.push(`${name} declares no .${aesthetic.solo} rule`);
+    }
+    for (const [, selector, body] of rules) {
+      for (const [token] of body!.matchAll(/var\(--(?:(?:ui|intent)-[a-z-]+|elevation-color)/g)) {
+        problems.push(`${selector!.trim()} reads ${token.slice(4)}`);
+      }
+    }
+  }
+
   expect(problems).toEqual([]);
 });
 

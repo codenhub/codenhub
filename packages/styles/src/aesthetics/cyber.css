@@ -80,3 +80,59 @@
     --ui-active-transform: none;
   }
 }
+
+/* Solo: the same look painted onto the one element carrying the class, for an
+   element the package does not style. See docs/internal/solo-utilities.md and
+   the note on `.glass-solo`: own knobs and foundation tokens with literal
+   fallbacks, never a shared `--ui-*`, `--intent-*`, or `--elevation-color`
+   token, unlayered, and not for this package's own components. */
+.cyber-solo {
+  --_cyber-ink: var(
+    --cyber-ink,
+    light-dark(var(--color-neutral-950, oklch(14.5% 0 0)), var(--color-neutral-50, oklch(98.5% 0 0)))
+  );
+
+  border: 1px solid var(--_cyber-ink);
+  border-radius: var(--cyber-cut, 0.5rem);
+  corner-shape: bevel;
+  /* Always lit: the elevation gate the aesthetic class answers to is `box`'s,
+     and a solo element is one the consumer chose to light up. */
+  box-shadow: 0 0 var(--cyber-glow, 12px) 0 color-mix(in oklab, var(--_cyber-ink) 70%, transparent);
+  font-family: var(--font-cyber, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  transition: transform var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));
+}
+
+@supports not (corner-shape: bevel) {
+  .cyber-solo {
+    border-radius: 0;
+  }
+}
+
+/* The press, only on something pressed: an action, not disabled. A solo
+   container stays put, the way only `.btn` and an opted-in card press under
+   the aesthetic class. */
+.cyber-solo:is(
+  button,
+  a[href],
+  [role="button"],
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"]
+):active:not(:disabled, [aria-disabled="true"]) {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cyber-solo:is(
+    button,
+    a[href],
+    [role="button"],
+    summary,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"]
+  ):active:not(:disabled, [aria-disabled="true"]) {
+    transform: none;
+  }
+}

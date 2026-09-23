@@ -67,3 +67,43 @@
     --ui-surface-ground: var(--color-background);
   }
 }
+
+/* Solo: the same look painted onto the one element carrying the class, for an
+   element the package does not style -- a toast from another library, a plain
+   `<div>` on a page that never loaded the base stylesheet. See
+   docs/internal/solo-utilities.md.
+
+   It reads the aesthetic's own knobs and the theme's foundation tokens, each
+   with its shipped literal as the fallback, and never a `--ui-*`, `--intent-*`,
+   or `--elevation-color` token: those belong to whichever aesthetic an ancestor
+   carries, and a solo element has to look the same inside any of them.
+   Unlayered and one class deep, so it beats a foreign component's
+   zero-specificity rules wherever they load. Not for this package's own
+   components, which take the aesthetic class instead. */
+.glass-solo {
+  background-color: color-mix(
+    in srgb,
+    var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0))) 45%,
+    transparent
+  );
+  border: 1px solid light-dark(rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.22));
+  /* The surface corner: the element this exists for is a pane. */
+  border-radius: var(--glass-radius-surface, 1rem);
+  /* The theme's depth colour as a literal, for the reason above: inside a
+     `.chunky-tile` region the token is black. */
+  box-shadow:
+    0 1px 2px -1px light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55)),
+    0 18px 40px -16px light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55));
+  /* Prefixed first, for the reason `surface` gives: written second, the
+     minifier folds the pair into the prefixed one and Firefox loses the blur. */
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  backdrop-filter: blur(14px) saturate(1.6);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass-solo {
+    background-color: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

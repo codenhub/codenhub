@@ -282,12 +282,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["class", "completeShadow"],
+        "required": ["class", "solo", "completeShadow"],
         "additionalProperties": false,
         "properties": {
           "class": {
             "type": "string",
             "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "solo": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*-solo$",
+            "description": "The self-contained class that paints this aesthetic's material onto the one element carrying it, for elements the package does not style. Checked against the aesthetic's stylesheet."
           },
           "completeShadow": {
             "type": "boolean",

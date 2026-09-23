@@ -64,3 +64,50 @@
 .neobrutalism .alert {
   --_d-elevation: 1;
 }
+
+/* Solo: the same look painted onto the one element carrying the class, for an
+   element the package does not style. See docs/internal/solo-utilities.md and
+   the note on `.glass-solo`: own knobs and foundation tokens with literal
+   fallbacks, never a shared `--ui-*`, `--intent-*`, or `--elevation-color`
+   token, unlayered, and not for this package's own components. */
+.neobrutalism-solo {
+  --_neo-offset: var(--neo-offset, 4px);
+  --_neo-ink: light-dark(var(--color-neutral-950, oklch(14.5% 0 0)), var(--color-neutral-50, oklch(98.5% 0 0)));
+
+  border: 2px solid var(--_neo-ink);
+  border-radius: 0;
+  box-shadow: var(--_neo-offset) var(--_neo-offset) 0 0 var(--_neo-ink);
+  transition:
+    box-shadow var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1)),
+    transform var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));
+}
+
+/* The press, only on something pressed: an action, not disabled. A solo
+   container -- a toast clicked to dismiss -- stays put, the way only `.btn` and
+   an opted-in card press under the aesthetic class. */
+.neobrutalism-solo:is(
+  button,
+  a[href],
+  [role="button"],
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"]
+):active:not(:disabled, [aria-disabled="true"]) {
+  box-shadow: 0 0 0 0 var(--_neo-ink);
+  transform: translate(var(--_neo-offset), var(--_neo-offset));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neobrutalism-solo:is(
+    button,
+    a[href],
+    [role="button"],
+    summary,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"]
+  ):active:not(:disabled, [aria-disabled="true"]) {
+    transform: none;
+  }
+}

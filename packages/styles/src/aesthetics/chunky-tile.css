@@ -126,3 +126,68 @@
 .chunky-tile .btn.icon.p-xs {
   --ui-shadow-y: 2px;
 }
+
+/* Solo: the same look painted onto the one element carrying the class, for an
+   element the package does not style. See docs/internal/solo-utilities.md and
+   the note on `.glass-solo`: own knobs and foundation tokens with literal
+   fallbacks, never a shared `--ui-*`, `--intent-*`, or `--elevation-color`
+   token, unlayered, and not for this package's own components. */
+.chunky-tile-solo {
+  --_tile-lift: var(--tile-lift, 4px);
+  --_tile-ink: light-dark(var(--color-neutral-400, oklch(70.8% 0 0)), var(--color-neutral-600, oklch(43.9% 0 0)));
+  /* With no fill to shade, the bar shades the edge: the colour an unfilled
+     tile's bar already is under the aesthetic class. */
+  --_tile-bar: color-mix(in oklab, var(--_tile-ink) 72%, rgb(0 0 0));
+
+  border: 2px solid var(--_tile-ink);
+  border-radius: var(--tile-radius, 0.75rem);
+  box-shadow: 0 var(--_tile-lift) 0 0 var(--_tile-bar);
+  font-family: var(--font-rounded, var(--font-default, ui-sans-serif, system-ui, sans-serif));
+  transition:
+    box-shadow var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1)),
+    transform var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));
+}
+
+/* The heavier, tracked label is an action's, as under the aesthetic class. */
+.chunky-tile-solo:is(
+  button,
+  a[href],
+  [role="button"],
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"]
+) {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+/* The press, only on something pressed: an action, not disabled. A solo
+   container -- a toast clicked to dismiss -- stays put, the way only `.btn` and
+   an opted-in card press under the aesthetic class. */
+.chunky-tile-solo:is(
+  button,
+  a[href],
+  [role="button"],
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"]
+):active:not(:disabled, [aria-disabled="true"]) {
+  box-shadow: 0 0 0 0 var(--_tile-bar);
+  transform: translateY(var(--_tile-lift));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chunky-tile-solo:is(
+    button,
+    a[href],
+    [role="button"],
+    summary,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"]
+  ):active:not(:disabled, [aria-disabled="true"]) {
+    transform: none;
+  }
+}
