@@ -66,7 +66,7 @@ Chunky tile's heavier, tracked label follows the same selector, for the same rea
 - **Neobrutalism.** 2px ink edge, square corners, hard offset slab in the ink.
 - **Pixel.** The one-unit polygon silhouette and the one-unit inset ring in place of a border, and the pixel font. Clipping removes the focus outline, so a focused solo element draws the focus ring as a second inset layer, as `box` does under the token class; it reads `--focus-ring` and `--focus-ring-width` with their shipped fallbacks.
 - **Chunky tile.** Corner, 2px edge in the tile grey, and the bar: straight down, unblurred, a 72% shade of the edge ink toward black. With no fill to shade, the bar shades the ink -- the same colour an unfilled tile's bar already is under the token class.
-- **Cyber.** As specified in [Cyber](./cyber-aesthetic.md), without the elevation gate: a solo element is by definition something the consumer chose to light up, so it always glows.
+- **Cyber.** As specified in [Cyber](./cyber-aesthetic.md), without the elevation gate: a solo element is by definition something the consumer chose to light up, so it always glows. A solo element takes the surface diagonal, since it is usually a pane, and an action (the S5 selector) takes the control diagonal.
 
 ### S7. Themes
 

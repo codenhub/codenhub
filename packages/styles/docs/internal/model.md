@@ -420,6 +420,8 @@ An aesthetic declares material: lengths, shadows, shapes, font family, the neutr
 | `--ui-radius`           | `--radius-control`   | Corner radius for controls.                           |
 | `--ui-radius-surface`   | `--radius-surface`   | Corner radius for surfaces.                           |
 | `--ui-corner-shape`     | `round`              | What the radius draws: an arc, or a `bevel` cut.      |
+| `--ui-radius-pill`      | `--ui-radius`        | Corner for what is fully round by default.            |
+| `--ui-radius-tight`     | `--ui-radius`        | Corner for chips, before their `--radius-small` cap.  |
 | `--ui-border-width`     | `--border-width`     | Edge thickness.                                       |
 | `--ui-border-max`       | `100px`              | Ceiling on the computed edge width.                   |
 | `--ui-ink`              | `--color-border`     | Neutral line color when no intent is set.             |
@@ -715,13 +717,15 @@ Rounded slabs seated on a darker shade of themselves, pressed flat on click.
 
 Bevelled corners, a thin bright edge, and a glow in the component's own colour. See [Cyber](./cyber-aesthetic.md) for the decision.
 
-- The bevel is `corner-shape: bevel` through `--ui-corner-shape`, not a clip: a clip removes the glow and cannot draw the diagonal edge. The border, the glow, and the focus outline follow the cut. `--cyber-cut` at `0.5rem` is the one corner knob, read with a fallback per [R8](#rules-for-aesthetics).
-- Where `corner-shape` is not supported the radius goes to zero, so the corners square rather than round.
+- The bevel is `corner-shape: bevel` through `--ui-corner-shape`, not a clip: a clip removes the glow and cannot draw the diagonal edge. The border, the glow, and the focus outline follow the cut.
+- `--cyber-cut` at `0.625rem` is the cut, placed by two shape knobs on opposite diagonals: controls top-left and bottom-right (`--cyber-shape`), surfaces top-right and bottom-left (`--cyber-shape-surface`). Both take any `border-radius` value, read with a fallback per [R8](#rules-for-aesthetics).
+- What is fully round cuts to points through `--ui-radius-pill` -- a diamond radio, switch knob, and tooltip icon, a pointed hexagon for a pill or a badge -- and chips square through `--ui-radius-tight: 0`, which keeps the checkbox distinct from the radio.
+- Where `corner-shape` is not supported the control and surface radii go to zero, so those corners square rather than round; what is fully round stays round.
 - 1px edges in `--ui-ink`, which is the `--cyber-ink` knob over the theme-following neutral neobrutalism and pixel use. Hue stays with intent.
-- The glow is `--ui-shadow-ink: 70%` toward a transparent `--elevation-color` -- the intent colour at 70% alpha -- blurred by `--cyber-glow` with no offset or spread. Elevation scales it, so it lights buttons, cards, and anything raised.
+- The glow is `--ui-shadow-ink: 55%` toward a transparent `--elevation-color` -- the intent colour at 55% alpha -- blurred by `--cyber-glow` (`10px`) with no offset or spread. Elevation scales it, so it lights buttons, cards, and anything raised.
 - The press is the base `scale(0.97)`, restated, and `none` under reduced motion. The glow holds still on hover and on press.
 - Reads `--font-cyber` and falls back to monospace.
-- `.radio` and `.btn.pill` force `corner-shape: round`, and every other aesthetic declares `round` so a region nested inside `.cyber` does not inherit the bevel.
+- Every other aesthetic declares `--ui-corner-shape: round` and clears `--ui-radius-pill` and `--ui-radius-tight`, so a region nested inside `.cyber` inherits none of its corners.
 
 ## Solo classes
 

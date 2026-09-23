@@ -125,7 +125,9 @@ The bar is a darker shade of the element's own colour rather than a shadow under
 
 Bevelled corners, a 1px edge, and a glow in the component's own colour: a success button glows green, a destructive card red. The bevel is drawn with `corner-shape`, so the border, the glow, and the focus outline all follow the cut rather than being clipped by it.
 
-`--cyber-cut` is the corner, `0.5rem`, one value for controls and surfaces alike. `--cyber-glow` is the glow's blur, `12px`. `--cyber-ink` is the neutral line and glow colour, which follows the theme by default -- near-black on light, near-white on dark -- and is where a neon neutral goes if you want one.
+Controls and surfaces take the cut on opposite diagonals, so a button and the card around it read as the same material and as different things: buttons and fields cut top-left and bottom-right, cards, panels, and alerts top-right and bottom-left. Anything fully round cuts to points -- a radio, a switch knob, and the tooltip icon become diamonds, a pill button or a badge a pointed hexagon -- and chips square, so the checkbox reads as a plain square beside the diamond radio.
+
+`--cyber-cut` is the size of the cut, `0.625rem`. `--cyber-shape` and `--cyber-shape-surface` place it, and take any `border-radius` value. `--cyber-glow` is the glow's blur, `10px`. `--cyber-ink` is the neutral line and glow colour, which follows the theme by default -- near-black on light, near-white on dark -- and is where a neon neutral goes if you want one.
 
 ```html
 <section class="cyber" style="--cyber-ink: rgb(0 229 255); --cyber-cut: 0.75rem">
@@ -133,13 +135,30 @@ Bevelled corners, a 1px edge, and a glow in the component's own colour: a succes
 </section>
 ```
 
+Other shapes are a value away. Set them on the `.cyber` element or any ancestor; `--ui-radius` set on one element changes just that element.
+
+| Shape                  | Value                 |
+| ---------------------- | --------------------- |
+| All four corners       | `0.625rem`            |
+| The other diagonal     | `0 0.625rem`          |
+| Hexagon (pointed ends) | `0.625rem / 50%`      |
+| Parallelogram          | `0.625rem 0 / 100% 0` |
+| One notch, top-right   | `0 0.625rem 0 0`      |
+
+```html
+<section class="cyber" style="--cyber-shape: 0.625rem / 50%">
+  <button class="btn primary">Hexagonal buttons</button>
+</section>
+```
+
+A parallelogram slants its sides into the content, so give a surface that takes one extra inline padding.
+
 **Exceptions:**
 
-- The bevel is Chromium-only today. Firefox and Safari do not draw `corner-shape` yet, and there the aesthetic squares its corners instead of rounding them, so the look degrades to square, lined, and glowing. It picks up the bevel with no change once an engine ships it.
+- The bevel is Chromium-only today. Firefox and Safari do not draw `corner-shape` yet, and there the aesthetic squares its cut corners instead of rounding them, and what is fully round stays round, so the look degrades to square, lined, and glowing. It picks up the bevel with no change once an engine ships it.
 - The glow is depth, so it reaches what the registry rests above zero -- buttons and cards -- and anything you raise with `.raised` or `.floating`. Fields, badges, and alerts keep the edge without the glow, and `.flat` takes it off anything.
 - In the light theme the glow of a neutral or `.primary` component is its near-black ink, which reads as a soft shadow rather than as light. The look is at its strongest on a dark page, or with a hued `--cyber-ink`.
-- `.radio` and `.btn.pill` stay round: a cut on a full radius draws a diamond, which reads as neither.
-- Chips that cap their corner at `--radius-small` -- the checkbox, `.kbd`, `.code` -- cap the cut the same way. The switch's knob takes the track's shape, which at this size is a diamond on a hexagonal track.
+- A plain `.btn.icon` is a square control, so it takes the control diagonal; a `.btn.icon.pill` is round, so it becomes a diamond.
 - `--font-cyber` is yours to supply. The package ships no font binary, so the aesthetic falls back to the monospace stack.
 - Casing is left alone, for the reason [Chunky tile](#chunky-tile) gives.
 
@@ -153,7 +172,7 @@ An aesthetic class sets material tokens and nothing paints until a component rea
 | `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                       |
 | `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.              |
 | `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                            |
-| `.cyber`        | `.cyber-solo`        | The bevel, 1px edge, the glow, the technical font.                                        |
+| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.        |
 
 ```css
 /* The only stylesheet from this package on the page. */
@@ -167,7 +186,7 @@ An aesthetic class sets material tokens and nothing paints until a component rea
 A solo class ships in the same entrypoint as its aesthetic, and needs nothing else loaded:
 
 - **It paints material, not colour.** Edge, corner, depth, silhouette, backdrop, font, and press. No intent, no fill amount, no hover tint -- the element has no presentation to compose. Glass's translucent ground is the one fill, because it is glass's material.
-- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-glow`, `--cyber-ink`, and the font knobs all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
+- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, and the font knobs all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
 - **It ignores the aesthetic around it.** It reads no `--ui-*` or `--elevation-color`, so a `.glass-solo` inside a `.pixel` region keeps its corners. The elevation modifiers do not reach it either.
 - **It beats a foreign component's own styles.** The rules are unlayered and one class deep, so they win over a component's zero-specificity or layered rules wherever the two load. The flip side is that a Tailwind utility on the same element (`rounded-none`) loses to it: tune a solo class through its knobs.
 - **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` that is not disabled; a container stays put, so a toast does not sink when clicked. Reduced motion drops the movement. Chunky tile's heavier label follows the same rule.
