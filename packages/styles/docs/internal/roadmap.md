@@ -18,13 +18,11 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**`0.3.0` is merged, tagged, and published**, and `@codenhub/styles@0.3.0` is the current npm version. It gave `.progress`'s track real presentation, per [`progress-presentation-axes.md`](./progress-presentation-axes.md), and added the generated `./palette` export, per [`generated-palette.md`](./generated-palette.md) and [`generated-palette-neutral-tokens.md`](./generated-palette-neutral-tokens.md). [`docs/changelog/0.3.0.md`](../changelog/0.3.0.md) records both, including the WCAG 1.4.11 known issue on the new `.progress` default. [Planned](#planned) is what is left. [Later / Possible](#later--possible) holds deferred, not-yet-started asks.
+**`0.4.0` is cut** and ships once its pull request is merged and the merge is tagged; `@codenhub/styles@0.3.0` is the current npm version until then. It adds the `.cyber` aesthetic, per [`cyber-aesthetic.md`](./cyber-aesthetic.md), a solo class for every aesthetic, per [`solo-utilities.md`](./solo-utilities.md), and the `--ui-corner-shape`, `--ui-radius-pill`, and `--ui-radius-tight` material tokens `.cyber` needed. [`docs/changelog/0.4.0.md`](../changelog/0.4.0.md) records it. [Planned](#planned) is what is left. [Later / Possible](#later--possible) holds deferred, not-yet-started asks.
 
 ## Planned
 
 - **Decide what to drop.** A `0.x` line is the window for removing surface that is not earning its place. Candidates are named here first, with the reason, before they are removed. Not a gate for any particular release.
-- **Solo utilities, for `0.4.0`.** A self-contained `.<aesthetic>-solo` class beside every aesthetic, which paints the look onto an element this package does not style -- the ask `@codenhub/toaster` raised, for a class it can hand to its `className` escape hatch. Proposed in [Solo utilities](./solo-utilities.md).
-- **A `.cyber` aesthetic, for `0.4.0`.** Bevelled corners through `corner-shape` and a new `--ui-corner-shape` material token, a neon edge, and a glow. Proposed in [Cyber](./cyber-aesthetic.md).
 
 ## Later / Possible
 
@@ -52,7 +50,7 @@ Two measurements shaped the material tokens and outlive the change that needed t
 
 ## Versioning
 
-`0.3.0` is the current published release, cut through the same tag workflow as `0.1.1` and `0.2.0` before it. `0.1.0` carried the whole model rewrite over the manually published `0.0.4`; `0.1.1` is the first version cut through the tag workflow -- pushing `@codenhub/styles@0.1.1` triggered `.github/workflows/publish.yml`, which publishes through trusted publishing with provenance and refuses a tag whose version disagrees with the manifest. Every release from here follows that path.
+`0.3.0` is the current published release, cut through the same tag workflow as `0.1.1` and `0.2.0` before it, and `0.4.0` is cut to follow it the same way. `0.1.0` carried the whole model rewrite over the manually published `0.0.4`; `0.1.1` is the first version cut through the tag workflow -- pushing `@codenhub/styles@0.1.1` triggered `.github/workflows/publish.yml`, which publishes through trusted publishing with provenance and refuses a tag whose version disagrees with the manifest. Every release from here follows that path.
 
 The stress-test pass's fixes, across all three screens, land as one minor (`0.2.0`) rather than a run of patches: several change default token values (`--progress-surface`, `--color-border`) that affect every consumer already using `.progress` or `.card.soft.edged`, not just new ones, which is a real behavior change and not patch-level even pre-1.0.
 

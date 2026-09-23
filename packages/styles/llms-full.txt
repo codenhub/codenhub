@@ -1845,6 +1845,16 @@ Use ARIA or data attributes when native attributes are not available for the ele
 
 `aria-disabled="true"` communicates disabled state but does not prevent activation. JavaScript or element choice must prevent activation when required.
 
+<!-- Source: docs/changelog/0.4.0.md -->
+
+# 0.4.0
+
+## Added
+
+- **`.cyber`**, a fifth aesthetic from `@codenhub/styles/aesthetics/cyber` (and `/tw/aesthetics/cyber`, and both aggregates): bevelled corners, a 1px edge, and a glow in each component's own colour. Controls cut top-left and bottom-right, surfaces top-right and bottom-left; what is fully round (a radio, a switch, a pill, a badge) cuts to diamonds and pointed hexagons, and chips square. Knobs: `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, and the consumer-supplied `--font-cyber`. The bevel is drawn with `corner-shape`, which only Chromium supports today; Firefox and Safari get square cut corners and round round ones. See [Aesthetics → Cyber](docs/usage/aesthetics.md#cyber).
+- **A solo class for every aesthetic**: `.glass-solo`, `.neobrutalism-solo`, `.pixel-solo`, `.chunky-tile-solo`, and `.cyber-solo` paint the aesthetic's look onto the one element carrying the class, for an element this package does not style -- a toast from another library, or a `<div>` on a page without the base stylesheet. Each ships in its aesthetic's existing entrypoint and needs nothing else loaded. See [Aesthetics → Solo classes](docs/usage/aesthetics.md#solo-classes).
+- **Three material tokens**: `--ui-corner-shape` (what a corner draws: `round`, or a `bevel` cut), `--ui-radius-pill` (the corner of what is fully round by default), and `--ui-radius-tight` (the corner of chips, before their `--radius-small` cap). All three default to today's look, so nothing changes unless an aesthetic or your own CSS sets them. See [Customizing → Material tokens](docs/usage/customizing.md#material-tokens).
+
 <!-- Source: docs/changelog/0.3.0.md -->
 
 # 0.3.0
