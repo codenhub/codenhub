@@ -1,15 +1,8 @@
-import { existsSync } from "node:fs";
-import { cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { parsePackageMetadata } from "@codenhub/tools/documentation";
-import {
-  fetchReleaseTags,
-  listFilesAtRef,
-  listTags,
-  readFileAtRef,
-  resolveLatestPublishedTag,
-} from "@codenhub/tools/release";
+import { fetchReleaseTags, listTags, materializeTreeAtRef, resolveLatestPublishedTag } from "@codenhub/tools/release";
 import { discoverWorkspace, type WorkspacePackage } from "@codenhub/tools/workspace";
 
 /** Where the repository and the tag-scoped snapshot live. */
@@ -24,78 +17,33 @@ export interface PublishedDocsSnapshotOptions {
 export interface PublishedDocsSnapshotDeps {
   discoverWorkspace: typeof discoverWorkspace;
   fetchReleaseTags: typeof fetchReleaseTags;
-  listFilesAtRef: typeof listFilesAtRef;
   listTags: typeof listTags;
-  readFileAtRef: typeof readFileAtRef;
+  materializeTreeAtRef: typeof materializeTreeAtRef;
   resolveLatestPublishedTag: typeof resolveLatestPublishedTag;
 }
+
+// What the site reads from a package: the catalog reads the manifest and
+// `docs/`, and resource publication validates the README and `llms` files and
+// serves `LICENSE` and `NOTICE`. Public docs may link nowhere else
+// (`invalid-docs-escape`), so nothing outside this set can be a link target.
+const ROOT_SURFACES = new Set(["LICENSE", "NOTICE", "README.md", "llms-full.txt", "llms.txt", "package.json"]);
+const DOCS_DIRECTORY = "docs";
 
 const defaultDeps: PublishedDocsSnapshotDeps = {
   discoverWorkspace,
   fetchReleaseTags,
-  listFilesAtRef,
   listTags,
-  readFileAtRef,
+  materializeTreeAtRef,
   resolveLatestPublishedTag,
 };
 
-function toPosix(value: string): string {
-  return value.replaceAll("\\", "/");
-}
-
-function isInternal(relativePath: string): boolean {
-  return toPosix(relativePath).split("/")[0] === "internal";
-}
-
-async function snapshotDocsFromTag(
-  deps: PublishedDocsSnapshotDeps,
-  repoRoot: string,
-  tag: string,
-  workspacePackage: WorkspacePackage,
-  destinationDocs: string,
-): Promise<boolean> {
-  const docsPath = toPosix(`${workspacePackage.location}/docs`);
-  // A `ref` git cannot read throws (see listFilesAtRef); zero matches is a
-  // legitimate result of a valid read and is filtered further below.
-  const files = (await deps.listFilesAtRef(repoRoot, tag, docsPath)).filter(
-    (filePath) => !isInternal(filePath.slice(docsPath.length + 1)),
-  );
-  if (files.length === 0) {
-    // The package published before it had docs, or before this file existed at
-    // that tag. There is nothing published to show, so this falls back to live
-    // content the same way a package with no tag at all does.
-    return false;
-  }
-  await Promise.all(
-    files.map(async (filePath) => {
-      // This path was just listed at this same ref, so a read failure here is
-      // an operational error, not "the file does not exist" — treating it as
-      // the latter would silently ship an incomplete release, or worse, let a
-      // later live-fallback show unreleased content in its place.
-      const content = await deps.readFileAtRef(repoRoot, tag, filePath);
-      if (content === undefined) {
-        throw new Error(`${filePath} was listed at ${tag} but could not be read.`);
-      }
-      const destinationPath = path.join(destinationDocs, ...filePath.slice(docsPath.length + 1).split("/"));
-      await mkdir(path.dirname(destinationPath), { recursive: true });
-      await writeFile(destinationPath, content, "utf8");
-    }),
-  );
-  return true;
-}
-
-async function snapshotDocsFromWorkingTree(workspacePackage: WorkspacePackage, destinationDocs: string): Promise<void> {
-  const sourceDocs = path.join(workspacePackage.directory, "docs");
-  if (!existsSync(sourceDocs)) {
-    // Nothing published and nothing live either. Leaving no docs/ here surfaces
-    // through `buildPackageDefinitions`' own "missing docs/index.md" check with
-    // a clearer message than a raw ENOENT from the copy below would.
-    return;
-  }
-  await cp(sourceDocs, destinationDocs, {
-    filter: (source) => !isInternal(path.relative(sourceDocs, source)),
-    recursive: true,
-  });
+/**
+ * Where the snapshot keeps its packages, mirroring the repository's own `packages/`.
+ * @param snapshotRoot Directory the snapshot is written into.
+ * @returns Absolute directory to read snapshotted packages from.
+ */
+export function snapshotPackagesRoot(snapshotRoot: string): string {
+  return path.join(snapshotRoot, "packages");
 }
 
 async function snapshotPackage(
@@ -104,51 +52,84 @@ async function snapshotPackage(
   context: { repoRoot: string; snapshotRoot: string; tags: readonly string[] },
 ): Promise<void> {
   const { repoRoot, snapshotRoot, tags } = context;
-  const destinationRoot = path.join(snapshotRoot, workspacePackage.location);
-  const destinationDocs = path.join(destinationRoot, "docs");
-
-  await mkdir(destinationRoot, { recursive: true });
-  // The manifest travels live, unpinned: only documentation content is scoped
-  // to a release, since `buildPackageDefinitions` correlates it against a
-  // manifest path sharing this same snapshot root.
-  await cp(path.join(workspacePackage.directory, "package.json"), path.join(destinationRoot, "package.json"));
-
   const tag = deps.resolveLatestPublishedTag(workspacePackage.name, tags);
-  const publishedFromTag =
-    tag === undefined ? false : await snapshotDocsFromTag(deps, repoRoot, tag, workspacePackage, destinationDocs);
-  if (!publishedFromTag) {
-    await snapshotDocsFromWorkingTree(workspacePackage, destinationDocs);
+  if (tag === undefined) {
+    // No tag means no release, so there is nothing published to show. The
+    // working tree is never a fallback: it is exactly the unreleased content
+    // this snapshot exists to keep off the site.
+    return;
   }
+
+  const destination = path.join(snapshotRoot, workspacePackage.location);
+  const isFound = await deps.materializeTreeAtRef({
+    cwd: repoRoot,
+    destination,
+    ref: tag,
+    treePath: workspacePackage.location,
+  });
+  if (!isFound) {
+    throw new Error(
+      `${tag} has nothing at ${workspacePackage.location}; the package moved after its last release. Release it from its new location to publish its docs again.`,
+    );
+  }
+
+  const manifestPath = path.join(destination, "package.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as unknown;
+  const name = typeof manifest === "object" && manifest !== null ? (manifest as { name?: unknown }).name : undefined;
+  if (name !== workspacePackage.name) {
+    throw new Error(`${tag} has ${String(name)} at ${workspacePackage.location}, not ${workspacePackage.name}.`);
+  }
+  // The opt-in is read from the released manifest, like everything else here:
+  // a package opts into the site in the same release that ships its docs.
+  if (parsePackageMetadata(manifest, `${workspacePackage.location}/package.json`) === null) {
+    await rm(destination, { force: true, recursive: true });
+    return;
+  }
+  await pruneToPublishedSurfaces(destination);
 }
 
 /**
- * Materializes each package's `docs/` as of its latest published release tag.
+ * Removes everything the site does not publish or validate from a materialized package.
  *
- * A build that reads `packages/*\/docs` straight from the working tree shows
- * whatever happens to sit on `main`, which can describe behavior that has not
- * reached npm yet — the more packages are in flight together, the more this
- * shows. This writes a parallel tree the site reads instead: each package's
- * `docs/` comes from `git show <tag>:...` at that package's own newest
- * `<name>@<version>` tag, resolved by `@codenhub/tools/release`. A package
- * with no tag yet, or whose docs did not exist yet at its latest tag, falls
- * back to its live `docs/` — there is nothing published to gate it against.
+ * Source, tests, and configs have no business in a content tree that sits
+ * inside this app: Vitest would collect the package's tests, `tsc` would check
+ * its sources, and Vite would compile its Markdown against the package's own
+ * `tsconfig.json`, whose `extends` target is not here.
+ * @param packageDirectory Materialized package directory.
+ */
+async function pruneToPublishedSurfaces(packageDirectory: string): Promise<void> {
+  const entries = await readdir(packageDirectory);
+  await Promise.all(
+    entries
+      .filter((entry) => entry !== DOCS_DIRECTORY && !ROOT_SURFACES.has(entry))
+      .map((entry) => rm(path.join(packageDirectory, entry), { force: true, recursive: true })),
+  );
+  await rm(path.join(packageDirectory, DOCS_DIRECTORY, "internal"), { force: true, recursive: true });
+}
+
+/**
+ * Materializes every released, documentation-enabled package as of its latest release tag.
  *
- * This does not yet cover every public-facing surface: `LICENSE`, `NOTICE`,
- * and non-Markdown `docs/` assets still reach the site from the live tree
- * through `documentation-integration.ts`'s separate resource pipeline, which
- * also validates each package's npm pack contents and needs more than this
- * snapshot builds to run against a tag safely. Deferred for the same reason
- * `apps/demo` is: matching it would mean materializing a full historical
- * package build, not just copying files.
+ * A build that reads `packages/*` straight from the working tree shows whatever
+ * happens to sit on `main`, which can describe behavior that has not reached npm
+ * yet. This writes a parallel `packages/` tree the site reads instead, in which
+ * each package is its whole directory at its own newest `<name>@<version>` tag,
+ * resolved by `@codenhub/tools/release`. Everything the site publishes about a
+ * package — its manifest, its `docs/`, its `LICENSE`, `NOTICE`, and assets —
+ * therefore comes from the same release.
  *
- * A git operation that fails outright — an unreadable tag, a listed file that
- * cannot be read, a failed tag fetch — throws rather than falling back. Empty
- * results are only ever a legitimate "nothing here"; a failure treated the
- * same way would show unreleased content for a package that has, in fact,
- * published, which defeats the entire point of this function.
+ * A package appears only when it has a release tag and its manifest at that tag
+ * declares `codenhub.docs`. A package with no tag is absent: there is no
+ * fallback to the working tree, because falling back is how unreleased
+ * documentation reached the site before.
+ *
+ * A git operation that fails outright — an unreadable tag, a failed tag fetch,
+ * a package no longer where its tag put it — throws rather than dropping the
+ * package. A published package missing from the site is a failure to report,
+ * not a state to ship.
  * @param options Where the repository and the snapshot live.
  * @param deps Collaborators to call through, defaulting to the real filesystem and `git`.
- * @throws When a package's latest tag, or a file it lists, cannot be read, or when fetching tags fails.
+ * @throws When tags cannot be fetched, a tag cannot be read, or a package's location or name at its tag disagrees with the workspace.
  */
 export async function buildPublishedDocsSnapshot(
   options: PublishedDocsSnapshotOptions,
@@ -156,32 +137,20 @@ export async function buildPublishedDocsSnapshot(
 ): Promise<void> {
   const { repoRoot, snapshotRoot } = options;
   await rm(snapshotRoot, { force: true, recursive: true });
+  // Created even when nothing has released, so every reader of the snapshot
+  // finds an empty tree rather than a missing one.
+  await mkdir(snapshotPackagesRoot(snapshotRoot), { recursive: true });
 
-  const workspace = await deps.discoverWorkspace(repoRoot);
-  // Eligibility is "opted into public docs" (the same `codenhub.docs` check
-  // `buildPackageDefinitions` applies), not "currently has a docs/ directory
-  // on disk". A package whose live docs/ was removed but that still has a
-  // published tag with docs must still resolve that tag, not be filtered out
-  // before it gets the chance.
-  const documented = workspace.packages.filter(
-    (workspacePackage) =>
-      parsePackageMetadata(workspacePackage.manifest, `${workspacePackage.location}/package.json`) !== null,
-  );
-  if (documented.length === 0) {
-    return;
-  }
-
-  // A failed fetch can leave local tags stale or entirely absent. Continuing
-  // with whatever happens to be on disk would resolve every package as
-  // unpublished and show live, unreleased content in its place — the exact
-  // outcome this mechanism exists to prevent — so this fails the build instead
-  // of guessing.
+  // A failed fetch can leave local tags stale or entirely absent, which would
+  // drop released packages from the site or pin them to an older release.
   if (!(await deps.fetchReleaseTags(repoRoot))) {
     throw new Error(`Could not fetch release tags from origin in ${repoRoot}.`);
   }
-  const tags = await deps.listTags(repoRoot);
+  const [workspace, tags] = await Promise.all([deps.discoverWorkspace(repoRoot), deps.listTags(repoRoot)]);
 
   await Promise.all(
-    documented.map((workspacePackage) => snapshotPackage(deps, workspacePackage, { repoRoot, snapshotRoot, tags })),
+    workspace.packages.map((workspacePackage) =>
+      snapshotPackage(deps, workspacePackage, { repoRoot, snapshotRoot, tags }),
+    ),
   );
 }

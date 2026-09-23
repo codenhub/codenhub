@@ -21,10 +21,10 @@ describe("Astro Markdown configuration", () => {
     ]);
   });
 
-  it("installs package documentation validation, resource publication, and the published-docs snapshot", () => {
+  it("writes the published-docs snapshot before documentation validation and resource publication read it", () => {
     expect(config.integrations).toEqual([
-      expect.objectContaining({ name: "codenhub-package-documentation" }),
       expect.objectContaining({ name: "codenhub-published-docs-snapshot" }),
+      expect.objectContaining({ name: "codenhub-package-documentation" }),
     ]);
   });
 

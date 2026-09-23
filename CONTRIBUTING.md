@@ -122,7 +122,15 @@ git push origin "@codenhub/error@0.3.0"
 
 The tag must name the version already in the package manifest on `main`; `.github/workflows/publish.yml` refuses the run otherwise. Bump the version and write its changelog entry in an ordinary pull request first, then tag the merge commit.
 
-A package's first release is the exception and is published from a maintainer's machine, because npm cannot configure a trusted publisher for a name that does not exist yet. `docs/specs/packages-lifecycle.md` owns the rules and `docs/ci.md` the workflow.
+A package's first release is the exception and is published from a maintainer's machine, because npm cannot configure a trusted publisher for a name that does not exist yet. It is tagged all the same, and tagged first — `hub publish` refuses to run without the tag on the commit being published — then the tag is pushed once npm has the version:
+
+```sh
+git tag "@codenhub/kbd@0.1.0"
+pnpm hub publish kbd
+git push origin "@codenhub/kbd@0.1.0"
+```
+
+`docs/specs/packages-lifecycle.md` owns the rules and `docs/ci.md` the workflow.
 
 Pushing a release tag is an outward-facing action. An agent asks first and never pushes one on its own initiative.
 

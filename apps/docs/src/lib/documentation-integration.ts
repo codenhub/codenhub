@@ -4,11 +4,19 @@ import { fileURLToPath } from "node:url";
 import { loadWorkspaceDocumentation, type PublicResource } from "@codenhub/tools/documentation";
 import type { AstroIntegration } from "astro";
 
+import { readsPublishedSnapshot } from "./published-docs-snapshot-integration";
 import { copyPublicResources, createResourceMiddleware } from "./resource-publisher";
 
 interface IntegrationOptions {
   loadDocumentation?: (packagesRoot: string) => Promise<PublicResource[]>;
+  /** Packages read outside a production build: the working tree, so local edits show immediately. */
   packagesRoot: string;
+  /**
+   * Packages read by a production build: the tag-scoped snapshot, so resources
+   * ship from the same release as the pages that link to them. Must already
+   * exist when this integration's setup runs.
+   */
+  publishedPackagesRoot: string;
 }
 
 interface ConnectRequest {
@@ -61,8 +69,10 @@ export function createDocumentationIntegration(options: IntegrationOptions): Ast
   return {
     name: "codenhub-package-documentation",
     hooks: {
-      "astro:config:setup": async ({ updateConfig }) => {
-        resources = await loadDocumentation(options.packagesRoot);
+      "astro:config:setup": async ({ command, updateConfig }) => {
+        resources = await loadDocumentation(
+          readsPublishedSnapshot(command) ? options.publishedPackagesRoot : options.packagesRoot,
+        );
         updateConfig({ vite: { plugins: [createResourcePlugin(resources)] } });
       },
       "astro:build:done": async ({ dir }) => {

@@ -92,8 +92,8 @@ export interface PublicPackage {
 // working tree directly, so editing a package's docs locally still
 // hot-reloads. A production build reads `.codenhub-published-docs` instead,
 // which `published-docs-snapshot-integration.ts` populates before Vite scans
-// these globs — each package's docs there come from its latest published
-// release tag, not from whatever else happens to be on `main`.
+// these globs — it holds only released packages, each exactly as it was at its
+// latest release tag, so an unreleased package or change never reaches here.
 // (docs/ci.md, "The documentation site")
 const manifestModulesLive = import.meta.glob<unknown>("../../../../packages/**/package.json", {
   eager: true,

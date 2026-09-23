@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-08
+last_updated: 2026-09-23
 scope: Public workspace packages.
 ---
 
@@ -155,6 +155,8 @@ CI MUST authenticate through npm trusted publishing, exchanging the workflow's O
 
 A maintainer MAY run `hub publish <package>` from their own machine against their own `npm login`, and MUST do so for a package's first release: a trusted publisher cannot be configured on npm for a package name that does not exist yet. Every release after the first goes through the workflow.
 
+Every version on npm MUST have its release tag in the repository. The tag is how the repository tells a released package from an unreleased one — the documentation site publishes a package only from its latest tag, and not at all without one — so a version published without a tag is invisible to everything that reads them. A manual publish therefore tags first: `hub publish <package>` refuses to run unless `<package name>@<version>` names the commit being published, and the maintainer pushes the tag once npm has the version. The workflow then runs on that tag and, finding the version already on npm, succeeds without publishing, which records the release the same way a workflow publish would.
+
 A pre-release version — one carrying a SemVer suffix such as `-beta.1` — MUST publish under the `next` dist-tag, not `latest`, so that `npm install` without a version keeps resolving the current stable release. `hub publish` derives this from the version and needs no extra flag.
 
 Package `prepublishOnly` still runs the build and typecheck that npm requires at publish time.
@@ -187,7 +189,7 @@ Package README files MUST follow `docs/specs/packages-readme.md`.
 
 Package documentation MUST follow `docs/specs/packages-documentation.md`.
 
-Private packages intended to expose public documentation MUST opt in through `codenhub.docs` and follow the same documentation spec. Publication status and documentation eligibility are separate concerns: a package does not need to be published to provide public documentation.
+Private packages intended to expose public documentation MUST opt in through `codenhub.docs` and follow the same documentation spec. Opting in makes documentation eligible for the site; it does not publish it. The production documentation site publishes a package only from its latest release tag (`docs/ci.md`, "Publish-scoped content"), and a private package is never released, so an opted-in private package's documentation is held to the documentation spec and served by `astro dev`, but never reaches the production site.
 
 README examples and public reference docs MUST match `package.json` `exports`. When `exports` changes, source JSDoc/TSDoc, README content, public docs, and LLM files MUST be reviewed in the same change.
 

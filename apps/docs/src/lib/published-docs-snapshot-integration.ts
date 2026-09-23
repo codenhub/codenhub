@@ -7,13 +7,28 @@ interface IntegrationOptions extends PublishedDocsSnapshotOptions {
 }
 
 /**
+ * Whether an Astro run reads packages from the published snapshot rather than the working tree.
+ *
+ * This mirrors `import.meta.env.PROD`, which `catalog.ts` switches its glob
+ * roots on and which config-time code cannot read: Vite derives it from
+ * `NODE_ENV === "production"`, and `astro build` sets that when nothing else
+ * has. The command alone is not the same signal — a build started from Vitest
+ * runs with `NODE_ENV=test`, so its pages come from the working tree, and the
+ * snapshot and resources must follow them there.
+ * @param command Astro command of the current run.
+ * @returns Whether pages, and so everything published alongside them, come from the snapshot.
+ */
+export function readsPublishedSnapshot(command: string): boolean {
+  return command === "build" && process.env.NODE_ENV === "production";
+}
+
+/**
  * Populates the tag-scoped documentation snapshot before a production build.
  *
- * Only `astro build` runs this. `astro dev` keeps `catalog.ts` reading
- * `packages/*\/docs` live, so editing a package's docs during local authoring
- * still hot-reloads; `import.meta.env.PROD` is the same signal `catalog.ts`
- * uses to choose between the live and snapshot glob roots, so the two stay in
- * step without this integration reaching into that module directly.
+ * `astro dev` keeps `catalog.ts` reading `packages/*` live, so editing a
+ * package's docs during local authoring still hot-reloads.
+ * {@link readsPublishedSnapshot} decides, so this stays in step with the
+ * catalog's glob roots without reaching into that module.
  * @param options Where the repository and the snapshot live, and the builder to run.
  * @returns Astro integration to register in `astro.config.ts`.
  */
@@ -23,7 +38,7 @@ export function createPublishedDocsSnapshotIntegration(options: IntegrationOptio
     name: "codenhub-published-docs-snapshot",
     hooks: {
       "astro:config:setup": async ({ command }) => {
-        if (command !== "build") {
+        if (!readsPublishedSnapshot(command)) {
           return;
         }
         await build({ repoRoot: options.repoRoot, snapshotRoot: options.snapshotRoot });

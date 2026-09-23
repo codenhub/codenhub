@@ -1,5 +1,6 @@
 import { execute } from "../process/execute.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
+import type { ReadinessCheck } from "./readiness.ts";
 
 /** A release tag split into the package it names and the version it releases. */
 export interface ReleaseTag {
@@ -146,3 +147,97 @@ export const readPublishedVersion: RegistryReader = async (workspacePackage, tim
     return undefined;
   }
 };
+
+/** Reads whether the registry already serves a package's manifest version. Injected by tests. */
+export type VersionLookup = (workspacePackage: WorkspacePackage, timeoutMs?: number) => Promise<boolean>;
+
+/**
+ * Reads whether the exact version in a package's manifest is already on npm.
+ *
+ * Any doubt answers `false`: an unreachable registry then leads to a publish
+ * attempt, which npm itself refuses for an existing version, rather than to a
+ * run that reports success without having published anything.
+ * @param workspacePackage Package whose manifest version to look up.
+ * @param timeoutMs Milliseconds before npm is killed, or `undefined` to wait indefinitely.
+ * @returns Whether the registry answered with exactly that version.
+ */
+export const isVersionPublished: VersionLookup = async (workspacePackage, timeoutMs) => {
+  const version = String(workspacePackage.manifest.version);
+  const outcome = await execute(
+    {
+      args: ["view", `${workspacePackage.name}@${version}`, "version", "--json"],
+      command: "npm",
+      cwd: workspacePackage.directory,
+    },
+    { stdio: "pipe", timeoutMs },
+  );
+  if (!outcome.isSuccess) {
+    return false;
+  }
+  try {
+    return JSON.parse(outcome.stdout || '""') === version;
+  } catch {
+    return false;
+  }
+};
+
+/** Resolves a git revision to the commit it names. Injected by tests. */
+export type RevisionResolver = (revision: string, cwd: string) => Promise<string | undefined>;
+
+const resolveRevision: RevisionResolver = async (revision, cwd) => {
+  const outcome = await execute(
+    { args: ["rev-parse", "--verify", "--quiet", `${revision}^{commit}`], command: "git", cwd },
+    { stdio: "pipe" },
+  );
+  return outcome.isSuccess ? outcome.stdout?.trim() || undefined : undefined;
+};
+
+/**
+ * The release tag that records a package's manifest version.
+ * @param workspacePackage Package to name the tag for.
+ * @returns Tag name, such as `@codenhub/error@0.3.0`.
+ */
+export function releaseTagFor(workspacePackage: WorkspacePackage): string {
+  return `${workspacePackage.name}@${String(workspacePackage.manifest.version)}`;
+}
+
+/**
+ * Checks that a package's release tag exists and names the commit being published.
+ *
+ * Every version on npm must have a tag, because the tag is how the rest of the
+ * repository — the documentation site first — tells a released package from
+ * an unreleased one. A publish without one would put a version on npm that the
+ * repository cannot see. In the workflow the tag is what was checked out, so
+ * this passes by construction; it exists for the manual first release.
+ * @param workspacePackage Package about to be published.
+ * @param resolve Revision resolver, defaulting to `git rev-parse`.
+ * @returns A `tag` precondition in the shape the preflight reports.
+ */
+export async function checkReleaseTag(
+  workspacePackage: WorkspacePackage,
+  resolve: RevisionResolver = resolveRevision,
+): Promise<ReadinessCheck> {
+  const tag = releaseTagFor(workspacePackage);
+  const [tagged, head] = await Promise.all([
+    resolve(`refs/tags/${tag}`, workspacePackage.directory),
+    resolve("HEAD", workspacePackage.directory),
+  ]);
+  if (tagged === undefined) {
+    return {
+      detail: `no ${tag} tag; tag the commit being published: git tag "${tag}"`,
+      name: "tag",
+      status: "blocked",
+    };
+  }
+  if (head === undefined) {
+    return { detail: "git could not resolve HEAD", name: "tag", status: "unknown" };
+  }
+  if (tagged !== head) {
+    return {
+      detail: `${tag} names ${tagged.slice(0, 7)}, but HEAD is ${head.slice(0, 7)}; check out the tag to publish it`,
+      name: "tag",
+      status: "blocked",
+    };
+  }
+  return { detail: `${tag} names HEAD`, name: "tag", status: "ready" };
+}
