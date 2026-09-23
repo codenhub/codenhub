@@ -76,6 +76,7 @@ test.describe("solo utilities", () => {
       "background-color",
       "border-top-width",
       "border-top-left-radius",
+      "border-top-right-radius",
       "box-shadow",
       "clip-path",
       "corner-shape",
@@ -112,12 +113,14 @@ test.describe("solo utilities", () => {
     expect(tile["box-shadow"], "tile bar").toMatch(/\b0px 4px 0px 0px\b/);
 
     expect(cyber["border-top-width"], "cyber line").toBe("1px");
-    expect(cyber["box-shadow"], "cyber glow").toMatch(/\b0px 0px 12px 0px\b/);
+    expect(cyber["box-shadow"], "cyber glow").toMatch(/\b0px 0px 10px 0px\b/);
+    /* A pane takes the surface diagonal: top-right and bottom-left. */
+    expect(cyber["border-top-left-radius"], "cyber top-left").toBe("0px");
     if (browserName === "chromium") {
       expect(cyber["corner-shape"], "cyber bevel").toBe("bevel");
-      expect(cyber["border-top-left-radius"], "cyber cut").toBe("8px");
+      expect(cyber["border-top-right-radius"], "cyber cut").toBe("10px");
     } else {
-      expect(cyber["border-top-left-radius"], "cyber squares where no bevel is drawn").toBe("0px");
+      expect(cyber["border-top-right-radius"], "cyber squares where no bevel is drawn").toBe("0px");
     }
   });
 
@@ -266,6 +269,17 @@ test.describe("solo utilities", () => {
     } finally {
       await page.mouse.up();
     }
+  });
+
+  /* The same split the aesthetic class draws between controls and surfaces:
+     an action cuts the opposite diagonal to a pane. */
+  test("cut a cyber action on the control diagonal", async ({ page, browserName }) => {
+    await load(page, ["aesthetics/cyber.css"], `<button id="action" class="cyber-solo">Go</button>`);
+
+    const action = await read(page, "#action", ["border-top-left-radius", "border-top-right-radius"]);
+
+    expect(action["border-top-left-radius"], "top-left").toBe(browserName === "chromium" ? "10px" : "0px");
+    expect(action["border-top-right-radius"], "top-right").toBe("0px");
   });
 
   test("weight chunky tile's label on an action only", async ({ page }) => {

@@ -8,11 +8,16 @@
    focus outline all follow it. Load after the base stylesheet. */
 .cyber {
   /* Knobs, read with a fallback so an ancestor can set them (R8; see
-     model.md#rules-for-aesthetics). One cut for controls and surfaces alike:
-     the cut is a fixed motif, and one size is what makes a button and the card
-     around it read as the same material. */
-  --_cyber-cut: var(--cyber-cut, 0.5rem);
-  --_cyber-glow: var(--cyber-glow, 12px);
+     model.md#rules-for-aesthetics). One cut size for controls and surfaces
+     alike, so a button and the card around it read as the same material; the
+     two shapes then place that cut on opposite diagonals, so they read as
+     different things. A shape knob takes any `border-radius` value -- the
+     documented presets are a hexagon, a parallelogram, and a single notch --
+     and the cut knob scales the default pair without restating it. */
+  --_cyber-cut: var(--cyber-cut, 0.625rem);
+  --_cyber-glow: var(--cyber-glow, 10px);
+  --_cyber-shape: var(--cyber-shape, var(--_cyber-cut) 0);
+  --_cyber-shape-surface: var(--cyber-shape-surface, 0 var(--_cyber-cut));
 
   /* The neutral line. A neon hue is the look's signature, but hue is intent's
      (R1), so the default follows the theme the way neobrutalism's and pixel's
@@ -21,21 +26,29 @@
      its own edge colour. */
   --ui-ink: var(--cyber-ink, light-dark(var(--color-neutral-950), var(--color-neutral-50)));
 
+  /* Controls cut top-left and bottom-right, surfaces top-right and bottom-left.
+     Anything fully round -- a badge, a switch, the progress track, the tooltip
+     icon, and through their own full radius a radio and a `.btn.pill` -- cuts
+     all the way to points: a diamond, or a hexagon on something wider than it
+     is tall. Chips square outright, which is what tells the checkbox from the
+     radio beside it. */
   --ui-corner-shape: bevel;
-  --ui-radius: var(--_cyber-cut);
-  --ui-radius-surface: var(--_cyber-cut);
+  --ui-radius: var(--_cyber-shape);
+  --ui-radius-surface: var(--_cyber-shape-surface);
+  --ui-radius-pill: calc(infinity * 1px);
+  --ui-radius-tight: 0;
   --ui-border-width: 1px;
   --ui-border-max: 100px;
 
   /* The glow: the component's own ink, blurred, with no offset. `box` mixes
      depth as `color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink),
-     var(--elevation-color))`, so a transparent depth colour turns 70% ink into
-     the intent colour at 70% alpha rather than into a darker shade of it.
+     var(--elevation-color))`, so a transparent depth colour turns 55% ink into
+     the intent colour at 55% alpha rather than into a darker shade of it.
      Elevation scales the blur like every shadow, so the glow lights what rests
      above zero -- buttons and cards -- and anything raised, and leaves fields
      and chips crisp. */
   --elevation-color: transparent;
-  --ui-shadow-ink: 70%;
+  --ui-shadow-ink: 55%;
   --ui-shadow-x: 0px;
   --ui-shadow-y: 0px;
   --ui-shadow-blur: var(--_cyber-glow);
@@ -67,7 +80,9 @@
 
 /* Firefox and Safari do not draw `corner-shape` yet, and there the radius would
    round the corners instead. A rounded cyber element reads as a different
-   aesthetic; a square one reads as the same aesthetic simplified. */
+   aesthetic; a square one reads as the same aesthetic simplified. What is fully
+   round stays round rather than square: a square radio is a checkbox, and a
+   pill is the nearest a diamond gets without a bevel. */
 @supports not (corner-shape: bevel) {
   .cyber {
     --ui-radius: 0;
@@ -93,17 +108,41 @@
   );
 
   border: 1px solid var(--_cyber-ink);
-  border-radius: var(--cyber-cut, 0.5rem);
+  /* The surface shape: the element this exists for is usually a pane. An action
+     takes the control shape below. */
+  border-radius: var(--cyber-shape-surface, 0 var(--cyber-cut, 0.625rem));
   corner-shape: bevel;
   /* Always lit: the elevation gate the aesthetic class answers to is `box`'s,
      and a solo element is one the consumer chose to light up. */
-  box-shadow: 0 0 var(--cyber-glow, 12px) 0 color-mix(in oklab, var(--_cyber-ink) 70%, transparent);
+  box-shadow: 0 0 var(--cyber-glow, 10px) 0 color-mix(in oklab, var(--_cyber-ink) 55%, transparent);
   font-family: var(--font-cyber, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
   transition: transform var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));
 }
 
+/* An action takes the control shape, on the opposite diagonal to a pane's. */
+.cyber-solo:is(
+  button,
+  a[href],
+  [role="button"],
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"]
+) {
+  border-radius: var(--cyber-shape, var(--cyber-cut, 0.625rem) 0);
+}
+
 @supports not (corner-shape: bevel) {
-  .cyber-solo {
+  .cyber-solo,
+  .cyber-solo:is(
+    button,
+    a[href],
+    [role="button"],
+    summary,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"]
+  ) {
     border-radius: 0;
   }
 }
