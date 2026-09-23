@@ -1,6 +1,6 @@
 ---
 title: Aesthetics
-description: The four shipped aesthetics in depth, including their documented exceptions.
+description: The five shipped aesthetics in depth, their solo classes, and their documented exceptions.
 order: 4
 ---
 
@@ -30,6 +30,7 @@ Like presentation, an aesthetic class cascades to any subtree:
 | `.glass`        | Translucent surfaces over a blurred backdrop with a hairline highlight edge.                                                    |
 | `.pixel`        | Corners cut by one grid unit, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
 | `.chunky-tile`  | Rounded slabs seated on a darker shade of themselves, with a press that moves the element down into its own bar.                |
+| `.cyber`        | Bevelled corners, a thin bright edge, and a glow in the component's own colour.                                                 |
 
 Aesthetics compose with every supported fill and edge pair. `.ghost.edgeless` intentionally removes the visible material traits from components whose aesthetic is expressed only through their fill, edge, or elevation.
 
@@ -119,3 +120,57 @@ The bar is a darker shade of the element's own colour rather than a shadow under
 - `.card.interactive` presses like a `.btn`, so a chunky answer tile drops onto its bar on click; `.card.pressable` gets the same press on its own. A plain `.card` stays put.
 - The shipped `.primary` is a near-black-or-near-white monochrome depending on theme, and the bar mixes toward a fixed black regardless of theme. In light theme this leaves a primary button's bar almost invisible against its own near-black plate (measured `1.04:1`, 10 units of sRGB distance); in dark theme the near-white plate against the same black-anchored bar reads fine (`2.48:1`, 154 units). Give `.primary` a hue of its own if it is the call to action and needs the depth cue in both themes.
 - Depth in this aesthetic is the bar, never a blurred drop shadow. Anything the registry rests flat sits flush on the page.
+
+## Cyber
+
+Bevelled corners, a 1px edge, and a glow in the component's own colour: a success button glows green, a destructive card red. The bevel is drawn with `corner-shape`, so the border, the glow, and the focus outline all follow the cut rather than being clipped by it.
+
+`--cyber-cut` is the corner, `0.5rem`, one value for controls and surfaces alike. `--cyber-glow` is the glow's blur, `12px`. `--cyber-ink` is the neutral line and glow colour, which follows the theme by default -- near-black on light, near-white on dark -- and is where a neon neutral goes if you want one.
+
+```html
+<section class="cyber" style="--cyber-ink: rgb(0 229 255); --cyber-cut: 0.75rem">
+  <button class="btn">Jack in</button>
+</section>
+```
+
+**Exceptions:**
+
+- The bevel is Chromium-only today. Firefox and Safari do not draw `corner-shape` yet, and there the aesthetic squares its corners instead of rounding them, so the look degrades to square, lined, and glowing. It picks up the bevel with no change once an engine ships it.
+- The glow is depth, so it reaches what the registry rests above zero -- buttons and cards -- and anything you raise with `.raised` or `.floating`. Fields, badges, and alerts keep the edge without the glow, and `.flat` takes it off anything.
+- In the light theme the glow of a neutral or `.primary` component is its near-black ink, which reads as a soft shadow rather than as light. The look is at its strongest on a dark page, or with a hued `--cyber-ink`.
+- `.radio` and `.btn.pill` stay round: a cut on a full radius draws a diamond, which reads as neither.
+- Chips that cap their corner at `--radius-small` -- the checkbox, `.kbd`, `.code` -- cap the cut the same way. The switch's knob takes the track's shape, which at this size is a diamond on a hexagonal track.
+- `--font-cyber` is yours to supply. The package ships no font binary, so the aesthetic falls back to the monospace stack.
+- Casing is left alone, for the reason [Chunky tile](#chunky-tile) gives.
+
+## Solo classes
+
+An aesthetic class sets material tokens and nothing paints until a component reads them, so `.glass` on an element this package does not style -- a toast from another library, a dialog, a plain `<div>` on a page without the base stylesheet -- changes nothing. Each aesthetic also ships a solo class that paints its look directly onto the one element carrying it:
+
+| Aesthetic       | Solo class           | Paints                                                                                    |
+| --------------- | -------------------- | ----------------------------------------------------------------------------------------- |
+| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner. |
+| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                       |
+| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.              |
+| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                            |
+| `.cyber`        | `.cyber-solo`        | The bevel, 1px edge, the glow, the technical font.                                        |
+
+```css
+/* The only stylesheet from this package on the page. */
+@import "@codenhub/styles/aesthetics/glass";
+```
+
+```html
+<div class="toast glass-solo">A pane over whatever is behind it.</div>
+```
+
+A solo class ships in the same entrypoint as its aesthetic, and needs nothing else loaded:
+
+- **It paints material, not colour.** Edge, corner, depth, silhouette, backdrop, font, and press. No intent, no fill amount, no hover tint -- the element has no presentation to compose. Glass's translucent ground is the one fill, because it is glass's material.
+- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-glow`, `--cyber-ink`, and the font knobs all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
+- **It ignores the aesthetic around it.** It reads no `--ui-*` or `--elevation-color`, so a `.glass-solo` inside a `.pixel` region keeps its corners. The elevation modifiers do not reach it either.
+- **It beats a foreign component's own styles.** The rules are unlayered and one class deep, so they win over a component's zero-specificity or layered rules wherever the two load. The flip side is that a Tailwind utility on the same element (`rounded-none`) loses to it: tune a solo class through its knobs.
+- **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` that is not disabled; a container stays put, so a toast does not sink when clicked. Reduced motion drops the movement. Chunky tile's heavier label follows the same rule.
+- **Dark values need a colour scheme.** Light and dark pairs are `light-dark()`, which follows the element's `color-scheme`. The package theme sets it; a page without it gets the light values.
+
+Do not put a solo class on this package's own components. On a `.card` it would replace the composed fill, edge, and intent with material alone; use the aesthetic class there.

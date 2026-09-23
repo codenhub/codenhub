@@ -68,7 +68,7 @@ The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source 
 - Publishes color, foundation, intent, presentation, and material design tokens as CSS custom properties, themed with `light-dark()`.
 - Provides a reset, focus-visible handling, and responsive layout/content utilities.
 - Provides composable classes for buttons, form controls and toggles, alerts, badges, loaders, progress, cards/panels, tables, quotes, code, and tooltips.
-- Provides four opt-in aesthetics that restyle the same components by setting material tokens, not by adding component variants.
+- Provides five opt-in aesthetics that restyle the same components by setting material tokens, not by adding component variants, each with a solo class that paints the look onto an element the package does not style.
 - Provides classless mappings so plain HTML elements pick up base styling without added classes, from a dedicated entrypoint.
 - Publishes Tailwind CSS v4 source entrypoints alongside the compiled output.
 
@@ -77,7 +77,7 @@ The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source 
 - No JavaScript. There is no runtime, no framework bindings, and no build-time code generation beyond the CSS itself.
 - No semantic HTML, ARIA, keyboard behavior, focus management, validation, or announcement timing. See [Accessibility](docs/accessibility.md) for the exact line between what the CSS provides and what an application must still add.
 - No theme-toggling logic. Theme selection is a class or attribute a consumer applies; wiring a toggle to system preference, storage, or a user setting is outside this package. The `@codenhub/theme` package covers that need for consumers who want it.
-- No shipped font binaries. `.pixel` and `.chunky-tile` accept a consumer-supplied font and fall back to a system stack when none is given.
+- No shipped font binaries. `.pixel`, `.chunky-tile`, and `.cyber` accept a consumer-supplied font and fall back to a system stack when none is given.
 - No compatibility layer for removed tokens or classes. Breaking changes are documented, not silently aliased.
 
 ## Next steps
@@ -175,8 +175,8 @@ Compiled entrypoints are ready-to-import CSS and require only tooling that can r
 | `@codenhub/styles/palette`       | Generated, self-contained `--palette-*` custom properties: every intent/presentation cell's fill, text, and edge color, plus the flat `border`/`surface`/`text` neutral tokens, pre-composed to a flat value. For a consumer that cannot take this package as a build-time dependency (an optional peer, for example) but wants to look consistent with it. Not a replacement for the components themselves when Tailwind is available -- see [Customizing → Generated palette](docs/usage/customizing.md#generated-palette). |
 | `@codenhub/styles/components`    | Compiled theme tokens, typography utilities, and every component class. Includes static reduced-motion loader masks; no reset, layout/content utilities, or native mappings.                                                                                                                                                                                                                                                                                                                                               |
 | `@codenhub/styles/native`        | Compiled complete surface plus classless mappings for headings, text, content elements, form controls, and buttons. Applies the reset and broad element selectors.                                                                                                                                                                                                                                                                                                                                                         |
-| `@codenhub/styles/aesthetics`    | Compiled `.neobrutalism`, `.glass`, `.pixel`, and `.chunky-tile` classes. Adds no tokens or components of its own; import after the base stylesheet.                                                                                                                                                                                                                                                                                                                                                                       |
-| `@codenhub/styles/aesthetics/*`  | One compiled aesthetic: `/neobrutalism`, `/glass`, `/pixel`, or `/chunky-tile`. Same rules and ordering as the combined file.                                                                                                                                                                                                                                                                                                                                                                                              |
+| `@codenhub/styles/aesthetics`    | Compiled `.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`, and `.cyber` classes, and each one's `-solo` class. Adds no tokens or components of its own; import after the base stylesheet.                                                                                                                                                                                                                                                                                                                               |
+| `@codenhub/styles/aesthetics/*`  | One compiled aesthetic and its solo class: `/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, or `/cyber`. Same rules and ordering as the combined file.                                                                                                                                                                                                                                                                                                                                                                 |
 | `@codenhub/styles/tw`            | Source equivalent of the complete stylesheet. Imports Tailwind itself, theme, typography, utilities, components, and reset; applies the same global rules.                                                                                                                                                                                                                                                                                                                                                                 |
 | `@codenhub/styles/tw/theme`      | Source theme, tokens, and presentation classes. Imports Tailwind's theme layer; emits root/system/explicit theme selectors and defines the package's custom `dark:` variant.                                                                                                                                                                                                                                                                                                                                               |
 | `@codenhub/styles/tw/components` | Published Tailwind source for theme, typography, buttons, feedback, forms, loaders, surfaces, and tooltips, including static reduced-motion loader masks. No reset, layout/content utilities, or native mappings.                                                                                                                                                                                                                                                                                                          |
@@ -190,7 +190,7 @@ Compiled entrypoints are ready-to-import CSS and require only tooling that can r
 | `@codenhub/styles/tw/native`     | Source complete surface plus reset and classless native-element mappings; broadest global effects.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `@codenhub/styles/tw/typography` | Source theme plus typography utilities; sets theme selectors but no reset or classless mappings.                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `@codenhub/styles/tw/utilities`  | Source theme and typography composition plus layout and content utilities; safelists the package utility names.                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `@codenhub/styles/tw/aesthetics` | Source aesthetics, combined. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, and `/chunky-tile` publish one apiece. Plain CSS with no theme or reset side effects.                                                                                                                                                                                                                                                                                                                                                      |
+| `@codenhub/styles/tw/aesthetics` | Source aesthetics, combined. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, and `/cyber` publish one apiece. Plain CSS with no theme or reset side effects.                                                                                                                                                                                                                                                                                                                                            |
 
 Avoid importing overlapping entrypoints in the same build unless duplicate generated CSS is acceptable; pick the narrowest entrypoint that covers what a page needs.
 
@@ -211,11 +211,11 @@ Read this before the usage guides. It explains the mental model every component,
 
 Every component separates three independent choices, so each can change without a component-specific variant:
 
-| Axis         | Question        | Classes                                                                                   | Inheritance  |
-| ------------ | --------------- | ----------------------------------------------------------------------------------------- | ------------ |
-| Intent       | Which color?    | `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.info`                 | Element only |
-| Presentation | How much of it? | `.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`                                        | Cascades     |
-| Aesthetic    | Made of what?   | `.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile` from an optional aesthetic stylesheet | Cascades     |
+| Axis         | Question        | Classes                                                                                             | Inheritance  |
+| ------------ | --------------- | --------------------------------------------------------------------------------------------------- | ------------ |
+| Intent       | Which color?    | `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.info`                           | Element only |
+| Presentation | How much of it? | `.solid`, `.soft`, `.ghost`, `.edged`, `.edgeless`                                                  | Cascades     |
+| Aesthetic    | Made of what?   | `.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`, `.cyber` from an optional aesthetic stylesheet | Cascades     |
 
 ```html
 <section class="soft pixel">
@@ -625,6 +625,7 @@ Components read each with a fallback, so leaving them unset produces the default
 | ----------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------- |
 | `--ui-radius`           | Corner radius for controls.                                                                                   | `--radius-control`   |
 | `--ui-radius-surface`   | Corner radius for surfaces.                                                                                   | `--radius-surface`   |
+| `--ui-corner-shape`     | What every corner the two radii set draws: `round`, or `bevel` for a straight cut. Chromium only today.       | `round`              |
 | `--ui-border-width`     | Edge thickness.                                                                                               | `--border-width`     |
 | `--ui-border-max`       | Ceiling on computed edge width.                                                                               | `100px`              |
 | `--ui-ink`              | Neutral line color when no intent is set.                                                                     | `--color-border`     |
@@ -664,6 +665,8 @@ Components read each with a fallback, so leaving them unset produces the default
 
 Clipping removes borders, outlines, and outer shadows. An aesthetic that uses a clip can replace the border with an inset shadow by setting `--ui-shadow-inset` and the four shadow geometry parts. Set `--ui-border-max: 0px` when that ring replaces the component border. Focusable components restore the clipped focus outline through `--ui-focus-inset`.
 
+A clip is not the only way to cut a corner. `--ui-corner-shape: bevel` draws the corner the radius sets as a straight cut instead of an arc, and the border, outer shadow, focus outline, and backdrop all follow it -- so a bevelled element keeps its glow and its line, where a clipped one loses both. `.cyber` uses it. Engines without `corner-shape` ignore it and draw the radius round, so an aesthetic that bevels should square its radius under `@supports not (corner-shape: bevel)`. `.radio` and `.btn.pill` stay round under any value, because a cut on a full radius draws a diamond.
+
 Declare `--ui-shadow-edge` when that ring _is_ the border. The ring then takes the element's edge color, which carries the edge axis as its alpha, so `.edged` draws it and `.edgeless` does not — the same answer a real border gives. Without it the ring paints on every component the aesthetic reaches and the edge classes have no effect. Use `--ui-shadow-ink` instead when the shadow is depth cast in the intent's own ink, such as a hard offset slab, which an `.edgeless` element still gets.
 
 The token is read for its presence, not its value: declare it empty to switch the ring on, and `initial` to switch it back off in an aesthetic nested inside one that declares it.
@@ -689,18 +692,22 @@ Variables prefixed `--_` are internal composition outputs — `--_bg`, `--_fg`, 
 
 The shipped [aesthetic classes](docs/usage/aesthetics.md) set material tokens for you. Only aesthetics with a token listed below expose an aesthetic-specific token. Tune all other behavior through the shared material tokens above. Listed tokens are available only where that aesthetic's stylesheet is imported.
 
-| Token                    | Aesthetic       | Purpose                                                     | Default                           |
-| ------------------------ | --------------- | ----------------------------------------------------------- | --------------------------------- |
-| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance the press travels.          | `4px`                             |
-| `--glass-radius`         | `.glass`        | Control corner radius.                                      | `0.75rem`                         |
-| `--glass-radius-surface` | `.glass`        | Surface corner radius.                                      | `1rem`                            |
-| `--pixel-unit`           | `.pixel`        | One pixel of the grid. The corner cut and the ring are one. | `4px`                             |
-| `--font-pixel`           | `.pixel`        | Consumer-supplied pixel font stack.                         | Falls back to the monospace stack |
-| `--tile-radius`          | `.chunky-tile`  | Corner radius, on controls and surfaces alike.              | `0.75rem`                         |
-| `--tile-lift`            | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.       | `4px`                             |
-| `--font-rounded`         | `.chunky-tile`  | Consumer-supplied rounded font stack.                       | Falls back to the page stack      |
+| Token                    | Aesthetic       | Purpose                                                      | Default                            |
+| ------------------------ | --------------- | ------------------------------------------------------------ | ---------------------------------- |
+| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance the press travels.           | `4px`                              |
+| `--glass-radius`         | `.glass`        | Control corner radius.                                       | `0.75rem`                          |
+| `--glass-radius-surface` | `.glass`        | Surface corner radius.                                       | `1rem`                             |
+| `--pixel-unit`           | `.pixel`        | One pixel of the grid. The corner cut and the ring are one.  | `4px`                              |
+| `--font-pixel`           | `.pixel`        | Consumer-supplied pixel font stack.                          | Falls back to the monospace stack  |
+| `--tile-radius`          | `.chunky-tile`  | Corner radius, on controls and surfaces alike.               | `0.75rem`                          |
+| `--tile-lift`            | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.        | `4px`                              |
+| `--font-rounded`         | `.chunky-tile`  | Consumer-supplied rounded font stack.                        | Falls back to the page stack       |
+| `--cyber-cut`            | `.cyber`        | Size of the bevelled corner, on controls and surfaces alike. | `0.5rem`                           |
+| `--cyber-glow`           | `.cyber`        | Blur of the glow.                                            | `12px`                             |
+| `--cyber-ink`            | `.cyber`        | Neutral line and glow colour, where no intent sets one.      | Theme ink (near-black, near-white) |
+| `--font-cyber`           | `.cyber`        | Consumer-supplied technical font stack.                      | Falls back to the monospace stack  |
 
-All four aesthetics reach the same way: each knob is _read_ with its default as a `var()` fallback rather than declared, so it resolves once into a private on the aesthetic's own class (`--_pixel-unit`, `--_neo-offset`, `--_tile-radius`, `--_tile-lift`, and so on). Set a knob on the element carrying the aesthetic class, or on any ancestor including `:root`:
+Every aesthetic's knobs reach the same way: each knob is _read_ with its default as a `var()` fallback rather than declared, so it resolves once into a private on the aesthetic's own class (`--_pixel-unit`, `--_neo-offset`, `--_tile-radius`, `--_tile-lift`, and so on). Set a knob on the element carrying the aesthetic class, or on any ancestor including `:root`:
 
 ```html
 <section class="pixel" style="--pixel-unit: 6px">
@@ -718,7 +725,9 @@ All four aesthetics reach the same way: each knob is _read_ with its default as 
 
 Knobs and material tokens reach in opposite directions, and telling them apart matters. A knob resolves once at the aesthetic's own class and inherits down already-resolved, so it reaches the aesthetic **from above**: setting it on the element or any ancestor works, but setting it on a _descendant_ of the aesthetic class changes nothing — the value has already been read. `--ui-radius` and the other material tokens above are read fresh by each component as it draws, so they reach **at or below** the element carrying them, which is how you round one card differently from its neighbours without touching the knob at all.
 
-Shipped aesthetics set the shared material tokens above. `.neobrutalism` and `.pixel` set `--ui-ink` for their neutral outline; intent classes still override the intent slots on each component.
+Shipped aesthetics set the shared material tokens above. `.neobrutalism`, `.pixel`, and `.cyber` set `--ui-ink` for their neutral outline; intent classes still override the intent slots on each component.
+
+The same knobs tune each aesthetic's [solo class](docs/usage/aesthetics.md#solo-classes), which reads them on its own element.
 
 ## Generated palette
 
@@ -785,6 +794,7 @@ Like presentation, an aesthetic class cascades to any subtree:
 | `.glass`        | Translucent surfaces over a blurred backdrop with a hairline highlight edge.                                                    |
 | `.pixel`        | Corners cut by one grid unit, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
 | `.chunky-tile`  | Rounded slabs seated on a darker shade of themselves, with a press that moves the element down into its own bar.                |
+| `.cyber`        | Bevelled corners, a thin bright edge, and a glow in the component's own colour.                                                 |
 
 Aesthetics compose with every supported fill and edge pair. `.ghost.edgeless` intentionally removes the visible material traits from components whose aesthetic is expressed only through their fill, edge, or elevation.
 
@@ -874,6 +884,60 @@ The bar is a darker shade of the element's own colour rather than a shadow under
 - `.card.interactive` presses like a `.btn`, so a chunky answer tile drops onto its bar on click; `.card.pressable` gets the same press on its own. A plain `.card` stays put.
 - The shipped `.primary` is a near-black-or-near-white monochrome depending on theme, and the bar mixes toward a fixed black regardless of theme. In light theme this leaves a primary button's bar almost invisible against its own near-black plate (measured `1.04:1`, 10 units of sRGB distance); in dark theme the near-white plate against the same black-anchored bar reads fine (`2.48:1`, 154 units). Give `.primary` a hue of its own if it is the call to action and needs the depth cue in both themes.
 - Depth in this aesthetic is the bar, never a blurred drop shadow. Anything the registry rests flat sits flush on the page.
+
+## Cyber
+
+Bevelled corners, a 1px edge, and a glow in the component's own colour: a success button glows green, a destructive card red. The bevel is drawn with `corner-shape`, so the border, the glow, and the focus outline all follow the cut rather than being clipped by it.
+
+`--cyber-cut` is the corner, `0.5rem`, one value for controls and surfaces alike. `--cyber-glow` is the glow's blur, `12px`. `--cyber-ink` is the neutral line and glow colour, which follows the theme by default -- near-black on light, near-white on dark -- and is where a neon neutral goes if you want one.
+
+```html
+<section class="cyber" style="--cyber-ink: rgb(0 229 255); --cyber-cut: 0.75rem">
+  <button class="btn">Jack in</button>
+</section>
+```
+
+**Exceptions:**
+
+- The bevel is Chromium-only today. Firefox and Safari do not draw `corner-shape` yet, and there the aesthetic squares its corners instead of rounding them, so the look degrades to square, lined, and glowing. It picks up the bevel with no change once an engine ships it.
+- The glow is depth, so it reaches what the registry rests above zero -- buttons and cards -- and anything you raise with `.raised` or `.floating`. Fields, badges, and alerts keep the edge without the glow, and `.flat` takes it off anything.
+- In the light theme the glow of a neutral or `.primary` component is its near-black ink, which reads as a soft shadow rather than as light. The look is at its strongest on a dark page, or with a hued `--cyber-ink`.
+- `.radio` and `.btn.pill` stay round: a cut on a full radius draws a diamond, which reads as neither.
+- Chips that cap their corner at `--radius-small` -- the checkbox, `.kbd`, `.code` -- cap the cut the same way. The switch's knob takes the track's shape, which at this size is a diamond on a hexagonal track.
+- `--font-cyber` is yours to supply. The package ships no font binary, so the aesthetic falls back to the monospace stack.
+- Casing is left alone, for the reason [Chunky tile](#chunky-tile) gives.
+
+## Solo classes
+
+An aesthetic class sets material tokens and nothing paints until a component reads them, so `.glass` on an element this package does not style -- a toast from another library, a dialog, a plain `<div>` on a page without the base stylesheet -- changes nothing. Each aesthetic also ships a solo class that paints its look directly onto the one element carrying it:
+
+| Aesthetic       | Solo class           | Paints                                                                                    |
+| --------------- | -------------------- | ----------------------------------------------------------------------------------------- |
+| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner. |
+| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                       |
+| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.              |
+| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                            |
+| `.cyber`        | `.cyber-solo`        | The bevel, 1px edge, the glow, the technical font.                                        |
+
+```css
+/* The only stylesheet from this package on the page. */
+@import "@codenhub/styles/aesthetics/glass";
+```
+
+```html
+<div class="toast glass-solo">A pane over whatever is behind it.</div>
+```
+
+A solo class ships in the same entrypoint as its aesthetic, and needs nothing else loaded:
+
+- **It paints material, not colour.** Edge, corner, depth, silhouette, backdrop, font, and press. No intent, no fill amount, no hover tint -- the element has no presentation to compose. Glass's translucent ground is the one fill, because it is glass's material.
+- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-glow`, `--cyber-ink`, and the font knobs all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
+- **It ignores the aesthetic around it.** It reads no `--ui-*` or `--elevation-color`, so a `.glass-solo` inside a `.pixel` region keeps its corners. The elevation modifiers do not reach it either.
+- **It beats a foreign component's own styles.** The rules are unlayered and one class deep, so they win over a component's zero-specificity or layered rules wherever the two load. The flip side is that a Tailwind utility on the same element (`rounded-none`) loses to it: tune a solo class through its knobs.
+- **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` that is not disabled; a container stays put, so a toast does not sink when clicked. Reduced motion drops the movement. Chunky tile's heavier label follows the same rule.
+- **Dark values need a colour scheme.** Light and dark pairs are `light-dark()`, which follows the element's `color-scheme`. The package theme sets it; a page without it gets the light values.
+
+Do not put a solo class on this package's own components. On a `.card` it would replace the composed fill, edge, and intent with material alone; use the aesthetic class there.
 
 <!-- Source: docs/usage/buttons.md -->
 
