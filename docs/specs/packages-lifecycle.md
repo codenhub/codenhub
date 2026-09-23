@@ -189,7 +189,7 @@ Package README files MUST follow `docs/specs/packages-readme.md`.
 
 Package documentation MUST follow `docs/specs/packages-documentation.md`.
 
-Private packages intended to expose public documentation MUST opt in through `codenhub.docs` and follow the same documentation spec. Publication status and documentation eligibility are separate concerns: a package does not need to be published to provide public documentation.
+Private packages intended to expose public documentation MUST opt in through `codenhub.docs` and follow the same documentation spec. Opting in makes documentation eligible for the site; it does not publish it. The production documentation site publishes a package only from its latest release tag (`docs/ci.md`, "Publish-scoped content"), and a private package is never released, so an opted-in private package's documentation is held to the documentation spec and served by `astro dev`, but never reaches the production site.
 
 README examples and public reference docs MUST match `package.json` `exports`. When `exports` changes, source JSDoc/TSDoc, README content, public docs, and LLM files MUST be reviewed in the same change.
 
