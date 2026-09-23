@@ -11,6 +11,7 @@ import { createDocumentationIntegration } from "./src/lib/documentation-integrat
 import { createCodeBlockTransformer } from "./src/lib/markdown/code-blocks";
 import { rehypeMarkdownEnhancements } from "./src/lib/markdown/rehype-enhancements";
 import { remarkAlerts } from "./src/lib/markdown/remark-alerts";
+import { snapshotPackagesRoot } from "./src/lib/published-docs-snapshot";
 import { createPublishedDocsSnapshotIntegration } from "./src/lib/published-docs-snapshot-integration";
 import { siteConfig } from "./src/site-config";
 
@@ -21,9 +22,14 @@ const publishedDocsSnapshotRoot = path.resolve(appRoot, ".codenhub-published-doc
 
 export default defineConfig({
   site: siteConfig.siteUrl,
+  // Order matters: setup hooks run in sequence, and the documentation
+  // integration reads the snapshot the first one writes.
   integrations: [
-    createDocumentationIntegration({ packagesRoot }),
     createPublishedDocsSnapshotIntegration({ repoRoot, snapshotRoot: publishedDocsSnapshotRoot }),
+    createDocumentationIntegration({
+      packagesRoot,
+      publishedPackagesRoot: snapshotPackagesRoot(publishedDocsSnapshotRoot),
+    }),
   ],
   markdown: {
     processor: unified({

@@ -3,17 +3,23 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createDocumentationIntegration } from "./documentation-integration";
+
+const ROOTS = { packagesRoot: "C:/repo/packages", publishedPackagesRoot: "C:/snapshot/packages" };
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("Astro package documentation integration", () => {
   it("loads validated documentation and installs the resource dev plugin", async () => {
     const loadDocumentation = vi.fn().mockResolvedValue([]);
     const updateConfig = vi.fn();
-    const integration = createDocumentationIntegration({ loadDocumentation, packagesRoot: "C:/repo/packages" });
+    const integration = createDocumentationIntegration({ loadDocumentation, ...ROOTS });
 
-    await integration.hooks["astro:config:setup"]!({ updateConfig } as never);
+    await integration.hooks["astro:config:setup"]!({ command: "dev", updateConfig } as never);
 
     expect(loadDocumentation).toHaveBeenCalledWith("C:/repo/packages");
     expect(updateConfig).toHaveBeenCalledWith({
@@ -21,9 +27,29 @@ describe("Astro package documentation integration", () => {
     });
   });
 
+  it("reads resources from the published snapshot for a production build", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const loadDocumentation = vi.fn().mockResolvedValue([]);
+    const integration = createDocumentationIntegration({ loadDocumentation, ...ROOTS });
+
+    await integration.hooks["astro:config:setup"]!({ command: "build", updateConfig: vi.fn() } as never);
+
+    expect(loadDocumentation).toHaveBeenCalledWith("C:/snapshot/packages");
+  });
+
+  it("reads resources from the working tree for a build whose pages do", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+    const loadDocumentation = vi.fn().mockResolvedValue([]);
+    const integration = createDocumentationIntegration({ loadDocumentation, ...ROOTS });
+
+    await integration.hooks["astro:config:setup"]!({ command: "build", updateConfig: vi.fn() } as never);
+
+    expect(loadDocumentation).toHaveBeenCalledWith("C:/repo/packages");
+  });
+
   it("fails config setup when package documentation validation fails", async () => {
     const loadDocumentation = vi.fn().mockRejectedValue(new Error("Invalid package documentation"));
-    const integration = createDocumentationIntegration({ loadDocumentation, packagesRoot: "C:/repo/packages" });
+    const integration = createDocumentationIntegration({ loadDocumentation, ...ROOTS });
 
     await expect(integration.hooks["astro:config:setup"]!({ updateConfig: vi.fn() } as never)).rejects.toThrow(
       "Invalid package documentation",
@@ -43,7 +69,7 @@ describe("Astro package documentation integration", () => {
           routePath: "/example/assets/diagram.svg",
         },
       ],
-      packagesRoot: "C:/repo/packages",
+      ...ROOTS,
     });
     await integration.hooks["astro:config:setup"]!({ updateConfig: vi.fn() } as never);
 
