@@ -127,8 +127,9 @@ export type RegistryReader = (workspacePackage: WorkspacePackage, timeoutMs?: nu
  *
  * `docs/specs/packages-lifecycle.md` asks for this confirmation after every
  * publish. It is a report and never a gate: registry metadata propagates
- * eventually, so a version that has not appeared yet means "check again in a
- * moment", not "the publish failed".
+ * eventually, and npm's automated review can hold a new version for minutes,
+ * so a version that has not appeared yet means "check again later", not "the
+ * publish failed".
  * @param workspacePackage Package to look up.
  * @param timeoutMs Milliseconds before npm is killed, or `undefined` to wait indefinitely.
  * @returns The published version, or `undefined` when the registry did not answer with one.

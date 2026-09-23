@@ -259,9 +259,24 @@ describe("hub publish", () => {
       servedVersion: "0.9.0",
     });
 
-    expect(result.output).toContain("metadata may still be propagating");
+    expect(result.output).toContain("the registry serves 0.9.0, not 1.0.0 yet");
+    expect(result.output).toContain("npm may still be propagating it or holding it for automated review");
     expect(result.published).toEqual(["@codenhub/error"]);
     expect(result.exitCode).toBe(EXIT_SUCCESS);
+  });
+
+  it("points at the npm versions page, where a version under review shows its status", async () => {
+    const result = await runPublish([createPackage("@codenhub/error", "1.0.0")], ["--from-tag=@codenhub/error@1.0.0"], {
+      servedVersion: "0.9.0",
+    });
+
+    expect(result.output).toContain("https://www.npmjs.com/package/@codenhub/error?activeTab=versions");
+  });
+
+  it("says nothing is served yet for a first release the registry has not caught up with", async () => {
+    const result = await runPublish([createPackage("@codenhub/error", "1.0.0")], ["error"]);
+
+    expect(result.output).toContain("the registry serves nothing, not 1.0.0 yet");
   });
 
   it("succeeds without publishing or verifying when the tagged version is already on npm", async () => {

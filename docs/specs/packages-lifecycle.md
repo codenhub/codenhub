@@ -161,7 +161,7 @@ A pre-release version — one carrying a SemVer suffix such as `-beta.1` — MUS
 
 Package `prepublishOnly` still runs the build and typecheck that npm requires at publish time.
 
-After publishing, confirm the registry version, dist tags, and package access status. `hub publish` reads the served version back and reports it; package `status:npm` reports all three. If `npm view` is temporarily unavailable immediately after publish but `npm dist-tag ls` and `npm access get status` succeed, wait for registry metadata propagation and retry before announcing consumer readiness.
+After publishing, confirm the registry version, dist tags, and package access status. `hub publish` reads the served version back and reports it; package `status:npm` reports all three. If `npm view` is temporarily unavailable immediately after publish but `npm dist-tag ls` and `npm access get status` succeed, wait for registry metadata propagation and retry before announcing consumer readiness. The same wait applies while npm's automated review holds a new version, which the package's versions page on npmjs.com shows as "Validating"; the version is published but not yet installable.
 
 Published packages MUST NOT include secrets, local paths, internal docs, test fixtures that are not useful to consumers, or build artifacts outside `files`.
 

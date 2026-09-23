@@ -309,7 +309,7 @@ A normal release publishes under npm's `latest` dist-tag. A pre-release version 
 
 Authentication is never configured here. In `.github/workflows/publish.yml` it comes from npm trusted publishing, which exchanges the job's OIDC token for a short-lived credential; on a maintainer's machine it comes from their own `npm login`. No npm token exists in this repository. No `--provenance` flag is passed either: trusted publishing attaches provenance on its own, and the flag is rejected outside a supported CI provider, so passing it would buy nothing in the workflow and break the same command locally.
 
-After a successful publish it reads the version npm serves back and reports it, which is the confirmation `docs/specs/packages-lifecycle.md` asks for. That read is a report and never a gate — registry metadata propagates eventually, so a version that has not appeared yet means "look again in a moment", not "the publish failed".
+After a successful publish it reads the version npm serves back and reports it, which is the confirmation `docs/specs/packages-lifecycle.md` asks for. That read is a report and never a gate. A version npm accepted can stay unreadable for minutes, while registry metadata propagates or while npm's automated review holds it — the package's versions page on npmjs.com shows it as "Validating" meanwhile, and the command prints that page's URL. A version that has not appeared yet means "look again later", not "the publish failed".
 
 ## Cleaning
 
