@@ -1,12 +1,12 @@
 ---
-status: APPROVED
-last_updated: 2026-09-16
+status: IMPLEMENTED
+last_updated: 2026-09-23
 scope: Decision to give `.progress`'s track a real presentation (fill and edge), and why the other three indicators do not get the same treatment.
 ---
 
 # `.progress` gains presentation; the other indicators don't
 
-This is agreed direction. Future work on `.progress` and on the indicator group MUST follow it; existing code is legacy until updated, per the repository root `docs/README.md`'s `APPROVED` status.
+This is agreed direction, shipped in `0.3.0`. Future work on `.progress` and on the indicator group MUST follow it, and the current code is expected to comply, per the repository root `docs/README.md`'s `IMPLEMENTED` status.
 
 This document intentionally contains no diffs or drop-in code. It states the decision and the reasoning behind it; the implementer derives the actual change from the referenced precedent in source, the same way every other component in the package was written. A prescriptive snippet here would go stale the moment the real implementation diverges from it, and would then be trusted over the real code -- see [Model](./model.md#seams-not-rewrites) on why a composed result, once written down somewhere else, stops being the thing anyone actually reads.
 

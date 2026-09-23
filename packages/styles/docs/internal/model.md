@@ -1,12 +1,12 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-03
+last_updated: 2026-09-23
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
 # Model
 
-What decides how an element looks in 0.1.0.
+What decides how an element looks. The model landed in 0.1.0; later releases extend it without replacing it.
 
 This document is the source of truth for the token contracts; public documents under `docs/` describe the same model for consumers.
 

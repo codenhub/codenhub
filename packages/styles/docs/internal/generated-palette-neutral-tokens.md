@@ -1,12 +1,12 @@
 ---
-status: APPROVED
-last_updated: 2026-09-18
+status: IMPLEMENTED
+last_updated: 2026-09-23
 scope: Extends `./palette` with `--color-border`/`--color-surface`/`--color-text`'s flat values, for the same optional-peer consumers `./palette` already serves.
 ---
 
 # Flat neutral tokens in the generated palette
 
-This is agreed direction, implemented in `scripts/generate-palette.mjs` and shipped in `src/palette.css`. It extends [A generated palette for consumers outside the Tailwind pipeline](./generated-palette.md) and should be read after it -- this document assumes that one's problem statement, evidence method, and "Public surface" precedent, and does not repeat them.
+This is agreed direction, shipped in `0.3.0`, implemented in `scripts/generate-palette.mjs` and shipped in `src/palette.css`. It extends [A generated palette for consumers outside the Tailwind pipeline](./generated-palette.md) and should be read after it -- this document assumes that one's problem statement, evidence method, and "Public surface" precedent, and does not repeat them.
 
 ## The problem
 
