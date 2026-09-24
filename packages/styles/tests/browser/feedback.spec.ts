@@ -276,6 +276,54 @@ test.describe("feedback", () => {
     expect(new Set(images).size).toBe(testIds.length);
   });
 
+  /* The artwork's closing `style` tag ships percent-encoded so the stylesheet
+     survives being inlined into an HTML `<style>` element. A data URI decodes
+     the escape before the SVG is parsed; an image that failed to parse would
+     reject `decode()` and mask nothing. */
+  test("decodes every loader artwork", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+
+    const results = await page.evaluate(async () => {
+      const testIds = [
+        "loader-default",
+        "loader-dots-wave",
+        "loader-dots-fade",
+        "loader-dots-queue",
+        "loader-dots-rotate",
+        "loader-dots-grow",
+        "loader-dots-grow-alternate",
+        "loader-dot-bounce",
+        "loader-bars-wave",
+        "loader-pulse-ring",
+      ];
+
+      return Promise.all(
+        testIds.map(async (testId) => {
+          /* The mask, not `--loader-art`: a custom property reads back as
+             authored, and the dev server's CSS pipeline authors `<` as the
+             CSS escape `\3c `, which is not a URL character. */
+          const styles = getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+          const mask = styles.maskImage || styles.getPropertyValue("-webkit-mask-image");
+          const source = /^url\(\s*(["']?)(.*)\1\s*\)$/s.exec(mask)?.[2] ?? "";
+          const image = new Image();
+
+          image.src = source;
+
+          try {
+            await image.decode();
+            return { testId, decoded: image.naturalWidth > 0 };
+          } catch {
+            return { testId, decoded: false };
+          }
+        }),
+      );
+    });
+
+    for (const { testId, decoded } of results) {
+      expect(decoded, testId).toBe(true);
+    }
+  });
+
   test("renders every alert fill", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 

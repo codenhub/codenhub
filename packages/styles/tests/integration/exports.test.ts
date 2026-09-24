@@ -193,6 +193,22 @@ test("every declared package export target exists after build", async () => {
   );
 });
 
+/* An HTML `<style>` element ends at the first `</style`, whatever CSS token it
+   sits in, so a stylesheet inlined into a page would drop every rule after one.
+   Every CSS file under `dist/` ships -- the compiled entries and the `/tw`
+   sources alike -- so every one is checked, not just the export targets. */
+test("no shipped stylesheet contains a sequence that ends an inline style element", async () => {
+  const distRoot = path.resolve(packageRoot, "dist");
+  const stylesheets = (await readdir(distRoot, { recursive: true })).filter((file) => file.endsWith(".css"));
+  const outputs = await Promise.all(stylesheets.map((file) => readFile(path.join(distRoot, file), "utf8")));
+  const unsafe = stylesheets
+    .filter((_, index) => /<\/style/i.test(outputs[index]!))
+    .map((file) => `dist/${file.replaceAll("\\", "/")}`);
+
+  expect(stylesheets.length).toBeGreaterThan(0);
+  expect(unsafe).toEqual([]);
+});
+
 for (const [exportName, contract] of Object.entries(compiledExportContracts)) {
   test(`${exportName} compiled export contains its representative public surface`, async () => {
     const output = await readFile(path.resolve(packageRoot, contract.target), "utf8");
