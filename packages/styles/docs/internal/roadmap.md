@@ -26,7 +26,7 @@ The release notes are written when `0.5.0` is cut, and lead with the layers' bre
 
 ## Planned
 
-All of this is `0.5.0` scope. [Model](./model.md#what-the-material-contract-does-not-express-yet) states each structural part as it stands today and what any answer must keep; the entries below add what has to be settled.
+All of this is `0.5.0` scope. [Model](./model.md#what-the-material-contract-does-not-express-yet) states each structural part as it stands today and what any answer must keep; the entries below add what has to be settled. [Structure for 0.5.0](./structure.md) proposes an answer to every item under Structure below.
 
 ### Structure
 
