@@ -203,6 +203,105 @@ for (const [exportName, contract] of Object.entries(compiledExportContracts)) {
   });
 }
 
+/* Cascade layers (docs/internal/cascade-layers.md). A browser orders layers by
+   the first time it meets each name, so every compiled entrypoint has to name
+   the package's four in Tailwind's order before it uses one -- a sheet that
+   opened `components` first would rank it below `theme` and `base` when loaded
+   on its own. `properties` is Tailwind's `@property` fallback layer and sits
+   wherever Tailwind puts it. */
+const LAYER_ORDER = ["theme", "base", "components", "utilities"];
+
+function firstLayerOrder(css: string): string[] {
+  const names = [...css.matchAll(/@layer\s+([a-z][a-z0-9.,\s-]*?)\s*[;{]/g)].flatMap((match) =>
+    match[1]!.split(",").map((name) => name.trim()),
+  );
+
+  return [...new Set(names)].filter((name) => name !== "properties");
+}
+
+/* Every style rule that sits in no `@layer`, with the at-rules around it. A
+   brace walk over the minified output, skipping quoted strings so a data URI
+   cannot open or close a block. */
+function unlayeredRules(source: string): { context: string; selector: string }[] {
+  const css = source.replace(/\/\*[\s\S]*?\*\//g, "");
+  const rules: { context: string; selector: string }[] = [];
+  const stack: string[] = [];
+  let buffer = "";
+  let quote: string | null = null;
+
+  for (let index = 0; index < css.length; index++) {
+    const character = css[index]!;
+
+    if (quote) {
+      buffer += character;
+      if (character === quote && css[index - 1] !== "\\") {
+        quote = null;
+      }
+    } else if (character === '"' || character === "'") {
+      quote = character;
+      buffer += character;
+    } else if (character === "{") {
+      const head = buffer.trim();
+      const inStyleRule = stack.some((entry) => !entry.startsWith("@"));
+      const inLayer = stack.some((entry) => entry.startsWith("@layer"));
+
+      if (!head.startsWith("@") && !inStyleRule && !inLayer) {
+        rules.push({ context: stack.join(" > "), selector: head });
+      }
+      stack.push(head);
+      buffer = "";
+    } else if (character === "}") {
+      stack.pop();
+      buffer = "";
+    } else if (character === ";") {
+      buffer = "";
+    } else {
+      buffer += character;
+    }
+  }
+
+  return rules;
+}
+
+/* What may stay unlayered, each because it has to beat every layer: the
+   `forced-colors` and reduced-motion accessibility overrides, the closed and
+   open `<dialog>` restatements that must beat `.card`'s own `display`, and the
+   solo classes, which must beat a foreign component's unlayered CSS. Keyframe
+   steps are not style rules at all. Anything else unlayered beats a consumer's
+   utility, which is the thing the layer map exists to stop. */
+const UNLAYERED_ALLOWED: { reason: string; matches: (rule: { context: string; selector: string }) => boolean }[] = [
+  { reason: "keyframe step", matches: (rule) => rule.context.startsWith("@keyframes") },
+  { reason: "forced-colors override", matches: (rule) => rule.context.includes("forced-colors:active") },
+  {
+    reason: "reduced-motion loader art",
+    matches: (rule) =>
+      rule.context.includes("prefers-reduced-motion:reduce") &&
+      /^\.(?:loader|dots?-[a-z-]+|bars-wave|pulse-ring)(?:,|$)/.test(rule.selector),
+  },
+  { reason: "dialog restatement", matches: (rule) => /^dialog(?::not\(\[open\]\)|\[open\])$/.test(rule.selector) },
+  { reason: "solo class", matches: (rule) => /-solo\b/.test(rule.selector) },
+];
+
+const compiledTargets = [...new Set(Object.values(compiledExportContracts).map((contract) => contract.target))];
+
+for (const target of compiledTargets) {
+  test(`${target} declares the package's layer order before using a layer`, async () => {
+    const output = await readFile(path.resolve(packageRoot, target), "utf8");
+
+    expect(firstLayerOrder(output)).toEqual(LAYER_ORDER);
+  });
+
+  test(`${target} leaves nothing unlayered but the allowlist`, async () => {
+    const output = await readFile(path.resolve(packageRoot, target), "utf8");
+    const stray = unlayeredRules(output).filter((rule) => !UNLAYERED_ALLOWED.some((allowed) => allowed.matches(rule)));
+
+    expect(
+      stray.map((rule) => `${rule.context || "(top level)"} :: ${rule.selector}`),
+      `${target} has unlayered rules outside the allowlist`,
+    ).toEqual([]);
+  });
+}
+
 /* The contracts above spot-check a handful of classes per entrypoint. A
    compiled bundle has no markup to scan, so a `@utility` emits only because the
    self-scan or an `@source inline` in that entrypoint's index names it -- and a

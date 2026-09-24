@@ -70,6 +70,8 @@ Components read each with a fallback, so leaving them unset produces the default
 | `--ui-clip`             | Structural component silhouette.                                                                              | `none`                    |
 | `--ui-clip-tight`       | Compact component silhouette.                                                                                 | `--ui-clip`               |
 | `--ui-focus-inset`      | Inset focus layer width.                                                                                      | Unset                     |
+| `--ui-button-weight`    | Button label weight. Read by `.btn` and, with `/native`, a bare `<button>`.                                   | `--font-weight-semibold`  |
+| `--ui-button-tracking`  | Button label letter spacing. Unset, the button inherits it.                                                   | Unset                     |
 
 ```html
 <section style="--ui-radius: 0; --ui-border-width: 3px">

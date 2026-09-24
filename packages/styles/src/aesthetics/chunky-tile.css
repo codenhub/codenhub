@@ -5,129 +5,140 @@
 
    Tier 1, plus one recorded selector list at the bottom. Load after the base
    stylesheet. */
-.chunky-tile {
-  /* Two knobs, read with a fallback so an ancestor can set them -- declared here
-     they would outrank `:root` (R8; see model.md#rules-for-aesthetics). One lift
-     drives everything: the bar is this deep and a press travels exactly this
-     far. 2px reads as a rendering seam, 8px as floating rather than seated. */
-  --_tile-lift: var(--tile-lift, 4px);
-  --_tile-radius: var(--tile-radius, 0.75rem);
 
-  /* The tile grey -- also the neutral bar, at the shadow ink below. Darker than
-     the look's own greys because `--ui-ink` is every text control's boundary,
-     drawn at `--_line-rest: 60%`: neutral-200/300 measure 1.21:1/1.42:1 against
-     the light page where WCAG 1.4.11 asks 3:1, and neutral-400 (2.48:1 whole) is
-     the heaviest grey that still leaves a field legible. */
-  --ui-ink: light-dark(var(--color-neutral-400), var(--color-neutral-600));
+/* The layer map, stated before anything uses a layer -- see `theme.css`. The
+   aesthetic's token class sits in `components`, below every utility, so a
+   consumer's own utility or unlayered CSS beats it; the solo class stays
+   unlayered, because it has to beat a foreign component's unlayered CSS. See
+   docs/internal/cascade-layers.md. */
+@layer theme, base, components, utilities;
 
-  /* One knob for both radii, where glass splits them: a tile and the button
-     inside it share a corner, and drifting apart loses the single-object read.
-     Chips clamp it to `--radius-small` themselves. */
-  --ui-radius: var(--_tile-radius);
-  --ui-radius-surface: var(--_tile-radius);
+@layer components {
+  .chunky-tile {
+    /* Two knobs, read with a fallback so an ancestor can set them -- declared here
+       they would outrank `:root` (R8; see model.md#rules-for-aesthetics). One lift
+       drives everything: the bar is this deep and a press travels exactly this
+       far. 2px reads as a rendering seam, 8px as floating rather than seated. */
+    --_tile-lift: var(--tile-lift, 4px);
+    --_tile-radius: var(--tile-radius, 0.75rem);
 
-  /* Half the tile. A 1px border under a 4px bar reads as a shadow with a hairline
-     rather than as a slab with an edge. The ceiling is restated so a chunky region
-     nested inside `.pixel` does not inherit its `0px` and lose the line. */
-  --ui-border-width: 2px;
-  --ui-border-max: 100px;
+    /* The tile grey -- also the neutral bar, at the shadow ink below. Darker than
+       the look's own greys because `--ui-ink` is every text control's boundary,
+       drawn at `--_line-rest: 60%`: neutral-200/300 measure 1.21:1/1.42:1 against
+       the light page where WCAG 1.4.11 asks 3:1, and neutral-400 (2.48:1 whole) is
+       the heaviest grey that still leaves a field legible. */
+    --ui-ink: light-dark(var(--color-neutral-400), var(--color-neutral-600));
 
-  /* What makes the bar a *shade*, not a repeat. `box` mixes the bar
-     `color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink), var(--elevation-color))`,
-     and `--intent-border` is `--intent-color` for the hue intents, so at 100%
-     ink the bar equalled the plate exactly (`.btn.success` #007a55 on #007a55).
-     Lowering the ink alone fails: the shipped `--elevation-color` is nearly
-     transparent, so the mix composites *lighter* than the plate. Naming the
-     depth colour opaque points it at black; 72% is measured (`.btn.success`
-     #007a55 on #004c34, neutral `.card` #fafafa on #888888). On a near-black
-     dark card the bar lands lighter and reads as a rim, as the original does.
-     `.glass` resolves `--elevation-color` in its own `--ui-surface-shadow`, so a
-     nested glass region inherits this opaque black -- one entry in the per-token
-     negotiation nesting two aesthetics already is. */
-  --elevation-color: rgb(0 0 0);
-  --ui-shadow-ink: 72%;
+    /* One knob for both radii, where glass splits them: a tile and the button
+       inside it share a corner, and drifting apart loses the single-object read.
+       Chips clamp it to `--radius-small` themselves. */
+    --ui-radius: var(--_tile-radius);
+    --ui-radius-surface: var(--_tile-radius);
 
-  /* Straight down, solid, unblurred, no spread. Zero x is what separates this from
-     neobrutalism, whose two-axis offset reads as a card lifted off the page where
-     this one is a slab seated on it. Spread stays zero so the bar cannot widen past
-     the element's own silhouette and put its corners out of step with the radius. */
-  --ui-shadow-x: 0px;
-  --ui-shadow-y: var(--_tile-lift);
-  --ui-shadow-blur: 0px;
-  --ui-shadow-spread: 0px;
+    /* Half the tile. A 1px border under a 4px bar reads as a shadow with a hairline
+       rather than as a slab with an edge. The ceiling is restated so a chunky region
+       nested inside `.pixel` does not inherit its `0px` and lose the line. */
+    --ui-border-width: 2px;
+    --ui-border-max: 100px;
 
-  /* The press, and the reason the lift is one number: the element travels exactly
-     the bar's depth and lands flat on the page. Hover holds still -- a seated slab
-     has one gesture and it belongs to the press -- and the resting shadow tokens
-     above already hold the bar under the pointer, so hover needs nothing of its
-     own. */
-  --ui-active-shadow-x: 0px;
-  --ui-active-shadow-y: 0px;
-  --ui-active-transform: translateY(var(--_tile-lift));
+    /* What makes the bar a *shade*, not a repeat. `box` mixes the bar
+       `color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink), var(--elevation-color))`,
+       and `--intent-border` is `--intent-color` for the hue intents, so at 100%
+       ink the bar equalled the plate exactly (`.btn.success` #007a55 on #007a55).
+       Lowering the ink alone fails: the shipped `--elevation-color` is nearly
+       transparent, so the mix composites *lighter* than the plate. Naming the
+       depth colour opaque points it at black; 72% is measured (`.btn.success`
+       #007a55 on #004c34, neutral `.card` #fafafa on #888888). On a near-black
+       dark card the bar lands lighter and reads as a rim, as the original does.
+       `.glass` resolves `--elevation-color` in its own `--ui-surface-shadow`, so a
+       nested glass region inherits this opaque black -- one entry in the per-token
+       negotiation nesting two aesthetics already is. */
+    --elevation-color: rgb(0 0 0);
+    --ui-shadow-ink: 72%;
 
-  /* Nothing here clips, blurs, thins its fill, or draws its edge as a ring, and an
-     aesthetic nested inside one that does has to say so rather than inherit it.
-     `--ui-shadow-edge` is the load-bearing clear: inherited from `.pixel` it would
-     point the bar at `--_edge`, which is transparent at `.edgeless`, and the bar
-     would vanish from every `.solid` button on the page -- which is the default
-     `.btn`. */
-  --ui-clip: none;
-  --ui-clip-tight: none;
-  /* Round corners, said explicitly, and the pill and chip corners cleared back
-     to `--ui-radius`: a region nested inside `.cyber` would otherwise inherit
-     its bevel, its diamond pills, and its square chips. */
-  --ui-corner-shape: round;
-  --ui-radius-pill: initial;
-  --ui-radius-tight: initial;
-  --ui-shadow-inset: ;
-  --ui-shadow-edge: initial;
-  --ui-backdrop: none;
-  --ui-bg-alpha: 1;
+    /* Straight down, solid, unblurred, no spread. Zero x is what separates this from
+       neobrutalism, whose two-axis offset reads as a card lifted off the page where
+       this one is a slab seated on it. Spread stays zero so the bar cannot widen past
+       the element's own silhouette and put its corners out of step with the radius. */
+    --ui-shadow-x: 0px;
+    --ui-shadow-y: var(--_tile-lift);
+    --ui-shadow-blur: 0px;
+    --ui-shadow-spread: 0px;
 
-  /* Consumer-supplied, the way `.pixel` reads `--font-pixel`. The package ships no
-     font binary, so the aesthetic has no rounded face to fall back to and takes the
-     page's own stack until one is supplied -- `--font-default`, the token the
-     reset applies to `html`/`body`, so a consumer that themed the page font gets
-     it here too. `--font-sans` is Tailwind's own and the package never sets it. */
-  font-family: var(--font-rounded, var(--font-default, ui-sans-serif, system-ui, sans-serif));
-}
+    /* The press, and the reason the lift is one number: the element travels exactly
+       the bar's depth and lands flat on the page. Hover holds still -- a seated slab
+       has one gesture and it belongs to the press -- and the resting shadow tokens
+       above already hold the bar under the pointer, so hover needs nothing of its
+       own. */
+    --ui-active-shadow-x: 0px;
+    --ui-active-shadow-y: 0px;
+    --ui-active-transform: translateY(var(--_tile-lift));
 
-/* The one R3 exception this aesthetic takes, recorded in the registry as
-   `selectors`.
+    /* Nothing here clips, blurs, thins its fill, or draws its edge as a ring, and an
+       aesthetic nested inside one that does has to say so rather than inherit it.
+       `--ui-shadow-edge` is the load-bearing clear: inherited from `.pixel` it would
+       point the bar at `--_edge`, which is transparent at `.edgeless`, and the bar
+       would vanish from every `.solid` button on the page -- which is the default
+       `.btn`. */
+    --ui-clip: none;
+    --ui-clip-tight: none;
+    /* Round corners, said explicitly, and the pill and chip corners cleared back
+       to `--ui-radius`: a region nested inside `.cyber` would otherwise inherit
+       its bevel, its diamond pills, and its square chips. */
+    --ui-corner-shape: round;
+    --ui-radius-pill: initial;
+    --ui-radius-tight: initial;
+    --ui-shadow-inset: ;
+    --ui-shadow-edge: initial;
+    --ui-backdrop: none;
+    --ui-bg-alpha: 1;
 
-   A heavy, slightly tracked label is what makes an action read as a tile rather
-   than as a button, and neither weight nor tracking is a value any material token
-   holds. Adding two would put typography into the material vocabulary for one
-   aesthetic's benefit, and a slot buys nothing besides: `.btn` is the only action
-   the package ships, so an action-scoped token would be this same list with an
-   indirection in front of it. The bare `button` is named beside the class so the
-   treatment reaches an unclassed element the way every Tier 1 token already does.
+    /* Consumer-supplied, the way `.pixel` reads `--font-pixel`. The package ships no
+       font binary, so the aesthetic has no rounded face to fall back to and takes the
+       page's own stack until one is supplied -- `--font-default`, the token the
+       reset applies to `html`/`body`, so a consumer that themed the page font gets
+       it here too. `--font-sans` is Tailwind's own and the package never sets it. */
+    font-family: var(--font-rounded, var(--font-default, ui-sans-serif, system-ui, sans-serif));
 
-   Casing is deliberately not here. The chunky-tile look is usually drawn with
-   uppercase labels and the earlier draft of this rule set `text-transform`, but
-   how a label is *worded* is the application's decision and an aesthetic silently
-   recasing it takes that away -- along with any acronym, proper noun, or
-   locale whose rules for case are not English's. A consumer who wants shouting
-   buttons writes it in their own stylesheet, where it is theirs to own. */
-.chunky-tile :is(.btn, button) {
-  font-weight: 800;
-  letter-spacing: 0.04em;
-}
+    /* A heavy, slightly tracked label is what makes an action read as a tile
+       rather than as a button. Two slots only a button reads, rather than a
+       selector list naming `.btn`: a selector list either loses to `.btn`'s own
+       weight or beats a consumer's `font-*` utility, depending on where it is
+       layered, and a token does neither. See docs/internal/cascade-layers.md (L5).
 
-/* `--tile-lift` alone cannot reach this: it resolves once, on `.chunky-tile`
-   itself (`--_tile-lift: var(--tile-lift, 4px)`), and inherits down already a
-   plain `4px` -- a nested `--tile-lift` on a descendant button is a fresh
-   declaration nothing downstream reads. `--ui-shadow-y` is what `box` actually
-   multiplies by elevation, so that is the token restated here, at half the
-   resting lift. A `.btn.icon` at `.dense`/`.p-xs` is close to the smallest
-   button the package draws (~20px, once the size floor both tiers drop for
-   `.icon` is gone -- see `button.css`), and a flat 4px bar under a target that
-   size sits close enough to the glyph's own footprint to read as a solid fill
-   behind it -- a `.ghost` button that looks `.solid`. 2px keeps the bar
-   legible as depth without swallowing the icon. */
-.chunky-tile .btn.icon.dense,
-.chunky-tile .btn.icon.p-xs {
-  --ui-shadow-y: 2px;
+       Casing is deliberately not here. The chunky-tile look is usually drawn with
+       uppercase labels and an earlier draft set `text-transform`, but how a label
+       is *worded* is the application's decision and an aesthetic silently
+       recasing it takes that away -- along with any acronym, proper noun, or
+       locale whose rules for case are not English's. A consumer who wants
+       shouting buttons writes it in their own stylesheet, where it is theirs to
+       own. */
+    --ui-button-weight: 800;
+    --ui-button-tracking: 0.04em;
+  }
+
+  /* The one R3 exception this aesthetic takes, recorded in the registry as
+     `selectors`.
+
+     `--tile-lift` alone cannot reach this: it resolves once, on `.chunky-tile`
+     itself (`--_tile-lift: var(--tile-lift, 4px)`), and inherits down already a
+     plain `4px` -- a nested `--tile-lift` on a descendant button is a fresh
+     declaration nothing downstream reads. `--ui-shadow-y` is what `box` actually
+     multiplies by elevation, so that is the token restated here, at half the
+     resting lift. A `.btn.icon` at `.dense`/`.p-xs` is close to the smallest
+     button the package draws (~20px, once the size floor both tiers drop for
+     `.icon` is gone -- see `button.css`), and a flat 4px bar under a target that
+     size sits close enough to the glyph's own footprint to read as a solid fill
+     behind it -- a `.ghost` button that looks `.solid`. 2px keeps the bar
+     legible as depth without swallowing the icon.
+
+     In `components` with the token class: it writes a public token, so as the
+     element's own declaration it beats the value inherited from `.chunky-tile`
+     and still loses to a consumer's utility. */
+  .chunky-tile .btn.icon.dense,
+  .chunky-tile .btn.icon.p-xs {
+    --ui-shadow-y: 2px;
+  }
 }
 
 /* Solo: the same look painted onto the one element carrying the class, for an

@@ -49,8 +49,9 @@
      plus `.solid`/`.ghost` so an explicit presentation on the element is
      never clamped to a cap it did not ask for.
 
-     Grounds on `--color-foreground` through the public `--ui-surface-ground`
-     escape hatch, exactly like `.panel` and a resting `.card.soft` -- an
+     Grounds on `--color-foreground` through `--_d-surface-ground`, exactly
+     like `.panel` and a resting `.card.soft`, so glass's ground and a
+     consumer's `--ui-surface-ground` still win over it -- an
      alert has no hover state to reveal a tint into either, so this is
      permanent rather than revealed. Unlike a neutral panel or badge, an
      alert cannot lose its visual identity from this: `--_d-border: 100%`
@@ -58,7 +59,7 @@
      framed box, just a quiet one instead of a grey slab. */
   &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid, .ghost) {
     --_fill-cap: 0%;
-    --ui-surface-ground: var(--color-foreground);
+    --_d-surface-ground: var(--color-foreground);
   }
 }
 

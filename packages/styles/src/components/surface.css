@@ -18,7 +18,18 @@
   --_d-fg-on-fill: 0%;
   --_d-border: 100%;
 
-  --_d-ground: var(--ui-surface-ground, var(--color-background));
+  /* The public token first, so an aesthetic (glass's translucent ground) or a
+     consumer names the ground outright; then the component's own quiet
+     default, which `.card.soft`, a neutral `.panel`, and a neutral `.alert`
+     write as a private rather than as the public token. Written as the public
+     token, their own declaration beat glass's inherited one in a glass region,
+     and once the aesthetics are layered below the components it beats glass
+     on the same element too -- `.card.soft.glass` went opaque. Restated
+     `initial` here so a quiet ground cannot inherit into a surface nested
+     inside one, the way `box` restates `--_d-ground`. See
+     docs/internal/cascade-layers.md (L6). */
+  --_d-surface-ground: initial;
+  --_d-ground: var(--ui-surface-ground, var(--_d-surface-ground, var(--color-background)));
 
   /* The complete-shadow slot for a shadow that is not one layer (glass tucks two
      under with negative spread). Only `surface` reads it -- through `--ui-shadow`
@@ -96,9 +107,9 @@
      a second fill declaration, for the no-intent case: resting at 0% means
      hover lands at exactly the hover step, 14%, in `--intent-hover` as
      always. The ground steps to `--color-surface` at the same moment,
-     through the public `--ui-surface-ground` escape hatch rather than the
-     private `--_d-ground`, so a consumer's own override still wins over both
-     states the way it always has. Scoped to `.interactive` and `.hoverable`,
+     through `--_d-surface-ground`, the default `surface` reads beneath the
+     public `--ui-surface-ground` -- so a consumer's own override, or glass's
+     ground, still wins over both states. Scoped to `.interactive` and `.hoverable`,
      the two classes that already opt a card into `box-hover` -- a plain
      `.card.soft` with neither has no hover state to reveal into and stays at
      the quiet, untinted rest. A named intent needs neither special case: it
@@ -106,11 +117,11 @@
      on hover (12% to 26%) with no ground shift required. */
   &.soft:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info) {
     --_fill-cap: 0%;
-    --ui-surface-ground: var(--color-foreground);
+    --_d-surface-ground: var(--color-foreground);
 
     &.interactive:hover,
     &.hoverable:hover {
-      --ui-surface-ground: var(--color-surface);
+      --_d-surface-ground: var(--color-surface);
     }
   }
 
@@ -190,26 +201,16 @@
      not ask for -- the same guard `data-table`'s own `:not(.solid, .ghost)`
      uses.
 
-     Grounds on `--color-foreground` through the public `--ui-surface-ground`
-     escape hatch, not the private `--_d-ground`, the same token `.card.soft`
-     steps to -- so a consumer's own override still wins, and a bare `.panel`
-     rests at exactly the plate a `.card.soft` does (measured: `245, 245, 245`
-     light, `23, 23, 23` dark, identical both ways). Permanent rather than
+     Grounds on `--color-foreground` through `--_d-surface-ground`, the same
+     default `.card.soft` rests on -- so a bare `.panel` rests at exactly the
+     plate a `.card.soft` does (measured: `245, 245, 245` light, `23, 23, 23`
+     dark, identical both ways), and a consumer's `--ui-surface-ground` or
+     glass's translucent ground still wins over it: a neutral panel under
+     `.glass` is glass, like every other surface there. Permanent rather than
      hover-revealed: neither a panel nor `data-table` has an interaction
-     state to reveal a tint into, so both rest quiet rather than reveal.
-
-     The one cost, inherited rather than new: an own declaration always beats
-     an inherited one, so this also beats `.glass` setting the same token on
-     an ancestor for its translucent ground -- a neutral panel under `.glass`
-     is quiet but opaque rather than blurred. `.card.soft` has carried this
-     exact trade-off since it shipped; nothing exercised it there because
-     `tests/browser/aesthetics.spec.ts`'s glass coverage tests a default
-     (ghost) card, never a soft one. Accepted rather than solved differently:
-     there is no way to ask "did an ancestor already set this token" in CSS,
-     only which declaration wins, and the quiet neutral rest is the more
-     common case a panel needs to get right. */
+     state to reveal a tint into, so both rest quiet rather than reveal. */
   &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid, .ghost) {
     --_fill-cap: 0%;
-    --ui-surface-ground: var(--color-foreground);
+    --_d-surface-ground: var(--color-foreground);
   }
 }

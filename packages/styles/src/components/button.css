@@ -14,9 +14,17 @@
   --_d-border: 0%;
   --_d-elevation: 1;
 
-  @apply box box-hover box-active relative inline-flex w-fit cursor-pointer items-center justify-center gap-2 px-4 py-2 font-semibold whitespace-nowrap no-underline select-none;
+  @apply box box-hover box-active relative inline-flex w-fit cursor-pointer items-center justify-center gap-2 px-4 py-2 whitespace-nowrap no-underline select-none;
 
   min-height: var(--control-height);
+  /* The label's weight and tracking are material slots, so an aesthetic sets
+     them as tokens (`.chunky-tile`'s heavier, tracked label) and a consumer's
+     own `font-*` or `tracking-*` utility still beats the aesthetic. Tracking
+     has no fallback on purpose: undefined, the declaration is invalid at
+     computed-value time and `letter-spacing` inherits, which is what it did
+     before the slot existed. See docs/internal/cascade-layers.md (L5). */
+  font-weight: var(--ui-button-weight, var(--font-weight-semibold));
+  letter-spacing: var(--ui-button-tracking);
 
   &.sm {
     @apply min-h-8 px-3 py-1 text-sm;

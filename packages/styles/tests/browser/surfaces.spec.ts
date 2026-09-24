@@ -55,11 +55,12 @@ test.describe("surfaces", () => {
      ground on `.interactive`/`.hoverable` `:hover` -- see the comment in
      `box.css` above `--_fill-cap` and in `surface.css` above `.card`'s
      `&.soft`. The override composes a private `--_fill-cap` term rather than
-     writing `--ui-fill` directly: `presentation.css`'s `.soft` is unlayered
-     and `@utility card` compiles into Tailwind's `utilities` layer, so a
-     `--ui-fill` written there was silently losing the cascade to `.soft`'s
-     `12%` regardless of selector specificity, and the card kept its ordinary
-     soft tint with nothing to show for the override. This test pins the
+     writing `--ui-fill` directly: `presentation.css`'s `.soft` was unlayered
+     while `@utility card` compiled into Tailwind's `utilities` layer, so a
+     `--ui-fill` written there silently lost the cascade to `.soft`'s `12%`
+     regardless of selector specificity, and the card kept its ordinary soft
+     tint with nothing to show for the override. Presentation is layered below
+     the utilities now, but the seam stays (see `box.css`). This test pins the
      numeric outcome so that regression cannot pass silently again. */
   test("rests a neutral soft card untinted and reveals the tint only on hover", async ({ page }) => {
     await page.goto(SURFACES_URL);
@@ -158,6 +159,32 @@ test.describe("surfaces", () => {
     /* The button opted out: its fill stays transparent while the card behind it
        tints, rather than inheriting the card's surface ground. */
     expect(isTransparent(await background(button)), "ghost button while the card is hovered").toBe(true);
+  });
+
+  /* A neutral `.card.soft` rests on a quiet ground of its own, written as a
+     private default `surface` restates on every surface -- so a card nested
+     inside it rests on the page ground like any other card, rather than
+     inheriting the outer card's. It inherited it while the quiet ground was the
+     public `--ui-surface-ground`. See docs/internal/cascade-layers.md (L6).
+
+     `.soft` is presentation, which cascades by design, so both nested cards
+     rest soft; the reference is a card under a plain `.soft` container, which
+     takes the same cascaded fill and has no quiet ground to leak. */
+  test("keeps a soft card's quiet ground out of a card nested inside it", async ({ page }) => {
+    await page.goto(SURFACES_URL);
+
+    const backgrounds = await page.evaluate(() => {
+      const host = document.createElement("div");
+      host.innerHTML =
+        '<div class="soft"><div class="card"></div></div><div class="card soft"><div class="card"></div></div>';
+      document.body.append(host);
+      const [region, softCard] = host.children as unknown as [HTMLElement, HTMLElement];
+      const read = (element: Element) => getComputedStyle(element).backgroundColor;
+
+      return { inCard: read(softCard.firstElementChild!), inRegion: read(region.firstElementChild!) };
+    });
+
+    expectSameColor(backgrounds.inCard, backgrounds.inRegion, "card nested in a .card.soft rests on the page ground");
   });
 
   /* A divider is an indicator: it reads intent and no presentation token at all.

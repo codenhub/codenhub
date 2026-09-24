@@ -553,24 +553,20 @@ test.describe("aesthetics", () => {
       await allowTransparency(page, browserName);
       await page.goto(withAesthetic(SURFACES_URL, "glass"));
 
-      /* A named intent, not `-none`: a neutral panel's own carve-out (surface.css,
-         next to `@utility panel`) writes `--ui-surface-ground` directly on the
-         element to stay quiet instead of drawing a slab, and an own declaration
-         always beats an ancestor's inherited one -- the same way `.card.soft`'s
-         already-shipped untint wins over this same glass ground, untested until
-         now because nothing exercised `.card.soft` under `.glass` either. A
-         `.destructive` panel carries no such carve-out, so it is what actually
-         proves glass reaches the component. */
-      const panel = await readStyles(page, "panel-default-destructive", BACKDROP_PROPERTIES);
+      /* Neutral as well as named. A neutral panel, alert, and `.card.soft` rest
+         on a quiet ground of their own, and they write it as a private default
+         beneath `--ui-surface-ground` rather than as that public token -- so
+         glass's ground still wins in its region. Written as the public token,
+         each one's own declaration beat glass's inherited one and the three sat
+         opaque inside a glass region. See docs/internal/cascade-layers.md (L6). */
+      const panel = await readStyles(page, "panel-default-none", BACKDROP_PROPERTIES);
+      const namedPanel = await readStyles(page, "panel-default-destructive", BACKDROP_PROPERTIES);
+      const softCard = await readStyles(page, "card-soft-edged-none", BACKDROP_PROPERTIES);
 
       await page.goto(withAesthetic(FEEDBACK_URL, "glass"));
 
-      /* Same reasoning as the panel above, now that `.alert` carries the
-         identical no-named-intent carve-out (feedback.css, next to `@utility
-         alert`): `-none` would write its own `--ui-surface-ground` and always
-         beat glass's ancestor-level one, so a named intent is what actually
-         exercises the component under glass. */
-      const alert = await readStyles(page, "alert-default-destructive", BACKDROP_PROPERTIES);
+      const alert = await readStyles(page, "alert-default-none", BACKDROP_PROPERTIES);
+      const namedAlert = await readStyles(page, "alert-default-destructive", BACKDROP_PROPERTIES);
       const tooltip = page.getByTestId("tooltip-open");
 
       await tooltip.hover();
@@ -590,7 +586,10 @@ test.describe("aesthetics", () => {
 
       for (const [label, styles] of [
         ["panel", panel],
+        ["destructive panel", namedPanel],
+        ["soft card", softCard],
         ["alert", alert],
+        ["destructive alert", namedAlert],
       ] as const) {
         expect(readBackdrop(styles), `${label} backdrop`).toContain("blur(14px)");
         expect(readSrgb(styles["background-color"]!).alpha, `${label} alpha`).toBeLessThan(1);
@@ -1200,9 +1199,10 @@ test.describe("aesthetics", () => {
       expect(channelDistance(line!.rgb, bar!.rgb), "line and bar are the same grey").toBeLessThan(120);
     });
 
-    /* The recorded R3 exception. `.btn` is the only action the package ships, and
-       the bare element is named beside the class so the treatment reaches an
-       unclassed `<button>` the way every Tier 1 token already does. */
+    /* Through the `--ui-button-weight`/`--ui-button-tracking` slot pair `.btn`
+       reads, so it reaches a bare `<button>` wherever the package styles one --
+       the native entry, which maps the element onto `btn` -- and nowhere it does
+       not. `layers.spec.ts` covers a consumer's utility beating it. */
     test("weights its action labels, including on an unclassed button", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "chunky-tile"));
 

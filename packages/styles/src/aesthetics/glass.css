@@ -7,67 +7,82 @@
    panels, alerts and tooltips while controls stay solid. An active blur costs a
    compositing layer apiece, and one under every control of a dense cluster reads
    as noise. */
-.glass {
-  /* Knobs read with a fallback so an ancestor can set them -- declared here they
-     outrank `:root` (R8; see model.md#rules-for-aesthetics). Glass is softer
-     than the base geometry because a translucent tight corner reads as a
-     cut-out; a control/surface pair rather than one value, because they do not
-     scale together and 12/16 keeps a button looking at home inside a card. */
-  --ui-radius: var(--glass-radius, 0.75rem);
-  --ui-radius-surface: var(--glass-radius-surface, 1rem);
-  --ui-border-width: 1px;
-  --ui-border-max: 100px;
 
-  /* Glass catches light from above whatever is under it, so the edge is a light
-     hairline in both themes rather than a theme-following ink. */
-  --ui-ink: light-dark(rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.22));
+/* The layer map, stated before anything uses a layer -- see `theme.css`. The
+   aesthetic's token class sits in `components`, below every utility, so a
+   consumer's own utility or unlayered CSS beats it; the solo class stays
+   unlayered, because it has to beat a foreign component's unlayered CSS. See
+   docs/internal/cascade-layers.md. */
+@layer theme, base, components, utilities;
 
-  --ui-bg-alpha: 0.8;
-  --ui-backdrop: blur(14px) saturate(1.6);
-
-  /* R6. Controls carry no shadow of their own -- the depth in this aesthetic is
-     the blur, and a drop shadow under a translucent button reads as grime. All
-     general parts are explicitly zero so inherited or future geometry cannot
-     leak onto controls. `--ui-surface-shadow` below replaces the shadow of
-     surfaces only. */
-  --ui-shadow-x: 0px;
-  --ui-shadow-y: 0px;
-  --ui-shadow-blur: 0px;
-  --ui-shadow-spread: 0px;
-  /* `--ui-bg-alpha` multiplies the fill, and a surface's default fill is 0%:
-     without a translucent ground the blur ends up behind an opaque background
-     and nothing shows through. */
-  --ui-surface-ground: color-mix(in srgb, var(--color-background) 45%, transparent);
-
-  /* Two layers pulling in with negative spread, so the shadow tucks under the
-     surface instead of haloing onto the backdrop. It is the one shipped aesthetic
-     that cannot be described with the parts, so it takes `surface`'s
-     complete-value slot -- which is also what keeps it off buttons and chips --
-     and the registry records that `.flat` does not reach it. */
-  --ui-surface-shadow: 0 1px 2px -1px var(--elevation-color), 0 18px 40px -16px var(--elevation-color);
-
-  --ui-clip: none;
-  --ui-clip-tight: none;
-  /* Round corners, said explicitly, and the pill and chip corners cleared back
-     to `--ui-radius`: a region nested inside `.cyber` would otherwise inherit
-     its bevel, its diamond pills, and its square chips. */
-  --ui-corner-shape: round;
-  --ui-radius-pill: initial;
-  --ui-radius-tight: initial;
-  /* Nothing here draws its edge as a ring, and an aesthetic nested inside pixel
-     has to say so rather than inherit it. */
-  --ui-shadow-edge: initial;
-  --ui-hover-transform: none;
-  --ui-active-transform: none;
-}
-
-/* Transparency is the whole aesthetic, so the honest degradation is an opaque
-   surface rather than a softer blur. */
-@media (prefers-reduced-transparency: reduce) {
+@layer components {
   .glass {
-    --ui-bg-alpha: 1;
-    --ui-backdrop: none;
-    --ui-surface-ground: var(--color-background);
+    /* Knobs read with a fallback so an ancestor can set them -- declared here they
+       outrank `:root` (R8; see model.md#rules-for-aesthetics). Glass is softer
+       than the base geometry because a translucent tight corner reads as a
+       cut-out; a control/surface pair rather than one value, because they do not
+       scale together and 12/16 keeps a button looking at home inside a card. */
+    --ui-radius: var(--glass-radius, 0.75rem);
+    --ui-radius-surface: var(--glass-radius-surface, 1rem);
+    --ui-border-width: 1px;
+    --ui-border-max: 100px;
+
+    /* Glass catches light from above whatever is under it, so the edge is a light
+       hairline in both themes rather than a theme-following ink. */
+    --ui-ink: light-dark(rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.22));
+
+    --ui-bg-alpha: 0.8;
+    --ui-backdrop: blur(14px) saturate(1.6);
+
+    /* R6. Controls carry no shadow of their own -- the depth in this aesthetic is
+       the blur, and a drop shadow under a translucent button reads as grime. All
+       general parts are explicitly zero so inherited or future geometry cannot
+       leak onto controls. `--ui-surface-shadow` below replaces the shadow of
+       surfaces only. */
+    --ui-shadow-x: 0px;
+    --ui-shadow-y: 0px;
+    --ui-shadow-blur: 0px;
+    --ui-shadow-spread: 0px;
+    /* `--ui-bg-alpha` multiplies the fill, and a surface's default fill is 0%:
+       without a translucent ground the blur ends up behind an opaque background
+       and nothing shows through. */
+    --ui-surface-ground: color-mix(in srgb, var(--color-background) 45%, transparent);
+
+    /* Two layers pulling in with negative spread, so the shadow tucks under the
+       surface instead of haloing onto the backdrop. It is the one shipped aesthetic
+       that cannot be described with the parts, so it takes `surface`'s
+       complete-value slot -- which is also what keeps it off buttons and chips --
+       and the registry records that `.flat` does not reach it. */
+    --ui-surface-shadow: 0 1px 2px -1px var(--elevation-color), 0 18px 40px -16px var(--elevation-color);
+
+    --ui-clip: none;
+    --ui-clip-tight: none;
+    /* Round corners, said explicitly, and the pill and chip corners cleared back
+       to `--ui-radius`: a region nested inside `.cyber` would otherwise inherit
+       its bevel, its diamond pills, and its square chips. */
+    --ui-corner-shape: round;
+    --ui-radius-pill: initial;
+    --ui-radius-tight: initial;
+    /* Nothing here draws its edge as a ring, and an aesthetic nested inside pixel
+       has to say so rather than inherit it. */
+    --ui-shadow-edge: initial;
+    --ui-hover-transform: none;
+    --ui-active-transform: none;
+
+    /* Chunky tile's heavier button label, cleared so a region nested inside it
+       keeps the button's own weight and tracking. */
+    --ui-button-weight: initial;
+    --ui-button-tracking: initial;
+  }
+
+  /* Transparency is the whole aesthetic, so the honest degradation is an opaque
+     surface rather than a softer blur. */
+  @media (prefers-reduced-transparency: reduce) {
+    .glass {
+      --ui-bg-alpha: 1;
+      --ui-backdrop: none;
+      --ui-surface-ground: var(--color-background);
+    }
   }
 }
 

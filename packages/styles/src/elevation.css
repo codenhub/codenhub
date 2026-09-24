@@ -1,3 +1,7 @@
+/* Imported into the `components` layer by `theme.css`, below every utility, so
+   a consumer's own utility or unlayered CSS beats these classes. See
+   docs/internal/cascade-layers.md. */
+
 /* Elevation is a modifier, not an axis: depth is a per-element decision (raised
    tiles beside a flat panel in one aesthetic), so one unitless number multiplies
    the aesthetic's shadow geometry where the component composes it. `.flat`
