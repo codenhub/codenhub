@@ -1,5 +1,3 @@
-@reference "tailwindcss";
-
 /* How a box is painted, in one place: intent supplies the colour, presentation
    how much of it, the aesthetic the material, and this composes the three. It
    composes here, not on a container, because a custom property resolves its

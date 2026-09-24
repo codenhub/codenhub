@@ -1,7 +1,7 @@
 @reference "tailwindcss";
 @import "../theme.css";
 @reference "../box.css";
-@reference "./surface.css";
+@reference "../surface.css";
 
 /* The host is a positioning wrapper and nothing else -- it paints no fill, no
    edge, no material of its own. The bubble is a real element beside the

@@ -20,6 +20,7 @@ const built = (file: string) => readFile(path.join(packageRoot, "dist", file), "
 const SCENARIOS: Record<string, readonly string[]> = {
   ".": ["index.css", "aesthetics/index.css"],
   "/theme + /components": ["theme.css", "components.css", "aesthetics/index.css"],
+  "/components alone": ["components.css", "aesthetics/index.css"],
   "/native": ["native.css", "aesthetics/index.css"],
   "/aesthetics loaded first": ["aesthetics/index.css", "theme.css", "components.css"],
 };
@@ -92,6 +93,22 @@ for (const [scenario, files] of Object.entries(SCENARIOS)) {
 
       expect(await read(page, "pixel-own-font", "font-family"), "aesthetic font").toBe("fantasy");
       expect(await read(page, "solid-own-fill", "--ui-fill"), "presentation").toBe("40%");
+    });
+
+    /* Every entry but `/aesthetics` carries the theme, so none depends on
+       another sheet for a colour. `/components` used to ship without its
+       `@theme` tokens, and loaded alone its components painted nothing. */
+    test("resolves the theme's colour tokens", async ({ page }) => {
+      await load(page, files);
+
+      const primary = await page.evaluate(() =>
+        getComputedStyle(document.documentElement).getPropertyValue("--color-primary").trim(),
+      );
+
+      expect(primary, "--color-primary").not.toBe("");
+      expect(await read(page, "solid-own-fill", "background-color"), "a solid button's fill").not.toBe(
+        "rgba(0, 0, 0, 0)",
+      );
     });
 
     /* The theme's `:root` tokens sit in `theme`, below the aesthetic in
