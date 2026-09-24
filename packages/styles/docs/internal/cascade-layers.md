@@ -10,7 +10,7 @@ This is the implemented decision, per the repository root `docs/README.md`'s `IM
 
 ## The problem
 
-A consumer's Tailwind utility on an element carrying a package class loses to that class. `rounded-none` on a `.pixel` region, `font-mono` on a `.cyber` one, or `[--ui-fill:50%]` on a `.solid` button all do nothing, because the class is unlayered and every Tailwind utility is layered. An unlayered declaration beats a layered one whatever the specificity.
+A consumer's Tailwind utility on an element carrying a package class loses to that class. `font-mono` on a `.pixel` region, `[--ui-radius:0]` on a `.cyber` one, or `[--ui-fill:50%]` on a `.solid` button all do nothing, because the class is unlayered and every Tailwind utility is layered. For normal declarations, an unlayered declaration beats a layered one whatever the specificity (important declarations reverse layer precedence; the `!important` width and height declarations in `@utility alert-icon` remain an intentional exception that overrides unlayered important declarations).
 
 [Roadmap](./roadmap.md) recorded this for the aesthetics. It also recorded that wrapping the aesthetic files in `@layer components` is not enough: a layered aesthetic then loses to everything the package leaves unlayered or puts in `utilities`. This proposal takes the wider scope the maintainer chose: a consumer's utility, and the consumer's own unlayered CSS, beat all four class families the package ships -- **aesthetic, presentation, intent, and elevation**.
 
@@ -71,10 +71,10 @@ The names are Tailwind's own, not a namespace of the package's, so a Tailwind co
 
 What this changes for a consumer:
 
-- A utility, or the consumer's own unlayered CSS, on the same element beats any class of the four families.
+- A utility, or the consumer's own unlayered CSS, on the same element beats any class of the four families for normal declarations.
 - A consumer utility and a package component on the same element still contest one layer, by specificity and then source order, as they already do on `.`. Components cannot move below `utilities`: `@apply` only reaches `@utility` rules, and `box`, `surface`, and `text-control` are applied that way.
 - A consumer rule the consumer placed in `@layer components` now contests the four families by specificity and order, where it lost to them outright before.
-- On `/components` and `/native`, the consumer's unlayered CSS now beats the components too, as it already does on `.`.
+- On `/components` and `/native`, the consumer's unlayered CSS now beats the components too (for normal declarations), as it already does on `.`.
 
 ### L2. Every entrypoint declares the order first
 

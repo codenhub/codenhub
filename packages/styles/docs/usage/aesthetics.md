@@ -38,7 +38,7 @@ An explicit presentation on the element still wins over the aesthetic's defaults
 
 An aesthetic directly on a component likewise wins over an inherited aesthetic. This includes tooltip bubbles: `.tooltip-bubble.glass` gets the complete glass bubble under a pixel ancestor, and `.tooltip-bubble.pixel` gets the complete stepped bubble under a glass ancestor.
 
-Your own CSS wins over an aesthetic. The aesthetic classes sit in the `components` cascade layer, so a Tailwind utility on the same element -- `font-mono` on a `.pixel` region, `rounded-none` or `[--ui-radius:0]` on a `.cyber` one -- or a rule in your own unlayered stylesheet beats them. See [Setup → Cascade layers](../setup.md#cascade-layers).
+Your own CSS wins over an aesthetic. The aesthetic classes sit in the `components` cascade layer, so a Tailwind utility on the same element -- `font-mono` on a `.pixel` region, `[--ui-radius:0]` on a `.cyber` one -- or a rule in your own unlayered stylesheet beats them. See [Setup → Cascade layers](../setup.md#cascade-layers).
 
 Each aesthetic that scales from one number publishes it as a knob — see [Customizing → Aesthetic tokens](./customizing.md#aesthetic-tokens) for how knobs resolve and where they can be set. This page covers what each aesthetic looks like and where it makes documented exceptions.
 

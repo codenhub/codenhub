@@ -530,7 +530,7 @@ Three steps, and there is no fourth. The replaced model's fourth step was "compo
 
 ## Cascade layers
 
-Everything the package ships sits in one of Tailwind's four layers, in Tailwind's order, on every entrypoint, and every entrypoint states that order before it uses a layer -- a browser orders layers by the first time it meets each name, so a sheet opening `components` first would rank it lowest. The decision and its measurements are in [Cascade layers](./cascade-layers.md).
+CSS shipped by the package is placed across Tailwind's four cascade layers, in Tailwind's order (with documented unlayered exceptions), on every entrypoint, and every entrypoint states that order before it uses a layer -- a browser orders layers by the first time it meets each name, so a sheet opening `components` first would rank it lowest. The decision and its measurements are in [Cascade layers](./cascade-layers.md).
 
 | Layer        | Holds                                                                                                                      |
 | ------------ | -------------------------------------------------------------------------------------------------------------------------- |
