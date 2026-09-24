@@ -374,6 +374,18 @@ It is also the first to come back in a narrower form. A ground answers the casca
 
 Giving the bubble a ground answers the same objection without pinning anything. It still rests filled, so an intent still floods it, but `--intent-subtle` is underneath, and an opaque ground is what keeps a bubble opaque at every fill rather than at the one fill it was allowed to have. The label follows the fill like any other label. A bound is a confession that composition failed somewhere, and this one turned out to be a component resting on nothing.
 
+### Which files import the theme
+
+`box` and `surface` live beside each other at the root of `src/`, and every component that composes them `@reference`s them. Tailwind marks every `@theme` value a referenced file reaches as reference-only and leaves it out of the output, and a later write of the same value replaces an earlier one, flag included. So a shared file that imports the theme, or that references Tailwind after the theme has been imported, silently strips the tokens from every entry that pulls it in: the package's own colour tokens in the first case, and Tailwind's palette ramp they are built from in the second. Until `0.5.0`, `surface` sat in `components/surface.css` beside a theme import, and `/components`, `/tw/components`, `/tw/feedback`, and `/tw/tooltip` shipped no colour token at all. `box.css`, `loader.css`, and the layout and content utilities referenced Tailwind as well, so every focused `/tw` component entry lost the ramp, and any sheet loaded after the loader lost it too.
+
+The rule that follows:
+
+- A file other files `@reference` -- `box.css`, `surface.css` -- imports neither the theme nor Tailwind.
+- A file that references Tailwind imports the theme straight after it, so the theme is the last word. `loader.css` and the layout and content utilities, which must not carry the theme or never stand alone, reference neither.
+- A compiled entry imports the theme before its own `@reference "tailwindcss"`. Tailwind writes the theme's variables where it meets the first `@theme`, and after the reference that is Tailwind's own reference-only one.
+
+`exports.test.ts` holds it: every compiled entry, every `/tw` entry that carries the theme, and the documented `/tw/button` and `/tw/loader` pairing must declare every `--color-*` they read.
+
 ## Intent
 
 Unchanged from the replaced model: seven slots, seven classes, no cascade, and the zero-specificity reset that lets an element's own intent class win over an inherited value. This is the part inherited from that model after it held up under everything asked of it.

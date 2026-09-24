@@ -53,7 +53,7 @@ The spike layered the four families and the theme tokens, then probed the built 
 
 The existing browser suite passed unchanged against the spike: 599 passed, 4 skipped, all three engines. (This read 605 when proposed; that count included six runs of the spike's own probe.) It caught none of the failures the spike had to fix along the way, because every playground page is compiled through Tailwind and none exercises a consumer override, which is why [Tests](#tests) adds both.
 
-One raw-entry fact turned up that this proposal does not change: `/components` loaded without the theme leaves colour tokens undefined, so `--_d-ground` and neobrutalism's slab resolve to nothing there on `main` and in the spike alike. The entry is compiled in Tailwind's reference mode, which emits no theme variables, so it relies on `/theme` for them.
+One raw-entry fact turned up that this proposal does not change: `/components` loaded without the theme leaves colour tokens undefined, so `--_d-ground` and neobrutalism's slab resolve to nothing there on `main` and in the spike alike. The entry is compiled in Tailwind's reference mode, which emits no theme variables, so it relies on `/theme` for them. Fixed separately in `0.5.0`, where the cause turned out to be which shared files import the theme rather than reference mode alone: see [Model](./model.md#which-files-import-the-theme).
 
 ## Decision
 
@@ -156,7 +156,7 @@ The maintainer accepted the consequence: **inside a `.glass` region, neutral sof
 ## Not in scope
 
 - Simplifying the seams layering makes redundant (L7).
-- Making `/components` usable without `/theme`. The undefined colour tokens there are unchanged by this proposal.
+- Making `/components` usable without `/theme`. The undefined colour tokens there are unchanged by this proposal. (Since fixed; see [Model](./model.md#which-files-import-the-theme).)
 - Corner scale and corner pattern, which are separate decisions on [Roadmap](./roadmap.md#structure).
 
 ## Implementation notes
