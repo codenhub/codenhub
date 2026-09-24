@@ -1,3 +1,6 @@
+/* The layer map, stated before any import uses a layer -- see `theme.css`. */
+@layer theme, base, components, utilities;
+
 @import "./theme.css";
 @reference "tailwindcss";
 /* Everything that is not `src/` -- see the note in `index.css`. Without the
@@ -19,45 +22,47 @@
 @import "./components/index.css";
 @import "./reset.css";
 
-/* `intent.css`'s reset keys on class names; these bare elements need the same,
-   or a `color-mix()` reading an undefined `--intent-*` drops silently. Zero
-   specificity like the class reset, values matching it slot for slot -- a bare
-   `<code>` and a `.code` chip are one component reached two ways. */
-:where(table, kbd, code, pre, blockquote, hr, input, textarea, select, button) {
-  --intent-color: var(--color-text);
-  --intent-contrast: var(--color-text-contrast);
-  --intent-hover: var(--color-text-hover);
-  --intent-strong: var(--color-text-strong);
-  --intent-subtle: var(--color-surface);
-  --intent-border: var(--ui-ink, var(--color-border));
-  --intent-fill-max: 20%;
-}
+@layer components {
+  /* `intent.css`'s reset keys on class names; these bare elements need the same,
+     or a `color-mix()` reading an undefined `--intent-*` drops silently. Zero
+     specificity like the class reset, values matching it slot for slot -- a bare
+     `<code>` and a `.code` chip are one component reached two ways. */
+  :where(table, kbd, code, pre, blockquote, hr, input, textarea, select, button) {
+    --intent-color: var(--color-text);
+    --intent-contrast: var(--color-text-contrast);
+    --intent-hover: var(--color-text-hover);
+    --intent-strong: var(--color-text-strong);
+    --intent-subtle: var(--color-surface);
+    --intent-border: var(--ui-ink, var(--color-border));
+    --intent-fill-max: 20%;
+  }
 
-/* Native text controls need the same stronger neutral boundary as their classed
-   counterparts, without changing buttons, checkboxes, radios, or other inputs. */
-:where(
-  input:not([type]),
-  input[type="text"],
-  input[type="number"],
-  input[type="email"],
-  input[type="password"],
-  input[type="url"],
-  input[type="tel"],
-  input[type="search"],
-  input[type="month"],
-  input[type="week"],
-  input[type="time"],
-  input[type="date"],
-  input[type="datetime-local"],
-  textarea,
-  select
-) {
-  --intent-border: var(--ui-ink, var(--color-control-border));
-}
+  /* Native text controls need the same stronger neutral boundary as their classed
+     counterparts, without changing buttons, checkboxes, radios, or other inputs. */
+  :where(
+    input:not([type]),
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="password"],
+    input[type="url"],
+    input[type="tel"],
+    input[type="search"],
+    input[type="month"],
+    input[type="week"],
+    input[type="time"],
+    input[type="date"],
+    input[type="datetime-local"],
+    textarea,
+    select
+  ) {
+    --intent-border: var(--ui-ink, var(--color-control-border));
+  }
 
-:where(hr) {
-  --intent-color: currentColor;
-  --intent-border: currentColor;
+  :where(hr) {
+    --intent-color: currentColor;
+    --intent-border: currentColor;
+  }
 }
 
 @layer base {

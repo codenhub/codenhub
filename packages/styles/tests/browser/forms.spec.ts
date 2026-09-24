@@ -16,12 +16,13 @@ const slug = (presentation: string) => presentation.replace(/\s+/gu, "-");
 
 test.describe("forms", () => {
   /* An invalid control is destructive, and it has to be destructive over an
-     intent class rather than under one. The rule that says so cannot live inside
-     `@utility text-control`: a rule nested there lands in the utilities layer,
-     the intent reset lands in no layer at all, and unlayered beats layered at
-     any specificity. It did not matter until the control classes joined the
-     reset, at which point every invalid field drew a plain grey line and the
-     only thing still marking the error was the hint underneath it. Asserting
+     intent class rather than under one. The rule that says so once had to be
+     unlayered: nested in `@utility text-control` it landed in the utilities
+     layer while the intent reset sat in no layer at all, and unlayered beats
+     layered at any specificity. When the control classes joined the reset,
+     every invalid field drew a plain grey line and the only thing still marking
+     the error was the hint underneath it. Intent now sits in `components` and
+     the rule in `utilities` at 0-2-0 (docs/internal/cascade-layers.md). Asserting
      "not transparent" is what let that through, so this names the color. */
   test("marks an invalid control destructive over any intent class", async ({ page }) => {
     await page.goto(FORMS_URL);

@@ -3,64 +3,74 @@
    named -- the ink reaches everything through the intent reset, the shadow is
    colourless geometry each component colours against its own intent. Load after
    the base stylesheet; source order decides against the zero-specificity reset. */
-.neobrutalism {
-  /* Read with a fallback, not declared, so an ancestor (`:root`, where an app
-     themes) can set `--neo-offset`; the private carries the resolved value to
-     the six places below. See model.md#rules-for-aesthetics (R8). */
-  --_neo-offset: var(--neo-offset, 4px);
 
-  /* Pure black reads as ink on a light page and disappears on a dark one, so the
-     ink follows the theme rather than the palette. A thick border in the neutral
-     border grey is a thick grey box, not a brutalist one. */
-  --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
+/* The layer map, stated before anything uses a layer -- see `theme.css`. The
+   aesthetic's token class sits in `components`, below every utility, so a
+   consumer's own utility or unlayered CSS beats it; the solo class stays
+   unlayered, because it has to beat a foreign component's unlayered CSS. See
+   docs/internal/cascade-layers.md. */
+@layer theme, base, components, utilities;
 
-  --ui-radius: 0;
-  --ui-radius-surface: 0;
-  --ui-border-width: 2px;
-  --ui-border-max: 100px;
+@layer components {
+  .neobrutalism {
+    /* Read with a fallback, not declared, so an ancestor (`:root`, where an app
+       themes) can set `--neo-offset`; the private carries the resolved value to
+       the six places below. See model.md#rules-for-aesthetics (R8). */
+    --_neo-offset: var(--neo-offset, 4px);
 
-  /* Hard, unblurred, and offset. Scaled by each component's own elevation, so
-     the registry decides which components sit on a slab and `.flat` takes one
-     off without this file knowing which component it landed on. */
-  /* The slab is ink, not shade: a hard offset of the element's own line colour
-     is the whole look, so this aesthetic asks for the intent instead of the
-     neutral depth colour every other shadow uses. */
-  --ui-shadow-ink: 100%;
-  --ui-shadow-x: var(--_neo-offset);
-  --ui-shadow-y: var(--_neo-offset);
-  --ui-shadow-blur: 0px;
-  --ui-shadow-spread: 0px;
+    /* Pure black reads as ink on a light page and disappears on a dark one, so the
+       ink follows the theme rather than the palette. A thick border in the neutral
+       border grey is a thick grey box, not a brutalist one. */
+    --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
 
-  /* The press: travel the offset, shrink the shadow to nothing, so the element
-     lands flat where its slab was. Hover keeps the slab still under the pointer;
-     `box-hover`'s derived fill tint is the whole hover response. One token pair,
-     no `:hover` list, R3 intact. */
-  --ui-active-shadow-x: 0px;
-  --ui-active-shadow-y: 0px;
-  --ui-active-transform: translate(var(--_neo-offset), var(--_neo-offset));
+    --ui-radius: 0;
+    --ui-radius-surface: 0;
+    --ui-border-width: 2px;
+    --ui-border-max: 100px;
 
-  /* Nothing here clips or blurs, and an aesthetic nested inside another has to
-     say so rather than inherit it. */
-  --ui-clip: none;
-  --ui-clip-tight: none;
-  /* Round corners, said explicitly, and the pill and chip corners cleared back
-     to `--ui-radius`: a region nested inside `.cyber` would otherwise inherit
-     its bevel, its diamond pills, and its square chips. */
-  --ui-corner-shape: round;
-  --ui-radius-pill: initial;
-  --ui-radius-tight: initial;
-  --ui-shadow-inset: ;
-  /* The slab is depth cast in ink, not this element's line, so an `.edgeless`
-     button keeps it. Cleared rather than omitted, because a neobrutalist region
-     nested inside a pixel one would otherwise inherit pixel's answer and lose the
-     slab on everything the edge axis rests at zero. */
-  --ui-shadow-edge: initial;
-  --ui-backdrop: none;
+    /* Hard, unblurred, and offset. Scaled by each component's own elevation, so
+       the registry decides which components sit on a slab and `.flat` takes one
+       off without this file knowing which component it landed on. */
+    /* The slab is ink, not shade: a hard offset of the element's own line colour
+       is the whole look, so this aesthetic asks for the intent instead of the
+       neutral depth colour every other shadow uses. */
+    --ui-shadow-ink: 100%;
+    --ui-shadow-x: var(--_neo-offset);
+    --ui-shadow-y: var(--_neo-offset);
+    --ui-shadow-blur: 0px;
+    --ui-shadow-spread: 0px;
 
-  /* Chunky tile's heavier button label, cleared so a region nested inside it
-     keeps the button's own weight and tracking. */
-  --ui-button-weight: initial;
-  --ui-button-tracking: initial;
+    /* The press: travel the offset, shrink the shadow to nothing, so the element
+       lands flat where its slab was. Hover keeps the slab still under the pointer;
+       `box-hover`'s derived fill tint is the whole hover response. One token pair,
+       no `:hover` list, R3 intact. */
+    --ui-active-shadow-x: 0px;
+    --ui-active-shadow-y: 0px;
+    --ui-active-transform: translate(var(--_neo-offset), var(--_neo-offset));
+
+    /* Nothing here clips or blurs, and an aesthetic nested inside another has to
+       say so rather than inherit it. */
+    --ui-clip: none;
+    --ui-clip-tight: none;
+    /* Round corners, said explicitly, and the pill and chip corners cleared back
+       to `--ui-radius`: a region nested inside `.cyber` would otherwise inherit
+       its bevel, its diamond pills, and its square chips. */
+    --ui-corner-shape: round;
+    --ui-radius-pill: initial;
+    --ui-radius-tight: initial;
+    --ui-shadow-inset: ;
+    /* The slab is depth cast in ink, not this element's line, so an `.edgeless`
+       button keeps it. Cleared rather than omitted, because a neobrutalist region
+       nested inside a pixel one would otherwise inherit pixel's answer and lose the
+       slab on everything the edge axis rests at zero. */
+    --ui-shadow-edge: initial;
+    --ui-backdrop: none;
+
+    /* Chunky tile's heavier button label, cleared so a region nested inside it
+       keeps the button's own weight and tracking. */
+    --ui-button-weight: initial;
+    --ui-button-tracking: initial;
+  }
 }
 
 /* The one R3 exception, recorded in the registry as `selectors`. The slab here
@@ -68,9 +78,15 @@
    registry rests flat -- looks unfinished without it. It writes the component's
    resting default rather than the modifier, so `.flat`/`.raised`/`.floating`
    still win on the element; a token would name the component through a longer
-   route. `--_d-elevation` inheriting is inert -- it equals `box`'s own fallback. */
-.neobrutalism .alert {
-  --_d-elevation: 1;
+   route. `--_d-elevation` inheriting is inert -- it equals `box`'s own fallback.
+
+   In `utilities`, not with the token class: it has to beat `@utility alert`'s
+   own `--_d-elevation: 0`, which it does there at 0-2-0, and it writes only a
+   private nothing a consumer sets. */
+@layer utilities {
+  .neobrutalism .alert {
+    --_d-elevation: 1;
+  }
 }
 
 /* Solo: the same look painted onto the one element carrying the class, for an

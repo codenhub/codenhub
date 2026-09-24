@@ -108,12 +108,17 @@
    identical reason: the bubble is a sibling, not a pseudo-element, of the
    trigger, so nothing but the shared ancestor can see both at once. The cost
    is the one `.input-group` already accepts -- the bubble also shows on a
-   mouse click, which the old `:focus-visible`-only version did not. */
-.tooltip:hover .tooltip-bubble,
-.tooltip:focus-within .tooltip-bubble,
-.tooltip[data-state="open"] .tooltip-bubble {
-  opacity: 1;
-  transform: var(--tooltip-transform) scale(1);
+   mouse click, which the old `:focus-visible`-only version did not.
+
+   In `utilities`, where the bubble's own `@utility` is, winning on
+   specificity -- see the seams note in `form.css`. */
+@layer utilities {
+  .tooltip:hover .tooltip-bubble,
+  .tooltip:focus-within .tooltip-bubble,
+  .tooltip[data-state="open"] .tooltip-bubble {
+    opacity: 1;
+    transform: var(--tooltip-transform) scale(1);
+  }
 }
 
 /* The trigger badge, for a message with no other element to hang it on. Quiet

@@ -1,5 +1,13 @@
+/* The layer map, stated before any import uses a layer -- see `theme.css`.
+   Tailwind's utilities are imported into `utilities` the way
+   `tailwindcss/index.css` does it, so every component lands there on this
+   entrypoint and on `/native` too, exactly where `.` already puts them. Without
+   `layer(utilities)` the CLI emitted them unlayered here, and they beat every
+   consumer rule on these two entries alone. */
+@layer theme, base, components, utilities;
+
 @reference "tailwindcss";
-@import "tailwindcss/utilities.css";
+@import "tailwindcss/utilities.css" layer(utilities);
 /* Everything that is not `src/` -- see the note in `index.css`. Keeps a class
    name in a docs code fence from shipping as a real rule in `dist/components.css`. */
 @source not "../../dist";

@@ -61,14 +61,13 @@
      the checked state that lifts them.
 
      `--_fg-on-fill-floor` is the seam `:checked` pins instead of touching
-     `--ui-fg-on-fill` directly. `.ghost`/`.soft` are unlayered CSS (P3, and see
-     model.md's `--_fill-cap` history) and `text-control` compiles into
-     Tailwind's `utilities` layer, so a layered `:checked` writing
-     `--ui-fg-on-fill` the way it writes `--_fill-cap`/`--_fill-floor` would
-     lose to `.ghost`'s unlayered `--ui-fg-on-fill: 0%` regardless of
-     specificity -- the same trap `--_fill-cap` exists to avoid on the fill
-     itself. A private floor `.ghost`/`.soft` never touch has nothing
-     unlayered contesting it. */
+     `--ui-fg-on-fill` directly. It was added while `.ghost`/`.soft` were
+     unlayered CSS, when a layered `:checked` writing `--ui-fg-on-fill` lost to
+     `.ghost`'s `--ui-fg-on-fill: 0%` regardless of specificity -- the trap
+     `--_fill-cap` avoids on the fill itself (see its note in `box.css`).
+     Presentation now sits in `components`, below this, so the trap is gone;
+     the seam stays, uncontested by anything, until it is simplified in a
+     change of its own (docs/internal/cascade-layers.md, L7). */
   --_on-fill: max(
     var(--_fg-on-fill-floor, 0%),
     min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), max(0%, calc(var(--_fill) * 2 - 100%)))
@@ -187,94 +186,104 @@
   }
 }
 
-/* A fill class on the element names its own cap; the 6% cascade cap in the
-   utility is for a container reaching a field nobody classed. Both raise
-   `--_fill-cap` rather than writing `--_fill` (P6), which is also what keeps
-   `.soft` < `.solid` -- written as a rewrite the louder name rendered the
-   quieter box, measured and inverted on `.ipt`, `.checkbox` and `.radio`.
-   20% clears `.soft`'s 12% and matches the plate a `.solid` badge draws.
+/* The component seams: rules that exist to beat their own component's
+   `@utility`, placed in `utilities` and winning there on specificity, each at
+   least 0-2-0 against the component's 0-1-0. They write only package privates
+   (`--_fill-cap`, `--_edge-floor`) or a state's intent slots, so nothing a
+   consumer writes competes with them. They used to be unlayered, which stopped
+   working once `/components` and `/native` put the components in `utilities`
+   too. See docs/internal/cascade-layers.md (L4). */
+@layer utilities {
+  /* A fill class on the element names its own cap; the 6% cascade cap in the
+     utility is for a container reaching a field nobody classed. Both raise
+     `--_fill-cap` rather than writing `--_fill` (P6), which is also what keeps
+     `.soft` < `.solid` -- written as a rewrite the louder name rendered the
+     quieter box, measured and inverted on `.ipt`, `.checkbox` and `.radio`.
+     20% clears `.soft`'s 12% and matches the plate a `.solid` badge draws.
 
-   `.switch` is deliberately absent: its track caps at 40% in its own utility,
-   and an unlayered rule here would overrule that. See model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
-:is(.text-control, .ipt, .textarea, .select, .input-group).soft {
-  --_fill-cap: 12%;
-}
+     `.switch` is deliberately absent: its track caps at 40% in its own utility,
+     and a 0-2-0 rule here would overrule that. See model.md#the-bounds-that-survive-and-the-test-for-keeping-one. */
+  :is(.text-control, .ipt, .textarea, .select, .input-group).soft {
+    --_fill-cap: 12%;
+  }
 
-:is(.text-control, .ipt, .textarea, .select, .input-group).solid {
-  --_fill-cap: 20%;
-}
+  :is(.text-control, .ipt, .textarea, .select, .input-group).solid {
+    --_fill-cap: 20%;
+  }
 
-/* A checked text-control fills with its own intent, so neutral has to drop its
-   20% cap here. No toggle needs this arm any more (see below), but a text
-   input is never `:checked` in practice either -- kept for whatever custom
-   `.text-control` composition does check itself. Declared where the intents
-   are (0-2-0, unlayered): inside `text-control` `.neutral` would overrule it. */
-:is(.text-control, input):checked {
-  --intent-fill-max: 100%;
-}
+  /* A checked text-control fills with its own intent, so neutral has to drop its
+     20% cap here. No toggle needs this arm any more (see below), but a text
+     input is never `:checked` in practice either -- kept for whatever custom
+     `.text-control` composition does check itself. A plain rule at 0-2-0 in
+     `utilities`, above every intent class in `components`, so `.neutral` on the
+     element cannot put the cap back. */
+  :is(.text-control, input):checked {
+    --intent-fill-max: 100%;
+  }
 
-/* The three toggles read their own component cap (`--_fill-cap`, below) as the
-   ceiling regardless of intent, checked or not -- not just at `:checked`, the
-   way the arm above still works for a hypothetical checked text-control. A
-   neutral fill stops at 20% everywhere else because it is the page's own ink,
-   and a full one reads as a slab on a badge or a card. That reasoning does not
-   hold for a toggle at rest: a neutral checkbox is the common case, most
-   controls carry no intent class at all, and it has to look like a present,
-   interactive box rather than a washed-out one just because nothing colored
-   it. Declared where the intents are, for the reason given above. */
-:is(.checkbox, .radio, .switch) {
-  --intent-fill-max: 100%;
-}
+  /* The three toggles read their own component cap (`--_fill-cap`, below) as the
+     ceiling regardless of intent, checked or not -- not just at `:checked`, the
+     way the arm above still works for a hypothetical checked text-control. A
+     neutral fill stops at 20% everywhere else because it is the page's own ink,
+     and a full one reads as a slab on a badge or a card. That reasoning does not
+     hold for a toggle at rest: a neutral checkbox is the common case, most
+     controls carry no intent class at all, and it has to look like a present,
+     interactive box rather than a washed-out one just because nothing colored
+     it. Declared where the intents are, for the reason given above. */
+  :is(.checkbox, .radio, .switch) {
+    --intent-fill-max: 100%;
+  }
 
-/* The element's own `.edgeless` lowers the floor `text-control` raises -- a
-   class on the element is a consumer's request, a class on a container is a
-   cascade. `.checkbox` and `.radio` are absent: an unchecked one is a
-   transparent square/circle with nothing but its line, so the floor is absolute
-   and `.edgeless` on them is published unsupported. `.input-group` is on it
-   because the group is the field boundary now. */
-:is(.text-control, .ipt, .textarea, .select, .switch, .input-group).edgeless {
-  --_edge-floor: 0%;
-}
+  /* The element's own `.edgeless` lowers the floor `text-control` raises -- a
+     class on the element is a consumer's request, a class on a container is a
+     cascade. `.checkbox` and `.radio` are absent: an unchecked one is a
+     transparent square/circle with nothing but its line, so the floor is absolute
+     and `.edgeless` on them is published unsupported. `.input-group` is on it
+     because the group is the field boundary now. */
+  :is(.text-control, .ipt, .textarea, .select, .switch, .input-group).edgeless {
+    --_edge-floor: 0%;
+  }
 
-/* `.switch`'s one exception to the opt-out above: `.ghost` already asks for
-   zero fill, so a `.switch.ghost.edgeless` track has neither a line nor a
-   plate and disappears entirely -- nothing marks its bounds but the floating
-   knob. Every other fill on this component still has something to paint
-   (`.soft`/`.solid`/default all rest above 0%), so only this one pairing
-   needs the floor held up. `.switch.ghost.edgeless` renders identically to
-   `.switch.ghost.edged` now, published unsupported as a distinct look --
-   the same "produces a row indistinguishable from its neighbour" reason
-   `.solid.edgeless`/`.solid.edged` already collapse to one row for. Higher
-   specificity than the rule above (three classes, not an `:is()` of one)
-   wins regardless of source order. */
-.switch.ghost.edgeless {
-  --_edge-floor: 100%;
-}
+  /* `.switch`'s one exception to the opt-out above: `.ghost` already asks for
+     zero fill, so a `.switch.ghost.edgeless` track has neither a line nor a
+     plate and disappears entirely -- nothing marks its bounds but the floating
+     knob. Every other fill on this component still has something to paint
+     (`.soft`/`.solid`/default all rest above 0%), so only this one pairing
+     needs the floor held up. `.switch.ghost.edgeless` renders identically to
+     `.switch.ghost.edged` now, published unsupported as a distinct look --
+     the same "produces a row indistinguishable from its neighbour" reason
+     `.solid.edgeless`/`.solid.edged` already collapse to one row for. Higher
+     specificity than the rule above (three classes, not an `:is()` of one)
+     wins regardless of source order. */
+  .switch.ghost.edgeless {
+    --_edge-floor: 100%;
+  }
 
-/* An invalid control is destructive whatever else it was asked to be. A plain
-   unlayered rule, not `&[aria-invalid]` inside `@utility`: the intent reset is
-   unlayered too and would overrule a layered version (leaving a grey line and
-   only the hint marking the error). `:is()` gives it 0-2-0 to outrank an intent
-   class. `--intent-hover` is redirected with the others so the line does not go
-   grey under the pointer. The `:has()` arm bridges an inner control's state to
-   an `.input-group`. */
-:is(
-  .text-control,
-  .ipt,
-  .textarea,
-  .select,
-  .checkbox,
-  .radio,
-  .switch,
-  .input-group,
-  input,
-  textarea,
-  select
-)[aria-invalid="true"],
-.input-group:has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select)[aria-invalid="true"]) {
-  --intent-color: var(--color-destructive);
-  --intent-hover: var(--color-destructive-hover);
-  --intent-border: var(--color-destructive);
+  /* An invalid control is destructive whatever else it was asked to be. It sits
+     in `utilities`, above every intent class and both intent resets in
+     `components`, and `:is()` gives it 0-2-0 so it also outranks the control's
+     own utility; a consumer's utility setting an intent slot on an invalid field
+     loses to it too, because state wins over every choice (model.md#precedence). `--intent-hover` is redirected with the others so the line does not go
+     grey under the pointer. The `:has()` arm bridges an inner control's state to
+     an `.input-group`. */
+  :is(
+    .text-control,
+    .ipt,
+    .textarea,
+    .select,
+    .checkbox,
+    .radio,
+    .switch,
+    .input-group,
+    input,
+    textarea,
+    select
+  )[aria-invalid="true"],
+  .input-group:has(> :is(.ipt, .textarea, .select, .text-control, input, textarea, select)[aria-invalid="true"]) {
+    --intent-color: var(--color-destructive);
+    --intent-hover: var(--color-destructive-hover);
+    --intent-border: var(--color-destructive);
+  }
 }
 
 /* A ghost, edged, unelevated text control. */

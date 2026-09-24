@@ -16,14 +16,15 @@
 
      `--_fill-cap` is the matching slot for a component that reinterprets what a
      presentation means for itself rather than merely bounding it -- `.card.soft`
-     uses it to rest at 0% regardless of what `.soft` asks for. It has to be a
-     separate term rather than a rewrite of `--ui-fill`: `presentation.css`'s
-     `.soft` is unlayered CSS and `@utility card`'s own rule compiles into
-     Tailwind's `utilities` layer, and an unlayered declaration always wins over
-     a layered one for the same property, at any specificity -- so `.card.soft`
-     writing `--ui-fill: 0%` directly was silently losing to `.soft`'s `12%`
-     every time. `--_fill-cap` is a token `.soft` never touches, so nothing
-     contests it.
+     uses it to rest at 0% regardless of what `.soft` asks for. It is a
+     separate term rather than a rewrite of `--ui-fill` for a reason that no
+     longer holds: `presentation.css`'s `.soft` was unlayered CSS and an
+     unlayered declaration beat `@utility card`'s layered one at any
+     specificity, so `.card.soft` writing `--ui-fill: 0%` directly silently lost
+     to `.soft`'s `12%`. Presentation now sits in `components`, below the
+     utilities, so a direct write would win; the seam stays because nothing
+     else contests a token `.soft` never touches, and simplifying it is its own
+     change (docs/internal/cascade-layers.md, L7).
 
      Restated here at `100%` -- a no-op -- for the same reason `--_d-ground`
      is restated `transparent` below rather than left to its `var()` fallback:
