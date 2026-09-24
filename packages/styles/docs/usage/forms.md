@@ -11,7 +11,7 @@ order: 6
 | `.field`                                                              | Vertical field wrapper.                                                  |
 | `.label`                                                              | Form label text.                                                         |
 | `.hint`                                                               | Secondary helper text.                                                   |
-| `.hint.error`                                                         | Helper text with destructive intent.                                     |
+| `.hint.destructive`                                                   | Helper text with destructive intent.                                     |
 | `.surface`                                                            | Shared public container composition utility.                             |
 | `.text-control`                                                       | Shared public text-control composition utility.                          |
 | `.ipt`                                                                | Input control styling.                                                   |
@@ -71,15 +71,15 @@ The gap between the control and its adornment is `--input-group-gap`, `0.5rem` b
 
 `.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons to set the checked color:
 
-| Class                               | Meaning                 |
-| ----------------------------------- | ----------------------- |
-| `.neutral` _(default)_              | Text color, capped.     |
-| `.primary`                          | Primary color.          |
-| `.secondary`                        | Secondary/accent color. |
-| `.success`                          | Success color.          |
-| `.warning`                          | Warning color.          |
-| `.destructive`, `.danger`, `.error` | Destructive color.      |
-| `.info`                             | Info color.             |
+| Class                  | Meaning                 |
+| ---------------------- | ----------------------- |
+| `.neutral` _(default)_ | Text color, capped.     |
+| `.primary`             | Primary color.          |
+| `.secondary`           | Secondary/accent color. |
+| `.success`             | Success color.          |
+| `.warning`             | Warning color.          |
+| `.destructive`         | Destructive color.      |
+| `.info`                | Info color.             |
 
 All three toggles rest at `.soft`. Presentation decides the _unchecked_ plate; checked is pinned to one look regardless of which class is on the element, so a checkbox, a radio, and a switch each have a single "on" identity rather than one per presentation:
 
@@ -126,7 +126,7 @@ The boundary is the edge axis's, and it splits the same way. A container's `.edg
 <label class="field">
   <span class="label">Email</span>
   <input class="ipt" type="email" aria-invalid="true" aria-describedby="email-error" />
-  <span class="hint error" id="email-error">Enter a valid email.</span>
+  <span class="hint destructive" id="email-error">Enter a valid email.</span>
 </label>
 <label style="display: flex; gap: 0.5rem; align-items: center">
   <input type="checkbox" class="checkbox success" />

@@ -49,7 +49,7 @@ For the Tailwind CSS v4 entrypoint, theme selection, the intent/presentation axe
 
 ## Notes
 
-This package has no JavaScript behavior; no version provides compatibility aliases for a removed class or token. `0.2.0` removes `.btn.loading` (compose a disabled `.btn` with a `.loader` child instead) and `.alert.icon`'s built-in glyph (drop a consumer-supplied icon into `.alert-icon` instead), and `.tooltip` now requires a `.tooltip-bubble` child element rather than a `data-tooltip` attribute. See the [changelog](./docs/changelog/index.md) for the complete history.
+This package has no JavaScript behavior; no version provides compatibility aliases for a removed class or token. `0.2.0` removes `.btn.loading` (compose a disabled `.btn` with a `.loader` child instead) and `.alert.icon`'s built-in glyph (drop a consumer-supplied icon into `.alert-icon` instead), and `.tooltip` now requires a `.tooltip-bubble` child element rather than a `data-tooltip` attribute. `0.5.0` removes the second names: `.dense`, `.compact`, and `.spacious` (use `.p-xs`, `.p-sm`, and `.p-lg`), `.danger` and `.error` (use `.destructive`, and `.hint.destructive` for `.hint.error`), and `.elevation-none`, `.elevation-sm`, and `.elevation-md` (use `.flat`, `.raised`, and `.floating`). See the [changelog](./docs/changelog/index.md) for the complete history.
 
 ## License
 
@@ -430,26 +430,26 @@ Presentation is two independent axes, so they get a column each. A `Yes` means t
 
 Every other text control floors a _cascaded_ `.edgeless` and honours its own: a `.edgeless` toolbar will not erase the line of a field nobody classed, while `.ipt.edgeless` is a consumer describing what they want and gets it.
 
-Intent aliases such as `.danger` and `.error` occupy the same intent axis as `.destructive`; they do not add component behavior. State and modifier classes such as `.interactive`, `.hoverable`, `.pressable`, `.invalid`, `.compact`, and `.vertical` sit above this map and are documented with their component.
+State and modifier classes such as `.interactive`, `.hoverable`, `.pressable`, `.invalid`, `.p-sm`, and `.vertical` sit above this map and are documented with their component.
 
 ## Elevation
 
 Depth is a modifier, not an axis. Nothing is raised until an [aesthetic](docs/usage/aesthetics.md) draws depth or one of these classes asks for it.
 
-| Class             | Alias       | Depth                                                                    |
-| ----------------- | ----------- | ------------------------------------------------------------------------ |
-| `.elevation-none` | `.flat`     | Removes part-based elevation; glass surfaces keep their complete shadow. |
-| `.elevation-sm`   | `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
-| `.elevation-md`   | `.floating` | Twice it, for menus and popovers.                                        |
+| Class       | Depth                                                                    |
+| ----------- | ------------------------------------------------------------------------ |
+| `.flat`     | Removes part-based elevation; glass surfaces keep their complete shadow. |
+| `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
+| `.floating` | Twice it, for menus and popovers.                                        |
 
-Both names in a row are equivalent, interchangeable classes — `.elevation-sm` and `.raised` are aliases, not a canonical form and a deprecated one, the way `.destructive` and `.danger` are on the intent axis. The `none`/`sm`/`md` naming matches the raw `--elevation-*` tokens in [Theming](docs/usage/theming.md#foundation-tokens) for the same weight of depth, even though the two are read from different places.
+These are a different thing from the raw `--elevation-*` shadow tokens in [Theming](docs/usage/theming.md#foundation-tokens), which are fixed shadows for elements you style yourself.
 
 Each is one unitless multiplier over whatever shadow geometry is in scope, so the same class reads as a soft blur on a plain page and as a hard offset slab under `.neobrutalism` — the aesthetic decides what depth looks like, the class decides how much of it this element takes.
 
 ```html
-<article class="card elevation-sm">Lifted</article>
-<div class="elevation-md panel">A menu surface</div>
-<article class="card elevation-none">Flat, whatever the page or container says</article>
+<article class="card raised">Lifted</article>
+<div class="floating panel">A menu surface</div>
+<article class="card flat">Flat, whatever the page or container says</article>
 ```
 
 The multiplier does not inherit: an elevation class lifts or flattens the element it is written on only, and an unclassed element inside it takes no depth of its own. Give each element that needs depth its own elevation class. Spread is deliberately left out of the multiplication, because an aesthetic that draws its edge as an inset ring spends spread on it and scaling that would erase the edge.
@@ -570,7 +570,7 @@ Set them directly to define an intent this package does not ship. **State every 
 
 Foundation tokens are not aliases for one color. They define layout, shape, motion, focus, depth, and layering behavior used by helper classes.
 
-The four `--elevation-*` values below are raw shadows for elements you style yourself. They are a separate thing from `.elevation-none`/`.elevation-sm`/ `.elevation-md` (aliased as `.flat`/`.raised`/`.floating`), which scale a _component's own_ shadow geometry and default to no shadow at all until an aesthetic or one of those classes asks for depth — see [Composing → Elevation](docs/usage/composing.md#elevation) for that system. The two share `none`/`sm`/`md`/`lg` naming for the same weight of depth, but one is a fixed value and the other multiplies shadow parts, so they will not always paint identically.
+The four `--elevation-*` values below are raw shadows for elements you style yourself. They are a separate thing from `.flat`/`.raised`/`.floating`, which scale a _component's own_ shadow geometry and default to no shadow at all until an aesthetic or one of those classes asks for depth — see [Composing → Elevation](docs/usage/composing.md#elevation) for that system. The two share `none`/`sm`/`md`/`lg` naming for the same weight of depth, but one is a fixed value and the other multiplies shadow parts, so they will not always paint identically.
 
 | Token                      | Purpose                                                                 |
 | -------------------------- | ----------------------------------------------------------------------- |
@@ -1002,15 +1002,15 @@ Intent classes map color tokens into button tone slots. [Presentation](docs/usag
 
 Intent classes:
 
-| Class                               | Meaning                        |
-| ----------------------------------- | ------------------------------ |
-| `.neutral` _(default)_              | No specific intent.            |
-| `.primary`                          | Primary action.                |
-| `.secondary`                        | Secondary/accent action.       |
-| `.success`                          | Successful or positive action. |
-| `.warning`                          | Warning/caution action.        |
-| `.destructive`, `.danger`, `.error` | Destructive or error action.   |
-| `.info`                             | Informational action.          |
+| Class                  | Meaning                        |
+| ---------------------- | ------------------------------ |
+| `.neutral` _(default)_ | No specific intent.            |
+| `.primary`             | Primary action.                |
+| `.secondary`           | Secondary/accent action.       |
+| `.success`             | Successful or positive action. |
+| `.warning`             | Warning/caution action.        |
+| `.destructive`         | Destructive or error action.   |
+| `.info`                | Informational action.          |
 
 Every component that supports intent accepts the same list and reads the same [intent tokens](docs/usage/theming.md#intent-tokens), so a custom intent class works everywhere without touching a component.
 
@@ -1023,9 +1023,9 @@ Size and shape classes:
 | `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).                                                                                                                                                                                   |
 | `.sm`                                                                  | Smaller button.                                                                                                                                                                                                                           |
 | `.lg`                                                                  | Larger button.                                                                                                                                                                                                                            |
-| `.p-xs`, `.dense`                                                      | Tightest padding modifier (`px-2 py-0.5`; icon `p-0.5`). Also drops the `--control-height` minimum so a chip-sized button fits a table cell or a dense toolbar; every other size and padding class keeps that floor for a labeled button. |
-| `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`; icon `p-1`).                                                                                                                                                                                     |
-| `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`; icon `p-3`).                                                                                                                                                                                      |
+| `.p-xs`                                                                | Tightest padding modifier (`px-2 py-0.5`; icon `p-0.5`). Also drops the `--control-height` minimum so a chip-sized button fits a table cell or a dense toolbar; every other size and padding class keeps that floor for a labeled button. |
+| `.p-sm`                                                                | Compact padding modifier (`px-2.5 py-1`; icon `p-1`).                                                                                                                                                                                     |
+| `.p-lg`                                                                | Spacious padding modifier (`px-6 py-3`; icon `p-3`).                                                                                                                                                                                      |
 | `.icon`                                                                | Square icon button, sized to its own padding rather than to `--control-height`. Use an accessible name in HTML.                                                                                                                           |
 | `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                                                                                                                                                                                         |
 
@@ -1060,7 +1060,7 @@ Use `<button>` for actions or an accessible link for navigation; see [Accessibil
 | `.field`                                                              | Vertical field wrapper.                                                  |
 | `.label`                                                              | Form label text.                                                         |
 | `.hint`                                                               | Secondary helper text.                                                   |
-| `.hint.error`                                                         | Helper text with destructive intent.                                     |
+| `.hint.destructive`                                                   | Helper text with destructive intent.                                     |
 | `.surface`                                                            | Shared public container composition utility.                             |
 | `.text-control`                                                       | Shared public text-control composition utility.                          |
 | `.ipt`                                                                | Input control styling.                                                   |
@@ -1120,15 +1120,15 @@ The gap between the control and its adornment is `--input-group-gap`, `0.5rem` b
 
 `.checkbox`, `.radio`, and `.switch` accept the same intent classes as buttons to set the checked color:
 
-| Class                               | Meaning                 |
-| ----------------------------------- | ----------------------- |
-| `.neutral` _(default)_              | Text color, capped.     |
-| `.primary`                          | Primary color.          |
-| `.secondary`                        | Secondary/accent color. |
-| `.success`                          | Success color.          |
-| `.warning`                          | Warning color.          |
-| `.destructive`, `.danger`, `.error` | Destructive color.      |
-| `.info`                             | Info color.             |
+| Class                  | Meaning                 |
+| ---------------------- | ----------------------- |
+| `.neutral` _(default)_ | Text color, capped.     |
+| `.primary`             | Primary color.          |
+| `.secondary`           | Secondary/accent color. |
+| `.success`             | Success color.          |
+| `.warning`             | Warning color.          |
+| `.destructive`         | Destructive color.      |
+| `.info`                | Info color.             |
 
 All three toggles rest at `.soft`. Presentation decides the _unchecked_ plate; checked is pinned to one look regardless of which class is on the element, so a checkbox, a radio, and a switch each have a single "on" identity rather than one per presentation:
 
@@ -1175,7 +1175,7 @@ The boundary is the edge axis's, and it splits the same way. A container's `.edg
 <label class="field">
   <span class="label">Email</span>
   <input class="ipt" type="email" aria-invalid="true" aria-describedby="email-error" />
-  <span class="hint error" id="email-error">Enter a valid email.</span>
+  <span class="hint destructive" id="email-error">Enter a valid email.</span>
 </label>
 <label style="display: flex; gap: 0.5rem; align-items: center">
   <input type="checkbox" class="checkbox success" />
@@ -1234,7 +1234,7 @@ Loader size modifiers:
 | `.sm`    | Small (`1.25rem`).   |
 | `.lg`    | Large (`2.25rem`).   |
 
-Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`. Without an intent, they use the text palette, except `.loader`, which keeps `currentColor` so it matches whatever content surrounds it.
+Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, they use the text palette, except `.loader`, which keeps `currentColor` so it matches whatever content surrounds it.
 
 Skeletons, loaders, and dividers are indicators: they read intent but ignore fill and edge [presentation](docs/usage/composing.md#presentation). `.progress` is not one of them — its track reads both, `.soft.edgeless` by default; only the moving value fill stays intent-colored at full strength regardless of presentation. `.solid` is unsupported on the track, and `.ghost.edgeless` renders but is discouraged, since neither leaves the track a visible frame. See [Composing → Component axis reference](docs/usage/composing.md#component-axis-reference) for the full table.
 
@@ -1470,17 +1470,17 @@ Use `.table-wrap` around `.data-table` when table width may exceed its container
 
 ## Surfaces
 
-| Class                | Purpose                                                                               |
-| -------------------- | ------------------------------------------------------------------------------------- |
-| `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`.                   |
-| `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.                      |
-| `.interactive`       | On `.card`. Adds pointer cursor, hover and press response, and a focus ring.          |
-| `.hoverable`         | On `.card`. The hover half of `.interactive`: hover response only, no pointer cursor. |
-| `.pressable`         | On `.card`. The press half of `.interactive`: press response and pointer cursor.      |
-| `.p-xs`, `.dense`    | On `.card` or `.panel`. Reduces padding further than `.compact`.                      |
-| `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                                              |
-| `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                                            |
-| `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.                    |
+| Class          | Purpose                                                                               |
+| -------------- | ------------------------------------------------------------------------------------- |
+| `.card`        | Bordered container, surface radius, padded. Rests at elevation `1`.                   |
+| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.                      |
+| `.interactive` | On `.card`. Adds pointer cursor, hover and press response, and a focus ring.          |
+| `.hoverable`   | On `.card`. The hover half of `.interactive`: hover response only, no pointer cursor. |
+| `.pressable`   | On `.card`. The press half of `.interactive`: press response and pointer cursor.      |
+| `.p-xs`        | On `.card` or `.panel`. Reduces padding further than `.p-sm`.                         |
+| `.p-sm`        | On `.card` or `.panel`. Reduces padding.                                              |
+| `.p-lg`        | On `.card` or `.panel`. Increases padding.                                            |
+| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content.                    |
 
 Both read intent, [presentation](docs/usage/composing.md#presentation), and [material tokens](docs/usage/customizing.md#material-tokens). A plain `.card` is a neutral bordered container; only an explicit presentation tints it. Resting at elevation `1` is not a visible shadow by itself — nothing draws depth until an [aesthetic](docs/usage/aesthetics.md) supplies shadow geometry or `.elevation-sm`/`.elevation-md` asks for it; see [Composing → Elevation](docs/usage/composing.md#elevation).
 

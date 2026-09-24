@@ -133,17 +133,17 @@ Use `.table-wrap` around `.data-table` when table width may exceed its container
 
 ## Surfaces
 
-| Class                | Purpose                                                                               |
-| -------------------- | ------------------------------------------------------------------------------------- |
-| `.card`              | Bordered container, surface radius, padded. Rests at elevation `1`.                   |
-| `.panel`             | Flush container for sidebars, toolbars, and wells. No elevation.                      |
-| `.interactive`       | On `.card`. Adds pointer cursor, hover and press response, and a focus ring.          |
-| `.hoverable`         | On `.card`. The hover half of `.interactive`: hover response only, no pointer cursor. |
-| `.pressable`         | On `.card`. The press half of `.interactive`: press response and pointer cursor.      |
-| `.p-xs`, `.dense`    | On `.card` or `.panel`. Reduces padding further than `.compact`.                      |
-| `.p-sm`, `.compact`  | On `.card` or `.panel`. Reduces padding.                                              |
-| `.p-lg`, `.spacious` | On `.card` or `.panel`. Increases padding.                                            |
-| `.flush`             | On `.card` or `.panel`. Removes padding, for edge-to-edge content.                    |
+| Class          | Purpose                                                                               |
+| -------------- | ------------------------------------------------------------------------------------- |
+| `.card`        | Bordered container, surface radius, padded. Rests at elevation `1`.                   |
+| `.panel`       | Flush container for sidebars, toolbars, and wells. No elevation.                      |
+| `.interactive` | On `.card`. Adds pointer cursor, hover and press response, and a focus ring.          |
+| `.hoverable`   | On `.card`. The hover half of `.interactive`: hover response only, no pointer cursor. |
+| `.pressable`   | On `.card`. The press half of `.interactive`: press response and pointer cursor.      |
+| `.p-xs`        | On `.card` or `.panel`. Reduces padding further than `.p-sm`.                         |
+| `.p-sm`        | On `.card` or `.panel`. Reduces padding.                                              |
+| `.p-lg`        | On `.card` or `.panel`. Increases padding.                                            |
+| `.flush`       | On `.card` or `.panel`. Removes padding, for edge-to-edge content.                    |
 
 Both read intent, [presentation](./composing.md#presentation), and [material tokens](./customizing.md#material-tokens). A plain `.card` is a neutral bordered container; only an explicit presentation tints it. Resting at elevation `1` is not a visible shadow by itself — nothing draws depth until an [aesthetic](./aesthetics.md) supplies shadow geometry or `.elevation-sm`/`.elevation-md` asks for it; see [Composing → Elevation](./composing.md#elevation).
 

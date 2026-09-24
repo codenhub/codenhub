@@ -12,15 +12,15 @@ Intent classes map color tokens into button tone slots. [Presentation](./composi
 
 Intent classes:
 
-| Class                               | Meaning                        |
-| ----------------------------------- | ------------------------------ |
-| `.neutral` _(default)_              | No specific intent.            |
-| `.primary`                          | Primary action.                |
-| `.secondary`                        | Secondary/accent action.       |
-| `.success`                          | Successful or positive action. |
-| `.warning`                          | Warning/caution action.        |
-| `.destructive`, `.danger`, `.error` | Destructive or error action.   |
-| `.info`                             | Informational action.          |
+| Class                  | Meaning                        |
+| ---------------------- | ------------------------------ |
+| `.neutral` _(default)_ | No specific intent.            |
+| `.primary`             | Primary action.                |
+| `.secondary`           | Secondary/accent action.       |
+| `.success`             | Successful or positive action. |
+| `.warning`             | Warning/caution action.        |
+| `.destructive`         | Destructive or error action.   |
+| `.info`                | Informational action.          |
 
 Every component that supports intent accepts the same list and reads the same [intent tokens](./theming.md#intent-tokens), so a custom intent class works everywhere without touching a component.
 
@@ -33,9 +33,9 @@ Size and shape classes:
 | `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).                                                                                                                                                                                   |
 | `.sm`                                                                  | Smaller button.                                                                                                                                                                                                                           |
 | `.lg`                                                                  | Larger button.                                                                                                                                                                                                                            |
-| `.p-xs`, `.dense`                                                      | Tightest padding modifier (`px-2 py-0.5`; icon `p-0.5`). Also drops the `--control-height` minimum so a chip-sized button fits a table cell or a dense toolbar; every other size and padding class keeps that floor for a labeled button. |
-| `.p-sm`, `.compact`                                                    | Compact padding modifier (`px-2.5 py-1`; icon `p-1`).                                                                                                                                                                                     |
-| `.p-lg`, `.spacious`                                                   | Spacious padding modifier (`px-6 py-3`; icon `p-3`).                                                                                                                                                                                      |
+| `.p-xs`                                                                | Tightest padding modifier (`px-2 py-0.5`; icon `p-0.5`). Also drops the `--control-height` minimum so a chip-sized button fits a table cell or a dense toolbar; every other size and padding class keeps that floor for a labeled button. |
+| `.p-sm`                                                                | Compact padding modifier (`px-2.5 py-1`; icon `p-1`).                                                                                                                                                                                     |
+| `.p-lg`                                                                | Spacious padding modifier (`px-6 py-3`; icon `p-3`).                                                                                                                                                                                      |
 | `.icon`                                                                | Square icon button, sized to its own padding rather than to `--control-height`. Use an accessible name in HTML.                                                                                                                           |
 | `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                                                                                                                                                                                         |
 

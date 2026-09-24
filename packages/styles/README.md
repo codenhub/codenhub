@@ -47,7 +47,7 @@ For the Tailwind CSS v4 entrypoint, theme selection, the intent/presentation axe
 
 ## Notes
 
-This package has no JavaScript behavior; no version provides compatibility aliases for a removed class or token. `0.2.0` removes `.btn.loading` (compose a disabled `.btn` with a `.loader` child instead) and `.alert.icon`'s built-in glyph (drop a consumer-supplied icon into `.alert-icon` instead), and `.tooltip` now requires a `.tooltip-bubble` child element rather than a `data-tooltip` attribute. See the [changelog](./docs/changelog/index.md) for the complete history.
+This package has no JavaScript behavior; no version provides compatibility aliases for a removed class or token. `0.2.0` removes `.btn.loading` (compose a disabled `.btn` with a `.loader` child instead) and `.alert.icon`'s built-in glyph (drop a consumer-supplied icon into `.alert-icon` instead), and `.tooltip` now requires a `.tooltip-bubble` child element rather than a `data-tooltip` attribute. `0.5.0` removes the second names: `.dense`, `.compact`, and `.spacious` (use `.p-xs`, `.p-sm`, and `.p-lg`), `.danger` and `.error` (use `.destructive`, and `.hint.destructive` for `.hint.error`), and `.elevation-none`, `.elevation-sm`, and `.elevation-md` (use `.flat`, `.raised`, and `.floating`). See the [changelog](./docs/changelog/index.md) for the complete history.
 
 ## License
 

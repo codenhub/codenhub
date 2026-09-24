@@ -118,7 +118,7 @@ Set them directly to define an intent this package does not ship. **State every 
 
 Foundation tokens are not aliases for one color. They define layout, shape, motion, focus, depth, and layering behavior used by helper classes.
 
-The four `--elevation-*` values below are raw shadows for elements you style yourself. They are a separate thing from `.elevation-none`/`.elevation-sm`/ `.elevation-md` (aliased as `.flat`/`.raised`/`.floating`), which scale a _component's own_ shadow geometry and default to no shadow at all until an aesthetic or one of those classes asks for depth — see [Composing → Elevation](./composing.md#elevation) for that system. The two share `none`/`sm`/`md`/`lg` naming for the same weight of depth, but one is a fixed value and the other multiplies shadow parts, so they will not always paint identically.
+The four `--elevation-*` values below are raw shadows for elements you style yourself. They are a separate thing from `.flat`/`.raised`/`.floating`, which scale a _component's own_ shadow geometry and default to no shadow at all until an aesthetic or one of those classes asks for depth — see [Composing → Elevation](./composing.md#elevation) for that system. The two share `none`/`sm`/`md`/`lg` naming for the same weight of depth, but one is a fixed value and the other multiplies shadow parts, so they will not always paint identically.
 
 | Token                      | Purpose                                                                 |
 | -------------------------- | ----------------------------------------------------------------------- |

@@ -282,14 +282,14 @@ Depth is not uniform within an aesthetic. In the chunky-tile look, white option 
 
 So elevation is a **modifier**, not a fourth axis. It sits with size, above the three axes:
 
-| Class             | Alias       | `--ui-elevation` | Means                                        |
-| ----------------- | ----------- | ---------------- | -------------------------------------------- |
-| `.elevation-none` | `.flat`     | `0`              | No part-based depth; complete values remain. |
-| _(default)_       |             | `1`              | The aesthetic's depth as authored.           |
-| `.elevation-sm`   | `.raised`   | `1`              | The same, said explicitly.                   |
-| `.elevation-md`   | `.floating` | `2`              | Twice it, for menus and popovers.            |
+| Class       | `--ui-elevation` | Means                                        |
+| ----------- | ---------------- | -------------------------------------------- |
+| `.flat`     | `0`              | No part-based depth; complete values remain. |
+| _(default)_ | `1`              | The aesthetic's depth as authored.           |
+| `.raised`   | `1`              | The same, said explicitly.                   |
+| `.floating` | `2`              | Twice it, for menus and popovers.            |
 
-The alias pair is not a deprecation shim -- both names are first-class, the way `.destructive`/`.danger`/`.error` are on the intent axis. `.elevation-lg` is not shipped: three levels covers what the modifier needs today, and the name stays reserved rather than guessed at. Bare `sm`/`md`/`lg` were not an option here -- `sm` and `lg` are already the size modifier's class names, so a class here with the same bare name would collide with a component's own size.
+Until `0.5.0` each class had a second name, `.elevation-none`/`-sm`/`-md`, borrowed from the raw `--elevation-*` shadows. Those were removed with the package's other aliases (see [Roadmap](./roadmap.md#cleanup)): the names described a scale step rather than what the class does, and they borrowed a token's name for a different mechanism. A fourth level is not shipped: three covers what the modifier needs today. Bare `sm`/`md`/`lg` were not an option here -- `sm` and `lg` are already the size modifier's class names, so a class here with the same bare name would collide with a component's own size.
 
 One unitless number, multiplied into the aesthetic's shadow geometry where the component composes it:
 
@@ -311,9 +311,9 @@ The bubble was the one exception until 0.1.0: it is placed over content nobody c
 
 Depth used to be a property of the component instead. `surface` carried a structural `0 1px 3px`, which put a shadow under every card on a plain page -- and, because `--_d-*` inherits like any custom property and a button declares no shadow geometry of its own, under every button and chip nested inside one too. The geometry moved to the things that ask for depth, and the leak went with it.
 
-This modifier system shares its naming with, but not its mechanism with, the `--elevation-none/-sm/-md/-lg` tokens in `theme.css`: those are raw shadow values for a consumer's own elements, read by nothing else in `src/`. A `.elevation-sm` card and `--elevation-sm` written on your own element mean the same weight of depth, but one multiplies an aesthetic's shadow parts and the other is a fixed value, so they are not read from the same place and will not always paint identically.
+This modifier system is separate from the `--elevation-none/-sm/-md/-lg` tokens in `theme.css`: those are raw shadow values for a consumer's own elements, read by nothing else in `src/`. A `.raised` card and `--elevation-sm` written on your own element mean roughly the same weight of depth, but one multiplies an aesthetic's shadow parts and the other is a fixed value, so they are not read from the same place and will not always paint identically.
 
-A component's registry elevation still only says how much depth it takes _if_ depth is drawn, which under the default aesthetic and with no `.elevation-sm`/`.elevation-md` (or their `.raised`/`.floating` aliases) is never -- so a `card` resting at elevation `1` renders identical to a `panel` resting at `0` with nothing else in scope. That is documented, intentional behavior, not a bug the naming pass above was meant to fix: giving every component's registry rest level real fallback geometry with no aesthetic and no modifier class was considered and set aside, to keep this pass to naming and the `none` rung rather than a visual change to every unclassed component.
+A component's registry elevation still only says how much depth it takes _if_ depth is drawn, which under the default aesthetic and with no `.raised` or `.floating` is never -- so a `card` resting at elevation `1` renders identical to a `panel` resting at `0` with nothing else in scope. That is documented, intentional behavior, not a bug the naming pass above was meant to fix: giving every component's registry rest level real fallback geometry with no aesthetic and no modifier class was considered and set aside, to keep this pass to naming and the `none` rung rather than a visual change to every unclassed component.
 
 ### The one limitation
 
@@ -417,7 +417,7 @@ Controls -- the text controls, `.input-group`, and the toggles -- read `--ui-con
 - **I1.** Intent declares color and nothing else. No intent class may set a length, a ratio, a shadow, or a shape.
 - **I2.** Exactly one intent applies, and semantic outranks emphasis.
 - **I3.** Intent does not cascade **into a component**. Every component redeclares the neutral defaults at its own root, at zero specificity, so an element's own intent class wins and an inherited one loses. The neutral values also sit at `:root` as the floor for everything else; the per-component redeclaration is what keeps that floor -- and any ancestor intent -- out of a component. See [The root floor](#the-root-floor).
-- **I4.** An intent class is never also a component. `.error` says destructive; it must not additionally mean "helper text". Where a component needs both, the component carries its own class and takes the intent alongside it.
+- **I4.** An intent class is never also a component. `.destructive` says destructive; it must not additionally mean "helper text". Where a component needs both, the component carries its own class and takes the intent alongside it.
 
 One deliberate exception to I3: table rows inherit their table's intent rather than resetting it, because a row is part of a table rather than an independent component. A row carrying its own intent class still wins.
 
@@ -768,7 +768,7 @@ Rounded slabs seated on a darker shade of themselves, pressed flat on click.
 - An unfilled tile's bar and its line are the same colour by construction: both resolve `--intent-border`.
 - Hover holds still and the press moves: a seated slab has one gesture and it belongs to the press.
 - Actions are heavier and slightly tracked, through `--ui-button-weight` and `--ui-button-tracking`, a slot pair only `.btn` reads, so a consumer's `font-*` utility still beats it. Casing is left to the application.
-- A `.btn.icon` at `.dense`/`.p-xs` sits on half the lift, through the one recorded selector list.
+- A `.btn.icon` at `.p-xs` sits on half the lift, through the one recorded selector list.
 
 ### `.cyber`
 
@@ -968,7 +968,7 @@ Checked against the components rather than against any look. Each row is a part 
 
 | Part                     | Fixed today                                                                                                                                                                                                                             | What any answer must keep                                                                                                                                                   |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Corner scale             | One radius per aesthetic at every size: `.sm`, `.lg`, `.dense`, `.p-xs`, and `.icon` change height and padding, never the corner. `.cyber` caps its cut at 25% of the box as a local fix.                                               | An explicit `--ui-radius` still wins; `--ui-radius-pill` and `--ui-radius-tight` keep their meaning.                                                                        |
+| Corner scale             | One radius per aesthetic at every size: `.sm`, `.lg`, `.p-xs`, and `.icon` change height and padding, never the corner. `.cyber` caps its cut at 25% of the box as a local fix.                                                         | An explicit `--ui-radius` still wins; `--ui-radius-pill` and `--ui-radius-tight` keep their meaning.                                                                        |
 | Corner pattern           | Which corners take the radius is packed into a multi-value `--ui-radius`, so a single element cannot choose a pattern without restating the size.                                                                                       | The pattern composes with every aesthetic's corner, including none.                                                                                                         |
 | Line style               | `solid`, written by `box`, the progress track, and the table's head and foot rules.                                                                                                                                                     | A control boundary still meets 1.4.11 where it does today, and forced colours still draw it.                                                                                |
 | Depth in layers          | One part-based layer on every component; a complete multi-layer value reaches surfaces only (`--ui-surface-shadow`), and there it opts out of elevation ([The one limitation](#the-one-limitation)).                                    | `.flat`, `.raised`, and `.floating` keep reaching every component, and the intent still colours the shadow at the component.                                                |

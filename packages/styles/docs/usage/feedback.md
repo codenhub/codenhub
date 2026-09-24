@@ -43,7 +43,7 @@ Loader size modifiers:
 | `.sm`    | Small (`1.25rem`).   |
 | `.lg`    | Large (`2.25rem`).   |
 
-Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, `.danger`, `.error`, and `.info`. Without an intent, they use the text palette, except `.loader`, which keeps `currentColor` so it matches whatever content surrounds it.
+Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, they use the text palette, except `.loader`, which keeps `currentColor` so it matches whatever content surrounds it.
 
 Skeletons, loaders, and dividers are indicators: they read intent but ignore fill and edge [presentation](./composing.md#presentation). `.progress` is not one of them — its track reads both, `.soft.edgeless` by default; only the moving value fill stays intent-colored at full strength regardless of presentation. `.solid` is unsupported on the track, and `.ghost.edgeless` renders but is discouraged, since neither leaves the track a visible frame. See [Composing → Component axis reference](./composing.md#component-axis-reference) for the full table.
 
