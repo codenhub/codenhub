@@ -40,6 +40,17 @@
     --ui-shadow-y: var(--_neo-offset);
     --ui-shadow-blur: 0px;
     --ui-shadow-spread: 0px;
+    /* No second depth layer and no halo, cleared so a region nested inside another
+       aesthetic does not inherit one. */
+    --ui-shadow-2-x: initial;
+    --ui-shadow-2-y: initial;
+    --ui-shadow-2-blur: initial;
+    --ui-shadow-2-spread: initial;
+    --ui-shadow-2-ink: initial;
+    --ui-shadow-2-inset: initial;
+    --ui-halo-blur: initial;
+    --ui-halo-spread: initial;
+    --ui-halo-ink: initial;
 
     /* The press: travel the offset, shrink the shadow to nothing, so the element
        lands flat where its slab was. Hover keeps the slab still under the pointer;

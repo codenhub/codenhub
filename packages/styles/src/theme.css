@@ -303,5 +303,7 @@
 @media (forced-colors: active) {
   * {
     --ui-line-style: solid;
+    --ui-shadow-2-ink: initial;
+    --ui-halo-ink: initial;
   }
 }

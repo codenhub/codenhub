@@ -52,6 +52,17 @@
     --ui-shadow-y: 0px;
     --ui-shadow-blur: 0px;
     --ui-shadow-spread: 0px;
+    /* No second depth layer and no halo, cleared so a region nested inside another
+       aesthetic does not inherit one. */
+    --ui-shadow-2-x: initial;
+    --ui-shadow-2-y: initial;
+    --ui-shadow-2-blur: initial;
+    --ui-shadow-2-spread: initial;
+    --ui-shadow-2-ink: initial;
+    --ui-shadow-2-inset: initial;
+    --ui-halo-blur: initial;
+    --ui-halo-spread: initial;
+    --ui-halo-ink: initial;
     /* `--ui-bg-alpha` multiplies the fill, and a surface's default fill is 0%:
        without a translucent ground the blur ends up behind an opaque background
        and nothing shows through. */

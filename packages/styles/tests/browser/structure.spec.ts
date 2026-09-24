@@ -152,3 +152,38 @@ test.describe("line style", () => {
     expect(await read(page, "field", "border-top-style")).toBe("solid");
   });
 });
+
+test.describe("shadow layers", () => {
+  test("a second depth layer paints only when asked for, and elevation scales it", async ({ page }) => {
+    await load(
+      page,
+      `<button data-testid="plain" class="btn">b</button>
+       <div class="c-layer">
+         <button data-testid="layered" class="btn">b</button>
+         <button data-testid="floating" class="btn floating">b</button>
+         <button data-testid="flat" class="btn flat">b</button>
+       </div>`,
+      `.c-layer { --ui-shadow-2-y: 3px; --ui-shadow-2-blur: 6px; --ui-shadow-2-ink: 0%; }`,
+    );
+
+    const layers = (shadow: string) => shadow.split(/,(?![^(]*\))/).length;
+
+    expect(layers(await read(page, "plain", "box-shadow")), "no empty layer by default").toBe(1);
+    expect(await read(page, "layered", "box-shadow")).toMatch(/0px 3px 6px 0px/);
+    expect(await read(page, "floating", "box-shadow")).toMatch(/0px 6px 12px 0px/);
+    expect(await read(page, "flat", "box-shadow")).toMatch(/0px 0px 0px 0px[^,]*$/);
+  });
+
+  test(".flat keeps the halo, and a field takes it", async ({ page }) => {
+    await load(
+      page,
+      `<div class="cyber">
+         <button data-testid="flat" class="btn flat success">b</button>
+         <input data-testid="field" class="ipt" />
+       </div>`,
+    );
+
+    expect(await read(page, "flat", "box-shadow")).toMatch(/0px 0px 8px 0px/);
+    expect(await read(page, "field", "box-shadow")).toMatch(/0px 0px 8px 0px/);
+  });
+});

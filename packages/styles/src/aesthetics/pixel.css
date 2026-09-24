@@ -50,6 +50,17 @@
        two `color-mix()` results that WebKit resolves as zero (see `box`). */
     --ui-shadow-edge: ;
     --ui-shadow-spread: var(--_pixel-unit);
+    /* No second depth layer and no halo, cleared so a region nested inside another
+       aesthetic does not inherit one. */
+    --ui-shadow-2-x: initial;
+    --ui-shadow-2-y: initial;
+    --ui-shadow-2-blur: initial;
+    --ui-shadow-2-spread: initial;
+    --ui-shadow-2-ink: initial;
+    --ui-shadow-2-inset: initial;
+    --ui-halo-blur: initial;
+    --ui-halo-spread: initial;
+    --ui-halo-ink: initial;
     --ui-shadow-x: 0px;
     --ui-shadow-y: 0px;
     --ui-shadow-blur: 0px;

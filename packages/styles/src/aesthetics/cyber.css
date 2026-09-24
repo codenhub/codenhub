@@ -67,19 +67,28 @@
     --ui-border-max: 100px;
     --ui-line-style: initial;
 
-    /* The glow: the component's own ink, blurred, with no offset. `box` mixes
-       depth as `color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink),
-       var(--elevation-color))`, so a transparent depth colour turns 40% ink into
-       the intent colour at 40% alpha rather than into a darker shade of it.
-       Elevation scales the blur like every shadow, so the glow lights what rests
-       above zero -- buttons and cards -- and anything raised, and leaves fields
-       and chips crisp. */
+    /* The glow is light, not depth, so it is the halo: the component's own intent
+       colour at 40%, blurred, with no offset. Elevation does not scale it, so
+       every component glows -- fields and chips included -- and `.flat` does
+       not put it out. There is no depth, and the transparent depth colour keeps
+       `.raised` and `.floating` from drawing any. */
     --elevation-color: transparent;
-    --ui-shadow-ink: 40%;
+    --ui-shadow-ink: 0%;
     --ui-shadow-x: 0px;
     --ui-shadow-y: 0px;
-    --ui-shadow-blur: var(--_cyber-glow);
+    --ui-shadow-blur: 0px;
     --ui-shadow-spread: 0px;
+    --ui-halo-blur: var(--_cyber-glow);
+    --ui-halo-spread: 0px;
+    --ui-halo-ink: 40%;
+    /* No second depth layer, cleared so a region nested inside another
+       aesthetic does not inherit one. */
+    --ui-shadow-2-x: initial;
+    --ui-shadow-2-y: initial;
+    --ui-shadow-2-blur: initial;
+    --ui-shadow-2-spread: initial;
+    --ui-shadow-2-ink: initial;
+    --ui-shadow-2-inset: initial;
 
     /* The glow holds still under the pointer and under a press; the press is the
        base scale, restated because a region nested inside another aesthetic must

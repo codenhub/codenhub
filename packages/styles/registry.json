@@ -99,7 +99,16 @@
       ]
     },
     "--ui-radius-surface": { "readers": ["surface"] },
-    "--ui-line-style": { "readers": ["box", "data-table", "progress"] }
+    "--ui-line-style": { "readers": ["box", "data-table", "progress"] },
+    "--ui-shadow-2-x": { "readers": ["box"] },
+    "--ui-shadow-2-y": { "readers": ["box"] },
+    "--ui-shadow-2-blur": { "readers": ["box"] },
+    "--ui-shadow-2-spread": { "readers": ["box"] },
+    "--ui-shadow-2-ink": { "readers": ["box"] },
+    "--ui-shadow-2-inset": { "readers": ["box"] },
+    "--ui-halo-blur": { "readers": ["box"] },
+    "--ui-halo-spread": { "readers": ["box"] },
+    "--ui-halo-ink": { "readers": ["box"] }
   },
   "components": [
     {

@@ -492,7 +492,7 @@
      rather than as an `outline`, so a clipping aesthetic clips it with
      everything else and its own inset focus layer still paints over the top. */
   &:focus-visible {
-    --_shadow: var(--_shadow-parts), 0 0 0 var(--focus-ring-width) var(--focus-ring);
+    --_shadow: var(--_shadow-parts) var(--_halo-layer,), 0 0 0 var(--focus-ring-width) var(--focus-ring);
   }
 
   &::after {
@@ -536,7 +536,7 @@
 
   /* The ring, for the reason given on `checkbox`. */
   &:focus-visible {
-    --_shadow: var(--_shadow-parts), 0 0 0 var(--focus-ring-width) var(--focus-ring);
+    --_shadow: var(--_shadow-parts) var(--_halo-layer,), 0 0 0 var(--focus-ring-width) var(--focus-ring);
   }
 
   &::after {
@@ -619,7 +619,7 @@
 
   /* The ring, for the reason given on `checkbox`. */
   &:focus-visible {
-    --_shadow: var(--_shadow-parts), 0 0 0 var(--focus-ring-width) var(--focus-ring);
+    --_shadow: var(--_shadow-parts) var(--_halo-layer,), 0 0 0 var(--focus-ring-width) var(--focus-ring);
   }
 
   &::after {

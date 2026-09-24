@@ -1428,10 +1428,10 @@ test.describe("aesthetics", () => {
       expect(hits.unscaled, "the same button with the full cut").toBe(false);
     });
 
-    /* The glow is depth, so it answers elevation like every shadow: the two
-       components the registry rests above zero light up, anything a consumer
-       raises lights up, and fields and chips stay crisp. */
-    test("glows buttons and cards in their own intent, and leaves fields and chips crisp", async ({ page }) => {
+    /* The glow is light, not depth, so it is the halo: elevation does not scale
+       it, every component takes it -- fields and chips too -- and `.flat` does
+       not put it out. */
+    test("glows every component in its own intent, flat or not", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "cyber"));
 
       const button = await readStyles(page, "btn-default-success", ["box-shadow"]);
@@ -1444,10 +1444,10 @@ test.describe("aesthetics", () => {
       await page.goto(withAesthetic(FEEDBACK_URL, "cyber"));
 
       const badge = await readStyles(page, "badge-default-none", ["box-shadow"]);
-      const raised = await page.evaluate(() => {
+      const flat = await page.evaluate(() => {
         const badgeElement = document.createElement("span");
 
-        badgeElement.className = "badge raised";
+        badgeElement.className = "badge flat";
         document.querySelector('[data-testid="preview-root"]')!.append(badgeElement);
 
         const shadow = getComputedStyle(badgeElement).boxShadow;
@@ -1461,15 +1461,18 @@ test.describe("aesthetics", () => {
       const field = await readStyles(page, "ipt-default-none", ["box-shadow"]);
 
       /* Offsetless and blurred: the glow sits evenly around the silhouette. */
-      expect(button["box-shadow"], "button glows").toMatch(/\b0px 0px 8px 0px\b/);
-      expect(card["box-shadow"], "card glows").toMatch(/\b0px 0px 8px 0px\b/);
-      expect(raised, "a raised badge glows").toMatch(/\b0px 0px 8px 0px\b/);
-      expect(badge["box-shadow"], "badge").toMatch(/\b0px 0px 0px 0px\b/);
-      expect(field["box-shadow"], "field").toMatch(/\b0px 0px 0px 0px\b/);
+      const glows = /\b0px 0px 8px 0px\b/;
 
-      /* The glow is the intent colour itself, thinned: a transparent depth colour
-         turns 40% ink into 40% alpha rather than into a darker shade. */
-      const glow = readSrgb(readShadowColor(button["box-shadow"]!));
+      expect(button["box-shadow"], "button glows").toMatch(glows);
+      expect(card["box-shadow"], "card glows").toMatch(glows);
+      expect(badge["box-shadow"], "badge glows").toMatch(glows);
+      expect(flat, "a flat badge still glows").toMatch(glows);
+      expect(field["box-shadow"], "field glows").toMatch(glows);
+
+      /* The glow is the intent colour itself, thinned: 40% of the intent over
+         nothing is 40% alpha rather than a darker shade. */
+      const halo = button["box-shadow"]!.split(/,(?![^(]*\))/).find((layer) => glows.test(layer))!;
+      const glow = readSrgb(readShadowColor(halo));
       const intent = readSrgb(success);
 
       expect(glow.alpha, "glow alpha").toBeCloseTo(0.4, 2);

@@ -37,7 +37,7 @@
   /* The complete-shadow slot for a shadow that is not one layer (glass tucks two
      under with negative spread). Only `surface` reads it -- through `--ui-shadow`
      it would land an 18px drop under every button and chip -- like the backdrop. */
-  --_shadow: var(--ui-surface-shadow, var(--_shadow-parts));
+  --_shadow: var(--ui-surface-shadow, var(--_shadow-parts)) var(--_halo-layer,);
 
   /* The surface pair of `box`'s corner: the aesthetic's surface length, scaled
      by the padding step and patterned by the same four corner switches. */

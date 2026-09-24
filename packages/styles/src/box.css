@@ -150,14 +150,34 @@
      and hands `var()` its fallback -- the idiom `--_focus-stack` also uses. */
   --_edge-shadow-color: var(--ui-shadow-edge) var(--_edge);
   --_shadow-color: var(--_edge-shadow-color, var(--_depth-color));
-  --_shadow-parts: var(--ui-shadow-inset,) var(--_sx) var(--_sy) var(--_sb) var(--_ss) var(--_shadow-color);
+  /* A second depth layer, in parts like the first and scaled the same way, so
+     `.flat`, `.raised`, and `.floating` reach both. Its ink is its presence: with
+     `--ui-shadow-2-ink` undeclared the whole layer, leading comma included, is
+     invalid at computed-value time and `var()` drops it -- no empty layer sits
+     in every box's shadow. Hover and press move the first layer only. */
+  --_shadow-2-layer:
+    ,
+    var(--ui-shadow-2-inset,) calc(var(--ui-shadow-2-x, 0px) * var(--_depth))
+      calc(var(--ui-shadow-2-y, 0px) * var(--_depth)) calc(var(--ui-shadow-2-blur, 0px) * var(--_depth))
+      var(--ui-shadow-2-spread, 0px)
+      color-mix(in oklab, var(--intent-border) var(--ui-shadow-2-ink), var(--elevation-color));
+  --_shadow-parts: var(--ui-shadow-inset,) var(--_sx) var(--_sy) var(--_sb) var(--_ss) var(--_shadow-color)
+    var(--_shadow-2-layer,);
+  /* A shadow that is not depth: light in the element's own intent colour, with
+     no offset. Outside the depth layers, and not scaled by elevation, so `.flat`
+     leaves it alone and a field resting at zero still takes it. Present only
+     when `--ui-halo-ink` is declared, the way the second layer is. */
+  --_halo-layer:
+    ,
+    0 0 var(--ui-halo-blur, 0px) var(--ui-halo-spread, 0px)
+      color-mix(in oklab, var(--intent-border) var(--ui-halo-ink), transparent);
   /* Indirection so a component can substitute a complete value of its own
      without restating the parts -- `surface` does, for the multi-layer case.
      There is deliberately no `--ui-shadow` wrapper: a complete value has nothing
      for the elevation multiplier to reach, so `.flat` would silently stop working
      on anything that set one. `--ui-surface-shadow` is that escape hatch narrowed
      to the single case that needs it. */
-  --_shadow: var(--_shadow-parts);
+  --_shadow: var(--_shadow-parts) var(--_halo-layer,);
   --_focus-stack: var(--_shadow), inset 0 0 0 var(--ui-focus-inset) var(--focus-ring);
 
   /* Every box sizes itself as `min-height`/`min-width: var(--control-height)`
