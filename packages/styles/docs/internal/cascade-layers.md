@@ -1,12 +1,12 @@
 ---
-status: DRAFT
+status: APPROVED
 last_updated: 2026-09-23
 scope: Decision to place everything `@codenhub/styles` ships in named cascade layers, so a consumer's own CSS and Tailwind utilities beat the package's classes.
 ---
 
 # Cascade layers: the consumer's CSS wins
 
-This is a proposal for review, per the repository root `docs/README.md`'s `DRAFT` status. It states the decision and what the implementation must reproduce, not drop-in code, for the reason [`.progress` gains presentation](./progress-presentation-axes.md) gives. The measurements below come from a throwaway spike, built and run in Chromium, Firefox, and WebKit.
+This is agreed direction. Future work touching this surface MUST follow it; the code does not comply yet, so what is there is legacy to reconcile, per the repository root `docs/README.md`'s `APPROVED` status. It states the decision and what the implementation must reproduce, not drop-in code, for the reason [`.progress` gains presentation](./progress-presentation-axes.md) gives. The measurements below come from a throwaway spike, built and run in Chromium, Firefox, and WebKit.
 
 ## The problem
 
