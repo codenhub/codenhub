@@ -159,7 +159,7 @@ The maintainer accepted the consequence: **inside a `.glass` region, neutral sof
 
 - Simplifying the seams layering makes redundant (L7).
 - Making `/components` usable without `/theme`. The undefined colour tokens there are unchanged by this proposal. (Since fixed; see [Model](./model.md#which-files-import-the-theme).)
-- Corner scale and corner pattern, which are separate decisions on [Roadmap](./roadmap.md#structure).
+- Corner scale and corner pattern, decided separately in [Structure for 0.5.0](./structure.md).
 
 ## Implementation notes
 

@@ -289,7 +289,7 @@ So elevation is a **modifier**, not a fourth axis. It sits with size, above the 
 | `.raised`   | `1`              | The same, said explicitly.                   |
 | `.floating` | `2`              | Twice it, for menus and popovers.            |
 
-Until `0.5.0` each class had a second name, `.elevation-none`/`-sm`/`-md`, borrowed from the raw `--elevation-*` shadows. Those were removed with the package's other aliases (see [Roadmap](./roadmap.md#cleanup)): the names described a scale step rather than what the class does, and they borrowed a token's name for a different mechanism. A fourth level is not shipped: three covers what the modifier needs today. Bare `sm`/`md`/`lg` were not an option here -- `sm` and `lg` are already the size modifier's class names, so a class here with the same bare name would collide with a component's own size.
+Until `0.5.0` each class had a second name, `.elevation-none`/`-sm`/`-md`, borrowed from the raw `--elevation-*` shadows. Those were removed with the package's other aliases (see [the 0.5.0 changelog](../changelog/0.5.0.md)): the names described a scale step rather than what the class does, and they borrowed a token's name for a different mechanism. A fourth level is not shipped: three covers what the modifier needs today. Bare `sm`/`md`/`lg` were not an option here -- `sm` and `lg` are already the size modifier's class names, so a class here with the same bare name would collide with a component's own size.
 
 One unitless number, multiplied into the aesthetic's shadow geometry where the component composes it:
 
