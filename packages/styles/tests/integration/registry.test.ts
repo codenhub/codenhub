@@ -839,6 +839,27 @@ test("every aesthetic declares a whole shadow geometry", async () => {
   expect(problems).toEqual([]);
 });
 
+/* Button label typography slots (`--ui-button-weight`, `--ui-button-tracking`)
+   are declared by chunky tile and cleared with `initial` by every other
+   aesthetic, so an aesthetic nested inside chunky tile keeps the button's own
+   weight and tracking rather than inheriting chunky tile's heavier label. See
+   docs/internal/cascade-layers.md (L5). */
+test("every aesthetic declares or clears button label typography", async () => {
+  const slots = ["--ui-button-weight", "--ui-button-tracking"];
+  const sources = await Promise.all(
+    (registry.aesthetics ?? []).map(async (aesthetic) => ({
+      name: aesthetic.class,
+      source: await read(`src/aesthetics/${aesthetic.class}.css`),
+    })),
+  );
+  const problems = sources
+    .map(({ name, source }) => ({ missing: slots.filter((slot) => !source.includes(`${slot}:`)), name }))
+    .filter(({ missing }) => missing.length > 0)
+    .map(({ missing, name }) => `${name} declares no ${missing.join(", ")}`);
+
+  expect(problems).toEqual([]);
+});
+
 /* `family` is the only record that `.secondary` maps onto the accent palette
    rather than a `--color-secondary-*` family that does not exist, and the
    browser suite hard-codes the same mapping. Held against the stylesheet so the
