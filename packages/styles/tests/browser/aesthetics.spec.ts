@@ -1573,3 +1573,82 @@ test.describe("aesthetics", () => {
     });
   });
 });
+
+/* A control's boundary is not a pane's edge. Glass's white hairline and chunky
+   tile's tile grey stay on surfaces, and a control inside either takes the
+   aesthetic's `--ui-control-ink` instead; every other aesthetic clears it, so a
+   region nested inside glass or chunky tile draws its controls in its own ink.
+   Read as the control's own `--intent-border`, the ink its line is drawn from:
+   the painted line then walks toward the fill by P3, which is not this test's
+   question. */
+test.describe("control ink", () => {
+  const CASES = [
+    { aesthetic: "glass", controlInk: "light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55))" },
+    { aesthetic: "chunky-tile", controlInk: "light-dark(var(--color-neutral-600), var(--color-neutral-400))" },
+  ] as const;
+
+  for (const { aesthetic, controlInk } of CASES) {
+    test(`${aesthetic} draws controls in its control ink and surfaces in its own`, async ({ page }) => {
+      await page.goto(FORMS_URL);
+
+      const read = await page.evaluate(
+        ({ name, ink }) => {
+          const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+          const region = document.createElement("div");
+
+          region.className = name;
+          region.innerHTML =
+            '<div class="card"><input type="checkbox" class="checkbox" data-probe="control"></div>' +
+            '<div class="neobrutalism"><input type="checkbox" class="checkbox" data-probe="nested"></div>';
+          host.append(region);
+
+          const resolve = (value: string, within: Element) => {
+            const probe = document.createElement("span");
+
+            probe.style.color = value;
+            within.append(probe);
+
+            const color = getComputedStyle(probe).color;
+
+            probe.remove();
+
+            return color;
+          };
+          const nested = region.querySelector(".neobrutalism")!;
+          /* A custom property computes to its token string, so the ink is read
+             back through a colour property the control does not otherwise use. */
+          const inkOf = (element: HTMLElement) => {
+            element.style.outlineColor = "var(--intent-border)";
+
+            const color = getComputedStyle(element).outlineColor;
+
+            element.style.removeProperty("outline-color");
+
+            return color;
+          };
+          const result = {
+            card: getComputedStyle(region.querySelector(".card")!).borderTopColor,
+            control: inkOf(region.querySelector<HTMLElement>('[data-probe="control"]')!),
+            expectedControl: resolve(ink, region),
+            nested: inkOf(region.querySelector<HTMLElement>('[data-probe="nested"]')!),
+            nestedInk: resolve("var(--ui-ink)", nested),
+            surfaceInk: resolve("var(--ui-ink)", region),
+          };
+
+          region.remove();
+
+          return result;
+        },
+        { ink: controlInk, name: aesthetic },
+      );
+
+      expectSameColor(read.control, read.expectedControl, `${aesthetic} checkbox ink`);
+      expect(
+        getColorDistance(read.control, read.surfaceInk),
+        `${aesthetic} checkbox is not the surface ink`,
+      ).toBeGreaterThan(2);
+      expect(isTransparent(read.card), `${aesthetic} card keeps a line`).toBe(false);
+      expectSameColor(read.nested, read.nestedInk, `neobrutalism nested in ${aesthetic} checkbox ink`);
+    });
+  }
+});

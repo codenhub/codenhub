@@ -103,6 +103,10 @@
        font to fall back to but a monospace stack. */
     font-family: var(--font-pixel, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
 
+    /* The control ink glass and chunky tile name, cleared so a region nested
+       inside either draws its controls in this aesthetic's own ink. */
+    --ui-control-ink: initial;
+
     /* Chunky tile's heavier button label, cleared so a region nested inside it
        keeps the button's own weight and tracking. */
     --ui-button-weight: initial;

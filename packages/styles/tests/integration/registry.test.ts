@@ -874,6 +874,29 @@ test("every aesthetic declares or clears button label typography", async () => {
   expect(problems).toEqual([]);
 });
 
+/* `--ui-control-ink` is named by the aesthetics whose surface ink does not suit
+   a control's boundary and cleared with `initial` by every other, so a region
+   nested inside glass or chunky tile draws its controls in its own ink. See
+   docs/internal/boundary-contrast.md. */
+test("every aesthetic names or clears the control ink", async () => {
+  const named = new Set(["glass", "chunky-tile"]);
+  const problems: string[] = [];
+
+  for (const { name, source } of await aestheticSources()) {
+    const clean = withoutComments(source);
+    const body = clean.match(new RegExp(String.raw`\.${name}(?![A-Za-z0-9_-])[^{]*\{([^{}]*)\}`))?.[1];
+    const value = body?.match(/(?:^|\s)--ui-control-ink\s*:\s*([^;]+);/)?.[1]?.trim();
+
+    if (value === undefined) {
+      problems.push(`${name} declares no --ui-control-ink`);
+    } else if (named.has(name) === (value === "initial")) {
+      problems.push(`${name} should ${named.has(name) ? "name" : "clear"} --ui-control-ink, found ${value}`);
+    }
+  }
+
+  expect(problems).toEqual([]);
+});
+
 /* `family` is the only record that `.secondary` maps onto the accent palette
    rather than a `--color-secondary-*` family that does not exist, and the
    browser suite hard-codes the same mapping. Held against the stylesheet so the

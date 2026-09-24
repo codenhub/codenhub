@@ -30,6 +30,14 @@
     /* Glass catches light from above whatever is under it, so the edge is a light
        hairline in both themes rather than a theme-following ink. */
     --ui-ink: light-dark(rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.22));
+    /* A control's boundary is not a pane's edge. The hairline erases an
+       unchecked checkbox on a light page (1.33:1 inside a glass card) and leaves
+       a field with nothing marking where typing goes, so controls take the
+       theme's ink at 55% instead: translucent, so it tints whatever is behind
+       the pane rather than drawing a flat grey, and 6.31:1 on a checkbox, 2.31:1
+       on a field's 60% resting line, in light. See
+       docs/internal/boundary-contrast.md. */
+    --ui-control-ink: light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55));
 
     --ui-bg-alpha: 0.8;
     --ui-backdrop: blur(14px) saturate(1.6);

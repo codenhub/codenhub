@@ -38,7 +38,8 @@
   }
 
   /* Native text controls need the same stronger neutral boundary as their classed
-     counterparts, without changing buttons, checkboxes, radios, or other inputs. */
+     counterparts, without changing buttons, checkboxes, radios, or other inputs --
+     control ink included, as `intent.css`'s class reset reads it. */
   :where(
     input:not([type]),
     input[type="text"],
@@ -56,7 +57,7 @@
     textarea,
     select
   ) {
-    --intent-border: var(--ui-ink, var(--color-control-border));
+    --intent-border: var(--ui-control-ink, var(--ui-ink, var(--color-control-border)));
   }
 
   :where(hr) {

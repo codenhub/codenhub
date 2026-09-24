@@ -22,12 +22,17 @@
     --_tile-lift: var(--tile-lift, 4px);
     --_tile-radius: var(--tile-radius, 0.75rem);
 
-    /* The tile grey -- also the neutral bar, at the shadow ink below. Darker than
-       the look's own greys because `--ui-ink` is every text control's boundary,
-       drawn at `--_line-rest: 60%`: neutral-200/300 measure 1.21:1/1.42:1 against
-       the light page where WCAG 1.4.11 asks 3:1, and neutral-400 (2.48:1 whole) is
-       the heaviest grey that still leaves a field legible. */
+    /* The tile grey -- also the neutral bar, at the shadow ink below. It was
+       chosen darker than the look's own greys while it was also every control's
+       boundary; controls now take `--ui-control-ink` below, so this is the line
+       of tiles and surfaces. */
     --ui-ink: light-dark(var(--color-neutral-400), var(--color-neutral-600));
+    /* Controls take a heavier grey than the tile, drawn at a field's 60% resting
+       line: 600 in light, where the tile's 400 left a field at 1.65:1 against
+       the page (2.87:1 now, a checkbox 8.63:1), and 400 in dark, where the
+       tile's 600 sat too close to the page (3.40:1 now, 8.62:1). See
+       docs/internal/boundary-contrast.md. */
+    --ui-control-ink: light-dark(var(--color-neutral-600), var(--color-neutral-400));
 
     /* One knob for both radii, where glass splits them: a tile and the button
        inside it share a corner, and drifting apart loses the single-object read.
