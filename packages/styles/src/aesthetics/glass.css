@@ -59,6 +59,11 @@
   --ui-shadow-edge: initial;
   --ui-hover-transform: none;
   --ui-active-transform: none;
+
+  /* Chunky tile's heavier button label, cleared so a region nested inside it
+     keeps the button's own weight and tracking. */
+  --ui-button-weight: initial;
+  --ui-button-tracking: initial;
 }
 
 /* Transparency is the whole aesthetic, so the honest degradation is an opaque

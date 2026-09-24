@@ -90,31 +90,28 @@
      reset applies to `html`/`body`, so a consumer that themed the page font gets
      it here too. `--font-sans` is Tailwind's own and the package never sets it. */
   font-family: var(--font-rounded, var(--font-default, ui-sans-serif, system-ui, sans-serif));
+
+  /* A heavy, slightly tracked label is what makes an action read as a tile
+     rather than as a button. Two slots only a button reads, rather than a
+     selector list naming `.btn`: a selector list either loses to `.btn`'s own
+     weight or beats a consumer's `font-*` utility, depending on where it is
+     layered, and a token does neither. See docs/internal/cascade-layers.md (L5).
+
+     Casing is deliberately not here. The chunky-tile look is usually drawn with
+     uppercase labels and an earlier draft set `text-transform`, but how a label
+     is *worded* is the application's decision and an aesthetic silently
+     recasing it takes that away -- along with any acronym, proper noun, or
+     locale whose rules for case are not English's. A consumer who wants
+     shouting buttons writes it in their own stylesheet, where it is theirs to
+     own. */
+  --ui-button-weight: 800;
+  --ui-button-tracking: 0.04em;
 }
 
 /* The one R3 exception this aesthetic takes, recorded in the registry as
    `selectors`.
 
-   A heavy, slightly tracked label is what makes an action read as a tile rather
-   than as a button, and neither weight nor tracking is a value any material token
-   holds. Adding two would put typography into the material vocabulary for one
-   aesthetic's benefit, and a slot buys nothing besides: `.btn` is the only action
-   the package ships, so an action-scoped token would be this same list with an
-   indirection in front of it. The bare `button` is named beside the class so the
-   treatment reaches an unclassed element the way every Tier 1 token already does.
-
-   Casing is deliberately not here. The chunky-tile look is usually drawn with
-   uppercase labels and the earlier draft of this rule set `text-transform`, but
-   how a label is *worded* is the application's decision and an aesthetic silently
-   recasing it takes that away -- along with any acronym, proper noun, or
-   locale whose rules for case are not English's. A consumer who wants shouting
-   buttons writes it in their own stylesheet, where it is theirs to own. */
-.chunky-tile :is(.btn, button) {
-  font-weight: 800;
-  letter-spacing: 0.04em;
-}
-
-/* `--tile-lift` alone cannot reach this: it resolves once, on `.chunky-tile`
+   `--tile-lift` alone cannot reach this: it resolves once, on `.chunky-tile`
    itself (`--_tile-lift: var(--tile-lift, 4px)`), and inherits down already a
    plain `4px` -- a nested `--tile-lift` on a descendant button is a fresh
    declaration nothing downstream reads. `--ui-shadow-y` is what `box` actually

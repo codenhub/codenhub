@@ -86,6 +86,11 @@
      no font binary; the monospace stack is the closest technical face every
      platform already has. */
   font-family: var(--font-cyber, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+
+  /* Chunky tile's heavier button label, cleared so a region nested inside it
+     keeps the button's own weight and tracking. */
+  --ui-button-weight: initial;
+  --ui-button-tracking: initial;
 }
 
 /* Firefox and Safari do not draw `corner-shape` yet, and there the radius would

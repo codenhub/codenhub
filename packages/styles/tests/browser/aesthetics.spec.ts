@@ -1200,9 +1200,10 @@ test.describe("aesthetics", () => {
       expect(channelDistance(line!.rgb, bar!.rgb), "line and bar are the same grey").toBeLessThan(120);
     });
 
-    /* The recorded R3 exception. `.btn` is the only action the package ships, and
-       the bare element is named beside the class so the treatment reaches an
-       unclassed `<button>` the way every Tier 1 token already does. */
+    /* Through the `--ui-button-weight`/`--ui-button-tracking` slot pair `.btn`
+       reads, so it reaches a bare `<button>` wherever the package styles one --
+       the native entry, which maps the element onto `btn` -- and nowhere it does
+       not. `layers.spec.ts` covers a consumer's utility beating it. */
     test("weights its action labels, including on an unclassed button", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "chunky-tile"));
 

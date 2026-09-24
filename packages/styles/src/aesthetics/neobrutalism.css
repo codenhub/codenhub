@@ -56,6 +56,11 @@
      slab on everything the edge axis rests at zero. */
   --ui-shadow-edge: initial;
   --ui-backdrop: none;
+
+  /* Chunky tile's heavier button label, cleared so a region nested inside it
+     keeps the button's own weight and tracking. */
+  --ui-button-weight: initial;
+  --ui-button-tracking: initial;
 }
 
 /* The one R3 exception, recorded in the registry as `selectors`. The slab here

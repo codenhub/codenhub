@@ -95,7 +95,7 @@ The rule for where anything goes:
 
 State is the one place a consumer's utility still loses, and deliberately: a consumer's `[--intent-color:...]` on an `aria-invalid` field loses to the destructive slots at 0-2-0, as [Precedence](./model.md#precedence) says state wins over every choice.
 
-Neobrutalism's alert slab writes only `--_d-elevation`, so it stays a selector list, now in `utilities` at 0-2-0. It remains the one R3 exception.
+The two aesthetic selector lists that remain follow the same rule. Neobrutalism's alert slab writes only `--_d-elevation`, so it goes in `utilities` at 0-2-0. Chunky tile's `.btn.icon.dense`/`.p-xs` rule writes `--ui-shadow-y`, a public token, so it goes in `components`: as the element's own declaration it still beats the value inherited from `.chunky-tile`, and a consumer's utility beats it.
 
 ### L5. Chunky tile's label weight becomes a slot
 
@@ -110,7 +110,7 @@ Neobrutalism's alert slab writes only `--_d-elevation`, so it stays a selector l
 
 Named for the component kind that reads them, the way `--ui-surface-*` names what only a surface reads, rather than for an "action" role: the role taxonomy was [removed from the model](./model.md#shared-composition-not-a-taxonomy).
 
-Two consequences. Chunky tile loses its only selector list, so neobrutalism's alert is the package's last R3 exception. And a bare `<button>` the package does not style -- no `.btn`, no `/native` -- no longer takes the heavier label under chunky tile; on `main` the selector list reached it anyway, which R3 says an aesthetic should not do.
+Two consequences. Chunky tile's selector list shrinks to its icon-button bar (L4), which still names `.btn` and so stays a recorded R3 exception. And a bare `<button>` the package does not style -- no `.btn`, no `/native` -- no longer takes the heavier label under chunky tile; on `main` the selector list reached it anyway, which R3 says an aesthetic should not do.
 
 ### L6. A surface's quiet ground becomes a private default
 
@@ -141,7 +141,7 @@ The maintainer accepted the consequence: **inside a `.glass` region, neutral sof
 - **Glass** reaches every neutral surface in its region (L6), in `docs/usage/aesthetics.md`.
 - **Chunky tile** no longer styles bare buttons the package does not style (L5).
 - **A new public section** on cascade layers in `docs/setup.md` or `docs/concepts.md`: the map, what beats what, and the per-entry guarantee.
-- **`registry.json`**: chunky tile's `selectors` entry goes; neobrutalism's stays.
+- **`registry.json`**: chunky tile's `selectorReason` narrows to the icon-button bar; neobrutalism's is unchanged.
 
 ## Documents this changes
 
@@ -151,7 +151,7 @@ The maintainer accepted the consequence: **inside a `.glass` region, neutral sof
 
 - **A new browser spec, `layers.spec.ts`**, turning the probe table into assertions, run on `.` and on the raw `dist/` files for `/components`, `/native`, `/theme` + `/components`, and `/aesthetics` before `/components`: a consumer `@layer utilities` rule and an unlayered rule each beat an aesthetic, presentation, intent, and elevation class; an aesthetic on `<html>` keeps its tokens; chunky tile's weight holds and a consumer's `font-*` beats it; `.card.soft.glass` and a glass region's neutral surfaces take glass's ground; a nested ghost card keeps its own ground; `.ipt.soft` names its cap and `aria-invalid` beats an intent class.
 - **An integration check in `exports.test.ts`**: every built entrypoint opens with `theme, base, components, utilities`, and every unlayered rule in `dist/` is on an allowlist -- the solo classes, `forced-colors`, `@property` -- so a rule that slips out of its layer fails the build.
-- **Registry**: chunky tile's `selectors` removed, and the aesthetic hygiene test extended to `--ui-button-weight` and `--ui-button-tracking`.
+- **Registry**: chunky tile's `selectorReason` narrowed, and the aesthetic hygiene test extended to `--ui-button-weight` and `--ui-button-tracking`.
 
 ## Not in scope
 

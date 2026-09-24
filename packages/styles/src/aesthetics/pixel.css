@@ -93,6 +93,11 @@
   /* Consumer-supplied. The package ships no font binary, so the aesthetic has no
      font to fall back to but a monospace stack. */
   font-family: var(--font-pixel, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+
+  /* Chunky tile's heavier button label, cleared so a region nested inside it
+     keeps the button's own weight and tracking. */
+  --ui-button-weight: initial;
+  --ui-button-tracking: initial;
 }
 
 /* Solo: the same look painted onto the one element carrying the class, for an
