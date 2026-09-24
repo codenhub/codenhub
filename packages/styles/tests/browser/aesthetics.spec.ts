@@ -219,26 +219,23 @@ test.describe("aesthetics", () => {
 
       const inkedCap = await readStyles(page, "kbd-default-none", [...properties, "background-color"]);
       const ink = await resolveToken(page, "--color-text");
-      /* A chip rests `soft`, and `box` blends a line toward the plate it rings by
-         the resting fill, so the ink sets the edge without being the edge whole.
-         Restating the blend here rather than loosening the comparison keeps the
-         assertion exact: what is checked is that the aesthetic's ink is the ink
-         end of that mix, not merely that the edge moved somewhere darker. */
-      const inkedEdge = await page.evaluate(
-        ([plate, tone]) => {
-          const probe = document.createElement("span");
+      /* A chip rests `soft`, and `box` fades a line out by the resting fill, so
+         the ink sets the edge without being the edge whole. Restating the blend
+         here rather than loosening the comparison keeps the assertion exact: what
+         is checked is that the aesthetic's ink is the ink end of that mix, not
+         merely that the edge moved somewhere darker. */
+      const inkedEdge = await page.evaluate((tone) => {
+        const probe = document.createElement("span");
 
-          probe.style.color = `color-mix(in oklab, ${plate} 12%, ${tone})`;
-          document.body.append(probe);
+        probe.style.color = `color-mix(in oklab, transparent 12%, ${tone})`;
+        document.body.append(probe);
 
-          const resolved = getComputedStyle(probe).color;
+        const resolved = getComputedStyle(probe).color;
 
-          probe.remove();
+        probe.remove();
 
-          return resolved;
-        },
-        [inkedCap["background-color"]!, ink] as const,
-      );
+        return resolved;
+      }, ink);
 
       expectSameColor(inkedCap["border-top-color"]!, inkedEdge, "inked key cap edge");
       expect(
@@ -1018,8 +1015,8 @@ test.describe("aesthetics", () => {
       await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
 
       /* Probed on `.ghost.edged`, because the ring now answers the edge axis and
-         a fill would blend it toward the plate: P3 runs the line into the fill by
-         the fill amount, so a `.solid` ring is the plate's own colour by design.
+         a fill would fade it out: P3 fades the line by the fill amount, so a
+         `.solid` ring is transparent by design and shows the plate under it.
          Zero fill is where the intent reaches the line undiluted. */
       const [neutralShadow, tintedShadow] = await page.evaluate(() =>
         ["btn-ghost-edged-none", "btn-ghost-edged-destructive"].map(

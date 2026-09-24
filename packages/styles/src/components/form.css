@@ -55,9 +55,11 @@
      there is nothing else marking an unchecked box. */
   --_line-rest: 60%;
   /* Two seams rather than one composed result. `--_line-tone` is what colour the
-     line is, and the states below move it; `--_line` folds in P3's blend toward
-     the fill, exactly as `box` does it, so the two agree and a state never has to
-     restate the blend to keep it.
+     line is, and the states below move it; `--_line` folds in the fill, walking
+     the line toward the intent colour by the fill amount, so a state never has
+     to restate that blend to keep it. It is a field's own form of P3 rather than
+     `box`'s: a field keeps its line whatever it is filled with, so the line walks
+     toward the fill's colour instead of fading out into it.
 
      Written as a single `--_line` that states overwrote, a hovered or focused
      control lost the blend along with the tone, because replacing a composed

@@ -406,17 +406,17 @@ test.describe("buttons", () => {
     );
   });
 
-  /* A hovered `.solid` box mixes its edge toward `--intent-hover`, not toward
-     the resting `--intent-color`. Without that the edge blends to the resting
-     colour exactly, and a hovered solid button wears a ring of the colour it
-     just left -- visible only as a hairline, and invisible to any assertion that
-     reads the background alone. */
+  /* A hovered `.solid` box's edge is its hover plate, not a line in the
+     colour it just left. The line fades out as the fill fills in, toward the
+     hover ink on hover, so at a full fill the band shows the plate under it --
+     which moves to `--intent-hover` with the fill. Measured as painted: the
+     band composited over the plate, because a transparent line and a line of
+     the resting colour read the same in a computed string that ignores alpha. */
   test("moves a hovered solid button's edge to the hover tone", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
     /* Built rather than read off the grid: `.solid` shows one row there, and a
-       button with no edge class rests edgeless, whose edge is nothing at all.
-       The tone the edge follows is only visible where a line is drawn. */
+       button with no edge class rests edgeless. */
     await page.evaluate(() => {
       const button = document.createElement("button");
 
@@ -426,7 +426,6 @@ test.describe("buttons", () => {
     });
 
     const solid = page.getByTestId("hover-solid-edged");
-    const resting = await solid.evaluate((element) => getComputedStyle(element).borderTopColor);
     const hoverToken = await page.evaluate(() => {
       const probe = document.createElement("span");
 
@@ -439,15 +438,28 @@ test.describe("buttons", () => {
 
       return color;
     });
+    const readBand = () =>
+      solid.evaluate((element) => {
+        const styles = getComputedStyle(element);
 
-    expect(getColorDistance(resting, hoverToken), "resting edge is not already the hover tone").toBeGreaterThan(2);
+        return { border: styles.borderTopColor, plate: styles.backgroundColor };
+      });
+
+    const resting = await readBand();
+
+    expect(getColorDistance(resting.plate, hoverToken), "resting plate is not already the hover tone").toBeGreaterThan(
+      2,
+    );
+    expectSameColor(flattenColor(resting.border, resting.plate), resting.plate, "resting band is the plate");
 
     await solid.hover();
 
     await expect
-      .poll(async () =>
-        getColorDistance(await solid.evaluate((element) => getComputedStyle(element).borderTopColor), hoverToken),
-      )
+      .poll(async () => {
+        const hovered = await readBand();
+
+        return getColorDistance(flattenColor(hovered.border, hovered.plate), hoverToken);
+      })
       .toBeLessThanOrEqual(2);
   });
 

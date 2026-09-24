@@ -393,10 +393,15 @@
      box paints that over the fill it already drew, so a quotation that asked for
      no bar got a bar of two coats of its own tint.
 
-     That this had to be fixed twice is the cost of a quotation drawing its own
-     edge instead of taking `box`'s. Recorded in `registry.json` beside the
-     decision to compose none of `box`. */
-  --quote-line: color-mix(in oklab, var(--quote-bg) var(--ui-fill, var(--_d-fill)), var(--intent-border));
+     It also fades toward `transparent` rather than toward the plate, as `box`'s
+     does: the plate runs under the bar, so a bar blended toward it painted a
+     translucent plate twice and drew a darker stripe on a neutral `.solid`
+     quotation.
+
+     That this had to be fixed three times is the cost of a quotation drawing
+     its own edge instead of taking `box`'s. Recorded in `registry.json` beside
+     the decision to compose none of `box`. */
+  --quote-line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-border));
   --quote-edge: color-mix(in oklab, var(--quote-line) var(--ui-border, var(--_d-border)), transparent);
   --quote-width: calc(var(--ui-border-width, var(--border-width)) * 2 + 1px);
 

@@ -69,14 +69,20 @@
      a capped intent -- rather than being bent so neutral's contrast is the ink,
      which rendered a checked neutral checkbox black-on-black. */
   --_fg: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
-  /* P3: the line blends toward the fill by the fill amount, so a filled box has
-     a seamless edge. Blend first, amount after (`--_edge-amount` below) -- the
-     other order lands `.edgeless` on the fill colour, which the border box then
-     paints as a second translucent coat: a ring around an element that asked for
-     no edge. The blend runs toward `--_bg`, not raw `--intent-color`, so under
-     an aesthetic that thins the fill a translucent box does not keep an opaque
-     ring. */
-  --_line: color-mix(in oklab, var(--_bg) var(--ui-fill, var(--_d-fill)), var(--intent-border));
+  /* P3: the line fades out as the fill fills in, so a filled box has a seamless
+     edge. It fades toward `transparent`, not toward the plate: the plate already
+     runs under the border (nothing here clips the background to the padding
+     box), so a line blended toward `--_bg` painted the plate a second time over
+     itself. On an opaque plate that is invisible; on a translucent one -- a
+     neutral fill, capped at 20%, or any fill `--ui-bg-alpha` thins -- it drew a
+     ring around the box, 1.54:1 against its own plate in light. Faded toward
+     nothing, the border shows the one coat beneath it.
+
+     Blend first, amount after (`--_edge-amount` below) -- the other order lands
+     `.edgeless` on the fill colour, which the border box then paints as a second
+     coat: a ring around an element that asked for no edge. See
+     docs/internal/boundary-contrast.md. */
+  --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-border));
   /* How much line there is, as an input rather than a result. A component that
      must keep its line whatever the edge class says raises `--_edge-floor`
      instead of rewriting `--_edge`, and the composition above still runs.
@@ -205,11 +211,10 @@
 @utility box-hover {
   &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
     --_bg: color-mix(in oklab, var(--intent-hover) var(--_hover-fill), var(--_d-ground, transparent));
-    /* P3 again, against the hover tone. Only the ink end has to move: the fill
-       end is `--_bg`, which the line above already redefined, so the resting
-       formula follows the hover on its own. Without this the edge blends toward
-       the resting ink -- a ring of the colour the box just left. */
-    --_line: color-mix(in oklab, var(--_bg) var(--ui-fill, var(--_d-fill)), var(--intent-hover));
+    /* P3 again, against the hover tone: the line still fades as the fill fills
+       in, but toward the hover ink. Without this the edge keeps the resting ink
+       -- a ring of the colour the box just left. */
+    --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-hover));
     --_sx: calc(var(--ui-hover-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_elevation));
     --_sy: calc(
       var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--elevation-y, 0px)))) * var(--_elevation)

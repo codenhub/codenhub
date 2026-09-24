@@ -435,9 +435,9 @@ test("reads presentation on key caps and tables", async ({ page }) => {
       defaultBorderWidth: resting.borderTopWidth,
       edgedBorderWidth: get("kbd-soft-edged-primary").borderTopWidth,
       /* The line `box` composes for a chip at its resting fill: the neutral line
-         blended toward the plate it rings by that fill. Restated here rather than
-         approximated, so the assertion still names a colour. */
-      expectedBorderColor: resolve(`color-mix(in oklab, ${resting.backgroundColor} 12%, var(--color-border))`),
+         faded out by that fill, over the plate that runs under it. Restated here
+         rather than approximated, so the assertion still names a colour. */
+      expectedBorderColor: resolve("color-mix(in oklab, transparent 12%, var(--color-border))"),
       ghostHeadBackground: ghostHead.backgroundColor,
       namedRestingBackground: namedResting.backgroundColor,
       restingBackground: resting.backgroundColor,
@@ -479,13 +479,17 @@ test("reads presentation on key caps and tables", async ({ page }) => {
   /* No presentation scales a key cap's border, so `.edged` matches the default
      rather than changing its width. */
   expect(Number.parseFloat(styles.edgedBorderWidth)).toBe(Number.parseFloat(styles.defaultBorderWidth));
-  // The resting line is the neutral line, blended toward its own plate.
+  // The resting line is the neutral line, faded out by the resting fill.
   expectSameColor(styles.defaultBorderColor, styles.expectedBorderColor, "default kbd edge");
-  /* `.edgeless` drops the line, and a filled cap lands on its own fill so nothing
-     rings it -- the edge blend runs the line to the plate at a full fill. A fill
-     class decides no edge of its own. */
+  /* `.edgeless` drops the line, and a filled cap draws none either, so nothing
+     rings it -- the line fades out as the fill fills in and the band shows the
+     plate under it. A fill class decides no edge of its own. */
   expect(readSrgb(styles.softBorderColor).alpha, styles.softBorderColor).toBeLessThan(0.2);
-  expectSameColor(styles.solidBorderColor, styles.solidBackground, "solid kbd edge");
+  expectSameColor(
+    flattenColor(styles.solidBorderColor, styles.solidBackground),
+    styles.solidBackground,
+    "solid kbd edge",
+  );
   /* A ghost table draws no head plate at all -- that is what `.ghost` means on
      this component -- while a soft one tints it away from the surface tone. */
   expect(isTransparent(styles.ghostHeadBackground), "ghost table head").toBe(true);

@@ -136,15 +136,27 @@ test.describe("axes", () => {
           painted: await readPainted(page, `${component.class} ${fill}`, tag, type, target),
         })),
       );
+      /* A full fill collapses the edge question by design (P3): the line fades
+         out as the fill fills in, so `.solid.edged` and `.solid.edgeless` paint
+         one box. A component that rests `.solid` is probed for its edge at the
+         first quieter fill it supports, where a line has somewhere to show. It
+         used to read as live at `.solid` only because the neutral probe drew a
+         ring of its own translucent plate there, which was the defect. */
+      const edgeFill =
+        component.default?.fill === "solid"
+          ? supported(component, "fill", FILL_CLASSES).find((fill) => fill !== "solid")
+          : undefined;
+      const edgeBase = edgeFill ? `${component.class} ${edgeFill}` : component.class;
+      const edgeBasePainted = edgeFill ? await readPainted(page, edgeBase, tag, type, target) : base;
       const edgeResults = await Promise.all(
         supported(component, "edge", EDGE_CLASSES).map(async (edge) => ({
           edge,
-          painted: await readPainted(page, `${component.class} ${edge}`, tag, type, target),
+          painted: await readPainted(page, `${edgeBase} ${edge}`, tag, type, target),
         })),
       );
 
       const fillMoves = fillResults.some((result) => differs(result.painted, base));
-      const edgeMoves = edgeResults.some((result) => differs(result.painted, base));
+      const edgeMoves = edgeResults.some((result) => differs(result.painted, edgeBasePainted));
 
       expect(
         fillMoves,
