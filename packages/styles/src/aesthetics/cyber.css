@@ -106,6 +106,7 @@
     --ui-shadow-inset: ;
     --ui-shadow-edge: initial;
     --ui-backdrop: none;
+    --ui-surface-image: initial;
     --ui-bg-alpha: 1;
 
     /* Consumer-supplied, the way `.pixel` reads `--font-pixel`. The package ships

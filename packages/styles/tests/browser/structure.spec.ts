@@ -187,3 +187,23 @@ test.describe("shadow layers", () => {
     expect(await read(page, "field", "box-shadow")).toMatch(/0px 0px 8px 0px/);
   });
 });
+
+test.describe("painted layer", () => {
+  test("paints surfaces and not controls, and a consumer's background-image wins", async ({ page }) => {
+    const stripes = "linear-gradient(rgb(255, 0, 0), rgb(0, 0, 255))";
+
+    await load(
+      page,
+      `<div class="c-image">
+         <div data-testid="card" class="card">c</div>
+         <div data-testid="own" class="card c-own">c</div>
+         <button data-testid="button" class="btn">b</button>
+       </div>`,
+      `.c-image { --ui-surface-image: ${stripes}; } .c-own { background-image: none; }`,
+    );
+
+    expect(await read(page, "card", "background-image")).toBe(stripes);
+    expect(await read(page, "own", "background-image"), "the consumer's own rule").toBe("none");
+    expect(await read(page, "button", "background-image"), "controls take no painted layer").toBe("none");
+  });
+});

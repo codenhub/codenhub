@@ -42,6 +42,7 @@
 
     --ui-bg-alpha: 0.8;
     --ui-backdrop: blur(14px) saturate(1.6);
+    --ui-surface-image: initial;
 
     /* R6. Controls carry no shadow of their own -- the depth in this aesthetic is
        the blur, and a drop shadow under a translucent button reads as grime. All

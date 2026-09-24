@@ -51,6 +51,12 @@
      pair into the prefixed one alone, and the standard property never reaches
      `dist/` -- which drops the blur in Firefox (the one engine with
      `backdrop-filter` and not the `-webkit-` alias). Measured on the built CSS. */
+  /* The painted layer: a pattern, a texture, or a gradient an aesthetic lays
+     over the plate. Surfaces only, like the backdrop, so a control's label and
+     `.select`'s chevron never sit on one. The aesthetic that sets it owns the
+     contrast of the text over it, and a consumer's own `background-image` still
+     beats this declaration. */
+  background-image: var(--ui-surface-image, none);
   -webkit-backdrop-filter: var(--ui-backdrop, none);
   backdrop-filter: var(--ui-backdrop, none);
 }

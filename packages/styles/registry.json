@@ -108,7 +108,8 @@
     "--ui-shadow-2-inset": { "readers": ["box"] },
     "--ui-halo-blur": { "readers": ["box"] },
     "--ui-halo-spread": { "readers": ["box"] },
-    "--ui-halo-ink": { "readers": ["box"] }
+    "--ui-halo-ink": { "readers": ["box"] },
+    "--ui-surface-image": { "readers": ["surface"] }
   },
   "components": [
     {

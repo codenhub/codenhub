@@ -116,6 +116,7 @@
     --ui-hover-transform: none;
     --ui-active-transform: none;
     --ui-backdrop: none;
+    --ui-surface-image: initial;
 
     /* Consumer-supplied. The package ships no font binary, so the aesthetic has no
        font to fall back to but a monospace stack. */
