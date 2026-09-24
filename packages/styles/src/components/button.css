@@ -17,14 +17,20 @@
   @apply box box-hover box-active relative inline-flex w-fit cursor-pointer items-center justify-center gap-2 px-4 py-2 whitespace-nowrap no-underline select-none;
 
   min-height: var(--control-height);
-  /* The label's weight and tracking are material slots, so an aesthetic sets
-     them as tokens (`.chunky-tile`'s heavier, tracked label) and a consumer's
-     own `font-*` or `tracking-*` utility still beats the aesthetic. Tracking
-     has no fallback on purpose: undefined, the declaration is invalid at
-     computed-value time and `letter-spacing` inherits, which is what it did
-     before the slot existed. See docs/internal/cascade-layers.md (L5). */
-  font-weight: var(--ui-button-weight, var(--font-weight-semibold));
-  letter-spacing: var(--ui-button-tracking);
+  /* The label is material, shared with `.badge`: weight, tracking, case, and a
+     text shadow, set by an aesthetic as tokens (`.chunky-tile`'s heavier,
+     tracked label), and a consumer's own `font-*`, `tracking-*`, `uppercase`, or
+     text-shadow utility still beats the aesthetic. Tracking has no fallback on
+     purpose: undefined, the declaration is invalid at computed-value time and
+     `letter-spacing` inherits, which is what it did before the slot existed.
+     Case and shadow fall back to `none`, which is what a button already does:
+     the user agent stops both inheriting into one. The shadow is written
+     without a colour, so it takes the label's own and cannot lower its
+     contrast. See docs/internal/cascade-layers.md (L5). */
+  font-weight: var(--ui-label-weight, var(--font-weight-semibold));
+  letter-spacing: var(--ui-label-tracking);
+  text-transform: var(--ui-label-case, none);
+  text-shadow: var(--ui-label-shadow, none);
 
   &.sm {
     @apply min-h-8 px-3 py-1 text-sm;

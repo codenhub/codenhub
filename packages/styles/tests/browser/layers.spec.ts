@@ -137,11 +137,9 @@ for (const [scenario, files] of Object.entries(SCENARIOS)) {
 
       expect(await read(page, "tile-button", "font-weight"), "chunky tile's label").toBe("800");
       expect(await read(page, "tile-utility-weight", "font-weight"), "a consumer's weight beats it").toBe("300");
-      expect(await read(page, "tile-button", "--ui-button-weight"), "chunky tile declares button weight slot").toBe(
-        "800",
-      );
+      expect(await read(page, "tile-button", "--ui-label-weight"), "chunky tile declares the label weight").toBe("800");
       expect(
-        await read(page, "tile-nested-pixel-button", "--ui-button-weight"),
+        await read(page, "tile-nested-pixel-button", "--ui-label-weight"),
         "nested aesthetic clears chunky tile's weight slot to initial (guaranteed-invalid)",
       ).toBe("");
       expect(

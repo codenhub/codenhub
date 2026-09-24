@@ -840,12 +840,11 @@ test("every aesthetic declares a whole shadow geometry", async () => {
   expect(problems).toEqual([]);
 });
 
-/* Button label typography slots (`--ui-button-weight`, `--ui-button-tracking`)
-   are declared by chunky tile and cleared with `initial` by every other
-   aesthetic, so an aesthetic nested inside chunky tile keeps the button's own
-   weight and tracking rather than inheriting chunky tile's heavier label. See
-   docs/internal/cascade-layers.md (L5). */
-test("every aesthetic declares or clears button label typography", async () => {
+/* The label weight and tracking are declared by chunky tile and cleared with
+   `initial` by every other aesthetic, so an aesthetic nested inside chunky tile
+   keeps the button's and the badge's own label rather than inheriting chunky
+   tile's heavier one. See docs/internal/cascade-layers.md (L5). */
+test("every aesthetic declares or clears the label weight and tracking", async () => {
   const problems: string[] = [];
 
   for (const { name, source } of await aestheticSources()) {
@@ -860,8 +859,8 @@ test("every aesthetic declares or clears button label typography", async () => {
     const body = ruleMatch[1]!;
     const expected =
       name === "chunky-tile"
-        ? { "--ui-button-weight": "800", "--ui-button-tracking": "0.04em" }
-        : { "--ui-button-weight": "initial", "--ui-button-tracking": "initial" };
+        ? { "--ui-label-weight": "800", "--ui-label-tracking": "0.04em" }
+        : { "--ui-label-weight": "initial", "--ui-label-tracking": "initial" };
 
     for (const [slot, value] of Object.entries(expected)) {
       const declaration = new RegExp(String.raw`(?:^|\s)${slot}\s*:\s*${value}\s*;`);

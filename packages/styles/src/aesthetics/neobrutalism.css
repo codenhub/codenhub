@@ -89,10 +89,12 @@
        inside either draws its controls in this aesthetic's own ink. */
     --ui-control-ink: initial;
 
-    /* Chunky tile's heavier button label, cleared so a region nested inside it
-       keeps the button's own weight and tracking. */
-    --ui-button-weight: initial;
-    --ui-button-tracking: initial;
+    /* Chunky tile's heavier label, cleared so a region nested inside it keeps
+       the button's and the badge's own label. */
+    --ui-label-weight: initial;
+    --ui-label-tracking: initial;
+    --ui-label-case: initial;
+    --ui-label-shadow: initial;
   }
 }
 

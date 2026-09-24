@@ -207,3 +207,51 @@ test.describe("painted layer", () => {
     expect(await read(page, "button", "background-image"), "controls take no painted layer").toBe("none");
   });
 });
+
+test.describe("label treatment", () => {
+  test("reaches buttons and badges, and a consumer's utility beats it", async ({ page }) => {
+    await load(
+      page,
+      `<div class="c-label">
+         <button data-testid="button" class="btn">b</button>
+         <span data-testid="badge" class="badge">b</span>
+         <button data-testid="own" class="btn c-own">b</button>
+       </div>`,
+      `.c-label { --ui-label-weight: 300; --ui-label-case: uppercase; --ui-label-shadow: 0 0 4px; }
+       @layer utilities { .c-own { font-weight: 900; text-transform: lowercase; } }`,
+    );
+
+    expect(await read(page, "button", "font-weight")).toBe("300");
+    expect(await read(page, "badge", "font-weight")).toBe("300");
+    expect(await read(page, "button", "text-transform")).toBe("uppercase");
+    expect(await read(page, "badge", "text-transform")).toBe("uppercase");
+    expect(await read(page, "button", "text-shadow"), "the shadow takes the label's colour").toBe(
+      `${await read(page, "button", "color")} 0px 0px 4px`,
+    );
+    expect(await read(page, "own", "font-weight"), "a consumer's weight utility").toBe("900");
+    expect(await read(page, "own", "text-transform"), "a consumer's case utility").toBe("lowercase");
+  });
+});
+
+/* Every structural part draws its plain version under forced colours. */
+test.describe("forced colours", () => {
+  test("resets every structural part", async ({ page }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await load(
+      page,
+      `<div class="cyber c-parts">
+         <button data-testid="button" class="btn edged">b</button>
+         <div data-testid="card" class="card">c</div>
+       </div>`,
+      `.c-parts { --ui-line-style: dashed; --ui-shadow-2-ink: 50%; --ui-surface-image: linear-gradient(red, blue);
+         --ui-label-shadow: 0 0 4px; }`,
+    );
+
+    expect(await read(page, "button", "--ui-line-style")).toBe("solid");
+    expect(await read(page, "button", "border-top-style")).toBe("solid");
+    expect(await read(page, "button", "--ui-shadow-2-ink")).toBe("");
+    expect(await read(page, "button", "--ui-halo-ink"), "cyber's halo").toBe("");
+    expect(await read(page, "card", "--ui-surface-image")).toBe("none");
+    expect(await read(page, "button", "--ui-label-shadow")).toBe("none");
+  });
+});

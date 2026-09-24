@@ -306,5 +306,6 @@
     --ui-shadow-2-ink: initial;
     --ui-halo-ink: initial;
     --ui-surface-image: none;
+    --ui-label-shadow: none;
   }
 }

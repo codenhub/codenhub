@@ -109,7 +109,11 @@
     "--ui-halo-blur": { "readers": ["box"] },
     "--ui-halo-spread": { "readers": ["box"] },
     "--ui-halo-ink": { "readers": ["box"] },
-    "--ui-surface-image": { "readers": ["surface"] }
+    "--ui-surface-image": { "readers": ["surface"] },
+    "--ui-label-weight": { "readers": ["badge", "btn"] },
+    "--ui-label-tracking": { "readers": ["badge", "btn"] },
+    "--ui-label-case": { "readers": ["badge", "btn"] },
+    "--ui-label-shadow": { "readers": ["badge", "btn"] }
   },
   "components": [
     {

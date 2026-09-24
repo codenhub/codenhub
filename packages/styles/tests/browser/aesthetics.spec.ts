@@ -1196,7 +1196,7 @@ test.describe("aesthetics", () => {
       expect(channelDistance(line!.rgb, bar!.rgb), "line and bar are the same grey").toBeLessThan(120);
     });
 
-    /* Through the `--ui-button-weight`/`--ui-button-tracking` slot pair `.btn`
+    /* Through the `--ui-label-weight`/`--ui-label-tracking` pair `.btn`
        reads, so it reaches a bare `<button>` wherever the package styles one --
        the native entry, which maps the element onto `btn` -- and nowhere it does
        not. `layers.spec.ts` covers a consumer's utility beating it. */

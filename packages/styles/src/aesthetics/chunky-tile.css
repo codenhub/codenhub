@@ -126,8 +126,8 @@
     font-family: var(--font-rounded, var(--font-default, ui-sans-serif, system-ui, sans-serif));
 
     /* A heavy, slightly tracked label is what makes an action read as a tile
-       rather than as a button. Two slots only a button reads, rather than a
-       selector list naming `.btn`: a selector list either loses to `.btn`'s own
+       rather than as a button, and a badge beside it takes the same label. Label
+       tokens rather than a selector list naming `.btn`: a selector list either loses to `.btn`'s own
        weight or beats a consumer's `font-*` utility, depending on where it is
        layered, and a token does neither. See docs/internal/cascade-layers.md (L5).
 
@@ -138,8 +138,10 @@
        locale whose rules for case are not English's. A consumer who wants
        shouting buttons writes it in their own stylesheet, where it is theirs to
        own. */
-    --ui-button-weight: 800;
-    --ui-button-tracking: 0.04em;
+    --ui-label-weight: 800;
+    --ui-label-tracking: 0.04em;
+    --ui-label-case: initial;
+    --ui-label-shadow: initial;
   }
 }
 
