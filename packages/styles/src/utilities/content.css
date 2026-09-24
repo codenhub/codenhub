@@ -77,8 +77,8 @@
      ordinary 12% tint (twenty-four units past the head) read backwards -- the
      seam that should read as one table read as the head belonging to the page
      and the body being the odd one out. `--_fill-cap` is `box.css`'s override
-     slot (the same one `.card.soft` uses, for the same cascade-layer reason
-     the comment there gives), and `--_d-ground` is box's own private ground
+     slot (the same one `.card.soft` uses, for the reasons the comment there
+     gives), and `--_d-ground` is box's own private ground
      slot, unclaimed here until now -- both land on the table's own element,
      same as `--table-fill`/`--table-head-plate` do, so nothing here fights
      `.soft` for `--ui-fill` either. `.ghost` is left at box's default

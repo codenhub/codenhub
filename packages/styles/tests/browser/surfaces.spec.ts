@@ -55,13 +55,11 @@ test.describe("surfaces", () => {
      ground on `.interactive`/`.hoverable` `:hover` -- see the comment in
      `box.css` above `--_fill-cap` and in `surface.css` above `.card`'s
      `&.soft`. The override composes a private `--_fill-cap` term rather than
-     writing `--ui-fill` directly: `presentation.css`'s `.soft` was unlayered
-     while `@utility card` compiled into Tailwind's `utilities` layer, so a
-     `--ui-fill` written there silently lost the cascade to `.soft`'s `12%`
-     regardless of selector specificity, and the card kept its ordinary soft
-     tint with nothing to show for the override. Presentation is layered below
-     the utilities now, but the seam stays (see `box.css`). This test pins the
-     numeric outcome so that regression cannot pass silently again. */
+     writing `--ui-fill` directly -- see `box.css` for why. It was first
+     written directly, when `.soft` was unlayered, and silently lost the
+     cascade to `.soft`'s `12%`: the card kept its ordinary soft tint with
+     nothing to show for the override. This test pins the numeric outcome so
+     that regression cannot pass silently again. */
   test("rests a neutral soft card untinted and reveals the tint only on hover", async ({ page }) => {
     await page.goto(SURFACES_URL);
 
