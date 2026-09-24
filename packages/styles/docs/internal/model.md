@@ -246,9 +246,9 @@ The stress-test pass reversed that. Composing real, dense screens (`form/`, `set
 
 A second look at the same screens moved the unclassed rest itself. All three toggles used to default to `.solid` -- `--_d-fill`/`--_d-fg-on-fill` named the same pair `.solid` does -- which meant a bare, no-intent `<input class="checkbox">` sat at the loudest of the three plates the cap now separates, next to fields and buttons that all default quieter. `--_d-fill`/`--_d-fg-on-fill` now name `.soft`'s pair (`12%`/`0%`) instead, so the unclassed toggle rests at the quiet tint and `.solid` is what a consumer reaches for to ask for the louder plate. Checked is unaffected either way: the pin in `text-control`'s `:checked` composes the same plate regardless of which presentation an element rests at.
 
-Pinning the fill alone was not enough. `--ui-fg-on-fill` is the other half of what a fill class asks for -- `0%` is `.ghost`/`.soft` declaring "no contrast ink, my plate stays quiet" -- and a checked `.ghost`/`.soft` toggle with its fill pinned to an opaque plate but its ink still asking for none rendered a mark within a dozen sRGB steps of its own background, close to invisible. The fix is not `--ui-fg-on-fill: 100%` written into `:checked` the way `--intent-fill-max` is: `.ghost`/`.soft` are unlayered CSS and `text-control` compiles into Tailwind's `utilities` layer, so a layered write there loses to `.ghost`'s unlayered `--ui-fg-on-fill: 0%` regardless of specificity -- the exact trap `--_fill-cap` exists to route around for the fill itself (see [the bounds that survive](#the-bounds-that-survive-and-the-test-for-keeping-one)). `--_on-fill`'s formula gained the same seam: `max(var(--_fg-on-fill-floor, 0%), min(...))`, and `:checked` pins that private floor instead, which nothing unlayered contests.
+Pinning the fill alone was not enough. `--ui-fg-on-fill` is the other half of what a fill class asks for -- `0%` is `.ghost`/`.soft` declaring "no contrast ink, my plate stays quiet" -- and a checked `.ghost`/`.soft` toggle with its fill pinned to an opaque plate but its ink still asking for none rendered a mark within a dozen sRGB steps of its own background, close to invisible. The fix was not `--ui-fg-on-fill: 100%` written into `:checked` the way `--intent-fill-max` is: `.ghost`/`.soft` were unlayered CSS then and `text-control` compiles into Tailwind's `utilities` layer, so a layered write there lost to `.ghost`'s unlayered `--ui-fg-on-fill: 0%` regardless of specificity -- the exact trap `--_fill-cap` routes around for the fill itself (see [the bounds that survive](#the-bounds-that-survive-and-the-test-for-keeping-one)). `--_on-fill`'s formula gained the same seam: `max(var(--_fg-on-fill-floor, 0%), min(...))`, and `:checked` pins that private floor instead. Presentation now sits in `components`, below the utilities ([Cascade layers](#cascade-layers)), so the trap is gone; both seams stay, uncontested, until they are simplified in a change of their own.
 
-One intent slot moves with this. `--intent-fill-max` stops neutral at 20% everywhere else, because a neutral fill is the page's own ink and a full one is a slab -- true of a badge, and false of a toggle at rest, where the common case carries no intent class at all and still has to look like a present, interactive control rather than a washed-out one. So the three toggles lift it unconditionally now, not only at `:checked`, declared where intents are declared for the reason [Precedence](#precedence) gives.
+One intent slot moves with this. `--intent-fill-max` stops neutral at 20% everywhere else, because a neutral fill is the page's own ink and a full one is a slab -- true of a badge, and false of a toggle at rest, where the common case carries no intent class at all and still has to look like a present, interactive control rather than a washed-out one. So the three toggles lift it unconditionally now, not only at `:checked`, declared above the intent classes for the reason [Precedence](#precedence) gives.
 
 ### Unsupported values
 
@@ -447,6 +447,8 @@ An aesthetic declares material: lengths, shadows, shapes, font family, the neutr
 | `--ui-clip`             | `none`               | Silhouette for structural components.                 |
 | `--ui-clip-tight`       | `--ui-clip`          | Silhouette for chips.                                 |
 | `--ui-focus-inset`      | _undefined_          | Inset focus layer width. Undefined means no layer.    |
+| `--ui-button-weight`    | semibold             | Label weight; resolved by buttons only.               |
+| `--ui-button-tracking`  | _undefined_          | Label tracking; undefined inherits. Buttons only.     |
 
 `--elevation-color` is the one row that is not a `--ui-*` slot, and it is here because an aesthetic legitimately names it. The theme declares it, every elevation composes from it, and `--ui-shadow-ink` says how far a component's own intent walks away from it -- so between the two they are the whole colour of depth, and an aesthetic that owns shadows owns both ends of that mix. Chunky tile is the case that proved it: at the shipped `rgb(15 23 42 / 0.08)` the mix runs toward something nearly transparent and its bar composites out _lighter_ than the plate it sits under. Naming the depth colour opaque is what makes the bar a shade of the element, and the [worked example](#worked-example-the-chunky-tile-look) records the measurement.
 
@@ -520,11 +522,29 @@ Modifiers -- size, and [elevation](#elevation) -- sit above the three, being per
 
 This rule had the most leverage left during implementation, because state is where a design system usually grows its escape hatches. The planned second wave added `:checked`, `:indeterminate`, `.active`, `[data-state]` and selected rows, and each had an obvious wrong answer -- paint the property directly -- that worked in isolation and then ignored the aesthetic, ignored elevation, and lost the hover derivation. Before R8 was implemented consistently, `text-control` overwrote the intent slots on `aria-invalid`, which followed R8, while `.checkbox` and `.switch` overwrote `border-color` on `:checked`, which did not. Both looked fine in isolation; only the first survived an aesthetic that drew its edge as an inset ring.
 
-R8 says what a state may declare. It does not say where, and where turns out to decide whether the state wins at all. A state written as `&[aria-invalid="true"]` inside `@utility` lands in the utilities layer; the intent resets land in no layer at all; an unlayered declaration beats a layered one at any specificity. So the moment the control classes joined the reset, the destructive slots an invalid field declares were overruled by the neutral ones, every invalid control drew a plain gray line, and the only thing still marking the error was the hint underneath it. The rule is a plain rule now, and `:is(...)` gives it 0-2-0 so it outranks an intent class on the same element by more than source order. **A state that writes an intent slot is declared where intents are declared.**
+R8 says what a state may declare. It does not say where, and where turns out to decide whether the state wins at all. A state written as `&[aria-invalid="true"]` inside `@utility` lands in the utilities layer; the intent resets land in no layer at all; an unlayered declaration beats a layered one at any specificity. So the moment the control classes joined the reset, the destructive slots an invalid field declares were overruled by the neutral ones, every invalid control drew a plain gray line, and the only thing still marking the error was the hint underneath it. The rule was made a plain unlayered rule to fix that. Since the [cascade layers](#cascade-layers) it sits in `utilities`, above every intent class and both resets in `components`, and `:is(...)` gives it 0-2-0 so it also outranks its own component's utility. **A state that writes an intent slot is declared above the intents: in `utilities`, at a specificity that beats its own component.** A consumer's utility setting an intent slot on an invalid field loses to it too, because state wins over every choice.
 
 The cost of the rule is that a state can only express itself in the vocabulary the axes already have. That is the point: if a state needs something the vocabulary cannot say, the vocabulary is missing a slot, and adding the slot fixes it for every state at once rather than for that one.
 
 Three steps, and there is no fourth. The replaced model's fourth step was "component clamps the result"; the clamps are gone with the edge scale that forced them, and the bounds left are stated where they apply.
+
+## Cascade layers
+
+Everything the package ships sits in one of Tailwind's four layers, in Tailwind's order, on every entrypoint, and every entrypoint states that order before it uses a layer -- a browser orders layers by the first time it meets each name, so a sheet opening `components` first would rank it lowest. The decision and its measurements are in [Cascade layers](./cascade-layers.md).
+
+| Layer        | Holds                                                                                                                      |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `theme`      | Tailwind's theme, the `:root` foundation tokens, the colour-scheme selectors, and `./palette`.                             |
+| `base`       | The reset and the native element styles.                                                                                   |
+| `components` | The four class families: intent (floor, classes, both resets), presentation, elevation, and every aesthetic's token class. |
+| `utilities`  | Every component, and the seams that must beat their own component.                                                         |
+| _unlayered_  | The `forced-colors` and reduced-motion overrides, the `<dialog>` restatement, and the solo classes.                        |
+
+So a consumer's own utility, or their unlayered CSS, beats any class of the four families on the same element. A consumer's utility and a component still contest one layer, by specificity and then source order: components cannot sit below `utilities`, because `@apply` reaches only `@utility` rules and `box`, `surface`, and `text-control` are applied that way.
+
+Where a rule goes follows from what it writes. A rule writing a property or a public token a consumer may set goes in `components` (or `theme`, for a foundation token), where a consumer's utility beats it. A rule writing only package privates, or a state, goes in `utilities` at the specificity it needs to beat its own component, where nothing a consumer writes competes with it. That is also why a selector list that writes a property -- chunky tile's heavier label -- became a slot: it had no layer that satisfied both.
+
+`integration/exports.test.ts` holds every built entrypoint to the order and to the unlayered allowlist, and `browser/layers.spec.ts` asserts a consumer's override on the raw files a non-Tailwind consumer links.
 
 ## Defaults
 
@@ -676,6 +696,7 @@ Translucent surfaces over a blurred backdrop with a hairline highlight edge. Nee
 - Blur and saturation reach surfaces only, through `--ui-backdrop`. Controls stay solid: an active blur costs a compositing layer apiece, and one under every control of a dense cluster reads as noise.
 - The edge is a light hairline in both themes, because glass catches light from above regardless of what is under it.
 - Both shadow layers pull in with negative spread, so the shadow tucks under the surface instead of haloing onto the backdrop.
+- Every surface in its region is glass, a neutral `.card.soft`, `.panel`, and `.alert` included: their quiet ground is a private default beneath `--ui-surface-ground`, so glass's ground wins over it. Until 0.5.0 they wrote the public token and sat opaque.
 - Under `prefers-reduced-transparency`, opacity goes to 100% and the blur is dropped. Transparency is the whole aesthetic, so the honest degradation is an opaque surface rather than a softer blur.
 - Corners are `--glass-radius` and `--glass-radius-surface`, at 0.75rem and 1rem. Rounder than the base geometry, because a translucent panel with a tight corner reads as a cut-out rather than as a pane; a full step above `--radius-surface` landed closer to a pill than to glass. Read with a fallback rather than declared, so an ancestor can set them — [R8](#rules-for-aesthetics), which these two were the first to break.
 
@@ -711,7 +732,8 @@ Rounded slabs seated on a darker shade of themselves, pressed flat on click.
 - The bar is a shade of the element rather than a repeat of it, which takes an opaque `--elevation-color` as well as a partial `--ui-shadow-ink`. See the correction under [Adding an aesthetic](#worked-example-the-chunky-tile-look).
 - An unfilled tile's bar and its line are the same colour by construction: both resolve `--intent-border`.
 - Hover holds still and the press moves: a seated slab has one gesture and it belongs to the press.
-- Actions are heavier and slightly tracked, through the one recorded selector list. Casing is left to the application.
+- Actions are heavier and slightly tracked, through `--ui-button-weight` and `--ui-button-tracking`, a slot pair only `.btn` reads, so a consumer's `font-*` utility still beats it. Casing is left to the application.
+- A `.btn.icon` at `.dense`/`.p-xs` sits on half the lift, through the one recorded selector list.
 
 ### `.cyber`
 
@@ -893,7 +915,9 @@ Depth in that aesthetic is not uniform, and it does not have to be: the promo pa
 }
 ```
 
-The spike's version of that rule also set `text-transform: uppercase`, and the shipped one does not. Weight and tracking are what the type is made of; casing is how a label is _worded_, which belongs to the application. An aesthetic that recases silently also recases every acronym, proper noun, and locale whose rules are not English's — a correctness cost for a look a consumer can write in one line of their own.
+Since 0.5.0 that rule is gone: a selector list naming `.btn` either loses to `.btn`'s own weight or beats a consumer's `font-*` utility, depending on the layer it sits in, so the weight and tracking became the `--ui-button-weight`/`--ui-button-tracking` slot pair ([Cascade layers](./cascade-layers.md), L5).
+
+The spike's version of that rule also set `text-transform: uppercase`, and the shipped one did not. Weight and tracking are what the type is made of; casing is how a label is _worded_, which belongs to the application. An aesthetic that recases silently also recases every acronym, proper noun, and locale whose rules are not English's — a correctness cost for a look a consumer can write in one line of their own.
 
 Nine tokens and one two-selector rule. Nothing modified, and the result holds across intents: a success button sits on a dark green edge, a neutral card on a dark gray one, a selected `.soft.edged.info` card on a dark blue one -- because the shadow composes against each component's own intent at the component, not at the container.
 
@@ -910,9 +934,9 @@ Checked against the model rather than promised. The cyberpunk row first read "cl
 | Liquid glass | Blur, translucent ground, radius, hairline edge    | Specular highlight on surfaces     |
 | Cyberpunk    | Bevelled corners, edge width, glow via shadow tint | Scanline background on surfaces    |
 | Synthwave    | Radius, glow, gradient ground                      | Gradient text or chrome on actions |
-| Chunky tile  | Everything above, and the shade under it           | Heavier, tracked action labels     |
+| Chunky tile  | Everything above, the shade under it, the label    | A shallower bar on tiny buttons    |
 
-Three of the four want a treatment on _surfaces_, which is a slot. Only the fourth wants one on actions, and `.btn` is the only action there is.
+Two of the four want a treatment on _surfaces_, which is a slot. The other two want one on buttons, and `.btn` is the only action there is: chunky tile's heavier label became the `--ui-button-*` slot pair once a selector list could no longer be layered without losing to `.btn` or beating a consumer, and what is left of its list is the shallower bar under the smallest icon buttons.
 
 The pattern holds in each case: shape, color, and depth come from tokens, and only a genuinely component-kind-specific treatment reaches past them. That is the line the tiers are drawn on.
 

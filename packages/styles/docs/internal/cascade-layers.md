@@ -1,12 +1,12 @@
 ---
-status: APPROVED
+status: IMPLEMENTED
 last_updated: 2026-09-23
 scope: Decision to place everything `@codenhub/styles` ships in named cascade layers, so a consumer's own CSS and Tailwind utilities beat the package's classes.
 ---
 
 # Cascade layers: the consumer's CSS wins
 
-This is agreed direction. Future work touching this surface MUST follow it; the code does not comply yet, so what is there is legacy to reconcile, per the repository root `docs/README.md`'s `APPROVED` status. It states the decision and what the implementation must reproduce, not drop-in code, for the reason [`.progress` gains presentation](./progress-presentation-axes.md) gives. The measurements below come from a throwaway spike, built and run in Chromium, Firefox, and WebKit.
+This is the implemented decision, per the repository root `docs/README.md`'s `IMPLEMENTED` status; [Model](./model.md#cascade-layers) carries the layer map as part of the model. [Implementation notes](#implementation-notes) records where the shipped code refines what was proposed. It states the decision and what the implementation must reproduce, not drop-in code, for the reason [`.progress` gains presentation](./progress-presentation-axes.md) gives. The measurements below come from a throwaway spike, built and run in Chromium, Firefox, and WebKit.
 
 ## The problem
 
@@ -51,21 +51,21 @@ The spike layered the four families and the theme tokens, then probed the built 
 
 (\*\*) Holds on `.`, but on `main` it is already broken under `/native`.
 
-The existing browser suite passed unchanged against the spike: 605 passed, 4 skipped, all three engines. It caught none of the failures the spike had to fix along the way, because every playground page is compiled through Tailwind and none exercises a consumer override, which is why [Tests](#tests) adds both.
+The existing browser suite passed unchanged against the spike: 599 passed, 4 skipped, all three engines. (This read 605 when proposed; that count included six runs of the spike's own probe.) It caught none of the failures the spike had to fix along the way, because every playground page is compiled through Tailwind and none exercises a consumer override, which is why [Tests](#tests) adds both.
 
-Two raw-entry facts turned up that this proposal does not change: `/components` loaded without the theme leaves colour tokens undefined, so `--_d-ground` and neobrutalism's slab resolve to nothing there on `main` and in the spike alike.
+One raw-entry fact turned up that this proposal does not change: `/components` loaded without the theme leaves colour tokens undefined, so `--_d-ground` and neobrutalism's slab resolve to nothing there on `main` and in the spike alike. The entry is compiled in Tailwind's reference mode, which emits no theme variables, so it relies on `/theme` for them.
 
 ## Decision
 
 ### L1. One layer map, for every entrypoint
 
-| Layer        | Holds                                                                                                                                                                                                                                                     |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `theme`      | Tailwind's theme, the package's `:root` foundation tokens (radius, control height, elevation colour and steps, focus ring, motion, `--ui-active-transform`), the `.light`/`.dark` colour-scheme selectors, and `./palette`'s `--palette-*` tokens.        |
-| `base`       | `reset.css` and the native element styles, as now.                                                                                                                                                                                                        |
-| `components` | The four class families: intent (the `:root` floor, the classes, both `:where()` resets including `native.css`'s), presentation, elevation, and every aesthetic's token classes with their `@supports` and `@media` blocks.                               |
-| `utilities`  | Every component `@utility`, on every entrypoint, and the rules that must beat their own component (L4).                                                                                                                                                   |
-| _unlayered_  | Only what must beat everything: the `forced-colors` blocks (an accessibility override, as `reset.css` already argues), the solo classes (they must beat a foreign component's unlayered CSS, per [Solo utilities](./solo-utilities.md)), and `@property`. |
+| Layer        | Holds                                                                                                                                                                                                                                                                                                                                  |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme`      | Tailwind's theme, the package's `:root` foundation tokens (radius, control height, elevation colour and steps, focus ring, motion, `--ui-active-transform`), the `.light`/`.dark` colour-scheme selectors, and `./palette`'s `--palette-*` tokens.                                                                                     |
+| `base`       | `reset.css` and the native element styles, as now.                                                                                                                                                                                                                                                                                     |
+| `components` | The four class families: intent (the `:root` floor, the classes, both `:where()` resets including `native.css`'s), presentation, elevation, and every aesthetic's token classes with their `@supports` and `@media` blocks.                                                                                                            |
+| `utilities`  | Every component `@utility`, on every entrypoint, and the rules that must beat their own component (L4).                                                                                                                                                                                                                                |
+| _unlayered_  | Only what must beat everything: the `forced-colors` blocks and the loader's reduced-motion art (accessibility overrides, as `reset.css` already argues), the `<dialog>` restatement in `reset.css`, the solo classes (they must beat a foreign component's unlayered CSS, per [Solo utilities](./solo-utilities.md)), and `@property`. |
 
 The names are Tailwind's own, not a namespace of the package's, so a Tailwind consumer's layers and the package's merge into one order. Placing the four families in `components` puts them below every utility, the consumer's included. The `properties` layer Tailwind emits for its `@property` fallbacks stays where Tailwind puts it, below `theme`.
 
@@ -157,7 +157,16 @@ The maintainer accepted the consequence: **inside a `.glass` region, neutral sof
 
 - Simplifying the seams layering makes redundant (L7).
 - Making `/components` usable without `/theme`. The undefined colour tokens there are unchanged by this proposal.
-- Size-aware corners and shape modifier classes, which are separate decisions on [Roadmap](./roadmap.md#planned).
+- Size-aware corners and shape modifier classes, which are separate decisions on [Roadmap](./roadmap.md#later--possible).
+
+## Implementation notes
+
+Where the shipped code refines or corrects what was proposed:
+
+- **Two more unlayered rules.** The proposal listed the `forced-colors` blocks, the solo classes, and `@property` as the only unlayered CSS. Two more were already unlayered on `main` and stay so, for reasons that still hold: the loader's reduced-motion art is an accessibility override like `forced-colors`, and the `<dialog>` restatement in `reset.css` has to beat `.card`'s `display: block` on a closed `<dialog class="card">`, so it must beat the utilities layer. L1's table now lists them, and the integration check's allowlist names each.
+- **Chunky tile keeps a selector list.** The proposal said chunky tile lost its only selector list under L5. Its `.btn.icon.dense`/`.p-xs` rule, which halves the bar under the smallest icon buttons, also names `.btn`, so it remains a recorded R3 exception. It writes the public `--ui-shadow-y`, so it sits in `components` (L4).
+- **The four families enter `components` two ways.** Intent, presentation, and elevation are imported into the layer by `theme.css` (`@import "./intent.css" layer(components)`), the only file that imports them; the aesthetics and `native.css`'s resets wrap their rules in `@layer components` because they are entrypoints or share a file with other layers.
+- **A regression test for the nested ground.** `surfaces.spec.ts` asserts that a card nested in a `.card.soft` rests like a card under a plain `.soft` container. Presentation cascades by design, so both are soft; only the ground differs, and it failed on `main`.
 
 ## References
 

@@ -18,11 +18,10 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**`0.5.0` is in progress.** `@codenhub/styles@0.4.0` is the current npm version, adding the `.cyber` aesthetic and a solo class for every aesthetic; [`docs/changelog/0.4.0.md`](../changelog/0.4.0.md) records it. `0.5.0` is planned as three foundation changes to the model -- cascade layers, size-aware corners, and shape modifier classes -- followed by the four aesthetics listed under [Later / Possible](#later--possible). [Planned](#planned) holds what has a decision in progress. [Later / Possible](#later--possible) holds deferred, not-yet-started asks.
+**`0.5.0` is in progress.** `@codenhub/styles@0.4.0` is the current npm version, adding the `.cyber` aesthetic and a solo class for every aesthetic; [`docs/changelog/0.4.0.md`](../changelog/0.4.0.md) records it. `0.5.0` is planned as three foundation changes to the model -- cascade layers, size-aware corners, and shape modifier classes -- followed by the four aesthetics listed under [Later / Possible](#later--possible). Cascade layers have landed, per [`cascade-layers.md`](./cascade-layers.md); the release notes are written when `0.5.0` is cut. [Planned](#planned) holds what has a decision in progress. [Later / Possible](#later--possible) holds deferred, not-yet-started asks.
 
 ## Planned
 
-- **Cascade layers.** Everything the package ships moves into named cascade layers, so a consumer's own CSS and Tailwind utilities beat the aesthetic, presentation, intent, and elevation classes, on every entrypoint. Proposed in [`cascade-layers.md`](./cascade-layers.md), with the spike's measurements. For `0.5.0`.
 - **Decide what to drop.** A `0.x` line is the window for removing surface that is not earning its place. Candidates are named here first, with the reason, before they are removed. Not a gate for any particular release.
 
 ## Later / Possible

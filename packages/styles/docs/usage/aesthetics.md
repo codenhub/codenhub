@@ -38,6 +38,8 @@ An explicit presentation on the element still wins over the aesthetic's defaults
 
 An aesthetic directly on a component likewise wins over an inherited aesthetic. This includes tooltip bubbles: `.tooltip-bubble.glass` gets the complete glass bubble under a pixel ancestor, and `.tooltip-bubble.pixel` gets the complete stepped bubble under a glass ancestor.
 
+Your own CSS wins over an aesthetic. The aesthetic classes sit in the `components` cascade layer, so a Tailwind utility on the same element -- `font-mono` on a `.pixel` region, `rounded-none` or `[--ui-radius:0]` on a `.cyber` one -- or a rule in your own unlayered stylesheet beats them. See [Setup → Cascade layers](../setup.md#cascade-layers).
+
 Each aesthetic that scales from one number publishes it as a knob — see [Customizing → Aesthetic tokens](./customizing.md#aesthetic-tokens) for how knobs resolve and where they can be set. This page covers what each aesthetic looks like and where it makes documented exceptions.
 
 ## Neobrutalism
@@ -72,6 +74,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 
 **Exceptions:**
 
+- Every surface in a glass region is glass, a neutral `.card.soft`, `.panel`, and `.alert` included.
 - The blur applies to `.card`, `.panel`, `.alert`, and the tooltip bubble only. Controls stay solid and sit on the glass: a blur under every control of a dense cluster costs a composited layer apiece and reads as noise. Controls still take the aesthetic's radius, border, and shadow.
 - Under `prefers-reduced-transparency: reduce`, glass surfaces drop the blur and become opaque.
 
@@ -116,7 +119,7 @@ The bar is a darker shade of the element's own colour rather than a shadow under
   ```
 
 - `--font-rounded` is yours to supply. A heavy rounded grotesque is most of this look and the package ships no font binary, so with nothing supplied the page's own stack is used.
-- Action labels are drawn heavier and slightly tracked. Casing is left alone: how a label is worded is the application's decision, so if you want uppercase buttons, write that rule in your own stylesheet.
+- Action labels are drawn heavier and slightly tracked, through `--ui-button-weight` and `--ui-button-tracking`, so your own `font-*` or `tracking-*` utility on a button still wins. It reaches `.btn`, and a bare `<button>` only where `/native` styles it. Casing is left alone: how a label is worded is the application's decision, so if you want uppercase buttons, write that rule in your own stylesheet.
 - `.card.interactive` presses like a `.btn`, so a chunky answer tile drops onto its bar on click; `.card.pressable` gets the same press on its own. A plain `.card` stays put.
 - The shipped `.primary` is a near-black-or-near-white monochrome depending on theme, and the bar mixes toward a fixed black regardless of theme. In light theme this leaves a primary button's bar almost invisible against its own near-black plate (measured `1.04:1`, 10 units of sRGB distance); in dark theme the near-white plate against the same black-anchored bar reads fine (`2.48:1`, 154 units). Give `.primary` a hue of its own if it is the call to action and needs the depth cue in both themes.
 - Depth in this aesthetic is the bar, never a blurred drop shadow. Anything the registry rests flat sits flush on the page.
