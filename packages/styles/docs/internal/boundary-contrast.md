@@ -1,14 +1,14 @@
 ---
-status: DRAFT
+status: IMPLEMENTED
 last_updated: 2026-09-24
 scope: Decision on how a component's line composes with its own plate, and a record of the boundary contrast measured alongside it.
 ---
 
 # Boundary contrast: a line that fades into its own plate
 
-This is a proposal for review, per the repository root `docs/README.md`'s `DRAFT` status. It states the decision and what the implementation must reproduce, not drop-in code, for the reason [`.progress` gains presentation](./progress-presentation-axes.md) gives. [Roadmap](./roadmap.md#cleanup) lists it as the boundary-contrast cleanup for `0.5.0`.
+This is agreed direction, implemented in `0.5.0`, and the current code is expected to comply, per the repository root `docs/README.md`'s `IMPLEMENTED` status; [the open question](#open-question-glass-and-chunky-tile-controls) is not part of what was decided. It states the decision and what the implementation must reproduce, not drop-in code, for the reason [`.progress` gains presentation](./progress-presentation-axes.md) gives. [Roadmap](./roadmap.md#cleanup) tracks the open question.
 
-It is weighed under [What enters the material contract](./model.md#what-enters-the-material-contract): looks, then function, then accessibility, balanced. One change passes that on every count and is proposed. The others this measured would have made the package look worse, or work worse, to gain a ratio, and are recorded under [Considered and not taken](#considered-and-not-taken) so the question starts from the numbers when it comes back.
+It is weighed under [What enters the material contract](./model.md#what-enters-the-material-contract): looks, then function, then accessibility, balanced. One change passes that on every count and was taken. The others this measured would have made the package look worse, or work worse, to gain a ratio, and are recorded under [Considered and not taken](#considered-and-not-taken) so the question starts from the numbers when it comes back.
 
 ## The problem
 
@@ -24,7 +24,7 @@ A throwaway probe loaded the built stylesheet and the aesthetics in Chromium, re
 | -------------------------- | ----: | ---: |
 | `.btn`, `.badge`, `.quote` |  1.54 | 1.81 |
 
-Neutral fills are capped at 20%, so the plate is translucent. The line blends toward the plate (`color-mix(in oklab, var(--_bg) <fill>, <border>)`), so at a full fill it is the plate's own translucent colour, and the border box paints it over the plate that already runs underneath: a second coat. By the same arithmetic every hue rings under `.glass`, whose `--ui-bg-alpha: 0.8` makes every plate translucent; that case is not measured here, because Chromium in this environment reports reduced transparency and glass then goes opaque.
+Neutral fills are capped at 20%, so the plate is translucent. The line blended toward the plate (`color-mix(in oklab, var(--_bg) <fill>, <border>)`), so at a full fill it was the plate's own translucent colour, and the border box painted it over the plate that already ran underneath: a second coat. By the same arithmetic every hue rings under `.glass`, whose `--ui-bg-alpha: 0.8` makes every plate translucent; that case is not measured here, because Chromium in this environment reports reduced transparency and glass then goes opaque.
 
 ## Decision
 
@@ -38,7 +38,7 @@ line = mix(transparent <fill>, <border>)   /* was mix(--_bg <fill>, <border>) */
 
 The plate already runs under the border, so a line that fades out as the fill fills in shows the plate through it: at a full fill the line is fully transparent, and a translucent plate stays one coat. `box`, `box-hover`, and `.quote`'s own copy of the blend change together; `.progress` draws its line from `--intent-border` without the blend and does not.
 
-Simulated on the built stylesheet, by rewriting `box`'s and `box-hover`'s blend: the ring on `.btn` and `.badge` goes to `1.00` in both themes (`.quote`'s copy was not rewritten in the simulation). Every other line, on every component and presentation, moves by at most 7% of its ratio in either direction -- the largest, destructive `.soft` surfaces in light, 4.88:1 to 5.22:1 -- and none that cleared 3:1 falls below it. Hover follows, since `box-hover` restates the same blend against `--intent-hover`.
+Simulated on the built stylesheet before it was written, by rewriting `box`'s and `box-hover`'s blend: the ring on `.btn` and `.badge` goes to `1.00` in both themes (`.quote`'s copy was not rewritten in the simulation). Every other line, on every component and presentation, moves by at most 7% of its ratio in either direction -- the largest, destructive `.soft` surfaces in light, 4.88:1 to 5.22:1 -- and none that cleared 3:1 falls below it. Hover follows, since `box-hover` restates the same blend against `--intent-hover`.
 
 P3's wording holds; its mechanism changes. The model's note that the blend "runs toward `--_bg`, not raw `--intent-color`, so under an aesthetic that thins the fill a translucent box does not keep an opaque ring" stays true of `transparent`, and the second coat it did not account for goes.
 
@@ -94,8 +94,7 @@ A reading of WCAG 1.4.11 as a package rule -- text controls, toggles, and `.prog
 
 ## Tests
 
-- The seamless line: a `.solid.edged` box's line composites to its own plate with no intent, and under a translucent plate (`--ui-bg-alpha` set inline, since Chromium here makes `.glass` opaque).
-- `.quote`'s copy, the same way.
+`feedback.spec.ts` composites the painted border band over the plate over the page and asserts it is the plate, for a neutral `.solid.edged` badge and button, a success badge on a plate `--ui-bg-alpha` thins (set inline, since Chromium here makes `.glass` opaque), and a neutral `.solid` quote. It failed on the old blend (a band at 164 on a plate at 202, in all three engines). The generated palette follows on its own: its edge tokens are read from rendered components, so a filled edge now publishes `transparent` and a partial one its alpha.
 
 ## References
 

@@ -57,7 +57,7 @@ The combinations mean exactly what they spell:
 <!-- A field sunk into the page -->
 ```
 
-A fill class never decides an edge and an edge class never decides a fill. Use `.solid.edgeless` for a filled box with no line — and prefer it on a neutral one, because a capped fill leaves the box translucent and the edge blend then paints a second coat of the same tint rather than disappearing into it (measured 1.53:1 against its own plate in light, 1.82:1 in dark).
+A fill class never decides an edge and an edge class never decides a fill. Use `.solid.edgeless` for a filled box with no line; `.solid.edged` renders the same box, because the line fades out as the fill fills in.
 
 The edge is the silhouette and nothing else. Rules _inside_ a component that has an inside are a separate switch — see [Content and layout → Table rules](./content-and-layout.md#table-rules) — because tying them to this axis made them arrive by implication rather than by request.
 

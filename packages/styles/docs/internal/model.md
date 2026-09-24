@@ -50,7 +50,7 @@ The test that does hold:
 
 > **An axis interacts with the other axes in the composition. A modifier composes independently.**
 
-Edge blends against fill: `--_line` mixes toward `--_bg` by the fill amount, which is P3, and it is why `.solid.edged` and `.solid.edgeless` render one box. Two things that interact inside one expression are one question with two dimensions, not one question and one bolt-on. Elevation multiplies shadow geometry nothing else touches; `.pill` sets a radius nothing else touches; `.sm` sets lengths. None of them can change what another axis produces.
+Edge blends against fill: `--_line` fades out by the fill amount, which is P3, and it is why `.solid.edged` and `.solid.edgeless` render one box. Two things that interact inside one expression are one question with two dimensions, not one question and one bolt-on. Elevation multiplies shadow geometry nothing else touches; `.pill` sets a radius nothing else touches; `.sm` sets lengths. None of them can change what another axis produces.
 
 So edge stays inside presentation, elevation stays a modifier, and the next candidate is argued against this sentence rather than against precedent.
 
@@ -72,9 +72,9 @@ Presentation answers two independent questions. Each is its own closed set, and 
 | `.soft`  | `12%`       | `0%`              |               | Tinted with the intent color; text is the intent color.           |
 | `.ghost` | `0%`        | `0%`              |               | No fill at rest; text is the intent color. Tints on hover.        |
 
-`.solid` briefly answered the edge question as well, writing `--ui-border: 0%` alongside its fill. The problem it was aimed at is real and still open: the edge blend runs the line toward `--_bg`, which for an opaque fill _is_ the fill and for a capped one is a second coat of the same tint painted over the first, so every neutral component that draws a line draws a ring over its own plate -- measured at 1.53:1 against that plate in light and 1.82:1 in dark on `.ipt` and any `.btn.solid.edged`.
+`.solid` briefly answered the edge question as well, writing `--ui-border: 0%` alongside its fill. The problem it was aimed at was real: the edge blend ran the line toward `--_bg`, which for an opaque fill _is_ the fill and for a capped one is a second coat of the same tint painted over the first, since the plate runs under the border -- so every neutral component that drew a line drew a ring over its own plate, measured at 1.54:1 against that plate in light and 1.81:1 in dark on any `.btn.solid.edged`.
 
-It was reverted anyway, because the cure cost more than the disease. Six combinations stay readable only while each half means what it says; a fill class that sometimes decides an edge turns the set into something to memorise rather than read, and the first thing it produced in review was the question of why `.soft` kept a frame that `.solid` removed. The ring is a fault in the blend, and `box` is where a fix for it goes. `.solid.edgeless` is how a consumer asks for a filled box with no line meanwhile.
+It was reverted anyway, because the cure cost more than the disease. Six combinations stay readable only while each half means what it says; a fill class that sometimes decides an edge turns the set into something to memorise rather than read, and the first thing it produced in review was the question of why `.soft` kept a frame that `.solid` removed. The ring was a fault in the blend, and `box` is where it was fixed, in 0.5.0: the line now fades toward `transparent` by the fill amount, so a translucent plate shows through its own border as one coat ([Boundary contrast](./boundary-contrast.md)).
 
 `.ghost` was `.bare` until 0.1.0. The rename is the one naming defect the set had: `.bare` and `.edgeless` both read as "less of something", so an author who wanted no border reached for `.bare` and got no background. `.ghost` names a fill and only a fill.
 
@@ -104,7 +104,7 @@ Three presentation tokens total, down from six. Every value is a percentage, so 
 <input  class="ipt soft edgeless" />      soft   edgeless  field sunk into the page
 ```
 
-Five distinct boxes out of six spellings. `.solid` collapses the edge question rather than answering it: the line blends toward the box's own background by the fill amount, so at a full fill it _is_ the background, and `.edged` has nothing to add that `.edgeless` takes away. That is the edge blend working -- a filled box ringed in another colour is the thing it exists to prevent -- and it is why the playground renders one `Solid` row for the pair.
+Five distinct boxes out of six spellings. `.solid` collapses the edge question rather than answering it: the line fades out by the fill amount, so at a full fill there is no line and the border shows the fill running under it, and `.edged` has nothing to add that `.edgeless` takes away. That is the edge blend working -- a filled box ringed in another colour is the thing it exists to prevent -- and it is why the playground renders one `Solid` row for the pair.
 
 None of the five is degenerate on a component that draws both a fill and a line. That is the test the previous set failed.
 
@@ -153,7 +153,7 @@ The cost is stated plainly: an outline button no longer fills completely on hove
 
 - **P1.** Presentation declares only unitless numbers and percentages.
 - **P2.** Presentation modulates what a component already draws. It never gives a component a part it does not otherwise have.
-- **P3.** Any component that draws a line blends it toward its own fill by the fill amount, so a filled component has a seamless edge rather than a stray ring of another color.
+- **P3.** Any component that draws a line fades it out by the fill amount, toward `transparent` rather than toward its plate -- the plate already runs under the border -- so a filled component has a seamless edge rather than a stray ring, of another colour or of its own tint painted twice.
 - **P4.** A component bounds a presentation token only when the composition itself produces a broken result -- not to protect a consumer from a combination they chose. Any bound that survives that test is published. See [the bounds that survive](#the-bounds-that-survive-and-the-test-for-keeping-one).
 - **P5.** A fill class never decides an edge, and an edge class never decides a fill. The axes are independent everywhere, with no exceptions.
 - **P6.** A component may bound an axis **input**. It may never rewrite the composed **result**. See [the seams](#seams-not-rewrites).

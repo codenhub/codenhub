@@ -20,7 +20,7 @@ Presentation tokens describe _how much_ of an intent a component shows, never _w
 
 A component resolves them with `color-mix` from its published default. Hover is derived by adding `--hover-step` to the resting fill and using `--intent-hover`; there are no per-presentation hover tokens.
 
-No fill class writes `--ui-border` and no edge class writes `--ui-fill`. A filled box with no line is `.solid.edgeless`, which is worth reaching for on a neutral component: neutral caps its fill, so the box stays translucent and a border over it paints a second coat of the same tint instead of blending into it.
+No fill class writes `--ui-border` and no edge class writes `--ui-fill`. A filled box with no line is `.solid.edgeless`, and `.solid.edged` renders the same box: the line fades out as the fill fills in, so even a neutral fill, capped and translucent, shows through its own border as one coat.
 
 ```css
 background: color-mix(in oklab, var(--color-primary) var(--ui-fill, 100%), transparent);
