@@ -98,7 +98,8 @@
         "tooltip-icon"
       ]
     },
-    "--ui-radius-surface": { "readers": ["surface"] }
+    "--ui-radius-surface": { "readers": ["surface"] },
+    "--ui-line-style": { "readers": ["box", "data-table", "progress"] }
   },
   "components": [
     {

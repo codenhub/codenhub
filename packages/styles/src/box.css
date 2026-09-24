@@ -172,7 +172,10 @@
   box-sizing: border-box;
   background-color: var(--_bg);
   color: var(--_fg);
-  border: var(--_width) solid var(--_edge);
+  /* The line's style is material: `solid`, `dashed`, `dotted`, or `double`,
+     which needs a width of 3px or more to draw two lines. It keeps the line's
+     colour, so its contrast, whatever it draws. */
+  border: var(--_width) var(--ui-line-style, solid) var(--_edge);
   /* The corner is the aesthetic's length at scale 1 times the size step, so a
      small button takes a small corner and a cut stays a true 45 degrees. Each
      corner then multiplies by its own `--ui-corner-tl`/`-tr`/`-br`/`-bl`, 0 or

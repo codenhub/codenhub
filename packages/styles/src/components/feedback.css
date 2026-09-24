@@ -169,7 +169,8 @@
 
   @apply relative h-2.5 w-full overflow-hidden;
   background-color: var(--progress-surface, var(--_progress-surface));
-  border: var(--ui-border-width, var(--border-width)) solid var(--progress-edge, var(--_progress-edge));
+  border: var(--ui-border-width, var(--border-width)) var(--ui-line-style, solid)
+    var(--progress-edge, var(--_progress-edge));
   /* Round by default; an aesthetic that declares no radius squares the track and
      its fill together, and a pill corner reaches both first. */
   border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));

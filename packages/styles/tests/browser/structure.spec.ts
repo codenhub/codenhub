@@ -115,3 +115,40 @@ test.describe("corner pattern", () => {
     expect(await corners(page, "surface")).toEqual(["0px", "10px", "0px", "10px"]);
   });
 });
+
+test.describe("line style", () => {
+  test("reaches every line a component draws", async ({ page }) => {
+    await load(
+      page,
+      `<div class="c-dashed">
+         <button data-testid="button" class="btn edged">b</button>
+         <input data-testid="field" class="ipt" />
+         <div data-testid="card" class="card">c</div>
+         <div data-testid="progress" class="progress"></div>
+         <table class="data-table"><thead><tr><th data-testid="head">h</th></tr></thead></table>
+       </div>`,
+      ".c-dashed { --ui-line-style: dashed; }",
+    );
+
+    const styles = await Promise.all(
+      ["button", "field", "card", "progress"].map(async (testId) => [
+        testId,
+        await read(page, testId, "border-top-style"),
+      ]),
+    );
+
+    expect(Object.fromEntries(styles)).toEqual({
+      button: "dashed",
+      card: "dashed",
+      field: "dashed",
+      progress: "dashed",
+    });
+    expect(await read(page, "head", "border-bottom-style"), "the table's head rule").toBe("dashed");
+  });
+
+  test("draws solid by default", async ({ page }) => {
+    await load(page, `<input data-testid="field" class="ipt" />`);
+
+    expect(await read(page, "field", "border-top-style")).toBe("solid");
+  });
+});

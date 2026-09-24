@@ -46,6 +46,7 @@
        nested inside `.pixel` does not inherit its `0px` and lose the line. */
     --ui-border-width: 2px;
     --ui-border-max: 100px;
+    --ui-line-style: initial;
 
     /* What makes the bar a *shade*, not a repeat. `box` mixes the bar
        `color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink), var(--elevation-color))`,

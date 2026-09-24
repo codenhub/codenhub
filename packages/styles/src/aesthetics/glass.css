@@ -26,6 +26,7 @@
     --ui-corner-surface: var(--glass-radius-surface, 1rem);
     --ui-border-width: 1px;
     --ui-border-max: 100px;
+    --ui-line-style: initial;
 
     /* Glass catches light from above whatever is under it, so the edge is a light
        hairline in both themes rather than a theme-following ink. */

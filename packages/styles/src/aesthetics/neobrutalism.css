@@ -27,6 +27,7 @@
     --ui-corner-surface: 0;
     --ui-border-width: 2px;
     --ui-border-max: 100px;
+    --ui-line-style: initial;
 
     /* Hard, unblurred, and offset. Scaled by each component's own elevation, so
        the registry decides which components sit on a slab and `.flat` takes one

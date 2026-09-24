@@ -36,6 +36,7 @@
        reads as a filled one. */
     --ui-border-width: 2px;
     --ui-border-max: 0px;
+    --ui-line-style: initial;
 
     /* The ring is one unit deep, which is exactly the corner cut, so the staircase
        is covered and the line does not read as broken at the corners. Spread is not

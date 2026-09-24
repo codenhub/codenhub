@@ -294,3 +294,14 @@
     }
   }
 }
+
+/* Forced colours draw the plain version of every structural part: a solid line
+   and nothing an aesthetic layers on top. Unlayered, so it beats every layered
+   declaration of these tokens -- an aesthetic's and a consumer's utility alike --
+   the way the other `forced-colors` blocks do. See
+   docs/internal/structure.md. */
+@media (forced-colors: active) {
+  * {
+    --ui-line-style: solid;
+  }
+}

@@ -201,7 +201,7 @@
   & td {
     @apply px-4 py-3 align-top;
 
-    border-bottom-style: solid;
+    border-bottom-style: var(--ui-line-style, solid);
     border-bottom-width: var(--_width);
     border-color: var(--table-rule);
   }
@@ -220,7 +220,7 @@
   }
 
   & tfoot tr:first-child > * {
-    border-top-style: solid;
+    border-top-style: var(--ui-line-style, solid);
     border-top-width: var(--_width);
     border-top-color: var(--table-boundary);
   }

@@ -65,6 +65,7 @@
     --ui-radius-tight: 0;
     --ui-border-width: 1px;
     --ui-border-max: 100px;
+    --ui-line-style: initial;
 
     /* The glow: the component's own ink, blurred, with no offset. `box` mixes
        depth as `color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink),
