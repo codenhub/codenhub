@@ -49,6 +49,7 @@ const MARKUP = `
 <div class="chunky-tile">
   <button data-testid="tile-button" class="btn">b</button>
   <button data-testid="tile-utility-weight" class="btn c-weight">b</button>
+  <div class="pixel"><button data-testid="tile-nested-pixel-button" class="btn">b</button></div>
 </div>
 <div class="neobrutalism"><div data-testid="neo-alert" class="alert">a</div></div>
 <div data-testid="glass-card" class="card glass">g</div>
@@ -119,6 +120,17 @@ for (const [scenario, files] of Object.entries(SCENARIOS)) {
 
       expect(await read(page, "tile-button", "font-weight"), "chunky tile's label").toBe("800");
       expect(await read(page, "tile-utility-weight", "font-weight"), "a consumer's weight beats it").toBe("300");
+      expect(await read(page, "tile-button", "--ui-button-weight"), "chunky tile declares button weight slot").toBe(
+        "800",
+      );
+      expect(
+        await read(page, "tile-nested-pixel-button", "--ui-button-weight"),
+        "nested aesthetic clears chunky tile's weight slot to initial (guaranteed-invalid)",
+      ).toBe("");
+      expect(
+        await read(page, "tile-nested-pixel-button", "font-weight"),
+        "nested aesthetic is not chunky tile's 800 weight",
+      ).not.toBe("800");
       expect(await read(page, "neo-alert", "box-shadow"), "neobrutalism's alert slab").not.toBe("none");
       expect(
         await read(page, "glass-soft-card", "--_d-ground"),
