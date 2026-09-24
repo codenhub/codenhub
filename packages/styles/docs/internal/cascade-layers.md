@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-23
+last_updated: 2026-09-24
 scope: Decision to place everything `@codenhub/styles` ships in named cascade layers, so a consumer's own CSS and Tailwind utilities beat the package's classes.
 ---
 
@@ -157,7 +157,7 @@ The maintainer accepted the consequence: **inside a `.glass` region, neutral sof
 
 - Simplifying the seams layering makes redundant (L7).
 - Making `/components` usable without `/theme`. The undefined colour tokens there are unchanged by this proposal.
-- Size-aware corners and shape modifier classes, which are separate decisions on [Roadmap](./roadmap.md#later--possible).
+- Corner scale and corner pattern, which are separate decisions on [Roadmap](./roadmap.md#structure).
 
 ## Implementation notes
 
