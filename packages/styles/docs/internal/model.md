@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-23
+last_updated: 2026-09-24
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -40,7 +40,7 @@ Put shortly: intent is _what it says_, presentation is _how loudly_, aesthetic i
 | ------------ | ---------------------------- | ------------------------------ | -------- | ------------------------------------------------------------------------------- |
 | Intent       | What does this mean?         | Hue only                       | No       | `.neutral` `.primary` `.secondary` `.success` `.warning` `.destructive` `.info` |
 | Presentation | How much of it does it show? | Unitless ratios only           | Yes      | `.solid` `.soft` `.ghost` and `.edged` `.edgeless`                              |
-| Aesthetic    | What is it made of?          | Lengths, shadows, shapes, type | Yes      | `.neobrutalism` `.glass` `.pixel`                                               |
+| Aesthetic    | What is it made of?          | Lengths, shadows, shapes, type | Yes      | `.neobrutalism` `.glass` `.pixel` `.chunky-tile` `.cyber`                       |
 
 ### What makes something an axis rather than a modifier
 
@@ -412,6 +412,12 @@ The cost is a fourth copy of the neutral mapping, after `.neutral` and the two r
 ## Aesthetic
 
 An aesthetic declares material: lengths, shadows, shapes, font family, the neutral ink, and the colour depth is cast in. It cascades, and a component resolves each token at its own root with the `var()` fallback that is its default.
+
+### What enters the material contract
+
+The material contract is built for structure, not for a look. A token enters it because it names a real part of what a component is made of -- a part the component already draws, whose material is fixed today -- and because more than one thing can use it: several components resolve it, and more than one look can be made from it. It never enters because one aesthetic asked for it. An aesthetic is a composition of what the contract exposes; one that the contract cannot yet express waits, rather than bending the model to fit.
+
+A token enters only in a form that keeps what the package guarantees by nature: accessibility (contrast, forced colours, reduced motion and transparency, focus visibility), composition (the axes stay orthogonal, elevation keeps reaching what it scales, a consumer's own utility still beats the families under [Cascade layers](#cascade-layers)), and the rules below. A capability that can only be exposed by breaking one of those is not exposed, and the reason is recorded where the question would come back.
 
 ### Material tokens
 
@@ -857,6 +863,8 @@ Some aesthetics want a treatment that is not a value: a specular highlight on su
 
 **Write the selector list.** If it really is "buttons in this aesthetic are uppercase", write `.chunky-tile :is(.btn, button)`. It is a rule an aesthetic should have to spell out, because it is the thing R3 exists to discourage, and spelling it out is how a reviewer sees it.
 
+Since the [cascade layers](#cascade-layers), a selector list works only for a property the components it names do not write themselves, and a list that writes tokens is placed by the rule that section gives. A painted property the component already writes -- anything `box` sets: `background-color`, `color`, `border`, `border-radius`, `corner-shape`, `box-shadow`, `clip-path`, `transform` -- has no layer that works: in `components` the list loses to the component, and in `utilities` it beats the consumer's own utility. Chunky tile's heavier label is the case that found it. A treatment on one of those properties is a slot.
+
 An earlier draft generated a `@custom-variant role-action` per role so an aesthetic could write `@variant role-action { ... }` without naming components. It was removed with the roles: no shipped aesthetic used it, and a targeting mechanism with no users is a mechanism that will be wrong when it finally has one.
 
 ### Pseudo-element budget
@@ -925,20 +933,24 @@ Nine tokens and one two-selector rule. Nothing modified, and the result holds ac
 
 The spike wrote this as a tint colour and an amount -- `#000` at 26%, mixed over the intent -- which let an aesthetic darken the shadow by an arbitrary colour. That pair shipped as one token: the base is the neutral depth colour and the amount says how much of the component's own ink replaces it, because the case that actually needed spelling was "this aesthetic's depth is ink, not shade", and the case that did not was any shadow at all on a page with no aesthetic. An aesthetic wanting a third colour under there declares `--ui-surface-shadow` or its own `box-shadow`, which is Tier 2 and says so.
 
-### What the other aesthetics on the list will need
+### What the material contract does not express yet
 
-Checked against the model rather than promised. The cyberpunk row first read "clipped corners"; a clip removes the glow, and `.cyber` shipped the bevel through `--ui-corner-shape` instead (see [Cyber](./cyber-aesthetic.md)):
+Checked against the components rather than against any look. Each row is a part a component already draws whose material is fixed today, so no aesthetic -- and no consumer -- can change it through a token. [Roadmap](./roadmap.md#planned) holds the decision to take on each, under [What enters the material contract](#what-enters-the-material-contract).
 
-| Aesthetic    | Tier 1 covers                                      | Needs Tier 2 for                   |
-| ------------ | -------------------------------------------------- | ---------------------------------- |
-| Liquid glass | Blur, translucent ground, radius, hairline edge    | Specular highlight on surfaces     |
-| Cyberpunk    | Bevelled corners, edge width, glow via shadow tint | Scanline background on surfaces    |
-| Synthwave    | Radius, glow, gradient ground                      | Gradient text or chrome on actions |
-| Chunky tile  | Everything above, the shade under it, the label    | A shallower bar on tiny buttons    |
+| Part                     | Fixed today                                                                                                                                                                                                                             | What any answer must keep                                                                                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Corner scale             | One radius per aesthetic at every size: `.sm`, `.lg`, `.dense`, `.p-xs`, and `.icon` change height and padding, never the corner. `.cyber` caps its cut at 25% of the box as a local fix.                                               | An explicit `--ui-radius` still wins; `--ui-radius-pill` and `--ui-radius-tight` keep their meaning.                                                                        |
+| Corner pattern           | Which corners take the radius is packed into a multi-value `--ui-radius`, so a single element cannot choose a pattern without restating the size.                                                                                       | The pattern composes with every aesthetic's corner, including none.                                                                                                         |
+| Line style               | `solid`, written by `box`, the progress track, and the table's head and foot rules.                                                                                                                                                     | A control boundary still meets 1.4.11 where it does today, and forced colours still draw it.                                                                                |
+| Depth in layers          | One part-based layer on every component; a complete multi-layer value reaches surfaces only (`--ui-surface-shadow`), and there it opts out of elevation ([The one limitation](#the-one-limitation)).                                    | `.flat`, `.raised`, and `.floating` keep reaching every component, and the intent still colours the shadow at the component.                                                |
+| Shadow that is not depth | Every part-based shadow is scaled by elevation, and 20 of the 22 registry components rest at zero, so a halo or glow reaches buttons and cards only. `--ui-shadow-edge` is the one shadow already answering something other than depth. | Elevation still means depth, and a non-depth shadow is not removed by `.flat`.                                                                                              |
+| A painted layer          | No component exposes `background-image`; `.select` spends it on its chevron.                                                                                                                                                            | A consumer's own background image on a component still applies; text keeps its contrast over the layer across intents and themes; forced colours are measured, not assumed. |
+| Ambient motion           | Motion is the hover and press transforms and the transitions; nothing moves at rest.                                                                                                                                                    | WCAG 2.2.2 (pausable past five seconds), 2.3.1 (three flashes), and a full stop under `prefers-reduced-motion`.                                                             |
+| Label treatment          | Weight and tracking on buttons (`--ui-button-*`); `text-shadow` inherits, but not into `<button>` or `<input>`, so nothing reaches a control's label.                                                                                   | Label contrast (1.4.3) holds with the treatment applied; a consumer's own `font-*` and text utilities still win.                                                            |
 
-Two of the four want a treatment on _surfaces_, which is a slot. The other two want one on buttons, and `.btn` is the only action there is: chunky tile's heavier label became the `--ui-button-*` slot pair once a selector list could no longer be layered without losing to `.btn` or beating a consumer, and what is left of its list is the shallower bar under the smallest icon buttons.
+Chunky tile's one remaining selector list, the shallower bar under the smallest icon buttons, is a size question as much as the corner is: a size a modifier publishes would let an aesthetic scale its lift from a token and retire the list.
 
-The pattern holds in each case: shape, color, and depth come from tokens, and only a genuinely component-kind-specific treatment reaches past them. That is the line the tiers are drawn on.
+The pattern the tiers are drawn on holds: shape, colour, and depth come from tokens, and only a treatment no token can reach goes past them. What this section records is where the tokens stop short today, stated as parts rather than as the looks that would use them.
 
 ### Where this leaves native elements
 
