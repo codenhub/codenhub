@@ -448,41 +448,59 @@ Beyond composition, the package strives for three things, in this order: that it
 
 ### Material tokens
 
-| Token                   | Fallback             | Meaning                                                    |
-| ----------------------- | -------------------- | ---------------------------------------------------------- |
-| `--ui-radius`           | `--radius-control`   | Corner radius for controls.                                |
-| `--ui-radius-surface`   | `--radius-surface`   | Corner radius for surfaces.                                |
-| `--ui-corner-shape`     | `round`              | What the radius draws: an arc, or a `bevel` cut.           |
-| `--ui-radius-pill`      | `--ui-radius`        | Corner for what is fully round by default.                 |
-| `--ui-radius-tight`     | `--ui-radius`        | Corner for chips, before their `--radius-small` cap.       |
-| `--ui-border-width`     | `--border-width`     | Edge thickness.                                            |
-| `--ui-border-max`       | `100px`              | Ceiling on the computed edge width.                        |
-| `--ui-ink`              | `--color-border`     | Neutral line color when no intent is set.                  |
-| `--ui-control-ink`      | `--ui-ink`           | Neutral line color for controls; read ahead of `--ui-ink`. |
-| `--ui-shadow-x`         | `0px`                | Shadow offset, colorless so it inherits safely.            |
-| `--ui-shadow-y`         | `0px`                | Shadow offset.                                             |
-| `--ui-shadow-blur`      | `0px`                | Shadow blur.                                               |
-| `--ui-shadow-spread`    | `0px`                | Shadow spread.                                             |
-| `--ui-shadow-inset`     | _empty_              | The `inset` keyword, when the edge is an inner ring.       |
-| `--ui-hover-shadow-x`   | `--ui-shadow-x`      | Shadow offset while hovered.                               |
-| `--ui-hover-shadow-y`   | `--ui-shadow-y`      | Shadow offset while hovered.                               |
-| `--ui-active-shadow-x`  | `--ui-shadow-x`      | Shadow offset while pressed.                               |
-| `--ui-active-shadow-y`  | `--ui-shadow-y`      | Shadow offset while pressed.                               |
-| `--ui-active-transform` | `scale(0.97)`        | Transform while pressed; `none` under reduced motion.      |
-| `--ui-shadow-ink`       | `0%`                 | How much of the shadow is the intent's own ink.            |
-| `--elevation-color`     | _theme_              | The base that ink mixes toward; depth's own colour.        |
-| `--ui-shadow-edge`      | _undefined_          | Declared, even empty, when the shadow is the edge.         |
-| `--ui-elevation`        | `1`                  | Unitless multiplier over the shadow geometry.              |
-| `--ui-surface-shadow`   | _unset_              | Complete value; resolved by surfaces only.                 |
-| `--ui-surface-ground`   | `--color-background` | Ground a surface sits on; how glass goes translucent.      |
-| `--ui-bg-alpha`         | `1`                  | Multiplier over fill, for translucency.                    |
-| `--ui-backdrop`         | `none`               | Backdrop filter; resolved by surfaces only.                |
-| `--ui-hover-transform`  | `none`               | Transform applied on interactive hover.                    |
-| `--ui-clip`             | `none`               | Silhouette for structural components.                      |
-| `--ui-clip-tight`       | `--ui-clip`          | Silhouette for chips.                                      |
-| `--ui-focus-inset`      | _undefined_          | Inset focus layer width. Undefined means no layer.         |
-| `--ui-button-weight`    | semibold             | Label weight; resolved by buttons only.                    |
-| `--ui-button-tracking`  | _undefined_          | Label tracking; undefined inherits. Buttons only.          |
+| Token                   | Fallback             | Meaning                                                     |
+| ----------------------- | -------------------- | ----------------------------------------------------------- |
+| `--ui-corner`           | `--radius-control`   | Control corner at scale 1; `box` scales it by the step.     |
+| `--ui-corner-surface`   | `--radius-surface`   | Surface corner at scale 1; `surface` scales it.             |
+| `--ui-corner-tl`        | `1`                  | `0` or `1`: whether the top-left takes the corner.          |
+| `--ui-corner-tr`        | `1`                  | The same, top-right.                                        |
+| `--ui-corner-br`        | `1`                  | The same, bottom-right.                                     |
+| `--ui-corner-bl`        | `1`                  | The same, bottom-left.                                      |
+| `--ui-radius`           | _computed_           | A complete control radius, taken as written, unscaled.      |
+| `--ui-radius-surface`   | _computed_           | A complete surface radius, taken as written, unscaled.      |
+| `--ui-scale`            | _the step_           | Override for the size step the modifiers publish.           |
+| `--ui-corner-shape`     | `round`              | What the radius draws: an arc, or a `bevel` cut.            |
+| `--ui-radius-pill`      | `--ui-corner`        | Corner for what is fully round by default.                  |
+| `--ui-radius-tight`     | `--ui-corner`        | Corner for chips, before their `--radius-small` cap.        |
+| `--ui-line-style`       | `solid`              | `solid`, `dashed`, `dotted`, or `double` (3px and up).      |
+| `--ui-border-width`     | `--border-width`     | Edge thickness.                                             |
+| `--ui-border-max`       | `100px`              | Ceiling on the computed edge width.                         |
+| `--ui-ink`              | `--color-border`     | Neutral line color when no intent is set.                   |
+| `--ui-control-ink`      | `--ui-ink`           | Neutral line color for controls; read ahead of `--ui-ink`.  |
+| `--ui-shadow-x`         | `0px`                | Shadow offset, colorless so it inherits safely.             |
+| `--ui-shadow-y`         | `0px`                | Shadow offset.                                              |
+| `--ui-shadow-blur`      | `0px`                | Shadow blur.                                                |
+| `--ui-shadow-spread`    | `0px`                | Shadow spread.                                              |
+| `--ui-shadow-inset`     | _empty_              | The `inset` keyword, when the edge is an inner ring.        |
+| `--ui-hover-shadow-x`   | `--ui-shadow-x`      | Shadow offset while hovered.                                |
+| `--ui-hover-shadow-y`   | `--ui-shadow-y`      | Shadow offset while hovered.                                |
+| `--ui-active-shadow-x`  | `--ui-shadow-x`      | Shadow offset while pressed.                                |
+| `--ui-active-shadow-y`  | `--ui-shadow-y`      | Shadow offset while pressed.                                |
+| `--ui-active-transform` | `scale(0.97)`        | Transform while pressed; `none` under reduced motion.       |
+| `--ui-shadow-ink`       | `0%`                 | How much of the shadow is the intent's own ink.             |
+| `--ui-shadow-2-x`       | `0px`                | Second depth layer, in parts; `-y`, `-blur`, `-spread` too. |
+| `--ui-shadow-2-ink`     | _undefined_          | Second layer's ink; undefined, the layer is absent.         |
+| `--ui-shadow-2-inset`   | _empty_              | The `inset` keyword for the second layer.                   |
+| `--ui-halo-blur`        | `0px`                | Halo blur; `--ui-halo-spread` beside it.                    |
+| `--ui-halo-ink`         | _undefined_          | Halo's share of the intent colour; undefined, no halo.      |
+| `--elevation-color`     | _theme_              | The base that ink mixes toward; depth's own colour.         |
+| `--ui-shadow-edge`      | _undefined_          | Declared, even empty, when the shadow is the edge.          |
+| `--ui-elevation`        | `1`                  | Unitless multiplier over the shadow geometry.               |
+| `--ui-surface-shadow`   | _unset_              | Complete value; resolved by surfaces only.                  |
+| `--ui-surface-ground`   | `--color-background` | Ground a surface sits on; how glass goes translucent.       |
+| `--ui-bg-alpha`         | `1`                  | Multiplier over fill, for translucency.                     |
+| `--ui-backdrop`         | `none`               | Backdrop filter; resolved by surfaces only.                 |
+| `--ui-surface-image`    | `none`               | Painted layer; resolved by surfaces only.                   |
+| `--ui-hover-transform`  | `none`               | Transform applied on interactive hover.                     |
+| `--ui-clip`             | `none`               | Silhouette for structural components.                       |
+| `--ui-clip-tight`       | `--ui-clip`          | Silhouette for chips.                                       |
+| `--ui-focus-inset`      | _undefined_          | Inset focus layer width. Undefined means no layer.          |
+| `--ui-label-weight`     | per component        | Label weight; `.btn` and `.badge`.                          |
+| `--ui-label-tracking`   | _undefined_          | Label tracking; undefined inherits.                         |
+| `--ui-label-case`       | per component        | `text-transform`; `.btn` falls back to `none`.              |
+| `--ui-label-shadow`     | per component        | `text-shadow` with no colour, so it takes the label's.      |
+
+The corner, line, second layer, halo, surface image, and label rows are the [0.5.0 structure](./structure.md), and `registry.json` records under `material` which utilities read each one. Every aesthetic names or clears every one of them, which `registry.test.ts` checks.
 
 `--elevation-color` is the one row that is not a `--ui-*` slot, and it is here because an aesthetic legitimately names it. The theme declares it, every elevation composes from it, and `--ui-shadow-ink` says how far a component's own intent walks away from it -- so between the two they are the whole colour of depth, and an aesthetic that owns shadows owns both ends of that mix. Chunky tile is the case that proved it: at the shipped `rgb(15 23 42 / 0.08)` the mix runs toward something nearly transparent and its bar composites out _lighter_ than the plate it sits under. Naming the depth colour opaque is what makes the bar a shade of the element, and the [worked example](#worked-example-the-chunky-tile-look) records the measurement.
 
@@ -767,19 +785,19 @@ Rounded slabs seated on a darker shade of themselves, pressed flat on click.
 - The bar is a shade of the element rather than a repeat of it, which takes an opaque `--elevation-color` as well as a partial `--ui-shadow-ink`. See the correction under [Adding an aesthetic](#worked-example-the-chunky-tile-look).
 - An unfilled tile's bar and its line are the same colour by construction: both resolve `--intent-border`.
 - Hover holds still and the press moves: a seated slab has one gesture and it belongs to the press.
-- Actions are heavier and slightly tracked, through `--ui-button-weight` and `--ui-button-tracking`, a slot pair only `.btn` reads, so a consumer's `font-*` utility still beats it. Casing is left to the application.
-- A `.btn.icon` at `.p-xs` sits on half the lift, through the one recorded selector list.
+- Labels are heavier and slightly tracked, through `--ui-label-weight` and `--ui-label-tracking`, which `.btn` and `.badge` read, so a consumer's `font-*` utility still beats them. Casing is left to the application.
+- A `.p-xs` button sits on half the lift and a `.sm` one on three quarters: `box` scales depth down with the size step, so the aesthetic names no component.
 
 ### `.cyber`
 
 Bevelled corners, a thin bright edge, and a glow in the component's own colour. See [Cyber](./cyber-aesthetic.md) for the decision.
 
 - The bevel is `corner-shape: bevel` through `--ui-corner-shape`, not a clip: a clip removes the glow and cannot draw the diagonal edge. The border, the glow, and the focus outline follow the cut.
-- `--cyber-cut` at `0.625rem` is the largest cut -- the default shapes cap it at 25% of the element's box, so small controls keep their corners -- placed by two shape knobs on opposite diagonals: controls top-left and bottom-right (`--cyber-shape`), surfaces top-right and bottom-left (`--cyber-shape-surface`). Both take any `border-radius` value, read with a fallback per [R8](#rules-for-aesthetics).
+- `--cyber-cut` at `0.625rem` is the cut at scale 1, set as `--ui-corner`, so `box` scales it with the size step and a `.p-xs` button takes half of it at a true 45 degrees. Controls cut top-left and bottom-right through the four corner switches; surfaces cut top-right and bottom-left through a whole `--ui-radius-surface`, unscaled, because the switches cannot place two patterns at once. `--cyber-shape` and `--cyber-shape-surface` take any `border-radius` value and are used as written, read with a fallback per [R8](#rules-for-aesthetics).
 - What is fully round cuts to points through `--ui-radius-pill` -- a diamond radio, switch knob, and tooltip icon, a pointed hexagon for a pill or a badge -- and chips square through `--ui-radius-tight: 0`, which keeps the checkbox distinct from the radio.
 - Where `corner-shape` is not supported the control and surface radii go to zero, so those corners square rather than round; what is fully round stays round.
 - 1px edges in `--ui-ink`, which is the `--cyber-ink` knob over the theme-following neutral neobrutalism and pixel use. Hue stays with intent.
-- The glow is `--ui-shadow-ink: 40%` toward a transparent `--elevation-color` -- the intent colour at 40% alpha -- blurred by `--cyber-glow` (`8px`) with no offset or spread. Elevation scales it, so it lights buttons, cards, and anything raised.
+- The glow is the halo: the intent colour at 40% (`--ui-halo-ink`), blurred by `--cyber-glow` (`8px`) with no offset or spread. Elevation does not scale it, so every component glows, fields and chips included, and `.flat` does not put it out. There is no depth.
 - The press is the base `scale(0.97)`, restated, and `none` under reduced motion. The glow holds still on hover and on press.
 - Reads `--font-cyber` and falls back to monospace.
 - Every other aesthetic declares `--ui-corner-shape: round` and clears `--ui-radius-pill` and `--ui-radius-tight`, so a region nested inside `.cyber` inherits none of its corners.
@@ -920,8 +938,8 @@ Rounded slabs sitting on a darker shade of themselves, pressed flat on click. Bu
   --_tile-radius: var(--tile-radius, 0.75rem);
   --_tile-lift: var(--tile-lift, 4px);
 
-  --ui-radius: var(--_tile-radius);
-  --ui-radius-surface: var(--_tile-radius);
+  --ui-corner: var(--_tile-radius);
+  --ui-corner-surface: var(--_tile-radius);
   --ui-border-width: 2px;
   --elevation-color: rgb(0 0 0);
   --ui-shadow-ink: 72%;
@@ -952,7 +970,7 @@ Depth in that aesthetic is not uniform, and it does not have to be: the promo pa
 }
 ```
 
-Since 0.5.0 that rule is gone: a selector list naming `.btn` either loses to `.btn`'s own weight or beats a consumer's `font-*` utility, depending on the layer it sits in, so the weight and tracking became the `--ui-button-weight`/`--ui-button-tracking` slot pair ([Cascade layers](./cascade-layers.md), L5).
+Since 0.5.0 that rule is gone: a selector list naming `.btn` either loses to `.btn`'s own weight or beats a consumer's `font-*` utility, depending on the layer it sits in, so the weight and tracking became a token pair ([Cascade layers](./cascade-layers.md), L5), now `--ui-label-weight` and `--ui-label-tracking`, which badges read too.
 
 The spike's version of that rule also set `text-transform: uppercase`, and the shipped one did not. Weight and tracking are what the type is made of; casing is how a label is _worded_, which belongs to the application. An aesthetic that recases silently also recases every acronym, proper noun, and locale whose rules are not English's — a correctness cost for a look a consumer can write in one line of their own.
 
@@ -962,22 +980,9 @@ Nine tokens and one two-selector rule. Nothing modified, and the result holds ac
 
 The spike wrote this as a tint colour and an amount -- `#000` at 26%, mixed over the intent -- which let an aesthetic darken the shadow by an arbitrary colour. That pair shipped as one token: the base is the neutral depth colour and the amount says how much of the component's own ink replaces it, because the case that actually needed spelling was "this aesthetic's depth is ink, not shade", and the case that did not was any shadow at all on a page with no aesthetic. An aesthetic wanting a third colour under there declares `--ui-surface-shadow` or its own `box-shadow`, which is Tier 2 and says so.
 
-### What the material contract does not express yet
+### What the material contract did not express
 
-Checked against the components rather than against any look. Each row is a part a component already draws whose material is fixed today, so no aesthetic -- and no consumer -- can change it through a token. [Roadmap](./roadmap.md#planned) holds the decision to take on each, under [What enters the material contract](#what-enters-the-material-contract).
-
-| Part                     | Fixed today                                                                                                                                                                                                                             | What any answer must keep                                                                                                                                                   |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Corner scale             | One radius per aesthetic at every size: `.sm`, `.lg`, `.p-xs`, and `.icon` change height and padding, never the corner. `.cyber` caps its cut at 25% of the box as a local fix.                                                         | An explicit `--ui-radius` still wins; `--ui-radius-pill` and `--ui-radius-tight` keep their meaning.                                                                        |
-| Corner pattern           | Which corners take the radius is packed into a multi-value `--ui-radius`, so a single element cannot choose a pattern without restating the size.                                                                                       | The pattern composes with every aesthetic's corner, including none.                                                                                                         |
-| Line style               | `solid`, written by `box`, the progress track, and the table's head and foot rules.                                                                                                                                                     | A control boundary still meets 1.4.11 where it does today, and forced colours still draw it.                                                                                |
-| Depth in layers          | One part-based layer on every component; a complete multi-layer value reaches surfaces only (`--ui-surface-shadow`), and there it opts out of elevation ([The one limitation](#the-one-limitation)).                                    | `.flat`, `.raised`, and `.floating` keep reaching every component, and the intent still colours the shadow at the component.                                                |
-| Shadow that is not depth | Every part-based shadow is scaled by elevation, and 20 of the 22 registry components rest at zero, so a halo or glow reaches buttons and cards only. `--ui-shadow-edge` is the one shadow already answering something other than depth. | Elevation still means depth, and a non-depth shadow is not removed by `.flat`.                                                                                              |
-| A painted layer          | No component exposes `background-image`; `.select` spends it on its chevron.                                                                                                                                                            | A consumer's own background image on a component still applies; text keeps its contrast over the layer across intents and themes; forced colours are measured, not assumed. |
-| Ambient motion           | Motion is the hover and press transforms and the transitions; nothing moves at rest.                                                                                                                                                    | WCAG 2.2.2 (pausable past five seconds), 2.3.1 (three flashes), and a full stop under `prefers-reduced-motion`.                                                             |
-| Label treatment          | Weight and tracking on buttons (`--ui-button-*`); `text-shadow` inherits, but not into `<button>` or `<input>`, so nothing reaches a control's label.                                                                                   | Label contrast (1.4.3) holds with the treatment applied; a consumer's own `font-*` and text utilities still win.                                                            |
-
-Chunky tile's one remaining selector list, the shallower bar under the smallest icon buttons, is a size question as much as the corner is: a size a modifier publishes would let an aesthetic scale its lift from a token and retire the list.
+Checked against the components rather than against any look, each of these was a part a component already drew whose material was fixed, so no aesthetic -- and no consumer -- could change it through a token: the corner's scale and pattern, the line's style, depth in more than one layer, shadow that is not depth, a painted layer, ambient motion, and label treatment. [Structure for 0.5.0](./structure.md) answers all eight. Seven entered the contract, as the corner, line, second-layer, halo, surface-image, and label rows under [Material tokens](#material-tokens); ambient motion did not, because a CSS-only package cannot ship the control WCAG 2.2.2 needs to pause it.
 
 The pattern the tiers are drawn on holds: shape, colour, and depth come from tokens, and only a treatment no token can reach goes past them. What this section records is where the tokens stop short today, stated as parts rather than as the looks that would use them.
 

@@ -110,6 +110,8 @@ The two aesthetic selector lists that remain follow the same rule. Neobrutalism'
 
 Named for the component kind that reads them, the way `--ui-surface-*` names what only a surface reads, rather than for an "action" role: the role taxonomy was [removed from the model](./model.md#shared-composition-not-a-taxonomy).
 
+Later in `0.5.0` the pair became `--ui-label-weight` and `--ui-label-tracking`, joined by `--ui-label-case` and `--ui-label-shadow`, when `.badge` started reading them too; `--ui-button-*` was removed without an alias. See [Structure for 0.5.0](./structure.md#8-label-treatment). The mechanism above is unchanged.
+
 Two consequences. Chunky tile's selector list shrinks to its icon-button bar (L4), which still names `.btn` and so stays a recorded R3 exception. And a bare `<button>` the package does not style -- no `.btn`, no `/native` -- no longer takes the heavier label under chunky tile; on `main` the selector list reached it anyway, which R3 says an aesthetic should not do.
 
 ### L6. A surface's quiet ground becomes a private default

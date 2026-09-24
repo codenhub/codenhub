@@ -40,11 +40,16 @@ Components read each with a fallback, so leaving them unset produces the default
 
 | Token                   | Purpose                                                                                                       | Fallback                                  |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `--ui-radius`           | Corner radius for controls.                                                                                   | `--radius-control`                        |
-| `--ui-radius-surface`   | Corner radius for surfaces.                                                                                   | `--radius-surface`                        |
-| `--ui-corner-shape`     | What every corner the two radii set draws: `round`, or `bevel` for a straight cut. Chromium only today.       | `round`                                   |
-| `--ui-radius-pill`      | Corner for what is fully round by default: badges, switches, progress, the tooltip icon.                      | `--ui-radius`, then full                  |
-| `--ui-radius-tight`     | Corner for chips -- checkbox, `.kbd`, `.code` -- before their `--radius-small` cap.                           | `--ui-radius`, then small                 |
+| `--ui-corner`           | Control corner at the default size; scaled by the size step.                                                  | `--radius-control`                        |
+| `--ui-corner-surface`   | Surface corner at the default padding; scaled by the size step.                                               | `--radius-surface`                        |
+| `--ui-corner-tl`        | `0` or `1`: whether the top-left takes the corner. `-tr`, `-br`, and `-bl` for the others.                    | `1`                                       |
+| `--ui-radius`           | A complete control radius, used as written: overrides the corner, the step, and the pattern.                  | Computed from the corner                  |
+| `--ui-radius-surface`   | A complete surface radius, used as written.                                                                   | Computed from the corner                  |
+| `--ui-scale`            | Overrides the size step the size and padding classes set.                                                     | The step                                  |
+| `--ui-corner-shape`     | What every corner draws: `round`, or `bevel` for a straight cut. Chromium only today.                         | `round`                                   |
+| `--ui-radius-pill`      | Corner for what is fully round by default: badges, switches, progress, the tooltip icon.                      | `--ui-radius`, `--ui-corner`, then full   |
+| `--ui-radius-tight`     | Corner for chips -- checkbox, `.kbd`, `.code` -- before their `--radius-small` cap.                           | `--ui-radius`, `--ui-corner`, then small  |
+| `--ui-line-style`       | Style of every line a component draws: `solid`, `dashed`, `dotted`, or `double` (3px wide or more).           | `solid`                                   |
 | `--ui-border-width`     | Edge thickness.                                                                                               | `--border-width`                          |
 | `--ui-border-max`       | Ceiling on computed edge width.                                                                               | `100px`                                   |
 | `--ui-ink`              | Neutral line color when no intent is set.                                                                     | `--color-border`                          |
@@ -61,21 +66,28 @@ Components read each with a fallback, so leaving them unset produces the default
 | `--ui-active-shadow-y`  | Shadow vertical offset while pressed.                                                                         | `--ui-shadow-y`                           |
 | `--ui-active-transform` | Transform while pressed. `none` under `prefers-reduced-motion`.                                               | `scale(0.97)`                             |
 | `--ui-shadow-ink`       | Percentage of shadow color taken from intent ink.                                                             | `0%`                                      |
+| `--ui-shadow-2-x`       | A second depth layer: `-x`, `-y`, `-blur`, `-spread`, and `-inset`, like the first. Elevation scales it.      | `0px`                                     |
+| `--ui-shadow-2-ink`     | The second layer's share of intent ink. Unset, there is no second layer.                                      | Unset                                     |
+| `--ui-halo-blur`        | Blur of a halo around the element; `--ui-halo-spread` beside it. Elevation does not scale it.                 | `0px`                                     |
+| `--ui-halo-ink`         | The halo's share of the intent colour, over nothing. Unset, there is no halo.                                 | Unset                                     |
 | `--ui-shadow-edge`      | Declared, even empty, when the shadow is the element's edge rather than its depth. Read for presence.         | Unset                                     |
 | `--ui-elevation`        | Unitless multiplier over shadow geometry.                                                                     | `1`                                       |
 | `--ui-surface-shadow`   | Complete multi-layer shadow accepted by surfaces only.                                                        | Unset                                     |
 | `--ui-surface-ground`   | Ground a surface sits on.                                                                                     | `--color-background`                      |
 | `--ui-bg-alpha`         | Multiplier over fill for translucent materials.                                                               | `1`                                       |
 | `--ui-backdrop`         | Backdrop filter accepted by surfaces only.                                                                    | `none`                                    |
+| `--ui-surface-image`    | A painted layer over a surface's plate: any `background-image` value. Surfaces only.                          | `none`                                    |
 | `--ui-hover-transform`  | Transform while an interactive element is hovered.                                                            | `none`                                    |
 | `--ui-clip`             | Structural component silhouette.                                                                              | `none`                                    |
 | `--ui-clip-tight`       | Compact component silhouette.                                                                                 | `--ui-clip`                               |
 | `--ui-focus-inset`      | Inset focus layer width.                                                                                      | Unset                                     |
-| `--ui-button-weight`    | Button label weight. Read by `.btn` and, with `/native`, a bare `<button>`.                                   | `--font-weight-semibold`                  |
-| `--ui-button-tracking`  | Button label letter spacing. Unset, the button inherits it.                                                   | Unset                                     |
+| `--ui-label-weight`     | Label weight of `.btn` (and, with `/native`, a bare `<button>`) and `.badge`.                                 | Semibold on a button, bold on a badge     |
+| `--ui-label-tracking`   | Label letter spacing. Unset, the label inherits it.                                                           | Unset                                     |
+| `--ui-label-case`       | Label `text-transform`.                                                                                       | `none` on a button; inherited on a badge  |
+| `--ui-label-shadow`     | Label `text-shadow`, written without a colour so it takes the label's own.                                    | `none` on a button; inherited on a badge  |
 
 ```html
-<section style="--ui-radius: 0; --ui-border-width: 3px">
+<section style="--ui-corner: 0; --ui-border-width: 3px">
   <button class="btn primary">Square and heavy</button>
   <input class="ipt" placeholder="Matches" />
 </section>
@@ -83,13 +95,31 @@ Components read each with a fallback, so leaving them unset produces the default
 
 > **Material token contract**: components read these; aesthetic classes and consumer overrides set them.
 
+### Corner size and pattern
+
+The corner scales with the element. `.p-xs` sets a size step of `0.5`, `.sm` and `.p-sm` `0.75`, and `.lg` and `.p-lg` `1.25`. When a size class and a padding class sit on one element, the smaller step wins, so `.lg.p-xs` is small. `box` multiplies `--ui-corner` by the step, so a small button takes a small corner and a bevel stays a true 45 degrees. Depth follows the step down but not up: a `.p-xs` button sits on half its aesthetic's shadow, and a `.lg` one on the whole of it.
+
+Which corners take the corner is its own choice. `.cut-diagonal` keeps the top-left and bottom-right and squares the other two; `.cut-diagonal-reverse` keeps the other pair. Both set `--ui-corner-tl`, `-tr`, `-br`, and `-bl`, which you can also set yourself, and both work under every aesthetic: a two-corner leaf on the default look, two cuts under `.cyber`. An explicit `--ui-radius` ignores the step and the pattern.
+
+### Lines, layers, and labels
+
+`--ui-line-style` reaches every line a component draws: the box's edge, the progress track, and the table's rules. A dashed or dotted line keeps its colour, so it keeps its contrast; `double` needs a width of 3px or more to draw two lines.
+
+`--ui-shadow-2-*` adds a second depth layer that elevation scales like the first, for a two-tone bevel or a soft shadow under a hard one. `--ui-halo-*` is light rather than depth -- a glow in the element's own intent colour -- so elevation does not scale it and `.flat` leaves it on. Each appears only when its ink is set.
+
+`--ui-surface-image` lays any `background-image` over a surface's plate: cards, panels, alerts, and tooltips, not controls. Whoever sets it owns the contrast of the text over it, and your own `background-image` on a surface still wins.
+
+`--ui-label-*` treats the label of a button or a badge: weight, tracking, case, and a text shadow. Write the shadow without a colour -- `0 0 6px` -- so it takes the label's own colour and cannot lower its contrast. Your own `font-*`, `tracking-*`, and case utilities still win.
+
+Under forced colours each of these draws its plain version: a solid line, no second layer, no halo, no painted layer, and no label shadow.
+
 ### Shape and ring composition
 
 Clipping removes borders, outlines, and outer shadows. An aesthetic that uses a clip can replace the border with an inset shadow by setting `--ui-shadow-inset` and the four shadow geometry parts. Set `--ui-border-max: 0px` when that ring replaces the component border. Focusable components restore the clipped focus outline through `--ui-focus-inset`.
 
 A clip is not the only way to cut a corner. `--ui-corner-shape: bevel` draws the corner the radius sets as a straight cut instead of an arc, and the border, outer shadow, focus outline, and backdrop all follow it -- so a bevelled element keeps its glow and its line, where a clipped one loses both. `.cyber` uses it. Engines without `corner-shape` ignore it and draw the radius round, so an aesthetic that bevels should square its radius under `@supports not (corner-shape: bevel)`. A bevel on a full radius cuts to points: a radio, a `.btn.pill`, and anything reading `--ui-radius-pill` become diamonds or pointed hexagons.
 
-Because `--ui-radius` accepts any `border-radius` value, it can also place the corner per side: `10px 0` cuts only top-left and bottom-right. The pill and chip corners are separate tokens for that reason -- a pill's full radius and a chip's `min()` cap cannot take a per-corner value -- and each falls back to `--ui-radius` when unset.
+`--ui-radius` accepts any `border-radius` value and is used as written, so it can place the corner per side: `10px 0` cuts only top-left and bottom-right. The pill and chip corners are separate tokens, because a pill's full radius and a chip's `min()` cap cannot take a per-corner value, and each falls back to `--ui-radius`, then `--ui-corner`, when unset.
 
 Declare `--ui-shadow-edge` when that ring _is_ the border. The ring then takes the element's edge color, which carries the edge axis as its alpha, so `.edged` draws it and `.edgeless` does not — the same answer a real border gives. Without it the ring paints on every component the aesthetic reaches and the edge classes have no effect. Use `--ui-shadow-ink` instead when the shadow is depth cast in the intent's own ink, such as a hard offset slab, which an `.edgeless` element still gets.
 
@@ -126,7 +156,7 @@ The shipped [aesthetic classes](./aesthetics.md) set material tokens for you. On
 | `--tile-radius`          | `.chunky-tile`  | Corner radius, on controls and surfaces alike.                                                | `0.75rem`                          |
 | `--tile-lift`            | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.                                         | `4px`                              |
 | `--font-rounded`         | `.chunky-tile`  | Consumer-supplied rounded font stack.                                                         | Falls back to the page stack       |
-| `--cyber-cut`            | `.cyber`        | Largest cut, on controls and surfaces alike; the default shapes cap it at 25% of the element. | `0.625rem`                         |
+| `--cyber-cut`            | `.cyber`        | The cut at the default size, on controls and surfaces alike; controls scale it with the step. | `0.625rem`                         |
 | `--cyber-shape`          | `.cyber`        | Where controls take the cut: any `border-radius` value.                                       | `<cut> 0` (top-left, bottom-right) |
 | `--cyber-shape-surface`  | `.cyber`        | Where surfaces take the cut: any `border-radius` value.                                       | `0 <cut>` (top-right, bottom-left) |
 | `--cyber-glow`           | `.cyber`        | Blur of the glow.                                                                             | `8px`                              |

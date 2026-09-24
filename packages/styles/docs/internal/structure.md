@@ -1,12 +1,12 @@
 ---
-status: DRAFT
+status: IMPLEMENTED
 last_updated: 2026-09-24
 scope: Decisions on the eight structural parts the material contract does not express yet -- corner scale, corner pattern, line style, depth in layers, shadow that is not depth, a painted layer, ambient motion, and label treatment -- for `@codenhub/styles@0.5.0`.
 ---
 
 # Structure for 0.5.0
 
-This is a proposal, per the repository root `docs/README.md`'s `DRAFT` status: nothing here is built until it is approved. It answers every item under [Roadmap → Structure](./roadmap.md#structure) in one place, because the answers share two rules and read better together.
+Implemented in `0.5.0`. It answers every structural part [Model](./model.md#what-the-material-contract-did-not-express) listed in one place, because the answers share two rules and read better together. Where building an answer settled a detail the proposal left open, the section says so under **Built**.
 
 Each decision is weighed under [What enters the material contract](./model.md#what-enters-the-material-contract): a part enters because a component already draws it and more than one thing can use it, in a form that keeps composition intact, weighing looks, then function, then accessibility. No decision is justified by the aesthetic that would use it.
 
@@ -29,6 +29,8 @@ A cut stays a true 45 degrees because the corner is a length, not a percentage, 
 
 **Breaking.** Every aesthetic moves from setting `--ui-radius` to setting `--ui-corner`. A consumer who set `--ui-radius` sees no change.
 
+**Built.** The modifiers write two privates, `--_scale-size` and `--_scale-pad`; `box` restates both `initial` so a `.card.p-xs` does not shrink the buttons inside it, and an unset step takes the other's value, so a lone `.lg` still grows. `--ui-scale` is the public override, and the package never declares it. Depth scales by the step too, capped at `1` -- down with a small element, never up, so a press that travels an aesthetic's whole depth still lands flat on a `.lg` button; that is what retires chunky tile's list. The pill and chip corners fall back through `--ui-radius`, then `--ui-corner`. Every aesthetic but `.cyber` clears `--ui-radius` and `--ui-radius-surface` to `initial`, so a region nested inside `.cyber` does not inherit its knob.
+
 ## 2. Corner pattern
 
 **Decision.** Four per-corner multipliers and two classes.
@@ -36,11 +38,15 @@ A cut stays a true 45 degrees because the corner is a length, not a percentage, 
 - **`--ui-corner-tl`, `-tr`, `-br`, `-bl`**, each `0` or `1`, default `1`, multiplying the computed corner in `box` and `surface`.
 - **`.cut-diagonal`** (top-left and bottom-right) and **`.cut-diagonal-reverse`** (top-right and bottom-left), which set the multipliers. They work under every aesthetic: under the default look a diagonal is a two-corner leaf; under `.cyber` it is two cuts.
 
+**Built.** `.skeleton` and the tooltip bubble, which set their own radius, read the pattern too. `.cyber` places its control diagonal through the switches; its surfaces cut the opposite diagonal, which the four shared switches cannot say at the same time, so its surface shape is a whole `--ui-radius-surface`, unscaled -- a card is large enough that the full cut is right at every padding. `--cyber-shape` is read as `--ui-radius` with no fallback, so left unset it is guaranteed-invalid and the computed corner draws.
+
 **Not taken.** A hexagon is a bevel whose corner is half the height, which `--ui-radius: 50%` already draws under a bevelling aesthetic, so it needs no class. A parallelogram slants its sides into its content and needs a clip or a transform plus its own padding answer; it is not a corner and stays out. `.cyber`'s `--cyber-shape` knobs stay knobs.
 
 ## 3. Line style
 
 **Decision.** **`--ui-line-style`**, default `solid`, read wherever a line is drawn: `box`, the progress track, and the table's head and foot rules. The supported values are `solid`, `dashed`, `dotted`, and `double`. Every component takes it, controls included: a dashed or dotted field line keeps its colour and so its contrast, and looks come first. `double` needs a width of at least `3px` to draw two lines, which the docs state. A pressed state has no value of its own.
+
+**Built.** The table reads it on every rule, the row rules as well as the head and foot boundaries, since they are one line style in one table.
 
 **Not taken.** `outset`, `inset`, `groove`, and `ridge`: each engine derives their two tones differently, so the same token would draw three different bevels. A two-tone bevel is expressed through depth in layers instead (4).
 
@@ -50,11 +56,15 @@ A cut stays a true 45 degrees because the corner is a length, not a percentage, 
 
 Hover and press keep their counterparts on the first layer only (`--ui-hover-shadow-*`, `--ui-active-shadow-*`). A second layer that must change on press is rare enough to wait until a component needs it.
 
+**Built.** The layer's ink is its presence: `--ui-shadow-2-ink` has no fallback, so undeclared, the whole layer -- its leading comma included -- is invalid and `box` drops it, and no empty layer sits in every component's shadow. `--ui-shadow-2-inset` carries the `inset` keyword, like the first layer's, because a two-tone bevel is two inset layers.
+
 ## 5. Shadow that is not depth
 
 **Decision.** A halo layer, **`--ui-halo-blur`**, **`--ui-halo-spread`**, and **`--ui-halo-ink`**, composed in `box` from the element's own intent colour, stacked outside the depth layers and below the focus ring. Elevation does not scale it, so `.flat` leaves it alone, and it reaches every component that composes `box`, not only the two that rest above zero. Indicators, which do not compose `box`, stay out.
 
 `.cyber`'s glow moves onto the halo, which fixes its glow disappearing under `.flat`.
+
+**Built.** Present only when `--ui-halo-ink` is declared, the way the second layer is. Blur and spread default to `0px`. `.cyber`'s fields and chips glow now, which is the reach the decision asked for.
 
 ## 6. A painted layer
 
@@ -76,14 +86,15 @@ The aesthetic that sets the layer owns the contrast of text over it; the docs sa
 
 A consumer's own `font-*`, `tracking-*`, and `uppercase` utilities still win, as they do on buttons today.
 
+**Built.** A button falls back to `none` for case and shadow, which is what the user agent already gives it; a badge leaves both undefined, so it inherits as its text always has. A badge's weight falls back to bold, its weight before the token.
+
 **Breaking.** `--ui-button-weight` and `--ui-button-tracking` are removed without an alias, in the same window as the other removals.
 
 ## Tests
 
-- **`axes.spec.ts`** gains each new token as a live axis: changing it changes rendering on every component the registry says reads it.
-- **`registry.json`** records which components read the corner, line, second layer, halo, surface image, and label tokens, and `registry.test.ts` checks every aesthetic still names or clears them.
-- **A browser test per decision** for the specific promise: the tighter scale wins; `--ui-radius` still overrides; `.cut-diagonal` rounds two corners; `.flat` keeps the halo; a consumer's `background-image` beats `--ui-surface-image`; a label utility beats `--ui-label-*`; forced colours draw every reset.
+- **`registry.json`** records under `material` which utilities read each new token, `registry.test.ts` holds that record against the stylesheets, and it checks every aesthetic names or clears each one.
+- **`structure.spec.ts`**, one browser test per decision, on the built files a consumer links: the tighter scale wins; `--ui-radius` still overrides; `.cut-diagonal` rounds two corners; `.flat` keeps the halo; a consumer's `background-image` beats `--ui-surface-image`; a label utility beats `--ui-label-*`; forced colours draw every reset.
 
 ## Order
 
-Corner scale first, because the corner pattern and chunky tile's lift build on it; then line style, the two shadow layers, the painted layer, and label treatment, each independent. The `0.5.0` changelog lists the three breaking changes above alongside the ones already landed.
+Built in that order: corner scale and pattern together, because `.cyber`'s move to `--ui-corner` needed both; then line style, the two shadow layers, the painted layer, and label treatment. The `0.5.0` changelog lists the breaking changes above alongside the ones already landed.

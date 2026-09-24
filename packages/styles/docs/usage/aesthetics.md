@@ -120,7 +120,7 @@ The bar is a darker shade of the element's own colour rather than a shadow under
   ```
 
 - `--font-rounded` is yours to supply. A heavy rounded grotesque is most of this look and the package ships no font binary, so with nothing supplied the page's own stack is used.
-- Action labels are drawn heavier and slightly tracked, through `--ui-button-weight` and `--ui-button-tracking`, so your own `font-*` or `tracking-*` utility on a button still wins. It reaches `.btn`, and a bare `<button>` only where `/native` styles it. Casing is left alone: how a label is worded is the application's decision, so if you want uppercase buttons, write that rule in your own stylesheet.
+- Labels are drawn heavier and slightly tracked, through `--ui-label-weight` and `--ui-label-tracking`, so your own `font-*` or `tracking-*` utility still wins. It reaches `.btn` and `.badge`, and a bare `<button>` only where `/native` styles it. Casing is left alone: how a label is worded is the application's decision, so if you want uppercase buttons, write that rule in your own stylesheet.
 - `.card.interactive` presses like a `.btn`, so a chunky answer tile drops onto its bar on click; `.card.pressable` gets the same press on its own. A plain `.card` stays put.
 - The shipped `.primary` is a near-black-or-near-white monochrome depending on theme, and the bar mixes toward a fixed black regardless of theme. In light theme this leaves a primary button's bar almost invisible against its own near-black plate (measured `1.04:1`, 10 units of sRGB distance); in dark theme the near-white plate against the same black-anchored bar reads fine (`2.48:1`, 154 units). Give `.primary` a hue of its own if it is the call to action and needs the depth cue in both themes.
 - Depth in this aesthetic is the bar, never a blurred drop shadow. Anything the registry rests flat sits flush on the page.
@@ -132,7 +132,7 @@ Bevelled corners, a 1px edge, and a glow in the component's own colour: a succes
 
 Controls and surfaces take the cut on opposite diagonals, so a button and the card around it read as the same material and as different things: buttons and fields cut top-left and bottom-right, cards, panels, and alerts top-right and bottom-left. Anything fully round cuts to points -- a radio, a switch knob, and the tooltip icon become diamonds, a pill button or a badge a pointed hexagon -- and chips square, so the checkbox reads as a plain square beside the diamond radio.
 
-`--cyber-cut` is the largest cut, `0.625rem`: the default shapes cap it at a quarter of the element's own box, so a normal button or a card takes the full cut and a small icon button a smaller one rather than losing its corners. `--cyber-shape` and `--cyber-shape-surface` place it, and take any `border-radius` value. `--cyber-glow` is the glow's blur, `8px`. `--cyber-ink` is the neutral line and glow colour, which follows the theme by default -- near-black on light, near-white on dark -- and is where a neon neutral goes if you want one.
+`--cyber-cut` is the cut at the default size, `0.625rem`. Controls scale it with their size step, so a `.p-xs` icon button takes half of it and keeps its corners, and it stays a true 45 degrees. `--cyber-shape` and `--cyber-shape-surface` replace the default placement with any `border-radius` value, used as written. `--cyber-glow` is the glow's blur, `8px`. `--cyber-ink` is the neutral line and glow colour, which follows the theme by default -- near-black on light, near-white on dark -- and is where a neon neutral goes if you want one.
 
 ```html
 <section class="cyber" style="--cyber-ink: rgb(0 229 255); --cyber-cut: 0.75rem">
@@ -140,7 +140,7 @@ Controls and surfaces take the cut on opposite diagonals, so a button and the ca
 </section>
 ```
 
-Other shapes are a value away. Set them on the `.cyber` element or any ancestor; `--ui-radius` set on one element changes just that element. A shape you set is used as written, so wrap a length in `min(..., 25%)` if small controls should keep the cap.
+Other shapes are a value away. Set them on the `.cyber` element or any ancestor; `--ui-radius` set on one element changes just that element. A shape you set is used as written and does not scale, so for a scaled one on a single control use `.cut-diagonal-reverse` instead.
 
 | Shape                  | Value                 |
 | ---------------------- | --------------------- |
@@ -161,7 +161,7 @@ A parallelogram slants its sides into the content, so give a surface that takes 
 **Exceptions:**
 
 - The bevel is Chromium-only today. Firefox and Safari do not draw `corner-shape` yet, and there the aesthetic squares its cut corners instead of rounding them, and what is fully round stays round, so the look degrades to square, lined, and glowing. It picks up the bevel with no change once an engine ships it.
-- The glow is depth, so it reaches what the registry rests above zero -- buttons and cards -- and anything you raise with `.raised` or `.floating`. Fields, badges, and alerts keep the edge without the glow, and `.flat` takes it off anything.
+- The glow is a halo, not depth, so every component takes it -- fields, badges, and alerts included -- and `.flat` does not take it off. `.raised` and `.floating` add no shadow under this aesthetic.
 - In the light theme the glow of a neutral or `.primary` component is its near-black ink, which reads as a soft shadow rather than as light. The look is at its strongest on a dark page, or with a hued `--cyber-ink`.
 - A plain `.btn.icon` is a square control, so it takes the control diagonal; a `.btn.icon.pill` is round, so it becomes a diamond.
 - `--font-cyber` is yours to supply. The package ships no font binary, so the aesthetic falls back to the monospace stack.
