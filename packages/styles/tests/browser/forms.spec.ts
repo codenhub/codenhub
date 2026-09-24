@@ -489,6 +489,47 @@ test.describe("forms", () => {
     }
   });
 
+  /* `:checked` declares a full fill and full contrast ink, and `box` ramps the
+     ink against the bounded fill before `--ui-bg-alpha` thins it. Ramped after,
+     `.glass`'s 0.8 would print the mark 60% of the way to the contrast tone on
+     an 80% plate, from a quiet presentation that asked for no ink at all. The
+     alpha is set inline rather than through `.glass`, because Chromium here
+     reports reduced transparency and glass then goes opaque. */
+  test("keeps a checked toggle's full contrast ink on a thinned plate", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const marks = await page.evaluate(() =>
+      ["none", "primary", "success"].flatMap((intent) =>
+        ["checkbox", "switch"].map((component) => {
+          const opaque = document.querySelector<HTMLInputElement>(
+            `[data-testid="${component}-default-${intent}-checked"]`,
+          )!;
+          const region = document.createElement("div");
+          region.className = "ghost";
+          region.style.setProperty("--ui-bg-alpha", "0.8");
+          const thinned = opaque.cloneNode() as HTMLInputElement;
+          thinned.checked = true;
+          region.append(thinned);
+          document.body.append(region);
+
+          const result = {
+            label: `${component} ${intent}`,
+            opaqueMark: getComputedStyle(opaque).color,
+            thinnedFill: getComputedStyle(thinned).backgroundColor,
+            thinnedMark: getComputedStyle(thinned).color,
+          };
+          region.remove();
+          return result;
+        }),
+      ),
+    );
+
+    for (const { label, opaqueMark, thinnedFill, thinnedMark } of marks) {
+      expect(readSrgb(thinnedFill).alpha, `${label} fill`).toBeCloseTo(0.8, 2);
+      expectSameColor(thinnedMark, opaqueMark, `${label} mark`);
+    }
+  });
+
   /* A switch's three resting fills used to render as two looks, so the
      component varied its *line* per fill class instead -- the only place in
      the package where a fill class decided an edge, and the reason `.soft`
