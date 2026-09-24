@@ -27,7 +27,7 @@
        The cut is a ceiling, not a size: the default pair caps it at a quarter of
        the element's own box, so a 40px button or a card takes the full cut and a
        19px icon button about 5px rather than having its corners eaten. Nothing in
-       the model scales a corner with a component's size -- `.sm` and `.dense`
+       the model scales a corner with a component's size -- `.sm` and `.p-xs`
        change padding and height, never the radius -- and a radius percentage is
        the one length that already knows the box. Horizontal percentages resolve
        against the width and vertical ones against the height, so on a small wide

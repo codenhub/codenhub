@@ -49,8 +49,7 @@
     },
     "destructive": {
       "family": "destructive",
-      "fillMax": "100%",
-      "aliases": ["danger", "error"]
+      "fillMax": "100%"
     },
     "info": {
       "family": "info",
@@ -59,21 +58,18 @@
   },
   "modifiers": {
     "elevation": {
-      "elevation-none": {
-        "ui-elevation": "0",
-        "aliases": ["flat"]
+      "flat": {
+        "ui-elevation": "0"
       },
-      "elevation-sm": {
-        "ui-elevation": "1",
-        "aliases": ["raised"]
+      "raised": {
+        "ui-elevation": "1"
       },
-      "elevation-md": {
-        "ui-elevation": "2",
-        "aliases": ["floating"]
+      "floating": {
+        "ui-elevation": "2"
       }
     },
     "size": ["sm", "lg"],
-    "padding": ["p-xs", "p-sm", "p-lg", "dense", "compact", "spacious", "flush"],
+    "padding": ["p-xs", "p-sm", "p-lg", "flush"],
     "shape": ["pill", "icon"],
     "state": ["disabled", "interactive", "hoverable", "pressable", "active", "indeterminate"],
     "layout": ["vertical", "horizontal", "between", "tight", "loose", "narrow", "wide"],
@@ -552,7 +548,7 @@
       "solo": "chunky-tile-solo",
       "completeShadow": false,
       "selectors": ["btn"],
-      "selectorReason": "Scales `--ui-shadow-y` down for `.btn.icon` paired with `.dense`/`.p-xs`: the bar is a flat 4px slab at every size, and on a ~20px glyph-only button it is close enough to the icon's own footprint to read as a solid fill behind a `.ghost` button. `--tile-lift` is not enough on its own -- it resolves once, on `.chunky-tile` itself, and a nested override of it does not reach `--ui-shadow-y`, which already inherited the resolved value -- so the token `box` actually reads is the one restated here. The heavier, tracked label this list used to carry is the `--ui-button-weight`/`--ui-button-tracking` slot pair since 0.5.0, so a consumer's own `font-*` utility can beat it."
+      "selectorReason": "Scales `--ui-shadow-y` down for `.btn.icon` paired with `.p-xs`: the bar is a flat 4px slab at every size, and on a ~20px glyph-only button it is close enough to the icon's own footprint to read as a solid fill behind a `.ghost` button. `--tile-lift` is not enough on its own -- it resolves once, on `.chunky-tile` itself, and a nested override of it does not reach `--ui-shadow-y`, which already inherited the resolved value -- so the token `box` actually reads is the one restated here. The heavier, tracked label this list used to carry is the `--ui-button-weight`/`--ui-button-tracking` slot pair since 0.5.0, so a consumer's own `font-*` utility can beat it."
     },
     {
       "class": "cyber",

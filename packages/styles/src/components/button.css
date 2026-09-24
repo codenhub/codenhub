@@ -40,25 +40,21 @@
     min-width: var(--control-height);
   }
 
-  /* `.p-xs`/`.p-sm`/`.p-lg` are the canonical names, matching the `sm`/`md`/`lg`
-     vocabulary the elevation modifier uses; `.dense`/`.compact`/`.spacious` are
-     first-class aliases, not a deprecation shim -- the same pattern
-     `.destructive`/`.danger`/`.error` uses on the intent axis. Bare `sm`/`lg`
-     are already the size modifier's class names, so `p-` prefixes here to
-     avoid colliding with a button's own size. `.p-xs` is the tightest step,
-     below `.compact`: a chip-sized button in a toolbar or a table cell.
+  /* Bare `sm`/`lg` are already the size modifier's class names, so `p-`
+     prefixes here to avoid colliding with a button's own size. `.p-xs` is the
+     tightest step, below `.p-sm`: a chip-sized button in a toolbar or a table
+     cell.
 
      `.icon` drops both floors -- `min-width` from its own base rule below and
      `min-height` from `--control-height` -- at every padding tier, labeled
-     buttons keep the height floor everywhere but `.p-xs`/`.dense`. `.icon`
+     buttons keep the height floor everywhere but `.p-xs`. `.icon`
      already asks to be square: `aspect-square` ties its width to whatever
      height it lands on, so a height floor that survives keeps the button
      bigger than its own glyph regardless of how tight the padding asked to be
-     -- the one combination `.p-xs`/`.dense` used to get right and the other two
-     tiers did not, leaving a `.icon.compact` floating in a box far bigger than
-     it needed and a `.icon.spacious` doing the same one step further out. */
-  &.p-xs,
-  &.dense {
+     -- the one combination `.p-xs` used to get right and the other two tiers
+     did not, leaving a `.icon.p-sm` floating in a box far bigger than it
+     needed and a `.icon.p-lg` doing the same one step further out. */
+  &.p-xs {
     @apply px-2 py-0.5;
 
     /* The one padding step that also drops the size floor for a labeled
@@ -75,8 +71,7 @@
     }
   }
 
-  &.p-sm,
-  &.compact {
+  &.p-sm {
     @apply px-2.5 py-1;
 
     &.icon {
@@ -87,8 +82,7 @@
     }
   }
 
-  &.p-lg,
-  &.spacious {
+  &.p-lg {
     @apply px-6 py-3;
 
     &.icon {

@@ -446,7 +446,7 @@ const buildField = (type, variant) => {
     input.setAttribute(name, value);
   }
 
-  message.className = variantSpec.error ? "hint error" : "hint";
+  message.className = variantSpec.error ? "hint destructive" : "hint";
   message.textContent = variantSpec.error ?? spec.hint;
   message.id = messageId;
   message.dataset.testid = `${messageId}`;

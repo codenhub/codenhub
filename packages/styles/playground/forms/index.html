@@ -176,7 +176,7 @@
                 aria-describedby="input-group-error"
               />
             </div>
-            <span class="hint error" id="input-group-error">Enter a valid email.</span>
+            <span class="hint destructive" id="input-group-error">Enter a valid email.</span>
           </label>
           <label class="field" data-testid="input-group-disabled">
             <span class="label">Email</span>
@@ -272,7 +272,7 @@
             names the control,
             <code class="code">.hint</code>
             explains it, and
-            <code class="code">.hint.error</code>
+            <code class="code">.hint.destructive</code>
             is destructive helper text.
           </p>
         </div>
@@ -296,7 +296,7 @@
               aria-describedby="field-error"
               data-testid="invalid-input"
             />
-            <span class="hint error" id="field-error" data-testid="field-error">Enter a valid email.</span>
+            <span class="hint destructive" id="field-error" data-testid="field-error">Enter a valid email.</span>
           </label>
           <label class="field" data-testid="field-hint-and-error">
             <span class="label">Email</span>
@@ -308,7 +308,7 @@
               aria-describedby="field-both-hint field-both-error"
             />
             <span class="hint" id="field-both-hint">We only use this to send build failures.</span>
-            <span class="hint error" id="field-both-error">Enter a valid email.</span>
+            <span class="hint destructive" id="field-both-error">Enter a valid email.</span>
           </label>
           <label class="field" data-testid="field-disabled">
             <span class="label">Email</span>
@@ -376,13 +376,13 @@ Collapsed the per-component intent blocks.</textarea
           <p class="text-body text-text-secondary">
             <code class="code">.hint</code>
             claims helper typography while
-            <code class="code">.error</code>
-            supplies destructive intent.
-            <code class="code">.btn.error</code>
+            <code class="code">.destructive</code>
+            supplies the intent.
+            <code class="code">.btn.destructive</code>
             stays a destructive button.
           </p>
           <div class="field">
-            <button class="btn error" type="button" data-testid="field-error-button">Delete</button>
+            <button class="btn destructive" type="button" data-testid="field-error-button">Delete</button>
           </div>
         </div>
       </section>

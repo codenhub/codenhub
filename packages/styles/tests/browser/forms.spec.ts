@@ -996,7 +996,7 @@ test.describe("forms", () => {
     expect(measured.disabled.cursor, "and shows the not-allowed cursor").toBe("not-allowed");
   });
 
-  test("styles only hint error messages as field helper text", async ({ page }) => {
+  test("styles only destructive hints as field helper text", async ({ page }) => {
     await page.goto(FORMS_URL);
 
     const styles = await page.evaluate(() => {
@@ -1004,8 +1004,8 @@ test.describe("forms", () => {
       const field = document.querySelector('[data-testid="field-error"]')!.parentElement!;
       const bareError = document.createElement("span");
 
-      bareError.className = "error";
-      bareError.textContent = "Bare error intent";
+      bareError.className = "destructive";
+      bareError.textContent = "Bare destructive intent";
       field.append(bareError);
 
       const hintError = get("field-error");

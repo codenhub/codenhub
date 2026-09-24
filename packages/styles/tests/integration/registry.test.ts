@@ -406,7 +406,7 @@ async function shippedUtilities(): Promise<Map<string, string>> {
 
 /* A utility's own declarations, with every nested selector and at-rule dropped.
    The two guards below ask what a component declares at rest, and `&:hover`,
-   `&.compact` and `&.interactive` all sit inside the same block, so a component
+   `&.p-sm` and `&.interactive` all sit inside the same block, so a component
    setting its fill only on hover would otherwise read as having declared it.
    `shippedUtilities` slices from the opening brace, so the walk starts past it. */
 function rootDeclarations(block: string): string {

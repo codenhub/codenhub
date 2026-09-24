@@ -129,30 +129,28 @@ test("applies intent on the element without cascading it from a container", asyn
   expect(values.tokenSuccess).not.toBe(values.tokenText);
 });
 
-/* An alias has to resolve to exactly the same tones as the intent it aliases,
-   or a component styled with one drifts from a component styled with the
-   other. */
-test("resolves every destructive alias to the same tones", async ({ page }) => {
+/* `.danger` and `.error` were destructive aliases until 0.5.0. `.error` is a
+   class an application or a form library often writes already, and an alias
+   set an intent wherever it landed; removed, both are just class names. */
+test("gives the removed destructive aliases no intent", async ({ page }) => {
   await page.goto(PLAYGROUND_URL);
 
   const resolved = await page.evaluate(() =>
-    ["destructive", "danger", "error"].map((intent) => {
+    ["", "danger", "error", "destructive"].map((intent) => {
       const element = document.createElement("div");
       element.className = `badge ${intent}`;
       document.body.append(element);
 
-      const styles = getComputedStyle(element);
-      const value = [
-        styles.getPropertyValue("--intent-color"),
-        styles.getPropertyValue("--intent-contrast"),
-        styles.getPropertyValue("--intent-border"),
-      ].join("|");
+      const value = getComputedStyle(element).getPropertyValue("--intent-color");
 
       element.remove();
 
       return value;
     }),
   );
+  const [plain, danger, error, destructive] = resolved;
 
-  expect(new Set(resolved).size).toBe(1);
+  expect(danger).toBe(plain);
+  expect(error).toBe(plain);
+  expect(destructive).not.toBe(plain);
 });

@@ -97,20 +97,13 @@ test.describe("surfaces", () => {
     await page.goto(SURFACES_URL);
 
     const padding = await page.evaluate(() =>
-      [
-        "card-dense",
-        "card-compact",
-        "card-default-padding",
-        "card-spacious",
-        "card-flush",
-        "panel-dense",
-        "panel-compact",
-      ].map((testId) =>
-        Number.parseFloat(getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!).paddingTop),
+      ["card-p-xs", "card-p-sm", "card-default-padding", "card-p-lg", "card-flush", "panel-p-xs", "panel-p-sm"].map(
+        (testId) =>
+          Number.parseFloat(getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!).paddingTop),
       ),
     );
 
-    const [dense, compact, base, spacious, flush, panelDense, panelCompact] = padding as [
+    const [extraSmall, small, base, large, flush, panelExtraSmall, panelSmall] = padding as [
       number,
       number,
       number,
@@ -121,12 +114,12 @@ test.describe("surfaces", () => {
     ];
 
     expect(flush).toBe(0);
-    expect(dense).toBeLessThan(compact);
-    expect(compact).toBeLessThan(base);
-    expect(spacious).toBeGreaterThan(base);
-    /* The alias resolves on a panel too, one step below `.compact`. */
-    expect(panelDense).toBeGreaterThan(0);
-    expect(panelDense).toBeLessThan(panelCompact);
+    expect(extraSmall).toBeLessThan(small);
+    expect(small).toBeLessThan(base);
+    expect(large).toBeGreaterThan(base);
+    /* The steps resolve on a panel too, `.p-xs` one below `.p-sm`. */
+    expect(panelExtraSmall).toBeGreaterThan(0);
+    expect(panelExtraSmall).toBeLessThan(panelSmall);
   });
 
   /* `--_d-ground` is a custom property, so it inherits: a `surface` sets it to

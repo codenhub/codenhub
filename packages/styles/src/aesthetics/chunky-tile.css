@@ -130,8 +130,8 @@
      plain `4px` -- a nested `--tile-lift` on a descendant button is a fresh
      declaration nothing downstream reads. `--ui-shadow-y` is what `box` actually
      multiplies by elevation, so that is the token restated here, at half the
-     resting lift. A `.btn.icon` at `.dense`/`.p-xs` is close to the smallest
-     button the package draws (~20px, once the size floor both tiers drop for
+     resting lift. A `.btn.icon` at `.p-xs` is close to the smallest
+     button the package draws (~20px, once the size floor that tier drops for
      `.icon` is gone -- see `button.css`), and a flat 4px bar under a target that
      size sits close enough to the glyph's own footprint to read as a solid fill
      behind it -- a `.ghost` button that looks `.solid`. 2px keeps the bar
@@ -140,7 +140,6 @@
      In `components` with the token class: it writes a public token, so as the
      element's own declaration it beats the value inherited from `.chunky-tile`
      and still loses to a consumer's utility. */
-  .chunky-tile .btn.icon.dense,
   .chunky-tile .btn.icon.p-xs {
     --ui-shadow-y: 2px;
   }

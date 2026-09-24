@@ -15,20 +15,15 @@
   --_d-border: 100%;
   --_d-elevation: 1;
 
-  /* `.p-xs`/`.p-sm`/`.p-lg` are the canonical names; `.dense`/`.compact`/`.spacious`
-     are first-class aliases -- see the identical note in `button.css`. */
-  &.p-xs,
-  &.dense {
+  &.p-xs {
     --surface-padding: 0.5rem;
   }
 
-  &.p-sm,
-  &.compact {
+  &.p-sm {
     --surface-padding: 0.75rem;
   }
 
-  &.p-lg,
-  &.spacious {
+  &.p-lg {
     --surface-padding: 2rem;
   }
 
@@ -73,7 +68,7 @@
      the quiet, untinted rest. A named intent needs neither special case: it
      already rests tinted, so the same generic `box-hover` formula deepens it
      on hover (12% to 26%) with no ground shift required. */
-  &.soft:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info) {
+  &.soft:not(.primary, .secondary, .success, .warning, .destructive, .info) {
     --_fill-cap: 0%;
     --_d-surface-ground: var(--color-foreground);
 
@@ -117,18 +112,15 @@
   --_d-border: 0%;
   --_d-elevation: 0;
 
-  &.p-xs,
-  &.dense {
+  &.p-xs {
     --surface-padding: 0.25rem;
   }
 
-  &.p-sm,
-  &.compact {
+  &.p-sm {
     --surface-padding: 0.5rem;
   }
 
-  &.p-lg,
-  &.spacious {
+  &.p-lg {
     --surface-padding: 1.5rem;
   }
 
@@ -167,7 +159,7 @@
      `.glass` is glass, like every other surface there. Permanent rather than
      hover-revealed: neither a panel nor `data-table` has an interaction
      state to reveal a tint into, so both rest quiet rather than reveal. */
-  &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid, .ghost) {
+  &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid, .ghost) {
     --_fill-cap: 0%;
     --_d-surface-ground: var(--color-foreground);
   }

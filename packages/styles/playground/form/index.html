@@ -132,7 +132,7 @@
                   aria-invalid="true"
                   aria-describedby="billing-email-error"
                 />
-                <span class="hint error" id="billing-email-error" data-testid="billing-email-error">
+                <span class="hint destructive" id="billing-email-error" data-testid="billing-email-error">
                   Enter a complete email address.
                 </span>
               </label>
@@ -145,7 +145,9 @@
               <label class="field" data-testid="field-company">
                 <span class="label">Company name</span>
                 <input class="ipt" type="text" value="" aria-invalid="true" aria-describedby="company-error" />
-                <span class="hint error" id="company-error" data-testid="company-error">Company name is required.</span>
+                <span class="hint destructive" id="company-error" data-testid="company-error">
+                  Company name is required.
+                </span>
               </label>
               <label class="field" data-testid="field-country">
                 <span class="label">Country</span>
@@ -154,7 +156,7 @@
                   <option>United States</option>
                   <option>Brazil</option>
                 </select>
-                <span class="hint error" id="country-error" data-testid="country-error">
+                <span class="hint destructive" id="country-error" data-testid="country-error">
                   Select a country to continue.
                 </span>
               </label>

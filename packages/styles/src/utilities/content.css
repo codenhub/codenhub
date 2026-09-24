@@ -322,7 +322,7 @@
   border-radius: min(var(--ui-radius-tight, var(--ui-radius, var(--radius-small))), var(--radius-small));
   clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 
-  &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid) {
+  &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid) {
     --_fill-cap: 0%;
   }
 }
@@ -340,7 +340,7 @@
   border-radius: min(var(--ui-radius-tight, var(--ui-radius, var(--radius-small))), var(--radius-small));
   clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 
-  &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid) {
+  &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid) {
     --_fill-cap: 0%;
   }
 }
@@ -355,7 +355,7 @@
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
 
-  &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid) {
+  &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid) {
     --_fill-cap: 0%;
   }
 }

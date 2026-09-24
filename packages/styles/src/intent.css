@@ -89,9 +89,7 @@
   --intent-fill-max: 100%;
 }
 
-.destructive,
-.danger,
-.error {
+.destructive {
   --intent-color: var(--color-destructive);
   --intent-contrast: var(--color-destructive-contrast);
   --intent-hover: var(--color-destructive-hover);

@@ -123,12 +123,12 @@ test.describe("buttons", () => {
     await expect(page.getByTestId("loading-button")).toBeDisabled();
   });
 
-  test("styles disabled and error button states", async ({ page }) => {
+  test("styles disabled and destructive button states", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
     const styles = await page.evaluate(() => {
       const disabledStyles = getComputedStyle(document.querySelector('[data-testid="aria-disabled-button"]')!);
-      const errorStyles = getComputedStyle(document.querySelector('[data-testid="btn-default-error"]')!);
+      const errorStyles = getComputedStyle(document.querySelector('[data-testid="btn-default-destructive"]')!);
 
       return {
         disabledCursor: disabledStyles.cursor,
@@ -505,24 +505,24 @@ test.describe("buttons", () => {
     }
   });
 
-  test("configures button padding with the dense, compact and spacious modifiers", async ({ page }) => {
+  test("configures button padding with the p-xs, p-sm and p-lg modifiers", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
     const readPadding = (testId: string, property: "padding" | "paddingLeft") =>
       page.getByTestId(testId).evaluate((element, name) => getComputedStyle(element)[name], property);
 
-    expect(await readPadding("btn-dense", "paddingLeft")).toBe("8px");
-    expect(await readPadding("btn-compact", "paddingLeft")).toBe("10px");
+    expect(await readPadding("btn-p-xs", "paddingLeft")).toBe("8px");
+    expect(await readPadding("btn-p-sm", "paddingLeft")).toBe("10px");
     expect(await readPadding("btn-default-padding", "paddingLeft")).toBe("16px");
-    expect(await readPadding("btn-spacious", "paddingLeft")).toBe("24px");
+    expect(await readPadding("btn-p-lg", "paddingLeft")).toBe("24px");
 
-    expect(await readPadding("btn-icon-dense", "padding")).toBe("2px");
-    expect(await readPadding("btn-icon-compact", "padding")).toBe("4px");
+    expect(await readPadding("btn-icon-p-xs", "padding")).toBe("2px");
+    expect(await readPadding("btn-icon-p-sm", "padding")).toBe("4px");
     expect(await readPadding("btn-icon-default", "padding")).toBe("8px");
-    expect(await readPadding("btn-icon-spacious", "padding")).toBe("12px");
+    expect(await readPadding("btn-icon-p-lg", "padding")).toBe("12px");
   });
 
-  /* `.p-xs`/`.dense` is the one padding tier that also drops the size floor, so a
+  /* `.p-xs` is the one padding tier that also drops the size floor, so a
      button fits a table cell or a dense toolbar. Every other size and padding
      class keeps `min-height: var(--control-height)`; `.sm` is the control here
      and stays floored. The icon variant gives up its `min-width` floor with it. */

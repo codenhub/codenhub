@@ -57,7 +57,7 @@
      alert cannot lose its visual identity from this: `--_d-border: 100%`
      above holds regardless of fill, so a neutral alert still reads as a
      framed box, just a quiet one instead of a grey slab. */
-  &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid, .ghost) {
+  &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid, .ghost) {
     --_fill-cap: 0%;
     --_d-surface-ground: var(--color-foreground);
   }

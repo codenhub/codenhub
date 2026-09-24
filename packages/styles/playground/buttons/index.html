@@ -28,21 +28,6 @@
           </p>
         </div>
         <div data-matrix="btn" data-matrix-states="rest" data-testid="btn-matrix"></div>
-        <div class="stack tight">
-          <h3 class="text-title-sm">Intent aliases</h3>
-          <p class="text-body text-text-secondary">
-            <code class="code">error</code>
-            is an alias of
-            <code class="code">destructive</code>
-            and has to resolve to the same tones.
-          </p>
-          <div
-            data-matrix="btn"
-            data-matrix-intents="destructive,error"
-            data-matrix-presentations="default,ghost edged,soft edged"
-            data-testid="btn-alias-matrix"
-          ></div>
-        </div>
       </section>
 
       <section class="sect-inn stack loose">
@@ -114,18 +99,18 @@
           <div class="stack tight">
             <h3 class="text-title-sm">Padding</h3>
             <p class="text-body text-text-secondary">
-              <code class="code">dense</code>
+              <code class="code">p-xs</code>
               ,
-              <code class="code">compact</code>
+              <code class="code">p-sm</code>
               and
               <!-- prettier-ignore -->
-              <span><code class="code">spacious</code>, the padding modifiers the registry publishes.</span>
+              <span><code class="code">p-lg</code>, the padding modifiers the registry publishes.</span>
             </p>
             <div class="cluster">
-              <button class="btn primary dense" data-testid="btn-dense">Dense</button>
-              <button class="btn primary compact" data-testid="btn-compact">Compact</button>
+              <button class="btn primary p-xs" data-testid="btn-p-xs">p-xs</button>
+              <button class="btn primary p-sm" data-testid="btn-p-sm">p-sm</button>
               <button class="btn primary" data-testid="btn-default-padding">Default</button>
-              <button class="btn primary spacious" data-testid="btn-spacious">Spacious</button>
+              <button class="btn primary p-lg" data-testid="btn-p-lg">p-lg</button>
             </div>
           </div>
 
@@ -133,9 +118,7 @@
             <h3 class="text-title-sm">Chip-sized</h3>
             <p class="text-body text-text-secondary">
               <code class="code">p-xs</code>
-              and its alias
-              <code class="code">dense</code>
-              are the one padding step that also drops the
+              is the one padding step that also drops the
               <code class="code">--control-height</code>
               floor, so a button can sit inside a table cell or a dense toolbar. Every other size and padding class
               keeps the floor. The icon variant sizes its own glyph — the package leaves glyph dimensions to the
@@ -144,8 +127,8 @@
             <div class="cluster items-center">
               <span class="text-body text-text-secondary">Row label</span>
               <button class="btn primary sm p-xs" data-testid="btn-chip">Edit</button>
-              <button class="btn sm dense ghost edged" data-testid="btn-chip-dense">Dismiss</button>
-              <button class="btn icon destructive sm dense" aria-label="Remove row" data-testid="btn-chip-icon">
+              <button class="btn sm p-xs ghost edged" data-testid="btn-chip-ghost">Dismiss</button>
+              <button class="btn icon destructive sm p-xs" aria-label="Remove row" data-testid="btn-chip-icon">
                 <i class="ic-x" aria-hidden="true"></i>
               </button>
             </div>
@@ -159,16 +142,20 @@
               <button class="btn icon pill destructive" aria-label="Close">
                 <i class="ic-x" aria-hidden="true"></i>
               </button>
-              <button class="btn icon primary dense" aria-label="Dense Create" data-testid="btn-icon-dense">
+              <button
+                class="btn icon primary p-xs"
+                aria-label="Create, extra-small padding"
+                data-testid="btn-icon-p-xs"
+              >
                 <i class="ic-plus" aria-hidden="true"></i>
               </button>
-              <button class="btn icon primary compact" aria-label="Compact Create" data-testid="btn-icon-compact">
+              <button class="btn icon primary p-sm" aria-label="Create, small padding" data-testid="btn-icon-p-sm">
                 <i class="ic-plus" aria-hidden="true"></i>
               </button>
               <button class="btn icon primary" aria-label="Default Create" data-testid="btn-icon-default">
                 <i class="ic-plus" aria-hidden="true"></i>
               </button>
-              <button class="btn icon primary spacious" aria-label="Spacious Create" data-testid="btn-icon-spacious">
+              <button class="btn icon primary p-lg" aria-label="Create, large padding" data-testid="btn-icon-p-lg">
                 <i class="ic-plus" aria-hidden="true"></i>
               </button>
             </div>

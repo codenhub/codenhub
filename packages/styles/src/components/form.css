@@ -299,7 +299,7 @@
   letter-spacing: 0.05em;
   line-height: 100%;
 
-  &.error {
+  &.destructive {
     color: var(--intent-color);
   }
 }
