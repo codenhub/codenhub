@@ -1,18 +1,20 @@
 ---
 status: IMPLEMENTED
 last_updated: 2026-09-24
-scope: Decision on how a component's line composes with its own plate, and a record of the boundary contrast measured alongside it.
+scope: Decisions on how a component's line composes with its own plate and which ink draws a control's boundary under an aesthetic, and a record of the boundary contrast measured alongside them.
 ---
 
-# Boundary contrast: a line that fades into its own plate
+# Boundary contrast: a line that fades into its own plate, and a control ink
 
-This is agreed direction, implemented in `0.5.0`, and the current code is expected to comply, per the repository root `docs/README.md`'s `IMPLEMENTED` status; [the open question](#open-question-glass-and-chunky-tile-controls) is not part of what was decided. It states the decision and what the implementation must reproduce, not drop-in code, for the reason [`.progress` gains presentation](./progress-presentation-axes.md) gives. [Roadmap](./roadmap.md#cleanup) tracks the open question.
+This is agreed direction, implemented in `0.5.0`, and the current code is expected to comply, per the repository root `docs/README.md`'s `IMPLEMENTED` status; it covers both decisions below. It states the decision and what the implementation must reproduce, not drop-in code, for the reason [`.progress` gains presentation](./progress-presentation-axes.md) gives.
 
-It is weighed under [What enters the material contract](./model.md#what-enters-the-material-contract): looks, then function, then accessibility, balanced. One change passes that on every count and was taken. The others this measured would have made the package look worse, or work worse, to gain a ratio, and are recorded under [Considered and not taken](#considered-and-not-taken) so the question starts from the numbers when it comes back.
+It is weighed under [What enters the material contract](./model.md#what-enters-the-material-contract): looks, then function, then accessibility, balanced. Two changes pass that on every count and were taken. The others this measured would have made the package look worse, or work worse, to gain a ratio, and are recorded under [Considered and not taken](#considered-and-not-taken) so the question starts from the numbers when it comes back.
 
 ## The problem
 
-A neutral component that draws a line draws a ring over its own plate. [Model](./model.md#fill-how-much-of-the-intent-color-fills-the-box) recorded it and placed the fix in `box`.
+A neutral component that draws a line drew a ring over its own plate. [Model](./model.md#fill-how-much-of-the-intent-color-fills-the-box) recorded it and placed the fix in `box`.
+
+Measuring every component alongside it found a second problem: two aesthetics replace every control's neutral boundary with the line they draw on surfaces, which on a light page leaves a glass checkbox barely there.
 
 ## Measured
 
@@ -42,7 +44,7 @@ Simulated on the built stylesheet before it was written, by rewriting `box`'s an
 
 P3's wording holds; its mechanism changes. The model's note that the blend "runs toward `--_bg`, not raw `--intent-color`, so under an aesthetic that thins the fill a translucent box does not keep an opaque ring" stays true of `transparent`, and the second coat it did not account for goes.
 
-## Open question: `.glass` and `.chunky-tile` controls
+### Controls take a control ink
 
 `--ui-ink` is one neutral line for everything an aesthetic reaches, but the theme keeps two: `--color-border` for surfaces and `--color-control-border` for controls. An aesthetic that sets `--ui-ink` replaces both, and two of them trade a control's visibility for their surface line. Neutral boundary against the page:
 
@@ -55,7 +57,16 @@ P3's wording holds; its mechanism changes. The model's note that the blend "runs
 
 Glass's white hairline is right for a pane. On a light page it leaves a neutral field at 1.02:1, with nothing marking where typing goes, and an unchecked checkbox at 1.45:1 -- a question of whether the control works at all, not only of its ratio. Chunky tile chose `neutral-400` as the heaviest grey that still looked right on a tile; its own comment records that fields then miss 3:1.
 
-A control ink separate from the surface ink (`--ui-control-ink`, resolved by the control reset ahead of `--ui-ink`) would let each aesthetic keep its surface line and choose a control line, and would expose a distinction the theme already draws. Whether either aesthetic should use it, and with what value, is a look to review on pixels. Left as it is, glass and chunky tile stay as shipped.
+A material token, `--ui-control-ink`, resolved by the control reset ahead of `--ui-ink` -- `var(--ui-control-ink, var(--ui-ink, var(--color-control-border)))`, for the text controls, `.input-group`, and the toggles, classed and native -- lets each aesthetic keep its surface line and choose a control line, and exposes the distinction the theme already draws. Glass and chunky tile set it; neobrutalism, pixel, and cyber clear it with `initial`, so a region nested inside either draws its controls in its own ink.
+
+The values were chosen on screen, from candidates measured against the page with each control inside the aesthetic's own card (a field at its 60% resting line):
+
+| Aesthetic      | Control ink                                              | Field light / dark | Checkbox light / dark |
+| -------------- | -------------------------------------------------------- | -----------------: | --------------------: |
+| `.glass`       | `light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55))` |        2.31 / 2.92 |           6.31 / 7.85 |
+| `.chunky-tile` | `light-dark(neutral-600, neutral-400)`                   |        2.87 / 3.40 |           8.63 / 8.62 |
+
+Glass's ink is translucent, so it tints whatever is behind the pane rather than drawing a flat grey. Chunky tile's runs the other way in dark, where the tile's `neutral-600` sat too close to the page.
 
 ## Considered and not taken
 
@@ -85,16 +96,19 @@ A reading of WCAG 1.4.11 as a package rule -- text controls, toggles, and `.prog
 ## Public surface
 
 - A neutral `.solid.edged` component, and every translucent plate under `.glass`, loses the ring around its own fill. Visual, and not breaking in any other sense.
-- No token, class, or default changes.
+- New material token `--ui-control-ink`, in the model's table and `docs/usage/customizing.md`. `.glass` and `.chunky-tile` controls draw a heavier line than before; nothing else changes unless an aesthetic or a consumer sets the token.
 
 ## Documents this changes
 
 - [Model](./model.md): P3's mechanism and the ring paragraph under Fill, which this closes; the source comments in `box.css` and `content.css` (`.quote`) that explain the blend.
 - [Accessibility](../accessibility.md): nothing for the ring, which was a composition defect rather than a recorded accessibility one.
+- [Model](./model.md): the control ink beside `--ui-ink`, the material token table, and the glass and chunky tile variant specs; `docs/usage/aesthetics.md` and `docs/usage/customizing.md` for consumers.
 
 ## Tests
 
 `feedback.spec.ts` composites the painted border band over the plate over the page and asserts it is the plate, for a neutral `.solid.edged` badge and button, a success badge on a plate `--ui-bg-alpha` thins (set inline, since Chromium here makes `.glass` opaque), and a neutral `.solid` quote. It failed on the old blend (a band at 164 on a plate at 202, in all three engines). The generated palette follows on its own: its edge tokens are read from rendered components, so a filled edge now publishes `transparent` and a partial one its alpha.
+
+`aesthetics.spec.ts` asserts a checkbox inside glass and chunky tile resolves its ink to the aesthetic's control ink, not its surface ink, that the card around it keeps a line, and that a neobrutalism region nested inside either takes neobrutalism's ink; it failed before the token, resolving to the hairline and the tile grey. `registry.test.ts` holds every aesthetic to naming or clearing the token.
 
 ## References
 

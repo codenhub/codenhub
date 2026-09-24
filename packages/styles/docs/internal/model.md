@@ -398,6 +398,8 @@ One change of ownership. The shared reset declares:
 
 An aesthetic sets `--ui-ink` to substitute its own neutral line color, and an intent class still overrides the whole slot, so a destructive control keeps its red edge under any aesthetic. This deleted the two fourteen-selector component lists in `neobrutalism.css` and closed a gap the replaced model had: a bare `<input>` under `.pixel` used to get the silhouette but not the ink, because the ink had to resolve against the component's own intent and a container-level token could not do that.
 
+Controls -- the text controls, `.input-group`, and the toggles -- read `--ui-control-ink` ahead of it (`var(--ui-control-ink, var(--ui-ink, var(--color-control-border)))`), because the theme keeps a control border apart from a surface border and an aesthetic's surface line is not always a control's boundary; see [Boundary contrast](./boundary-contrast.md).
+
 ### What intent may not do
 
 - **I1.** Intent declares color and nothing else. No intent class may set a length, a ratio, a shadow, or a shape.
@@ -434,40 +436,41 @@ Beyond composition, the package strives for three things, in this order: that it
 
 ### Material tokens
 
-| Token                   | Fallback             | Meaning                                               |
-| ----------------------- | -------------------- | ----------------------------------------------------- |
-| `--ui-radius`           | `--radius-control`   | Corner radius for controls.                           |
-| `--ui-radius-surface`   | `--radius-surface`   | Corner radius for surfaces.                           |
-| `--ui-corner-shape`     | `round`              | What the radius draws: an arc, or a `bevel` cut.      |
-| `--ui-radius-pill`      | `--ui-radius`        | Corner for what is fully round by default.            |
-| `--ui-radius-tight`     | `--ui-radius`        | Corner for chips, before their `--radius-small` cap.  |
-| `--ui-border-width`     | `--border-width`     | Edge thickness.                                       |
-| `--ui-border-max`       | `100px`              | Ceiling on the computed edge width.                   |
-| `--ui-ink`              | `--color-border`     | Neutral line color when no intent is set.             |
-| `--ui-shadow-x`         | `0px`                | Shadow offset, colorless so it inherits safely.       |
-| `--ui-shadow-y`         | `0px`                | Shadow offset.                                        |
-| `--ui-shadow-blur`      | `0px`                | Shadow blur.                                          |
-| `--ui-shadow-spread`    | `0px`                | Shadow spread.                                        |
-| `--ui-shadow-inset`     | _empty_              | The `inset` keyword, when the edge is an inner ring.  |
-| `--ui-hover-shadow-x`   | `--ui-shadow-x`      | Shadow offset while hovered.                          |
-| `--ui-hover-shadow-y`   | `--ui-shadow-y`      | Shadow offset while hovered.                          |
-| `--ui-active-shadow-x`  | `--ui-shadow-x`      | Shadow offset while pressed.                          |
-| `--ui-active-shadow-y`  | `--ui-shadow-y`      | Shadow offset while pressed.                          |
-| `--ui-active-transform` | `scale(0.97)`        | Transform while pressed; `none` under reduced motion. |
-| `--ui-shadow-ink`       | `0%`                 | How much of the shadow is the intent's own ink.       |
-| `--elevation-color`     | _theme_              | The base that ink mixes toward; depth's own colour.   |
-| `--ui-shadow-edge`      | _undefined_          | Declared, even empty, when the shadow is the edge.    |
-| `--ui-elevation`        | `1`                  | Unitless multiplier over the shadow geometry.         |
-| `--ui-surface-shadow`   | _unset_              | Complete value; resolved by surfaces only.            |
-| `--ui-surface-ground`   | `--color-background` | Ground a surface sits on; how glass goes translucent. |
-| `--ui-bg-alpha`         | `1`                  | Multiplier over fill, for translucency.               |
-| `--ui-backdrop`         | `none`               | Backdrop filter; resolved by surfaces only.           |
-| `--ui-hover-transform`  | `none`               | Transform applied on interactive hover.               |
-| `--ui-clip`             | `none`               | Silhouette for structural components.                 |
-| `--ui-clip-tight`       | `--ui-clip`          | Silhouette for chips.                                 |
-| `--ui-focus-inset`      | _undefined_          | Inset focus layer width. Undefined means no layer.    |
-| `--ui-button-weight`    | semibold             | Label weight; resolved by buttons only.               |
-| `--ui-button-tracking`  | _undefined_          | Label tracking; undefined inherits. Buttons only.     |
+| Token                   | Fallback             | Meaning                                                    |
+| ----------------------- | -------------------- | ---------------------------------------------------------- |
+| `--ui-radius`           | `--radius-control`   | Corner radius for controls.                                |
+| `--ui-radius-surface`   | `--radius-surface`   | Corner radius for surfaces.                                |
+| `--ui-corner-shape`     | `round`              | What the radius draws: an arc, or a `bevel` cut.           |
+| `--ui-radius-pill`      | `--ui-radius`        | Corner for what is fully round by default.                 |
+| `--ui-radius-tight`     | `--ui-radius`        | Corner for chips, before their `--radius-small` cap.       |
+| `--ui-border-width`     | `--border-width`     | Edge thickness.                                            |
+| `--ui-border-max`       | `100px`              | Ceiling on the computed edge width.                        |
+| `--ui-ink`              | `--color-border`     | Neutral line color when no intent is set.                  |
+| `--ui-control-ink`      | `--ui-ink`           | Neutral line color for controls; read ahead of `--ui-ink`. |
+| `--ui-shadow-x`         | `0px`                | Shadow offset, colorless so it inherits safely.            |
+| `--ui-shadow-y`         | `0px`                | Shadow offset.                                             |
+| `--ui-shadow-blur`      | `0px`                | Shadow blur.                                               |
+| `--ui-shadow-spread`    | `0px`                | Shadow spread.                                             |
+| `--ui-shadow-inset`     | _empty_              | The `inset` keyword, when the edge is an inner ring.       |
+| `--ui-hover-shadow-x`   | `--ui-shadow-x`      | Shadow offset while hovered.                               |
+| `--ui-hover-shadow-y`   | `--ui-shadow-y`      | Shadow offset while hovered.                               |
+| `--ui-active-shadow-x`  | `--ui-shadow-x`      | Shadow offset while pressed.                               |
+| `--ui-active-shadow-y`  | `--ui-shadow-y`      | Shadow offset while pressed.                               |
+| `--ui-active-transform` | `scale(0.97)`        | Transform while pressed; `none` under reduced motion.      |
+| `--ui-shadow-ink`       | `0%`                 | How much of the shadow is the intent's own ink.            |
+| `--elevation-color`     | _theme_              | The base that ink mixes toward; depth's own colour.        |
+| `--ui-shadow-edge`      | _undefined_          | Declared, even empty, when the shadow is the edge.         |
+| `--ui-elevation`        | `1`                  | Unitless multiplier over the shadow geometry.              |
+| `--ui-surface-shadow`   | _unset_              | Complete value; resolved by surfaces only.                 |
+| `--ui-surface-ground`   | `--color-background` | Ground a surface sits on; how glass goes translucent.      |
+| `--ui-bg-alpha`         | `1`                  | Multiplier over fill, for translucency.                    |
+| `--ui-backdrop`         | `none`               | Backdrop filter; resolved by surfaces only.                |
+| `--ui-hover-transform`  | `none`               | Transform applied on interactive hover.                    |
+| `--ui-clip`             | `none`               | Silhouette for structural components.                      |
+| `--ui-clip-tight`       | `--ui-clip`          | Silhouette for chips.                                      |
+| `--ui-focus-inset`      | _undefined_          | Inset focus layer width. Undefined means no layer.         |
+| `--ui-button-weight`    | semibold             | Label weight; resolved by buttons only.                    |
+| `--ui-button-tracking`  | _undefined_          | Label tracking; undefined inherits. Buttons only.          |
 
 `--elevation-color` is the one row that is not a `--ui-*` slot, and it is here because an aesthetic legitimately names it. The theme declares it, every elevation composes from it, and `--ui-shadow-ink` says how far a component's own intent walks away from it -- so between the two they are the whole colour of depth, and an aesthetic that owns shadows owns both ends of that mix. Chunky tile is the case that proved it: at the shipped `rgb(15 23 42 / 0.08)` the mix runs toward something nearly transparent and its bar composites out _lighter_ than the plate it sits under. Naming the depth colour opaque is what makes the bar a shade of the element, and the [worked example](#worked-example-the-chunky-tile-look) records the measurement.
 
@@ -713,7 +716,7 @@ No aesthetic class in scope. 1px edges, 0.5rem control radius, 0.875rem surface 
 Translucent surfaces over a blurred backdrop with a hairline highlight edge. Needs something behind it to blur; on a flat page background it is a translucent panel and nothing more.
 
 - Blur and saturation reach surfaces only, through `--ui-backdrop`. Controls stay solid: an active blur costs a compositing layer apiece, and one under every control of a dense cluster reads as noise.
-- The edge is a light hairline in both themes, because glass catches light from above regardless of what is under it.
+- The edge is a light hairline in both themes, because glass catches light from above regardless of what is under it. Controls do not take it: the hairline erased an unchecked checkbox on a light page, so their line is `--ui-control-ink`, the theme's ink at 55% -- translucent, so it tints what is behind the pane rather than drawing a flat grey.
 - Both shadow layers pull in with negative spread, so the shadow tucks under the surface instead of haloing onto the backdrop.
 - Every surface in its region is glass, a neutral `.card.soft`, `.panel`, and `.alert` included: their quiet ground is a private default beneath `--ui-surface-ground`, so glass's ground wins over it. Until 0.5.0 they wrote the public token and sat opaque.
 - Under `prefers-reduced-transparency`, opacity goes to 100% and the blur is dropped. Transparency is the whole aesthetic, so the honest degradation is an opaque surface rather than a softer blur.
@@ -747,6 +750,7 @@ An 8-bit look built from a stepped silhouette and an inset ring.
 Rounded slabs seated on a darker shade of themselves, pressed flat on click.
 
 - `--tile-radius` at 12px on controls and surfaces alike, and 2px lines. One knob rather than glass's pair, because the corner is what makes a 40px button and a 200px card read as the same object; chips clamp it themselves at `--radius-small`. Named rather than written into `--ui-radius` directly so a consumer can set it from `:root`, which a declaration on the aesthetic's own class would otherwise outrank -- [R8](#rules-for-aesthetics), which this aesthetic is the worked example for.
+- The tile grey, `neutral-400`/`-600`, is the line of tiles and surfaces. Controls draw a heavier one through `--ui-control-ink`: `neutral-600` in light and `neutral-400` in dark.
 - The bar is solid, unblurred, straight down, and spreadless. Zero x is what separates it from neobrutalism, whose two-axis offset reads as a card lifted off the page where this is a slab seated on it.
 - The bar is a shade of the element rather than a repeat of it, which takes an opaque `--elevation-color` as well as a partial `--ui-shadow-ink`. See the correction under [Adding an aesthetic](#worked-example-the-chunky-tile-look).
 - An unfilled tile's bar and its line are the same colour by construction: both resolve `--intent-border`.
