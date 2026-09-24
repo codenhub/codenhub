@@ -35,43 +35,12 @@
      derived from it and the two must not drift apart. Typed text is
      `--intent-color` over a wash of its own tone, past 10:1 in both themes at
      any value this cap is likely to take, so the bound still does what it was
-     written for. */
+     written for.
+
+     The fill and the ink are `box`'s own, unrestated: its `--_capped` reads
+     this cap, so the plate and the ink ramp stay in step at every bound,
+     including the checked state below that lifts it. */
   --_fill-cap: 6%;
-  /* The floor is zero everywhere except a checked toggle, which needs a ground
-     under its mark. A container's `.ghost` would otherwise leave a checked
-     checkbox as a tick floating on the page -- our own cascade producing the
-     broken result, which is the test a bound has to pass. */
-  --_fill-floor: 0%;
-  --_fill: calc(
-    clamp(
-        var(--_fill-floor),
-        min(var(--ui-fill, var(--_d-fill)), var(--_fill-cap), var(--intent-fill-max, 100%)),
-        100%
-      ) *
-      var(--ui-bg-alpha, 1)
-  );
-  /* The ink follows *this* control's fill, not `box`'s. `box` ramps against
-     `--_capped`, which knows `--intent-fill-max` but not `--_fill-cap`, so on a
-     control it would read a fill far higher than the one actually painted: a
-     `.primary.solid` checkbox has `--ui-fill: 100%` and an unbounded intent, so
-     `box` would call for the contrast tone while the plate sits at 20%. White
-     tick on light grey.
-
-     Ramping against `--_fill` keeps the two in step at every bound, including
-     the checked state that lifts them.
-
-     `--_fg-on-fill-floor` is the seam `:checked` pins instead of touching
-     `--ui-fg-on-fill` directly. It was added while `.ghost`/`.soft` were
-     unlayered CSS, when a layered `:checked` writing `--ui-fg-on-fill` lost to
-     `.ghost`'s `--ui-fg-on-fill: 0%` regardless of specificity -- the trap
-     `--_fill-cap` avoids on the fill itself (see its note in `box.css`).
-     Presentation now sits in `components`, below this, so the trap is gone;
-     the seam stays, uncontested by anything, until it is simplified in a
-     change of its own (docs/internal/cascade-layers.md, L7). */
-  --_on-fill: max(
-    var(--_fg-on-fill-floor, 0%),
-    min(var(--ui-fg-on-fill, var(--_d-fg-on-fill)), max(0%, calc(var(--_fill) * 2 - 100%)))
-  );
   /* The resting line is a fraction of the intent rather than all of it, and the
      fraction is what makes the pointer visible. Drawn at full strength a control
      already sits at its intent's darkest, and hover moves it to a neighbouring
@@ -132,14 +101,18 @@
     --_line-tone: var(--intent-color);
   }
 
-  /* R8, P6: `:checked` pins the fill by making the floor and the cap the same
-     value, so `clamp()` returns exactly that value whatever `--ui-fill` asks --
-     still a bound on the input, still lifted rather than a rewrite of the
-     result (the failure mode P6 exists for: an early version pinned `--_fill`
-     and `--_fg` directly, which made a checked toggle ignore its own aesthetic
-     and elevation along with presentation).
+  /* R8, P6: `:checked` is a state, so it re-declares the presentation inputs
+     -- a full fill and full contrast ink -- and lifts the cap that would bound
+     them, and `box` composes the rest. It does not write a result (the failure
+     mode P6 exists for: an early version pinned `--_fill` and `--_fg` directly,
+     which made a checked toggle ignore its own aesthetic and elevation along
+     with presentation). It sits in `utilities` at 0-2-0, above the fill
+     classes in `components`, so a checked toggle renders one plate whatever
+     presentation it or a container asks for, and a consumer's utility loses to
+     it because state wins over every choice (model.md#precedence). A toggle is
+     a void `<input>`, so the inputs it writes reach nothing but its own mark.
 
-     The floor used to sit at `12%` rather than `100%`, which kept presentation
+     The fill used to be pinned at `12%` rather than `100%`, which kept presentation
      live on the checked mark too -- a checked `.soft` toggle rendered a pale
      plate with just the mark at full strength, the classic ring-and-dot radio.
      The stress-test pass found that cost more than it bought on a real screen:
@@ -153,20 +126,19 @@
      something. Lives here, not on the toggles, because a text input is never
      `:checked`.
 
-     The ink is pinned alongside the fill, through `--_fg-on-fill-floor` rather
-     than `--ui-fg-on-fill` directly (see that seam, above): the other half of
-     what a fill class asks for is how much contrast ink it wants
-     (`--ui-fg-on-fill: 0%` is `.ghost`/`.soft` declaring "none, my plate stays
-     quiet"), and pinning the fill without pinning this left a checked
-     `.ghost`/`.soft` toggle with an opaque plate and a mark that still read as
-     though the plate were quiet -- both derived from the same intent tone,
-     close enough to disappear into each other. `--_on-fill` ramps against the
-     *composed* `--_fill`, so once that is pinned to 100% the ink has to reach
-     full contrast too, or the ramp's own ceiling has nothing to reach. */
+     The ink is declared alongside the fill: the other half of what a fill
+     class asks for is how much contrast ink it wants (`--ui-fg-on-fill: 0%` is
+     `.ghost`/`.soft` declaring "none, my plate stays quiet"), and setting the
+     fill without this left a checked `.ghost`/`.soft` toggle with an opaque
+     plate and a mark that still read as though the plate were quiet -- both
+     derived from the same intent tone, close enough to disappear into each
+     other. `box` ramps the ink against the bounded fill before `--ui-bg-alpha`
+     thins it, so a checked toggle under `.glass` keeps full contrast ink on
+     its translucent plate. */
   &:checked {
+    --ui-fill: 100%;
+    --ui-fg-on-fill: 100%;
     --_fill-cap: 100%;
-    --_fill-floor: 100%;
-    --_fg-on-fill-floor: 100%;
   }
 
   /* Native decorations a field replaces with its own artwork. */

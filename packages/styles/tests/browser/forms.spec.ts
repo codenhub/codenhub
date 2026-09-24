@@ -545,7 +545,7 @@ test.describe("forms", () => {
      the edge would cut a page-colored ring out of a filled track. It is the
      same track under all of them: `:checked` pins the fill rather than lifting
      the bounds and letting presentation keep composing through it (the
-     stress-test pass's reversal, see model.md#a-state-lifts-bounds-it-does-not-write-results),
+     stress-test pass's reversal, see model.md#a-state-declares-inputs-and-lifts-bounds-it-does-not-write-results),
      so `.solid` and `.soft` both reach the pinned plate the default does. */
   test("separates a switch's presentations by its fill and keeps the line under all of them", async ({ page }) => {
     await page.goto(FORMS_URL);
