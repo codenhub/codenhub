@@ -3,8 +3,7 @@
    people picture -- named for what it is made of rather than for a product, the
    way the other three are.
 
-   Tier 1, plus one recorded selector list at the bottom. Load after the base
-   stylesheet. */
+   Tier 1 only. Load after the base stylesheet. */
 
 /* The layer map, stated before anything uses a layer -- see `theme.css`. The
    aesthetic's token class sits in `components`, below every utility, so a
@@ -18,7 +17,9 @@
     /* Two knobs, read with a fallback so an ancestor can set them -- declared here
        they would outrank `:root` (R8; see model.md#rules-for-aesthetics). One lift
        drives everything: the bar is this deep and a press travels exactly this
-       far. 2px reads as a rendering seam, 8px as floating rather than seated. */
+       far. 2px reads as a rendering seam, 8px as floating rather than seated.
+       `box` scales depth down with the size step, so a `.p-xs` button sits on
+       half the bar rather than on a slab as deep as its own glyph. */
     --_tile-lift: var(--tile-lift, 4px);
     --_tile-radius: var(--tile-radius, 0.75rem);
 
@@ -37,8 +38,8 @@
     /* One knob for both radii, where glass splits them: a tile and the button
        inside it share a corner, and drifting apart loses the single-object read.
        Chips clamp it to `--radius-small` themselves. */
-    --ui-radius: var(--_tile-radius);
-    --ui-radius-surface: var(--_tile-radius);
+    --ui-corner: var(--_tile-radius);
+    --ui-corner-surface: var(--_tile-radius);
 
     /* Half the tile. A 1px border under a 4px bar reads as a shadow with a hairline
        rather than as a slab with an edge. The ceiling is restated so a chunky region
@@ -88,11 +89,17 @@
     --ui-clip: none;
     --ui-clip-tight: none;
     /* Round corners, said explicitly, and the pill and chip corners cleared back
-       to `--ui-radius`: a region nested inside `.cyber` would otherwise inherit
-       its bevel, its diamond pills, and its square chips. */
+       to `--ui-corner`: a region nested inside `.cyber` would otherwise inherit
+       its bevel, its diagonal, its diamond pills, and its square chips. */
     --ui-corner-shape: round;
     --ui-radius-pill: initial;
     --ui-radius-tight: initial;
+    --ui-radius: initial;
+    --ui-radius-surface: initial;
+    --ui-corner-tl: initial;
+    --ui-corner-tr: initial;
+    --ui-corner-br: initial;
+    --ui-corner-bl: initial;
     --ui-shadow-inset: ;
     --ui-shadow-edge: initial;
     --ui-backdrop: none;
@@ -120,28 +127,6 @@
        own. */
     --ui-button-weight: 800;
     --ui-button-tracking: 0.04em;
-  }
-
-  /* The one R3 exception this aesthetic takes, recorded in the registry as
-     `selectors`.
-
-     `--tile-lift` alone cannot reach this: it resolves once, on `.chunky-tile`
-     itself (`--_tile-lift: var(--tile-lift, 4px)`), and inherits down already a
-     plain `4px` -- a nested `--tile-lift` on a descendant button is a fresh
-     declaration nothing downstream reads. `--ui-shadow-y` is what `box` actually
-     multiplies by elevation, so that is the token restated here, at half the
-     resting lift. A `.btn.icon` at `.p-xs` is close to the smallest
-     button the package draws (~20px, once the size floor that tier drops for
-     `.icon` is gone -- see `button.css`), and a flat 4px bar under a target that
-     size sits close enough to the glyph's own footprint to read as a solid fill
-     behind it -- a `.ghost` button that looks `.solid`. 2px keeps the bar
-     legible as depth without swallowing the icon.
-
-     In `components` with the token class: it writes a public token, so as the
-     element's own declaration it beats the value inherited from `.chunky-tile`
-     and still loses to a consumer's utility. */
-  .chunky-tile .btn.icon.p-xs {
-    --ui-shadow-y: 2px;
   }
 }
 

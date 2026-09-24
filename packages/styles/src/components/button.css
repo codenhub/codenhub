@@ -28,10 +28,14 @@
 
   &.sm {
     @apply min-h-8 px-3 py-1 text-sm;
+
+    --_scale-size: 0.75;
   }
 
   &.lg {
     @apply min-h-12 px-5 py-2.5 text-[1.0625rem];
+
+    --_scale-size: 1.25;
   }
 
   &.icon {
@@ -57,6 +61,8 @@
   &.p-xs {
     @apply px-2 py-0.5;
 
+    --_scale-pad: 0.5;
+
     /* The one padding step that also drops the size floor for a labeled
        button. At this tier the button is a chip in a toolbar or a table
        cell, where `--control-height` is taller than the row it sits in;
@@ -74,6 +80,8 @@
   &.p-sm {
     @apply px-2.5 py-1;
 
+    --_scale-pad: 0.75;
+
     &.icon {
       @apply p-1;
 
@@ -84,6 +92,8 @@
 
   &.p-lg {
     @apply px-6 py-3;
+
+    --_scale-pad: 1.25;
 
     &.icon {
       @apply p-3;

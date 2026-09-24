@@ -12,6 +12,7 @@
 @import "./intent.css" layer(components);
 @import "./presentation.css" layer(components);
 @import "./elevation.css" layer(components);
+@import "./corner.css" layer(components);
 /* Everything that is not `src/` -- see the note in `index.css`. Keeps a
    `--color-*` reference in a docs example from shipping as a real theme entry. */
 @source not "../dist";

@@ -22,8 +22,8 @@
        than the base geometry because a translucent tight corner reads as a
        cut-out; a control/surface pair rather than one value, because they do not
        scale together and 12/16 keeps a button looking at home inside a card. */
-    --ui-radius: var(--glass-radius, 0.75rem);
-    --ui-radius-surface: var(--glass-radius-surface, 1rem);
+    --ui-corner: var(--glass-radius, 0.75rem);
+    --ui-corner-surface: var(--glass-radius-surface, 1rem);
     --ui-border-width: 1px;
     --ui-border-max: 100px;
 
@@ -66,11 +66,17 @@
     --ui-clip: none;
     --ui-clip-tight: none;
     /* Round corners, said explicitly, and the pill and chip corners cleared back
-       to `--ui-radius`: a region nested inside `.cyber` would otherwise inherit
-       its bevel, its diamond pills, and its square chips. */
+       to `--ui-corner`: a region nested inside `.cyber` would otherwise inherit
+       its bevel, its diagonal, its diamond pills, and its square chips. */
     --ui-corner-shape: round;
     --ui-radius-pill: initial;
     --ui-radius-tight: initial;
+    --ui-radius: initial;
+    --ui-radius-surface: initial;
+    --ui-corner-tl: initial;
+    --ui-corner-tr: initial;
+    --ui-corner-br: initial;
+    --ui-corner-bl: initial;
     /* Nothing here draws its edge as a ring, and an aesthetic nested inside pixel
        has to say so rather than inherit it. */
     --ui-shadow-edge: initial;

@@ -70,10 +70,35 @@
     },
     "size": ["sm", "lg"],
     "padding": ["p-xs", "p-sm", "p-lg", "flush"],
-    "shape": ["pill", "icon"],
+    "shape": ["pill", "icon", "cut-diagonal", "cut-diagonal-reverse"],
     "state": ["disabled", "interactive", "hoverable", "pressable", "active", "indeterminate"],
     "layout": ["vertical", "horizontal", "between", "tight", "loose", "narrow", "wide"],
     "rule": ["ruled", "ruleless"]
+  },
+  "material": {
+    "--ui-corner": {
+      "readers": ["badge", "box", "checkbox", "code", "kbd", "progress", "skeleton", "switch", "tooltip-icon"]
+    },
+    "--ui-corner-surface": { "readers": ["surface"] },
+    "--ui-corner-tl": { "readers": ["box", "skeleton", "surface", "tooltip-bubble"] },
+    "--ui-corner-tr": { "readers": ["box", "skeleton", "surface", "tooltip-bubble"] },
+    "--ui-corner-br": { "readers": ["box", "skeleton", "surface", "tooltip-bubble"] },
+    "--ui-corner-bl": { "readers": ["box", "skeleton", "surface", "tooltip-bubble"] },
+    "--ui-radius": {
+      "readers": [
+        "badge",
+        "box",
+        "checkbox",
+        "code",
+        "kbd",
+        "progress",
+        "skeleton",
+        "switch",
+        "tooltip-bubble",
+        "tooltip-icon"
+      ]
+    },
+    "--ui-radius-surface": { "readers": ["surface"] }
   },
   "components": [
     {
@@ -546,9 +571,7 @@
     {
       "class": "chunky-tile",
       "solo": "chunky-tile-solo",
-      "completeShadow": false,
-      "selectors": ["btn"],
-      "selectorReason": "Scales `--ui-shadow-y` down for `.btn.icon` paired with `.p-xs`: the bar is a flat 4px slab at every size, and on a ~20px glyph-only button it is close enough to the icon's own footprint to read as a solid fill behind a `.ghost` button. `--tile-lift` is not enough on its own -- it resolves once, on `.chunky-tile` itself, and a nested override of it does not reach `--ui-shadow-y`, which already inherited the resolved value -- so the token `box` actually reads is the one restated here. The heavier, tracked label this list used to carry is the `--ui-button-weight`/`--ui-button-tracking` slot pair since 0.5.0, so a consumer's own `font-*` utility can beat it."
+      "completeShadow": false
     },
     {
       "class": "cyber",

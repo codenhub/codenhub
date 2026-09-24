@@ -23,8 +23,8 @@
     --_pixel-unit: var(--pixel-unit, 4px);
 
     --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
-    --ui-radius: 0;
-    --ui-radius-surface: 0;
+    --ui-corner: 0;
+    --ui-corner-surface: 0;
 
     /* A border would be clipped at the straight sides and paint a second line
        beside the ring, so the ceiling takes it out and the ring does the drawing.
@@ -88,12 +88,18 @@
     --ui-clip-tight: none;
 
     /* Square corners already, but a radius of zero draws no shape; it is
-       restated, and the pill and chip corners cleared back to `--ui-radius`, so
+       restated, and the pill and chip corners cleared back to `--ui-corner`, so
        a region nested inside `.cyber` does not inherit its bevel onto anything
        that sets a radius of its own. */
     --ui-corner-shape: round;
     --ui-radius-pill: initial;
     --ui-radius-tight: initial;
+    --ui-radius: initial;
+    --ui-radius-surface: initial;
+    --ui-corner-tl: initial;
+    --ui-corner-tr: initial;
+    --ui-corner-br: initial;
+    --ui-corner-bl: initial;
 
     --ui-hover-transform: none;
     --ui-active-transform: none;

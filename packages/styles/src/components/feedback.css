@@ -98,7 +98,7 @@
      the round corner is this component's fallback rather than a hardcoded value.
      An aesthetic that keeps pills distinct from its control corner says so
      through `--ui-radius-pill` first. */
-  border-radius: var(--ui-radius-pill, var(--ui-radius, calc(infinity * 1px)));
+  border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
   clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 }
 
@@ -117,8 +117,14 @@
   animation: anim-skeleton calc(var(--motion-duration-slow) * 4) linear infinite;
   background: linear-gradient(90deg, var(--skeleton-base), var(--skeleton-sheen), var(--skeleton-base));
   background-size: 200% 100%;
-  border-radius: var(--ui-radius, var(--radius-control));
-  /* Not a box, so it reads the corner shape itself, beside the radius. */
+  /* Not a box, so it draws the control corner and its pattern itself, the way
+     `box` does at scale 1, and reads the corner shape beside it. */
+  --_corner: var(--ui-corner, var(--radius-control));
+  border-radius: var(
+    --ui-radius,
+    calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
+      calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
+  );
   corner-shape: var(--ui-corner-shape, round);
 }
 
@@ -166,7 +172,7 @@
   border: var(--ui-border-width, var(--border-width)) solid var(--progress-edge, var(--_progress-edge));
   /* Round by default; an aesthetic that declares no radius squares the track and
      its fill together, and a pill corner reaches both first. */
-  border-radius: var(--ui-radius-pill, var(--ui-radius, calc(infinity * 1px)));
+  border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
   /* Not a box either, and the fill below restates it, so a bevelled track
      carries a bevelled fill rather than a pill inside a cut frame. */
   corner-shape: var(--ui-corner-shape, round);
@@ -175,7 +181,7 @@
     content: "";
     @apply absolute start-0 top-0 bottom-0 block h-full transition-[width] duration-(--motion-duration-slow) ease-(--motion-ease);
 
-    border-radius: var(--ui-radius-pill, var(--ui-radius, calc(infinity * 1px)));
+    border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
     corner-shape: var(--ui-corner-shape, round);
     background-color: var(--progress-color, var(--intent-color));
     width: var(--progress-value, 0%);

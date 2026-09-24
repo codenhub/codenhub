@@ -319,7 +319,10 @@
 
   /* Capped at its own radius: a control radius is sized for a control, and a key
      cap this small would read as a lozenge. A squaring aesthetic still reaches it. */
-  border-radius: min(var(--ui-radius-tight, var(--ui-radius, var(--radius-small))), var(--radius-small));
+  border-radius: min(
+    var(--ui-radius-tight, var(--ui-radius, var(--ui-corner, var(--radius-small)))),
+    var(--radius-small)
+  );
   clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 
   &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid) {
@@ -337,7 +340,10 @@
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
 
-  border-radius: min(var(--ui-radius-tight, var(--ui-radius, var(--radius-small))), var(--radius-small));
+  border-radius: min(
+    var(--ui-radius-tight, var(--ui-radius, var(--ui-corner, var(--radius-small)))),
+    var(--radius-small)
+  );
   clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 
   &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid) {

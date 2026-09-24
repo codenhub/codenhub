@@ -100,14 +100,30 @@
      draws. Zero lengths are written `0px` because `calc(0 * 1)` yields a number
      and a shadow position needs a length. */
   --_elevation: var(--ui-elevation, var(--_d-elevation, 1));
-  --_sx: calc(var(--ui-shadow-x, var(--_d-shadow-x, 0px)) * var(--_elevation));
+
+  /* The size step, a unitless multiplier the size and padding modifiers publish
+     as two privates -- `.sm`/`.p-sm` 0.75, `.p-xs` 0.5, `.lg`/`.p-lg` 1.25 --
+     so that when both sit on one element the tighter wins: `.lg.p-xs` is
+     small. An unset step takes the other's value, so a lone `.lg` still grows.
+     Restated `initial` here, before any modifier, because a custom property
+     inherits and a `.card.p-xs` would otherwise shrink every button inside it;
+     the modifier rules outrank this one on specificity. `--ui-scale` is the
+     public override, undeclared by the package. See docs/internal/structure.md. */
+  --_scale-size: initial;
+  --_scale-pad: initial;
+  --_scale: var(--ui-scale, min(var(--_scale-size, var(--_scale-pad, 1)), var(--_scale-pad, var(--_scale-size, 1))));
+  /* Depth follows the step down and not up: a 4px slab under a 20px button
+     swallows it, while a press that travels the aesthetic's whole depth has to
+     land flat on a `.lg` button too. */
+  --_depth: calc(var(--_elevation) * min(1, var(--_scale)));
+  --_sx: calc(var(--ui-shadow-x, var(--_d-shadow-x, 0px)) * var(--_depth));
   /* Three slots, most specific first: the aesthetic, then a component that draws
      its own depth, then the plain step `.raised`/`.floating` supply on a page
      with no aesthetic. The order lets a raised card under `.neobrutalism` keep
      the slab. Nothing declares the last slot until something asks for depth, so
      a plain unmodified page has no shadow anywhere. */
-  --_sy: calc(var(--ui-shadow-y, var(--_d-shadow-y, var(--elevation-y, 0px))) * var(--_elevation));
-  --_sb: calc(var(--ui-shadow-blur, var(--_d-shadow-blur, var(--elevation-blur, 0px))) * var(--_elevation));
+  --_sy: calc(var(--ui-shadow-y, var(--_d-shadow-y, var(--elevation-y, 0px))) * var(--_depth));
+  --_sb: calc(var(--ui-shadow-blur, var(--_d-shadow-blur, var(--elevation-blur, 0px))) * var(--_depth));
   /* Spread is deliberately not scaled. An aesthetic that draws its edge as an
      inset ring spends spread on it, and scaling that by elevation would erase
      the edge of every component the registry rests at zero. Elevation is depth:
@@ -157,7 +173,18 @@
   background-color: var(--_bg);
   color: var(--_fg);
   border: var(--_width) solid var(--_edge);
-  border-radius: var(--ui-radius, var(--radius-control));
+  /* The corner is the aesthetic's length at scale 1 times the size step, so a
+     small button takes a small corner and a cut stays a true 45 degrees. Each
+     corner then multiplies by its own `--ui-corner-tl`/`-tr`/`-br`/`-bl`, 0 or
+     1, which is how `.cut-diagonal` and a bevelling aesthetic's diagonal draw
+     two corners and leave two square. An explicit `--ui-radius` still wins,
+     taken as written. */
+  --_corner: calc(var(--ui-corner, var(--radius-control)) * var(--_scale));
+  border-radius: var(
+    --ui-radius,
+    calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
+      calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
+  );
   /* What the radius draws: a round arc by default, a straight cut under an
      aesthetic that bevels (`.cyber`). `round` is the property's initial value,
      so with no aesthetic in scope this is a no-op, and an engine without
@@ -213,9 +240,9 @@
        in, but toward the hover ink. Without this the edge keeps the resting ink
        -- a ring of the colour the box just left. */
     --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-hover));
-    --_sx: calc(var(--ui-hover-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_elevation));
+    --_sx: calc(var(--ui-hover-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
     --_sy: calc(
-      var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--elevation-y, 0px)))) * var(--_elevation)
+      var(--ui-hover-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, var(--elevation-y, 0px)))) * var(--_depth)
     );
 
     transform: var(--ui-hover-transform, none);
@@ -231,8 +258,8 @@
    stay no-ops until an aesthetic sets them. */
 @utility box-active {
   &:active:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
-    --_sx: calc(var(--ui-active-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_elevation));
-    --_sy: calc(var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, 0px))) * var(--_elevation));
+    --_sx: calc(var(--ui-active-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
+    --_sy: calc(var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, 0px))) * var(--_depth));
 
     transform: var(--ui-active-transform, none);
   }

@@ -473,7 +473,10 @@
      checkbox must not be. A squaring aesthetic still reaches it, through the
      chip corner first -- `.cyber` squares chips outright, which is also what
      tells its checkbox from its diamond radio. */
-  border-radius: min(var(--ui-radius-tight, var(--ui-radius, var(--radius-small))), var(--radius-small));
+  border-radius: min(
+    var(--ui-radius-tight, var(--ui-radius, var(--ui-corner, var(--radius-small)))),
+    var(--radius-small)
+  );
 
   /* Chip geometry: the tight silhouette, and an inset edge no thicker than the
      line the aesthetic draws elsewhere. A 16px box cannot spend four pixels a
@@ -606,7 +609,7 @@
   /* Pill by default; a squaring aesthetic reaches the track and the knob
      together, and an aesthetic with a pill corner of its own reaches both
      through that first. */
-  border-radius: var(--ui-radius-pill, var(--ui-radius, calc(infinity * 1px)));
+  border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
 
   /* Chip geometry, for the reason given on `checkbox`: a 20px track has no more
      room for a thick inset edge than a 16px box does. */
@@ -627,7 +630,7 @@
        tone as the label beside it. Checked, it takes the mark colour like the
        other two toggles. */
     background-color: var(--color-text-secondary);
-    border-radius: var(--ui-radius-pill, var(--ui-radius, calc(infinity * 1px)));
+    border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
     /* A pseudo-element is not a box: the knob takes the track's corner shape
        itself, so the two stay the same shape. */
     corner-shape: var(--ui-corner-shape, round);

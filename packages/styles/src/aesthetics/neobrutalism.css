@@ -23,8 +23,8 @@
        border grey is a thick grey box, not a brutalist one. */
     --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
 
-    --ui-radius: 0;
-    --ui-radius-surface: 0;
+    --ui-corner: 0;
+    --ui-corner-surface: 0;
     --ui-border-width: 2px;
     --ui-border-max: 100px;
 
@@ -53,11 +53,17 @@
     --ui-clip: none;
     --ui-clip-tight: none;
     /* Round corners, said explicitly, and the pill and chip corners cleared back
-       to `--ui-radius`: a region nested inside `.cyber` would otherwise inherit
-       its bevel, its diamond pills, and its square chips. */
+       to `--ui-corner`: a region nested inside `.cyber` would otherwise inherit
+       its bevel, its diagonal, its diamond pills, and its square chips. */
     --ui-corner-shape: round;
     --ui-radius-pill: initial;
     --ui-radius-tight: initial;
+    --ui-radius: initial;
+    --ui-radius-surface: initial;
+    --ui-corner-tl: initial;
+    --ui-corner-tr: initial;
+    --ui-corner-br: initial;
+    --ui-corner-bl: initial;
     --ui-shadow-inset: ;
     /* The slab is depth cast in ink, not this element's line, so an `.edgeless`
        button keeps it. Cleared rather than omitted, because a neobrutalist region

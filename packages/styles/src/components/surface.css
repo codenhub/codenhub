@@ -17,14 +17,17 @@
 
   &.p-xs {
     --surface-padding: 0.5rem;
+    --_scale-pad: 0.5;
   }
 
   &.p-sm {
     --surface-padding: 0.75rem;
+    --_scale-pad: 0.75;
   }
 
   &.p-lg {
     --surface-padding: 2rem;
+    --_scale-pad: 1.25;
   }
 
   &.flush {
@@ -114,14 +117,17 @@
 
   &.p-xs {
     --surface-padding: 0.25rem;
+    --_scale-pad: 0.5;
   }
 
   &.p-sm {
     --surface-padding: 0.5rem;
+    --_scale-pad: 0.75;
   }
 
   &.p-lg {
     --surface-padding: 1.5rem;
+    --_scale-pad: 1.25;
   }
 
   &.flush {
