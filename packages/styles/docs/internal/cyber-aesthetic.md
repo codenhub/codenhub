@@ -1,12 +1,12 @@
 ---
-status: APPROVED
-last_updated: 2026-09-23
+status: IMPLEMENTED
+last_updated: 2026-09-24
 scope: Decision to ship a `.cyber` aesthetic, and the `--ui-corner-shape`, `--ui-radius-pill`, and `--ui-radius-tight` material tokens it needs.
 ---
 
 # Cyber: bevelled corners, a neon edge, and a glow
 
-This is agreed direction. Future work touching this surface MUST follow it; it does not exist yet, so there is no legacy code to reconcile, per the repository root `docs/README.md`'s `APPROVED` status.
+This is agreed direction, shipped in `0.4.0`. Future work touching this surface MUST follow it, and the current code is expected to comply, per the repository root `docs/README.md`'s `IMPLEMENTED` status.
 
 It states the decision and the values the implementation must reproduce, not drop-in code, for the reason [`.progress` gains presentation](./progress-presentation-axes.md) gives.
 

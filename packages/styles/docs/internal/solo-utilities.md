@@ -1,12 +1,12 @@
 ---
-status: APPROVED
-last_updated: 2026-09-23
+status: IMPLEMENTED
+last_updated: 2026-09-24
 scope: Decision to ship a self-contained `-solo` utility beside every aesthetic, for elements this package does not style.
 ---
 
 # Solo utilities: an aesthetic on one element, without the package
 
-This is agreed direction. Future work touching this surface MUST follow it; it does not exist yet, so there is no legacy code to reconcile, per the repository root `docs/README.md`'s `APPROVED` status.
+This is agreed direction, shipped in `0.4.0`. Future work touching this surface MUST follow it, and the current code is expected to comply, per the repository root `docs/README.md`'s `IMPLEMENTED` status.
 
 Like [`.progress` gains presentation](./progress-presentation-axes.md), it states the decision and the reasoning, not drop-in code: the values below are the ones the implementation must reproduce, and the source is where they are written.
 
@@ -90,7 +90,7 @@ Every light/dark pair is written with `light-dark()`, which follows the element'
 
 ## Not in scope
 
-- Moving the aesthetics or the solo classes into a cascade layer. Measured and deferred as its own decision: it needs the whole package's layering redesigned, not one file wrapped. See [Roadmap](./roadmap.md#later--possible).
+- Moving the aesthetics or the solo classes into a cascade layer. Measured and deferred as its own decision: it needed the whole package's layering redesigned, not one file wrapped. [Cascade layers](./cascade-layers.md) took that decision in `0.5.0`, and the solo classes stay unlayered there, for the reason S4 gives.
 - Updating `@codenhub/toaster`'s styling guide to recommend `.glass-solo` over `.glass`. It belongs to that package, after this one releases.
 
 ## References
