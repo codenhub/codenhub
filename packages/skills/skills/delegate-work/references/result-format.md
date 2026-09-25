@@ -94,7 +94,7 @@ by reading the log by default.
 | `out_of_scope`   | Touched files outside `--allow`, or anything inside dependency folders (`node_modules`, virtual environments). Changes are quarantined; in place, those files are already restored. | `discard`. If the extra file was genuinely needed, rebrief with a wider allowlist. |
 | `blocked`        | Worker stopped because a needed action was denied. | Check `denied`. Do that action yourself if appropriate, then rebrief. |
 | `timeout`        | Killed by the time or step budget. | `discard`. Task was too large or too vague: split or sharpen it, then `--rebrief-of` if retry is available. |
-| `conflict`       | `apply` (or an in-place run) found the allowed files changed by someone else since the snapshot. Nothing was overwritten. | Inspect with `dispatch diff <id>`; merge by hand, rebrief from the current state, or `discard`. |
+| `conflict`       | `apply`, `discard` or `unapply` found the files changed by someone else since the snapshot, or another in-place run still working in the tree. Nothing was overwritten. | If a run is still working, retry when it finishes. Otherwise inspect with `dispatch diff <id>`; merge by hand, rebrief from the current state, or `discard`. |
 | `harness_error`  | Worker process failed (auth, rate limit, crash) and every fallback failed too. | Follow `hint`. Otherwise use native subagents or do it inline. |
 | `use_native`     | The chosen model shares the orchestrator's quota pool. Nothing ran. `worker.model` names the model. | Run the same brief as a native subagent with that model. No retry is consumed. |
 | `not_available`  | No configured harness is usable for this role here. | Run `doctor`; fall back to native subagents or inline. |

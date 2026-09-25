@@ -325,7 +325,14 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   const post = G.workingTree(meta.workDir, path.join(runDir(meta.id), "post.index"));
   const ignore = [...(meta.linked ?? []), ...(meta.copied ?? [])];
   const changed = G.numstat(meta.snap, post, meta.workDir).filter((c) => !ignore.includes(c.path));
-  const outOfScope = changed.map((c) => c.path).filter((f) => !meta.editing || !matchAny(f, meta.allow));
+  const reported = new Set(
+    acc.edits.map((f) => toPosix(path.isAbsolute(f) ? path.relative(meta.workDir, canonical(f)) : f)),
+  );
+  // A read-only worker has no edit tools: changes it didn't report are
+  // someone else's (a concurrent run, the orchestrator) and stay as they are.
+  const outOfScope = changed
+    .map((c) => c.path)
+    .filter((f) => (meta.editing ? !matchAny(f, meta.allow) : reported.has(f)));
   if (depsFingerprint(meta.root, depDirs) !== depsBefore) {
     outOfScope.push("(dependency folder changed: install detected)");
   }
@@ -390,8 +397,20 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
     }
   } else {
     meta.status = "ok";
+    if (changed.length) {
+      meta.hint = `Changed in the tree during this read-only run, left as they are: ${changed
+        .slice(0, 10)
+        .map((c) => c.path)
+        .join(", ")}`;
+    }
   }
   return meta;
+}
+
+/** Another run still working in this tree: writing into it now would be counted as that run's change. */
+function busyTree(meta) {
+  const [other] = activeInplace(meta.root).filter((m) => m.id !== meta.id);
+  return other ? `In-place run ${other.id} is still working in this tree; try again when it finishes.` : null;
 }
 
 // ---------- public commands ----------
@@ -627,6 +646,9 @@ export async function followup(id, brief) {
   if (!brief?.trim()) {
     throw new UsageError("empty brief");
   }
+  if (!fs.existsSync(meta.workDir)) {
+    throw new UsageError("the tree this run worked in is gone (applied or discarded since); use --rebrief-of instead");
+  }
   // The follow-up is judged against the original snapshot, so anything edited
   // since would count as the worker's change (and be restored if out of scope).
   const now = G.workingTree(meta.workDir, path.join(runDir(id), "now.index"));
@@ -679,6 +701,10 @@ export function apply(id) {
   }
   const files = meta.files.changed.map((c) => c.path);
   if (meta.isolation === "worktree") {
+    const busy = busyTree(meta);
+    if (busy) {
+      return envelope(meta, { status: "conflict", hint: busy });
+    }
     // Copied byte for byte, not patched: git apply converts line endings
     // through attributes (and crashes when told not to).
     const moved = foreignEdits(meta.root, meta.snap, meta.post, files);
@@ -715,6 +741,10 @@ export async function discard(id) {
   if (meta.isolation === "worktree") {
     cleanupWorktree(meta);
   } else if (meta.editing && meta.post) {
+    const busy = busyTree(meta);
+    if (busy) {
+      return envelope(meta, { status: "conflict", hint: busy });
+    }
     const files = meta.files.changed.map((c) => c.path).filter((f) => !meta.files.outOfScope.includes(f));
     const touched = foreignEdits(meta.root, meta.post, meta.snap, files);
     if (touched.length) {
@@ -734,6 +764,10 @@ export function unapply(id) {
   }
   if (!meta.applied) {
     throw new UsageError("run is not applied");
+  }
+  const busy = busyTree(meta);
+  if (busy) {
+    return envelope(meta, { status: "conflict", hint: busy });
   }
   // Applied, both isolations leave the worker's version in the tree.
   const files = meta.files.changed.map((c) => c.path);

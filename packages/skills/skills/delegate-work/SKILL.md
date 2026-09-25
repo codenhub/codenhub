@@ -121,7 +121,10 @@ asks for an external run.
    Isolation defaults to `auto`: read-only roles and a single editing worker run
    in place; parallel editing workers each get an isolated copy. In place, the
    change is already in your tree: `apply` keeps it, `discard` restores the
-   allowed files. Don't edit a running worker's allowed files.
+   allowed files. Don't edit the working tree while an editing worker runs in
+   place: its result can't tell your edits from its own, and out-of-scope
+   files are restored (a copy is kept). `apply`, `discard` and `unapply`
+   refuse while one is running.
 4. **Read the result.** Each run returns one JSON result, specified in
    `references/result-format.md`. Read the result, not the log. Open `logPath`
    only to diagnose a failure you can't explain from the result.
