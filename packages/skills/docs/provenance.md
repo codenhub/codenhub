@@ -13,6 +13,7 @@ This page records the origin and license context of skill assets shipped by `@co
 | `caveman`                 | Adapted from [JuliusBrussee/caveman]                       | MIT        |
 | `caveman-commit`          | Adapted from [JuliusBrussee/caveman]                       | MIT        |
 | `caveman-review`          | Adapted from [JuliusBrussee/caveman]                       | MIT        |
+| `delegate-work`           | Original Coden Agency work                                 | Apache-2.0 |
 | `frontend-design`         | Adapted from [Anthropic's official frontend-design plugin] | Apache-2.0 |
 | `subagent-specialist`     | Adapted from [obra/superpowers]                            | MIT        |
 | `test-driven-development` | Adapted from [obra/superpowers]                            | MIT        |

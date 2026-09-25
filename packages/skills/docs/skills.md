@@ -43,6 +43,7 @@ Supporting Markdown, YAML, notices, examples, and reference files may accompany 
 | `caveman`                 | Provides an ultra-compressed communication mode.               |
 | `caveman-commit`          | Generates terse Conventional Commit messages.                  |
 | `caveman-review`          | Produces compressed, actionable code-review findings.          |
+| `delegate-work`           | Delegates scoped tasks to other models through CLI harnesses.  |
 | `frontend-design`         | Guides distinctive production-grade frontend design.           |
 | `subagent-specialist`     | Plans, delegates, reviews, and integrates parallel agent work. |
 | `test-driven-development` | Applies fail-first red-green-refactor development.             |

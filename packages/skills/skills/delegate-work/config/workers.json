@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "limits": {
+    "maxParallel": 4,
+    "timeoutSec": {
+      "scout": 300,
+      "fixer": 600,
+      "builder": 1800,
+      "reviewer": 600
+    },
+    "maxSteps": {
+      "scout": 40,
+      "fixer": 40,
+      "builder": 150,
+      "reviewer": 30
+    },
+    "checkTimeoutSec": 900,
+    "pruneAfterHours": 24,
+    "contextSafety": 1.5
+  },
+  "dataPolicy": {
+    "allowTraining": false
+  },
+  "orchestrators": {
+    "claude-code": {
+      "env": "CLAUDECODE",
+      "pools": [
+        "claude-pro"
+      ]
+    }
+  },
+  "roles": {
+    "scout": {
+      "tier": "light"
+    },
+    "fixer": {
+      "tier": "light"
+    },
+    "builder": {
+      "tier": "standard"
+    },
+    "reviewer": {
+      "tier": "standard"
+    }
+  },
+  "models": {
+    "example-light": {
+      "family": "example",
+      "context": 200000,
+      "note": "Replace via `dispatch init`; this file holds neutral defaults only.",
+      "routes": [
+        {
+          "id": "example-route",
+          "harness": "opencode",
+          "model": "provider/model-id",
+          "quotaPool": "example-pool",
+          "trainsOnData": false,
+          "enabled": false
+        }
+      ]
+    }
+  },
+  "tiers": {
+    "light": [
+      "example-light"
+    ],
+    "standard": [],
+    "strong": []
+  },
+  "kinds": {
+    "ui": {},
+    "text": {}
+  },
+  "projects": {}
+}
