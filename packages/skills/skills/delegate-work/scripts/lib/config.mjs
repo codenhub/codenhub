@@ -87,6 +87,10 @@ export function validate(cfg, harnesses) {
     }
     m.routes.forEach((r, i) => {
       const p = `models.${id}.routes[${i}]`;
+      if (!isObj(r)) {
+        e(p, "must be an object");
+        return;
+      }
       if (!r.id) {
         e(p, "id required");
       }

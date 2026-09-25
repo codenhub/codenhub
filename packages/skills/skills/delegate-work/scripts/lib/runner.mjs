@@ -106,6 +106,30 @@ function differsFrom(root, ref, files) {
   return files.filter((f) => G.fileId(root, f) !== G.blobId(ref, f, root));
 }
 
+/**
+ * Files that are neither `from` nor already `to`: edited by someone else. A
+ * file already at `to` is one an interrupted apply, discard or unapply wrote,
+ * so running it again completes the operation.
+ */
+function foreignEdits(root, from, to, files) {
+  const moved = differsFrom(root, from, files);
+  return moved.length ? differsFrom(root, to, moved) : [];
+}
+
+/**
+ * Publish the in-place claim before looking at other runs: of two runs that
+ * start together, at least one sees the other, and the earlier claim keeps
+ * the working tree.
+ */
+function claimInplace(meta) {
+  Object.assign(meta, { isolation: "inplace", phase: "running", claimedAt: Date.now() });
+  saveMeta(meta.id, meta);
+  const [first] = activeInplace(meta.root).sort(
+    (a, b) => (a.claimedAt ?? 0) - (b.claimedAt ?? 0) || a.id.localeCompare(b.id),
+  );
+  return first?.id === meta.id ? "inplace" : "worktree";
+}
+
 // ---------- prompt ----------
 
 function preamble({ role, allow, read, checks }) {
@@ -356,6 +380,10 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   } else if (meta.editing) {
     const timeout = 1000 * (cfg.limits?.checkTimeoutSec ?? 900);
     meta.checks = await runChecks(meta.checkList, meta.workDir, timeout, gitEnv);
+    // What checks leave behind (unignored reports, caches) isn't someone's edit.
+    meta.settled = meta.checkList.length
+      ? G.workingTree(meta.workDir, path.join(runDir(meta.id), "settled.index"))
+      : meta.post;
     meta.status = meta.checks.every((c) => c.ok) ? "ok" : "failed_checks";
     if (!meta.checkList.length) {
       meta.hint = "No checks could be inferred for this project; verify the change yourself.";
@@ -382,6 +410,9 @@ export async function run(o) {
   if (!["scout", "fixer", "builder", "reviewer"].includes(o.role)) {
     throw new UsageError("--role must be scout, fixer, builder or reviewer");
   }
+  if (o.isolation !== undefined && !["auto", "inplace", "worktree"].includes(o.isolation)) {
+    throw new UsageError("--isolation must be auto, inplace or worktree");
+  }
   const editing = EDITING.has(o.role);
   let allow = o.allow ?? [];
   let read = o.read ?? [];
@@ -403,15 +434,6 @@ export async function run(o) {
     if (prev.applied) {
       throw new UsageError(`run ${prev.id} is applied; unapply it before rebriefing`);
     }
-    if (!prev.discarded) {
-      const d = await discard(prev.id);
-      if (d.status === "conflict") {
-        throw new UsageError(d.hint);
-      }
-    }
-    prev = loadMeta(prev.id);
-    prev.retryUsed = true;
-    saveMeta(prev.id, prev);
     if (!allow.length) {
       allow = prev.allow;
     }
@@ -428,11 +450,15 @@ export async function run(o) {
     if (o.role !== "reviewer") {
       throw new UsageError("--review requires --role reviewer");
     }
+    const patchFile = path.join(runDir(target.id), "patch.diff");
+    if (!target.files || !fs.existsSync(patchFile)) {
+      throw new UsageError(`run ${target.id} has no change to review (status ${target.status})`);
+    }
     if (target.worker?.family) {
       excludeFamilies = [target.worker.family];
     }
     read = [...new Set([...read, ...target.files.changed.map((c) => c.path)])];
-    const diff = fs.readFileSync(path.join(runDir(target.id), "patch.diff"), "utf8").slice(0, 60000);
+    const diff = fs.readFileSync(patchFile, "utf8").slice(0, 60000);
     brief = `${brief}\n\nORIGINAL TASK\n${target.brief}\n\nCHANGE UNDER REVIEW\n\`\`\`diff\n${diff}\n\`\`\``;
     if (target.isolation === "worktree" && !target.applied && fs.existsSync(target.worktree)) {
       workDirOverride = target.worktree;
@@ -443,6 +469,18 @@ export async function run(o) {
   }
   if (!brief?.trim()) {
     throw new UsageError("empty brief");
+  }
+  // Only once the invocation is known to be valid: this uses up the task's retry.
+  if (prev) {
+    if (!prev.discarded) {
+      const d = await discard(prev.id);
+      if (d.status === "conflict") {
+        throw new UsageError(d.hint);
+      }
+    }
+    prev = loadMeta(prev.id);
+    prev.retryUsed = true;
+    saveMeta(prev.id, prev);
   }
 
   tier ??= cfg.roles?.[o.role]?.tier ?? "standard";
@@ -509,7 +547,7 @@ export async function run(o) {
 
   let isolation = o.isolation ?? "auto";
   if (isolation === "auto") {
-    isolation = !editing ? "inplace" : o.forceWorktree || activeInplace(root).length ? "worktree" : "inplace";
+    isolation = !editing ? "inplace" : o.forceWorktree ? "worktree" : claimInplace(meta);
   }
   meta.isolation = workDirOverride ? "worktree" : isolation;
   meta.phase = "running";
@@ -586,6 +624,24 @@ export async function followup(id, brief) {
   if (!route) {
     throw new UsageError("the route used by this run is no longer configured");
   }
+  if (!brief?.trim()) {
+    throw new UsageError("empty brief");
+  }
+  // The follow-up is judged against the original snapshot, so anything edited
+  // since would count as the worker's change (and be restored if out of scope).
+  const now = G.workingTree(meta.workDir, path.join(runDir(id), "now.index"));
+  const settled = meta.settled ?? meta.post;
+  if (now !== settled) {
+    const ignore = [...(meta.linked ?? []), ...(meta.copied ?? [])];
+    const edited = G.numstat(settled, now, meta.workDir)
+      .map((c) => c.path)
+      .filter((f) => !ignore.includes(f));
+    if (edited.length) {
+      throw new UsageError(
+        `edited since the run: ${edited.slice(0, 10).join(", ")}; a follow-up would count these as the worker's changes. Apply or discard this run and use --rebrief-of instead.`,
+      );
+    }
+  }
   meta.retryUsed = true;
   meta.phase = "running";
   meta.pid = process.pid;
@@ -625,7 +681,7 @@ export function apply(id) {
   if (meta.isolation === "worktree") {
     // Copied byte for byte, not patched: git apply converts line endings
     // through attributes (and crashes when told not to).
-    const moved = differsFrom(meta.root, meta.snap, files);
+    const moved = foreignEdits(meta.root, meta.snap, meta.post, files);
     if (moved.length) {
       return envelope(meta, {
         status: "conflict",
@@ -660,7 +716,7 @@ export async function discard(id) {
     cleanupWorktree(meta);
   } else if (meta.editing && meta.post) {
     const files = meta.files.changed.map((c) => c.path).filter((f) => !meta.files.outOfScope.includes(f));
-    const touched = differsFrom(meta.root, meta.post, files);
+    const touched = foreignEdits(meta.root, meta.post, meta.snap, files);
     if (touched.length) {
       return envelope(meta, { status: "conflict", hint: `Edited since the run, not restored: ${touched.join(", ")}` });
     }
@@ -681,7 +737,7 @@ export function unapply(id) {
   }
   // Applied, both isolations leave the worker's version in the tree.
   const files = meta.files.changed.map((c) => c.path);
-  const touched = differsFrom(meta.root, meta.post, files);
+  const touched = foreignEdits(meta.root, meta.post, meta.snap, files);
   if (touched.length) {
     return envelope(meta, { status: "conflict", hint: `Edited since the run: ${touched.join(", ")}` });
   }

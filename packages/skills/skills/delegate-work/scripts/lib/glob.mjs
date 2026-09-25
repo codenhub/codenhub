@@ -43,7 +43,9 @@ export function canonical(p) {
   try {
     return fs.realpathSync.native(p);
   } catch {
-    return p;
+    // Missing (a file the worker deleted): resolve the nearest existing parent.
+    const parent = path.dirname(p);
+    return path.isAbsolute(p) && parent !== p ? path.join(canonical(parent), path.basename(p)) : p;
   }
 }
 

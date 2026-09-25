@@ -40,7 +40,13 @@ function node(root, level) {
   if (!exists(root, "package.json")) {
     return null;
   }
-  const pkg = JSON.parse(read(root, "package.json"));
+  let pkg;
+  try {
+    pkg = JSON.parse(read(root, "package.json"));
+  } catch {
+    // Unreadable or invalid: no Node checks, the other ecosystems still count.
+    return null;
+  }
   const s = pkg.scripts ?? {};
   const m = pm(root, pkg);
   const has = (n) => typeof s[n] === "string" && !/no test specified/.test(s[n]);

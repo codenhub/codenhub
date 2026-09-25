@@ -106,6 +106,17 @@ function doctor(cwd) {
     return { config: { default: defaultPath(), user: userPath(), errors: [e.message] } };
   }
   const gitVersion = { version: git(["--version"], { allowFail: true }).stdout || null, problem: gitProblem() };
+  const config = { default: defaultPath(), user: userPath(), userExists: fs.existsSync(userPath()), errors };
+  // Everything below walks models, routes and tiers as the schema says they are.
+  if (errors.length) {
+    const harnesses = Object.fromEntries(
+      Object.entries(adapters).map(([n, a]) => {
+        const d = a.detect();
+        return [n, d.ok ? { ok: true, version: d.version } : { ok: false, reason: d.reason }];
+      }),
+    );
+    return { config, repo: root, git: gitVersion, harnesses, hint: "Fix the config errors to see routes and tiers." };
+  }
   const harnesses = Object.fromEntries(
     Object.entries(adapters).map(([n, a]) => {
       const d = a.detect();
@@ -166,7 +177,7 @@ function doctor(cwd) {
         };
   }
   return {
-    config: { default: defaultPath(), user: userPath(), userExists: fs.existsSync(userPath()), errors },
+    config,
     repo: root,
     git: gitVersion,
     harnesses,
