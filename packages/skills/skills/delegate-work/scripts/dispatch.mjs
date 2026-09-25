@@ -192,10 +192,7 @@ function doctor(cwd) {
 
 async function main() {
   const o = parse(process.argv.slice(2));
-  if (
-    process.env.DELEGATE_WORK_WORKER &&
-    ["run", "followup", "apply", "discard", "unapply", "prune"].includes(o.cmd)
-  ) {
+  if (process.env.DELEGATE_WORK_WORKER && ["run", "followup", "apply", "discard", "unapply", "prune"].includes(o.cmd)) {
     throw new R.UsageError("running inside a dispatched worker; workers do not delegate or manage runs");
   }
   const cwd = process.cwd();
