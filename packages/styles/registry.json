@@ -110,6 +110,8 @@
     "--ui-halo-spread": { "readers": ["box"] },
     "--ui-halo-ink": { "readers": ["box"] },
     "--ui-surface-image": { "readers": ["surface"] },
+    "--ui-active-translate-x": { "readers": ["box-active"] },
+    "--ui-active-translate-y": { "readers": ["box-active"] },
     "--ui-label-weight": { "readers": ["badge", "btn"] },
     "--ui-label-tracking": { "readers": ["badge", "btn"] },
     "--ui-label-case": { "readers": ["badge", "btn"] },

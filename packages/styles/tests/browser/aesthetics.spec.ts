@@ -299,9 +299,8 @@ test.describe("aesthetics", () => {
         await page.mouse.down();
         try {
           await expect
-            .poll(() => element.evaluate((node) => getComputedStyle(node).transform), `${testId} press`)
-            /* translate(4px, 4px) serializes as a matrix with the offsets last. */
-            .toBe("matrix(1, 0, 0, 1, 4, 4)");
+            .poll(() => element.evaluate((node) => getComputedStyle(node).translate), `${testId} press`)
+            .toBe("4px 4px");
           await expect
             .poll(() => element.evaluate((node) => getComputedStyle(node).boxShadow), `${testId} press`)
             .toMatch(/\b0px 0px 0px 0px\b/);
@@ -1128,7 +1127,7 @@ test.describe("aesthetics", () => {
         "border-radius",
         "border-top-width",
         "--ui-active-shadow-y",
-        "--ui-active-transform",
+        "--ui-active-translate-y",
         "--ui-hover-transform",
       ]);
 
@@ -1143,7 +1142,7 @@ test.describe("aesthetics", () => {
          press asserts the tokens the rule reads. That the rule reads them is
          `button.css`'s contract and the neobrutalism suite already covers it. */
       expect(button["--ui-active-shadow-y"].trim(), "the bar collapses on press").toBe("0px");
-      expect(button["--ui-active-transform"].trim(), "the element travels the bar's depth").toBe("translateY(4px)");
+      expect(button["--ui-active-translate-y"].trim(), "the element travels the bar's depth").toBe("4px");
       /* Chunky tile declares no hover transform, so `box-hover` falls back to
          `none` and the tile holds still under the pointer. */
       expect(button["--ui-hover-transform"].trim(), "no hover transform declared").toBe("");
@@ -1163,11 +1162,10 @@ test.describe("aesthetics", () => {
       await page.mouse.down();
 
       try {
-        /* translateY(4px) serializes as a matrix with the y offset last. Both
-           properties are transitioned, so these poll for the settled value. */
+        /* Both properties are transitioned, so these poll for the settled value. */
         await expect
-          .poll(() => card.evaluate((node) => getComputedStyle(node).transform), "the tile travels the bar's depth")
-          .toBe("matrix(1, 0, 0, 1, 0, 4)");
+          .poll(() => card.evaluate((node) => getComputedStyle(node).translate), "the tile travels the bar's depth")
+          .toBe("0px 4px");
         await expect
           .poll(() => card.evaluate((node) => getComputedStyle(node).boxShadow), "the bar collapses under it")
           .toMatch(/\b0px 0px 0px 0px\b/);

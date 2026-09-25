@@ -115,6 +115,8 @@
 
     --ui-hover-transform: none;
     --ui-active-transform: none;
+    --ui-active-translate-x: initial;
+    --ui-active-translate-y: initial;
     --ui-backdrop: none;
     --ui-surface-image: initial;
 

@@ -217,13 +217,19 @@
   corner-shape: var(--ui-corner-shape, round);
   box-shadow: var(--_shadow);
   clip-path: var(--ui-clip, none);
+  /* The press travel `box-active` writes; `none` at rest, because any other
+     `translate` makes the box a stacking context and a containing block.
+     Restated here so a pressed card does not carry the boxes inside it. */
+  --_press: none;
+  translate: var(--_press);
   transition:
     background-color var(--motion-duration-normal) var(--motion-ease),
     border-color var(--motion-duration-normal) var(--motion-ease),
     box-shadow var(--motion-duration-normal) var(--motion-ease),
     color var(--motion-duration-normal) var(--motion-ease),
     opacity var(--motion-duration-normal) var(--motion-ease),
-    transform var(--motion-duration-normal) var(--motion-ease);
+    transform var(--motion-duration-normal) var(--motion-ease),
+    translate var(--motion-duration-normal) var(--motion-ease);
 
   /* An aesthetic that clips cannot show the global focus outline, so it declares
      `--ui-focus-inset` and gets an inset layer instead. With no such aesthetic
@@ -278,11 +284,26 @@
    aesthetic's -- neobrutalism travels into its offset shadow, chunky-tile drops
    onto its bar -- and with no aesthetic it is the base `scale(0.97)` from
    `theme.css`, dropped under reduced motion. The `--ui-active-shadow-*` slots
-   stay no-ops until an aesthetic sets them. */
+   stay no-ops until an aesthetic sets them.
+
+   A press that travels into the element's own depth is a translation, given as
+   `--ui-active-translate-x`/`-y` and scaled by `--_depth` like the shadow it
+   travels into, so a `.p-xs` button that sits on half the slab moves half as
+   far, a `.floating` one twice as far, and a `.flat` one, with no slab to land
+   on, not at all. It is the independent `translate` property, so it composes
+   with `--ui-active-transform` rather than replacing it.
+
+   The press writes only `--_press`, and `box` declares `translate` from it.
+   A `translate` declaration here sorts this rule ahead of `box-hover`'s -- the
+   property ranks before `transform` in Tailwind's order -- and the hovered
+   `transform: none` then beats every press. */
 @utility box-active {
   &:active:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]) {
     --_sx: calc(var(--ui-active-shadow-x, var(--ui-shadow-x, var(--_d-shadow-x, 0px))) * var(--_depth));
     --_sy: calc(var(--ui-active-shadow-y, var(--ui-shadow-y, var(--_d-shadow-y, 0px))) * var(--_depth));
+
+    --_press: calc(var(--ui-active-translate-x, 0px) * var(--_depth))
+      calc(var(--ui-active-translate-y, 0px) * var(--_depth));
 
     transform: var(--ui-active-transform, none);
   }

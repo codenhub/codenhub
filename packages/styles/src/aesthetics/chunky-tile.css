@@ -84,13 +84,17 @@
     --ui-halo-ink: initial;
 
     /* The press, and the reason the lift is one number: the element travels exactly
-       the bar's depth and lands flat on the page. Hover holds still -- a seated slab
+       the bar's depth and lands flat on the page. It is given as a translation
+       `box` scales with the bar, so a small button that sits on half the bar
+       travels half as far. Hover holds still -- a seated slab
        has one gesture and it belongs to the press -- and the resting shadow tokens
        above already hold the bar under the pointer, so hover needs nothing of its
        own. */
     --ui-active-shadow-x: 0px;
     --ui-active-shadow-y: 0px;
-    --ui-active-transform: translateY(var(--_tile-lift));
+    --ui-active-transform: none;
+    --ui-active-translate-x: 0px;
+    --ui-active-translate-y: var(--_tile-lift);
 
     /* Nothing here clips, blurs, thins its fill, or draws its edge as a ring, and an
        aesthetic nested inside one that does has to say so rather than inherit it.

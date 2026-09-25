@@ -122,11 +122,11 @@ for (const [scenario, files] of Object.entries(SCENARIOS)) {
 
         return {
           depth: styles.getPropertyValue("--elevation-color").trim(),
-          press: styles.getPropertyValue("--ui-active-transform").trim(),
+          press: styles.getPropertyValue("--ui-active-translate-y").trim(),
         };
       });
 
-      expect(root.press, "chunky tile's press").toBe("translateY(4px)");
+      expect(root.press, "chunky tile's press").toBe("4px");
       expect(["#000", "rgb(0 0 0)", "rgb(0, 0, 0)"], `chunky tile's depth colour, got ${root.depth}`).toContain(
         root.depth,
       );

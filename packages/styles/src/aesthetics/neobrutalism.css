@@ -53,12 +53,15 @@
     --ui-halo-ink: initial;
 
     /* The press: travel the offset, shrink the shadow to nothing, so the element
-       lands flat where its slab was. Hover keeps the slab still under the pointer;
+       lands flat where its slab was. A translation `box` scales with the slab, so
+       the two stay the same length at every size and elevation. Hover keeps the slab still under the pointer;
        `box-hover`'s derived fill tint is the whole hover response. One token pair,
        no `:hover` list, R3 intact. */
     --ui-active-shadow-x: 0px;
     --ui-active-shadow-y: 0px;
-    --ui-active-transform: translate(var(--_neo-offset), var(--_neo-offset));
+    --ui-active-transform: none;
+    --ui-active-translate-x: var(--_neo-offset);
+    --ui-active-translate-y: var(--_neo-offset);
 
     /* Nothing here clips or blurs, and an aesthetic nested inside another has to
        say so rather than inherit it. */

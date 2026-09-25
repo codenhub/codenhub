@@ -85,6 +85,27 @@ test.describe("corner scale", () => {
   });
 });
 
+test("a press travels exactly the depth it lands on", async ({ page }) => {
+  await load(
+    page,
+    `<div class="chunky-tile" style="padding: 2rem">
+       <button data-testid="tile-tight" class="btn p-xs">b</button>
+     </div>`,
+  );
+
+  const button = page.getByTestId("tile-tight");
+
+  await button.hover();
+  await page.mouse.down();
+  try {
+    await expect
+      .poll(() => button.evaluate((node) => getComputedStyle(node).translate), "half the lift, like the bar")
+      .toBe("0px 2px");
+  } finally {
+    await page.mouse.up();
+  }
+});
+
 test.describe("corner pattern", () => {
   test(".cut-diagonal rounds two corners and leaves two square", async ({ page }) => {
     await load(
