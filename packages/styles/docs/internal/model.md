@@ -448,57 +448,58 @@ Beyond composition, the package strives for three things, in this order: that it
 
 ### Material tokens
 
-| Token                   | Fallback             | Meaning                                                     |
-| ----------------------- | -------------------- | ----------------------------------------------------------- |
-| `--ui-corner`           | `--radius-control`   | Control corner at scale 1; `box` scales it by the step.     |
-| `--ui-corner-surface`   | `--radius-surface`   | Surface corner at scale 1; `surface` scales it.             |
-| `--ui-corner-tl`        | `1`                  | `0` or `1`: whether the top-left takes the corner.          |
-| `--ui-corner-tr`        | `1`                  | The same, top-right.                                        |
-| `--ui-corner-br`        | `1`                  | The same, bottom-right.                                     |
-| `--ui-corner-bl`        | `1`                  | The same, bottom-left.                                      |
-| `--ui-radius`           | _computed_           | A complete control radius, taken as written, unscaled.      |
-| `--ui-radius-surface`   | _computed_           | A complete surface radius, taken as written, unscaled.      |
-| `--ui-scale`            | _the step_           | Override for the size step the modifiers publish.           |
-| `--ui-corner-shape`     | `round`              | What the radius draws: an arc, or a `bevel` cut.            |
-| `--ui-radius-pill`      | `--ui-corner`        | Corner for what is fully round by default.                  |
-| `--ui-radius-tight`     | `--ui-corner`        | Corner for chips, before their `--radius-small` cap.        |
-| `--ui-line-style`       | `solid`              | `solid`, `dashed`, `dotted`, or `double` (3px and up).      |
-| `--ui-border-width`     | `--border-width`     | Edge thickness.                                             |
-| `--ui-border-max`       | `100px`              | Ceiling on the computed edge width.                         |
-| `--ui-ink`              | `--color-border`     | Neutral line color when no intent is set.                   |
-| `--ui-control-ink`      | `--ui-ink`           | Neutral line color for controls; read ahead of `--ui-ink`.  |
-| `--ui-shadow-x`         | `0px`                | Shadow offset, colorless so it inherits safely.             |
-| `--ui-shadow-y`         | `0px`                | Shadow offset.                                              |
-| `--ui-shadow-blur`      | `0px`                | Shadow blur.                                                |
-| `--ui-shadow-spread`    | `0px`                | Shadow spread.                                              |
-| `--ui-shadow-inset`     | _empty_              | The `inset` keyword, when the edge is an inner ring.        |
-| `--ui-hover-shadow-x`   | `--ui-shadow-x`      | Shadow offset while hovered.                                |
-| `--ui-hover-shadow-y`   | `--ui-shadow-y`      | Shadow offset while hovered.                                |
-| `--ui-active-shadow-x`  | `--ui-shadow-x`      | Shadow offset while pressed.                                |
-| `--ui-active-shadow-y`  | `--ui-shadow-y`      | Shadow offset while pressed.                                |
-| `--ui-active-transform` | `scale(0.97)`        | Transform while pressed; `none` under reduced motion.       |
-| `--ui-shadow-ink`       | `0%`                 | How much of the shadow is the intent's own ink.             |
-| `--ui-shadow-2-x`       | `0px`                | Second depth layer, in parts; `-y`, `-blur`, `-spread` too. |
-| `--ui-shadow-2-ink`     | _undefined_          | Second layer's ink; undefined, the layer is absent.         |
-| `--ui-shadow-2-inset`   | _empty_              | The `inset` keyword for the second layer.                   |
-| `--ui-halo-blur`        | `0px`                | Halo blur; `--ui-halo-spread` beside it.                    |
-| `--ui-halo-ink`         | _undefined_          | Halo's share of the intent colour; undefined, no halo.      |
-| `--elevation-color`     | _theme_              | The base that ink mixes toward; depth's own colour.         |
-| `--ui-shadow-edge`      | _undefined_          | Declared, even empty, when the shadow is the edge.          |
-| `--ui-elevation`        | `1`                  | Unitless multiplier over the shadow geometry.               |
-| `--ui-surface-shadow`   | _unset_              | Complete value; resolved by surfaces only.                  |
-| `--ui-surface-ground`   | `--color-background` | Ground a surface sits on; how glass goes translucent.       |
-| `--ui-bg-alpha`         | `1`                  | Multiplier over fill, for translucency.                     |
-| `--ui-backdrop`         | `none`               | Backdrop filter; resolved by surfaces only.                 |
-| `--ui-surface-image`    | `none`               | Painted layer; resolved by surfaces only.                   |
-| `--ui-hover-transform`  | `none`               | Transform applied on interactive hover.                     |
-| `--ui-clip`             | `none`               | Silhouette for structural components.                       |
-| `--ui-clip-tight`       | `--ui-clip`          | Silhouette for chips.                                       |
-| `--ui-focus-inset`      | _undefined_          | Inset focus layer width. Undefined means no layer.          |
-| `--ui-label-weight`     | per component        | Label weight; `.btn` and `.badge`.                          |
-| `--ui-label-tracking`   | _undefined_          | Label tracking; undefined inherits.                         |
-| `--ui-label-case`       | per component        | `text-transform`; `.btn` falls back to `none`.              |
-| `--ui-label-shadow`     | per component        | `text-shadow` with no colour, so it takes the label's.      |
+| Token                     | Fallback             | Meaning                                                     |
+| ------------------------- | -------------------- | ----------------------------------------------------------- |
+| `--ui-corner`             | `--radius-control`   | Control corner at scale 1; `box` scales it by the step.     |
+| `--ui-corner-surface`     | `--radius-surface`   | Surface corner at scale 1; `surface` scales it.             |
+| `--ui-corner-tl`          | `1`                  | `0` or `1`: whether the top-left takes the corner.          |
+| `--ui-corner-tr`          | `1`                  | The same, top-right.                                        |
+| `--ui-corner-br`          | `1`                  | The same, bottom-right.                                     |
+| `--ui-corner-bl`          | `1`                  | The same, bottom-left.                                      |
+| `--ui-radius`             | _computed_           | A complete control radius, taken as written, unscaled.      |
+| `--ui-radius-surface`     | _computed_           | A complete surface radius, taken as written, unscaled.      |
+| `--ui-scale`              | _the step_           | Override for the size step the modifiers publish.           |
+| `--ui-corner-shape`       | `round`              | What the radius draws: an arc, or a `bevel` cut.            |
+| `--ui-radius-pill`        | `--ui-corner`        | Corner for what is fully round by default.                  |
+| `--ui-radius-tight`       | `--ui-corner`        | Corner for chips, before their `--radius-small` cap.        |
+| `--ui-line-style`         | `solid`              | `solid`, `dashed`, `dotted`, or `double` (3px and up).      |
+| `--ui-border-width`       | `--border-width`     | Edge thickness.                                             |
+| `--ui-border-max`         | `100px`              | Ceiling on the computed edge width.                         |
+| `--ui-ink`                | `--color-border`     | Neutral line color when no intent is set.                   |
+| `--ui-control-ink`        | `--ui-ink`           | Neutral line color for controls; read ahead of `--ui-ink`.  |
+| `--ui-shadow-x`           | `0px`                | Shadow offset, colorless so it inherits safely.             |
+| `--ui-shadow-y`           | `0px`                | Shadow offset.                                              |
+| `--ui-shadow-blur`        | `0px`                | Shadow blur.                                                |
+| `--ui-shadow-spread`      | `0px`                | Shadow spread.                                              |
+| `--ui-shadow-inset`       | _empty_              | The `inset` keyword, when the edge is an inner ring.        |
+| `--ui-hover-shadow-x`     | `--ui-shadow-x`      | Shadow offset while hovered.                                |
+| `--ui-hover-shadow-y`     | `--ui-shadow-y`      | Shadow offset while hovered.                                |
+| `--ui-active-shadow-x`    | `--ui-shadow-x`      | Shadow offset while pressed.                                |
+| `--ui-active-shadow-y`    | `--ui-shadow-y`      | Shadow offset while pressed.                                |
+| `--ui-active-transform`   | `scale(0.97)`        | Transform while pressed; `none` under reduced motion.       |
+| `--ui-active-translate-x` | `0px`                | Press travel into the depth, `-y` too; scaled like it.      |
+| `--ui-shadow-ink`         | `0%`                 | How much of the shadow is the intent's own ink.             |
+| `--ui-shadow-2-x`         | `0px`                | Second depth layer, in parts; `-y`, `-blur`, `-spread` too. |
+| `--ui-shadow-2-ink`       | _undefined_          | Second layer's ink; undefined, the layer is absent.         |
+| `--ui-shadow-2-inset`     | _empty_              | The `inset` keyword for the second layer.                   |
+| `--ui-halo-blur`          | `0px`                | Halo blur; `--ui-halo-spread` beside it.                    |
+| `--ui-halo-ink`           | _undefined_          | Halo's share of the intent colour; undefined, no halo.      |
+| `--elevation-color`       | _theme_              | The base that ink mixes toward; depth's own colour.         |
+| `--ui-shadow-edge`        | _undefined_          | Declared, even empty, when the shadow is the edge.          |
+| `--ui-elevation`          | `1`                  | Unitless multiplier over the shadow geometry.               |
+| `--ui-surface-shadow`     | _unset_              | Complete value; resolved by surfaces only.                  |
+| `--ui-surface-ground`     | `--color-background` | Ground a surface sits on; how glass goes translucent.       |
+| `--ui-bg-alpha`           | `1`                  | Multiplier over fill, for translucency.                     |
+| `--ui-backdrop`           | `none`               | Backdrop filter; resolved by surfaces only.                 |
+| `--ui-surface-image`      | `none`               | Painted layer; resolved by surfaces only.                   |
+| `--ui-hover-transform`    | `none`               | Transform applied on interactive hover.                     |
+| `--ui-clip`               | `none`               | Silhouette for structural components.                       |
+| `--ui-clip-tight`         | `--ui-clip`          | Silhouette for chips.                                       |
+| `--ui-focus-inset`        | _undefined_          | Inset focus layer width. Undefined means no layer.          |
+| `--ui-label-weight`       | per component        | Label weight; `.btn` and `.badge`.                          |
+| `--ui-label-tracking`     | _undefined_          | Label tracking; undefined inherits.                         |
+| `--ui-label-case`         | per component        | `text-transform`; `.btn` falls back to `none`.              |
+| `--ui-label-shadow`       | per component        | `text-shadow` with no colour, so it takes the label's.      |
 
 The corner, line, second layer, halo, surface image, and label rows are the [0.5.0 structure](./structure.md), and `registry.json` records under `material` which utilities read each one. Every aesthetic names or clears every one of them, which `registry.test.ts` checks.
 
@@ -892,7 +893,7 @@ An aesthetic built out of one number -- pixel's grid unit, neobrutalism's offset
   --_tile-lift: var(--tile-lift, 4px);
 
   --ui-shadow-y: var(--_tile-lift);
-  --ui-active-transform: translateY(var(--_tile-lift));
+  --ui-active-translate-y: var(--_tile-lift);
 }
 ```
 
@@ -945,7 +946,7 @@ Rounded slabs sitting on a darker shade of themselves, pressed flat on click. Bu
   --ui-shadow-ink: 72%;
   --ui-shadow-y: var(--_tile-lift);
   --ui-active-shadow-y: 0px;
-  --ui-active-transform: translateY(var(--_tile-lift));
+  --ui-active-translate-y: var(--_tile-lift);
 }
 ```
 

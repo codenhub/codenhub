@@ -29,14 +29,14 @@ A cut stays a true 45 degrees because the corner is a length, not a percentage, 
 
 **Breaking.** Every aesthetic moves from setting `--ui-radius` to setting `--ui-corner`. A consumer who set `--ui-radius` sees no change.
 
-**Built.** The modifiers write two privates, `--_scale-size` and `--_scale-pad`; `box` restates both `initial` so a `.card.p-xs` does not shrink the buttons inside it, and an unset step takes the other's value, so a lone `.lg` still grows. `--ui-scale` is the public override, and the package never declares it. Depth scales by the step too, capped at `1` -- down with a small element, never up, so a press that travels an aesthetic's whole depth still lands flat on a `.lg` button; that is what retires chunky tile's list. The pill and chip corners fall back through `--ui-radius`, then `--ui-corner`. Every aesthetic but `.cyber` clears `--ui-radius` and `--ui-radius-surface` to `initial`, so a region nested inside `.cyber` does not inherit its knob.
+**Built.** The modifiers write two privates, `--_scale-size` and `--_scale-pad`; `box` restates both `initial` so a `.card.p-xs` does not shrink the buttons inside it, and an unset step takes the other's value, so a lone `.lg` still grows. `--ui-scale` is the public override, and the package never declares it. Depth scales by the step too, capped at `1` -- down with a small element, never up; that is what retires chunky tile's list. A press that travels into the depth is `--ui-active-translate-x`/`-y`, which `box-active` scales by the same factor as the depth, elevation included, so it lands flat on the slab at every size: a `.p-xs` chunky button drops 2px onto a 2px bar, and a `.flat` one, with no bar, does not drop. The pill and chip corners fall back through `--ui-radius`, then `--ui-corner`. Every aesthetic but `.cyber` clears `--ui-radius` and `--ui-radius-surface` to `initial`, so a region nested inside `.cyber` does not inherit its knob.
 
 ## 2. Corner pattern
 
 **Decision.** Four per-corner multipliers and two classes.
 
 - **`--ui-corner-tl`, `-tr`, `-br`, `-bl`**, each `0` or `1`, default `1`, multiplying the computed corner in `box` and `surface`.
-- **`.cut-diagonal`** (top-left and bottom-right) and **`.cut-diagonal-reverse`** (top-right and bottom-left), which set the multipliers. They work under every aesthetic: under the default look a diagonal is a two-corner leaf; under `.cyber` it is two cuts.
+- **`.cut-diagonal`** (top-left and bottom-right) and **`.cut-diagonal-reverse`** (top-right and bottom-left), which set the multipliers. They work wherever the corner is computed: under the default look a diagonal is a two-corner leaf, and on a control under `.cyber` it is two cuts. A surface under `.cyber` keeps the aesthetic's whole `--ui-radius-surface` (see **Built**), which the pattern does not reach.
 
 **Built.** `.skeleton` and the tooltip bubble, which set their own radius, read the pattern too. `.cyber` places its control diagonal through the switches; its surfaces cut the opposite diagonal, which the four shared switches cannot say at the same time, so its surface shape is a whole `--ui-radius-surface`, unscaled -- a card is large enough that the full cut is right at every padding. `--cyber-shape` is read as `--ui-radius` with no fallback, so left unset it is guaranteed-invalid and the computed corner draws.
 

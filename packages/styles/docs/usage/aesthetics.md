@@ -140,7 +140,7 @@ Controls and surfaces take the cut on opposite diagonals, so a button and the ca
 </section>
 ```
 
-Other shapes are a value away. Set them on the `.cyber` element or any ancestor; `--ui-radius` set on one element changes just that element. A shape you set is used as written and does not scale, so for a scaled one on a single control use `.cut-diagonal-reverse` instead.
+Other shapes are a value away. Set them on the `.cyber` element or any ancestor. `--ui-radius` set on an element reaches that element and every component inside it that does not set its own. A shape you set is used as written and does not scale, so for a scaled one on a single control use `.cut-diagonal-reverse` instead.
 
 | Shape                  | Value                 |
 | ---------------------- | --------------------- |

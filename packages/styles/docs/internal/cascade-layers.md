@@ -139,7 +139,7 @@ The maintainer accepted the consequence: **inside a `.glass` region, neutral sof
 
 - **Behaviour, pre-1.0 breaking.** Consumer CSS that relied on a package class beating it now loses, and a consumer's `@layer components` rule now contests the four families. The commit that lands it carries `!`, and the release notes say so.
 - **`/components` and `/native`** gain the layer placement `.` already has (L3).
-- **New material tokens** `--ui-button-weight` and `--ui-button-tracking`, in the model's table and `docs/usage/customizing.md`.
+- **New material tokens** `--ui-button-weight` and `--ui-button-tracking`, in the model's table and `docs/usage/customizing.md`. Historical names: they shipped as `--ui-label-weight` and `--ui-label-tracking` (see L5).
 - **Glass** reaches every neutral surface in its region (L6), in `docs/usage/aesthetics.md`.
 - **Chunky tile** no longer styles bare buttons the package does not style (L5).
 - **A new public section** on cascade layers in `docs/setup.md` or `docs/concepts.md`: the map, what beats what, and the per-entry guarantee.
@@ -153,7 +153,7 @@ The maintainer accepted the consequence: **inside a `.glass` region, neutral sof
 
 - **A new browser spec, `layers.spec.ts`**, turning the probe table into assertions, run on `.` and on the raw `dist/` files for `/components`, `/native`, `/theme` + `/components`, and `/aesthetics` before `/components`: a consumer `@layer utilities` rule and an unlayered rule each beat an aesthetic, presentation, intent, and elevation class; an aesthetic on `<html>` keeps its tokens; chunky tile's weight holds and a consumer's `font-*` beats it; `.card.soft.glass` and a glass region's neutral surfaces take glass's ground; a nested ghost card keeps its own ground; `.ipt.soft` names its cap and `aria-invalid` beats an intent class.
 - **An integration check in `exports.test.ts`**: every built entrypoint opens with `theme, base, components, utilities`, and every unlayered rule in `dist/` is on an allowlist -- the solo classes, `forced-colors`, `@property` -- so a rule that slips out of its layer fails the build.
-- **Registry**: chunky tile's `selectorReason` narrowed, and the aesthetic hygiene test extended to `--ui-button-weight` and `--ui-button-tracking`.
+- **Registry**: chunky tile's `selectorReason` narrowed, and the aesthetic hygiene test extended to `--ui-button-weight` and `--ui-button-tracking` -- since renamed; the test now covers `--ui-label-weight` and `--ui-label-tracking` (see L5).
 
 ## Not in scope
 
