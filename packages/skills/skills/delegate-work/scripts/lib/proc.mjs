@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { StringDecoder } from "node:string_decoder";
 
 const WIN = process.platform === "win32";
 
@@ -100,10 +101,13 @@ export function start(cmd, args, { cwd, env, input, timeoutMs, onLine, stdoutFil
   const err = stderrFile ? fs.createWriteStream(stderrFile) : null;
   let stderrTail = "";
   let buf = "";
+  // A multibyte character can straddle two chunks; decoders carry the partial bytes over.
+  const outText = new StringDecoder("utf8");
+  const errText = new StringDecoder("utf8");
 
   child.stdout.on("data", (d) => {
     out?.write(d);
-    buf += d.toString("utf8");
+    buf += outText.write(d);
     let i;
     while ((i = buf.indexOf("\n")) >= 0) {
       const line = buf.slice(0, i).replace(/\r$/, "");
@@ -115,7 +119,11 @@ export function start(cmd, args, { cwd, env, input, timeoutMs, onLine, stdoutFil
   });
   child.stderr.on("data", (d) => {
     err?.write(d);
-    stderrTail = (stderrTail + d.toString("utf8")).slice(-8000);
+    stderrTail = (stderrTail + errText.write(d)).slice(-8000);
+  });
+  child.stdin.on("error", () => {
+    // EPIPE when the harness exits before reading the whole prompt (an auth
+    // failure, say); the close handler reports the outcome.
   });
   if (input !== null && input !== undefined) {
     child.stdin.end(input);
@@ -139,6 +147,8 @@ export function start(cmd, args, { cwd, env, input, timeoutMs, onLine, stdoutFil
     });
     child.on("close", (code) => {
       clearTimeout(timer);
+      buf += outText.end();
+      stderrTail = (stderrTail + errText.end()).slice(-8000);
       if (buf && onLine) {
         onLine(buf);
       }
@@ -169,9 +179,13 @@ export async function runShell(command, { cwd, timeoutMs, env }) {
     stdio: ["ignore", "pipe", "pipe"],
   });
   let output = "";
-  const add = (d) => (output = (output + d.toString("utf8")).slice(-20000));
-  child.stdout.on("data", add);
-  child.stderr.on("data", add);
+  const collect = (stream) => {
+    const text = new StringDecoder("utf8");
+    stream.on("data", (d) => (output = (output + text.write(d)).slice(-20000)));
+    stream.on("end", () => (output += text.end()));
+  };
+  collect(child.stdout);
+  collect(child.stderr);
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
