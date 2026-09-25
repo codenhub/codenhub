@@ -6,6 +6,11 @@
    consumer rule on these two entries alone. */
 @layer theme, base, components, utilities;
 
+/* The theme before `@reference "tailwindcss"`, as `native.css` has it:
+   Tailwind writes the theme's variables at the first `@theme` it meets, and
+   after the reference that is Tailwind's own reference-only one. See
+   docs/internal/model.md (Which files import the theme). */
+@import "../theme.css";
 @reference "tailwindcss";
 @import "tailwindcss/utilities.css" layer(utilities);
 /* Everything that is not `src/` -- see the note in `index.css`. Keeps a class
@@ -21,7 +26,6 @@
 @source not "../../*.md";
 @source not "../../*.txt";
 @source not "../../*.json";
-@import "../theme.css";
 @import "../typography.css";
 @import "../box.css";
 @import "./button.css";
@@ -44,4 +48,4 @@
    makes the emission deliberate; the composition-body check in
    `exports.test.ts` fails the build if one is dropped. `text-control` and
    `surface` are also documented as consumer-usable on their own. */
-@source inline("box box-hover box-active loader-mask text-control surface input-group text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint ipt email password url tel search date datetime month week time icon left right textarea select checkbox radio switch alert alert-icon badge skeleton progress tooltip tooltip-bubble tooltip-icon card panel interactive flush compact spacious neutral solid soft ghost edged edgeless flat raised floating loader");
+@source inline("box box-hover box-active loader-mask text-control surface input-group text-display text-title-lg text-title text-title-sm text-label-lg text-label text-body btn field label hint ipt email password url tel search date datetime month week time icon left right textarea select checkbox radio switch alert alert-icon badge skeleton progress tooltip tooltip-bubble tooltip-icon card panel interactive flush neutral solid soft ghost edged edgeless flat raised floating loader");

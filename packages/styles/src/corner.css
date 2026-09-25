@@ -1,0 +1,26 @@
+/* Imported into the `components` layer by `theme.css`, below every utility, so
+   a consumer's own utility or unlayered CSS beats these classes. See
+   docs/internal/cascade-layers.md.
+
+   The corner pattern: which corners take the corner the aesthetic draws. `box`
+   and `surface` multiply their computed corner by `--ui-corner-tl`, `-tr`,
+   `-br`, and `-bl`, each 0 or 1, so a class that sets the four draws two
+   corners and leaves two square under every aesthetic -- a two-corner leaf
+   under the default look, two cuts under `.cyber`. An explicit `--ui-radius`
+   is taken as written and ignores the pattern. See docs/internal/structure.md. */
+
+/* Top-left and bottom-right. */
+.cut-diagonal {
+  --ui-corner-tl: 1;
+  --ui-corner-tr: 0;
+  --ui-corner-br: 1;
+  --ui-corner-bl: 0;
+}
+
+/* Top-right and bottom-left. */
+.cut-diagonal-reverse {
+  --ui-corner-tl: 0;
+  --ui-corner-tr: 1;
+  --ui-corner-br: 0;
+  --ui-corner-bl: 1;
+}

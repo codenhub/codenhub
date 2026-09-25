@@ -12,6 +12,7 @@
 @import "./intent.css" layer(components);
 @import "./presentation.css" layer(components);
 @import "./elevation.css" layer(components);
+@import "./corner.css" layer(components);
 /* Everything that is not `src/` -- see the note in `index.css`. Keeps a
    `--color-*` reference in a docs example from shipping as a real theme entry. */
 @source not "../dist";
@@ -202,11 +203,10 @@
     --elevation-color: light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55));
     /* Four rungs: no shadow, then a Tailwind-style sm/md/lg progression, so a
        consumer unsure which step to reach for has a named "no depth" value
-       instead of inferring it by omitting a shadow declaration. The elevation
-       modifier classes (`.elevation-none`/`.elevation-sm`/`.elevation-md` in
-       elevation.css) share this naming on purpose -- same weight, same word --
-       though they multiply an aesthetic's shadow parts rather than declaring a
-       fixed value, so the two are not read from the same place. */
+       instead of inferring it by omitting a shadow declaration. These are raw
+       shadows for elements a consumer styles; the elevation modifier classes
+       (`.flat`/`.raised`/`.floating` in elevation.css) multiply an aesthetic's
+       shadow parts instead, and are not read from here. */
     --elevation-none: none;
     --elevation-sm: 0 1px 2px var(--elevation-color), 0 1px 3px var(--elevation-color);
     --elevation-md: 0 4px 6px -1px var(--elevation-color), 0 2px 4px -2px var(--elevation-color);
@@ -292,5 +292,20 @@
     &:not(:where(.light, .light *, .theme-light, .theme-light *, [data-theme="light"], [data-theme="light"] *)) {
       @slot;
     }
+  }
+}
+
+/* Forced colours draw the plain version of every structural part: a solid line
+   and nothing an aesthetic layers on top. Unlayered, so it beats every layered
+   declaration of these tokens -- an aesthetic's and a consumer's utility alike --
+   the way the other `forced-colors` blocks do. See
+   docs/internal/structure.md. */
+@media (forced-colors: active) {
+  * {
+    --ui-line-style: solid;
+    --ui-shadow-2-ink: initial;
+    --ui-halo-ink: initial;
+    --ui-surface-image: none;
+    --ui-label-shadow: none;
   }
 }

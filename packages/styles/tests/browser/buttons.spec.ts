@@ -123,12 +123,12 @@ test.describe("buttons", () => {
     await expect(page.getByTestId("loading-button")).toBeDisabled();
   });
 
-  test("styles disabled and error button states", async ({ page }) => {
+  test("styles disabled and destructive button states", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
     const styles = await page.evaluate(() => {
       const disabledStyles = getComputedStyle(document.querySelector('[data-testid="aria-disabled-button"]')!);
-      const errorStyles = getComputedStyle(document.querySelector('[data-testid="btn-default-error"]')!);
+      const errorStyles = getComputedStyle(document.querySelector('[data-testid="btn-default-destructive"]')!);
 
       return {
         disabledCursor: disabledStyles.cursor,
@@ -406,17 +406,17 @@ test.describe("buttons", () => {
     );
   });
 
-  /* A hovered `.solid` box mixes its edge toward `--intent-hover`, not toward
-     the resting `--intent-color`. Without that the edge blends to the resting
-     colour exactly, and a hovered solid button wears a ring of the colour it
-     just left -- visible only as a hairline, and invisible to any assertion that
-     reads the background alone. */
+  /* A hovered `.solid` box's edge is its hover plate, not a line in the
+     colour it just left. The line fades out as the fill fills in, toward the
+     hover ink on hover, so at a full fill the band shows the plate under it --
+     which moves to `--intent-hover` with the fill. Measured as painted: the
+     band composited over the plate, because a transparent line and a line of
+     the resting colour read the same in a computed string that ignores alpha. */
   test("moves a hovered solid button's edge to the hover tone", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
     /* Built rather than read off the grid: `.solid` shows one row there, and a
-       button with no edge class rests edgeless, whose edge is nothing at all.
-       The tone the edge follows is only visible where a line is drawn. */
+       button with no edge class rests edgeless. */
     await page.evaluate(() => {
       const button = document.createElement("button");
 
@@ -426,7 +426,6 @@ test.describe("buttons", () => {
     });
 
     const solid = page.getByTestId("hover-solid-edged");
-    const resting = await solid.evaluate((element) => getComputedStyle(element).borderTopColor);
     const hoverToken = await page.evaluate(() => {
       const probe = document.createElement("span");
 
@@ -439,15 +438,28 @@ test.describe("buttons", () => {
 
       return color;
     });
+    const readBand = () =>
+      solid.evaluate((element) => {
+        const styles = getComputedStyle(element);
 
-    expect(getColorDistance(resting, hoverToken), "resting edge is not already the hover tone").toBeGreaterThan(2);
+        return { border: styles.borderTopColor, plate: styles.backgroundColor };
+      });
+
+    const resting = await readBand();
+
+    expect(getColorDistance(resting.plate, hoverToken), "resting plate is not already the hover tone").toBeGreaterThan(
+      2,
+    );
+    expectSameColor(flattenColor(resting.border, resting.plate), resting.plate, "resting band is the plate");
 
     await solid.hover();
 
     await expect
-      .poll(async () =>
-        getColorDistance(await solid.evaluate((element) => getComputedStyle(element).borderTopColor), hoverToken),
-      )
+      .poll(async () => {
+        const hovered = await readBand();
+
+        return getColorDistance(flattenColor(hovered.border, hovered.plate), hoverToken);
+      })
       .toBeLessThanOrEqual(2);
   });
 
@@ -493,24 +505,24 @@ test.describe("buttons", () => {
     }
   });
 
-  test("configures button padding with the dense, compact and spacious modifiers", async ({ page }) => {
+  test("configures button padding with the p-xs, p-sm and p-lg modifiers", async ({ page }) => {
     await page.goto(BUTTONS_URL);
 
     const readPadding = (testId: string, property: "padding" | "paddingLeft") =>
       page.getByTestId(testId).evaluate((element, name) => getComputedStyle(element)[name], property);
 
-    expect(await readPadding("btn-dense", "paddingLeft")).toBe("8px");
-    expect(await readPadding("btn-compact", "paddingLeft")).toBe("10px");
+    expect(await readPadding("btn-p-xs", "paddingLeft")).toBe("8px");
+    expect(await readPadding("btn-p-sm", "paddingLeft")).toBe("10px");
     expect(await readPadding("btn-default-padding", "paddingLeft")).toBe("16px");
-    expect(await readPadding("btn-spacious", "paddingLeft")).toBe("24px");
+    expect(await readPadding("btn-p-lg", "paddingLeft")).toBe("24px");
 
-    expect(await readPadding("btn-icon-dense", "padding")).toBe("2px");
-    expect(await readPadding("btn-icon-compact", "padding")).toBe("4px");
+    expect(await readPadding("btn-icon-p-xs", "padding")).toBe("2px");
+    expect(await readPadding("btn-icon-p-sm", "padding")).toBe("4px");
     expect(await readPadding("btn-icon-default", "padding")).toBe("8px");
-    expect(await readPadding("btn-icon-spacious", "padding")).toBe("12px");
+    expect(await readPadding("btn-icon-p-lg", "padding")).toBe("12px");
   });
 
-  /* `.p-xs`/`.dense` is the one padding tier that also drops the size floor, so a
+  /* `.p-xs` is the one padding tier that also drops the size floor, so a
      button fits a table cell or a dense toolbar. Every other size and padding
      class keeps `min-height: var(--control-height)`; `.sm` is the control here
      and stays floored. The icon variant gives up its `min-width` floor with it. */

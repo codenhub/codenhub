@@ -1,7 +1,7 @@
 @reference "tailwindcss";
 @import "../theme.css";
 @reference "../box.css";
-@reference "./surface.css";
+@reference "../surface.css";
 
 /* The host is a positioning wrapper and nothing else -- it paints no fill, no
    edge, no material of its own. The bubble is a real element beside the
@@ -88,8 +88,13 @@
   --_edge-floor: 100%;
 
   /* A bubble is a small transient popover, not a modal, so it takes the
-     control radius rather than the surface one `surface` hands it. */
-  border-radius: var(--ui-radius, var(--radius-control));
+     control corner `box` computes rather than the surface one `surface` hands
+     it, with the same pattern. */
+  border-radius: var(
+    --ui-radius,
+    calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
+      calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
+  );
   left: var(--tooltip-left);
   right: var(--tooltip-right);
   top: var(--tooltip-top);
@@ -143,6 +148,6 @@
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
 
-  border-radius: var(--ui-radius-pill, var(--ui-radius, calc(infinity * 1px)));
+  border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
   clip-path: none;
 }

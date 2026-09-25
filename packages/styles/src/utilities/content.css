@@ -1,4 +1,3 @@
-@reference "tailwindcss";
 @reference "../box.css";
 
 @utility table-wrap {
@@ -77,8 +76,8 @@
      ordinary 12% tint (twenty-four units past the head) read backwards -- the
      seam that should read as one table read as the head belonging to the page
      and the body being the odd one out. `--_fill-cap` is `box.css`'s override
-     slot (the same one `.card.soft` uses, for the same cascade-layer reason
-     the comment there gives), and `--_d-ground` is box's own private ground
+     slot (the same one `.card.soft` uses, for the reasons the comment there
+     gives), and `--_d-ground` is box's own private ground
      slot, unclaimed here until now -- both land on the table's own element,
      same as `--table-fill`/`--table-head-plate` do, so nothing here fights
      `.soft` for `--ui-fill` either. `.ghost` is left at box's default
@@ -202,7 +201,7 @@
   & td {
     @apply px-4 py-3 align-top;
 
-    border-bottom-style: solid;
+    border-bottom-style: var(--ui-line-style, solid);
     border-bottom-width: var(--_width);
     border-color: var(--table-rule);
   }
@@ -221,7 +220,7 @@
   }
 
   & tfoot tr:first-child > * {
-    border-top-style: solid;
+    border-top-style: var(--ui-line-style, solid);
     border-top-width: var(--_width);
     border-top-color: var(--table-boundary);
   }
@@ -320,10 +319,13 @@
 
   /* Capped at its own radius: a control radius is sized for a control, and a key
      cap this small would read as a lozenge. A squaring aesthetic still reaches it. */
-  border-radius: min(var(--ui-radius-tight, var(--ui-radius, var(--radius-small))), var(--radius-small));
+  border-radius: min(
+    var(--ui-radius-tight, var(--ui-radius, var(--ui-corner, var(--radius-small)))),
+    var(--radius-small)
+  );
   clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 
-  &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid) {
+  &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid) {
     --_fill-cap: 0%;
   }
 }
@@ -338,10 +340,13 @@
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
 
-  border-radius: min(var(--ui-radius-tight, var(--ui-radius, var(--radius-small))), var(--radius-small));
+  border-radius: min(
+    var(--ui-radius-tight, var(--ui-radius, var(--ui-corner, var(--radius-small)))),
+    var(--radius-small)
+  );
   clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 
-  &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid) {
+  &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid) {
     --_fill-cap: 0%;
   }
 }
@@ -356,7 +361,7 @@
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
 
-  &:not(.primary, .secondary, .success, .warning, .destructive, .danger, .error, .info, .solid) {
+  &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid) {
     --_fill-cap: 0%;
   }
 }
@@ -393,10 +398,15 @@
      box paints that over the fill it already drew, so a quotation that asked for
      no bar got a bar of two coats of its own tint.
 
-     That this had to be fixed twice is the cost of a quotation drawing its own
-     edge instead of taking `box`'s. Recorded in `registry.json` beside the
-     decision to compose none of `box`. */
-  --quote-line: color-mix(in oklab, var(--quote-bg) var(--ui-fill, var(--_d-fill)), var(--intent-border));
+     It also fades toward `transparent` rather than toward the plate, as `box`'s
+     does: the plate runs under the bar, so a bar blended toward it painted a
+     translucent plate twice and drew a darker stripe on a neutral `.solid`
+     quotation.
+
+     That this had to be fixed three times is the cost of a quotation drawing
+     its own edge instead of taking `box`'s. Recorded in `registry.json` beside
+     the decision to compose none of `box`. */
+  --quote-line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-border));
   --quote-edge: color-mix(in oklab, var(--quote-line) var(--ui-border, var(--_d-border)), transparent);
   --quote-width: calc(var(--ui-border-width, var(--border-width)) * 2 + 1px);
 

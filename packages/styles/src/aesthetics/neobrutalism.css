@@ -23,10 +23,11 @@
        border grey is a thick grey box, not a brutalist one. */
     --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
 
-    --ui-radius: 0;
-    --ui-radius-surface: 0;
+    --ui-corner: 0;
+    --ui-corner-surface: 0;
     --ui-border-width: 2px;
     --ui-border-max: 100px;
+    --ui-line-style: initial;
 
     /* Hard, unblurred, and offset. Scaled by each component's own elevation, so
        the registry decides which components sit on a slab and `.flat` takes one
@@ -39,25 +40,45 @@
     --ui-shadow-y: var(--_neo-offset);
     --ui-shadow-blur: 0px;
     --ui-shadow-spread: 0px;
+    /* No second depth layer and no halo, cleared so a region nested inside another
+       aesthetic does not inherit one. */
+    --ui-shadow-2-x: initial;
+    --ui-shadow-2-y: initial;
+    --ui-shadow-2-blur: initial;
+    --ui-shadow-2-spread: initial;
+    --ui-shadow-2-ink: initial;
+    --ui-shadow-2-inset: initial;
+    --ui-halo-blur: initial;
+    --ui-halo-spread: initial;
+    --ui-halo-ink: initial;
 
     /* The press: travel the offset, shrink the shadow to nothing, so the element
-       lands flat where its slab was. Hover keeps the slab still under the pointer;
+       lands flat where its slab was. A translation `box` scales with the slab, so
+       the two stay the same length at every size and elevation. Hover keeps the slab still under the pointer;
        `box-hover`'s derived fill tint is the whole hover response. One token pair,
        no `:hover` list, R3 intact. */
     --ui-active-shadow-x: 0px;
     --ui-active-shadow-y: 0px;
-    --ui-active-transform: translate(var(--_neo-offset), var(--_neo-offset));
+    --ui-active-transform: none;
+    --ui-active-translate-x: var(--_neo-offset);
+    --ui-active-translate-y: var(--_neo-offset);
 
     /* Nothing here clips or blurs, and an aesthetic nested inside another has to
        say so rather than inherit it. */
     --ui-clip: none;
     --ui-clip-tight: none;
     /* Round corners, said explicitly, and the pill and chip corners cleared back
-       to `--ui-radius`: a region nested inside `.cyber` would otherwise inherit
-       its bevel, its diamond pills, and its square chips. */
+       to `--ui-corner`: a region nested inside `.cyber` would otherwise inherit
+       its bevel, its diagonal, its diamond pills, and its square chips. */
     --ui-corner-shape: round;
     --ui-radius-pill: initial;
     --ui-radius-tight: initial;
+    --ui-radius: initial;
+    --ui-radius-surface: initial;
+    --ui-corner-tl: initial;
+    --ui-corner-tr: initial;
+    --ui-corner-br: initial;
+    --ui-corner-bl: initial;
     --ui-shadow-inset: ;
     /* The slab is depth cast in ink, not this element's line, so an `.edgeless`
        button keeps it. Cleared rather than omitted, because a neobrutalist region
@@ -65,11 +86,18 @@
        slab on everything the edge axis rests at zero. */
     --ui-shadow-edge: initial;
     --ui-backdrop: none;
+    --ui-surface-image: initial;
 
-    /* Chunky tile's heavier button label, cleared so a region nested inside it
-       keeps the button's own weight and tracking. */
-    --ui-button-weight: initial;
-    --ui-button-tracking: initial;
+    /* The control ink glass and chunky tile name, cleared so a region nested
+       inside either draws its controls in this aesthetic's own ink. */
+    --ui-control-ink: initial;
+
+    /* Chunky tile's heavier label, cleared so a region nested inside it keeps
+       the button's and the badge's own label. */
+    --ui-label-weight: initial;
+    --ui-label-tracking: initial;
+    --ui-label-case: initial;
+    --ui-label-shadow: initial;
   }
 }
 

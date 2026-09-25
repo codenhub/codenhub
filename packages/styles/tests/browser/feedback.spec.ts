@@ -1,5 +1,12 @@
 import { expect, test } from "./fixtures";
-import { expectSameColor, getColorDistance, getContrastRatio, isTransparent, readSrgb } from "./test-utils";
+import {
+  expectSameColor,
+  flattenColor,
+  getColorDistance,
+  getContrastRatio,
+  isTransparent,
+  readSrgb,
+} from "./test-utils";
 
 const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
 
@@ -269,6 +276,54 @@ test.describe("feedback", () => {
     expect(new Set(images).size).toBe(testIds.length);
   });
 
+  /* The artwork's closing `style` tag ships percent-encoded so the stylesheet
+     survives being inlined into an HTML `<style>` element. A data URI decodes
+     the escape before the SVG is parsed; an image that failed to parse would
+     reject `decode()` and mask nothing. */
+  test("decodes every loader artwork", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+
+    const results = await page.evaluate(async () => {
+      const testIds = [
+        "loader-default",
+        "loader-dots-wave",
+        "loader-dots-fade",
+        "loader-dots-queue",
+        "loader-dots-rotate",
+        "loader-dots-grow",
+        "loader-dots-grow-alternate",
+        "loader-dot-bounce",
+        "loader-bars-wave",
+        "loader-pulse-ring",
+      ];
+
+      return Promise.all(
+        testIds.map(async (testId) => {
+          /* The mask, not `--loader-art`: a custom property reads back as
+             authored, and the dev server's CSS pipeline authors `<` as the
+             CSS escape `\3c `, which is not a URL character. */
+          const styles = getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
+          const mask = styles.maskImage || styles.getPropertyValue("-webkit-mask-image");
+          const source = /^url\(\s*(["']?)(.*)\1\s*\)$/s.exec(mask)?.[2] ?? "";
+          const image = new Image();
+
+          image.src = source;
+
+          try {
+            await image.decode();
+            return { testId, decoded: image.naturalWidth > 0 };
+          } catch {
+            return { testId, decoded: false };
+          }
+        }),
+      );
+    });
+
+    for (const { testId, decoded } of results) {
+      expect(decoded, testId).toBe(true);
+    }
+  });
+
   test("renders every alert fill", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
@@ -379,10 +434,10 @@ test.describe("feedback", () => {
     /* A solid badge fills with the intent and reads in the contrast tone. */
     expect(isTransparent(styles.solidInfo.background)).toBe(false);
     expect(getColorDistance(styles.solidInfo.color, styles.solidInfo.background)).toBeGreaterThan(2);
-    /* P3: a filled badge's edge blends all the way to its own fill, so `.edged`
-       draws the boundary in the fill and `.edgeless` draws none -- and the border
-       box shows the same fill through the gap. Two spellings, one box. */
-    expectSameColor(styles.edgedSolid.border, styles.edgedSolid.background, "solid edged badge edge");
+    /* P3: a filled badge's edge fades out as the fill fills in, so at a full fill
+       `.edged` and `.edgeless` both draw nothing and the border box shows the
+       fill running under it. Two spellings, one box. */
+    expect(isTransparent(styles.edgedSolid.border), "solid edged badge edge").toBe(true);
     expect(isTransparent(styles.edgelessSolid.border), "solid edgeless badge edge").toBe(true);
     expectSameColor(styles.edgelessSolid.background, styles.edgedSolid.background, "solid badge fill");
 
@@ -398,6 +453,51 @@ test.describe("feedback", () => {
        of a translucent tint, which is the ring it is meant to rule out. */
     expect(isTransparent(styles.softSuccess.background)).toBe(false);
     expect(isTransparent(styles.softSuccess.border), "soft badge edge").toBe(true);
+  });
+
+  /* The plate runs under the border, so a line blended toward the plate painted
+     it a second time over itself. Invisible on an opaque plate; on a translucent
+     one -- a neutral fill, capped at 20%, or any fill `--ui-bg-alpha` thins -- it
+     drew a ring 1.54:1 against the plate in light. Measured as painted: the
+     border band composited over the plate over the page must be the plate. */
+  test("paints a filled edge as one coat of its own translucent plate", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+
+    const bands = await page.evaluate(() => {
+      const pageColor = getComputedStyle(document.body).backgroundColor;
+      const cases: [string, string, string, string][] = [
+        ["neutral solid edged badge", "span", "badge solid edged", ""],
+        ["neutral solid edged button", "button", "btn solid edged", ""],
+        ["thinned solid edged success badge", "span", "badge solid edged success", "--ui-bg-alpha: 0.8"],
+        ["neutral solid quote", "blockquote", "quote solid", ""],
+      ];
+
+      return cases.map(([label, tag, className, style]) => {
+        const element = document.createElement(tag);
+        element.className = className;
+        element.setAttribute("style", style);
+        element.textContent = "Band";
+        document.body.append(element);
+
+        const styles = getComputedStyle(element);
+        const side = tag === "blockquote" ? "left" : "top";
+        const result = {
+          border: styles.getPropertyValue(`border-${side}-color`),
+          label,
+          pageColor,
+          plate: styles.backgroundColor,
+        };
+
+        element.remove();
+        return result;
+      });
+    });
+
+    for (const { border, label, pageColor, plate } of bands) {
+      const painted = flattenColor(plate, pageColor);
+      expect(readSrgb(plate).alpha, `${label} plate is translucent`).toBeLessThan(1);
+      expectSameColor(flattenColor(border, painted), painted, `${label} band`);
+    }
   });
 
   test("uses the neutral text tokens when no intent is set", async ({ page }) => {

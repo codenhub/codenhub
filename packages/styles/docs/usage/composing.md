@@ -57,7 +57,7 @@ The combinations mean exactly what they spell:
 <!-- A field sunk into the page -->
 ```
 
-A fill class never decides an edge and an edge class never decides a fill. Use `.solid.edgeless` for a filled box with no line — and prefer it on a neutral one, because a capped fill leaves the box translucent and the edge blend then paints a second coat of the same tint rather than disappearing into it (measured 1.53:1 against its own plate in light, 1.82:1 in dark).
+A fill class never decides an edge and an edge class never decides a fill. Use `.solid.edgeless` for a filled box with no line; `.solid.edged` renders the same box, because the line fades out as the fill fills in.
 
 The edge is the silhouette and nothing else. Rules _inside_ a component that has an inside are a separate switch — see [Content and layout → Table rules](./content-and-layout.md#table-rules) — because tying them to this axis made them arrive by implication rather than by request.
 
@@ -125,26 +125,26 @@ Presentation is two independent axes, so they get a column each. A `Yes` means t
 
 Every other text control floors a _cascaded_ `.edgeless` and honours its own: a `.edgeless` toolbar will not erase the line of a field nobody classed, while `.ipt.edgeless` is a consumer describing what they want and gets it.
 
-Intent aliases such as `.danger` and `.error` occupy the same intent axis as `.destructive`; they do not add component behavior. State and modifier classes such as `.interactive`, `.hoverable`, `.pressable`, `.invalid`, `.compact`, and `.vertical` sit above this map and are documented with their component.
+State and modifier classes such as `.interactive`, `.hoverable`, `.pressable`, `.invalid`, `.p-sm`, and `.vertical` sit above this map and are documented with their component.
 
 ## Elevation
 
 Depth is a modifier, not an axis. Nothing is raised until an [aesthetic](./aesthetics.md) draws depth or one of these classes asks for it.
 
-| Class             | Alias       | Depth                                                                    |
-| ----------------- | ----------- | ------------------------------------------------------------------------ |
-| `.elevation-none` | `.flat`     | Removes part-based elevation; glass surfaces keep their complete shadow. |
-| `.elevation-sm`   | `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
-| `.elevation-md`   | `.floating` | Twice it, for menus and popovers.                                        |
+| Class       | Depth                                                                    |
+| ----------- | ------------------------------------------------------------------------ |
+| `.flat`     | Removes part-based elevation; glass surfaces keep their complete shadow. |
+| `.raised`   | One unit of the depth in scope. Cards, tiles, popovers that sit close.   |
+| `.floating` | Twice it, for menus and popovers.                                        |
 
-Both names in a row are equivalent, interchangeable classes — `.elevation-sm` and `.raised` are aliases, not a canonical form and a deprecated one, the way `.destructive` and `.danger` are on the intent axis. The `none`/`sm`/`md` naming matches the raw `--elevation-*` tokens in [Theming](./theming.md#foundation-tokens) for the same weight of depth, even though the two are read from different places.
+These are a different thing from the raw `--elevation-*` shadow tokens in [Theming](./theming.md#foundation-tokens), which are fixed shadows for elements you style yourself.
 
 Each is one unitless multiplier over whatever shadow geometry is in scope, so the same class reads as a soft blur on a plain page and as a hard offset slab under `.neobrutalism` — the aesthetic decides what depth looks like, the class decides how much of it this element takes.
 
 ```html
-<article class="card elevation-sm">Lifted</article>
-<div class="elevation-md panel">A menu surface</div>
-<article class="card elevation-none">Flat, whatever the page or container says</article>
+<article class="card raised">Lifted</article>
+<div class="floating panel">A menu surface</div>
+<article class="card flat">Flat, whatever the page or container says</article>
 ```
 
 The multiplier does not inherit: an elevation class lifts or flattens the element it is written on only, and an unclassed element inside it takes no depth of its own. Give each element that needs depth its own elevation class. Spread is deliberately left out of the multiplication, because an aesthetic that draws its edge as an inset ring spends spread on it and scaling that would erase the edge.

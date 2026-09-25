@@ -57,6 +57,7 @@ interface Registry {
   };
   intents: Record<string, { aliases?: string[]; family: string; fillMax: string }>;
   modifiers: Record<string, unknown>;
+  material?: Record<string, { readers: string[] }>;
   components: ComponentEntry[];
   helpers?: string[];
   aesthetics?: AestheticEntry[];
@@ -406,7 +407,7 @@ async function shippedUtilities(): Promise<Map<string, string>> {
 
 /* A utility's own declarations, with every nested selector and at-rule dropped.
    The two guards below ask what a component declares at rest, and `&:hover`,
-   `&.compact` and `&.interactive` all sit inside the same block, so a component
+   `&.p-sm` and `&.interactive` all sit inside the same block, so a component
    setting its fill only on hover would otherwise read as having declared it.
    `shippedUtilities` slices from the opening brace, so the walk starts past it. */
 function rootDeclarations(block: string): string {
@@ -839,12 +840,11 @@ test("every aesthetic declares a whole shadow geometry", async () => {
   expect(problems).toEqual([]);
 });
 
-/* Button label typography slots (`--ui-button-weight`, `--ui-button-tracking`)
-   are declared by chunky tile and cleared with `initial` by every other
-   aesthetic, so an aesthetic nested inside chunky tile keeps the button's own
-   weight and tracking rather than inheriting chunky tile's heavier label. See
-   docs/internal/cascade-layers.md (L5). */
-test("every aesthetic declares or clears button label typography", async () => {
+/* The label weight and tracking are declared by chunky tile and cleared with
+   `initial` by every other aesthetic, so an aesthetic nested inside chunky tile
+   keeps the button's and the badge's own label rather than inheriting chunky
+   tile's heavier one. See docs/internal/cascade-layers.md (L5). */
+test("every aesthetic declares or clears the label weight and tracking", async () => {
   const problems: string[] = [];
 
   for (const { name, source } of await aestheticSources()) {
@@ -859,14 +859,104 @@ test("every aesthetic declares or clears button label typography", async () => {
     const body = ruleMatch[1]!;
     const expected =
       name === "chunky-tile"
-        ? { "--ui-button-weight": "800", "--ui-button-tracking": "0.04em" }
-        : { "--ui-button-weight": "initial", "--ui-button-tracking": "initial" };
+        ? { "--ui-label-weight": "800", "--ui-label-tracking": "0.04em" }
+        : { "--ui-label-weight": "initial", "--ui-label-tracking": "initial" };
 
     for (const [slot, value] of Object.entries(expected)) {
       const declaration = new RegExp(String.raw`(?:^|\s)${slot}\s*:\s*${value}\s*;`);
 
       if (!declaration.test(body)) {
         problems.push(`${name} should declare ${slot}: ${value}`);
+      }
+    }
+  }
+
+  expect(problems).toEqual([]);
+});
+
+/* `--ui-control-ink` is named by the aesthetics whose surface ink does not suit
+   a control's boundary and cleared with `initial` by every other, so a region
+   nested inside glass or chunky tile draws its controls in its own ink. See
+   docs/internal/boundary-contrast.md. */
+test("every aesthetic names or clears the control ink", async () => {
+  const named = new Set(["glass", "chunky-tile"]);
+  const problems: string[] = [];
+
+  for (const { name, source } of await aestheticSources()) {
+    const clean = withoutComments(source);
+    const body = clean.match(new RegExp(String.raw`\.${name}(?![A-Za-z0-9_-])[^{]*\{([^{}]*)\}`))?.[1];
+    const value = body?.match(/(?:^|\s)--ui-control-ink\s*:\s*([^;]+);/)?.[1]?.trim();
+
+    if (value === undefined) {
+      problems.push(`${name} declares no --ui-control-ink`);
+    } else if (named.has(name) === (value === "initial")) {
+      problems.push(`${name} should ${named.has(name) ? "name" : "clear"} --ui-control-ink, found ${value}`);
+    }
+  }
+
+  expect(problems).toEqual([]);
+});
+
+/* The body of every `@utility` in the package, keyed by name, braces matched so
+   a nested modifier stays inside its component. */
+async function utilityBodies(): Promise<Map<string, string>> {
+  const bodies = new Map<string, string>();
+
+  for (const { source } of await sourceFiles()) {
+    const clean = withoutComments(source);
+
+    for (const match of clean.matchAll(/@utility\s+([a-z][a-z0-9-]*)\s*\{/g)) {
+      let depth = 1;
+      let end = match.index + match[0].length;
+
+      while (depth > 0 && end < clean.length) {
+        if (clean[end] === "{") {
+          depth += 1;
+        } else if (clean[end] === "}") {
+          depth -= 1;
+        }
+        end += 1;
+      }
+      bodies.set(match[1]!, (bodies.get(match[1]!) ?? "") + clean.slice(match.index, end));
+    }
+  }
+
+  return bodies;
+}
+
+/* A material token's readers are recorded so a change to who reads it is a
+   change to the registry, and the record is only worth keeping if it is the
+   stylesheet's own answer. */
+test("every material token's readers are the utilities that read it", async () => {
+  const bodies = await utilityBodies();
+  const problems: string[] = [];
+
+  for (const [token, { readers }] of Object.entries(registry.material ?? {})) {
+    const reads = new RegExp(String.raw`var\(\s*${token}\s*[,)]`);
+    const actual = [...bodies].filter(([, body]) => reads.test(body)).map(([name]) => name);
+
+    if (actual.toSorted().join() !== readers.toSorted().join()) {
+      problems.push(`${token} is read by ${actual.toSorted().join(", ")}, the registry says ${readers.join(", ")}`);
+    }
+  }
+
+  expect(problems).toEqual([]);
+});
+
+/* Material inherits, so an aesthetic that leaves a token alone hands a region
+   nested inside it whatever the aesthetic outside set. Every aesthetic names or
+   clears each one, the way it already does the shadow geometry. */
+test("every aesthetic names or clears every material token", async () => {
+  const problems: string[] = [];
+
+  for (const { name, source } of await aestheticSources()) {
+    const body = withoutComments(source).match(
+      new RegExp(String.raw`\.${name}(?![A-Za-z0-9_-])[^{]*\{([^{}]*)\}`),
+    )?.[1];
+
+    for (const token of Object.keys(registry.material ?? {})) {
+      if (!new RegExp(String.raw`(?:^|\s)${token}\s*:`).test(body ?? "")) {
+        problems.push(`${name} neither names nor clears ${token}`);
       }
     }
   }

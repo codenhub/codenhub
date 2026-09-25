@@ -24,10 +24,10 @@
    component uniformly the way it always did. Registering these three is what
    scopes the change to the elevation modifier alone.
 
-   `.flat`/`.raised`/`.floating` and `.elevation-none`/`-sm`/`-md` are
-   interchangeable aliases, the second borrowing the raw `--elevation-*` scale's
-   naming. Bare `sm`/`md`/`lg` would collide with the size modifier;
-   `.elevation-lg` is reserved, not shipped. */
+   `.flat`/`.raised`/`.floating` name what they do rather than a scale step:
+   bare `sm`/`md`/`lg` would collide with the size modifier, and the
+   `.elevation-*` spellings, which borrowed the raw `--elevation-*` shadows'
+   names for a different mechanism, were removed in `0.5.0`. */
 
 /* `syntax: "*"` with no `initial-value` is deliberate: a numeric syntax would
    require one (CSS Properties and Values API), and any initial-value at all
@@ -55,7 +55,6 @@
 
 /* No part-based depth. Complete surface shadow values, such as glass, are not
    reached by the elevation multiplier. */
-.elevation-none,
 .flat {
   --ui-elevation: 0;
 }
@@ -65,22 +64,18 @@
    that declares its own shadow parts overrides it, and the elevation multiplier
    scales whichever one lands. `.floating` takes its extra depth from the
    multiplier below, not a second copy of these parts. */
-.elevation-sm,
 .raised,
-.elevation-md,
 .floating {
   --elevation-y: 1px;
   --elevation-blur: 3px;
 }
 
 /* The aesthetic's depth as authored, said explicitly. */
-.elevation-sm,
 .raised {
   --ui-elevation: 1;
 }
 
 /* Twice it, for menus and popovers. */
-.elevation-md,
 .floating {
   --ui-elevation: 2;
 }

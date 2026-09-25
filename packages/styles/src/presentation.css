@@ -17,10 +17,11 @@
    that each half means only what it says. Two axes that are independent in two
    cases out of three are not axes.
 
-   The ring is a fault in the blend rather than in the class, and it is recorded
-   as such: `.solid.edged` on a capped intent measures 1.53:1 against its own
-   plate in light and 1.82:1 in dark. `.solid.edgeless` is how a consumer asks
-   for a filled box with no line.
+   The ring was a fault in the blend rather than in the class, and it was fixed
+   there: the line fades toward `transparent` as the fill fills in, so a
+   translucent plate shows through its own border as one coat (`box.css`;
+   docs/internal/boundary-contrast.md). `.solid.edged` and `.solid.edgeless`
+   render one box.
 
    Presentation declares only unitless numbers and percentages. A custom
    property's value is resolved on the element that declares it, so anything

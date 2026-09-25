@@ -20,6 +20,7 @@ const built = (file: string) => readFile(path.join(packageRoot, "dist", file), "
 const SCENARIOS: Record<string, readonly string[]> = {
   ".": ["index.css", "aesthetics/index.css"],
   "/theme + /components": ["theme.css", "components.css", "aesthetics/index.css"],
+  "/components alone": ["components.css", "aesthetics/index.css"],
   "/native": ["native.css", "aesthetics/index.css"],
   "/aesthetics loaded first": ["aesthetics/index.css", "theme.css", "components.css"],
 };
@@ -94,6 +95,22 @@ for (const [scenario, files] of Object.entries(SCENARIOS)) {
       expect(await read(page, "solid-own-fill", "--ui-fill"), "presentation").toBe("40%");
     });
 
+    /* Every entry but `/aesthetics` carries the theme, so none depends on
+       another sheet for a colour. `/components` used to ship without its
+       `@theme` tokens, and loaded alone its components painted nothing. */
+    test("resolves the theme's colour tokens", async ({ page }) => {
+      await load(page, files);
+
+      const primary = await page.evaluate(() =>
+        getComputedStyle(document.documentElement).getPropertyValue("--color-primary").trim(),
+      );
+
+      expect(primary, "--color-primary").not.toBe("");
+      expect(await read(page, "solid-own-fill", "background-color"), "a solid button's fill").not.toBe(
+        "rgba(0, 0, 0, 0)",
+      );
+    });
+
     /* The theme's `:root` tokens sit in `theme`, below the aesthetic in
        `components`, so an aesthetic on `<html>` keeps its own press and depth
        colour whichever sheet loads first. */
@@ -105,11 +122,11 @@ for (const [scenario, files] of Object.entries(SCENARIOS)) {
 
         return {
           depth: styles.getPropertyValue("--elevation-color").trim(),
-          press: styles.getPropertyValue("--ui-active-transform").trim(),
+          press: styles.getPropertyValue("--ui-active-translate-y").trim(),
         };
       });
 
-      expect(root.press, "chunky tile's press").toBe("translateY(4px)");
+      expect(root.press, "chunky tile's press").toBe("4px");
       expect(["#000", "rgb(0 0 0)", "rgb(0, 0, 0)"], `chunky tile's depth colour, got ${root.depth}`).toContain(
         root.depth,
       );
@@ -120,11 +137,9 @@ for (const [scenario, files] of Object.entries(SCENARIOS)) {
 
       expect(await read(page, "tile-button", "font-weight"), "chunky tile's label").toBe("800");
       expect(await read(page, "tile-utility-weight", "font-weight"), "a consumer's weight beats it").toBe("300");
-      expect(await read(page, "tile-button", "--ui-button-weight"), "chunky tile declares button weight slot").toBe(
-        "800",
-      );
+      expect(await read(page, "tile-button", "--ui-label-weight"), "chunky tile declares the label weight").toBe("800");
       expect(
-        await read(page, "tile-nested-pixel-button", "--ui-button-weight"),
+        await read(page, "tile-nested-pixel-button", "--ui-label-weight"),
         "nested aesthetic clears chunky tile's weight slot to initial (guaranteed-invalid)",
       ).toBe("");
       expect(

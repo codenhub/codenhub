@@ -23,8 +23,8 @@
     --_pixel-unit: var(--pixel-unit, 4px);
 
     --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
-    --ui-radius: 0;
-    --ui-radius-surface: 0;
+    --ui-corner: 0;
+    --ui-corner-surface: 0;
 
     /* A border would be clipped at the straight sides and paint a second line
        beside the ring, so the ceiling takes it out and the ring does the drawing.
@@ -36,6 +36,7 @@
        reads as a filled one. */
     --ui-border-width: 2px;
     --ui-border-max: 0px;
+    --ui-line-style: initial;
 
     /* The ring is one unit deep, which is exactly the corner cut, so the staircase
        is covered and the line does not read as broken at the corners. Spread is not
@@ -49,6 +50,17 @@
        two `color-mix()` results that WebKit resolves as zero (see `box`). */
     --ui-shadow-edge: ;
     --ui-shadow-spread: var(--_pixel-unit);
+    /* No second depth layer and no halo, cleared so a region nested inside another
+       aesthetic does not inherit one. */
+    --ui-shadow-2-x: initial;
+    --ui-shadow-2-y: initial;
+    --ui-shadow-2-blur: initial;
+    --ui-shadow-2-spread: initial;
+    --ui-shadow-2-ink: initial;
+    --ui-shadow-2-inset: initial;
+    --ui-halo-blur: initial;
+    --ui-halo-spread: initial;
+    --ui-halo-ink: initial;
     --ui-shadow-x: 0px;
     --ui-shadow-y: 0px;
     --ui-shadow-blur: 0px;
@@ -88,25 +100,40 @@
     --ui-clip-tight: none;
 
     /* Square corners already, but a radius of zero draws no shape; it is
-       restated, and the pill and chip corners cleared back to `--ui-radius`, so
+       restated, and the pill and chip corners cleared back to `--ui-corner`, so
        a region nested inside `.cyber` does not inherit its bevel onto anything
        that sets a radius of its own. */
     --ui-corner-shape: round;
     --ui-radius-pill: initial;
     --ui-radius-tight: initial;
+    --ui-radius: initial;
+    --ui-radius-surface: initial;
+    --ui-corner-tl: initial;
+    --ui-corner-tr: initial;
+    --ui-corner-br: initial;
+    --ui-corner-bl: initial;
 
     --ui-hover-transform: none;
     --ui-active-transform: none;
+    --ui-active-translate-x: initial;
+    --ui-active-translate-y: initial;
     --ui-backdrop: none;
+    --ui-surface-image: initial;
 
     /* Consumer-supplied. The package ships no font binary, so the aesthetic has no
        font to fall back to but a monospace stack. */
     font-family: var(--font-pixel, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
 
-    /* Chunky tile's heavier button label, cleared so a region nested inside it
-       keeps the button's own weight and tracking. */
-    --ui-button-weight: initial;
-    --ui-button-tracking: initial;
+    /* The control ink glass and chunky tile name, cleared so a region nested
+       inside either draws its controls in this aesthetic's own ink. */
+    --ui-control-ink: initial;
+
+    /* Chunky tile's heavier label, cleared so a region nested inside it keeps
+       the button's and the badge's own label. */
+    --ui-label-weight: initial;
+    --ui-label-tracking: initial;
+    --ui-label-case: initial;
+    --ui-label-shadow: initial;
   }
 }
 

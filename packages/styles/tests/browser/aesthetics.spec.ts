@@ -219,26 +219,23 @@ test.describe("aesthetics", () => {
 
       const inkedCap = await readStyles(page, "kbd-default-none", [...properties, "background-color"]);
       const ink = await resolveToken(page, "--color-text");
-      /* A chip rests `soft`, and `box` blends a line toward the plate it rings by
-         the resting fill, so the ink sets the edge without being the edge whole.
-         Restating the blend here rather than loosening the comparison keeps the
-         assertion exact: what is checked is that the aesthetic's ink is the ink
-         end of that mix, not merely that the edge moved somewhere darker. */
-      const inkedEdge = await page.evaluate(
-        ([plate, tone]) => {
-          const probe = document.createElement("span");
+      /* A chip rests `soft`, and `box` fades a line out by the resting fill, so
+         the ink sets the edge without being the edge whole. Restating the blend
+         here rather than loosening the comparison keeps the assertion exact: what
+         is checked is that the aesthetic's ink is the ink end of that mix, not
+         merely that the edge moved somewhere darker. */
+      const inkedEdge = await page.evaluate((tone) => {
+        const probe = document.createElement("span");
 
-          probe.style.color = `color-mix(in oklab, ${plate} 12%, ${tone})`;
-          document.body.append(probe);
+        probe.style.color = `color-mix(in oklab, transparent 12%, ${tone})`;
+        document.body.append(probe);
 
-          const resolved = getComputedStyle(probe).color;
+        const resolved = getComputedStyle(probe).color;
 
-          probe.remove();
+        probe.remove();
 
-          return resolved;
-        },
-        [inkedCap["background-color"]!, ink] as const,
-      );
+        return resolved;
+      }, ink);
 
       expectSameColor(inkedCap["border-top-color"]!, inkedEdge, "inked key cap edge");
       expect(
@@ -302,9 +299,8 @@ test.describe("aesthetics", () => {
         await page.mouse.down();
         try {
           await expect
-            .poll(() => element.evaluate((node) => getComputedStyle(node).transform), `${testId} press`)
-            /* translate(4px, 4px) serializes as a matrix with the offsets last. */
-            .toBe("matrix(1, 0, 0, 1, 4, 4)");
+            .poll(() => element.evaluate((node) => getComputedStyle(node).translate), `${testId} press`)
+            .toBe("4px 4px");
           await expect
             .poll(() => element.evaluate((node) => getComputedStyle(node).boxShadow), `${testId} press`)
             .toMatch(/\b0px 0px 0px 0px\b/);
@@ -1018,8 +1014,8 @@ test.describe("aesthetics", () => {
       await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
 
       /* Probed on `.ghost.edged`, because the ring now answers the edge axis and
-         a fill would blend it toward the plate: P3 runs the line into the fill by
-         the fill amount, so a `.solid` ring is the plate's own colour by design.
+         a fill would fade it out: P3 fades the line by the fill amount, so a
+         `.solid` ring is transparent by design and shows the plate under it.
          Zero fill is where the intent reaches the line undiluted. */
       const [neutralShadow, tintedShadow] = await page.evaluate(() =>
         ["btn-ghost-edged-none", "btn-ghost-edged-destructive"].map(
@@ -1131,7 +1127,7 @@ test.describe("aesthetics", () => {
         "border-radius",
         "border-top-width",
         "--ui-active-shadow-y",
-        "--ui-active-transform",
+        "--ui-active-translate-y",
         "--ui-hover-transform",
       ]);
 
@@ -1146,7 +1142,7 @@ test.describe("aesthetics", () => {
          press asserts the tokens the rule reads. That the rule reads them is
          `button.css`'s contract and the neobrutalism suite already covers it. */
       expect(button["--ui-active-shadow-y"].trim(), "the bar collapses on press").toBe("0px");
-      expect(button["--ui-active-transform"].trim(), "the element travels the bar's depth").toBe("translateY(4px)");
+      expect(button["--ui-active-translate-y"].trim(), "the element travels the bar's depth").toBe("4px");
       /* Chunky tile declares no hover transform, so `box-hover` falls back to
          `none` and the tile holds still under the pointer. */
       expect(button["--ui-hover-transform"].trim(), "no hover transform declared").toBe("");
@@ -1166,11 +1162,10 @@ test.describe("aesthetics", () => {
       await page.mouse.down();
 
       try {
-        /* translateY(4px) serializes as a matrix with the y offset last. Both
-           properties are transitioned, so these poll for the settled value. */
+        /* Both properties are transitioned, so these poll for the settled value. */
         await expect
-          .poll(() => card.evaluate((node) => getComputedStyle(node).transform), "the tile travels the bar's depth")
-          .toBe("matrix(1, 0, 0, 1, 0, 4)");
+          .poll(() => card.evaluate((node) => getComputedStyle(node).translate), "the tile travels the bar's depth")
+          .toBe("0px 4px");
         await expect
           .poll(() => card.evaluate((node) => getComputedStyle(node).boxShadow), "the bar collapses under it")
           .toMatch(/\b0px 0px 0px 0px\b/);
@@ -1199,7 +1194,7 @@ test.describe("aesthetics", () => {
       expect(channelDistance(line!.rgb, bar!.rgb), "line and bar are the same grey").toBeLessThan(120);
     });
 
-    /* Through the `--ui-button-weight`/`--ui-button-tracking` slot pair `.btn`
+    /* Through the `--ui-label-weight`/`--ui-label-tracking` pair `.btn`
        reads, so it reaches a bare `<button>` wherever the package styles one --
        the native entry, which maps the element onto `btn` -- and nowhere it does
        not. `layers.spec.ts` covers a consumer's utility beating it. */
@@ -1367,7 +1362,7 @@ test.describe("aesthetics", () => {
       const chips = await readCorners(page, CHIPS, "", "cyber");
 
       for (const corner of controls) {
-        expect(corner.topLeft, `${corner.name} top-left`).toBe(bevels ? "min(10px, 25%)" : "0px");
+        expect(corner.topLeft, `${corner.name} top-left`).toBe(bevels ? "10px" : "0px");
         expect(corner.topRight, `${corner.name} top-right`).toBe("0px");
         if (bevels) {
           expect(corner.shape, `${corner.name} shape`).toBe("bevel");
@@ -1375,7 +1370,7 @@ test.describe("aesthetics", () => {
       }
       for (const corner of surfaces) {
         expect(corner.topLeft, `${corner.name} top-left`).toBe("0px");
-        expect(corner.topRight, `${corner.name} top-right`).toBe(bevels ? "min(10px, 25%)" : "0px");
+        expect(corner.topRight, `${corner.name} top-right`).toBe(bevels ? "10px" : "0px");
         if (bevels) {
           expect(corner.shape, `${corner.name} shape`).toBe("bevel");
         }
@@ -1391,12 +1386,12 @@ test.describe("aesthetics", () => {
       }
     });
 
-    /* The cut is a ceiling: a quarter of the element's own box caps it, so a
-       small button keeps its corners. No computed style reports a used radius,
-       so this hit-tests inside the corner instead -- 2px in from the top-left
-       lies outside a full 10px cut and inside a capped one, and Chromium's hit
-       testing follows the bevel. */
-    test("caps the cut at a quarter of a small element's box", async ({ page, browserName }) => {
+    /* The cut follows the size step, so a small button keeps its corners. This
+       hit-tests inside the corner rather than reading the radius, because what
+       matters is the drawn shape -- 2px in from the top-left lies outside a full
+       10px cut and inside a scaled one, and Chromium's hit testing follows the
+       bevel. */
+    test("scales the cut down with a small element's step", async ({ page, browserName }) => {
       test.skip(browserName !== "chromium", "Only Chromium draws the bevel the cap is measured on.");
       await page.goto(withAesthetic(BUTTONS_URL, "cyber"));
 
@@ -1422,19 +1417,19 @@ test.describe("aesthetics", () => {
         return {
           full: probe("btn"),
           small: probe("btn icon p-xs"),
-          uncapped: probe("btn icon p-xs", "--ui-radius: 10px 0"),
+          unscaled: probe("btn icon p-xs", "--ui-radius: 10px 0"),
         };
       });
 
       expect(hits.full, "a full-size button takes the full cut").toBe(false);
       expect(hits.small, "a small button takes a smaller cut").toBe(true);
-      expect(hits.uncapped, "the same button with the full cut").toBe(false);
+      expect(hits.unscaled, "the same button with the full cut").toBe(false);
     });
 
-    /* The glow is depth, so it answers elevation like every shadow: the two
-       components the registry rests above zero light up, anything a consumer
-       raises lights up, and fields and chips stay crisp. */
-    test("glows buttons and cards in their own intent, and leaves fields and chips crisp", async ({ page }) => {
+    /* The glow is light, not depth, so it is the halo: elevation does not scale
+       it, every component takes it -- fields and chips too -- and `.flat` does
+       not put it out. */
+    test("glows every component in its own intent, flat or not", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "cyber"));
 
       const button = await readStyles(page, "btn-default-success", ["box-shadow"]);
@@ -1447,10 +1442,10 @@ test.describe("aesthetics", () => {
       await page.goto(withAesthetic(FEEDBACK_URL, "cyber"));
 
       const badge = await readStyles(page, "badge-default-none", ["box-shadow"]);
-      const raised = await page.evaluate(() => {
+      const flat = await page.evaluate(() => {
         const badgeElement = document.createElement("span");
 
-        badgeElement.className = "badge raised";
+        badgeElement.className = "badge flat";
         document.querySelector('[data-testid="preview-root"]')!.append(badgeElement);
 
         const shadow = getComputedStyle(badgeElement).boxShadow;
@@ -1464,15 +1459,18 @@ test.describe("aesthetics", () => {
       const field = await readStyles(page, "ipt-default-none", ["box-shadow"]);
 
       /* Offsetless and blurred: the glow sits evenly around the silhouette. */
-      expect(button["box-shadow"], "button glows").toMatch(/\b0px 0px 8px 0px\b/);
-      expect(card["box-shadow"], "card glows").toMatch(/\b0px 0px 8px 0px\b/);
-      expect(raised, "a raised badge glows").toMatch(/\b0px 0px 8px 0px\b/);
-      expect(badge["box-shadow"], "badge").toMatch(/\b0px 0px 0px 0px\b/);
-      expect(field["box-shadow"], "field").toMatch(/\b0px 0px 0px 0px\b/);
+      const glows = /\b0px 0px 8px 0px\b/;
 
-      /* The glow is the intent colour itself, thinned: a transparent depth colour
-         turns 40% ink into 40% alpha rather than into a darker shade. */
-      const glow = readSrgb(readShadowColor(button["box-shadow"]!));
+      expect(button["box-shadow"], "button glows").toMatch(glows);
+      expect(card["box-shadow"], "card glows").toMatch(glows);
+      expect(badge["box-shadow"], "badge glows").toMatch(glows);
+      expect(flat, "a flat badge still glows").toMatch(glows);
+      expect(field["box-shadow"], "field glows").toMatch(glows);
+
+      /* The glow is the intent colour itself, thinned: 40% of the intent over
+         nothing is 40% alpha rather than a darker shade. */
+      const halo = button["box-shadow"]!.split(/,(?![^(]*\))/).find((layer) => glows.test(layer))!;
+      const glow = readSrgb(readShadowColor(halo));
       const intent = readSrgb(success);
 
       expect(glow.alpha, "glow alpha").toBeCloseTo(0.4, 2);
@@ -1486,7 +1484,7 @@ test.describe("aesthetics", () => {
       await page.goto(withAesthetic(SURFACES_URL, "cyber"));
 
       const bevels = browserName === "chromium";
-      /* The cut scales the default pair without restating it. */
+      /* The cut sizes the default pair without restating it. */
       const [scaledButton, scaledCard] = await readCorners(
         page,
         [{ className: "btn" }, { className: "card" }],
@@ -1501,8 +1499,8 @@ test.describe("aesthetics", () => {
         "cyber",
       );
 
-      expect(scaledButton!.topLeft, "cut reaches controls").toBe(bevels ? "min(4px, 25%)" : "0px");
-      expect(scaledCard!.topRight, "cut reaches surfaces").toBe(bevels ? "min(4px, 25%)" : "0px");
+      expect(scaledButton!.topLeft, "cut reaches controls").toBe(bevels ? "4px" : "0px");
+      expect(scaledCard!.topRight, "cut reaches surfaces").toBe(bevels ? "4px" : "0px");
       expect(shapedButton!.topRight, "control shape").toBe(bevels ? "6px" : "0px");
       expect(shapedButton!.topLeft, "control shape leaves the rest square").toBe("0px");
       expect(shapedCard!.bottomRight, "surface shape").toBe(bevels ? "20px" : "0px");
@@ -1575,4 +1573,83 @@ test.describe("aesthetics", () => {
       expect(reduced["--ui-active-transform"].trim(), "reduced motion").toBe("none");
     });
   });
+});
+
+/* A control's boundary is not a pane's edge. Glass's white hairline and chunky
+   tile's tile grey stay on surfaces, and a control inside either takes the
+   aesthetic's `--ui-control-ink` instead; every other aesthetic clears it, so a
+   region nested inside glass or chunky tile draws its controls in its own ink.
+   Read as the control's own `--intent-border`, the ink its line is drawn from:
+   the painted line then walks toward the fill by P3, which is not this test's
+   question. */
+test.describe("control ink", () => {
+  const CASES = [
+    { aesthetic: "glass", controlInk: "light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55))" },
+    { aesthetic: "chunky-tile", controlInk: "light-dark(var(--color-neutral-600), var(--color-neutral-400))" },
+  ] as const;
+
+  for (const { aesthetic, controlInk } of CASES) {
+    test(`${aesthetic} draws controls in its control ink and surfaces in its own`, async ({ page }) => {
+      await page.goto(FORMS_URL);
+
+      const read = await page.evaluate(
+        ({ name, ink }) => {
+          const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+          const region = document.createElement("div");
+
+          region.className = name;
+          region.innerHTML =
+            '<div class="card"><input type="checkbox" class="checkbox" data-probe="control"></div>' +
+            '<div class="neobrutalism"><input type="checkbox" class="checkbox" data-probe="nested"></div>';
+          host.append(region);
+
+          const resolve = (value: string, within: Element) => {
+            const probe = document.createElement("span");
+
+            probe.style.color = value;
+            within.append(probe);
+
+            const color = getComputedStyle(probe).color;
+
+            probe.remove();
+
+            return color;
+          };
+          const nested = region.querySelector(".neobrutalism")!;
+          /* A custom property computes to its token string, so the ink is read
+             back through a colour property the control does not otherwise use. */
+          const inkOf = (element: HTMLElement) => {
+            element.style.outlineColor = "var(--intent-border)";
+
+            const color = getComputedStyle(element).outlineColor;
+
+            element.style.removeProperty("outline-color");
+
+            return color;
+          };
+          const result = {
+            card: getComputedStyle(region.querySelector(".card")!).borderTopColor,
+            control: inkOf(region.querySelector<HTMLElement>('[data-probe="control"]')!),
+            expectedControl: resolve(ink, region),
+            nested: inkOf(region.querySelector<HTMLElement>('[data-probe="nested"]')!),
+            nestedInk: resolve("var(--ui-ink)", nested),
+            surfaceInk: resolve("var(--ui-ink)", region),
+          };
+
+          region.remove();
+
+          return result;
+        },
+        { ink: controlInk, name: aesthetic },
+      );
+
+      expectSameColor(read.control, read.expectedControl, `${aesthetic} checkbox ink`);
+      expect(
+        getColorDistance(read.control, read.surfaceInk),
+        `${aesthetic} checkbox is not the surface ink`,
+      ).toBeGreaterThan(2);
+      expect(isTransparent(read.card), `${aesthetic} card keeps a line`).toBe(false);
+      expectSameColor(read.nested, read.nestedInk, `neobrutalism nested in ${aesthetic} checkbox ink`);
+    });
+  }
 });

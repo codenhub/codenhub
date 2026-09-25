@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-23
+last_updated: 2026-09-24
 scope: Decision to place everything `@codenhub/styles` ships in named cascade layers, so a consumer's own CSS and Tailwind utilities beat the package's classes.
 ---
 
@@ -53,7 +53,7 @@ The spike layered the four families and the theme tokens, then probed the built 
 
 The existing browser suite passed unchanged against the spike: 599 passed, 4 skipped, all three engines. (This read 605 when proposed; that count included six runs of the spike's own probe.) It caught none of the failures the spike had to fix along the way, because every playground page is compiled through Tailwind and none exercises a consumer override, which is why [Tests](#tests) adds both.
 
-One raw-entry fact turned up that this proposal does not change: `/components` loaded without the theme leaves colour tokens undefined, so `--_d-ground` and neobrutalism's slab resolve to nothing there on `main` and in the spike alike. The entry is compiled in Tailwind's reference mode, which emits no theme variables, so it relies on `/theme` for them.
+One raw-entry fact turned up that this proposal does not change: `/components` loaded without the theme leaves colour tokens undefined, so `--_d-ground` and neobrutalism's slab resolve to nothing there on `main` and in the spike alike. The entry is compiled in Tailwind's reference mode, which emits no theme variables, so it relies on `/theme` for them. Fixed separately in `0.5.0`, where the cause turned out to be which shared files import the theme rather than reference mode alone: see [Model](./model.md#which-files-import-the-theme).
 
 ## Decision
 
@@ -110,6 +110,8 @@ The two aesthetic selector lists that remain follow the same rule. Neobrutalism'
 
 Named for the component kind that reads them, the way `--ui-surface-*` names what only a surface reads, rather than for an "action" role: the role taxonomy was [removed from the model](./model.md#shared-composition-not-a-taxonomy).
 
+Later in `0.5.0` the pair became `--ui-label-weight` and `--ui-label-tracking`, joined by `--ui-label-case` and `--ui-label-shadow`, when `.badge` started reading them too; `--ui-button-*` was removed without an alias. See [Structure for 0.5.0](./structure.md#8-label-treatment). The mechanism above is unchanged.
+
 Two consequences. Chunky tile's selector list shrinks to its icon-button bar (L4), which still names `.btn` and so stays a recorded R3 exception. And a bare `<button>` the package does not style -- no `.btn`, no `/native` -- no longer takes the heavier label under chunky tile; on `main` the selector list reached it anyway, which R3 says an aesthetic should not do.
 
 ### L6. A surface's quiet ground becomes a private default
@@ -137,7 +139,7 @@ The maintainer accepted the consequence: **inside a `.glass` region, neutral sof
 
 - **Behaviour, pre-1.0 breaking.** Consumer CSS that relied on a package class beating it now loses, and a consumer's `@layer components` rule now contests the four families. The commit that lands it carries `!`, and the release notes say so.
 - **`/components` and `/native`** gain the layer placement `.` already has (L3).
-- **New material tokens** `--ui-button-weight` and `--ui-button-tracking`, in the model's table and `docs/usage/customizing.md`.
+- **New material tokens** `--ui-button-weight` and `--ui-button-tracking`, in the model's table and `docs/usage/customizing.md`. Historical names: they shipped as `--ui-label-weight` and `--ui-label-tracking` (see L5).
 - **Glass** reaches every neutral surface in its region (L6), in `docs/usage/aesthetics.md`.
 - **Chunky tile** no longer styles bare buttons the package does not style (L5).
 - **A new public section** on cascade layers in `docs/setup.md` or `docs/concepts.md`: the map, what beats what, and the per-entry guarantee.
@@ -151,13 +153,13 @@ The maintainer accepted the consequence: **inside a `.glass` region, neutral sof
 
 - **A new browser spec, `layers.spec.ts`**, turning the probe table into assertions, run on `.` and on the raw `dist/` files for `/components`, `/native`, `/theme` + `/components`, and `/aesthetics` before `/components`: a consumer `@layer utilities` rule and an unlayered rule each beat an aesthetic, presentation, intent, and elevation class; an aesthetic on `<html>` keeps its tokens; chunky tile's weight holds and a consumer's `font-*` beats it; `.card.soft.glass` and a glass region's neutral surfaces take glass's ground; a nested ghost card keeps its own ground; `.ipt.soft` names its cap and `aria-invalid` beats an intent class.
 - **An integration check in `exports.test.ts`**: every built entrypoint opens with `theme, base, components, utilities`, and every unlayered rule in `dist/` is on an allowlist -- the solo classes, `forced-colors`, `@property` -- so a rule that slips out of its layer fails the build.
-- **Registry**: chunky tile's `selectorReason` narrowed, and the aesthetic hygiene test extended to `--ui-button-weight` and `--ui-button-tracking`.
+- **Registry**: chunky tile's `selectorReason` narrowed, and the aesthetic hygiene test extended to `--ui-button-weight` and `--ui-button-tracking` -- since renamed; the test now covers `--ui-label-weight` and `--ui-label-tracking` (see L5).
 
 ## Not in scope
 
 - Simplifying the seams layering makes redundant (L7).
-- Making `/components` usable without `/theme`. The undefined colour tokens there are unchanged by this proposal.
-- Size-aware corners and shape modifier classes, which are separate decisions on [Roadmap](./roadmap.md#later--possible).
+- Making `/components` usable without `/theme`. The undefined colour tokens there are unchanged by this proposal. (Since fixed; see [Model](./model.md#which-files-import-the-theme).)
+- Corner scale and corner pattern, decided separately in [Structure for 0.5.0](./structure.md).
 
 ## Implementation notes
 
@@ -167,6 +169,7 @@ Where the shipped code refines or corrects what was proposed:
 - **Chunky tile keeps a selector list.** The proposal said chunky tile lost its only selector list under L5. Its `.btn.icon.dense`/`.p-xs` rule, which halves the bar under the smallest icon buttons, also names `.btn`, so it remains a recorded R3 exception. It writes the public `--ui-shadow-y`, so it sits in `components` (L4).
 - **The four families enter `components` two ways.** Intent, presentation, and elevation are imported into the layer by `theme.css` (`@import "./intent.css" layer(components)`), the only file that imports them; the aesthetics and `native.css`'s resets wrap their rules in `@layer components` because they are entrypoints or share a file with other layers.
 - **A regression test for the nested ground.** `surfaces.spec.ts` asserts that a card nested in a `.card.soft` rests like a card under a plain `.soft` container. Presentation cascades by design, so both are soft; only the ground differs, and it failed on `main`.
+- **The seams, simplified later.** L7 left the seams alone. The follow-up in `0.5.0` removed `--_fill-floor` and `--_fg-on-fill-floor`: `:checked` now declares `--ui-fill` and `--ui-fg-on-fill` itself, as a state in `utilities` may, and `text-control` reads `box`'s fill and ink rather than restating them. `--_fill-cap` stays, for L4 (a component writing `--ui-fill` from `utilities` would beat the consumer's utility) and because `--ui-fill` cascades into what a component contains. See [Model](./model.md#a-state-declares-inputs-and-lifts-bounds-it-does-not-write-results).
 
 ## References
 

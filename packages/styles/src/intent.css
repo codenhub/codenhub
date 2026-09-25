@@ -89,9 +89,7 @@
   --intent-fill-max: 100%;
 }
 
-.destructive,
-.danger,
-.error {
+.destructive {
   --intent-color: var(--color-destructive);
   --intent-contrast: var(--color-destructive-contrast);
   --intent-hover: var(--color-destructive-hover);
@@ -167,9 +165,15 @@
    above every intent class in `components`, and overrule `.primary` on the
    element. Written as a plain class list it would carry 0-1-0 and, being later
    in the stylesheet, beat `.primary` the same way. Either would make every
-   colored control draw a grey line; `:where()` keeps it under both. */
+   colored control draw a grey line; `:where()` keeps it under both.
+
+   An aesthetic reaches this line through `--ui-control-ink` first, then its
+   `--ui-ink`: the theme keeps a control border apart from a surface border, and
+   an aesthetic whose neutral line suits a pane but not a control's boundary --
+   `.glass`'s white hairline, `.chunky-tile`'s tile grey -- names a control line
+   of its own. See docs/internal/boundary-contrast.md. */
 :where(.text-control, .ipt, .textarea, .select, .input-group, .checkbox, .radio, .switch) {
-  --intent-border: var(--ui-ink, var(--color-control-border));
+  --intent-border: var(--ui-control-ink, var(--ui-ink, var(--color-control-border)));
 }
 
 /* The bubble a tooltip draws is the one plate in the package that is chosen

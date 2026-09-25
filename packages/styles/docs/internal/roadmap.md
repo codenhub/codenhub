@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-23
+last_updated: 2026-09-24
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -18,23 +18,22 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**`0.5.0` is in progress.** `@codenhub/styles@0.4.0` is the current npm version, adding the `.cyber` aesthetic and a solo class for every aesthetic; [`docs/changelog/0.4.0.md`](../changelog/0.4.0.md) records it. `0.5.0` is planned as three foundation changes to the model -- cascade layers, size-aware corners, and shape modifier classes -- followed by the four aesthetics listed under [Later / Possible](#later--possible). Cascade layers have landed, per [`cascade-layers.md`](./cascade-layers.md); the release notes are written when `0.5.0` is cut. [Planned](#planned) holds what has a decision in progress. [Later / Possible](#later--possible) holds deferred, not-yet-started asks.
+**`0.5.0` is cut** and ships once its pull request is merged and the merge is tagged; `@codenhub/styles@0.4.0` is the current npm version until then. It is a foundation release and ships no new aesthetic: the cascade layers, per [`cascade-layers.md`](./cascade-layers.md); the structure the material contract did not express, per [`structure.md`](./structure.md); the boundary contrast of a line over its own plate and of controls under glass and chunky tile, per [`boundary-contrast.md`](./boundary-contrast.md); a stylesheet that survives inlining; the theme on every entry that promises it; and the removal of three alias sets. [`docs/changelog/0.5.0.md`](../changelog/0.5.0.md) records it, leading with the layers' breaking change.
+
+The foundation is built for structure, not for a look. Each structural item was decided in its own document before it was built, under [What enters the material contract](./model.md#what-enters-the-material-contract), and the same holds for whatever comes next. No item is justified by the aesthetic that would use it; [Later / Possible](#later--possible) lists those as compositions of the foundation, not as reasons for it.
 
 ## Planned
 
-- **Decide what to drop.** A `0.x` line is the window for removing surface that is not earning its place. Candidates are named here first, with the reason, before they are removed. Not a gate for any particular release.
+Nothing is planned past `0.5.0` yet. [Later / Possible](#later--possible) holds the aesthetics wanted next.
 
 ## Later / Possible
 
-- **Size-aware corners in the model.** No corner scales with a component's size today: `--radius-control` is one value, the size and padding modifiers (`.sm`, `.lg`, `.dense`, `.p-xs`, `.icon`) change height and padding but never the radius, and every aesthetic sets one `--ui-radius` for every size. A round corner hides it; `.cyber`'s bevel does not, and a 10px cut crowded the label out of a 15-30px button. `.cyber` caps its default cut at `min(<cut>, 25%)` of the element's box as a local fix, which scales but runs slightly off 45 degrees on small wide elements because horizontal percentages resolve against the width. The model-level answer is two tokens: a size token each size and padding modifier publishes, and a scalar corner token an aesthetic sets, separate from the corner _pattern_ (which corners take it) that `.cyber` currently packs into a multi-value `--ui-radius`. `box` would compute the default radius from the two, and an explicit `--ui-radius` would still override. That would scale every aesthetic's corner, retire `.cyber`'s percentage cap, and give [shape modifier classes](#later--possible) the scalar they need. To settle when picked up: whether the scale follows height or padding step; whether the result must stay a true 45-degree cut (a length, not a percentage); how it composes with `--ui-radius-pill` and `--ui-radius-tight`; and what it changes for a consumer already setting `--ui-radius` directly. Not started.
-- **Shape modifier classes.** Per-element classes that place an aesthetic's corner on a chosen pattern -- `.cut-diagonal`, `.cut-diagonal-reverse`, `.cut-hex`, `.cut-skew` -- by setting `--ui-radius`/`--ui-radius-surface` from a scalar cut the aesthetic publishes. Considered while scoping `.cyber`'s shapes and deferred: `.cyber` exposes its shapes as the `--cyber-shape`/`--cyber-shape-surface` knobs, which cover a whole region, and a single element can already take a shape through `--ui-radius` set inline. A class family would work under every aesthetic (a diagonal under the default look is a two-corner "leaf") and so is a new modifier family, with its registry entries, collision checks, and docs; a parallelogram also slants into its content and needs its own padding answer. Not started.
+Aesthetics are compositions of the foundation, not reasons for it. The four below are wanted after `0.5.0`. Each records the parts it would compose from and the questions that stay its own; a look the foundation cannot express without breaking a guarantee waits, rather than bending the model.
 
-The four aesthetics below are wanted for a near-future release and deferred from the current one so it can ship what it scoped. Each records what the model already says about it, so picking one up starts from the constraint rather than from scratch.
-
-- **Glitch.** Its signatures are a colour-split (offset copies in two fixed hues) and a slice or jitter motion, and neither is material. The split is a multi-layer shadow in fixed colours: a complete value, which only surfaces resolve (`--ui-surface-shadow`), and fixed hues sit close to what [R1](./model.md#rules-for-aesthetics) bars. A text split needs `text-shadow`, which does not inherit into `<button>` or `<input>` (see Synthwave below). Motion has to satisfy WCAG 2.2.2 (moving content over five seconds must be pausable) and 2.3.1 (three flashes), and stop under `prefers-reduced-motion`. Whether it ships as a cascading aesthetic or as an effect utility on a single element is open; the maintainer has further direction for it. Not started.
-- **Sketch.** A hand-drawn look: uneven elliptical corners, a 2px ink line, and a small offset shadow. The corners are a plain `--ui-radius`/`--ui-radius-surface` value (`255px 15px 225px 15px / 15px 225px 15px 255px`, for example), so the look is Tier 1 with no new slot. Two things to settle when it is picked up: `.checkbox` clamps its corner with `min(var(--ui-radius, ...), var(--radius-small))`, and `min()` takes a single length, so a multi-value elliptical radius makes that declaration invalid and the checkbox squares; and `box` writes `border-style: solid`, so a dashed or pencil line would need a slot of its own. A handwriting face would be consumer-supplied, the way `.pixel` reads `--font-pixel`. Not started.
-- **Synthwave / retro.** Assessed earlier and deferred; now wanted. Its signatures are palette, which [R1](./model.md#rules-for-aesthetics) bars an aesthetic from setting. The glow is `--ui-shadow-blur` scaled by elevation, and 20 of the 22 registry components rest at zero elevation, so it would reach two of them: buttons and cards. `text-shadow` does not inherit into `<button>` or `<input>`, and the grid and scanline backgrounds need a painted layer `box` does not have. Shipping it means either breaking R1 or adding a background-image slot. The slot was judged not worth adding for one aesthetic alone, and the stress-test pass never surfaced a need for a painted layer elsewhere; the slot is to be designed together with synthwave, which cannot ship without it, and `.cyber` can take scanlines from it then. Known costs to settle at that point: surfaces would own `background-image`, so a consumer's own background image on a `.card` becomes cascade-order dependent where it now just works; every pattern needs text contrast checked across intents and themes; and forced-colors behaviour for a gradient layer is unmeasured. Not started.
-- **Retro-OS bevel.** The raised two-tone bevel of a late-90s desktop UI: a light top-left edge, a dark bottom-right edge, and a press that inverts the two. Both edges are inset layers in fixed light and dark colours, which the single-layer shadow parts cannot express, so the resting look is a complete value -- and the one complete-value slot, `--ui-surface-shadow`, reaches surfaces only, where the look is best known on buttons and fields. It needs either a complete-value slot controls resolve (and an `:active` counterpart for the inverted press) or a Tier 2 selector list. Not started.
+- **Glitch.** A colour split (offset copies in two hues) and a slice or jitter motion. Would compose from the second depth layer or the label shadow for the split. The movement has no token: ambient motion is [not exposed](./structure.md#7-ambient-motion), so it would be the application's own animation. Its own questions: fixed hues sit close to what [R1](./model.md#rules-for-aesthetics) bars; whether it is a cascading aesthetic or an effect on a single element; and the maintainer has further direction for it. Not started.
+- **Sketch.** A hand-drawn look: uneven elliptical corners, an ink line, and a small offset shadow. The corners are a plain `--ui-radius`/`--ui-radius-surface` value (`255px 15px 225px 15px / 15px 225px 15px 255px`, for example); chips take a single length through `--ui-radius-tight`, so the checkbox's `min()` cap no longer turns invalid, and they take a plain corner rather than a wobble. Would compose from `--ui-line-style` for a dashed or dotted line; the offset shadow is the existing parts. A handwriting face would be consumer-supplied, the way `.pixel` reads `--font-pixel`. Not started.
+- **Synthwave / retro.** A glow, a grid or scanline ground, and glowing labels. Would compose from the halo, `--ui-surface-image`, and the label shadow. Its own question: its signature is palette, which [R1](./model.md#rules-for-aesthetics) gives to intent, so the hues come from the application's palette or a published knob in the way `--cyber-ink` works, never from the aesthetic. Not started.
+- **Retro-OS bevel.** The raised two-tone edge of a late-90s desktop UI, light top-left and dark bottom-right, with a press that inverts the two. Would compose from two inset layers -- the first and `--ui-shadow-2-*`. The inverting press needs a pressed counterpart for the second layer, which [Structure](./structure.md#4-depth-in-layers) left until a component needs it, and `outset`/`inset` line styles were not taken. Not started.
 
 ## Aesthetics assessed and deferred
 
@@ -48,14 +47,17 @@ Two measurements shaped the material tokens and outlive the change that needed t
 
 ## Versioning
 
-`0.4.0` is the current published release, cut through the same tag workflow as `0.2.0` and `0.3.0` before it, and `0.5.0` is in progress to follow it the same way. `0.1.0` carried the whole model rewrite over the manually published `0.0.4`; `0.1.1` is the first version cut through the tag workflow -- pushing `@codenhub/styles@0.1.1` triggered `.github/workflows/publish.yml`, which publishes through trusted publishing with provenance and refuses a tag whose version disagrees with the manifest. Every release from here follows that path.
+`0.4.0` is the current published release, cut through the same tag workflow as `0.2.0` and `0.3.0` before it, and `0.5.0` is cut to follow it the same way. `0.1.0` carried the whole model rewrite over the manually published `0.0.4`; `0.1.1` is the first version cut through the tag workflow -- pushing `@codenhub/styles@0.1.1` triggered `.github/workflows/publish.yml`, which publishes through trusted publishing with provenance and refuses a tag whose version disagrees with the manifest. Every release from here follows that path.
 
 The stress-test pass's fixes, across all three screens, land as one minor (`0.2.0`) rather than a run of patches: several change default token values (`--progress-surface`, `--color-border`) that affect every consumer already using `.progress` or `.card.soft.edged`, not just new ones, which is a real behavior change and not patch-level even pre-1.0.
+
+`0.5.0` is one minor for the same reason: the cascade layers change what beats what for every consumer, and the edge-contrast fix and any removal change default rendering, so the foundation lands together rather than as a run of releases each breaking a little.
 
 The package stays on `0.x` while the public contract is still young, so a necessary breaking correction stays explicit and cheap. Documentation status remains `active`: supported for normal consumer use, not frozen against future semver-major changes.
 
 ## Not Planned
 
+- **Removing `.theme-light` and `.theme-dark`**: named with the aliases `0.5.0` removed, and kept. `@codenhub/theme` writes a `theme-<name>` class by default, and the toaster's standalone fallback reads it, so it is not a second name nothing uses.
 - **Neumorphism**: Its defining trait is a borderless control distinguished only by low-contrast shadow, which fails WCAG 1.4.11 non-text contrast. Not shipped unless a variant is found that keeps the look and passes.
 - **Bundled fonts**: `.pixel` reads `--font-pixel` and falls back to monospace. The package ships no font binary and stays free of network side effects. The playground supplies Pixelify Sans from a CDN so the aesthetic can be reviewed against a real bitmap face; that is preview scaffolding and never ships. A substitute needs distinct uppercase and lowercase glyphs and real 400-700 weights, since components set `font-weight` 500 to 700 and synthetic bold smears a bitmap glyph. Silkscreen fails the first requirement: it draws the same glyph for both cases, which makes every heading read as shouting and hides real casing mistakes.
 - **JS/TS Helpers**: Runtime DOM helpers such as a typed `createElement` wrapper are not planned. The package stays CSS-only.
@@ -67,10 +69,11 @@ The package stays on `0.x` while the public contract is still young, so a necess
 ## References
 
 - [Model](./model.md)
+- [Cascade layers](./cascade-layers.md)
+- [Accessibility](../accessibility.md)
 - [Overview](../index.md)
 - [Setup](../setup.md)
 - [Concepts](../concepts.md)
 - [Usage](../usage/index.md)
 - [Integrating](../integrating/index.md)
-- [Accessibility](../accessibility.md)
 - [Tests](./tests.md)

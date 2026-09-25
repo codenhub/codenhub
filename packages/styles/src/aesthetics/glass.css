@@ -22,17 +22,27 @@
        than the base geometry because a translucent tight corner reads as a
        cut-out; a control/surface pair rather than one value, because they do not
        scale together and 12/16 keeps a button looking at home inside a card. */
-    --ui-radius: var(--glass-radius, 0.75rem);
-    --ui-radius-surface: var(--glass-radius-surface, 1rem);
+    --ui-corner: var(--glass-radius, 0.75rem);
+    --ui-corner-surface: var(--glass-radius-surface, 1rem);
     --ui-border-width: 1px;
     --ui-border-max: 100px;
+    --ui-line-style: initial;
 
     /* Glass catches light from above whatever is under it, so the edge is a light
        hairline in both themes rather than a theme-following ink. */
     --ui-ink: light-dark(rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.22));
+    /* A control's boundary is not a pane's edge. The hairline erases an
+       unchecked checkbox on a light page (1.33:1 inside a glass card) and leaves
+       a field with nothing marking where typing goes, so controls take the
+       theme's ink at 55% instead: translucent, so it tints whatever is behind
+       the pane rather than drawing a flat grey, and 6.31:1 on a checkbox, 2.31:1
+       on a field's 60% resting line, in light. See
+       docs/internal/boundary-contrast.md. */
+    --ui-control-ink: light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55));
 
     --ui-bg-alpha: 0.8;
     --ui-backdrop: blur(14px) saturate(1.6);
+    --ui-surface-image: initial;
 
     /* R6. Controls carry no shadow of their own -- the depth in this aesthetic is
        the blur, and a drop shadow under a translucent button reads as grime. All
@@ -43,6 +53,17 @@
     --ui-shadow-y: 0px;
     --ui-shadow-blur: 0px;
     --ui-shadow-spread: 0px;
+    /* No second depth layer and no halo, cleared so a region nested inside another
+       aesthetic does not inherit one. */
+    --ui-shadow-2-x: initial;
+    --ui-shadow-2-y: initial;
+    --ui-shadow-2-blur: initial;
+    --ui-shadow-2-spread: initial;
+    --ui-shadow-2-ink: initial;
+    --ui-shadow-2-inset: initial;
+    --ui-halo-blur: initial;
+    --ui-halo-spread: initial;
+    --ui-halo-ink: initial;
     /* `--ui-bg-alpha` multiplies the fill, and a surface's default fill is 0%:
        without a translucent ground the blur ends up behind an opaque background
        and nothing shows through. */
@@ -58,21 +79,31 @@
     --ui-clip: none;
     --ui-clip-tight: none;
     /* Round corners, said explicitly, and the pill and chip corners cleared back
-       to `--ui-radius`: a region nested inside `.cyber` would otherwise inherit
-       its bevel, its diamond pills, and its square chips. */
+       to `--ui-corner`: a region nested inside `.cyber` would otherwise inherit
+       its bevel, its diagonal, its diamond pills, and its square chips. */
     --ui-corner-shape: round;
     --ui-radius-pill: initial;
     --ui-radius-tight: initial;
+    --ui-radius: initial;
+    --ui-radius-surface: initial;
+    --ui-corner-tl: initial;
+    --ui-corner-tr: initial;
+    --ui-corner-br: initial;
+    --ui-corner-bl: initial;
     /* Nothing here draws its edge as a ring, and an aesthetic nested inside pixel
        has to say so rather than inherit it. */
     --ui-shadow-edge: initial;
     --ui-hover-transform: none;
     --ui-active-transform: none;
+    --ui-active-translate-x: initial;
+    --ui-active-translate-y: initial;
 
-    /* Chunky tile's heavier button label, cleared so a region nested inside it
-       keeps the button's own weight and tracking. */
-    --ui-button-weight: initial;
-    --ui-button-tracking: initial;
+    /* Chunky tile's heavier label, cleared so a region nested inside it keeps
+       the button's and the badge's own label. */
+    --ui-label-weight: initial;
+    --ui-label-tracking: initial;
+    --ui-label-case: initial;
+    --ui-label-shadow: initial;
   }
 
   /* Transparency is the whole aesthetic, so the honest degradation is an opaque

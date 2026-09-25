@@ -193,6 +193,22 @@ test("every declared package export target exists after build", async () => {
   );
 });
 
+/* An HTML `<style>` element ends at the first `</style`, whatever CSS token it
+   sits in, so a stylesheet inlined into a page would drop every rule after one.
+   Every CSS file under `dist/` ships -- the compiled entries and the `/tw`
+   sources alike -- so every one is checked, not just the export targets. */
+test("no shipped stylesheet contains a sequence that ends an inline style element", async () => {
+  const distRoot = path.resolve(packageRoot, "dist");
+  const stylesheets = (await readdir(distRoot, { recursive: true })).filter((file) => file.endsWith(".css"));
+  const outputs = await Promise.all(stylesheets.map((file) => readFile(path.join(distRoot, file), "utf8")));
+  const unsafe = stylesheets
+    .filter((_, index) => /<\/style/i.test(outputs[index]!))
+    .map((file) => `dist/${file.replaceAll("\\", "/")}`);
+
+  expect(stylesheets.length).toBeGreaterThan(0);
+  expect(unsafe).toEqual([]);
+});
+
 for (const [exportName, contract] of Object.entries(compiledExportContracts)) {
   test(`${exportName} compiled export contains its representative public surface`, async () => {
     const output = await readFile(path.resolve(packageRoot, contract.target), "utf8");
@@ -465,33 +481,93 @@ test("aggregate exports emit each public rule expansion once", async () => {
   }
 });
 
-for (const [exportName, contract] of Object.entries(tailwindExportContracts)) {
-  test(`${exportName} emits its representative public surface`, async () => {
+/* Compiles the given package exports the way a Tailwind consumer does: their
+   own `@import "tailwindcss"` first, then each export in order. */
+const compileAsConsumer = async (exportNames: readonly string[], candidates?: string) => {
+  const temporaryRoot = await mkdtemp(path.join(tmpdir(), "codenhub-styles-export-"));
+  const inputPath = path.join(temporaryRoot, "input.css");
+  const outputPath = path.join(temporaryRoot, "output.css");
+  const imports = exportNames.map((exportName) => {
     const entry = manifest.exports[exportName];
-    const target = typeof entry === "string" ? entry : (entry.style ?? entry.import ?? entry.default);
+    const target = typeof entry === "string" ? entry : (entry?.style ?? entry?.import ?? entry?.default);
     expect(typeof target, `${exportName} must resolve to one CSS target`).toBe("string");
 
-    const temporaryRoot = await mkdtemp(path.join(tmpdir(), "codenhub-styles-export-"));
-    const inputPath = path.join(temporaryRoot, "input.css");
-    const outputPath = path.join(temporaryRoot, "output.css");
-    const targetUrl = pathToFileURL(path.resolve(packageRoot, target as string)).href;
-    const candidateSource = contract.candidates ? `@source inline("${contract.candidates}");\n` : "";
+    return `@import "${pathToFileURL(path.resolve(packageRoot, target as string)).href}";
+`;
+  });
+  const candidateSource = candidates
+    ? `@source inline("${candidates}");
+`
+    : "";
 
-    try {
-      await writeFile(inputPath, `@import "${tailwindCssUrl}";\n@import "${targetUrl}";\n${candidateSource}`);
-      await executeFile(process.execPath, [tailwindCliPath, "-i", inputPath, "-o", outputPath, "--minify"], {
-        cwd: packageRoot,
-      });
-      const output = await readFile(outputPath, "utf8");
+  try {
+    await writeFile(
+      inputPath,
+      `@import "${tailwindCssUrl}";
+${imports.join("")}${candidateSource}`,
+    );
+    await executeFile(process.execPath, [tailwindCliPath, "-i", inputPath, "-o", outputPath, "--minify"], {
+      cwd: packageRoot,
+    });
 
-      for (const pattern of contract.patterns) {
-        expect(output, `${exportName} should emit ${pattern}`).toMatch(pattern);
-      }
-    } finally {
-      await rm(temporaryRoot, { force: true, recursive: true });
+    return await readFile(outputPath, "utf8");
+  } finally {
+    await rm(temporaryRoot, { force: true, recursive: true });
+  }
+};
+
+/* Every `--color-*` a stylesheet reads that it never declares. Tailwind marks
+   each `@theme` value a `@reference`d file reaches as reference-only, the last
+   write winning, and drops those from the output. A shared file that imported
+   the theme, or referenced Tailwind after it, silently undeclared the colour
+   tokens -- or just the palette ramp they are built from -- on the entries that
+   pulled it in. See the note in `surface.css`. */
+const undeclaredColors = (css: string) => {
+  const declared = new Set(css.match(/--color-[a-z0-9-]+(?=\s*:)/g) ?? []);
+
+  return [...new Set([...css.matchAll(/var\((--color-[a-z0-9-]+)/g)].map((match) => match[1]!))].filter(
+    (name) => !declared.has(name),
+  );
+};
+
+/* The loader and the aesthetics carry no theme by contract; everything else
+   does. */
+const carriesTheme = (exportName: string) => exportName !== "./tw/loader" && !exportName.startsWith("./tw/aesthetics");
+
+for (const [exportName, contract] of Object.entries(tailwindExportContracts)) {
+  test(`${exportName} emits its representative public surface`, async () => {
+    const output = await compileAsConsumer([exportName], contract.candidates);
+
+    for (const pattern of contract.patterns) {
+      expect(output, `${exportName} should emit ${pattern}`).toMatch(pattern);
     }
   });
 }
+
+for (const exportName of Object.keys(tailwindExportContracts).filter(carriesTheme)) {
+  test(`${exportName} declares every colour it reads`, async () => {
+    const output = await compileAsConsumer([exportName], tailwindExportContracts[exportName]?.candidates);
+
+    expect(undeclaredColors(output)).toEqual([]);
+  });
+}
+
+test("compiled entrypoints declare every colour they read", async () => {
+  for (const target of ["dist/index.css", "dist/theme.css", "dist/components.css", "dist/native.css"]) {
+    // oxlint-disable-next-line no-await-in-loop -- one file at a time keeps the failure naming its file.
+    const output = await readFile(path.resolve(packageRoot, target), "utf8");
+
+    expect(undeclaredColors(output), `${target} should declare every colour it reads`).toEqual([]);
+  }
+});
+
+/* `/tw/button`'s documented pairing, with the loader last: a file loaded after
+   the theme that referenced Tailwind used to undeclare the palette ramp. */
+test("a focused entry keeps its colours when the loader loads after it", async () => {
+  const output = await compileAsConsumer(["./tw/button", "./tw/loader"], "btn loader");
+
+  expect(undeclaredColors(output)).toEqual([]);
+});
 
 /* Tailwind's content detection scans the whole package directory, and the
    compiled entrypoints narrow it back to `src/` with `@source not`. A miss in

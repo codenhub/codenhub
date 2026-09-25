@@ -119,6 +119,25 @@
         }
       }
     },
+    "material": {
+      "type": "object",
+      "description": "The material tokens an aesthetic sets, each with the utilities that read it directly. `box` and `surface` stand for every component that composes them. Checked against the stylesheets, and every aesthetic must name or clear each token, so a region nested inside another aesthetic never inherits one it did not ask for.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["readers"],
+        "additionalProperties": false,
+        "properties": {
+          "readers": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            }
+          }
+        }
+      }
+    },
     "components": {
       "type": "array",
       "items": {

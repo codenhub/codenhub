@@ -17,21 +17,31 @@
   @apply box box-hover box-active relative inline-flex w-fit cursor-pointer items-center justify-center gap-2 px-4 py-2 whitespace-nowrap no-underline select-none;
 
   min-height: var(--control-height);
-  /* The label's weight and tracking are material slots, so an aesthetic sets
-     them as tokens (`.chunky-tile`'s heavier, tracked label) and a consumer's
-     own `font-*` or `tracking-*` utility still beats the aesthetic. Tracking
-     has no fallback on purpose: undefined, the declaration is invalid at
-     computed-value time and `letter-spacing` inherits, which is what it did
-     before the slot existed. See docs/internal/cascade-layers.md (L5). */
-  font-weight: var(--ui-button-weight, var(--font-weight-semibold));
-  letter-spacing: var(--ui-button-tracking);
+  /* The label is material, shared with `.badge`: weight, tracking, case, and a
+     text shadow, set by an aesthetic as tokens (`.chunky-tile`'s heavier,
+     tracked label), and a consumer's own `font-*`, `tracking-*`, `uppercase`, or
+     text-shadow utility still beats the aesthetic. Tracking has no fallback on
+     purpose: undefined, the declaration is invalid at computed-value time and
+     `letter-spacing` inherits, which is what it did before the slot existed.
+     Case and shadow fall back to `none`, which is what a button already does:
+     the user agent stops both inheriting into one. The shadow is written
+     without a colour, so it takes the label's own and cannot lower its
+     contrast. See docs/internal/cascade-layers.md (L5). */
+  font-weight: var(--ui-label-weight, var(--font-weight-semibold));
+  letter-spacing: var(--ui-label-tracking);
+  text-transform: var(--ui-label-case, none);
+  text-shadow: var(--ui-label-shadow, none);
 
   &.sm {
     @apply min-h-8 px-3 py-1 text-sm;
+
+    --_scale-size: 0.75;
   }
 
   &.lg {
     @apply min-h-12 px-5 py-2.5 text-[1.0625rem];
+
+    --_scale-size: 1.25;
   }
 
   &.icon {
@@ -40,26 +50,24 @@
     min-width: var(--control-height);
   }
 
-  /* `.p-xs`/`.p-sm`/`.p-lg` are the canonical names, matching the `sm`/`md`/`lg`
-     vocabulary the elevation modifier uses; `.dense`/`.compact`/`.spacious` are
-     first-class aliases, not a deprecation shim -- the same pattern
-     `.destructive`/`.danger`/`.error` uses on the intent axis. Bare `sm`/`lg`
-     are already the size modifier's class names, so `p-` prefixes here to
-     avoid colliding with a button's own size. `.p-xs` is the tightest step,
-     below `.compact`: a chip-sized button in a toolbar or a table cell.
+  /* Bare `sm`/`lg` are already the size modifier's class names, so `p-`
+     prefixes here to avoid colliding with a button's own size. `.p-xs` is the
+     tightest step, below `.p-sm`: a chip-sized button in a toolbar or a table
+     cell.
 
      `.icon` drops both floors -- `min-width` from its own base rule below and
      `min-height` from `--control-height` -- at every padding tier, labeled
-     buttons keep the height floor everywhere but `.p-xs`/`.dense`. `.icon`
+     buttons keep the height floor everywhere but `.p-xs`. `.icon`
      already asks to be square: `aspect-square` ties its width to whatever
      height it lands on, so a height floor that survives keeps the button
      bigger than its own glyph regardless of how tight the padding asked to be
-     -- the one combination `.p-xs`/`.dense` used to get right and the other two
-     tiers did not, leaving a `.icon.compact` floating in a box far bigger than
-     it needed and a `.icon.spacious` doing the same one step further out. */
-  &.p-xs,
-  &.dense {
+     -- the one combination `.p-xs` used to get right and the other two tiers
+     did not, leaving a `.icon.p-sm` floating in a box far bigger than it
+     needed and a `.icon.p-lg` doing the same one step further out. */
+  &.p-xs {
     @apply px-2 py-0.5;
+
+    --_scale-pad: 0.5;
 
     /* The one padding step that also drops the size floor for a labeled
        button. At this tier the button is a chip in a toolbar or a table
@@ -75,9 +83,10 @@
     }
   }
 
-  &.p-sm,
-  &.compact {
+  &.p-sm {
     @apply px-2.5 py-1;
+
+    --_scale-pad: 0.75;
 
     &.icon {
       @apply p-1;
@@ -87,9 +96,10 @@
     }
   }
 
-  &.p-lg,
-  &.spacious {
+  &.p-lg {
     @apply px-6 py-3;
+
+    --_scale-pad: 1.25;
 
     &.icon {
       @apply p-3;
