@@ -1,6 +1,0 @@
-delegate-work
-Adapted from: https://github.com/obra/superpowers
-Original copyright: Copyright (c) 2025 Jesse Vincent
-Original license: MIT
-License text: https://github.com/obra/superpowers/blob/main/LICENSE
-Changes: Derived from this package's subagent-specialist skill. Reworked the delegation workflow, briefs and review prompts, and added a dispatch script with harness adapters that delegate scoped tasks to other models through CLI harnesses.
