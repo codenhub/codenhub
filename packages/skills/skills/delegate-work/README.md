@@ -85,6 +85,16 @@ Worktrees get the project's venv linked. Its editable install still points at
 the repository, so with a `src/` directory the checks (and the worker) get
 `PYTHONPATH=src` to test the worktree's code.
 
+## Trust boundary
+
+Harness permissions limit what a worker can do while it runs: which files it
+edits and which commands it runs. They don't sandbox the code it writes. The
+checks run that code with your permissions and environment, as your own test
+run would, and a worker in place edits your real working tree; dispatch
+restores out-of-scope files afterwards, it doesn't prevent writing them. Give
+workers the same trust you give the models behind them, and keep untrusted
+routes off repositories whose tests reach credentials or production systems.
+
 ## Harness notes
 
 Per-harness mechanics, verified versions and known limits:

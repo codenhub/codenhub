@@ -88,9 +88,9 @@ by reading the log by default.
 
 | Status           | Meaning | Orchestrator action |
 |------------------|---------|---------------------|
-| `ok`             | Changes in scope, all checks passed (or read-only role finished). | Editing roles: review the diff; for a nontrivial `builder`, get a cross-model review; then `apply` or `discard`. Read-only roles: use `report`. |
+| `ok`             | Changes in scope and every check that ran passed (or read-only role finished). With an empty `checks`, nothing verified the change. | Editing roles: review the diff; for a nontrivial `builder`, get a cross-model review; then `apply` or `discard`. Read-only roles: use `report`. |
 | `no_changes`     | `fixer` finished without changing anything. | Read `summary`. Usually the brief was wrong or the issue doesn't exist. Rebrief or drop. |
-| `failed_checks`  | In scope, but a check failed. | Read the failing `tail`. Small and local → `followup`; otherwise `--rebrief-of` (tier goes up); if `retryAvailable` is false, fix it yourself or `discard`. |
+| `failed_checks`  | In scope, but a check failed. | Read the failing `tail`. Small and local → `followup` (refused if files changed since the run); otherwise `--rebrief-of` (tier goes up); if `retryAvailable` is false, fix it yourself or `discard`. |
 | `out_of_scope`   | Touched files outside `--allow`, or anything inside dependency folders (`node_modules`, virtual environments). Changes are quarantined; in place, those files are already restored. | `discard`. If the extra file was genuinely needed, rebrief with a wider allowlist. |
 | `blocked`        | Worker stopped because a needed action was denied. | Check `denied`. Do that action yourself if appropriate, then rebrief. |
 | `timeout`        | Killed by the time or step budget. | `discard`. Task was too large or too vague: split or sharpen it, then `--rebrief-of` if retry is available. |
@@ -114,9 +114,13 @@ Retry limit per task: one follow-up **or** one rebrief, enforced by
 }
 ```
 
-The workers run in parallel, limited by `maxParallel`, each in its own
-worktree. Results are not applied automatically. After applying several, run
-the full checks once in the working tree (SKILL.md, step 7).
+The workers run in parallel, limited by `maxParallel`. With two or more
+editing tasks, every editing worker gets its own worktree; a batch with a
+single editing task runs it in place, like a lone `run`. Read-only tasks run
+in place. Worktree results are not applied automatically; in-place changes are
+already in the working tree. Either way, `apply` or `discard` each result.
+After applying several, run the full checks once in the working tree
+(SKILL.md, step 7).
 
 ## Prune result
 
