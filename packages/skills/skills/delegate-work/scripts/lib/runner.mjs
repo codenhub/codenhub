@@ -808,7 +808,17 @@ export async function run(o) {
     saveMeta(id, meta);
     return envelope(meta);
   }
-  const isolation = iso.isolation === "auto" ? claimInplace(meta) : iso.isolation;
+  let isolation = iso.isolation;
+  if (isolation === "auto") {
+    isolation = claimInplace(meta);
+  } else if (isolation === "inplace" && editing && claimInplace(meta) !== "inplace") {
+    // Asked for in place, but another editing run holds the tree.
+    Object.assign(meta, { phase: "done", discarded: true });
+    saveMeta(id, meta);
+    throw new UsageError(
+      `${busyTree(meta) ?? "Another in-place run holds this tree."} Or rerun with --isolation worktree.`,
+    );
+  }
   meta.isolation = workDirOverride ? "worktree" : isolation;
   meta.phase = "running";
 

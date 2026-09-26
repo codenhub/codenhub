@@ -167,6 +167,26 @@ describe("delegate-work", () => {
     expect((await R.discard(r.id)).status).toBe("ok");
   });
 
+  it("shouldRefuseAnInPlaceRunWhileAnotherHoldsTheTree", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+    const fixer = { cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" };
+
+    const first = await R.run(fixer);
+    const { root } = S.loadMeta(first.id);
+    await R.discard(first.id);
+    const holder = S.newRun();
+    const held = { id: holder, root, editing: true, isolation: "inplace", phase: "running", pid: process.pid };
+    S.saveMeta(holder, { ...held, claimedAt: 0 });
+    try {
+      await expect(R.run({ ...fixer, isolation: "inplace" })).rejects.toThrow(
+        `In-place run ${holder} is still working in this tree`,
+      );
+    } finally {
+      S.saveMeta(holder, { ...held, phase: "done" });
+    }
+  });
+
   it("shouldPlanABatchWithoutRunningIt", async () => {
     const R = await import(runner);
     const runs = path.join(process.env.DELEGATE_WORK_STATE as string, "runs");
