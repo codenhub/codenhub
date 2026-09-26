@@ -10,8 +10,9 @@ Re-check these points when Claude Code updates.
 ## How a run is invoked
 
     claude -p --output-format stream-json --verbose --model <model>
-      --restricted --tools Read,Glob,Grep[,Edit,Write],Bash
-      --allowedTools <rules...> --permission-mode dontAsk
+      --restricted --tools Read,Glob,Grep[,Edit,Write,Bash]
+      --allowedTools <rules...> [--disallowedTools <rules...>]
+      --permission-mode dontAsk
       --disable-slash-commands --strict-mcp-config --no-chrome
       [--effort <variant>] [--resume <session_id>]
 
@@ -24,11 +25,19 @@ Re-check these points when Claude Code updates.
   servers.
 - Not `--bare`: it only accepts API-key auth, so a subscription login can't
   be used. Not `--safe-mode`: it also drops the project's CLAUDE.md.
-- Allow rules: `Edit(<glob>)` per `--allow` glob (relative to the work dir;
-  covers Write too), `Bash(<cmd>)` and `Bash(<cmd>:*)` for the check commands,
-  read-only git, and `cd`. Claude checks every part of a compound command and
-  often writes `cd "<repo>" && npm run test`, so `cd` must be allowed.
-  Everything else is denied by `dontAsk`.
+- Read-only workers get `Read`, `Glob` and `Grep` only: no shell. With
+  `git log` allowed, `git log --output=<path>` writes anywhere.
+- Editing workers' allow rules: `Edit(<glob>)` per `--allow` glob (relative
+  to the work dir; covers Write too), `Bash(<cmd>)` and `Bash(<cmd>:*)` for
+  the check commands, read-only git, and `cd`. Claude checks every part of a
+  compound command and often writes `cd "<repo>" && npm run test`, so `cd`
+  must be allowed. Deny rules, which win over allow rules, block git's
+  `--output`, `--no-index`, `--ext-diff` and `--textconv`. Everything else is
+  denied by `dontAsk`.
+- Check commands take any arguments, so workers can narrow a test run. A
+  test run executes code the worker wrote, outside any sandbox: the rules
+  limit what the worker types, not what its code does. The diff, and the
+  checks dispatch runs itself, are the gate.
 - Model ids: aliases (`sonnet`, `opus`, `haiku`) or full ids. There is no
   listing command, so `doctor` can't validate them.
 

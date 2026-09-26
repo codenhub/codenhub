@@ -188,6 +188,90 @@ describe("codex adapter", () => {
   });
 });
 
+describe("opencode adapter (2.x permissions)", () => {
+  beforeAll(() => {
+    // command() picks the config shape from the version the harness reports.
+    fs.mkdirSync(state, { recursive: true });
+    const fake = path.join(here, "fixtures", "fake-opencode.mjs");
+    const bin = path.join(state, process.platform === "win32" ? "opencode.cmd" : "opencode");
+    fs.writeFileSync(
+      bin,
+      process.platform === "win32" ? `@node "${fake}" %*\r\n` : `#!/bin/sh\nexec node "${fake}" "$@"\n`,
+      { mode: 0o755 },
+    );
+    process.env.DELEGATE_WORK_BIN_OPENCODE = bin;
+  });
+
+  const shellRules = async (readOnly: boolean) => {
+    const { default: opencode } = await import(adapter("opencode"));
+    const { env } = opencode.command({
+      route: { model: "m" },
+      cwd: state,
+      prompt: "p",
+      readOnly,
+      allow: readOnly ? [] : ["src/a.txt"],
+      bashAllow: readOnly ? [] : ["npm run test"],
+      sessionId: null,
+    });
+    const config = JSON.parse(env.OPENCODE_CONFIG_CONTENT);
+    return config.agents["dispatch-worker"].permissions
+      .filter((r: { action: string }) => r.action === "shell")
+      .map((r: { resource: string; effect: string }) => `${r.effect} ${r.resource}`);
+  };
+
+  it("shouldGiveReadOnlyWorkersNoShell", async () => {
+    expect(await shellRules(true)).toEqual(["deny *"]);
+  });
+
+  it("shouldDenyGitFlagsThatReachOutsideTheRepositoryAfterAllowingGit", async () => {
+    const rules = await shellRules(false);
+
+    expect(rules).toContain("allow git log *");
+    expect(rules).toContain("allow npm run test *");
+    // The last matching rule wins.
+    expect(rules.slice(-4)).toEqual([
+      "deny git *--output*",
+      "deny git *--no-index*",
+      "deny git *--ext-diff*",
+      "deny git *--textconv*",
+    ]);
+  });
+});
+
+describe("claude adapter", () => {
+  const args = async (readOnly: boolean) => {
+    const { default: claude } = await import(adapter("claude"));
+    return claude.command({
+      route: { model: "m" },
+      prompt: "p",
+      readOnly,
+      allow: ["src/a.txt"],
+      bashAllow: ["npm run test"],
+      sessionId: null,
+    }).args as string[];
+  };
+
+  it("shouldGiveReadOnlyWorkersNoShell", async () => {
+    const a = await args(true);
+
+    expect(a[a.indexOf("--tools") + 1]).toBe("Read,Glob,Grep");
+    expect(a.filter((x) => x.startsWith("Bash("))).toEqual([]);
+  });
+
+  it("shouldDenyGitFlagsThatReachOutsideTheRepository", async () => {
+    const a = await args(false);
+    const denied = a.slice(a.indexOf("--disallowedTools") + 1, a.indexOf("--permission-mode"));
+
+    expect(a).toContain("Bash(git log:*)");
+    expect(denied).toEqual([
+      "Bash(git *--output*)",
+      "Bash(git *--no-index*)",
+      "Bash(git *--ext-diff*)",
+      "Bash(git *--textconv*)",
+    ]);
+  });
+});
+
 describe("opencode adapter (2.x events)", () => {
   it("shouldReadPatchedFilesFromToolMetadata", async () => {
     const { default: opencode } = await import(adapter("opencode"));

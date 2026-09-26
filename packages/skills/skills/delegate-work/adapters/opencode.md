@@ -55,9 +55,17 @@ action resolves to `ask`.
 - `edit` covers `edit`, `write` and `patch`: denied, then allowed per
   `--allow` glob. Resources are paths relative to the work dir; `*` crosses
   directories, so `**` is collapsed to `*`.
-- `shell` is denied, then allowed as `<cmd> *` (with or without arguments)
-  for the check commands and read-only git. Chained commands
+- `shell` is denied. Editing workers get it back as `<cmd> *` (with or
+  without arguments) for the check commands and read-only git, then denied
+  again for git's `--output`, `--no-index`, `--ext-diff` and `--textconv`:
+  `git log --output=<path>` writes anywhere and `--no-index` reads anywhere.
+  Read-only workers get no shell at all; a scout with `git log` allowed was
+  seen writing outside the repository that way. Chained commands
   (`git status && x`) are denied.
+- Check commands take any arguments, so workers can narrow a test run. A
+  test run executes code the worker wrote, with no OS sandbox: the allowlist
+  limits what the worker types, not what its code does. The diff, and the
+  checks dispatch runs itself, are the gate.
 - A denied tool fails with "Permission denied: <action>"; the attempted
   command or file goes into `denied`.
 
@@ -74,9 +82,11 @@ Permissions grouped by tool, `agent.dispatch-worker.permission`.
 - `edit` patterns are paths relative to the work dir, so the allowlist blocks
   out-of-scope writes before they happen. On Windows both slash styles are
   registered. OpenCode's `*` crosses directories, so `**` is collapsed to `*`.
-- `bash` allows only the resolved check commands and read-only git commands.
+- `bash` allows only the resolved check commands and read-only git commands,
+  with the same git flags denied as in 2.x, and only for editing workers.
   OpenCode matches each subcommand separately: `git status && x`,
-  `npm run test; x` and `npm run test -- $(x)` are all denied.
+  `npm run test; x` and `npm run test -- $(x)` are all denied. The flag
+  denies were not verified against a real 1.x.
 - `webfetch`, `websearch`, `external_directory`, `task`, `question`,
   `doom_loop` are denied. Reading `.env*` already resolves to "ask" by default,
   so it is auto-rejected too.
