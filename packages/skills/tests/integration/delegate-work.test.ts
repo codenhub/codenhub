@@ -489,6 +489,29 @@ describe("delegate-work", () => {
     }
   });
 
+  it.skipIf(process.platform !== "win32")(
+    "shouldNotRunAGitPlantedInTheWorkingDirectory",
+    () => {
+      const dir = path.join(tmp, "planted");
+      fs.mkdirSync(dir, { recursive: true });
+      // Node answers `git --version` with its own version: a planted git.exe.
+      fs.copyFileSync(process.execPath, path.join(dir, "git.exe"));
+      // Set by some hosts (Claude Code), not by a plain shell; its case varies.
+      const env = Object.fromEntries(
+        Object.entries(process.env).filter(([k]) => k.toLowerCase() !== "nodefaultcurrentdirectoryinexepath"),
+      );
+
+      const out = execFileSync(process.execPath, [path.resolve(runner, "../../dispatch.mjs"), "doctor"], {
+        cwd: dir,
+        env,
+        encoding: "utf8",
+      });
+      expect(JSON.parse(out).git.version).toMatch(/^git version/);
+      // doctor probes every harness installed here.
+    },
+    60000,
+  );
+
   describe("with a harness that can't be contained in place", () => {
     let opencode: { containedInPlace?: boolean };
 

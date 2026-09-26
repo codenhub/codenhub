@@ -78,6 +78,12 @@ points git at the repository and so at its config, is put back as git wrote
 it after every worker and after the checks; a changed one makes the run
 `out_of_scope`.
 
+Windows looks for a program named without a path (`git`, `taskkill`) in the
+working directory before `PATH`, and a work dir is where a worker writes.
+Dispatch turns that lookup off for itself and everything it starts
+(`NoDefaultCurrentDirectoryInExePath`), so a `git.exe` a worker leaves in its
+worktree never runs as dispatch.
+
 ## Checks
 
 `fixer` runs the fast set, `builder` the full set. A project's `checks.fast` /

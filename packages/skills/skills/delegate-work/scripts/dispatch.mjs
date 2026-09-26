@@ -11,6 +11,12 @@ import { candidates, orchestratorPools } from "./lib/route.mjs";
 import * as R from "./lib/runner.mjs";
 import { cooldowns } from "./lib/state.mjs";
 
+// Windows looks for a bare program name (git, taskkill) in the working
+// directory before PATH, and a work dir is where a worker writes: its git.exe
+// would run as dispatch. This turns that off for this process's lookups; it
+// has no effect set only in a child's environment.
+process.env.NoDefaultCurrentDirectoryInExePath = "1";
+
 const BATCH_FIELDS = new Set(["role", "allow", "read", "tier", "kind", "model", "brief", "briefFile"]);
 
 const HELP = `dispatch — delegate scoped tasks to worker agents
