@@ -17,6 +17,8 @@ export const APPLICABLE = new Set(["ok", "failed_checks", "blocked"]);
 const VERDICTS = new Set(["approve", "approve-with-nits", "reject"]);
 const DEFAULT_STEPS = { scout: 40, fixer: 40, builder: 150, reviewer: 30 };
 const DEFAULT_TIMEOUT = { scout: 300, fixer: 600, builder: 1800, reviewer: 600 };
+// A reviewer's brief carries the diff up to this size; the changed files are readable anyway.
+const REVIEW_DIFF_CAP = 60000;
 
 export class UsageError extends Error {}
 
@@ -678,6 +680,7 @@ export async function run(o) {
   let workDirOverride = null;
   let prev = null;
   let target = null;
+  let diffCut = false;
 
   if (o.rebriefOf) {
     prev = loadMeta(o.rebriefOf);
@@ -720,7 +723,11 @@ export async function run(o) {
       excludeFamilies = [target.worker.family];
     }
     read = [...new Set([...read, ...target.files.changed.map((c) => c.path)])];
-    const diff = fs.readFileSync(patchFile, "utf8").slice(0, 60000);
+    const whole = fs.readFileSync(patchFile, "utf8");
+    diffCut = whole.length > REVIEW_DIFF_CAP;
+    const diff = diffCut
+      ? `${whole.slice(0, REVIEW_DIFF_CAP)}\n[diff cut at ${REVIEW_DIFF_CAP} of ${whole.length} characters: read the changed files for the rest]`
+      : whole;
     brief = `${brief}\n\nORIGINAL TASK\n${target.brief}\n\nCHANGE UNDER REVIEW\n\`\`\`diff\n${diff}\n\`\`\``;
     if (target.isolation === "worktree" && !target.applied && fs.existsSync(target.worktree)) {
       workDirOverride = target.worktree;
@@ -876,6 +883,10 @@ export async function run(o) {
   if (target) {
     // The reviewer ran in the target's worktree; don't treat its snapshot as ours.
     meta.isolation = target.isolation;
+    if (diffCut) {
+      const note = `The reviewer got the diff cut at ${REVIEW_DIFF_CAP} characters and was told to read the changed files for the rest; check that the report covers every file.`;
+      meta.hint = [meta.hint, note].filter(Boolean).join(" ");
+    }
     saveMeta(id, meta);
   }
   return envelope(meta);

@@ -150,7 +150,9 @@ asks for an external run.
    ```
    `dispatch` picks a reviewer from a different model family than the builder,
    gives it the original brief and the diff, and lets it read the changed
-   files. The brief needs only the review criteria.
+   files. The brief needs only the review criteria. A diff over 60,000
+   characters is cut, and the result's `hint` says so: check that the report
+   covers every changed file.
 6. **Decide.**
    - Accept: `node scripts/dispatch.mjs apply <id>`
    - Reject: `node scripts/dispatch.mjs discard <id>`

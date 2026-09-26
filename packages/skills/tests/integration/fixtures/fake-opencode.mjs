@@ -18,6 +18,9 @@ if (cmd === "--version") {
     const report = prompt.includes("SHORT") ? "one finding" : `${"finding\n".repeat(600)}end of report`;
     const verdict = prompt.match(/VERDICT (\S+)/)?.[1];
     let text = `RESULT\nstatus: done\nsummary: read the code\n${verdict ? `verdict: ${verdict}\n` : ""}report:\n${report}`;
+    if (prompt.includes("[diff cut at")) {
+      text += "\n(diff was cut)";
+    }
     // ABOVE: the answer before the block, only pointed at inside it.
     if (prompt.includes("ABOVE")) {
       text = `${"the answer\n".repeat(40)}\nRESULT\nstatus: done\nsummary: answered\nreport:\nFindings are listed above.`;
@@ -44,6 +47,10 @@ if (cmd === "--version") {
     // Git hides the file on Windows, and a hidden file can't be overwritten.
     fs.rmSync(".git");
     fs.writeFileSync(".git", "gitdir: ../planted\n");
+  }
+  if (prompt.includes("BIG-DIFF")) {
+    fs.writeFileSync("src/big.txt", "a long line of generated text\n".repeat(3000));
+    emit({ type: "tool_use", part: { tool: "write", state: { status: "completed", input: { path: "src/big.txt" } } } });
   }
   const also = prompt.match(/ALSO-WRITE (\S+)/)?.[1];
   if (also) {

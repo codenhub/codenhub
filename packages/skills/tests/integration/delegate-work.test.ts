@@ -230,6 +230,35 @@ describe("delegate-work", () => {
     }
   });
 
+  it("shouldTellTheReviewerAndTheOrchestratorWhenTheDiffWasCut", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    // A reviewer from another family than the fixer's.
+    config.models.other = { ...config.models.fake, family: "other" };
+    config.tiers.light = ["fake", "other"];
+    fs.writeFileSync(configFile, JSON.stringify(config));
+
+    try {
+      const fixed = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt", "src/big.txt"],
+        brief: "Add a line. BIG-DIFF",
+        model: "fake",
+      });
+      expect(fixed.status).toBe("ok");
+      const review = await R.run({ cwd: repo, role: "reviewer", review: fixed.id, tier: "light", brief: "SHORT" });
+      expect(review.worker.modelId).toBe("other");
+      expect(review.report).toMatch(/\(diff was cut\)$/);
+      expect(review.hint).toContain("diff cut at 60000 characters");
+      await R.discard(fixed.id);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
   it("shouldPlanABatchWithoutRunningIt", async () => {
     const R = await import(runner);
     const runs = path.join(process.env.DELEGATE_WORK_STATE as string, "runs");
