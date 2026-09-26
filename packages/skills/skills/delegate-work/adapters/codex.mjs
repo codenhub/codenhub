@@ -62,7 +62,8 @@ const SANDBOX_NOTE = `
 Environment note: your sandbox may refuse to start child processes (errors
 such as "spawn EPERM" or "Access is denied"), which breaks some test runners.
 That is the sandbox, not your change: do not work around it or change
-configuration. The same checks run outside the sandbox after you finish.`;
+configuration. The same checks run outside the sandbox after you finish;
+don't report them as blocked.`;
 
 /** `"C:\...\powershell.exe" -Command 'npm run test'` → `npm run test`. */
 function shortCommand(cmd) {

@@ -41,6 +41,11 @@ Environment note: you have no shell here, so you can't run any checks. Read,
 search and edit with your file tools. The checks run automatically after you
 finish; don't report them as blocked. ${PATHS_NOTE}`;
 
+const READ_ONLY_NOTE = `
+
+Environment note: you have no shell here. Read and search with your file
+tools. ${PATHS_NOTE}`;
+
 const shellNote = (cmds) => `
 
 Environment note: the only shell commands you can run are these, each exactly
@@ -238,7 +243,7 @@ export default {
     if (sessionId) {
       args.push("--conversation", sessionId);
     }
-    const note = sessionId ? "" : cmds.length ? shellNote(cmds) : NO_SHELL_NOTE;
+    const note = sessionId ? "" : readOnly ? READ_ONLY_NOTE : cmds.length ? shellNote(cmds) : NO_SHELL_NOTE;
     const input = `${JSON.stringify({ event: "user", message: { content: prompt + note } })}\n`;
     return { args, input, env: homeEnv(home) };
   },
