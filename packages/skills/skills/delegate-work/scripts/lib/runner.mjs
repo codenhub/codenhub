@@ -1026,19 +1026,40 @@ export function diff(id) {
   return fs.existsSync(f) ? fs.readFileSync(f, "utf8") : "";
 }
 
+/**
+ * Two tasks whose allowlists can reach the same file: an existing one both
+ * match, or a path one names literally that the other matches. New files
+ * behind two wildcards can't be foreseen.
+ */
+function overlappingTask(root, tasks) {
+  const files = G.listFiles(root);
+  const literal = (globs) => globs.filter((g) => !/[*?]/.test(g)).map((g) => toPosix(g).replace(/^\.\//, ""));
+  for (let i = 0; i < tasks.length; i++) {
+    for (let j = i + 1; j < tasks.length; j++) {
+      const a = tasks[i].allow ?? [];
+      const b = tasks[j].allow ?? [];
+      if (!a.length || !b.length) {
+        continue;
+      }
+      const shared =
+        a.find((g) => b.includes(g)) ??
+        [...literal(a), ...literal(b), ...files].find((f) => matchAny(f, a) && matchAny(f, b));
+      if (shared) {
+        return `tasks ${i} and ${j} may both edit ${shared}; give each task its own files`;
+      }
+    }
+  }
+  return null;
+}
+
 export async function batch(tasks, common) {
   const cfg = load(G.repoRoot(common.cwd));
   const limit = Math.max(1, cfg.limits?.maxParallel ?? 4);
   const editingCount = tasks.filter((t) => EDITING.has(t.role)).length;
-  const seen = new Map();
-  tasks.forEach((t, i) =>
-    (t.allow ?? []).forEach((g) => {
-      if (seen.has(g)) {
-        throw new UsageError(`tasks ${seen.get(g)} and ${i} share allow pattern "${g}"`);
-      }
-      seen.set(g, i);
-    }),
-  );
+  const overlap = overlappingTask(G.repoRoot(common.cwd), tasks);
+  if (overlap) {
+    throw new UsageError(overlap);
+  }
   const results = Array.from({ length: tasks.length });
   let next = 0;
   const worker = async () => {

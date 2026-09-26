@@ -106,7 +106,9 @@ asks for an external run.
 
 1. **Plan.** List the tasks. Mark which are independent (parallel) and which
    depend on others (sequential). Tasks in the same batch must not touch the
-   same files.
+   same files. `dispatch` refuses a batch whose allowlists reach a common
+   existing file or a path one of them names; it can't foresee two wildcards
+   creating the same new file, so name new files explicitly.
 2. **Brief.** Fill in `references/brief-template.md` for each task. Every
    editing brief must name the files it may touch (`--allow`). Files the worker
    should read but not edit go in `--read`. Pass briefs through stdin or a

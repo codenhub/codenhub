@@ -121,6 +121,22 @@ describe("delegate-work", () => {
     expect(fs.readdirSync(runs)).toEqual(before);
   });
 
+  it("shouldRefuseABatchWhoseAllowlistsOverlap", async () => {
+    const R = await import(runner);
+    const task = (allow: string[]) => ({ role: "fixer", allow, brief: "Edit.", model: "fake" });
+
+    // An existing file both patterns match.
+    await expect(R.batch([task(["src/a.txt"]), task(["src/*.txt"])], { cwd: repo, plan: true })).rejects.toThrow(
+      "tasks 0 and 1 may both edit src/a.txt",
+    );
+    // A new file one task names and the other's pattern covers.
+    await expect(R.batch([task(["src/new.ts"]), task(["src/**"])], { cwd: repo, plan: true })).rejects.toThrow(
+      "may both edit src/new.ts",
+    );
+    const ok = await R.batch([task(["src/a.txt"]), task(["src/b.txt"])], { cwd: repo, plan: true });
+    expect(ok.totals.planned).toBe(2);
+  });
+
   it("shouldKeepTheWholeReportWhenTheResultCutsIt", async () => {
     const R = await import(runner);
 
