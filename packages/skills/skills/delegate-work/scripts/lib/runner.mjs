@@ -1123,6 +1123,20 @@ export async function batch(tasks, common) {
   if (overlap) {
     throw new UsageError(overlap);
   }
+  // Planning checks a task without running it. An invalid task is refused
+  // here, before the others run, rather than come back as a failed run.
+  const planned = [];
+  for (const [i, t] of tasks.entries()) {
+    try {
+      // oxlint-disable-next-line no-await-in-loop -- one after another: the first invalid task stops the batch.
+      planned.push(await run({ ...common, ...t, forceWorktree: editingCount > 1, plan: true }));
+    } catch (e) {
+      throw e instanceof UsageError ? new UsageError(`task ${i}: ${e.message}`) : e;
+    }
+  }
+  if (common.plan) {
+    return { v: 1, batch: planned, totals: totalsOf(planned, true) };
+  }
   const results = Array.from({ length: tasks.length });
   let next = 0;
   const worker = async () => {
@@ -1137,11 +1151,15 @@ export async function batch(tasks, common) {
     }
   };
   await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
-  const totals = common.plan
+  return { v: 1, batch: results, totals: totalsOf(results, false) };
+}
+
+function totalsOf(results, planned) {
+  const totals = planned
     ? { planned: 0, use_native: 0, not_available: 0, other: 0 }
     : { ok: 0, failed_checks: 0, out_of_scope: 0, other: 0 };
   for (const r of results) {
     totals[r.status in totals ? r.status : "other"]++;
   }
-  return { v: 1, batch: results, totals };
+  return totals;
 }

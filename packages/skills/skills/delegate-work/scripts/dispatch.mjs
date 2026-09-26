@@ -11,6 +11,8 @@ import { candidates, orchestratorPools } from "./lib/route.mjs";
 import * as R from "./lib/runner.mjs";
 import { cooldowns } from "./lib/state.mjs";
 
+const BATCH_FIELDS = new Set(["role", "allow", "read", "tier", "kind", "model", "brief", "briefFile"]);
+
 const HELP = `dispatch — delegate scoped tasks to worker agents
 
   run       --role <scout|fixer|builder|reviewer> --brief <file|->
@@ -18,8 +20,9 @@ const HELP = `dispatch — delegate scoped tasks to worker agents
             [--kind code|ui|text] [--model <id>] [--external]
             [--isolation auto|inplace|worktree] [--orchestrator <name>]
             [--rebrief-of <id>] [--review <id>] [--plan]
-  run       --batch <file.json> [--plan]
-                                    tasks: [{ role, allow, read, tier, kind, brief | briefFile }]
+  run       --batch <file.json> [--external] [--plan]
+                                    tasks: [{ role, allow, read, tier, kind, model,
+                                    brief | briefFile }]
             --plan: route only, run nothing (status use_native, planned or
             not_available)
   followup  <id> --brief <file|->   one follow-up in the same worker session
@@ -208,14 +211,22 @@ async function main() {
     case "run": {
       if (o.batch) {
         const spec = JSON.parse(fs.readFileSync(o.batch, "utf8"));
-        const tasks = (spec.tasks ?? spec).map((t) => ({
-          role: t.role,
-          allow: t.allow ?? [],
-          read: t.read ?? [],
-          tier: t.tier,
-          kind: t.kind,
-          brief: t.brief ?? readBrief(t.briefFile),
-        }));
+        const tasks = (spec.tasks ?? spec).map((t, i) => {
+          // A field this ignored would change nothing without a word.
+          const unknown = Object.keys(t).filter((k) => !BATCH_FIELDS.has(k));
+          if (unknown.length) {
+            throw new R.UsageError(`task ${i}: unknown field ${unknown.join(", ")}`);
+          }
+          return {
+            role: t.role,
+            allow: t.allow ?? [],
+            read: t.read ?? [],
+            tier: t.tier,
+            kind: t.kind,
+            model: t.model,
+            brief: t.brief ?? readBrief(t.briefFile),
+          };
+        });
         out(await R.batch(tasks, { cwd, orchestrator: o.orchestrator, external: o.external, plan: o.plan }));
         return 0;
       }

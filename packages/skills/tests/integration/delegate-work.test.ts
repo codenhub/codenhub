@@ -274,6 +274,18 @@ describe("delegate-work", () => {
     expect(fs.readdirSync(runs)).toEqual(before);
   });
 
+  it("shouldRefuseABatchWithAnInvalidTaskBeforeRunningAny", async () => {
+    const R = await import(runner);
+    const runs = path.join(process.env.DELEGATE_WORK_STATE as string, "runs");
+    const before = fs.readdirSync(runs);
+    const good = { role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" };
+
+    await expect(R.batch([good, { ...good, allow: [] }], { cwd: repo })).rejects.toThrow(
+      "task 1: fixer requires --allow",
+    );
+    expect(fs.readdirSync(runs)).toEqual(before);
+  });
+
   it("shouldRefuseABatchWhoseAllowlistsOverlap", async () => {
     const R = await import(runner);
     const task = (allow: string[]) => ({ role: "fixer", allow, brief: "Edit.", model: "fake" });
