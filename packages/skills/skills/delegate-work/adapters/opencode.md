@@ -116,9 +116,11 @@ Permissions grouped by tool, `agent.dispatch-worker.permission`.
   before emitting a final `error` event. Classification uses that final error
   and the last `error="..."` on stderr; earlier errors in the stderr tail were
   already retried past and only count when the final one is unrecognized.
-- OpenRouter without credits was not observed: on the verification account a
-  paid model (`z-ai/glm-5.3-flash`) answered normally. Billing is matched from
-  the provider's wording (402, "insufficient credits").
+- 2.x OpenRouter key whose spending limit is used up: `provider.auth`, 403,
+  "Key limit exceeded (total limit). Manage it using ..." → `billing`, not
+  `auth`: logging in again doesn't help. The run fails at once. An account
+  out of credits was not observed; it is matched from the provider's wording
+  (402, "insufficient credits").
 
 ## Route options
 

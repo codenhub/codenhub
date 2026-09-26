@@ -245,7 +245,7 @@ function hintFor(kind, harness) {
     {
       auth: `${harness} is not authenticated for this provider; log in again, then retry.`,
       billing:
-        "The provider refused for lack of credits; add credits or disable the route. Its pool cools down for 6 hours.",
+        "The provider refused for lack of credits or a spent key limit; add credits, raise the limit, or disable the route. Its pool cools down for 6 hours.",
       rate_limit: "All configured routes are rate-limited or out of quota; retry later or use native subagents.",
       unavailable: `Model not found, or its provider isn't logged in to ${harness}. Check ids and logins with \`dispatch doctor\`.`,
       transient: "Network or provider errors on every route; retry later.",

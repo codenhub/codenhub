@@ -15,7 +15,7 @@ export function classifyText(text) {
     retryAfterMs = Math.ceil(n * unit);
   }
   // Not "billing": Google's per-minute 429 says "check your plan and billing details".
-  if (/\b402\b|payment required|insufficient (credits|balance|funds)|credit balance/i.test(t)) {
+  if (/\b402\b|payment required|insufficient (credits|balance|funds)|credit balance|key limit exceeded/i.test(t)) {
     return { kind: "billing" };
   }
   if (

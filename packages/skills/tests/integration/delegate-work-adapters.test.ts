@@ -342,4 +342,17 @@ describe("opencode adapter (2.x events)", () => {
       retryAfterMs: 32644,
     });
   });
+
+  it("shouldClassifyAnOpenRouterKeyLimitErrorAsBilling", async () => {
+    const { default: opencode } = await import(adapter("opencode"));
+    const acc = newAcc();
+    const error = {
+      type: "provider.auth",
+      status: 403,
+      message: "Key limit exceeded (total limit). Manage it using https://openrouter.ai/workspaces/default/keys/abc123",
+    };
+    opencode.parseLine(JSON.stringify({ type: "error", error }), acc);
+
+    expect(opencode.classify({ code: 1, acc, stderrTail: "" }).kind).toBe("billing");
+  });
 });
