@@ -221,7 +221,10 @@ async function execute(meta, cfg, list, prompt, sessionId) {
   let outcome = null;
   let lastFailure = null;
   // A follow-up adds attempts to the run; each keeps its own log.
-  let attempt = fs.readdirSync(runDir(meta.id)).filter((f) => /^log-\d+\.jsonl$/.test(f)).length;
+  let attempt = Math.max(
+    0,
+    ...fs.readdirSync(runDir(meta.id)).map((f) => Number(f.match(/^log-(\d+)\.jsonl$/)?.[1] ?? 0)),
+  );
 
   for (const c of list) {
     attempt++;

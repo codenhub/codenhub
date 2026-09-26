@@ -72,4 +72,16 @@ describe("delegate-work", () => {
     expect(fs.readFileSync(first.logPath, "utf8")).toBe(firstLog);
     expect(fs.readFileSync(path.join(repo, "src", "a.txt"), "utf8")).toBe("start\nfirst\nsecond\n");
   });
+
+  it("shouldNumberAFollowUpsLogAfterTheHighestExistingOne", async () => {
+    const R = await import(runner);
+
+    const first = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+    const stray = path.join(path.dirname(first.logPath), "log-3.jsonl");
+    fs.writeFileSync(stray, "kept\n");
+
+    const second = await R.followup(first.id, "FOLLOW-UP: add another line.");
+    expect(path.basename(second.logPath)).toBe("log-4.jsonl");
+    expect(fs.readFileSync(stray, "utf8")).toBe("kept\n");
+  });
 });
