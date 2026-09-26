@@ -109,6 +109,6 @@ Per-harness mechanics, verified versions and known limits:
 
 A route's usable context is the smallest of the model's `context`, the
 route's optional `context`, and what the harness reports (OpenCode's
-`models --verbose`, Codex's model cache × its effective percentage). Reported
+models.dev metadata, Codex's model cache × its effective percentage). Reported
 values are cached for a day in the state directory; `doctor` refreshes them
 and flags drift of more than 10% between config and harness.

@@ -6,8 +6,8 @@ import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 /**
- * Harness adapters against event lines captured from real runs (agy 1.2.11),
- * trimmed to the fields the adapters read.
+ * Harness adapters against event lines captured from real runs (agy 1.2.11,
+ * OpenCode 2.0.17), trimmed to the fields the adapters read.
  */
 const here = path.dirname(fileURLToPath(import.meta.url));
 const adapter = (name: string) => path.resolve(here, `../../skills/delegate-work/adapters/${name}.mjs`);
@@ -106,5 +106,76 @@ describe("agy adapter", () => {
     expect(failed('invalid model selection (--model "x"): model x is not recognized as a known model')).toBe(
       "unavailable",
     );
+  });
+});
+
+describe("opencode adapter (2.x events)", () => {
+  it("shouldReadPatchedFilesFromToolMetadata", async () => {
+    const { default: opencode } = await import(adapter("opencode"));
+    const acc = newAcc();
+    const patch = {
+      type: "tool_use",
+      sessionID: "ses_1",
+      part: {
+        tool: "patch",
+        state: {
+          status: "completed",
+          input: { patchText: "*** Begin Patch\n*** Update File: src/text.mjs\n*** End Patch" },
+          metadata: { metadata: { files: [{ file: "src/text.mjs", status: "modified" }] } },
+        },
+      },
+    };
+    opencode.parseLine(JSON.stringify(patch), acc);
+
+    expect(acc.sessionId).toBe("ses_1");
+    expect(acc.edits).toEqual(["src/text.mjs"]);
+  });
+
+  it("shouldTreatARunStoppedByAPermissionPromptAsTheWorkersOutcome", async () => {
+    const { default: opencode } = await import(adapter("opencode"));
+    const acc = newAcc();
+    const events = [
+      {
+        type: "tool_use",
+        part: {
+          tool: "shell",
+          state: { status: "error", input: { command: "node -v" }, error: "Permission denied: shell" },
+        },
+      },
+      {
+        type: "tool_use",
+        part: {
+          tool: "read",
+          state: { status: "error", input: { path: "../x" }, error: "Tool execution interrupted" },
+        },
+      },
+      { type: "error", error: { type: "aborted", message: "Step interrupted" } },
+    ];
+    for (const e of events) {
+      opencode.parseLine(JSON.stringify(e), acc);
+    }
+
+    expect(acc.denied).toEqual([
+      "shell: node -v",
+      "read: ../x (needs approval, which opencode run can't ask for; the run stopped there)",
+    ]);
+    expect(opencode.classify({ code: 1, acc, stderrTail: "" }).kind).toBe("ok");
+  });
+
+  it("shouldClassifyAFreeTierQuotaErrorAsARateLimitWithItsRetryDelay", async () => {
+    const { default: opencode } = await import(adapter("opencode"));
+    const acc = newAcc();
+    const error = {
+      type: "provider.quota",
+      status: 429,
+      message:
+        "You exceeded your current quota, please check your plan and billing details.\nPlease retry in 32.643304145s.",
+    };
+    opencode.parseLine(JSON.stringify({ type: "error", error }), acc);
+
+    expect(opencode.classify({ code: 1, acc, stderrTail: "" })).toMatchObject({
+      kind: "rate_limit",
+      retryAfterMs: 32644,
+    });
   });
 });
