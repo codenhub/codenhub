@@ -968,6 +968,12 @@ export async function followup(id, brief) {
   if (!fs.existsSync(meta.workDir)) {
     throw new UsageError("the tree this run worked in is gone (applied or discarded since); use --rebrief-of instead");
   }
+  if (meta.isolation === "inplace") {
+    const busy = busyTree(meta);
+    if (busy) {
+      throw new UsageError(busy);
+    }
+  }
   // The follow-up is judged against the original snapshot, so anything edited
   // since would count as the worker's change (and be restored if out of scope).
   const now = G.workingTree(meta.workDir, path.join(runDir(id), "now.index"));

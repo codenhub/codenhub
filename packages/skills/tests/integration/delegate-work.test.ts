@@ -561,6 +561,22 @@ describe("delegate-work", () => {
     expect(prune({ maxAgeMs: Infinity, dryRun: true }).kept.map((k: { id: string }) => k.id)).not.toContain(r.id);
   });
 
+  it("shouldRefuseAFollowUpWhileAnotherRunHoldsTheTree", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+
+    const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+    const holder = S.newRun();
+    const held = { id: holder, root: S.loadMeta(r.id).root, editing: true, isolation: "inplace", pid: process.pid };
+    S.saveMeta(holder, { ...held, phase: "running" });
+    try {
+      await expect(R.followup(r.id, "FOLLOW-UP: more.")).rejects.toThrow(`In-place run ${holder} is still working`);
+    } finally {
+      S.saveMeta(holder, { ...held, phase: "done" });
+    }
+    await R.discard(r.id);
+  });
+
   describe("with a harness that can't be contained in place", () => {
     let opencode: { containedInPlace?: boolean };
 
