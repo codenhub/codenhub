@@ -32,7 +32,9 @@ Permissions
 - If an action is denied, do not look for another way to perform it. Copy the
   denial message verbatim into your report and continue if you can, or stop.
 
-Finish with exactly this block as the last thing in your output:
+Finish with exactly this block as the last thing in your output. Only the
+block is read: whatever the task asks you to report goes inside it, not
+above it.
 
 RESULT
 status: done | blocked | not_needed

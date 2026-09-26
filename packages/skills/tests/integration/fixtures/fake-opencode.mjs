@@ -17,7 +17,11 @@ if (cmd === "--version") {
   if (prompt.includes("read-only task")) {
     const report = prompt.includes("SHORT") ? "one finding" : `${"finding\n".repeat(600)}end of report`;
     const verdict = prompt.match(/VERDICT (\S+)/)?.[1];
-    const text = `RESULT\nstatus: done\nsummary: read the code\n${verdict ? `verdict: ${verdict}\n` : ""}report:\n${report}`;
+    let text = `RESULT\nstatus: done\nsummary: read the code\n${verdict ? `verdict: ${verdict}\n` : ""}report:\n${report}`;
+    // ABOVE: the answer before the block, only pointed at inside it.
+    if (prompt.includes("ABOVE")) {
+      text = `${"the answer\n".repeat(40)}\nRESULT\nstatus: done\nsummary: answered\nreport:\nFindings are listed above.`;
+    }
     emit({ type: "text", part: { text } });
     process.exit(0);
   }

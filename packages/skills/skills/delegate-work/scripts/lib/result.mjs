@@ -1,5 +1,6 @@
 const cap = (s, n) => (s && s.length > n ? s.slice(0, n - 1) + "…" : (s ?? null));
 const REPORT_CAP = 4000;
+const REPORT_POINTER = 200;
 
 /** Parse the RESULT block a worker ends with. Tolerant of formatting drift. */
 export function parseResult(text) {
@@ -36,7 +37,12 @@ export function parseResult(text) {
     .filter((l) => l && !/^(none|n\/a|nothing)\.?$/i.test(l));
   out.verdict = join("verdict")?.split(/\s/)[0].toLowerCase() ?? null;
   const report = join("report");
-  out.report = report;
+  // Some workers write the answer above the block and only point at it under
+  // report ("findings are listed above"). A short report under a longer text
+  // keeps that text too.
+  const above = text.slice(0, last.index).trim();
+  const short = (report?.length ?? 0) < REPORT_POINTER;
+  out.report = short && above.length > (report?.length ?? 0) ? [above, report].filter(Boolean).join("\n\n") : report;
   return out;
 }
 

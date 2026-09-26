@@ -73,7 +73,7 @@ Never treat exit code 0 as "the task succeeded".
 | `isolation`       | `inplace` (changes are already in the working tree) or `worktree` (changes wait for `apply`); `null` when nothing ran (`use_native`, `not_available`). |
 | `lineage`         | `rebriefOf`: the task this run retries. `reviewOf`: the result this review covers. |
 | `summary`         | Worker's own summary, capped at 600 characters. Unverified claim. |
-| `report`          | `scout` and `reviewer` only: findings, capped at 4000 characters. `null` for editing roles. A `reviewer` report starts with a verdict line: `approve`, `approve-with-nits` or `reject`. |
+| `report`          | `scout` and `reviewer` only: findings, capped at 4000 characters. `null` for editing roles. A `reviewer` report starts with a verdict line: `approve`, `approve-with-nits` or `reject`. When the worker's own report was a short pointer ("listed above") under a longer answer, the answer comes first, and may start with the worker's narration. |
 | `reportTruncated` | `true` when `report` was cut at the cap. |
 | `reportPath`      | The whole report, outside the repository. Read it when `reportTruncated` is `true` and the rest matters. |
 | `files.changed`   | From `git diff`, not from the worker's claims. |

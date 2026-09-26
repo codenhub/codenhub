@@ -213,6 +213,17 @@ describe("delegate-work", () => {
     expect(odd.hint).toContain("no valid verdict");
   });
 
+  it("shouldKeepAnAnswerWrittenAboveTheResultBlock", async () => {
+    const R = await import(runner);
+
+    const r = await R.run({ cwd: repo, role: "scout", brief: "Answer. ABOVE", model: "fake" });
+    expect(r.report).toMatch(/^the answer\n/);
+    expect(r.report).toMatch(/\n\nFindings are listed above\.$/);
+    // A full report stays as the worker wrote it.
+    const full = await R.run({ cwd: repo, role: "scout", brief: "Answer. SHORT", model: "fake" });
+    expect(full.report).toBe("one finding");
+  });
+
   it("shouldKeepTheWholeReportWhenTheResultCutsIt", async () => {
     const R = await import(runner);
 

@@ -196,9 +196,9 @@ function preamble({ role, allow, read, checks }) {
   const tpl = fs.readFileSync(path.join(skillDir, "references", "worker-preamble.md"), "utf8");
   const report =
     {
-      scout: "report:\n<your findings, in the form the task asks for>",
+      scout: "report:\n<your whole answer, in the form the task asks for>",
       reviewer:
-        "verdict: approve | approve-with-nits | reject\nreport:\n<each issue: file, line, problem, why it matters>",
+        "verdict: approve | approve-with-nits | reject\nreport:\n<every issue in full: file, line, problem, why it matters>",
     }[role] ?? "";
   return tpl
     .replace("{{ALLOW}}", EDITING.has(role) ? allow.join(", ") : "none (read-only task: do not edit any file)")
