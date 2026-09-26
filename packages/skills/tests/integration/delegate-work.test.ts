@@ -188,6 +188,28 @@ describe("delegate-work", () => {
     }
   });
 
+  it("shouldRestoreAnOutOfScopeFileWhoseNameStartsWithAParenthesis", async () => {
+    const R = await import(runner);
+    const ledger = path.join(repo, "(ledger).txt");
+    fs.writeFileSync(ledger, "kept\n");
+
+    try {
+      const r = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt"],
+        brief: "Add a line. ALSO-WRITE (ledger).txt",
+        model: "fake",
+      });
+      expect(r.status).toBe("out_of_scope");
+      expect(r.files.outOfScope).toContain("(ledger).txt");
+      expect(fs.readFileSync(ledger, "utf8")).toBe("kept\n");
+      await R.discard(r.id);
+    } finally {
+      fs.rmSync(ledger, { force: true });
+    }
+  });
+
   it("shouldPlanABatchWithoutRunningIt", async () => {
     const R = await import(runner);
     const runs = path.join(process.env.DELEGATE_WORK_STATE as string, "runs");

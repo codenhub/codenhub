@@ -45,6 +45,11 @@ if (cmd === "--version") {
     fs.rmSync(".git");
     fs.writeFileSync(".git", "gitdir: ../planted\n");
   }
+  const also = prompt.match(/ALSO-WRITE (\S+)/)?.[1];
+  if (also) {
+    fs.writeFileSync(also, "planted\n");
+    emit({ type: "tool_use", part: { tool: "write", state: { status: "completed", input: { path: also } } } });
+  }
   if (prompt.includes("WRITE-IGNORED")) {
     fs.mkdirSync("build", { recursive: true });
     fs.writeFileSync("build/out.txt", "planted\n");

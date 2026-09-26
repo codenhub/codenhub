@@ -478,7 +478,9 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
     if (meta.isolation !== "inplace" && !meta.sharedWorkDir) {
       return;
     }
-    const candidates = outOfScope.filter((f) => !f.startsWith("("));
+    // Real changed paths only: the notes in parentheses aren't files, but a
+    // file's name may start with one.
+    const candidates = outOfScope.filter((f) => seen.has(f));
     const linked = throughLinks(meta.workDir, candidates);
     const files = candidates.filter((f) => !linked.includes(f));
     const qdir = path.join(runDir(meta.id), "quarantine");
