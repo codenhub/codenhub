@@ -134,6 +134,16 @@ function catalog(bin) {
 export default {
   name: "opencode",
 
+  /**
+   * Credentials this harness may log in with; dispatch strips other secrets.
+   * An API key in the environment belongs to the route's provider:
+   * `openrouter/...` reads OPENROUTER_API_KEY.
+   */
+  authEnv(route) {
+    const provider = String(route.model).split("/")[0].toUpperCase().replaceAll("-", "_");
+    return provider === "GOOGLE" ? ["GOOGLE_*", "GEMINI_*"] : [`${provider}_*`];
+  },
+
   detect() {
     if (detected) {
       return detected;

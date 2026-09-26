@@ -30,5 +30,6 @@ if (cmd === "--version") {
       part: { tool: "write", state: { status: "completed", input: { path: "build/out.txt" } } },
     });
   }
-  emit({ type: "text", part: { text: "RESULT\nstatus: done\nsummary: edited src/a.txt" } });
+  const env = ["DW_TOKEN", "DW_PASSED_TOKEN", "DW_PLAIN"].map((k) => `${k}=${process.env[k] ?? "unset"}`);
+  emit({ type: "text", part: { text: `RESULT\nstatus: done\nsummary: edited src/a.txt; ${env.join(" ")}` } });
 }

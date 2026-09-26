@@ -99,11 +99,29 @@ the repository, so with a `src/` directory the checks (and the worker) get
 
 Harness permissions limit what a worker can do while it runs: which files it
 edits and which commands it runs. They don't sandbox the code it writes. The
-checks run that code with your permissions and environment, as your own test
-run would, and a worker in place edits your real working tree; dispatch
+checks run that code with your permissions and environment (minus the
+secrets below), as your own test run would, and a worker in place edits your
+real working tree; dispatch
 restores out-of-scope files afterwards, it doesn't prevent writing them. Give
 workers the same trust you give the models behind them, and keep untrusted
 routes off repositories whose tests reach credentials or production systems.
+
+## Secrets
+
+Workers, and the checks dispatch runs on their code, get your environment
+without the variables that look like credentials: names with a `TOKEN`,
+`SECRET`, `PASSWORD`, `PASSPHRASE`, `CREDENTIAL`, `KEY`, `PAT` or `AUTH` part
+(`GITHUB_TOKEN`, `NPM_TOKEN`, `AWS_SECRET_ACCESS_KEY`), and URLs with a
+password in them (`DATABASE_URL=postgres://user:pass@...`).
+
+Each harness keeps what it logs in with: Claude Code `ANTHROPIC_*` and
+`CLAUDE_CODE_OAUTH_TOKEN`, Codex `OPENAI_*` and `CODEX_*`, OpenCode the route
+provider's own (`OPENROUTER_*` for `openrouter/...`; `GOOGLE_*` and
+`GEMINI_*` for `google/...`). To pass more, list names (`NAME` or `PREFIX_*`)
+in `passEnv` on a route (that worker only) or on a project (its workers and
+its checks), for example a test suite that needs a token:
+
+    "projects": { "C:/work/api/**": { "passEnv": ["STRIPE_TEST_KEY"] } }
 
 ## Harness notes
 

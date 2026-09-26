@@ -106,6 +106,34 @@ describe("delegate-work", () => {
     fs.rmSync(path.join(repo, ".gitignore"));
   });
 
+  it("shouldKeepSecretsFromWorkersAndChecksUnlessPassed", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    // Fails when the checks can see the stripped variable.
+    config.projects = {
+      [`${repo.replaceAll("\\", "/")}/**`]: {
+        passEnv: ["DW_PASSED_*"],
+        checks: { fast: ['node -e "process.exit(process.env.DW_TOKEN ? 1 : 0)"'] },
+      },
+    };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+    Object.assign(process.env, { DW_TOKEN: "secret", DW_PASSED_TOKEN: "passed", DW_PLAIN: "plain" });
+
+    try {
+      const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+      expect(r.summary).toContain("DW_TOKEN=unset DW_PASSED_TOKEN=passed DW_PLAIN=plain");
+      expect(r.checks).toEqual([{ name: "check1", ok: true, tail: "" }]);
+      await R.discard(r.id);
+    } finally {
+      fs.writeFileSync(configFile, original);
+      for (const k of ["DW_TOKEN", "DW_PASSED_TOKEN", "DW_PLAIN"]) {
+        delete process.env[k];
+      }
+    }
+  });
+
   describe("with a harness that can't be contained in place", () => {
     let opencode: { containedInPlace?: boolean };
 

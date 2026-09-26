@@ -47,6 +47,8 @@ A parent Claude Code session (desktop app, CLI, SDK) exports around two dozen
 `CLAUDE*` variables: session ids, a messaging socket and token. Workers get
 all of them removed except `CLAUDE_CODE_OAUTH_TOKEN` and `CLAUDE_CONFIG_DIR`.
 `ANTHROPIC_*` variables pass through; they may be the user's own API setup.
+Other secret-looking variables are stripped, as for every harness (see the
+README's Secrets section).
 
 ## Auth
 

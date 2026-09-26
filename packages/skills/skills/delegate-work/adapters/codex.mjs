@@ -90,6 +90,9 @@ export default {
   // write through, so editing runs never happen in place.
   containedInPlace: false,
 
+  /** Credentials this harness may log in with; dispatch strips other secrets. */
+  authEnv: () => ["OPENAI_*", "CODEX_*"],
+
   detect() {
     if (detected) {
       return detected;

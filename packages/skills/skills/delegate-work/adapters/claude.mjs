@@ -38,6 +38,9 @@ const bashRules = (cmds) => cmds.flatMap((c) => [`Bash(${c})`, `Bash(${c}:*)`]);
 export default {
   name: "claude",
 
+  /** Credentials this harness may log in with; dispatch strips other secrets. */
+  authEnv: () => ["ANTHROPIC_*", "CLAUDE_CODE_OAUTH_TOKEN"],
+
   detect() {
     if (detected) {
       return detected;

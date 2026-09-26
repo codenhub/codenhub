@@ -7,7 +7,7 @@ import { load, skillDir, validate } from "./config.mjs";
 import * as G from "./git.mjs";
 import { canonical, matchAny, toPosix } from "./glob.mjs";
 import { linkDeps, removeDirSafe, removeWorktree, unlinkSafe } from "./links.mjs";
-import { start } from "./proc.mjs";
+import { start, withoutSecrets } from "./proc.mjs";
 import { envelope, parseResult } from "./result.mjs";
 import { candidates, nextTier, orchestratorPools } from "./route.mjs";
 import { activeInplace, loadMeta, newRun, runDir, saveMeta, setCooldown } from "./state.mjs";
@@ -272,7 +272,17 @@ async function execute(meta, cfg, list, prompt, sessionId) {
     const proc = start(c.adapter.detect().bin, cmd.args, {
       cwd: meta.workDir,
       // Marks the process tree as a worker: dispatch refuses to run inside it.
-      env: { ...gitEnv, ...checkEnv(meta.checkList ?? []), ...cmd.env, DELEGATE_WORK_WORKER: "1" },
+      env: {
+        ...withoutSecrets([
+          ...(c.adapter.authEnv?.(c.route) ?? []),
+          ...(c.route.passEnv ?? []),
+          ...(cfg.project.passEnv ?? []),
+        ]),
+        ...gitEnv,
+        ...checkEnv(meta.checkList ?? []),
+        ...cmd.env,
+        DELEGATE_WORK_WORKER: "1",
+      },
       input: cmd.input,
       timeoutMs,
       stdoutFile: logPath,
@@ -431,7 +441,10 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
     meta.status = "no_changes";
   } else if (meta.editing) {
     const timeout = 1000 * (cfg.limits?.checkTimeoutSec ?? 900);
-    meta.checks = await runChecks(meta.checkList, meta.workDir, timeout, gitEnv);
+    meta.checks = await runChecks(meta.checkList, meta.workDir, timeout, {
+      ...withoutSecrets(cfg.project.passEnv ?? []),
+      ...gitEnv,
+    });
     // The checks ran the worker's code.
     guardGitFile(meta);
     // What checks leave behind (unignored reports, caches) isn't someone's edit.

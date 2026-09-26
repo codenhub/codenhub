@@ -18,6 +18,7 @@ export function userPath() {
 }
 
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
+const isNameList = (v) => v === undefined || (Array.isArray(v) && v.every((n) => /^[\w*]+$/.test(n)));
 
 function merge(a, b) {
   if (!isObj(a) || !isObj(b)) {
@@ -106,7 +107,15 @@ export function validate(cfg, harnesses) {
       if (r.context !== undefined && typeof r.context !== "number") {
         e(`${p}.context`, "must be a number");
       }
+      if (!isNameList(r.passEnv)) {
+        e(`${p}.passEnv`, "must be an array of variable names (NAME or PREFIX_*)");
+      }
     });
+  }
+  for (const [pattern, p] of Object.entries(cfg.projects ?? {})) {
+    if (!isNameList(p?.passEnv)) {
+      e(`projects.${pattern}.passEnv`, "must be an array of variable names (NAME or PREFIX_*)");
+    }
   }
   for (const [tier, list] of Object.entries(cfg.tiers ?? {})) {
     if (!TIERS.includes(tier)) {
