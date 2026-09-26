@@ -24,6 +24,11 @@ the model list itself changes between versions.
   `--standalone` starts a private server for the run instead. 2.x has no
   `--dir` (the process cwd is the work dir) and no `--variant` (it joins the
   model after `#`).
+- 2.x takes its directory from `PWD` when it is set, over the process cwd.
+  A worker started in a worktree with the `PWD` of a shell in the repository
+  edited the repository and ran its checks there, while the worktree stayed
+  clean (`no_changes`). Dispatch sets `PWD` to the work dir for every worker
+  and check.
 - `--print-logs`: 1.x JSON error events only say "Unexpected server error";
   the real cause (model not found, auth, rate limit) is on stderr as
   `error="..."`. 2.x error events carry the cause themselves; its logs are
@@ -116,9 +121,11 @@ Permissions grouped by tool, `agent.dispatch-worker.permission`.
   before emitting a final `error` event. Classification uses that final error
   and the last `error="..."` on stderr; earlier errors in the stderr tail were
   already retried past and only count when the final one is unrecognized.
-- OpenRouter without credits was not observed: on the verification account a
-  paid model (`z-ai/glm-5.3-flash`) answered normally. Billing is matched from
-  the provider's wording (402, "insufficient credits").
+- 2.x OpenRouter key whose spending limit is used up: `provider.auth`, 403,
+  "Key limit exceeded (total limit). Manage it using ..." → `billing`, not
+  `auth`: logging in again doesn't help. The run fails at once. An account
+  out of credits was not observed; it is matched from the provider's wording
+  (402, "insufficient credits").
 
 ## Route options
 

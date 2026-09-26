@@ -53,8 +53,11 @@ export function runSync(resolved, args, opts = {}) {
 // Variables that usually hold credentials, by name or by a URL with a
 // password in it. Workers, and the checks that run their code, don't get
 // them unless a harness needs one for its own login or the config passes it.
-const SECRET_NAME = /(^|_)(TOKEN|SECRET|PASSWORD|PASSWD|PASSPHRASE|CREDENTIALS?|APIKEY|KEY|PAT|AUTH)S?(_|$)/i;
-const SECRET_VALUE = /^[a-z][a-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/i;
+// A password anywhere in the name (PGPASSWORD), and a PWD part after another
+// (MYSQL_PWD) but not PWD itself, the working directory. A URL's user may be
+// empty (redis://:password@host).
+const SECRET_NAME = /(^|_)(TOKEN|SECRET|PASSPHRASE|CREDENTIALS?|APIKEY|KEY|PAT|AUTH)S?(_|$)|PASSW(OR)?D|_PWD(_|$)/i;
+const SECRET_VALUE = /^[a-z][a-z0-9+.-]*:\/\/[^/\s:@]*:[^/\s@]+@/i;
 const nameRule = (p) =>
   p instanceof RegExp ? p : new RegExp(`^${p.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*")}$`, "i");
 
@@ -81,6 +84,11 @@ export function mergeEnv(env = {}) {
   return out;
 }
 
+// A child inherits dispatch's PWD, the directory dispatch was started from.
+// Some tools trust PWD over their real directory (OpenCode 2 does, and then
+// works in the repository instead of the worktree), so it names cwd instead.
+const inDir = (cwd) => (cwd ? { PWD: path.resolve(cwd) } : {});
+
 export function killTree(pid) {
   if (!pid) {
     return;
@@ -104,7 +112,7 @@ export function start(cmd, args, { cwd, env, input, timeoutMs, onLine, stdoutFil
   const resolved = typeof cmd === "string" ? { file: cmd, shim: false } : cmd;
   const opts = {
     cwd,
-    env: mergeEnv(env),
+    env: mergeEnv({ ...env, ...inDir(cwd) }),
     stdio: ["pipe", "pipe", "pipe"],
     detached: !WIN,
     windowsHide: true,
@@ -193,7 +201,7 @@ export async function runShell(command, { cwd, timeoutMs, env }) {
     shell: true,
     // FORCE_COLOR=0 disables color for Node tools but forces it for Python,
     // which checks NO_COLOR first.
-    env: mergeEnv({ CI: "1", FORCE_COLOR: "0", NO_COLOR: "1", ...env }),
+    env: mergeEnv({ CI: "1", FORCE_COLOR: "0", NO_COLOR: "1", ...env, ...inDir(cwd) }),
     detached: !WIN,
     windowsHide: true,
     stdio: ["ignore", "pipe", "pipe"],

@@ -114,9 +114,12 @@ asks for an external run.
    editing brief must name the files it may touch (`--allow`). Files the worker
    should read but not edit go in `--read`. Pass briefs through stdin or a
    temporary path outside the repository.
-3. **Dispatch.**
+3. **Dispatch.** Run `dispatch` from the repository the work is in: it works
+   on the repository of the current directory. `scripts/` is under this
+   skill's directory, so give its full path: every `node scripts/dispatch.mjs`
+   in this file stands for `node <this skill's directory>/scripts/dispatch.mjs`.
    ```
-   node scripts/dispatch.mjs run --role fixer --allow "src/validation.ts" --brief -
+   node scripts/dispatch.mjs run --role fixer --allow "src/validation.ts" --allow "src/validation.test.ts" --brief -
    node scripts/dispatch.mjs run --role builder --allow "src/rates/**" --read "src/types.ts" --brief -
    node scripts/dispatch.mjs run --batch <batch.json>
    ```
@@ -150,7 +153,12 @@ asks for an external run.
    ```
    `dispatch` picks a reviewer from a different model family than the builder,
    gives it the original brief and the diff, and lets it read the changed
-   files. The brief needs only the review criteria.
+   files. The brief needs only the review criteria. A diff over 60,000
+   characters is cut, and the result's `hint` says so: check that the report
+   covers every changed file. When it returns `use_native`, brief the native
+   reviewer yourself with the same parts: your criteria, the original brief,
+   the diff (`dispatch diff <id>`), and where to read the changed files (the
+   result's `worktree`, or your working tree for an in-place result).
 6. **Decide.**
    - Accept: `node scripts/dispatch.mjs apply <id>`
    - Reject: `node scripts/dispatch.mjs discard <id>`

@@ -35,6 +35,7 @@ Never treat exit code 0 as "the task succeeded".
     ]
   },
   "isolation": "inplace",
+  "worktree": null,
   "lineage": { "rebriefOf": null, "reviewOf": null },
   "summary": "Guarded parseDate against empty strings; added test case.",
   "report": null,
@@ -71,15 +72,16 @@ Never treat exit code 0 as "the task succeeded".
 | `status`          | See the status table. |
 | `worker`          | What actually ran, and the tier/kind it was chosen for. `route` names which access path was used; `family` is the model family, which `--review` uses to pick a reviewer from another one. `skipped` lists models or routes passed over and why (context too small, unavailable, cooling down, blocked by data policy, failed and fell back). |
 | `isolation`       | `inplace` (changes are already in the working tree) or `worktree` (changes wait for `apply`); `null` when nothing ran (`use_native`, `not_available`). |
+| `worktree`        | The worktree holding the change while a `worktree` result waits for `apply` or `discard`, outside the repository; `null` otherwise. Its files are the worker's version, for review. |
 | `lineage`         | `rebriefOf`: the task this run retries. `reviewOf`: the result this review covers. |
 | `summary`         | Worker's own summary, capped at 600 characters. Unverified claim. |
-| `report`          | `scout` and `reviewer` only: findings, capped at 4000 characters. `null` for editing roles. A `reviewer` report starts with a verdict line: `approve`, `approve-with-nits` or `reject`. |
+| `report`          | `scout` and `reviewer` only: findings, capped at 4000 characters. `null` for editing roles. A `reviewer` report starts with a verdict line: `approve`, `approve-with-nits` or `reject`. When the worker's own report was a short pointer ("listed above") under a longer answer, the answer comes first, and may start with the worker's narration. |
 | `reportTruncated` | `true` when `report` was cut at the cap. |
 | `reportPath`      | The whole report, outside the repository. Read it when `reportTruncated` is `true` and the rest matters. |
 | `files.changed`   | From `git diff`, not from the worker's claims. |
 | `files.outOfScope`| Changed files not matching `--allow`. Non-empty forces status `out_of_scope`, unless the run hit its time or step budget first: then it is `timeout`, with the same files restored. |
 | `checks`          | Verification commands from user config, or inferred from the project (fast set for `fixer`, full set for `builder`). `tail` is the last ≤ 20 lines of output, only when `ok` is false. **Empty means nothing could be inferred:** `ok` then only means "in scope and finished", and you must verify the change yourself before applying. |
-| `denied`          | Actions the harness refused, verbatim, one line each. |
+| `denied`          | Actions the harness refused, one line each, at most 20: its own wording where it gave one, otherwise the tool and its target; paths in the work dir are made relative. |
 | `notes`           | Out-of-scope observations from the worker. Never acted on automatically. |
 | `hint`            | Set by `dispatch` when it can suggest a concrete next step (e.g. re-authenticate a harness). |
 | `applied`         | Whether `apply` accepted the change. In place, the change is in the working tree either way; `false` there means it is not decided yet. |
@@ -99,7 +101,7 @@ by reading the log by default.
 | `out_of_scope`   | Touched files outside `--allow`, or anything inside dependency folders (`node_modules`, virtual environments). Changes are quarantined; in place, those files are already restored. Entries in parentheses are not restored: an install, or a write git can't see (an ignored file), known only from the worker's own edit events. | `discard`. Tell the user about any `(invisible to git, not restored)` file: it is still as the worker left it. If the extra file was genuinely needed, rebrief with a wider allowlist. |
 | `blocked`        | Worker stopped because a needed action was denied. Edits it made before stopping are kept and in scope, but the checks did not run. | Check `denied`. If `files.changed` has useful partial work, review and verify it, then `apply` it (or `followup` to finish); otherwise `discard`. Do the denied action yourself if appropriate, then rebrief what's left. |
 | `timeout`        | Killed by the time or step budget. | `discard`. Task was too large or too vague: split or sharpen it, then `--rebrief-of` if retry is available. |
-| `conflict`       | `apply`, `discard` or `unapply` found the files changed by someone else since the snapshot, a file whose path goes through a symlink or junction, or another in-place run still working in the tree. Nothing was overwritten. | If a run is still working, retry when it finishes. Otherwise inspect with `dispatch diff <id>`; merge by hand, rebrief from the current state, or `discard`. |
+| `conflict`       | `apply`, `discard` or `unapply` found the files changed by someone else since the snapshot, a file whose path goes through a symlink or junction, another in-place run still working in the tree, or the run itself still working (a follow-up in progress). Nothing was overwritten. | If a run is still working, retry when it finishes. Otherwise inspect with `dispatch diff <id>`; merge by hand, rebrief from the current state, or `discard`. |
 | `harness_error`  | Worker process failed (auth, rate limit, crash) and every fallback failed too. | Follow `hint`. Otherwise use native subagents or do it inline. |
 | `use_native`     | The chosen model shares the orchestrator's quota pool. Nothing ran. `worker.model` names the model. | Run the same brief as a native subagent with that model. A first run's `use_native` uses no retry; a rebrief's does, since the native run is the retry. |
 | `not_available`  | No configured harness is usable for this role here. | Run `doctor`; fall back to native subagents or inline. |

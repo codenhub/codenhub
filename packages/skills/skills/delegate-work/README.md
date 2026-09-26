@@ -70,7 +70,10 @@ before the next route runs, the files it restores are copied into the run's
 state first, in case you edited one meanwhile.
 
 Dispatch's own git commands also run no programs from repository config
-(`core.fsmonitor`, external diff, textconv). A worktree's `.git` file, which
+(`core.fsmonitor`, hooks, external diff, textconv): a `core.hooksPath`
+inside the tree, as husky and similar setups use, is a folder a worker can
+write to. Workers and checks in a worktree get the same settings. A
+worktree's `.git` file, which
 points git at the repository and so at its config, is put back as git wrote
 it after every worker and after the checks; a changed one makes the run
 `out_of_scope`.
@@ -125,9 +128,12 @@ routes off repositories whose tests reach credentials or production systems.
 
 Workers, and the checks dispatch runs on their code, get your environment
 without the variables that look like credentials: names with a `TOKEN`,
-`SECRET`, `PASSWORD`, `PASSPHRASE`, `CREDENTIAL`, `KEY`, `PAT` or `AUTH` part
-(`GITHUB_TOKEN`, `NPM_TOKEN`, `AWS_SECRET_ACCESS_KEY`), and URLs with a
-password in them (`DATABASE_URL=postgres://user:pass@...`).
+`SECRET`, `PASSPHRASE`, `CREDENTIAL`, `KEY`, `PAT` or `AUTH` part
+(`GITHUB_TOKEN`, `NPM_TOKEN`, `AWS_SECRET_ACCESS_KEY`), `PASSWORD` or `PASSWD`
+anywhere in the name (`PGPASSWORD`), a `PWD` part after another
+(`MYSQL_PWD`; `PWD` itself is the working directory), and URLs with a
+password in them (`DATABASE_URL=postgres://user:pass@...`,
+`REDIS_URL=redis://:pass@...`).
 
 Each harness keeps what it logs in with: Claude Code `ANTHROPIC_*` and
 `CLAUDE_CODE_OAUTH_TOKEN`, Codex `OPENAI_*` and `CODEX_*`, OpenCode the route

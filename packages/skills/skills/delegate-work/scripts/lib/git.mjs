@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import { canonical } from "./glob.mjs";
@@ -30,7 +31,7 @@ export function bytesEnv(cwd) {
   const tree = EMPTY_TREE[formats.get(cwd)];
   return {
     ...(tree ? { GIT_ATTR_SOURCE: tree } : {}),
-    GIT_CONFIG_COUNT: "4",
+    GIT_CONFIG_COUNT: "5",
     GIT_CONFIG_KEY_0: "core.autocrlf",
     GIT_CONFIG_VALUE_0: "false",
     GIT_CONFIG_KEY_1: "core.eol",
@@ -40,6 +41,10 @@ export function bytesEnv(cwd) {
     // An fsmonitor hook is a program git runs on add and status.
     GIT_CONFIG_KEY_3: "core.fsmonitor",
     GIT_CONFIG_VALUE_3: "false",
+    // Hooks too (post-index-change on add, post-checkout on worktree add),
+    // and a core.hooksPath inside the tree is one a worker can write to.
+    GIT_CONFIG_KEY_4: "core.hooksPath",
+    GIT_CONFIG_VALUE_4: os.devNull,
   };
 }
 

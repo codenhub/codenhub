@@ -12,6 +12,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  */
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runner = path.resolve(here, "../../skills/delegate-work/scripts/lib/runner.mjs");
+const state = path.resolve(here, "../../skills/delegate-work/scripts/lib/state.mjs");
+const proc = path.resolve(here, "../../skills/delegate-work/scripts/lib/proc.mjs");
 const adapter = (name: string) => path.resolve(here, `../../skills/delegate-work/adapters/${name}.mjs`);
 
 describe("delegate-work", () => {
@@ -106,6 +108,157 @@ describe("delegate-work", () => {
     fs.rmSync(path.join(repo, ".gitignore"));
   });
 
+  it("shouldPointOutReportedEditsTheWorkDirDoesNotShow", async () => {
+    const R = await import(runner);
+
+    const r = await R.run({
+      cwd: repo,
+      role: "fixer",
+      allow: ["src/a.txt"],
+      brief: "Add a line. REPORT-ONLY",
+      model: "fake",
+    });
+    expect(r.status).toBe("no_changes");
+    expect(r.hint).toContain("reported editing src/a.txt, but the work dir doesn't show them changed");
+  });
+
+  it("shouldNotRunTheRepositorysGitHooks", async () => {
+    const R = await import(runner);
+    const sentinel = path.join(tmp, "hook-ran");
+    const hooks = path.join(repo, ".githooks");
+    fs.mkdirSync(hooks);
+    // Git runs post-index-change whenever it writes an index: every snapshot.
+    fs.writeFileSync(
+      path.join(hooks, "post-index-change"),
+      `#!/bin/sh\necho ran > "${sentinel.replaceAll("\\", "/")}"\n`,
+      { mode: 0o755 },
+    );
+    const git = (...args: string[]) => execFileSync("git", args, { cwd: repo, stdio: "ignore" });
+    git("config", "core.hooksPath", ".githooks");
+
+    try {
+      const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+      expect(r.status).toBe("ok");
+      expect(fs.existsSync(sentinel)).toBe(false);
+      await R.discard(r.id);
+    } finally {
+      git("config", "--unset", "core.hooksPath");
+      fs.rmSync(hooks, { recursive: true });
+    }
+  });
+
+  it("shouldRefuseToActOnARunThatIsStillWorking", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+
+    const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+    const meta = S.loadMeta(r.id);
+    // As a follow-up in another dispatch process leaves it while it works.
+    S.saveMeta(r.id, { ...meta, phase: "running", pid: process.pid });
+    try {
+      expect(R.apply(r.id).status).toBe("conflict");
+      expect((await R.discard(r.id)).status).toBe("conflict");
+      await expect(
+        R.run({ cwd: repo, rebriefOf: r.id, role: "fixer", brief: "Better.", model: "fake" }),
+      ).rejects.toThrow(`Run ${r.id} is still working`);
+      await expect(R.followup(r.id, "More.")).rejects.toThrow("still working");
+    } finally {
+      S.saveMeta(r.id, meta);
+    }
+    expect((await R.discard(r.id)).status).toBe("ok");
+  });
+
+  it("shouldRefuseAnInPlaceRunWhileAnotherHoldsTheTree", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+    const fixer = { cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" };
+
+    const first = await R.run(fixer);
+    const { root } = S.loadMeta(first.id);
+    await R.discard(first.id);
+    const holder = S.newRun();
+    const held = { id: holder, root, editing: true, isolation: "inplace", phase: "running", pid: process.pid };
+    S.saveMeta(holder, { ...held, claimedAt: 0 });
+    try {
+      await expect(R.run({ ...fixer, isolation: "inplace" })).rejects.toThrow(
+        `In-place run ${holder} is still working in this tree`,
+      );
+    } finally {
+      S.saveMeta(holder, { ...held, phase: "done" });
+    }
+  });
+
+  it("shouldRestoreAnOutOfScopeFileWhoseNameStartsWithAParenthesis", async () => {
+    const R = await import(runner);
+    const ledger = path.join(repo, "(ledger).txt");
+    fs.writeFileSync(ledger, "kept\n");
+
+    try {
+      const r = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt"],
+        brief: "Add a line. ALSO-WRITE (ledger).txt",
+        model: "fake",
+      });
+      expect(r.status).toBe("out_of_scope");
+      expect(r.files.outOfScope).toContain("(ledger).txt");
+      expect(fs.readFileSync(ledger, "utf8")).toBe("kept\n");
+      await R.discard(r.id);
+    } finally {
+      fs.rmSync(ledger, { force: true });
+    }
+  });
+
+  it("shouldCountAnEditOutsideTheTreeAsOutOfScopeWhateverTheAllowlist", async () => {
+    const R = await import(runner);
+    const outside = path.join(tmp, "outside.txt");
+
+    try {
+      const r = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["**"],
+        brief: "Add a line. ALSO-WRITE ../outside.txt",
+        model: "fake",
+      });
+      expect(r.status).toBe("out_of_scope");
+      expect(r.files.outOfScope).toContain("(invisible to git, not restored) ../outside.txt");
+      await R.discard(r.id);
+    } finally {
+      fs.rmSync(outside, { force: true });
+    }
+  });
+
+  it("shouldTellTheReviewerAndTheOrchestratorWhenTheDiffWasCut", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    // A reviewer from another family than the fixer's.
+    config.models.other = { ...config.models.fake, family: "other" };
+    config.tiers.light = ["fake", "other"];
+    fs.writeFileSync(configFile, JSON.stringify(config));
+
+    try {
+      const fixed = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt", "src/big.txt"],
+        brief: "Add a line. BIG-DIFF",
+        model: "fake",
+      });
+      expect(fixed.status).toBe("ok");
+      const review = await R.run({ cwd: repo, role: "reviewer", review: fixed.id, tier: "light", brief: "SHORT" });
+      expect(review.worker.modelId).toBe("other");
+      expect(review.report).toMatch(/\(diff was cut\)$/);
+      expect(review.hint).toContain("diff cut at 60000 characters");
+      await R.discard(fixed.id);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
   it("shouldPlanABatchWithoutRunningIt", async () => {
     const R = await import(runner);
     const runs = path.join(process.env.DELEGATE_WORK_STATE as string, "runs");
@@ -118,6 +271,18 @@ describe("delegate-work", () => {
     // Two editing tasks get worktrees.
     expect(r.batch[0].isolation).toBe("worktree");
     expect(r.totals).toEqual({ planned: 2, use_native: 0, not_available: 0, other: 0 });
+    expect(fs.readdirSync(runs)).toEqual(before);
+  });
+
+  it("shouldRefuseABatchWithAnInvalidTaskBeforeRunningAny", async () => {
+    const R = await import(runner);
+    const runs = path.join(process.env.DELEGATE_WORK_STATE as string, "runs");
+    const before = fs.readdirSync(runs);
+    const good = { role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" };
+
+    await expect(R.batch([good, { ...good, allow: [] }], { cwd: repo })).rejects.toThrow(
+      "task 1: fixer requires --allow",
+    );
     expect(fs.readdirSync(runs)).toEqual(before);
   });
 
@@ -172,6 +337,17 @@ describe("delegate-work", () => {
     const odd = await review("Review. SHORT VERDICT looks-fine");
     expect(odd.report).toBe("one finding");
     expect(odd.hint).toContain("no valid verdict");
+  });
+
+  it("shouldKeepAnAnswerWrittenAboveTheResultBlock", async () => {
+    const R = await import(runner);
+
+    const r = await R.run({ cwd: repo, role: "scout", brief: "Answer. ABOVE", model: "fake" });
+    expect(r.report).toMatch(/^the answer\n/);
+    expect(r.report).toMatch(/\n\nFindings are listed above\.$/);
+    // A full report stays as the worker wrote it.
+    const full = await R.run({ cwd: repo, role: "scout", brief: "Answer. SHORT", model: "fake" });
+    expect(full.report).toBe("one finding");
   });
 
   it("shouldKeepTheWholeReportWhenTheResultCutsIt", async () => {
@@ -285,6 +461,34 @@ describe("delegate-work", () => {
     }
   });
 
+  it("shouldStripPasswordsInAnyNameFormButKeepTheWorkingDirectory", async () => {
+    const { withoutSecrets } = await import(proc);
+    const env = {
+      PGPASSWORD: "x",
+      MYSQL_PWD: "x",
+      REDIS_URL: "redis://:password@localhost:6379",
+      OLDPWD: "/previous",
+      DW_PLAIN_URL: "https://example.com/path",
+    };
+    Object.assign(process.env, env);
+
+    try {
+      const stripped = Object.keys(withoutSecrets([]));
+      expect(stripped).toEqual(expect.arrayContaining(["PGPASSWORD", "MYSQL_PWD", "REDIS_URL"]));
+      expect(stripped).not.toContain("PWD");
+      expect(stripped).not.toContain("OLDPWD");
+      expect(stripped).not.toContain("DW_PLAIN_URL");
+    } finally {
+      for (const k of Object.keys(env)) {
+        if (saved[k] === undefined) {
+          delete process.env[k];
+        } else {
+          process.env[k] = saved[k];
+        }
+      }
+    }
+  });
+
   describe("with a harness that can't be contained in place", () => {
     let opencode: { containedInPlace?: boolean };
 
@@ -304,7 +508,42 @@ describe("delegate-work", () => {
       expect(r.status).toBe("ok");
       expect(r.isolation).toBe("worktree");
       expect(r.applied).toBe(false);
-      await R.discard(r.id);
+      expect(fs.readFileSync(path.join(r.worktree, "src", "a.txt"), "utf8")).toMatch(/first\n$/);
+      expect((await R.discard(r.id)).worktree).toBeNull();
+    });
+
+    it("shouldPointPwdAtTheWorktreeForTheWorkerAndTheChecks", async () => {
+      const R = await import(runner);
+      const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+      const original = fs.readFileSync(configFile, "utf8");
+      const config = JSON.parse(original);
+      config.projects = {
+        [`${repo.replaceAll("\\", "/")}/**`]: {
+          checks: {
+            fast: [
+              "node -e \"const r=require('fs').realpathSync.native;process.exit(r(process.env.PWD)===r(process.cwd())?0:1)\"",
+            ],
+          },
+        },
+      };
+      fs.writeFileSync(configFile, JSON.stringify(config));
+      // What a shell started in the repository passes down.
+      process.env.PWD = repo;
+
+      try {
+        const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+        expect(r.isolation).toBe("worktree");
+        expect(r.summary).toContain("PWD=cwd");
+        expect(r.checks).toEqual([{ name: "check1", ok: true, tail: "" }]);
+        await R.discard(r.id);
+      } finally {
+        fs.writeFileSync(configFile, original);
+        if (saved.PWD === undefined) {
+          delete process.env.PWD;
+        } else {
+          process.env.PWD = saved.PWD;
+        }
+      }
     });
 
     it("shouldRestoreAWorktreeGitFileTheWorkerRepointed", async () => {
