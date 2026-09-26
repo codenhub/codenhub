@@ -82,7 +82,9 @@ Windows looks for a program named without a path (`git`, `taskkill`) in the
 working directory before `PATH`, and a work dir is where a worker writes.
 Dispatch turns that lookup off for itself and everything it starts
 (`NoDefaultCurrentDirectoryInExePath`), so a `git.exe` a worker leaves in its
-worktree never runs as dispatch.
+worktree never runs as dispatch. A worktree's dependency links are checked
+before the checks run: a worker that replaced one with a folder of its own
+would have the checks run its tools, so the run is `out_of_scope` instead.
 
 Restores keep a file's executable bit and put back symbolic links from the
 snapshot. `apply` never writes a symbolic link a worker made: it reports a

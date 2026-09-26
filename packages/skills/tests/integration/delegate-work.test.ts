@@ -742,6 +742,30 @@ describe("delegate-work", () => {
       await R.discard(r.id);
     });
 
+    it("shouldNotTrustChecksAfterTheWorkerReplacedADependencyLink", async () => {
+      const R = await import(runner);
+      fs.mkdirSync(path.join(repo, "node_modules"), { recursive: true });
+      fs.writeFileSync(path.join(repo, ".gitignore"), "node_modules/\n");
+
+      try {
+        const r = await R.run({
+          cwd: repo,
+          role: "fixer",
+          allow: ["src/a.txt"],
+          brief: "Add a line. SWAP-LINK",
+          model: "fake",
+        });
+        expect(r.status).toBe("out_of_scope");
+        expect(r.files.outOfScope).toContain("(dependency link node_modules replaced)");
+        await R.discard(r.id);
+        // The worker's folder went with the worktree; the real one stays.
+        expect(fs.existsSync(path.join(repo, "node_modules"))).toBe(true);
+      } finally {
+        fs.rmSync(path.join(repo, "node_modules"), { recursive: true });
+        fs.rmSync(path.join(repo, ".gitignore"));
+      }
+    });
+
     it.skipIf(process.platform === "win32")("shouldNotApplyASymbolicLinkTheWorkerMade", async () => {
       const R = await import(runner);
 

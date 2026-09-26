@@ -43,6 +43,16 @@ if (cmd === "--version") {
   if (link) {
     fs.symlinkSync(link[1], "src/j", process.platform === "win32" ? "junction" : "dir");
   }
+  // SWAP-LINK: the worktree's dependency link becomes a folder of the worker's own.
+  if (prompt.includes("SWAP-LINK")) {
+    try {
+      fs.unlinkSync("node_modules");
+    } catch {
+      fs.rmdirSync("node_modules");
+    }
+    fs.mkdirSync("node_modules/.bin", { recursive: true });
+    fs.writeFileSync("node_modules/.bin/check", "exit 0\n");
+  }
   const fileLink = prompt.match(/MAKE-FILE-LINK (\S+)/);
   if (fileLink) {
     fs.symlinkSync(fileLink[1], "src/l.txt");

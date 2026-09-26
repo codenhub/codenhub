@@ -6,7 +6,7 @@ import { checkEnv, resolveChecks, runChecks } from "./checks.mjs";
 import { load, skillDir, validate } from "./config.mjs";
 import * as G from "./git.mjs";
 import { canonical, matchAny, toPosix } from "./glob.mjs";
-import { linkDeps, removeDirSafe, removeWorktree, stripLinks, unlinkSafe } from "./links.mjs";
+import { linkDeps, linksTo, removeDirSafe, removeWorktree, stripLinks, unlinkSafe } from "./links.mjs";
 import { start, withoutSecrets } from "./proc.mjs";
 import { envelope, parseResult } from "./result.mjs";
 import { candidates, nextTier, orchestratorPools } from "./route.mjs";
@@ -496,6 +496,12 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   }
   if (meta.gitFileRestored) {
     outOfScope.push("(worktree .git file changed: restored)");
+  }
+  // The checks would run whatever tools a replaced dependency link holds.
+  for (const d of meta.linked ?? []) {
+    if (!linksTo(path.join(meta.workDir, d), path.join(meta.root, d))) {
+      outOfScope.push(`(dependency link ${d} replaced)`);
+    }
   }
   // Writes git can't see (ignored files, paths outside the tree) are known
   // only from the harness's edit events, and can't be restored from the snapshot.

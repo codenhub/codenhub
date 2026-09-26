@@ -24,6 +24,21 @@ export function linkDeps(root, wt, dirs) {
   return linked;
 }
 
+/** link is still the link linkDeps made to target, not a folder or a link to somewhere else. */
+export function linksTo(link, target) {
+  let to;
+  try {
+    if (!fs.lstatSync(link).isSymbolicLink()) {
+      return false;
+    }
+    to = path.resolve(path.dirname(link), fs.readlinkSync(link));
+  } catch {
+    return false;
+  }
+  const norm = (p) => (WIN ? path.resolve(p).toLowerCase() : path.resolve(p));
+  return norm(to) === norm(target);
+}
+
 /** Remove only the link itself. Throws if it can't, so callers stop before deleting anything. */
 export function unlinkSafe(p) {
   try {
