@@ -36,7 +36,7 @@ const HELP = `dispatch — delegate scoped tasks to worker agents
             [--kind code|ui|text] [--model <id>] [--external]
             [--isolation auto|inplace|worktree] [--orchestrator <name>]
             [--rebrief-of <id>] [--review <id>] [--plan]
-  run       --batch <file.json> [--external] [--plan]
+  run       --batch <file.json> [--external] [--plan] [--isolation auto|worktree]
                                     tasks: [{ role, allow, read, tier, kind, model,
                                     brief | briefFile }]
             --plan: route only, run nothing (status use_native, planned or
@@ -258,7 +258,18 @@ async function main() {
             brief: t.brief ?? readBrief(t.briefFile),
           };
         });
-        out(await R.batch(tasks, { cwd, orchestrator: o.orchestrator, external: o.external, plan: o.plan }));
+        if (o.isolation !== undefined && !["auto", "worktree"].includes(o.isolation)) {
+          throw new R.UsageError("a batch takes --isolation auto or worktree");
+        }
+        out(
+          await R.batch(tasks, {
+            cwd,
+            orchestrator: o.orchestrator,
+            external: o.external,
+            plan: o.plan,
+            isolation: o.isolation,
+          }),
+        );
         return 0;
       }
       out(

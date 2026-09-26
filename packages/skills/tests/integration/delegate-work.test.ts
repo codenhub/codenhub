@@ -600,6 +600,18 @@ describe("delegate-work", () => {
     }
   });
 
+  it("shouldGiveABatchsEditingTaskAWorktreeWhenAsked", async () => {
+    const R = await import(runner);
+    const task = { role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" };
+
+    const r = await R.batch([task, { role: "scout", brief: "Look.", model: "fake" }], {
+      cwd: repo,
+      plan: true,
+      isolation: "worktree",
+    });
+    expect(r.batch.map((t: { isolation: string }) => t.isolation)).toEqual(["worktree", "inplace"]);
+  });
+
   describe("with a harness that can't be contained in place", () => {
     let opencode: { containedInPlace?: boolean };
 

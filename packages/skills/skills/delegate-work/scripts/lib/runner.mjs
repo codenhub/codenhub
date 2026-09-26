@@ -1217,10 +1217,12 @@ function overlappingTask(root, tasks) {
   return null;
 }
 
-export async function batch(tasks, common) {
+export async function batch(tasks, { isolation, ...common }) {
   const cfg = load(G.repoRoot(common.cwd));
   const limit = Math.max(1, cfg.limits?.maxParallel ?? 4);
   const editingCount = tasks.filter((t) => EDITING.has(t.role)).length;
+  // Editing tasks side by side, or beside other edits (native subagents), each get a worktree.
+  const forceWorktree = editingCount > 1 || isolation === "worktree";
   const overlap = overlappingTask(G.repoRoot(common.cwd), tasks);
   if (overlap) {
     throw new UsageError(overlap);
@@ -1231,7 +1233,7 @@ export async function batch(tasks, common) {
   for (const [i, t] of tasks.entries()) {
     try {
       // oxlint-disable-next-line no-await-in-loop -- one after another: the first invalid task stops the batch.
-      planned.push(await run({ ...common, ...t, forceWorktree: editingCount > 1, plan: true }));
+      planned.push(await run({ ...common, ...t, forceWorktree, plan: true }));
     } catch (e) {
       throw e instanceof UsageError ? new UsageError(`task ${i}: ${e.message}`) : e;
     }
@@ -1246,7 +1248,7 @@ export async function batch(tasks, common) {
       const i = next++;
       try {
         // oxlint-disable-next-line no-await-in-loop -- each pool slot runs its tasks in turn; slots run in parallel.
-        results[i] = await run({ ...common, ...tasks[i], forceWorktree: editingCount > 1 });
+        results[i] = await run({ ...common, ...tasks[i], forceWorktree });
       } catch (e) {
         results[i] = { v: 1, id: null, role: tasks[i].role, status: "harness_error", hint: String(e.message ?? e) };
       }
