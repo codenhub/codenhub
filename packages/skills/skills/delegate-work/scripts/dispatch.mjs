@@ -210,8 +210,23 @@ async function main() {
   switch (o.cmd) {
     case "run": {
       if (o.batch) {
-        const spec = JSON.parse(fs.readFileSync(o.batch, "utf8"));
-        const tasks = (spec.tasks ?? spec).map((t, i) => {
+        if (!fs.existsSync(o.batch)) {
+          throw new R.UsageError(`batch file not found: ${o.batch}`);
+        }
+        let spec;
+        try {
+          spec = JSON.parse(fs.readFileSync(o.batch, "utf8"));
+        } catch (e) {
+          throw new R.UsageError(`batch file is not JSON: ${e.message}`);
+        }
+        const list = spec?.tasks ?? spec;
+        if (!Array.isArray(list)) {
+          throw new R.UsageError("batch file must hold an array of tasks, or { tasks: [...] }");
+        }
+        const tasks = list.map((t, i) => {
+          if (!t || typeof t !== "object" || Array.isArray(t)) {
+            throw new R.UsageError(`task ${i}: not an object`);
+          }
           // A field this ignored would change nothing without a word.
           const unknown = Object.keys(t).filter((k) => !BATCH_FIELDS.has(k));
           if (unknown.length) {
