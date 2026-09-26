@@ -241,7 +241,7 @@ const relativeEdit = (workDir, f) =>
   path.posix.normalize(toPosix(path.isAbsolute(f) ? path.relative(workDir, canonical(f)) : f));
 
 /** In the allowlist and inside the work dir: `**` alone would also match `../x`. */
-const inScope = (f, allow) => !/^(\.\.(\/|$)|\/|[a-z]:)/i.test(f) && matchAny(f, allow);
+const inScope = (f, allow) => !/^(\.\.(\/|$)|\/|[a-z]:\/)/i.test(f) && matchAny(f, allow);
 
 function newAcc() {
   return { sessionId: null, edits: [], denied: [], texts: [], stepTexts: [], errors: [], steps: 0 };
