@@ -21,11 +21,38 @@ const DISABLED = [
   "goals",
   "skill_mcp_dependency_install",
 ];
-const DENIAL = /access is denied|blocked by policy|rejected\(|refusing to run unsandboxed/i;
+// PowerShell's "Access to the path '...' is denied" exits 0, so output is
+// checked whatever the exit code; it wraps the path onto the next line.
+const DENIAL =
+  /access is denied|access to the path [\s\S]*? is denied|blocked by policy|rejected\(|refusing to run unsandboxed/i;
 let detected;
 
 const codexHome = () => process.env.CODEX_HOME || path.join(os.homedir(), ".codex");
 const windowsSandbox = (route) => route.windowsSandbox ?? "unelevated";
+
+const inside = (dir, file) => {
+  const rel = path.relative(dir, file);
+  return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+};
+
+/**
+ * workspace-write also makes the temp dir writable. A worktree links the
+ * repository's dependency folders; when the repository itself is in the
+ * temp dir, a write through the link lands in the real folder, where no diff
+ * sees it. The temp dir is then left out of the writable roots.
+ */
+function linksIntoTemp(cwd, depDirs) {
+  const tmp = fs.realpathSync.native(os.tmpdir());
+  const work = fs.realpathSync.native(cwd);
+  return depDirs.some((d) => {
+    try {
+      const real = fs.realpathSync.native(path.join(cwd, d));
+      return !inside(work, real) && inside(tmp, real);
+    } catch {
+      return false;
+    }
+  });
+}
 
 // The unelevated Windows sandbox refuses child processes with piped stdio
 // (spawn EPERM), which most test runners use. Workers are told so they don't
@@ -78,7 +105,7 @@ export default {
     return (detected = { ok: true, bin, version: v.stdout.toString().trim(), login: status });
   },
 
-  command({ route, cwd, prompt, readOnly, sessionId }) {
+  command({ route, cwd, prompt, readOnly, depDirs = [], sessionId }) {
     // User config is ignored: it can load plugins, MCP servers and notify
     // hooks. Everything a worker needs is set here.
     const opts = [
@@ -101,6 +128,14 @@ export default {
     }
     if (route.variant) {
       opts.push("-c", `model_reasoning_effort=${route.variant}`);
+    }
+    if (!readOnly && linksIntoTemp(cwd, depDirs)) {
+      opts.push(
+        "-c",
+        "sandbox_workspace_write.exclude_tmpdir_env_var=true",
+        "-c",
+        "sandbox_workspace_write.exclude_slash_tmp=true",
+      );
     }
     // resume has no --cd; the process cwd is the work dir either way.
     const args = sessionId ? ["exec", "resume", ...opts, sessionId, "-"] : ["exec", ...opts, "-C", cwd, "-"];
@@ -138,11 +173,7 @@ export default {
             }
           }
         }
-        if (
-          item.type === "command_execution" &&
-          item.exit_code !== 0 &&
-          DENIAL.test(String(item.aggregated_output ?? ""))
-        ) {
+        if (item.type === "command_execution" && DENIAL.test(String(item.aggregated_output ?? ""))) {
           acc.denied.push(`shell: ${shortCommand(item.command)}`);
         }
         // item type "error" is a warning (e.g. missing model metadata); the
@@ -157,13 +188,17 @@ export default {
     }
   },
 
-  /** Commands the sandbox refused before they started are only logged on stderr. */
+  /** Commands the sandbox refused before they started, and refused patch writes, are only logged on stderr. */
   parseStderr(stderr, acc) {
     for (const m of (stderr ?? "").matchAll(/Rejected\(\\?"`?(.*?)`? rejected: ([^"\\]+)/g)) {
       acc.denied.push(`shell: ${shortCommand(m[1].replace(/\\\\/g, "\\"))} (${m[2]})`);
     }
     if (/refusing to run unsandboxed|setup refresh had errors/.test(stderr ?? "")) {
       acc.denied.push("shell: every command (the Codex sandbox could not start; see logPath)");
+    }
+    // The event is a failed file_change without a reason.
+    for (const m of (stderr ?? "").matchAll(/^Failed to write file (.+?)\s*$/gm)) {
+      acc.denied.push(`apply_patch: ${m[1]}`);
     }
   },
 

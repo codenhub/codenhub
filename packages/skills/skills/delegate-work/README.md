@@ -2,7 +2,7 @@
 
 Splits coding work across subagents. Uses the current harness's native
 subagents first; can also dispatch scoped tasks to other models through CLI
-harnesses (OpenCode, Codex and Claude Code today; an agy adapter is planned).
+harnesses (OpenCode, Codex, Antigravity CLI and Claude Code).
 
 ## Requirements
 
@@ -36,8 +36,8 @@ by default `~/.local/state/delegate-work` on every OS
 Why the home directory:
 
 - Not the temp directory: sandboxed workers may write anywhere in it (Codex's
-  workspace-write sandbox does), and the state directory holds every run's
-  worktree.
+  workspace-write sandbox does, and agy allows it by default), and the state
+  directory holds every run's worktree.
 - Not AppData on Windows: packaged apps (the Claude desktop app is one) get
   newly created AppData folders redirected to a private copy, so dispatch run
   from them and from a terminal would not share config or state.
@@ -46,6 +46,10 @@ Snapshots are unreferenced git objects that `git gc` removes. Worktrees are
 removed on apply/discard. `dispatch prune` removes run state older than
 `limits.pruneAfterHours` (default 24), including worktrees nobody applied or
 discarded.
+
+agy workers run with their own agy home in the state directory (`agy-home`),
+so your `~/.gemini` configuration neither applies to them nor changes; it
+keeps agy's history of worker conversations, which `prune` leaves alone.
 
 Dependency folders are linked into worktrees (junctions on Windows).
 `git worktree remove` follows junctions on Windows and deletes the real
@@ -99,12 +103,12 @@ routes off repositories whose tests reach credentials or production systems.
 
 Per-harness mechanics, verified versions and known limits:
 [`adapters/opencode.md`](adapters/opencode.md), [`adapters/codex.md`](adapters/codex.md),
-[`adapters/claude.md`](adapters/claude.md).
+[`adapters/agy.md`](adapters/agy.md), [`adapters/claude.md`](adapters/claude.md).
 
 ## Context windows
 
 A route's usable context is the smallest of the model's `context`, the
 route's optional `context`, and what the harness reports (OpenCode's
-`models --verbose`, Codex's model cache × its effective percentage). Reported
+models.dev metadata, Codex's model cache × its effective percentage). Reported
 values are cached for a day in the state directory; `doctor` refreshes them
 and flags drift of more than 10% between config and harness.

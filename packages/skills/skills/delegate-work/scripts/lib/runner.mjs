@@ -220,7 +220,11 @@ async function execute(meta, cfg, list, prompt, sessionId) {
   const gitEnv = meta.isolation === "worktree" ? G.bytesEnv(meta.workDir) : {};
   let outcome = null;
   let lastFailure = null;
-  let attempt = 0;
+  // A follow-up adds attempts to the run; each keeps its own log.
+  let attempt = Math.max(
+    0,
+    ...fs.readdirSync(runDir(meta.id)).map((f) => Number(f.match(/^log-(\d+)\.jsonl$/)?.[1] ?? 0)),
+  );
 
   for (const c of list) {
     attempt++;
@@ -233,6 +237,7 @@ async function execute(meta, cfg, list, prompt, sessionId) {
       readOnly: !meta.editing,
       allow: meta.allow,
       bashAllow: meta.checkCmds,
+      depDirs,
       sessionId,
     });
     const logPath = path.join(runDir(meta.id), `log-${attempt}.jsonl`);

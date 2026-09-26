@@ -3,7 +3,8 @@
  *
  * detect()                -> { ok, version?, reason? }            cached per process
  * command(ctx)            -> { args, env, input }                  ctx: { route, cwd, prompt, readOnly,
- *                                                                        allow, bashAllow, sessionId }
+ *                                                                        allow, bashAllow, depDirs, sessionId }
+ *                                                                        depDirs: dependency folders, relative
  * parseLine(line, acc)    -> void                                  fills acc.{sessionId, edits[], denied[],
  *                                                                        texts[], errors[], steps}
  * finalText(acc)          -> string                                the worker's last message

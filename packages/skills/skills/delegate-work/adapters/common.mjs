@@ -33,7 +33,7 @@ export function classifyText(text) {
     return { kind: "auth" };
   }
   if (
-    /model.{0,40}(not found|not available|does not exist|unsupported)|unknown model|ModelNotFound|ProviderModelNotFound|no such model|no endpoints found|model is not supported/i.test(
+    /model.{0,40}(not found|not available|does not exist|unsupported|not recognized)|unknown model|ModelNotFound|ProviderModelNotFound|no such model|no endpoints found|model is not supported/i.test(
       t,
     )
   ) {
