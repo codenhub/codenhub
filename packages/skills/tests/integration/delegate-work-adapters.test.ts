@@ -107,6 +107,44 @@ describe("agy adapter", () => {
       "unavailable",
     );
   });
+
+  it("shouldDenyWritesToDependencyFoldersForEditingWorkersOnly", async () => {
+    const { default: agy } = await import(adapter("agy"));
+    const work = fs.mkdtempSync(path.join(state, "work-"));
+    const grants = (readOnly: boolean) => {
+      const { args } = agy.command({
+        route: { model: "m" },
+        cwd: work,
+        prompt: "p",
+        readOnly,
+        allow: ["src/a.txt"],
+        bashAllow: ["npm run test"],
+        depDirs: ["node_modules", "pkg/node_modules"],
+        sessionId: null,
+      });
+      const id = args[args.indexOf("--project") + 1];
+      const file = path.join(state, "agy-home", ".gemini", "config", "projects", `${id}.json`);
+      return JSON.parse(fs.readFileSync(file, "utf8")).permissionGrants.permissionGrants;
+    };
+    const dir = fs.realpathSync.native(work);
+
+    const edit = grants(false);
+    expect(edit.allow).toContain(`write_file(${dir})`);
+    expect(edit.deny).toEqual(
+      expect.arrayContaining([
+        `write_file(${path.join(dir, "node_modules")})`,
+        `write_file(${path.join(dir, "pkg", "node_modules")})`,
+      ]),
+    );
+    expect(grants(true).deny.filter((d: string) => d.includes("node_modules"))).toEqual([]);
+
+    // Setting up the shared home again rewrites nothing and leaves no temp files.
+    grants(false);
+    const leftovers = fs
+      .readdirSync(path.join(state, "agy-home"), { recursive: true })
+      .filter((f) => String(f).endsWith(".tmp"));
+    expect(leftovers).toEqual([]);
+  });
 });
 
 describe("opencode adapter (2.x events)", () => {

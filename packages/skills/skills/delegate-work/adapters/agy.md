@@ -73,6 +73,10 @@ the turn goes on. So what a worker must not do is removed or denied outright.
 - **Temp dir.** agy lets any tool read and write the temp dir. The project
   denies `read_file` and `write_file` on it unless the work dir is inside it;
   a work dir in the temp dir leaves the rest of it readable.
+- **Dependency folders.** A worktree links the repository's `node_modules`
+  and virtual environments; agy checks the worktree path, so reads through
+  the link work. Writes are denied for editing workers: they would land in
+  the real folder, which no diff sees.
 - **Scope.** The write grant covers the whole work dir, so scope is enforced
   from edit events (the watchdog) and the diff, as for Codex.
 - `--mode plan` is not read-only headless: it auto-approves its own plan and

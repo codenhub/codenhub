@@ -234,6 +234,7 @@ async function execute(meta, cfg, list, prompt, sessionId) {
       readOnly: !meta.editing,
       allow: meta.allow,
       bashAllow: meta.checkCmds,
+      depDirs,
       sessionId,
     });
     const logPath = path.join(runDir(meta.id), `log-${attempt}.jsonl`);

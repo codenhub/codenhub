@@ -114,12 +114,17 @@ const inside = (dir, file) => {
  * `unsandboxed` grant. The id is derived from the grants, so a follow-up
  * selects the same project.
  */
-function project(cwd, readOnly, cmds) {
+function project(cwd, readOnly, cmds, depDirs) {
   const dir = canonical(cwd);
   const tmp = canonical(os.tmpdir());
   const allow = readOnly ? [] : [`write_file(${dir})`, ...cmds.flatMap((c) => [`command(${c})`, `unsandboxed(${c})`])];
-  // agy lets any tool read and write the temp dir.
-  const deny = inside(tmp, dir) ? [] : [`read_file(${tmp})`, `write_file(${tmp})`];
+  const deny = [
+    // agy lets any tool read and write the temp dir.
+    ...(inside(tmp, dir) ? [] : [`read_file(${tmp})`, `write_file(${tmp})`]),
+    // A worktree links the repository's own dependency folders: a write there
+    // lands in the real one, where no diff sees it. A deny beats the allow above.
+    ...(readOnly ? [] : depDirs.map((d) => `write_file(${path.join(dir, d)})`)),
+  ];
   const grants = { allow, deny };
   const id = `dispatch-${crypto.createHash("sha1").update(JSON.stringify(grants)).digest("hex").slice(0, 12)}`;
   const file = path.join(agyHomeDir(), ".gemini", "config", "projects", `${id}.json`);
@@ -201,7 +206,7 @@ export default {
     return (detected = { ok: true, bin, version, models: listed.ids });
   },
 
-  command({ route, cwd, prompt, readOnly, bashAllow, sessionId }) {
+  command({ route, cwd, prompt, readOnly, bashAllow, depDirs = [], sessionId }) {
     const cmds = readOnly ? [] : bashAllow;
     const home = agyHome();
     // Print mode starts from --input-format alone; -p would take the next flag as its prompt.
@@ -215,7 +220,7 @@ export default {
       "--agent",
       readOnly ? "dispatch-read" : cmds.length ? "dispatch-edit-shell" : "dispatch-edit",
       "--project",
-      project(cwd, readOnly, cmds),
+      project(cwd, readOnly, cmds, depDirs),
       "--disable-slash-commands",
     ];
     if (route.variant) {
