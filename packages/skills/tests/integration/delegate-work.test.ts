@@ -582,6 +582,13 @@ describe("delegate-work", () => {
     }
   });
 
+  it.skipIf(process.platform === "win32")("shouldTakeABackslashAsPartOfAFileName", async () => {
+    const { matchAny } = await import(path.resolve(runner, "../glob.mjs"));
+
+    expect(matchAny("src\\victim.ts", ["src/**"])).toBe(false);
+    expect(matchAny("src/victim.ts", ["src/**"])).toBe(true);
+  });
+
   it("shouldListAnInPlaceResultLeftUndiscarded", async () => {
     const R = await import(runner);
     const { prune } = await import(path.resolve(runner, "../prune.mjs"));
