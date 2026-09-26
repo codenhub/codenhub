@@ -40,7 +40,8 @@ Where credentials live on Linux was not verified; `detect` lists models
 through the worker home, so a home that loses the login shows up there.
 
 The worker home keeps agy's own conversation history and per-run project
-files; `dispatch prune` doesn't clean it.
+files; `dispatch prune` doesn't clean it. Concurrent runs share it, so its
+files are written only when their content changes, and replaced whole.
 
 ## Tools and permissions
 

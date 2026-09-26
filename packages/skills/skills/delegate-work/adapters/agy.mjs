@@ -73,15 +73,31 @@ const agyHomeDir = () => path.join(baseDir(), "agy-home");
  */
 function agyHome() {
   const gemini = path.join(agyHomeDir(), ".gemini");
-  fs.mkdirSync(path.join(gemini, "antigravity-cli"), { recursive: true });
   const settings = `${JSON.stringify({ permissions: { deny: DENY } }, null, 2)}\n`;
-  fs.writeFileSync(path.join(gemini, "antigravity-cli", "settings.json"), settings);
+  writeShared(path.join(gemini, "antigravity-cli", "settings.json"), settings);
   for (const [name, tools] of Object.entries(AGENTS)) {
-    const dir = path.join(gemini, "config", "agents", name);
-    fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(path.join(dir, "agent.md"), agentFile(name, tools));
+    writeShared(path.join(gemini, "config", "agents", name, "agent.md"), agentFile(name, tools));
   }
   return agyHomeDir();
+}
+
+/**
+ * Concurrent runs share the home, and agy may be reading these files while
+ * another run starts: a file is only written when its content changes, and
+ * then replaced whole, never truncated in place.
+ */
+function writeShared(file, content) {
+  try {
+    if (fs.readFileSync(file, "utf8") === content) {
+      return;
+    }
+  } catch {
+    // Not written yet.
+  }
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, content);
+  fs.renameSync(tmp, file);
 }
 
 const inside = (dir, file) => {
@@ -107,11 +123,7 @@ function project(cwd, readOnly, cmds) {
   const grants = { allow, deny };
   const id = `dispatch-${crypto.createHash("sha1").update(JSON.stringify(grants)).digest("hex").slice(0, 12)}`;
   const file = path.join(agyHomeDir(), ".gemini", "config", "projects", `${id}.json`);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(
-    file,
-    `${JSON.stringify({ id, name: id, permissionGrants: { permissionGrants: grants } }, null, 2)}\n`,
-  );
+  writeShared(file, `${JSON.stringify({ id, name: id, permissionGrants: { permissionGrants: grants } }, null, 2)}\n`);
   return id;
 }
 
