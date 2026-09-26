@@ -307,6 +307,40 @@ describe("delegate-work", () => {
       await R.discard(r.id);
     });
 
+    it("shouldPointPwdAtTheWorktreeForTheWorkerAndTheChecks", async () => {
+      const R = await import(runner);
+      const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+      const original = fs.readFileSync(configFile, "utf8");
+      const config = JSON.parse(original);
+      config.projects = {
+        [`${repo.replaceAll("\\", "/")}/**`]: {
+          checks: {
+            fast: [
+              "node -e \"const r=require('fs').realpathSync.native;process.exit(r(process.env.PWD)===r(process.cwd())?0:1)\"",
+            ],
+          },
+        },
+      };
+      fs.writeFileSync(configFile, JSON.stringify(config));
+      // What a shell started in the repository passes down.
+      process.env.PWD = repo;
+
+      try {
+        const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+        expect(r.isolation).toBe("worktree");
+        expect(r.summary).toContain("PWD=cwd");
+        expect(r.checks).toEqual([{ name: "check1", ok: true, tail: "" }]);
+        await R.discard(r.id);
+      } finally {
+        fs.writeFileSync(configFile, original);
+        if (saved.PWD === undefined) {
+          delete process.env.PWD;
+        } else {
+          process.env.PWD = saved.PWD;
+        }
+      }
+    });
+
     it("shouldRestoreAWorktreeGitFileTheWorkerRepointed", async () => {
       const R = await import(runner);
 

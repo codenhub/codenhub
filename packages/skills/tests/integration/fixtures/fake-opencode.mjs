@@ -49,5 +49,7 @@ if (cmd === "--version") {
   const env = ["DW_TOKEN", "DW_PASSED_TOKEN", "DW_PLAIN", "pnpm_config_verify_deps_before_run"].map(
     (k) => `${k}=${process.env[k] ?? "unset"}`,
   );
+  const real = (p) => fs.realpathSync.native(p);
+  env.push(`PWD=${process.env.PWD && real(process.env.PWD) === real(process.cwd()) ? "cwd" : "elsewhere"}`);
   emit({ type: "text", part: { text: `RESULT\nstatus: done\nsummary: edited src/a.txt; ${env.join(" ")}` } });
 }
