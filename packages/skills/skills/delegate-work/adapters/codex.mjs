@@ -21,7 +21,10 @@ const DISABLED = [
   "goals",
   "skill_mcp_dependency_install",
 ];
-const DENIAL = /access is denied|blocked by policy|rejected\(|refusing to run unsandboxed/i;
+// PowerShell's "Access to the path '...' is denied" exits 0, so output is
+// checked whatever the exit code; it wraps the path onto the next line.
+const DENIAL =
+  /access is denied|access to the path [\s\S]*? is denied|blocked by policy|rejected\(|refusing to run unsandboxed/i;
 let detected;
 
 const codexHome = () => process.env.CODEX_HOME || path.join(os.homedir(), ".codex");
@@ -170,11 +173,7 @@ export default {
             }
           }
         }
-        if (
-          item.type === "command_execution" &&
-          item.exit_code !== 0 &&
-          DENIAL.test(String(item.aggregated_output ?? ""))
-        ) {
+        if (item.type === "command_execution" && DENIAL.test(String(item.aggregated_output ?? ""))) {
           acc.denied.push(`shell: ${shortCommand(item.command)}`);
         }
         // item type "error" is a warning (e.g. missing model metadata); the
@@ -189,13 +188,17 @@ export default {
     }
   },
 
-  /** Commands the sandbox refused before they started are only logged on stderr. */
+  /** Commands the sandbox refused before they started, and refused patch writes, are only logged on stderr. */
   parseStderr(stderr, acc) {
     for (const m of (stderr ?? "").matchAll(/Rejected\(\\?"`?(.*?)`? rejected: ([^"\\]+)/g)) {
       acc.denied.push(`shell: ${shortCommand(m[1].replace(/\\\\/g, "\\"))} (${m[2]})`);
     }
     if (/refusing to run unsandboxed|setup refresh had errors/.test(stderr ?? "")) {
       acc.denied.push("shell: every command (the Codex sandbox could not start; see logPath)");
+    }
+    // The event is a failed file_change without a reason.
+    for (const m of (stderr ?? "").matchAll(/^Failed to write file (.+?)\s*$/gm)) {
+      acc.denied.push(`apply_patch: ${m[1]}`);
     }
   },
 

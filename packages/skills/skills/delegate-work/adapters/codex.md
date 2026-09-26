@@ -72,12 +72,15 @@ which the unelevated sandbox accepts.
 `command_execution` / `file_change` / `mcp_tool_call` / `web_search` (step
 budget), `item.completed` `agent_message` (final message = last one),
 `file_change` (`changes[].path`, absolute), `command_execution` (`exit_code`,
-`aggregated_output`; sandbox refusals go to `denied`), `error` and
+`aggregated_output`; sandbox refusals go to `denied` whatever the exit code,
+since PowerShell's "Access to the path '...' is denied" exits 0), `error` and
 `turn.failed` (message is often a JSON body with `status`).
 
 An `item.completed` of type `error` is a warning (for example missing model
 metadata), not a failure. Commands the sandbox refuses before they start
-appear only on stderr (`Rejected(...)`); `parseStderr` collects them.
+appear only on stderr (`Rejected(...)`), and so do refused patch writes (a
+failed `file_change` plus "Failed to write file <path>" on stderr);
+`parseStderr` collects both.
 
 ## Failures
 

@@ -165,6 +165,27 @@ describe("codex adapter", () => {
       fs.rmSync(deps, { recursive: true, force: true });
     }
   });
+
+  it("shouldReportWritesTheSandboxRefusedEvenWhenTheCommandExitedCleanly", async () => {
+    const { default: codex } = await import(adapter("codex"));
+    const acc = newAcc();
+    const shell = {
+      type: "item.completed",
+      item: {
+        type: "command_execution",
+        command: "powershell.exe -Command 'Add-Content -LiteralPath x -Value y'",
+        exit_code: 0,
+        aggregated_output: "Add-Content : Access to the path \r\n'C:\\wt\\node_modules\\x' is denied.",
+      },
+    };
+    codex.parseLine(JSON.stringify(shell), acc);
+    codex.parseStderr("Output:\nFailed to write file C:\\wt\\node_modules\\README.md\n", acc);
+
+    expect(acc.denied).toEqual([
+      "shell: Add-Content -LiteralPath x -Value y",
+      "apply_patch: C:\\wt\\node_modules\\README.md",
+    ]);
+  });
 });
 
 describe("opencode adapter (2.x events)", () => {
