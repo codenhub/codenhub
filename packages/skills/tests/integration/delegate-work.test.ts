@@ -137,6 +137,30 @@ describe("delegate-work", () => {
     expect(ok.totals.planned).toBe(2);
   });
 
+  it("shouldReportNoRetryLeftWhenARebriefGoesNative", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+
+    const first = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+    // The fake model now belongs to the orchestrator's own pool.
+    fs.writeFileSync(
+      configFile,
+      JSON.stringify({ ...JSON.parse(original), orchestrators: { test: { pools: ["fake-pool"] } } }),
+    );
+    const rebrief = (tier: string) =>
+      R.run({ cwd: repo, rebriefOf: first.id, role: "fixer", brief: "Better.", orchestrator: "test", tier });
+    try {
+      // Nothing configured for the tier: nothing runs, the retry stays.
+      expect((await rebrief("strong")).status).toBe("not_available");
+      const r = await rebrief("light");
+      expect(r.status).toBe("use_native");
+      expect(r.retryAvailable).toBe(false);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
   it("shouldKeepTheWholeReportWhenTheResultCutsIt", async () => {
     const R = await import(runner);
 

@@ -718,8 +718,12 @@ export async function run(o) {
     return plan(o, { editing, tier, kind, picked, workDirOverride, lineage: { prev, target } });
   }
 
-  // Only once the invocation is known to be valid: this uses up the task's retry.
-  if (prev) {
+  const iso = picked.native ? null : isolationFor(o, editing, picked.candidates);
+  const unavailable = !picked.native && !iso.candidates.length;
+
+  // Only once the invocation is known to be valid and something will run it
+  // (here or natively): this uses up the task's retry.
+  if (prev && !unavailable) {
     if (!prev.discarded) {
       const d = await discard(prev.id);
       if (d.status === "conflict") {
@@ -744,8 +748,8 @@ export async function run(o) {
     kind,
     rebriefOf: prev?.id ?? null,
     reviewOf: target?.id ?? null,
-    retryUsed: !!prev,
-    skipped: picked.skipped ?? [],
+    retryUsed: !!prev && !unavailable,
+    skipped: [...(picked.skipped ?? []), ...(iso?.skipped ?? [])],
     checkList,
     checkCmds: checkList.map((c) => c.cmd),
     pid: process.pid,
@@ -756,34 +760,19 @@ export async function run(o) {
       status: "use_native",
       isolation: null,
       phase: "done",
-      retryUsed: false,
       worker: { ...picked.native, tier, kind, skipped: meta.skipped },
       hint: `Run this brief as a native subagent with ${picked.native.model}.`,
     });
     saveMeta(id, meta);
     return envelope(meta);
   }
-  if (!picked.candidates.length) {
+  if (unavailable) {
     Object.assign(meta, {
       status: "not_available",
       isolation: null,
       phase: "done",
       worker: { tier, kind, skipped: meta.skipped },
-      hint: "No usable route for this tier. Run `dispatch doctor`.",
-    });
-    saveMeta(id, meta);
-    return envelope(meta);
-  }
-
-  const iso = isolationFor(o, editing, picked.candidates);
-  meta.skipped.push(...iso.skipped);
-  if (!iso.candidates.length) {
-    Object.assign(meta, {
-      status: "not_available",
-      isolation: null,
-      phase: "done",
-      worker: { tier, kind, skipped: meta.skipped },
-      hint: IN_PLACE_ONLY_HINT,
+      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : "No usable route for this tier. Run `dispatch doctor`.",
     });
     saveMeta(id, meta);
     return envelope(meta);
