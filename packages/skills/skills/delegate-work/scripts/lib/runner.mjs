@@ -752,19 +752,21 @@ export async function run(o) {
   const iso = picked.native ? null : isolationFor(o, editing, picked.candidates);
   const unavailable = !picked.native && !iso.candidates.length;
 
-  // Only once the invocation is known to be valid and something will run it
-  // (here or natively): this uses up the task's retry.
-  if (prev && !unavailable) {
-    if (!prev.discarded) {
-      const d = await discard(prev.id);
-      if (d.status === "conflict") {
-        throw new UsageError(d.hint);
-      }
+  // The new attempt starts from a tree without the previous one's change.
+  if (prev && !unavailable && !prev.discarded) {
+    const d = await discard(prev.id);
+    if (d.status === "conflict") {
+      throw new UsageError(d.hint);
     }
-    prev = loadMeta(prev.id);
-    prev.retryUsed = true;
-    saveMeta(prev.id, prev);
   }
+  // Only once something runs it, here (set up) or natively, does a rebrief
+  // use up the task's retry.
+  const useRetry = () => {
+    if (prev) {
+      const p = loadMeta(prev.id);
+      saveMeta(p.id, { ...p, retryUsed: true });
+    }
+  };
 
   const id = newRun();
   const meta = {
@@ -795,6 +797,7 @@ export async function run(o) {
       hint: `Run this brief as a native subagent with ${picked.native.model}.`,
     });
     saveMeta(id, meta);
+    useRetry();
     return envelope(meta);
   }
   if (unavailable) {
@@ -852,6 +855,7 @@ export async function run(o) {
     }
   });
   saveMeta(id, meta);
+  useRetry();
 
   try {
     await execute(meta, cfg, iso.candidates, prompt, null);
