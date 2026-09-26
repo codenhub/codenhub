@@ -116,7 +116,8 @@ asks for an external run.
    temporary path outside the repository.
 3. **Dispatch.** Run `dispatch` from the repository the work is in: it works
    on the repository of the current directory. `scripts/` is under this
-   skill's directory, so give its full path.
+   skill's directory, so give its full path: every `node scripts/dispatch.mjs`
+   in this file stands for `node <this skill's directory>/scripts/dispatch.mjs`.
    ```
    node scripts/dispatch.mjs run --role fixer --allow "src/validation.ts" --allow "src/validation.test.ts" --brief -
    node scripts/dispatch.mjs run --role builder --allow "src/rates/**" --read "src/types.ts" --brief -
