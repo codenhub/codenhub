@@ -61,6 +61,12 @@ Restores and applies are byte-exact: dispatch runs git with line-ending
 conversion and `.gitattributes` filters off, so a CRLF checkout
 (`core.autocrlf=true`) stays CRLF and an LF file stays LF.
 
+Dispatch's own git commands also run no programs from repository config
+(`core.fsmonitor`, external diff, textconv). A worktree's `.git` file, which
+points git at the repository and so at its config, is put back as git wrote
+it after every worker and after the checks; a changed one makes the run
+`out_of_scope`.
+
 ## Checks
 
 `fixer` runs the fast set, `builder` the full set. A project's `checks.fast` /

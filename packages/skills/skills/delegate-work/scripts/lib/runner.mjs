@@ -6,7 +6,7 @@ import { checkEnv, resolveChecks, runChecks } from "./checks.mjs";
 import { load, skillDir, validate } from "./config.mjs";
 import * as G from "./git.mjs";
 import { canonical, matchAny, toPosix } from "./glob.mjs";
-import { linkDeps, removeWorktree } from "./links.mjs";
+import { linkDeps, removeDirSafe, removeWorktree, unlinkSafe } from "./links.mjs";
 import { start } from "./proc.mjs";
 import { envelope, parseResult } from "./result.mjs";
 import { candidates, nextTier, orchestratorPools } from "./route.mjs";
@@ -84,6 +84,30 @@ function depsFingerprint(root, dirs) {
 }
 
 const cleanupWorktree = (meta) => removeWorktree(meta.worktree, meta.root);
+
+/**
+ * A worktree's .git file tells git which repository, and so which config, to
+ * use. Put back what `git worktree add` wrote before dispatch runs git there.
+ */
+function guardGitFile(meta) {
+  if (!meta.gitFile) {
+    return;
+  }
+  const f = path.join(meta.worktree, ".git");
+  let now = null;
+  try {
+    now = fs.lstatSync(f).isFile() ? fs.readFileSync(f, "utf8") : "";
+  } catch {
+    // Deleted.
+  }
+  if (now === meta.gitFile) {
+    return;
+  }
+  unlinkSafe(f);
+  removeDirSafe(f);
+  fs.writeFileSync(f, meta.gitFile);
+  meta.gitFileRestored = true;
+}
 
 // ---------- writing files into a tree ----------
 
@@ -269,6 +293,7 @@ async function execute(meta, cfg, list, prompt, sessionId) {
     });
     // oxlint-disable-next-line no-await-in-loop -- candidates run one at a time: the next only after this one failed.
     const res = await proc.done;
+    guardGitFile(meta);
     c.adapter.parseStderr?.(res.stderrTail, acc);
     meta.logPath = logPath;
     meta.worker = {
@@ -343,6 +368,9 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   if (depsFingerprint(meta.root, depDirs) !== depsBefore) {
     outOfScope.push("(dependency folder changed: install detected)");
   }
+  if (meta.gitFileRestored) {
+    outOfScope.push("(worktree .git file changed: restored)");
+  }
   // Writes git can't see (ignored files, paths outside the tree) are known
   // only from the harness's edit events, and can't be restored from the snapshot.
   if (meta.editing) {
@@ -404,11 +432,17 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   } else if (meta.editing) {
     const timeout = 1000 * (cfg.limits?.checkTimeoutSec ?? 900);
     meta.checks = await runChecks(meta.checkList, meta.workDir, timeout, gitEnv);
+    // The checks ran the worker's code.
+    guardGitFile(meta);
     // What checks leave behind (unignored reports, caches) isn't someone's edit.
     meta.settled = meta.checkList.length
       ? G.workingTree(meta.workDir, path.join(runDir(meta.id), "settled.index"))
       : meta.post;
     meta.status = meta.checks.every((c) => c.ok) ? "ok" : "failed_checks";
+    if (meta.gitFileRestored) {
+      meta.status = "out_of_scope";
+      meta.files.outOfScope.push("(worktree .git file changed by the checks: restored)");
+    }
     if (!meta.checkList.length) {
       meta.hint = "No checks could be inferred for this project; verify the change yourself.";
     }
@@ -623,6 +657,7 @@ export async function run(o) {
     if (isolation === "worktree") {
       meta.worktree = path.join(runDir(id), "wt");
       G.addWorktree(root, meta.worktree, meta.snap);
+      meta.gitFile = fs.readFileSync(path.join(meta.worktree, ".git"), "utf8");
       meta.linked = linkDeps(root, meta.worktree, findDepDirs(root));
       meta.copied = [];
       for (const f of cfg.project.copy ?? []) {

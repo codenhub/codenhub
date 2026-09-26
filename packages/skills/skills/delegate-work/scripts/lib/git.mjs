@@ -30,13 +30,16 @@ export function bytesEnv(cwd) {
   const tree = EMPTY_TREE[formats.get(cwd)];
   return {
     ...(tree ? { GIT_ATTR_SOURCE: tree } : {}),
-    GIT_CONFIG_COUNT: "3",
+    GIT_CONFIG_COUNT: "4",
     GIT_CONFIG_KEY_0: "core.autocrlf",
     GIT_CONFIG_VALUE_0: "false",
     GIT_CONFIG_KEY_1: "core.eol",
     GIT_CONFIG_VALUE_1: "lf",
     GIT_CONFIG_KEY_2: "core.safecrlf",
     GIT_CONFIG_VALUE_2: "false",
+    // An fsmonitor hook is a program git runs on add and status.
+    GIT_CONFIG_KEY_3: "core.fsmonitor",
+    GIT_CONFIG_VALUE_3: "false",
   };
 }
 
@@ -100,7 +103,10 @@ export function snapshot(cwd, tmpIndex) {
 }
 
 export function numstat(a, b, cwd) {
-  const { stdout } = git(["diff", "--numstat", "-z", "--no-renames", a, b], { cwd, raw: true });
+  const { stdout } = git(["diff", "--numstat", "-z", "--no-renames", "--no-ext-diff", "--no-textconv", a, b], {
+    cwd,
+    raw: true,
+  });
   const out = [];
   for (const rec of stdout.toString("utf8").split("\0")) {
     const m = rec.match(/^(\S+)\t(\S+)\t(.+)$/s);
@@ -111,7 +117,9 @@ export function numstat(a, b, cwd) {
   return out;
 }
 
-export const patch = (a, b, cwd) => git(["diff", "--binary", "--no-renames", a, b], { cwd, raw: true }).stdout;
+// Configured external diff and textconv programs would run, and change the patch.
+export const patch = (a, b, cwd) =>
+  git(["diff", "--binary", "--no-renames", "--no-ext-diff", "--no-textconv", a, b], { cwd, raw: true }).stdout;
 
 export function blob(ref, file, cwd) {
   const r = git(["cat-file", "blob", `${ref}:${file}`], { cwd, raw: true, allowFail: true });

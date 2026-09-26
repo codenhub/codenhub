@@ -128,6 +128,22 @@ describe("delegate-work", () => {
       await R.discard(r.id);
     });
 
+    it("shouldRestoreAWorktreeGitFileTheWorkerRepointed", async () => {
+      const R = await import(runner);
+
+      const r = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt"],
+        brief: "Add a line. REPOINT-GIT",
+        model: "fake",
+      });
+      expect(r.status).toBe("out_of_scope");
+      expect(r.files.outOfScope).toContain("(worktree .git file changed: restored)");
+      expect(r.files.changed.map((c: { path: string }) => c.path)).toEqual(["src/a.txt"]);
+      await R.discard(r.id);
+    });
+
     it("shouldSkipItWhenInPlaceIsRequested", async () => {
       const R = await import(runner);
 

@@ -17,6 +17,11 @@ if (cmd === "--version") {
   const emit = (ev) => console.log(JSON.stringify({ sessionID, ...ev }));
   emit({ type: "step_start", part: {} });
   emit({ type: "tool_use", part: { tool: "write", state: { status: "completed", input: { path: file } } } });
+  if (prompt.includes("REPOINT-GIT")) {
+    // Git hides the file on Windows, and a hidden file can't be overwritten.
+    fs.rmSync(".git");
+    fs.writeFileSync(".git", "gitdir: ../planted\n");
+  }
   if (prompt.includes("WRITE-IGNORED")) {
     fs.mkdirSync("build", { recursive: true });
     fs.writeFileSync("build/out.txt", "planted\n");
