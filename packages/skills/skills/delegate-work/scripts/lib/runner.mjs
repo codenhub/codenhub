@@ -1182,6 +1182,14 @@ export function unapply(id) {
   return envelope(meta);
 }
 
+export function show(id) {
+  const meta = loadMeta(id);
+  if (!meta) {
+    throw new UsageError(`unknown run ${id}`);
+  }
+  return envelope(meta);
+}
+
 export function diff(id) {
   const meta = loadMeta(id);
   if (!meta) {

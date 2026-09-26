@@ -561,6 +561,24 @@ describe("delegate-work", () => {
     expect(prune({ maxAgeMs: Infinity, dryRun: true }).kept.map((k: { id: string }) => k.id)).not.toContain(r.id);
   });
 
+  it("shouldListAnInPlaceResultLeftUndiscarded", async () => {
+    const R = await import(runner);
+    const { prune } = await import(path.resolve(runner, "../prune.mjs"));
+
+    const r = await R.run({
+      cwd: repo,
+      role: "fixer",
+      allow: ["src/a.txt"],
+      brief: "Add a line. ALSO-WRITE src/stray.txt",
+      model: "fake",
+    });
+    expect(r.status).toBe("out_of_scope");
+    const listed = prune({ maxAgeMs: Infinity, dryRun: true }).kept.find((k: { id: string }) => k.id === r.id);
+    expect(listed.reason).toContain("out_of_scope, not discarded: its edits are still in the working tree");
+    expect(R.show(r.id)).toMatchObject({ id: r.id, status: "out_of_scope" });
+    await R.discard(r.id);
+  });
+
   it("shouldRefuseAFollowUpWhileAnotherRunHoldsTheTree", async () => {
     const R = await import(runner);
     const S = await import(state);

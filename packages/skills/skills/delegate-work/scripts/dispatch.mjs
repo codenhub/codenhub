@@ -46,6 +46,7 @@ const HELP = `dispatch — delegate scoped tasks to worker agents
   discard   <id>                    drop the change
   unapply   <id>                    revert an applied change
   diff      <id>                    print the change as a patch
+  show      <id>                    print the run's result again
   prune     [--older-than <age>] [--all] [--dry-run]
                                     remove run state older than <age> (90m, 24h, 7d;
                                     default limits.pruneAfterHours): worktrees, logs,
@@ -306,6 +307,9 @@ async function main() {
       return 0;
     case "diff":
       process.stdout.write(R.diff(o.pos[0]));
+      return 0;
+    case "show":
+      out(R.show(o.pos[0]));
       return 0;
     case "prune": {
       const hours = load(null).limits?.pruneAfterHours ?? 24;

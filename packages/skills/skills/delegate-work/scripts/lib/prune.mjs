@@ -25,11 +25,12 @@ function pending(meta) {
   if (meta.phase === "running" || meta.phase === "interrupted") {
     return meta.isolation === "inplace" ? "interrupted; partial edits may be in the working tree" : "interrupted";
   }
-  if (!APPLICABLE.has(meta.status)) {
-    return null;
-  }
   if (!meta.files?.changed?.length) {
     return null;
+  }
+  if (!APPLICABLE.has(meta.status)) {
+    // Its out-of-scope files are restored; its in-scope edits stay until discard.
+    return meta.isolation === "inplace" ? `${meta.status}, not discarded: its edits are still in the working tree` : null;
   }
   return meta.isolation === "worktree"
     ? "unapplied worktree result"
