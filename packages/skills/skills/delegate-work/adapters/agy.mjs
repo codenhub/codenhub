@@ -78,6 +78,14 @@ function agyHome() {
   for (const [name, tools] of Object.entries(AGENTS)) {
     writeShared(path.join(gemini, "config", "agents", name, "agent.md"), agentFile(name, tools));
   }
+  // Windows resolves the AppData known folders through USERPROFILE, which
+  // points here. When one is missing, .NET reports an empty path and
+  // PowerShell (agy's shell) writes its module cache relative to the work dir.
+  if (WIN) {
+    for (const d of ["Local", "Roaming"]) {
+      fs.mkdirSync(path.join(agyHomeDir(), "AppData", d), { recursive: true });
+    }
+  }
   return agyHomeDir();
 }
 

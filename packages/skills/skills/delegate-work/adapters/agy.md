@@ -39,6 +39,13 @@ Manager (`gemini:antigravity`), so a run in the worker home stays signed in.
 Where credentials live on Linux was not verified; `detect` lists models
 through the worker home, so a home that loses the login shows up there.
 
+Windows resolves the AppData folders through `USERPROFILE` too, and .NET
+reports an empty path for one that doesn't exist. PowerShell, which runs the
+workers' commands, then wrote its `ModuleAnalysisCache` to
+`Microsoft/Windows/PowerShell/` inside the work dir, which failed the run as
+`out_of_scope`. The worker home gets `AppData/Local` and `AppData/Roaming`,
+so that cache stays there.
+
 The worker home keeps agy's own conversation history and per-run project
 files; `dispatch prune` doesn't clean it. Concurrent runs share it, so its
 files are written only when their content changes, and replaced whole.
