@@ -72,7 +72,8 @@ export function envelope(meta, extra = {}) {
     ...(meta.promptPath ? { promptPath: meta.promptPath } : {}),
     durationMs: meta.durationMs ?? null,
     applied: !!meta.applied,
-    retryAvailable: !meta.retryUsed,
+    // A rebrief is the task's retry even when it couldn't run.
+    retryAvailable: !meta.retryUsed && !meta.rebriefOf,
     logPath: meta.logPath ?? null,
     ...extra,
   };

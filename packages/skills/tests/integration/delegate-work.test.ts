@@ -317,7 +317,10 @@ describe("delegate-work", () => {
       R.run({ cwd: repo, rebriefOf: first.id, role: "fixer", brief: "Better.", orchestrator: "test", tier });
     try {
       // Nothing configured for the tier: nothing runs, the retry stays.
-      expect((await rebrief("strong")).status).toBe("not_available");
+      const none = await rebrief("strong");
+      expect(none.status).toBe("not_available");
+      // Not for the rebrief itself, though: it was the task's retry.
+      expect(none.retryAvailable).toBe(false);
       const r = await rebrief("light");
       expect(r.status).toBe("use_native");
       expect(r.retryAvailable).toBe(false);
