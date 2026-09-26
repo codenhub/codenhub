@@ -84,6 +84,11 @@ function errorText(msg) {
 
 export default {
   name: "codex",
+  // workspace-write lets a worker write anything in the work dir, gitignored
+  // files included (node_modules, .venv), where no diff sees it and the checks
+  // then run it. In a worktree those folders are links the sandbox refuses to
+  // write through, so editing runs never happen in place.
+  containedInPlace: false,
 
   detect() {
     if (detected) {

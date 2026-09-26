@@ -570,8 +570,32 @@ export async function run(o) {
   }
 
   let isolation = o.isolation ?? "auto";
+  // Some harnesses can't be kept to the allowlist in the real tree (see
+  // containedInPlace); an editing run that may reach one gets a worktree.
+  const uncontained = (c) => editing && c.adapter.containedInPlace === false;
   if (isolation === "auto") {
-    isolation = !editing ? "inplace" : o.forceWorktree ? "worktree" : claimInplace(meta);
+    isolation = !editing
+      ? "inplace"
+      : o.forceWorktree || picked.candidates.some(uncontained)
+        ? "worktree"
+        : claimInplace(meta);
+  }
+  if (isolation === "inplace" && picked.candidates.some(uncontained)) {
+    for (const c of picked.candidates.filter(uncontained)) {
+      meta.skipped.push({ modelId: c.modelId, route: c.route.id, reason: `${c.route.harness}: can't edit in place` });
+    }
+    picked.candidates = picked.candidates.filter((c) => !uncontained(c));
+    if (!picked.candidates.length) {
+      Object.assign(meta, {
+        status: "not_available",
+        isolation: null,
+        phase: "done",
+        worker: { tier, kind, skipped: meta.skipped },
+        hint: "Every usable route for this tier edits only in a worktree; rerun without --isolation inplace.",
+      });
+      saveMeta(id, meta);
+      return envelope(meta);
+    }
   }
   meta.isolation = workDirOverride ? "worktree" : isolation;
   meta.phase = "running";

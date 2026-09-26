@@ -119,7 +119,9 @@ asks for an external run.
    ```
    Workers start from the current working tree, including uncommitted changes.
    Isolation defaults to `auto`: read-only roles and a single editing worker run
-   in place; parallel editing workers each get an isolated copy. In place, the
+   in place; parallel editing workers each get an isolated copy, and so does an
+   editing worker that may run on a harness that can't be contained in the
+   real tree (the result's `isolation` says which happened). In place, the
    change is already in your tree: `apply` keeps it, `discard` restores the
    allowed files. Don't edit the working tree while an editing worker runs in
    place: its result can't tell your edits from its own, and out-of-scope

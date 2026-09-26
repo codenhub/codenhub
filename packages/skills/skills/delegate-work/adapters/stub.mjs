@@ -1,6 +1,9 @@
 /**
  * Adapter interface (every harness implements the same shape):
  *
+ * containedInPlace        -> boolean                              optional, default true; false: the harness
+ *                                                                        can write outside the allowlist unseen,
+ *                                                                        so editing runs use a worktree
  * detect()                -> { ok, version?, reason? }            cached per process
  * command(ctx)            -> { args, env, input }                  ctx: { route, cwd, prompt, readOnly,
  *                                                                        allow, bashAllow, depDirs, sessionId }

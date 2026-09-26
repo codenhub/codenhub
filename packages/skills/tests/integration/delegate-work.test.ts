@@ -12,6 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  */
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runner = path.resolve(here, "../../skills/delegate-work/scripts/lib/runner.mjs");
+const adapter = (name: string) => path.resolve(here, `../../skills/delegate-work/adapters/${name}.mjs`);
 
 describe("delegate-work", () => {
   let tmp: string;
@@ -83,5 +84,43 @@ describe("delegate-work", () => {
     const second = await R.followup(first.id, "FOLLOW-UP: add another line.");
     expect(path.basename(second.logPath)).toBe("log-4.jsonl");
     expect(fs.readFileSync(stray, "utf8")).toBe("kept\n");
+  });
+
+  describe("with a harness that can't be contained in place", () => {
+    let opencode: { containedInPlace?: boolean };
+
+    beforeAll(async () => {
+      ({ default: opencode } = await import(adapter("opencode")));
+      opencode.containedInPlace = false;
+    });
+
+    afterAll(() => {
+      delete opencode.containedInPlace;
+    });
+
+    it("shouldGiveALoneEditingRunAWorktree", async () => {
+      const R = await import(runner);
+
+      const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+      expect(r.status).toBe("ok");
+      expect(r.isolation).toBe("worktree");
+      expect(r.applied).toBe(false);
+      await R.discard(r.id);
+    });
+
+    it("shouldSkipItWhenInPlaceIsRequested", async () => {
+      const R = await import(runner);
+
+      const r = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt"],
+        brief: "Add a line.",
+        model: "fake",
+        isolation: "inplace",
+      });
+      expect(r.status).toBe("not_available");
+      expect(r.worker.skipped).toContainEqual(expect.objectContaining({ reason: "opencode: can't edit in place" }));
+    });
   });
 });

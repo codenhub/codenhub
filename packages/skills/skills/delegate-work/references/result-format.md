@@ -116,7 +116,8 @@ Retry limit per task: one follow-up **or** one rebrief, enforced by
 
 The workers run in parallel, limited by `maxParallel`. With two or more
 editing tasks, every editing worker gets its own worktree; a batch with a
-single editing task runs it in place, like a lone `run`. Read-only tasks run
+single editing task runs it in place, like a lone `run`, unless one of its
+routes is a harness that only edits in a worktree (Codex). Read-only tasks run
 in place. Worktree results are not applied automatically; in-place changes are
 already in the working tree. Either way, `apply` or `discard` each result.
 After applying several, run the full checks once in the working tree
