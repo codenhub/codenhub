@@ -108,7 +108,7 @@ describe("agy adapter", () => {
     );
   });
 
-  it("shouldDenyWritesToDependencyFoldersForEditingWorkersOnly", async () => {
+  it("shouldDenyWritesToGitAndDependencyFoldersForEditingWorkersOnly", async () => {
     const { default: agy } = await import(adapter("agy"));
     const work = fs.mkdtempSync(path.join(state, "work-"));
     const grants = (readOnly: boolean) => {
@@ -132,11 +132,12 @@ describe("agy adapter", () => {
     expect(edit.allow).toContain(`write_file(${dir})`);
     expect(edit.deny).toEqual(
       expect.arrayContaining([
+        `write_file(${path.join(dir, ".git")})`,
         `write_file(${path.join(dir, "node_modules")})`,
         `write_file(${path.join(dir, "pkg", "node_modules")})`,
       ]),
     );
-    expect(grants(true).deny.filter((d: string) => d.includes("node_modules"))).toEqual([]);
+    expect(grants(true).deny.filter((d: string) => d.startsWith(`write_file(${dir}`))).toEqual([]);
 
     // Setting up the shared home again rewrites nothing and leaves no temp files.
     grants(false);

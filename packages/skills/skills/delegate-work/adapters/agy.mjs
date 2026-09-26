@@ -122,8 +122,9 @@ function project(cwd, readOnly, cmds, depDirs) {
     // agy lets any tool read and write the temp dir.
     ...(inside(tmp, dir) ? [] : [`read_file(${tmp})`, `write_file(${tmp})`]),
     // A worktree links the repository's own dependency folders: a write there
-    // lands in the real one, where no diff sees it. A deny beats the allow above.
-    ...(readOnly ? [] : depDirs.map((d) => `write_file(${path.join(dir, d)})`)),
+    // lands in the real one, where no diff sees it. .git holds the config and
+    // gitdir pointer dispatch's own git commands obey. A deny beats the allow above.
+    ...(readOnly ? [] : [".git", ...depDirs].map((d) => `write_file(${path.join(dir, d)})`)),
   ];
   const grants = { allow, deny };
   const id = `dispatch-${crypto.createHash("sha1").update(JSON.stringify(grants)).digest("hex").slice(0, 12)}`;

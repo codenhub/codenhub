@@ -77,6 +77,10 @@ the turn goes on. So what a worker must not do is removed or denied outright.
   and virtual environments; agy checks the worktree path, so reads through
   the link work. Writes are denied for editing workers: they would land in
   the real folder, which no diff sees.
+- **`.git`.** Writes are denied for editing workers: the repository's config
+  and a worktree's `.git` pointer decide what dispatch's own git commands
+  run. Verified: a write into `.git` is refused ("Matches user-configured
+  deny rule") and the run goes on.
 - **Scope.** The write grant covers the whole work dir, so scope is enforced
   from edit events (the watchdog) and the diff, as for Codex.
 - `--mode plan` is not read-only headless: it auto-approves its own plan and
