@@ -220,7 +220,8 @@ async function execute(meta, cfg, list, prompt, sessionId) {
   const gitEnv = meta.isolation === "worktree" ? G.bytesEnv(meta.workDir) : {};
   let outcome = null;
   let lastFailure = null;
-  let attempt = 0;
+  // A follow-up adds attempts to the run; each keeps its own log.
+  let attempt = fs.readdirSync(runDir(meta.id)).filter((f) => /^log-\d+\.jsonl$/.test(f)).length;
 
   for (const c of list) {
     attempt++;
