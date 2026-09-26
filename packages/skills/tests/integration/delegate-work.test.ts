@@ -210,6 +210,26 @@ describe("delegate-work", () => {
     }
   });
 
+  it("shouldCountAnEditOutsideTheTreeAsOutOfScopeWhateverTheAllowlist", async () => {
+    const R = await import(runner);
+    const outside = path.join(tmp, "outside.txt");
+
+    try {
+      const r = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["**"],
+        brief: "Add a line. ALSO-WRITE ../outside.txt",
+        model: "fake",
+      });
+      expect(r.status).toBe("out_of_scope");
+      expect(r.files.outOfScope).toContain("(invisible to git, not restored) ../outside.txt");
+      await R.discard(r.id);
+    } finally {
+      fs.rmSync(outside, { force: true });
+    }
+  });
+
   it("shouldPlanABatchWithoutRunningIt", async () => {
     const R = await import(runner);
     const runs = path.join(process.env.DELEGATE_WORK_STATE as string, "runs");

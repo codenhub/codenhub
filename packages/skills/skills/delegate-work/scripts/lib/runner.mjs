@@ -236,6 +236,9 @@ function estimateTokens(root, files, globs, prompt) {
 const relativeEdit = (workDir, f) =>
   path.posix.normalize(toPosix(path.isAbsolute(f) ? path.relative(workDir, canonical(f)) : f));
 
+/** In the allowlist and inside the work dir: `**` alone would also match `../x`. */
+const inScope = (f, allow) => !/^(\.\.(\/|$)|\/|[a-z]:)/i.test(f) && matchAny(f, allow);
+
 function newAcc() {
   return { sessionId: null, edits: [], denied: [], texts: [], stepTexts: [], errors: [], steps: 0 };
 }
@@ -344,7 +347,7 @@ async function execute(meta, cfg, list, prompt, sessionId) {
         c.adapter.parseLine(line, acc);
         for (const f of acc.edits.slice(before)) {
           const r = relativeEdit(meta.workDir, f);
-          if (!meta.editing || !matchAny(r, meta.allow)) {
+          if (!meta.editing || !inScope(r, meta.allow)) {
             proc.kill("out_of_scope");
           }
         }
@@ -442,12 +445,12 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   // only from the harness's edit events, and can't be restored from the snapshot.
   const seen = new Set(changed.map((c) => c.path));
   const unseen = meta.editing ? [...reported].filter((f) => !seen.has(f)) : [];
-  for (const f of unseen.filter((f) => !matchAny(f, meta.allow))) {
+  for (const f of unseen.filter((f) => !inScope(f, meta.allow))) {
     outOfScope.push(`(invisible to git, not restored) ${f}`);
   }
   // An allowed edit the work dir doesn't show: reverted, ignored, or written
   // into another directory (a harness that ignored the work dir it was given).
-  const missing = unseen.filter((f) => matchAny(f, meta.allow));
+  const missing = unseen.filter((f) => inScope(f, meta.allow));
 
   meta.post = post;
   meta.files = { changed, outOfScope };
