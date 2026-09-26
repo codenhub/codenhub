@@ -27,6 +27,30 @@ let detected;
 const codexHome = () => process.env.CODEX_HOME || path.join(os.homedir(), ".codex");
 const windowsSandbox = (route) => route.windowsSandbox ?? "unelevated";
 
+const inside = (dir, file) => {
+  const rel = path.relative(dir, file);
+  return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+};
+
+/**
+ * workspace-write also makes the temp dir writable. A worktree links the
+ * repository's dependency folders; when the repository itself is in the
+ * temp dir, a write through the link lands in the real folder, where no diff
+ * sees it. The temp dir is then left out of the writable roots.
+ */
+function linksIntoTemp(cwd, depDirs) {
+  const tmp = fs.realpathSync.native(os.tmpdir());
+  const work = fs.realpathSync.native(cwd);
+  return depDirs.some((d) => {
+    try {
+      const real = fs.realpathSync.native(path.join(cwd, d));
+      return !inside(work, real) && inside(tmp, real);
+    } catch {
+      return false;
+    }
+  });
+}
+
 // The unelevated Windows sandbox refuses child processes with piped stdio
 // (spawn EPERM), which most test runners use. Workers are told so they don't
 // spend steps fighting it; dispatch runs the checks outside the sandbox.
@@ -78,7 +102,7 @@ export default {
     return (detected = { ok: true, bin, version: v.stdout.toString().trim(), login: status });
   },
 
-  command({ route, cwd, prompt, readOnly, sessionId }) {
+  command({ route, cwd, prompt, readOnly, depDirs = [], sessionId }) {
     // User config is ignored: it can load plugins, MCP servers and notify
     // hooks. Everything a worker needs is set here.
     const opts = [
@@ -101,6 +125,14 @@ export default {
     }
     if (route.variant) {
       opts.push("-c", `model_reasoning_effort=${route.variant}`);
+    }
+    if (!readOnly && linksIntoTemp(cwd, depDirs)) {
+      opts.push(
+        "-c",
+        "sandbox_workspace_write.exclude_tmpdir_env_var=true",
+        "-c",
+        "sandbox_workspace_write.exclude_slash_tmp=true",
+      );
     }
     // resume has no --cd; the process cwd is the work dir either way.
     const args = sessionId ? ["exec", "resume", ...opts, sessionId, "-"] : ["exec", ...opts, "-C", cwd, "-"];

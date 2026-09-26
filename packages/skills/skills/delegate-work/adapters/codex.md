@@ -1,8 +1,9 @@
 # Codex adapter
 
 Verified against Codex CLI 0.157.0 on Windows with a ChatGPT login and real
-runs of `gpt-6-luna` (in place, worktree, read-only, resume). Re-check these
-points when Codex updates; 0.111 → 0.157 renamed and removed flags.
+runs of `gpt-6-luna` (in place, worktree, read-only, resume), and 0.157.1 for
+writes through linked dependency folders. Re-check these points when Codex
+updates; 0.111 → 0.157 renamed and removed flags.
 
 ## How a run is invoked
 
@@ -40,6 +41,15 @@ and worktrees live under `~/.local/state`, not in the temp dir. Network is off.
 Extra writable roots (`sandbox_workspace_write.writable_roots`) make the
 unelevated Windows sandbox refuse to run at all ("cannot enforce split
 writable root sets"), so workers get no private temp dir.
+
+A worktree links the repository's dependency folders. The sandbox checks
+where a write lands, so writes through a link into a repository under the
+home directory are refused, by the shell and by `apply_patch` alike. A
+repository inside the temp dir is the exception: the link lands in the
+writable temp dir and the real folder would change, unseen by the diff. When
+a linked folder resolves into the temp dir, the run sets
+`sandbox_workspace_write.exclude_tmpdir_env_var` and `exclude_slash_tmp`,
+which the unelevated sandbox accepts.
 
 ## Windows
 

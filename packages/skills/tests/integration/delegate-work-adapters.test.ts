@@ -147,6 +147,26 @@ describe("agy adapter", () => {
   });
 });
 
+describe("codex adapter", () => {
+  it("shouldLeaveTheTempDirOutWhenALinkedDependencyFolderResolvesIntoIt", async () => {
+    const { default: codex } = await import(adapter("codex"));
+    const work = fs.mkdtempSync(path.join(state, "wt-"));
+    const deps = fs.mkdtempSync(path.join(os.tmpdir(), "delegate-work-deps-"));
+    fs.symlinkSync(deps, path.join(work, "node_modules"), process.platform === "win32" ? "junction" : "dir");
+    const args = (depDirs: string[], readOnly = false) =>
+      codex.command({ route: { model: "m" }, cwd: work, prompt: "p", readOnly, depDirs, sessionId: null }).args;
+
+    try {
+      expect(args(["node_modules"])).toContain("sandbox_workspace_write.exclude_tmpdir_env_var=true");
+      expect(args([])).not.toContain("sandbox_workspace_write.exclude_tmpdir_env_var=true");
+      expect(args(["node_modules"], true)).not.toContain("sandbox_workspace_write.exclude_tmpdir_env_var=true");
+    } finally {
+      fs.unlinkSync(path.join(work, "node_modules"));
+      fs.rmSync(deps, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("opencode adapter (2.x events)", () => {
   it("shouldReadPatchedFilesFromToolMetadata", async () => {
     const { default: opencode } = await import(adapter("opencode"));
