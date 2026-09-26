@@ -190,8 +190,10 @@ function doctor(cwd) {
   const tiers = {};
   for (const t of TIERS) {
     const c = candidates(cfg, adapters, { tier: t, kind: "code", estimate: 0, pools, external: false });
+    // What --external would run instead, which the native answer hides.
+    const external = () => candidates(cfg, adapters, { tier: t, kind: "code", estimate: 0, pools, external: true });
     tiers[t] = c.native
-      ? { native: c.native.model }
+      ? { native: c.native.model, external: external().candidates.map((x) => `${x.modelId} via ${x.route.id}`) }
       : {
           usable: c.candidates
             .map((x) => `${x.modelId} via ${x.route.id}`)

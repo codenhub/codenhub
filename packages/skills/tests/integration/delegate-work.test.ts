@@ -618,6 +618,17 @@ describe("delegate-work", () => {
     }
   });
 
+  it("shouldSayWhyNoRouteCouldRun", async () => {
+    const R = await import(runner);
+
+    const fixed = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+    // The only model is the fixer's own family.
+    const review = await R.run({ cwd: repo, role: "reviewer", review: fixed.id, tier: "light", brief: "Review." });
+    expect(review.status).toBe("not_available");
+    expect(review.hint).toContain("fake (same family as reviewed work (fake))");
+    await R.discard(fixed.id);
+  });
+
   it("shouldGiveABatchsEditingTaskAWorktreeWhenAsked", async () => {
     const R = await import(runner);
     const task = { role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" };

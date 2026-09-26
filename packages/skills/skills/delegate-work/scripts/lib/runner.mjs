@@ -449,7 +449,7 @@ async function runAttempts(meta, cfg, list, prompt, sessionId) {
     meta.status = lastFailure ? "harness_error" : "not_available";
     meta.hint = lastFailure
       ? hintFor(lastFailure.kind, lastFailure.harness)
-      : "No usable route. Run `dispatch doctor`.";
+      : noRouteHint(meta.skipped);
     meta.files = { changed: [], outOfScope: [] };
   } else {
     await evaluate(meta, cfg, outcome);
@@ -620,6 +620,15 @@ function busyTree(meta) {
   return other ? `In-place run ${other.id} is still working in this tree; try again when it finishes.` : null;
 }
 
+/** Why nothing could run: each route left out and its reason, which doctor alone wouldn't say. */
+function noRouteHint(skipped) {
+  const why = skipped
+    .slice(0, 6)
+    .map((s) => `${s.modelId}${s.route ? ` via ${s.route}` : ""} (${s.reason})`)
+    .join("; ");
+  return why ? `No usable route for this tier: ${why}.` : "No usable route for this tier. Run `dispatch doctor`.";
+}
+
 const nativeHint = (model) =>
   `Run this task as a native subagent with ${model}, and give it the text at promptPath: your brief with the worker rules in front.`;
 
@@ -682,7 +691,7 @@ function plan(o, { editing, tier, kind, picked, workDirOverride, lineage, prompt
       worker: { tier, kind, skipped },
       isolation: null,
       fallbacks: [],
-      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : "No usable route for this tier. Run `dispatch doctor`.",
+      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : noRouteHint(skipped),
     };
   }
   return {
@@ -872,7 +881,7 @@ export async function run(o) {
       isolation: null,
       phase: "done",
       worker: { tier, kind, skipped: meta.skipped },
-      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : "No usable route for this tier. Run `dispatch doctor`.",
+      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : noRouteHint(meta.skipped),
     });
     saveMeta(id, meta);
     return envelope(meta);
