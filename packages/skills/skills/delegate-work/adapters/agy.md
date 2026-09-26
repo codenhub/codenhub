@@ -82,7 +82,10 @@ the turn goes on. So what a worker must not do is removed or denied outright.
   run. Verified: a write into `.git` is refused ("Matches user-configured
   deny rule") and the run goes on.
 - **Scope.** The write grant covers the whole work dir, so scope is enforced
-  from edit events (the watchdog) and the diff, as for Codex.
+  from edit events (the watchdog) and the diff, as for Codex. agy reports
+  every write it makes, so a write to a gitignored file (`.env`, build
+  output) still stops the run as `out_of_scope`; the diff can't see it,
+  though, so nothing restores it.
 - `--mode plan` is not read-only headless: it auto-approves its own plan and
   edits. Read-only roles rely on the tool set instead.
 

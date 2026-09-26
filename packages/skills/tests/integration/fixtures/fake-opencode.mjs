@@ -17,5 +17,13 @@ if (cmd === "--version") {
   const emit = (ev) => console.log(JSON.stringify({ sessionID, ...ev }));
   emit({ type: "step_start", part: {} });
   emit({ type: "tool_use", part: { tool: "write", state: { status: "completed", input: { path: file } } } });
+  if (prompt.includes("WRITE-IGNORED")) {
+    fs.mkdirSync("build", { recursive: true });
+    fs.writeFileSync("build/out.txt", "planted\n");
+    emit({
+      type: "tool_use",
+      part: { tool: "write", state: { status: "completed", input: { path: "build/out.txt" } } },
+    });
+  }
   emit({ type: "text", part: { text: "RESULT\nstatus: done\nsummary: edited src/a.txt" } });
 }

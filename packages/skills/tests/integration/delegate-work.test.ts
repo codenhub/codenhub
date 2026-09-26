@@ -86,6 +86,26 @@ describe("delegate-work", () => {
     expect(fs.readFileSync(stray, "utf8")).toBe("kept\n");
   });
 
+  it("shouldReportAnIgnoredFileTheWorkerWroteOutsideItsAllowlist", async () => {
+    const R = await import(runner);
+    fs.writeFileSync(path.join(repo, ".gitignore"), "build/\n");
+
+    const r = await R.run({
+      cwd: repo,
+      role: "fixer",
+      allow: ["src/a.txt"],
+      brief: "Add a line. WRITE-IGNORED",
+      model: "fake",
+    });
+    expect(r.status).toBe("out_of_scope");
+    expect(r.files.outOfScope).toContain("(invisible to git, not restored) build/out.txt");
+    // Not in the snapshot, so a restore would have deleted it.
+    expect(fs.existsSync(path.join(repo, "build", "out.txt"))).toBe(true);
+    await R.discard(r.id);
+    fs.rmSync(path.join(repo, "build"), { recursive: true });
+    fs.rmSync(path.join(repo, ".gitignore"));
+  });
+
   describe("with a harness that can't be contained in place", () => {
     let opencode: { containedInPlace?: boolean };
 

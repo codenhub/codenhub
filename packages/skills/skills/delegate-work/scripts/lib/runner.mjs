@@ -172,6 +172,10 @@ function estimateTokens(root, files, globs, prompt) {
 
 // ---------- execution ----------
 
+/** A harness-reported edit as a normalized path relative to the work dir: `src/../x` is `x`. */
+const relativeEdit = (workDir, f) =>
+  path.posix.normalize(toPosix(path.isAbsolute(f) ? path.relative(workDir, canonical(f)) : f));
+
 function newAcc() {
   return { sessionId: null, edits: [], denied: [], texts: [], stepTexts: [], errors: [], steps: 0 };
 }
@@ -253,7 +257,7 @@ async function execute(meta, cfg, list, prompt, sessionId) {
         const before = acc.edits.length;
         c.adapter.parseLine(line, acc);
         for (const f of acc.edits.slice(before)) {
-          const r = toPosix(path.isAbsolute(f) ? path.relative(meta.workDir, canonical(f)) : f);
+          const r = relativeEdit(meta.workDir, f);
           if (!meta.editing || !matchAny(r, meta.allow)) {
             proc.kill("out_of_scope");
           }
@@ -330,9 +334,7 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   const post = G.workingTree(meta.workDir, path.join(runDir(meta.id), "post.index"));
   const ignore = [...(meta.linked ?? []), ...(meta.copied ?? [])];
   const changed = G.numstat(meta.snap, post, meta.workDir).filter((c) => !ignore.includes(c.path));
-  const reported = new Set(
-    acc.edits.map((f) => toPosix(path.isAbsolute(f) ? path.relative(meta.workDir, canonical(f)) : f)),
-  );
+  const reported = new Set(acc.edits.map((f) => relativeEdit(meta.workDir, f)));
   // A read-only worker has no edit tools: changes it didn't report are
   // someone else's (a concurrent run, the orchestrator) and stay as they are.
   const outOfScope = changed
@@ -340,6 +342,16 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
     .filter((f) => (meta.editing ? !matchAny(f, meta.allow) : reported.has(f)));
   if (depsFingerprint(meta.root, depDirs) !== depsBefore) {
     outOfScope.push("(dependency folder changed: install detected)");
+  }
+  // Writes git can't see (ignored files, paths outside the tree) are known
+  // only from the harness's edit events, and can't be restored from the snapshot.
+  if (meta.editing) {
+    const seen = new Set(changed.map((c) => c.path));
+    for (const f of reported) {
+      if (!seen.has(f) && !matchAny(f, meta.allow)) {
+        outOfScope.push(`(invisible to git, not restored) ${f}`);
+      }
+    }
   }
 
   meta.post = post;
