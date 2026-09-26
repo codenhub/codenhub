@@ -56,8 +56,7 @@ export function runSync(resolved, args, opts = {}) {
 // A password anywhere in the name (PGPASSWORD), and a PWD part after another
 // (MYSQL_PWD) but not PWD itself, the working directory. A URL's user may be
 // empty (redis://:password@host).
-const SECRET_NAME =
-  /(^|_)(TOKEN|SECRET|PASSPHRASE|CREDENTIALS?|APIKEY|KEY|PAT|AUTH)S?(_|$)|PASSW(OR)?D|_PWD(_|$)/i;
+const SECRET_NAME = /(^|_)(TOKEN|SECRET|PASSPHRASE|CREDENTIALS?|APIKEY|KEY|PAT|AUTH)S?(_|$)|PASSW(OR)?D|_PWD(_|$)/i;
 const SECRET_VALUE = /^[a-z][a-z0-9+.-]*:\/\/[^/\s:@]*:[^/\s@]+@/i;
 const nameRule = (p) =>
   p instanceof RegExp ? p : new RegExp(`^${p.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*")}$`, "i");

@@ -1,8 +1,9 @@
 # Review checklist
 
-For `ok` results from `fixer` and `builder`. The checks already passed; this is
-about what checks can't see. Read the diff (`git diff` in the result's worktree,
-or `dispatch diff <id>`), not the worker's summary.
+For `ok` results from `fixer` and `builder`. Every check that ran passed; with
+an empty `checks` none ran, so also verify the change works. The rest is about
+what checks can't see. Read the diff (`dispatch diff <id>`, or `git diff` in the
+result's `worktree`), not the worker's summary.
 
 Reject or fix if any of these fail:
 

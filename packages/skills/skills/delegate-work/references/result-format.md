@@ -81,7 +81,7 @@ Never treat exit code 0 as "the task succeeded".
 | `files.changed`   | From `git diff`, not from the worker's claims. |
 | `files.outOfScope`| Changed files not matching `--allow`. Non-empty forces status `out_of_scope`, unless the run hit its time or step budget first: then it is `timeout`, with the same files restored. |
 | `checks`          | Verification commands from user config, or inferred from the project (fast set for `fixer`, full set for `builder`). `tail` is the last ≤ 20 lines of output, only when `ok` is false. **Empty means nothing could be inferred:** `ok` then only means "in scope and finished", and you must verify the change yourself before applying. |
-| `denied`          | Actions the harness refused, verbatim, one line each. |
+| `denied`          | Actions the harness refused, one line each, at most 20: its own wording where it gave one, otherwise the tool and its target; paths in the work dir are made relative. |
 | `notes`           | Out-of-scope observations from the worker. Never acted on automatically. |
 | `hint`            | Set by `dispatch` when it can suggest a concrete next step (e.g. re-authenticate a harness). |
 | `applied`         | Whether `apply` accepted the change. In place, the change is in the working tree either way; `false` there means it is not decided yet. |

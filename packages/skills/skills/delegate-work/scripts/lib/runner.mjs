@@ -207,7 +207,9 @@ function preamble({ role, allow, read, checks }) {
     .replace("{{READ}}", read.length ? read.join(", ") : "any file in the repository")
     .replace(
       "{{CHECKS}}",
-      checks.length ? checks.map((c) => c.cmd).join(" ; ") : "none; do not run install or build commands",
+      checks.length
+        ? `${checks.map((c) => c.cmd).join(" ; ")} (one at a time: run together, they can collide over the same build output)`
+        : "none; do not run install or build commands",
     )
     .replace("{{REPORT_INSTRUCTIONS}}", report);
 }
