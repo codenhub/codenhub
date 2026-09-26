@@ -561,6 +561,27 @@ describe("delegate-work", () => {
     expect(prune({ maxAgeMs: Infinity, dryRun: true }).kept.map((k: { id: string }) => k.id)).not.toContain(r.id);
   });
 
+  it.skipIf(process.platform === "win32")("shouldRestoreAnExecutableFileAsExecutable", async () => {
+    const R = await import(runner);
+    const tool = path.join(repo, "tool.sh");
+    fs.writeFileSync(tool, "#!/bin/sh\n", { mode: 0o755 });
+
+    try {
+      const r = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt"],
+        brief: "Add a line. DELETE tool.sh",
+        model: "fake",
+      });
+      expect(r.status).toBe("out_of_scope");
+      expect(fs.statSync(tool).mode & 0o111).toBe(0o111);
+      await R.discard(r.id);
+    } finally {
+      fs.rmSync(tool, { force: true });
+    }
+  });
+
   it("shouldListAnInPlaceResultLeftUndiscarded", async () => {
     const R = await import(runner);
     const { prune } = await import(path.resolve(runner, "../prune.mjs"));
@@ -711,6 +732,24 @@ describe("delegate-work", () => {
       expect(r.status).toBe("out_of_scope");
       expect(r.files.outOfScope).toContain("(worktree .git file changed: restored)");
       expect(r.files.changed.map((c: { path: string }) => c.path)).toEqual(["src/a.txt"]);
+      await R.discard(r.id);
+    });
+
+    it.skipIf(process.platform === "win32")("shouldNotApplyASymbolicLinkTheWorkerMade", async () => {
+      const R = await import(runner);
+
+      const r = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt", "src/l.txt"],
+        brief: "Add a line. MAKE-FILE-LINK /etc/passwd",
+        model: "fake",
+      });
+      expect(r.status).toBe("ok");
+      const applied = R.apply(r.id);
+      expect(applied.status).toBe("conflict");
+      expect(applied.hint).toContain("symbolic links, which apply doesn't write: src/l.txt");
+      expect(fs.existsSync(path.join(repo, "src", "l.txt"))).toBe(false);
       await R.discard(r.id);
     });
 

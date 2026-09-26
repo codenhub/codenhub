@@ -101,6 +101,8 @@ function depsFingerprint(root, dirs) {
     .join("|");
 }
 
+const WIN = process.platform === "win32";
+
 const cleanupWorktree = (meta) => removeWorktree(meta.worktree, meta.root);
 
 /**
@@ -154,7 +156,14 @@ function throughLinks(root, files) {
 
 const linkHint = (files) => `Not written, their path goes through a link: ${files.slice(0, 10).join(", ")}`;
 
-/** Make files in root byte-identical to their version in ref (snapshot or post tree). */
+/** Files that are symbolic links in ref: a worker's link may point anywhere, so apply won't write one. */
+const linksIn = (ref, files, cwd) => files.filter((f) => G.mode(ref, f, cwd) === "120000");
+
+/**
+ * Make files in root byte-identical to their version in ref (snapshot or post
+ * tree), executable bit and links included where the OS has them. Git on
+ * Windows checks a link out as a file holding its target, and so does this.
+ */
 function writeFrom(root, ref, files) {
   const linked = throughLinks(root, files);
   if (linked.length) {
@@ -164,11 +173,22 @@ function writeFrom(root, ref, files) {
   for (const f of files) {
     const data = G.blob(ref, f, root);
     const full = path.join(root, f);
-    if (data) {
-      fs.mkdirSync(path.dirname(full), { recursive: true });
-      fs.writeFileSync(full, data);
-    } else {
+    if (!data) {
       fs.rmSync(full, { force: true });
+      continue;
+    }
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    const mode = WIN ? null : G.mode(ref, f, root);
+    if (mode === "120000") {
+      fs.rmSync(full, { force: true });
+      fs.symlinkSync(data.toString("utf8"), full);
+      continue;
+    }
+    fs.writeFileSync(full, data);
+    if (mode) {
+      const now = fs.statSync(full).mode & 0o777;
+      // Executable wherever readable, as git checks it out; otherwise not executable at all.
+      fs.chmodSync(full, mode === "100755" ? now | ((now & 0o444) >> 2) : now & ~0o111);
     }
   }
 }
@@ -1078,6 +1098,13 @@ export function apply(id) {
     const linked = throughLinks(meta.root, files);
     if (linked.length) {
       return envelope(meta, { status: "conflict", hint: linkHint(linked) });
+    }
+    const madeLinks = linksIn(meta.post, files, meta.root);
+    if (madeLinks.length) {
+      return envelope(meta, {
+        status: "conflict",
+        hint: `The worker made these symbolic links, which apply doesn't write: ${madeLinks.slice(0, 10).join(", ")}. Check where they point in \`dispatch diff ${id}\`, and make them yourself if they belong.`,
+      });
     }
     const moved = foreignEdits(meta.root, meta.snap, meta.post, files);
     if (moved.length) {

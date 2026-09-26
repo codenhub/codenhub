@@ -43,6 +43,15 @@ if (cmd === "--version") {
   if (link) {
     fs.symlinkSync(link[1], "src/j", process.platform === "win32" ? "junction" : "dir");
   }
+  const fileLink = prompt.match(/MAKE-FILE-LINK (\S+)/);
+  if (fileLink) {
+    fs.symlinkSync(fileLink[1], "src/l.txt");
+    emit({ type: "tool_use", part: { tool: "write", state: { status: "completed", input: { path: "src/l.txt" } } } });
+  }
+  const gone = prompt.match(/DELETE (\S+)/)?.[1];
+  if (gone) {
+    fs.rmSync(gone);
+  }
   if (prompt.includes("REPOINT-GIT")) {
     // Git hides the file on Windows, and a hidden file can't be overwritten.
     fs.rmSync(".git");

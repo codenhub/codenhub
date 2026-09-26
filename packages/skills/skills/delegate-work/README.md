@@ -84,6 +84,10 @@ Dispatch turns that lookup off for itself and everything it starts
 (`NoDefaultCurrentDirectoryInExePath`), so a `git.exe` a worker leaves in its
 worktree never runs as dispatch.
 
+Restores keep a file's executable bit and put back symbolic links from the
+snapshot. `apply` never writes a symbolic link a worker made: it reports a
+`conflict` naming it, since the link could point anywhere.
+
 A running run saves its state every five minutes; a `running` state older
 than 20 minutes belongs to a dispatch that is gone, whatever process now has
 its pid. Stopped with Ctrl+C or a closing terminal, dispatch ends its workers

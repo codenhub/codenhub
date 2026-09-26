@@ -131,6 +131,12 @@ export function blob(ref, file, cwd) {
   return r.ok ? r.stdout : null;
 }
 
+/** The file's mode in ref: "100644", "100755" (executable), "120000" (symbolic link), or null. */
+export function mode(ref, file, cwd) {
+  const r = git(["ls-tree", "-z", ref, "--", file], { cwd, allowFail: true });
+  return r.ok ? (r.stdout.match(/^(\d{6}) /)?.[1] ?? null) : null;
+}
+
 export function blobId(ref, file, cwd) {
   const r = git(["rev-parse", "-q", "--verify", `${ref}:${file}`], { cwd, allowFail: true });
   return r.ok ? r.stdout : null;
