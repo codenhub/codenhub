@@ -10,7 +10,17 @@ import { linkDeps, removeDirSafe, removeWorktree, stripLinks, unlinkSafe } from 
 import { start, withoutSecrets } from "./proc.mjs";
 import { envelope, parseResult } from "./result.mjs";
 import { candidates, nextTier, orchestratorPools } from "./route.mjs";
-import { activeInplace, BEAT_MS, loadMeta, newRun, runDir, saveMeta, setCooldown, working } from "./state.mjs";
+import {
+  activeInplace,
+  BEAT_MS,
+  loadMeta,
+  newRun,
+  runDir,
+  savePrompt,
+  saveMeta,
+  setCooldown,
+  working,
+} from "./state.mjs";
 
 export const EDITING = new Set(["fixer", "builder"]);
 export const APPLICABLE = new Set(["ok", "failed_checks", "blocked"]);
@@ -610,6 +620,9 @@ function busyTree(meta) {
   return other ? `In-place run ${other.id} is still working in this tree; try again when it finishes.` : null;
 }
 
+const nativeHint = (model) =>
+  `Run this task as a native subagent with ${model}, and give it the text at promptPath: your brief with the worker rules in front.`;
+
 const IN_PLACE_ONLY_HINT =
   "Every usable route for this tier edits only in a worktree; rerun without --isolation inplace.";
 
@@ -641,7 +654,7 @@ function isolationFor(o, editing, candidates) {
 }
 
 /** What `run` would do, without running anything or touching run state. */
-function plan(o, { editing, tier, kind, picked, workDirOverride, lineage }) {
+function plan(o, { editing, tier, kind, picked, workDirOverride, lineage, prompt }) {
   const base = {
     v: 1,
     id: null,
@@ -655,7 +668,8 @@ function plan(o, { editing, tier, kind, picked, workDirOverride, lineage }) {
       worker: { ...picked.native, tier, kind, skipped: picked.skipped ?? [] },
       isolation: null,
       fallbacks: [],
-      hint: `Run this brief as a native subagent with ${picked.native.model}.`,
+      promptPath: savePrompt(prompt),
+      hint: nativeHint(picked.native.model),
     };
   }
   const iso = isolationFor(o, editing, picked.candidates);
@@ -797,7 +811,7 @@ export async function run(o) {
   });
 
   if (o.plan) {
-    return plan(o, { editing, tier, kind, picked, workDirOverride, lineage: { prev, target } });
+    return plan(o, { editing, tier, kind, picked, workDirOverride, lineage: { prev, target }, prompt });
   }
 
   const iso = picked.native ? null : isolationFor(o, editing, picked.candidates);
@@ -845,7 +859,8 @@ export async function run(o) {
       isolation: null,
       phase: "done",
       worker: { ...picked.native, tier, kind, skipped: meta.skipped },
-      hint: `Run this brief as a native subagent with ${picked.native.model}.`,
+      promptPath: savePrompt(prompt),
+      hint: nativeHint(picked.native.model),
     });
     saveMeta(id, meta);
     useRetry();

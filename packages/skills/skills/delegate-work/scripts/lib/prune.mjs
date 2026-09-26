@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { removeDirSafe, removeWorktree } from "./links.mjs";
 import { APPLICABLE, EDITING } from "./runner.mjs";
-import { loadMeta, runDir, runsDir, working } from "./state.mjs";
+import { loadMeta, promptsDir, runDir, runsDir, working } from "./state.mjs";
 
 /** "90m", "24h", "7d", "0" → ms. */
 export function parseAge(s) {
@@ -93,6 +93,15 @@ export function prune({ maxAgeMs, dryRun = false }) {
       }
     }
     out.removed.push({ ...entry, ...(left ? { dropped: left } : {}) });
+  }
+  // Prompts kept for native subagents: nothing refers to them once the task is done.
+  if (!dryRun && fs.existsSync(promptsDir())) {
+    for (const f of fs.readdirSync(promptsDir())) {
+      const file = path.join(promptsDir(), f);
+      if (now - fs.statSync(file).mtimeMs >= maxAgeMs) {
+        fs.rmSync(file, { force: true });
+      }
+    }
   }
   return out;
 }

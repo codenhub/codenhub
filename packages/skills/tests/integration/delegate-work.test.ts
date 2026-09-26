@@ -577,6 +577,29 @@ describe("delegate-work", () => {
     await R.discard(r.id);
   });
 
+  it("shouldGiveANativeTaskItsBriefWithTheWorkerRules", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    fs.writeFileSync(
+      configFile,
+      JSON.stringify({ ...JSON.parse(original), orchestrators: { test: { pools: ["fake-pool"] } } }),
+    );
+    const task = { cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", orchestrator: "test" };
+
+    try {
+      const r = await R.run(task);
+      expect(r.status).toBe("use_native");
+      const prompt = fs.readFileSync(r.promptPath, "utf8");
+      expect(prompt).toContain("Edit only the files you are allowed to edit: src/a.txt");
+      expect(prompt).toMatch(/Add a line\.$/);
+      // A plan names the same prompt.
+      expect((await R.run({ ...task, plan: true })).promptPath).toBe(r.promptPath);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
   describe("with a harness that can't be contained in place", () => {
     let opencode: { containedInPlace?: boolean };
 

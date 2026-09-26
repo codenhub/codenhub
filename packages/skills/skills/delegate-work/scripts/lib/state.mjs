@@ -99,6 +99,16 @@ export function activeInplace(root) {
     );
 }
 
+export const promptsDir = () => path.join(baseDir(), "prompts");
+
+/** Keep a worker's whole prompt where a native subagent can be given it. Same prompt, same file. */
+export function savePrompt(text) {
+  const file = path.join(promptsDir(), `${crypto.createHash("sha256").update(text).digest("hex").slice(0, 16)}.md`);
+  fs.mkdirSync(promptsDir(), { recursive: true });
+  fs.writeFileSync(file, text);
+  return file;
+}
+
 const cooldownFile = () => path.join(baseDir(), "cooldowns.json");
 
 export function cooldowns() {

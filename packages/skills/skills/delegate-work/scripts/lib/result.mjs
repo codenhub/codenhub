@@ -67,6 +67,7 @@ export function envelope(meta, extra = {}) {
     denied: meta.denied ?? [],
     notes: meta.notes ?? [],
     hint: meta.hint ?? null,
+    ...(meta.promptPath ? { promptPath: meta.promptPath } : {}),
     durationMs: meta.durationMs ?? null,
     applied: !!meta.applied,
     retryAvailable: !meta.retryUsed,
