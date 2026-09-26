@@ -61,6 +61,20 @@ Restores and applies are byte-exact: dispatch runs git with line-ending
 conversion and `.gitattributes` filters off, so a CRLF checkout
 (`core.autocrlf=true`) stays CRLF and an LF file stays LF.
 
+Restores and applies never write through a link. Git for Windows walks into a
+junction as if it were a folder, so a junction a worker made would show its
+target's files as changes in the tree; dispatch leaves any path that goes
+through a symlink or junction alone and says so (`apply`, `discard` and
+`unapply` report a `conflict`). When a failed attempt in place is undone
+before the next route runs, the files it restores are copied into the run's
+state first, in case you edited one meanwhile.
+
+Dispatch's own git commands also run no programs from repository config
+(`core.fsmonitor`, external diff, textconv). A worktree's `.git` file, which
+points git at the repository and so at its config, is put back as git wrote
+it after every worker and after the checks; a changed one makes the run
+`out_of_scope`.
+
 ## Checks
 
 `fixer` runs the fast set, `builder` the full set. A project's `checks.fast` /
@@ -85,6 +99,13 @@ ecosystem found at the repository root contributes:
   keyed by path, so a worktree finds none: set `virtualenvs.in-project` or
   configure the checks.
 
+Checks and workers run with pnpm's `verify-deps-before-run` off. pnpm 10+
+installs before `pnpm run` when dependencies look stale, and in a worktree
+they always do (its paths differ from the ones pnpm recorded): the install
+wrote through the linked `node_modules` and repointed the repository's own
+links at the worktree. A change to the install markers during the checks
+still makes the run `out_of_scope`.
+
 Worktrees get the project's venv linked. Its editable install still points at
 the repository, so with a `src/` directory the checks (and the worker) get
 `PYTHONPATH=src` to test the worktree's code.
@@ -93,11 +114,29 @@ the repository, so with a `src/` directory the checks (and the worker) get
 
 Harness permissions limit what a worker can do while it runs: which files it
 edits and which commands it runs. They don't sandbox the code it writes. The
-checks run that code with your permissions and environment, as your own test
-run would, and a worker in place edits your real working tree; dispatch
+checks run that code with your permissions and environment (minus the
+secrets below), as your own test run would, and a worker in place edits your
+real working tree; dispatch
 restores out-of-scope files afterwards, it doesn't prevent writing them. Give
 workers the same trust you give the models behind them, and keep untrusted
 routes off repositories whose tests reach credentials or production systems.
+
+## Secrets
+
+Workers, and the checks dispatch runs on their code, get your environment
+without the variables that look like credentials: names with a `TOKEN`,
+`SECRET`, `PASSWORD`, `PASSPHRASE`, `CREDENTIAL`, `KEY`, `PAT` or `AUTH` part
+(`GITHUB_TOKEN`, `NPM_TOKEN`, `AWS_SECRET_ACCESS_KEY`), and URLs with a
+password in them (`DATABASE_URL=postgres://user:pass@...`).
+
+Each harness keeps what it logs in with: Claude Code `ANTHROPIC_*` and
+`CLAUDE_CODE_OAUTH_TOKEN`, Codex `OPENAI_*` and `CODEX_*`, OpenCode the route
+provider's own (`OPENROUTER_*` for `openrouter/...`; `GOOGLE_*` and
+`GEMINI_*` for `google/...`). To pass more, list names (`NAME` or `PREFIX_*`)
+in `passEnv` on a route (that worker only) or on a project (its workers and
+its checks), for example a test suite that needs a token:
+
+    "projects": { "C:/work/api/**": { "passEnv": ["STRIPE_TEST_KEY"] } }
 
 ## Harness notes
 

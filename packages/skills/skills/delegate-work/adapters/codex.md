@@ -42,6 +42,13 @@ Extra writable roots (`sandbox_workspace_write.writable_roots`) make the
 unelevated Windows sandbox refuse to run at all ("cannot enforce split
 writable root sets"), so workers get no private temp dir.
 
+In place, the work dir is the repository itself, so a worker can also write
+gitignored files: `node_modules`, `.venv`, build output. No diff sees those
+writes, `discard` can't undo them, and the checks dispatch runs afterwards
+execute them outside the sandbox. Editing runs therefore never run Codex in
+place: with `--isolation auto`, a run whose candidates include a Codex route
+gets a worktree; with `--isolation inplace`, Codex routes are skipped.
+
 A worktree links the repository's dependency folders. The sandbox checks
 where a write lands, so writes through a link into a repository under the
 home directory are refused, by the shell and by `apply_patch` alike. A

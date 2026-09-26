@@ -5,9 +5,13 @@ import { classifyText } from "./common.mjs";
 // orchestrator's quota pool and dispatch answers use_native instead.
 
 const EDIT_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
-// Claude checks every part of `cd "<repo>" && npm run test` and often writes
-// commands that way, so `cd` is allowed; file tools stay confined regardless.
+// Editing workers only; read-only ones get no shell. Claude checks every part
+// of `cd "<repo>" && npm run test` and often writes commands that way, so `cd`
+// is allowed; file tools stay confined regardless.
 const READ_GIT = ["cd", "git status", "git diff", "git log", "git show"];
+// Deny rules win over allow rules. These flags write to or read from any path
+// (--output, --no-index) or run configured programs.
+const GIT_FLAGS_DENIED = ["--output", "--no-index", "--ext-diff", "--textconv"];
 const DENIAL = /permission|denied|not allowed|haven't granted/i;
 // Kept from a parent Claude Code session: deliberate auth and config location.
 const KEEP = new Set(["CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CONFIG_DIR"]);
@@ -33,6 +37,9 @@ const bashRules = (cmds) => cmds.flatMap((c) => [`Bash(${c})`, `Bash(${c}:*)`]);
 
 export default {
   name: "claude",
+
+  /** Credentials this harness may log in with; dispatch strips other secrets. */
+  authEnv: () => ["ANTHROPIC_*", "CLAUDE_CODE_OAUTH_TOKEN"],
 
   detect() {
     if (detected) {
@@ -65,11 +72,11 @@ export default {
     // --restricted ignores user/project/local settings files, confines file
     // tools to the work dir and protects git and settings files. --tools is
     // the whole tool set: no subagents, web, notebooks or MCP.
-    const tools = readOnly ? ["Read", "Glob", "Grep", "Bash"] : ["Read", "Glob", "Grep", "Edit", "Write", "Bash"];
-    const rules = [
-      ...bashRules(READ_GIT),
-      ...(readOnly ? [] : [...allow.map((g) => `Edit(${g})`), ...bashRules(bashAllow)]),
-    ];
+    const tools = readOnly ? ["Read", "Glob", "Grep"] : ["Read", "Glob", "Grep", "Edit", "Write", "Bash"];
+    const rules = readOnly
+      ? tools
+      : [...bashRules(READ_GIT), ...allow.map((g) => `Edit(${g})`), ...bashRules(bashAllow)];
+    const denied = readOnly ? [] : ["--disallowedTools", ...GIT_FLAGS_DENIED.map((f) => `Bash(git *${f}*)`)];
     const args = [
       "-p",
       "--output-format",
@@ -82,6 +89,7 @@ export default {
       tools.join(","),
       "--allowedTools",
       ...rules,
+      ...denied,
       "--permission-mode",
       "dontAsk",
       "--disable-slash-commands",

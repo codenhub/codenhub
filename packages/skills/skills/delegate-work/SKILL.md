@@ -15,8 +15,9 @@ narrow, well-specified tasks and report back in a fixed, compact format.
    dispatch is a fallback with a specific reason, never the default.
 2. **No footprint.** Nothing about this process may appear in the repository.
    See [Hard rules](#hard-rules).
-3. **One shot.** A worker gets one complete brief and one run. Wrong result →
-   better brief and a fresh run, not a conversation.
+3. **One shot.** A worker gets one complete brief and one run, plus at most one
+   retry: a short follow-up when the result is nearly right, or a better brief
+   and a fresh run (see [Retries](#retries)). Never an open-ended conversation.
 4. **Code enforces, the orchestrator judges.** Scope, timeouts, isolation,
    checks, model choice and fallback are handled by `scripts/dispatch.mjs`. The
    orchestrator decides what to delegate, writes briefs, and reviews results.
@@ -106,7 +107,9 @@ asks for an external run.
 
 1. **Plan.** List the tasks. Mark which are independent (parallel) and which
    depend on others (sequential). Tasks in the same batch must not touch the
-   same files.
+   same files. `dispatch` refuses a batch whose allowlists reach a common
+   existing file or a path one of them names; it can't foresee two wildcards
+   creating the same new file, so name new files explicitly.
 2. **Brief.** Fill in `references/brief-template.md` for each task. Every
    editing brief must name the files it may touch (`--allow`). Files the worker
    should read but not edit go in `--read`. Pass briefs through stdin or a
@@ -117,25 +120,37 @@ asks for an external run.
    node scripts/dispatch.mjs run --role builder --allow "src/rates/**" --read "src/types.ts" --brief -
    node scripts/dispatch.mjs run --batch <batch.json>
    ```
+   A batch prints nothing until every worker in it finishes, so tasks meant
+   for native subagents would wait for the slowest external one. Before a
+   batch, run it with `--plan`: it routes every task and runs nothing. Start
+   the `use_native` tasks as native subagents, then dispatch a batch of the
+   `planned` ones.
    Workers start from the current working tree, including uncommitted changes.
    Isolation defaults to `auto`: read-only roles and a single editing worker run
-   in place; parallel editing workers each get an isolated copy. In place, the
+   in place; parallel editing workers each get an isolated copy, and so does an
+   editing worker that may run on a harness that can't be contained in the
+   real tree (the result's `isolation` says which happened). In place, the
    change is already in your tree: `apply` keeps it, `discard` restores the
    allowed files. Don't edit the working tree while an editing worker runs in
    place: its result can't tell your edits from its own, and out-of-scope
-   files are restored (a copy is kept). `apply`, `discard` and `unapply`
-   refuse while one is running.
+   files are restored (a copy is kept). Whatever writes into the tree
+   (`discard` in place, `unapply`, applying a worktree result) refuses while
+   one is running.
 4. **Read the result.** Each run returns one JSON result, specified in
-   `references/result-format.md`. Read the result, not the log. Open `logPath`
-   only to diagnose a failure you can't explain from the result.
+   `references/result-format.md`. Read the result, not the log. When
+   `reportTruncated` is true and the rest matters, read `reportPath`. Open
+   `logPath` only to diagnose a failure you can't explain from the result.
 5. **Review.** For `ok` results from editing roles, check the diff against
    `references/review-checklist.md`. Passing checks is necessary, not
-   sufficient. For a nontrivial `builder` result, also get a cross-model review
-   before applying:
+   sufficient. Also get a cross-model review before applying a `builder`
+   result that adds logic or changes more than one file; skip it only for
+   purely mechanical changes:
    ```
    node scripts/dispatch.mjs run --role reviewer --review <id> --brief -
    ```
-   `dispatch` picks a reviewer from a different model family than the builder.
+   `dispatch` picks a reviewer from a different model family than the builder,
+   gives it the original brief and the diff, and lets it read the changed
+   files. The brief needs only the review criteria.
 6. **Decide.**
    - Accept: `node scripts/dispatch.mjs apply <id>`
    - Reject: `node scripts/dispatch.mjs discard <id>`

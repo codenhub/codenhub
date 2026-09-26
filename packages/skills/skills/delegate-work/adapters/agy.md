@@ -39,6 +39,13 @@ Manager (`gemini:antigravity`), so a run in the worker home stays signed in.
 Where credentials live on Linux was not verified; `detect` lists models
 through the worker home, so a home that loses the login shows up there.
 
+Windows resolves the AppData folders through `USERPROFILE` too, and .NET
+reports an empty path for one that doesn't exist. PowerShell, which runs the
+workers' commands, then wrote its `ModuleAnalysisCache` to
+`Microsoft/Windows/PowerShell/` inside the work dir, which failed the run as
+`out_of_scope`. The worker home gets `AppData/Local` and `AppData/Roaming`,
+so that cache stays there.
+
 The worker home keeps agy's own conversation history and per-run project
 files; `dispatch prune` doesn't clean it. Concurrent runs share it, so its
 files are written only when their content changes, and replaced whole.
@@ -77,8 +84,15 @@ the turn goes on. So what a worker must not do is removed or denied outright.
   and virtual environments; agy checks the worktree path, so reads through
   the link work. Writes are denied for editing workers: they would land in
   the real folder, which no diff sees.
+- **`.git`.** Writes are denied for editing workers: the repository's config
+  and a worktree's `.git` pointer decide what dispatch's own git commands
+  run. Verified: a write into `.git` is refused ("Matches user-configured
+  deny rule") and the run goes on.
 - **Scope.** The write grant covers the whole work dir, so scope is enforced
-  from edit events (the watchdog) and the diff, as for Codex.
+  from edit events (the watchdog) and the diff, as for Codex. agy reports
+  every write it makes, so a write to a gitignored file (`.env`, build
+  output) still stops the run as `out_of_scope`; the diff can't see it,
+  though, so nothing restores it.
 - `--mode plan` is not read-only headless: it auto-approves its own plan and
   edits. Read-only roles rely on the tool set instead.
 

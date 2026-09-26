@@ -17,8 +17,11 @@ const HELP = `dispatch — delegate scoped tasks to worker agents
             [--allow <glob>]... [--read <glob>]... [--tier light|standard|strong]
             [--kind code|ui|text] [--model <id>] [--external]
             [--isolation auto|inplace|worktree] [--orchestrator <name>]
-            [--rebrief-of <id>] [--review <id>]
-  run       --batch <file.json>     tasks: [{ role, allow, read, tier, kind, brief | briefFile }]
+            [--rebrief-of <id>] [--review <id>] [--plan]
+  run       --batch <file.json> [--plan]
+                                    tasks: [{ role, allow, read, tier, kind, brief | briefFile }]
+            --plan: route only, run nothing (status use_native, planned or
+            not_available)
   followup  <id> --brief <file|->   one follow-up in the same worker session
   apply     <id>                    keep the change (worktree: apply the patch)
   discard   <id>                    drop the change
@@ -45,7 +48,7 @@ function parse(argv) {
       continue;
     }
     const key = a.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-    if (["external", "path", "help", "all", "dryRun"].includes(key)) {
+    if (["external", "path", "help", "all", "dryRun", "plan"].includes(key)) {
       o[key] = true;
       continue;
     }
@@ -213,7 +216,7 @@ async function main() {
           kind: t.kind,
           brief: t.brief ?? readBrief(t.briefFile),
         }));
-        out(await R.batch(tasks, { cwd, orchestrator: o.orchestrator, external: o.external }));
+        out(await R.batch(tasks, { cwd, orchestrator: o.orchestrator, external: o.external, plan: o.plan }));
         return 0;
       }
       out(
@@ -231,6 +234,7 @@ async function main() {
           orchestrator: o.orchestrator,
           rebriefOf: o.rebriefOf,
           review: o.review,
+          plan: o.plan,
         }),
       );
       return 0;

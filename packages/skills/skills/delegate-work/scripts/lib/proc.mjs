@@ -50,6 +50,26 @@ export function runSync(resolved, args, opts = {}) {
     : spawnSync(resolved.file, args, { windowsHide: true, ...opts });
 }
 
+// Variables that usually hold credentials, by name or by a URL with a
+// password in it. Workers, and the checks that run their code, don't get
+// them unless a harness needs one for its own login or the config passes it.
+const SECRET_NAME = /(^|_)(TOKEN|SECRET|PASSWORD|PASSWD|PASSPHRASE|CREDENTIALS?|APIKEY|KEY|PAT|AUTH)S?(_|$)/i;
+const SECRET_VALUE = /^[a-z][a-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/i;
+const nameRule = (p) =>
+  p instanceof RegExp ? p : new RegExp(`^${p.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*")}$`, "i");
+
+/** Overrides that remove secret-looking variables, except names matching keep (`NAME`, `PREFIX_*`). */
+export function withoutSecrets(keep = []) {
+  const kept = keep.map(nameRule);
+  const out = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if ((SECRET_NAME.test(k) || SECRET_VALUE.test(v ?? "")) && !kept.some((re) => re.test(k))) {
+      out[k] = null;
+    }
+  }
+  return out;
+}
+
 /** process.env plus overrides; an override of null removes the variable. */
 export function mergeEnv(env = {}) {
   const out = { ...process.env, ...env };
@@ -173,7 +193,7 @@ export async function runShell(command, { cwd, timeoutMs, env }) {
     shell: true,
     // FORCE_COLOR=0 disables color for Node tools but forces it for Python,
     // which checks NO_COLOR first.
-    env: { ...process.env, CI: "1", FORCE_COLOR: "0", NO_COLOR: "1", ...env },
+    env: mergeEnv({ CI: "1", FORCE_COLOR: "0", NO_COLOR: "1", ...env }),
     detached: !WIN,
     windowsHide: true,
     stdio: ["ignore", "pipe", "pipe"],

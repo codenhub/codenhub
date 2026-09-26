@@ -6,14 +6,15 @@ import { checkEnv, resolveChecks, runChecks } from "./checks.mjs";
 import { load, skillDir, validate } from "./config.mjs";
 import * as G from "./git.mjs";
 import { canonical, matchAny, toPosix } from "./glob.mjs";
-import { linkDeps, removeWorktree } from "./links.mjs";
-import { start } from "./proc.mjs";
+import { linkDeps, removeDirSafe, removeWorktree, stripLinks, unlinkSafe } from "./links.mjs";
+import { start, withoutSecrets } from "./proc.mjs";
 import { envelope, parseResult } from "./result.mjs";
 import { candidates, nextTier, orchestratorPools } from "./route.mjs";
 import { activeInplace, loadMeta, newRun, runDir, saveMeta, setCooldown } from "./state.mjs";
 
 export const EDITING = new Set(["fixer", "builder"]);
 export const APPLICABLE = new Set(["ok", "failed_checks", "blocked"]);
+const VERDICTS = new Set(["approve", "approve-with-nits", "reject"]);
 const DEFAULT_STEPS = { scout: 40, fixer: 40, builder: 150, reviewer: 30 };
 const DEFAULT_TIMEOUT = { scout: 300, fixer: 600, builder: 1800, reviewer: 600 };
 
@@ -39,6 +40,11 @@ const SKIP_WALK = new Set([
   ".wrangler",
 ]);
 const DEP_DIRS = new Set(["node_modules", ".venv", "venv"]);
+// pnpm 10+ installs before `pnpm run` when it thinks dependencies are stale,
+// and in a worktree they always look stale: its paths differ from the ones
+// pnpm recorded. The install writes through the linked node_modules and
+// repoints the repository's own links at the worktree.
+const NO_AUTO_INSTALL = { pnpm_config_verify_deps_before_run: "false" };
 const INSTALL_MARKERS = [".package-lock.json", ".modules.yaml", ".yarn-state.yml", ".yarn-integrity", "pyvenv.cfg"];
 
 function findDepDirs(root, depth = 4) {
@@ -85,10 +91,64 @@ function depsFingerprint(root, dirs) {
 
 const cleanupWorktree = (meta) => removeWorktree(meta.worktree, meta.root);
 
+/**
+ * A worktree's .git file tells git which repository, and so which config, to
+ * use. Put back what `git worktree add` wrote before dispatch runs git there.
+ */
+function guardGitFile(meta) {
+  if (!meta.gitFile) {
+    return;
+  }
+  const f = path.join(meta.worktree, ".git");
+  let now = null;
+  try {
+    now = fs.lstatSync(f).isFile() ? fs.readFileSync(f, "utf8") : "";
+  } catch {
+    // Deleted.
+  }
+  if (now === meta.gitFile) {
+    return;
+  }
+  unlinkSafe(f);
+  removeDirSafe(f);
+  fs.writeFileSync(f, meta.gitFile);
+  meta.gitFileRestored = true;
+}
+
 // ---------- writing files into a tree ----------
+
+/**
+ * Files whose path under root goes through a link (symlink or junction): a
+ * write or delete there would land wherever the link points, which a worker
+ * may have chosen.
+ */
+function throughLinks(root, files) {
+  return files.filter((f) => {
+    let p = root;
+    for (const part of f.split("/")) {
+      p = path.join(p, part);
+      try {
+        if (fs.lstatSync(p).isSymbolicLink()) {
+          return true;
+        }
+      } catch {
+        // Missing from here on: nothing to follow.
+        return false;
+      }
+    }
+    return false;
+  });
+}
+
+const linkHint = (files) => `Not written, their path goes through a link: ${files.slice(0, 10).join(", ")}`;
 
 /** Make files in root byte-identical to their version in ref (snapshot or post tree). */
 function writeFrom(root, ref, files) {
+  const linked = throughLinks(root, files);
+  if (linked.length) {
+    // Callers check first; this is the last guard.
+    throw new Error(linkHint(linked));
+  }
   for (const f of files) {
     const data = G.blob(ref, f, root);
     const full = path.join(root, f);
@@ -172,6 +232,10 @@ function estimateTokens(root, files, globs, prompt) {
 
 // ---------- execution ----------
 
+/** A harness-reported edit as a normalized path relative to the work dir: `src/../x` is `x`. */
+const relativeEdit = (workDir, f) =>
+  path.posix.normalize(toPosix(path.isAbsolute(f) ? path.relative(workDir, canonical(f)) : f));
+
 function newAcc() {
   return { sessionId: null, edits: [], denied: [], texts: [], stepTexts: [], errors: [], steps: 0 };
 }
@@ -195,15 +259,30 @@ async function resetWork(meta) {
   }
   if (meta.isolation === "worktree") {
     const ex = [...(meta.linked ?? []), ...(meta.copied ?? [])].flatMap((p) => ["-e", p]);
+    // Only dispatch's own links may stay: git must not clean through one a worker made.
+    stripLinks(
+      meta.workDir,
+      (meta.linked ?? []).map((d) => path.join(meta.workDir, d)),
+    );
     G.git(["reset", "-q", "--hard", meta.snap], { cwd: meta.workDir });
     G.git(["clean", "-q", "-fd", ...ex], { cwd: meta.workDir });
   } else {
     const tree = G.workingTree(meta.root, path.join(runDir(meta.id), "reset.index"));
-    writeFrom(
-      meta.root,
-      meta.snap,
-      G.numstat(meta.snap, tree, meta.root).map((c) => c.path),
-    );
+    const files = G.numstat(meta.snap, tree, meta.root).map((c) => c.path);
+    // Anything edited in the tree meanwhile is restored too; keep a copy.
+    meta.resets = (meta.resets ?? 0) + 1;
+    const copy = path.join(runDir(meta.id), `reset-${meta.resets}`);
+    for (const f of files) {
+      const src = path.join(meta.root, f);
+      if (fs.existsSync(src) && !throughLinks(meta.root, [f]).length) {
+        fs.mkdirSync(path.dirname(path.join(copy, f)), { recursive: true });
+        fs.copyFileSync(src, path.join(copy, f));
+      }
+    }
+    if (fs.existsSync(copy)) {
+      meta.resetCopies = [...(meta.resetCopies ?? []), copy];
+    }
+    writeFrom(meta.root, meta.snap, files);
   }
 }
 
@@ -244,7 +323,18 @@ async function execute(meta, cfg, list, prompt, sessionId) {
     const proc = start(c.adapter.detect().bin, cmd.args, {
       cwd: meta.workDir,
       // Marks the process tree as a worker: dispatch refuses to run inside it.
-      env: { ...gitEnv, ...checkEnv(meta.checkList ?? []), ...cmd.env, DELEGATE_WORK_WORKER: "1" },
+      env: {
+        ...withoutSecrets([
+          ...(c.adapter.authEnv?.(c.route) ?? []),
+          ...(c.route.passEnv ?? []),
+          ...(cfg.project.passEnv ?? []),
+        ]),
+        ...gitEnv,
+        ...NO_AUTO_INSTALL,
+        ...checkEnv(meta.checkList ?? []),
+        ...cmd.env,
+        DELEGATE_WORK_WORKER: "1",
+      },
       input: cmd.input,
       timeoutMs,
       stdoutFile: logPath,
@@ -253,7 +343,7 @@ async function execute(meta, cfg, list, prompt, sessionId) {
         const before = acc.edits.length;
         c.adapter.parseLine(line, acc);
         for (const f of acc.edits.slice(before)) {
-          const r = toPosix(path.isAbsolute(f) ? path.relative(meta.workDir, canonical(f)) : f);
+          const r = relativeEdit(meta.workDir, f);
           if (!meta.editing || !matchAny(r, meta.allow)) {
             proc.kill("out_of_scope");
           }
@@ -265,6 +355,7 @@ async function execute(meta, cfg, list, prompt, sessionId) {
     });
     // oxlint-disable-next-line no-await-in-loop -- candidates run one at a time: the next only after this one failed.
     const res = await proc.done;
+    guardGitFile(meta);
     c.adapter.parseStderr?.(res.stderrTail, acc);
     meta.logPath = logPath;
     meta.worker = {
@@ -321,18 +412,21 @@ async function execute(meta, cfg, list, prompt, sessionId) {
       ? hintFor(lastFailure.kind, lastFailure.harness)
       : "No usable route. Run `dispatch doctor`.";
     meta.files = { changed: [], outOfScope: [] };
-    return meta;
+  } else {
+    await evaluate(meta, cfg, outcome);
   }
-  return evaluate(meta, cfg, outcome);
+  if (meta.resetCopies?.length) {
+    const note = `A failed attempt's changes were undone in the working tree; the files it restored were copied first to ${meta.resetCopies.join(", ")}.`;
+    meta.hint = [meta.hint, note].filter(Boolean).join(" ");
+  }
+  return meta;
 }
 
 async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, gitEnv }) {
   const post = G.workingTree(meta.workDir, path.join(runDir(meta.id), "post.index"));
   const ignore = [...(meta.linked ?? []), ...(meta.copied ?? [])];
   const changed = G.numstat(meta.snap, post, meta.workDir).filter((c) => !ignore.includes(c.path));
-  const reported = new Set(
-    acc.edits.map((f) => toPosix(path.isAbsolute(f) ? path.relative(meta.workDir, canonical(f)) : f)),
-  );
+  const reported = new Set(acc.edits.map((f) => relativeEdit(meta.workDir, f)));
   // A read-only worker has no edit tools: changes it didn't report are
   // someone else's (a concurrent run, the orchestrator) and stay as they are.
   const outOfScope = changed
@@ -340,6 +434,19 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
     .filter((f) => (meta.editing ? !matchAny(f, meta.allow) : reported.has(f)));
   if (depsFingerprint(meta.root, depDirs) !== depsBefore) {
     outOfScope.push("(dependency folder changed: install detected)");
+  }
+  if (meta.gitFileRestored) {
+    outOfScope.push("(worktree .git file changed: restored)");
+  }
+  // Writes git can't see (ignored files, paths outside the tree) are known
+  // only from the harness's edit events, and can't be restored from the snapshot.
+  if (meta.editing) {
+    const seen = new Set(changed.map((c) => c.path));
+    for (const f of reported) {
+      if (!seen.has(f) && !matchAny(f, meta.allow)) {
+        outOfScope.push(`(invisible to git, not restored) ${f}`);
+      }
+    }
   }
 
   meta.post = post;
@@ -352,8 +459,16 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   meta.notes = parsed.notes;
   meta.summary = parsed.summary;
   if (!meta.editing) {
-    meta.report =
-      [parsed.verdict && `verdict: ${parsed.verdict}`, parsed.report].filter(Boolean).join("\n") || parsed.summary;
+    const verdict = meta.role === "reviewer" && VERDICTS.has(parsed.verdict) ? parsed.verdict : null;
+    meta.report = [verdict && `verdict: ${verdict}`, parsed.report].filter(Boolean).join("\n") || parsed.summary;
+    if (meta.role === "reviewer" && !verdict) {
+      meta.hint = "The reviewer gave no valid verdict (approve, approve-with-nits or reject); judge from the report.";
+    }
+    // The result caps the report; the whole text stays readable here.
+    if (meta.report) {
+      meta.reportPath = path.join(runDir(meta.id), "report.md");
+      fs.writeFileSync(meta.reportPath, meta.report);
+    }
   }
   fs.writeFileSync(path.join(runDir(meta.id), "patch.diff"), G.patch(meta.snap, post, meta.workDir));
 
@@ -363,7 +478,9 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
     if (meta.isolation !== "inplace" && !meta.sharedWorkDir) {
       return;
     }
-    const files = outOfScope.filter((f) => !f.startsWith("("));
+    const candidates = outOfScope.filter((f) => !f.startsWith("("));
+    const linked = throughLinks(meta.workDir, candidates);
+    const files = candidates.filter((f) => !linked.includes(f));
     const qdir = path.join(runDir(meta.id), "quarantine");
     for (const f of files) {
       const src = path.join(meta.workDir, f);
@@ -373,9 +490,14 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
       }
     }
     writeFrom(meta.workDir, meta.snap, files);
+    const notes = [meta.hint];
     if (files.length) {
-      meta.hint = `Out-of-scope files were restored; their changed versions are kept in ${qdir}.`;
+      notes.push(`Out-of-scope files were restored; their changed versions are kept in ${qdir}.`);
     }
+    if (linked.length) {
+      notes.push(linkHint(linked));
+    }
+    meta.hint = notes.filter(Boolean).join(" ") || null;
   };
 
   if (killed === "timeout" || killed === "steps") {
@@ -391,12 +513,28 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
     meta.status = "no_changes";
   } else if (meta.editing) {
     const timeout = 1000 * (cfg.limits?.checkTimeoutSec ?? 900);
-    meta.checks = await runChecks(meta.checkList, meta.workDir, timeout, gitEnv);
+    const depsBeforeChecks = depsFingerprint(meta.root, depDirs);
+    meta.checks = await runChecks(meta.checkList, meta.workDir, timeout, {
+      ...withoutSecrets(cfg.project.passEnv ?? []),
+      ...gitEnv,
+      ...NO_AUTO_INSTALL,
+    });
+    // The checks ran the worker's code.
+    guardGitFile(meta);
+    if (depsFingerprint(meta.root, depDirs) !== depsBeforeChecks) {
+      meta.files.outOfScope.push("(dependency folder changed during the checks: install detected)");
+    }
     // What checks leave behind (unignored reports, caches) isn't someone's edit.
     meta.settled = meta.checkList.length
       ? G.workingTree(meta.workDir, path.join(runDir(meta.id), "settled.index"))
       : meta.post;
     meta.status = meta.checks.every((c) => c.ok) ? "ok" : "failed_checks";
+    if (meta.gitFileRestored) {
+      meta.files.outOfScope.push("(worktree .git file changed by the checks: restored)");
+    }
+    if (meta.files.outOfScope.length) {
+      meta.status = "out_of_scope";
+    }
     if (!meta.checkList.length) {
       meta.hint = "No checks could be inferred for this project; verify the change yourself.";
     }
@@ -416,6 +554,87 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
 function busyTree(meta) {
   const [other] = activeInplace(meta.root).filter((m) => m.id !== meta.id);
   return other ? `In-place run ${other.id} is still working in this tree; try again when it finishes.` : null;
+}
+
+const IN_PLACE_ONLY_HINT =
+  "Every usable route for this tier edits only in a worktree; rerun without --isolation inplace.";
+
+/**
+ * Isolation for a run and the candidates that can run with it. Some harnesses
+ * can't be kept to the allowlist in the real tree (containedInPlace: false):
+ * an editing run that may reach one gets a worktree, or skips them when in
+ * place was asked for. "auto" is left for a lone editing run, which works in
+ * place unless another run holds the tree.
+ */
+function isolationFor(o, editing, candidates) {
+  const uncontained = (c) => editing && c.adapter.containedInPlace === false;
+  let isolation = o.isolation ?? "auto";
+  if (isolation === "auto" && !editing) {
+    isolation = "inplace";
+  } else if (isolation === "auto" && (o.forceWorktree || candidates.some(uncontained))) {
+    isolation = "worktree";
+  }
+  if (isolation === "worktree") {
+    return { isolation, candidates, skipped: [] };
+  }
+  return {
+    isolation,
+    candidates: candidates.filter((c) => !uncontained(c)),
+    skipped: candidates
+      .filter(uncontained)
+      .map((c) => ({ modelId: c.modelId, route: c.route.id, reason: `${c.route.harness}: can't edit in place` })),
+  };
+}
+
+/** What `run` would do, without running anything or touching run state. */
+function plan(o, { editing, tier, kind, picked, workDirOverride, lineage }) {
+  const base = {
+    v: 1,
+    id: null,
+    role: o.role,
+    lineage: { rebriefOf: lineage.prev?.id ?? null, reviewOf: lineage.target?.id ?? null },
+  };
+  if (picked.native) {
+    return {
+      ...base,
+      status: "use_native",
+      worker: { ...picked.native, tier, kind, skipped: picked.skipped ?? [] },
+      isolation: null,
+      fallbacks: [],
+      hint: `Run this brief as a native subagent with ${picked.native.model}.`,
+    };
+  }
+  const iso = isolationFor(o, editing, picked.candidates);
+  const skipped = [...(picked.skipped ?? []), ...iso.skipped];
+  const [first, ...rest] = iso.candidates;
+  if (!first) {
+    return {
+      ...base,
+      status: "not_available",
+      worker: { tier, kind, skipped },
+      isolation: null,
+      fallbacks: [],
+      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : "No usable route for this tier. Run `dispatch doctor`.",
+    };
+  }
+  return {
+    ...base,
+    status: "planned",
+    worker: {
+      modelId: first.modelId,
+      route: first.route.id,
+      harness: first.route.harness,
+      model: first.route.model,
+      family: first.family,
+      tier,
+      kind,
+      skipped,
+    },
+    // "auto" works in place unless another in-place run holds the tree then.
+    isolation: workDirOverride ? "worktree" : iso.isolation === "auto" ? "inplace" : iso.isolation,
+    fallbacks: rest.map((c) => ({ modelId: c.modelId, route: c.route.id })),
+    hint: "Nothing ran. Dispatch it without --plan.",
+  };
 }
 
 // ---------- public commands ----------
@@ -494,19 +713,6 @@ export async function run(o) {
   if (!brief?.trim()) {
     throw new UsageError("empty brief");
   }
-  // Only once the invocation is known to be valid: this uses up the task's retry.
-  if (prev) {
-    if (!prev.discarded) {
-      const d = await discard(prev.id);
-      if (d.status === "conflict") {
-        throw new UsageError(d.hint);
-      }
-    }
-    prev = loadMeta(prev.id);
-    prev.retryUsed = true;
-    saveMeta(prev.id, prev);
-  }
-
   tier ??= cfg.roles?.[o.role]?.tier ?? "standard";
   const kind = o.kind ?? "code";
   const level = o.role === "builder" ? "full" : o.role === "fixer" ? "fast" : "none";
@@ -525,6 +731,27 @@ export async function run(o) {
     external: o.external,
   });
 
+  if (o.plan) {
+    return plan(o, { editing, tier, kind, picked, workDirOverride, lineage: { prev, target } });
+  }
+
+  const iso = picked.native ? null : isolationFor(o, editing, picked.candidates);
+  const unavailable = !picked.native && !iso.candidates.length;
+
+  // Only once the invocation is known to be valid and something will run it
+  // (here or natively): this uses up the task's retry.
+  if (prev && !unavailable) {
+    if (!prev.discarded) {
+      const d = await discard(prev.id);
+      if (d.status === "conflict") {
+        throw new UsageError(d.hint);
+      }
+    }
+    prev = loadMeta(prev.id);
+    prev.retryUsed = true;
+    saveMeta(prev.id, prev);
+  }
+
   const id = newRun();
   const meta = {
     id,
@@ -538,8 +765,8 @@ export async function run(o) {
     kind,
     rebriefOf: prev?.id ?? null,
     reviewOf: target?.id ?? null,
-    retryUsed: !!prev,
-    skipped: picked.skipped ?? [],
+    retryUsed: !!prev && !unavailable,
+    skipped: [...(picked.skipped ?? []), ...(iso?.skipped ?? [])],
     checkList,
     checkCmds: checkList.map((c) => c.cmd),
     pid: process.pid,
@@ -550,29 +777,24 @@ export async function run(o) {
       status: "use_native",
       isolation: null,
       phase: "done",
-      retryUsed: false,
       worker: { ...picked.native, tier, kind, skipped: meta.skipped },
       hint: `Run this brief as a native subagent with ${picked.native.model}.`,
     });
     saveMeta(id, meta);
     return envelope(meta);
   }
-  if (!picked.candidates.length) {
+  if (unavailable) {
     Object.assign(meta, {
       status: "not_available",
       isolation: null,
       phase: "done",
       worker: { tier, kind, skipped: meta.skipped },
-      hint: "No usable route for this tier. Run `dispatch doctor`.",
+      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : "No usable route for this tier. Run `dispatch doctor`.",
     });
     saveMeta(id, meta);
     return envelope(meta);
   }
-
-  let isolation = o.isolation ?? "auto";
-  if (isolation === "auto") {
-    isolation = !editing ? "inplace" : o.forceWorktree ? "worktree" : claimInplace(meta);
-  }
+  const isolation = iso.isolation === "auto" ? claimInplace(meta) : iso.isolation;
   meta.isolation = workDirOverride ? "worktree" : isolation;
   meta.phase = "running";
 
@@ -587,6 +809,7 @@ export async function run(o) {
     if (isolation === "worktree") {
       meta.worktree = path.join(runDir(id), "wt");
       G.addWorktree(root, meta.worktree, meta.snap);
+      meta.gitFile = fs.readFileSync(path.join(meta.worktree, ".git"), "utf8");
       meta.linked = linkDeps(root, meta.worktree, findDepDirs(root));
       meta.copied = [];
       for (const f of cfg.project.copy ?? []) {
@@ -607,7 +830,7 @@ export async function run(o) {
   saveMeta(id, meta);
 
   try {
-    await execute(meta, cfg, picked.candidates, prompt, null);
+    await execute(meta, cfg, iso.candidates, prompt, null);
   } finally {
     meta.phase = "done";
     // Nothing to apply or discard later; the report is all there is.
@@ -674,6 +897,8 @@ export async function followup(id, brief) {
   meta.pid = process.pid;
   meta.checks = [];
   meta.hint = null;
+  meta.resetCopies = [];
+  meta.gitFileRestored = false;
   saveMeta(id, meta);
   try {
     await execute(
@@ -712,6 +937,10 @@ export function apply(id) {
     }
     // Copied byte for byte, not patched: git apply converts line endings
     // through attributes (and crashes when told not to).
+    const linked = throughLinks(meta.root, files);
+    if (linked.length) {
+      return envelope(meta, { status: "conflict", hint: linkHint(linked) });
+    }
     const moved = foreignEdits(meta.root, meta.snap, meta.post, files);
     if (moved.length) {
       return envelope(meta, {
@@ -751,6 +980,10 @@ export async function discard(id) {
       return envelope(meta, { status: "conflict", hint: busy });
     }
     const files = meta.files.changed.map((c) => c.path).filter((f) => !meta.files.outOfScope.includes(f));
+    const linked = throughLinks(meta.root, files);
+    if (linked.length) {
+      return envelope(meta, { status: "conflict", hint: linkHint(linked) });
+    }
     const touched = foreignEdits(meta.root, meta.post, meta.snap, files);
     if (touched.length) {
       return envelope(meta, { status: "conflict", hint: `Edited since the run, not restored: ${touched.join(", ")}` });
@@ -776,6 +1009,10 @@ export function unapply(id) {
   }
   // Applied, both isolations leave the worker's version in the tree.
   const files = meta.files.changed.map((c) => c.path);
+  const linked = throughLinks(meta.root, files);
+  if (linked.length) {
+    return envelope(meta, { status: "conflict", hint: linkHint(linked) });
+  }
   const touched = foreignEdits(meta.root, meta.post, meta.snap, files);
   if (touched.length) {
     return envelope(meta, { status: "conflict", hint: `Edited since the run: ${touched.join(", ")}` });
@@ -796,19 +1033,40 @@ export function diff(id) {
   return fs.existsSync(f) ? fs.readFileSync(f, "utf8") : "";
 }
 
+/**
+ * Two tasks whose allowlists can reach the same file: an existing one both
+ * match, or a path one names literally that the other matches. New files
+ * behind two wildcards can't be foreseen.
+ */
+function overlappingTask(root, tasks) {
+  const files = G.listFiles(root);
+  const literal = (globs) => globs.filter((g) => !/[*?]/.test(g)).map((g) => toPosix(g).replace(/^\.\//, ""));
+  for (let i = 0; i < tasks.length; i++) {
+    for (let j = i + 1; j < tasks.length; j++) {
+      const a = tasks[i].allow ?? [];
+      const b = tasks[j].allow ?? [];
+      if (!a.length || !b.length) {
+        continue;
+      }
+      const shared =
+        a.find((g) => b.includes(g)) ??
+        [...literal(a), ...literal(b), ...files].find((f) => matchAny(f, a) && matchAny(f, b));
+      if (shared) {
+        return `tasks ${i} and ${j} may both edit ${shared}; give each task its own files`;
+      }
+    }
+  }
+  return null;
+}
+
 export async function batch(tasks, common) {
   const cfg = load(G.repoRoot(common.cwd));
   const limit = Math.max(1, cfg.limits?.maxParallel ?? 4);
   const editingCount = tasks.filter((t) => EDITING.has(t.role)).length;
-  const seen = new Map();
-  tasks.forEach((t, i) =>
-    (t.allow ?? []).forEach((g) => {
-      if (seen.has(g)) {
-        throw new UsageError(`tasks ${seen.get(g)} and ${i} share allow pattern "${g}"`);
-      }
-      seen.set(g, i);
-    }),
-  );
+  const overlap = overlappingTask(G.repoRoot(common.cwd), tasks);
+  if (overlap) {
+    throw new UsageError(overlap);
+  }
   const results = Array.from({ length: tasks.length });
   let next = 0;
   const worker = async () => {
@@ -823,7 +1081,9 @@ export async function batch(tasks, common) {
     }
   };
   await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
-  const totals = { ok: 0, failed_checks: 0, out_of_scope: 0, other: 0 };
+  const totals = common.plan
+    ? { planned: 0, use_native: 0, not_available: 0, other: 0 }
+    : { ok: 0, failed_checks: 0, out_of_scope: 0, other: 0 };
   for (const r of results) {
     totals[r.status in totals ? r.status : "other"]++;
   }

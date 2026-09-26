@@ -5,7 +5,10 @@ import { resolveCommand, runSync } from "../scripts/lib/proc.mjs";
 import { classifyText, stripAnsi } from "./common.mjs";
 
 const EDIT_TOOLS = new Set(["edit", "write", "patch", "multiedit", "apply_patch"]);
+// Editing workers only; read-only ones get no shell. The denied flags write
+// to or read from any path (--output, --no-index) or run configured programs.
 const READ_GIT = ["git status", "git diff", "git log", "git show"];
+const GIT_FLAGS_DENIED = ["--output", "--no-index", "--ext-diff", "--textconv"];
 // OpenCode 2 actions a worker never needs. Anything left unmatched resolves
 // to "ask", which `run` can't answer: it aborts the step and the run.
 const DENIED_V2 = ["webfetch", "websearch", "external_directory", "subagent", "question", "skill", "execute"];
@@ -20,12 +23,17 @@ const bothSlashes = (p) => [...new Set([p, p.replace(/\//g, "\\")])];
 /** 1.x: permissions grouped by tool, in `agent.<name>.permission`. */
 function agentV1({ route, readOnly, allow, bashAllow }) {
   const bash = { "*": "deny" };
-  for (const c of READ_GIT) {
-    bash[`${c}*`] = "allow";
-  }
-  for (const c of bashAllow) {
-    bash[c] = "allow";
-    bash[`${c} *`] = "allow";
+  if (!readOnly) {
+    for (const c of READ_GIT) {
+      bash[`${c}*`] = "allow";
+    }
+    for (const c of bashAllow) {
+      bash[c] = "allow";
+      bash[`${c} *`] = "allow";
+    }
+    for (const f of GIT_FLAGS_DENIED) {
+      bash[`git *${f}*`] = "deny";
+    }
   }
   let edit = "deny";
   if (!readOnly) {
@@ -71,7 +79,12 @@ function agentV2({ route, readOnly, allow, bashAllow }) {
     rule("edit", "*", "deny"),
     ...(readOnly ? [] : allow.map((g) => rule("edit", editPattern(g), "allow"))),
     rule("shell", "*", "deny"),
-    ...[...READ_GIT, ...bashAllow].map((c) => rule("shell", `${c} *`, "allow")),
+    ...(readOnly
+      ? []
+      : [
+          ...[...READ_GIT, ...bashAllow].map((c) => rule("shell", `${c} *`, "allow")),
+          ...GIT_FLAGS_DENIED.map((f) => rule("shell", `git *${f}*`, "deny")),
+        ]),
     ...DENIED_V2.map((a) => rule(a, "*", "deny")),
   ];
   return {
@@ -120,6 +133,16 @@ function catalog(bin) {
 
 export default {
   name: "opencode",
+
+  /**
+   * Credentials this harness may log in with; dispatch strips other secrets.
+   * An API key in the environment belongs to the route's provider:
+   * `openrouter/...` reads OPENROUTER_API_KEY.
+   */
+  authEnv(route) {
+    const provider = String(route.model).split("/")[0].toUpperCase().replaceAll("-", "_");
+    return provider === "GOOGLE" ? ["GOOGLE_*", "GEMINI_*"] : [`${provider}_*`];
+  },
 
   detect() {
     if (detected) {

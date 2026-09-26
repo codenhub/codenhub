@@ -1,6 +1,12 @@
 /**
  * Adapter interface (every harness implements the same shape):
  *
+ * containedInPlace        -> boolean                              optional, default true; false: the harness
+ *                                                                        can write outside the allowlist unseen,
+ *                                                                        so editing runs use a worktree
+ * authEnv(route)          -> string[]                             optional: variables the harness logs in with
+ *                                                                        (`NAME`, `PREFIX_*`); other secrets are
+ *                                                                        stripped from the worker's environment
  * detect()                -> { ok, version?, reason? }            cached per process
  * command(ctx)            -> { args, env, input }                  ctx: { route, cwd, prompt, readOnly,
  *                                                                        allow, bashAllow, depDirs, sessionId }
