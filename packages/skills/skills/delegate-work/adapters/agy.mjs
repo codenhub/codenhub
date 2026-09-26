@@ -102,7 +102,7 @@ function writeShared(file, content) {
 
 const inside = (dir, file) => {
   const rel = path.relative(dir, file);
-  return !rel.startsWith("..") && !path.isAbsolute(rel);
+  return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
 };
 
 /**
