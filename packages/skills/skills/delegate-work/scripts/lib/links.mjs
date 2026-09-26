@@ -40,8 +40,8 @@ export function unlinkSafe(p) {
   }
 }
 
-/** Unlink every symlink and junction under dir, never following one. */
-export function stripLinks(dir) {
+/** Unlink every symlink and junction under dir except the paths in keep, never following one. */
+export function stripLinks(dir, keep = []) {
   let entries;
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -51,9 +51,11 @@ export function stripLinks(dir) {
   for (const e of entries) {
     const p = path.join(dir, e.name);
     if (e.isSymbolicLink()) {
-      unlinkSafe(p);
+      if (!keep.includes(p)) {
+        unlinkSafe(p);
+      }
     } else if (e.isDirectory()) {
-      stripLinks(p);
+      stripLinks(p, keep);
     }
   }
 }

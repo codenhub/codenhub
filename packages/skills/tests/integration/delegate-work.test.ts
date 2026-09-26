@@ -106,6 +106,55 @@ describe("delegate-work", () => {
     fs.rmSync(path.join(repo, ".gitignore"));
   });
 
+  it("shouldNotRestoreThroughALinkTheWorkerMade", async () => {
+    const R = await import(runner);
+    const outside = path.join(tmp, "outside");
+    fs.mkdirSync(outside, { recursive: true });
+    fs.writeFileSync(path.join(outside, "keep.txt"), "keep\n");
+
+    const r = await R.run({
+      cwd: repo,
+      role: "fixer",
+      allow: ["src/a.txt"],
+      brief: `Add a line. MAKE-LINK ${outside}`,
+      model: "fake",
+    });
+    expect(r.status).toBe("out_of_scope");
+    // Git walks into a junction (Windows) and records a symlink (elsewhere).
+    expect(r.hint).toContain("Not written, their path goes through a link: src/j");
+    expect(fs.readFileSync(path.join(outside, "keep.txt"), "utf8")).toBe("keep\n");
+    fs.unlinkSync(path.join(repo, "src", "j"));
+    await R.discard(r.id);
+  });
+
+  it("shouldCopyWhatAnInPlaceResetRestoresBeforeTheNextRoute", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    config.models.fake.routes.unshift({
+      id: "broken-route",
+      harness: "opencode",
+      model: "fake/broken",
+      quotaPool: "broken-pool",
+    });
+    fs.writeFileSync(configFile, JSON.stringify(config));
+    const before = fs.readFileSync(path.join(repo, "src", "a.txt"), "utf8");
+
+    try {
+      const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+      expect(r.status).toBe("ok");
+      expect(r.worker.route).toBe("fake-route");
+      const copy = r.hint.match(/copied first to (\S+?)\.$/)[1];
+      expect(fs.readFileSync(path.join(copy, "src", "a.txt"), "utf8")).toBe(`${before}first\n`);
+      expect(fs.readFileSync(path.join(repo, "src", "a.txt"), "utf8")).toBe(`${before}first\n`);
+      await R.discard(r.id);
+    } finally {
+      fs.writeFileSync(configFile, original);
+      fs.rmSync(path.join(process.env.DELEGATE_WORK_STATE as string, "cooldowns.json"), { force: true });
+    }
+  });
+
   it("shouldKeepSecretsFromWorkersAndChecksUnlessPassed", async () => {
     const R = await import(runner);
     const configFile = process.env.DELEGATE_WORK_CONFIG as string;

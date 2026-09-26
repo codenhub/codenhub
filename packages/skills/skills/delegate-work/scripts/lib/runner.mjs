@@ -6,7 +6,7 @@ import { checkEnv, resolveChecks, runChecks } from "./checks.mjs";
 import { load, skillDir, validate } from "./config.mjs";
 import * as G from "./git.mjs";
 import { canonical, matchAny, toPosix } from "./glob.mjs";
-import { linkDeps, removeDirSafe, removeWorktree, unlinkSafe } from "./links.mjs";
+import { linkDeps, removeDirSafe, removeWorktree, stripLinks, unlinkSafe } from "./links.mjs";
 import { start, withoutSecrets } from "./proc.mjs";
 import { envelope, parseResult } from "./result.mjs";
 import { candidates, nextTier, orchestratorPools } from "./route.mjs";
@@ -111,8 +111,38 @@ function guardGitFile(meta) {
 
 // ---------- writing files into a tree ----------
 
+/**
+ * Files whose path under root goes through a link (symlink or junction): a
+ * write or delete there would land wherever the link points, which a worker
+ * may have chosen.
+ */
+function throughLinks(root, files) {
+  return files.filter((f) => {
+    let p = root;
+    for (const part of f.split("/")) {
+      p = path.join(p, part);
+      try {
+        if (fs.lstatSync(p).isSymbolicLink()) {
+          return true;
+        }
+      } catch {
+        // Missing from here on: nothing to follow.
+        return false;
+      }
+    }
+    return false;
+  });
+}
+
+const linkHint = (files) => `Not written, their path goes through a link: ${files.slice(0, 10).join(", ")}`;
+
 /** Make files in root byte-identical to their version in ref (snapshot or post tree). */
 function writeFrom(root, ref, files) {
+  const linked = throughLinks(root, files);
+  if (linked.length) {
+    // Callers check first; this is the last guard.
+    throw new Error(linkHint(linked));
+  }
   for (const f of files) {
     const data = G.blob(ref, f, root);
     const full = path.join(root, f);
@@ -223,15 +253,30 @@ async function resetWork(meta) {
   }
   if (meta.isolation === "worktree") {
     const ex = [...(meta.linked ?? []), ...(meta.copied ?? [])].flatMap((p) => ["-e", p]);
+    // Only dispatch's own links may stay: git must not clean through one a worker made.
+    stripLinks(
+      meta.workDir,
+      (meta.linked ?? []).map((d) => path.join(meta.workDir, d)),
+    );
     G.git(["reset", "-q", "--hard", meta.snap], { cwd: meta.workDir });
     G.git(["clean", "-q", "-fd", ...ex], { cwd: meta.workDir });
   } else {
     const tree = G.workingTree(meta.root, path.join(runDir(meta.id), "reset.index"));
-    writeFrom(
-      meta.root,
-      meta.snap,
-      G.numstat(meta.snap, tree, meta.root).map((c) => c.path),
-    );
+    const files = G.numstat(meta.snap, tree, meta.root).map((c) => c.path);
+    // Anything edited in the tree meanwhile is restored too; keep a copy.
+    meta.resets = (meta.resets ?? 0) + 1;
+    const copy = path.join(runDir(meta.id), `reset-${meta.resets}`);
+    for (const f of files) {
+      const src = path.join(meta.root, f);
+      if (fs.existsSync(src) && !throughLinks(meta.root, [f]).length) {
+        fs.mkdirSync(path.dirname(path.join(copy, f)), { recursive: true });
+        fs.copyFileSync(src, path.join(copy, f));
+      }
+    }
+    if (fs.existsSync(copy)) {
+      meta.resetCopies = [...(meta.resetCopies ?? []), copy];
+    }
+    writeFrom(meta.root, meta.snap, files);
   }
 }
 
@@ -360,9 +405,14 @@ async function execute(meta, cfg, list, prompt, sessionId) {
       ? hintFor(lastFailure.kind, lastFailure.harness)
       : "No usable route. Run `dispatch doctor`.";
     meta.files = { changed: [], outOfScope: [] };
-    return meta;
+  } else {
+    await evaluate(meta, cfg, outcome);
   }
-  return evaluate(meta, cfg, outcome);
+  if (meta.resetCopies?.length) {
+    const note = `A failed attempt's changes were undone in the working tree; the files it restored were copied first to ${meta.resetCopies.join(", ")}.`;
+    meta.hint = [meta.hint, note].filter(Boolean).join(" ");
+  }
+  return meta;
 }
 
 async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, gitEnv }) {
@@ -413,7 +463,9 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
     if (meta.isolation !== "inplace" && !meta.sharedWorkDir) {
       return;
     }
-    const files = outOfScope.filter((f) => !f.startsWith("("));
+    const candidates = outOfScope.filter((f) => !f.startsWith("("));
+    const linked = throughLinks(meta.workDir, candidates);
+    const files = candidates.filter((f) => !linked.includes(f));
     const qdir = path.join(runDir(meta.id), "quarantine");
     for (const f of files) {
       const src = path.join(meta.workDir, f);
@@ -423,9 +475,14 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
       }
     }
     writeFrom(meta.workDir, meta.snap, files);
+    const notes = [meta.hint];
     if (files.length) {
-      meta.hint = `Out-of-scope files were restored; their changed versions are kept in ${qdir}.`;
+      notes.push(`Out-of-scope files were restored; their changed versions are kept in ${qdir}.`);
     }
+    if (linked.length) {
+      notes.push(linkHint(linked));
+    }
+    meta.hint = notes.filter(Boolean).join(" ") || null;
   };
 
   if (killed === "timeout" || killed === "steps") {
@@ -758,6 +815,7 @@ export async function followup(id, brief) {
   meta.pid = process.pid;
   meta.checks = [];
   meta.hint = null;
+  meta.resetCopies = [];
   saveMeta(id, meta);
   try {
     await execute(
@@ -796,6 +854,10 @@ export function apply(id) {
     }
     // Copied byte for byte, not patched: git apply converts line endings
     // through attributes (and crashes when told not to).
+    const linked = throughLinks(meta.root, files);
+    if (linked.length) {
+      return envelope(meta, { status: "conflict", hint: linkHint(linked) });
+    }
     const moved = foreignEdits(meta.root, meta.snap, meta.post, files);
     if (moved.length) {
       return envelope(meta, {
@@ -835,6 +897,10 @@ export async function discard(id) {
       return envelope(meta, { status: "conflict", hint: busy });
     }
     const files = meta.files.changed.map((c) => c.path).filter((f) => !meta.files.outOfScope.includes(f));
+    const linked = throughLinks(meta.root, files);
+    if (linked.length) {
+      return envelope(meta, { status: "conflict", hint: linkHint(linked) });
+    }
     const touched = foreignEdits(meta.root, meta.post, meta.snap, files);
     if (touched.length) {
       return envelope(meta, { status: "conflict", hint: `Edited since the run, not restored: ${touched.join(", ")}` });
@@ -860,6 +926,10 @@ export function unapply(id) {
   }
   // Applied, both isolations leave the worker's version in the tree.
   const files = meta.files.changed.map((c) => c.path);
+  const linked = throughLinks(meta.root, files);
+  if (linked.length) {
+    return envelope(meta, { status: "conflict", hint: linkHint(linked) });
+  }
   const touched = foreignEdits(meta.root, meta.post, meta.snap, files);
   if (touched.length) {
     return envelope(meta, { status: "conflict", hint: `Edited since the run: ${touched.join(", ")}` });

@@ -17,6 +17,15 @@ if (cmd === "--version") {
   const emit = (ev) => console.log(JSON.stringify({ sessionID, ...ev }));
   emit({ type: "step_start", part: {} });
   emit({ type: "tool_use", part: { tool: "write", state: { status: "completed", input: { path: file } } } });
+  // A route that edits, then fails as a provider would.
+  if (process.argv.includes("fake/broken")) {
+    emit({ type: "error", error: { type: "provider", status: 503, message: "The service is currently unavailable." } });
+    process.exit(1);
+  }
+  const link = prompt.match(/MAKE-LINK (\S+)/);
+  if (link) {
+    fs.symlinkSync(link[1], "src/j", process.platform === "win32" ? "junction" : "dir");
+  }
   if (prompt.includes("REPOINT-GIT")) {
     // Git hides the file on Windows, and a hidden file can't be overwritten.
     fs.rmSync(".git");

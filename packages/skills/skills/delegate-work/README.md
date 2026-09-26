@@ -61,6 +61,14 @@ Restores and applies are byte-exact: dispatch runs git with line-ending
 conversion and `.gitattributes` filters off, so a CRLF checkout
 (`core.autocrlf=true`) stays CRLF and an LF file stays LF.
 
+Restores and applies never write through a link. Git for Windows walks into a
+junction as if it were a folder, so a junction a worker made would show its
+target's files as changes in the tree; dispatch leaves any path that goes
+through a symlink or junction alone and says so (`apply`, `discard` and
+`unapply` report a `conflict`). When a failed attempt in place is undone
+before the next route runs, the files it restores are copied into the run's
+state first, in case you edited one meanwhile.
+
 Dispatch's own git commands also run no programs from repository config
 (`core.fsmonitor`, external diff, textconv). A worktree's `.git` file, which
 points git at the repository and so at its config, is put back as git wrote
