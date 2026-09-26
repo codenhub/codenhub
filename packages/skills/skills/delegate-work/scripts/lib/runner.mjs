@@ -10,7 +10,7 @@ import { linkDeps, removeDirSafe, removeWorktree, stripLinks, unlinkSafe } from 
 import { start, withoutSecrets } from "./proc.mjs";
 import { envelope, parseResult } from "./result.mjs";
 import { candidates, nextTier, orchestratorPools } from "./route.mjs";
-import { activeInplace, loadMeta, newRun, runDir, saveMeta, setCooldown } from "./state.mjs";
+import { activeInplace, alive, loadMeta, newRun, runDir, saveMeta, setCooldown } from "./state.mjs";
 
 export const EDITING = new Set(["fixer", "builder"]);
 export const APPLICABLE = new Set(["ok", "failed_checks", "blocked"]);
@@ -554,6 +554,10 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   return meta;
 }
 
+/** The run itself is still working (a first run or a follow-up): its result isn't final. */
+const stillWorking = (meta) => meta.phase === "running" && alive(meta.pid);
+const workingHint = (id) => `Run ${id} is still working; wait for its result.`;
+
 /** Another run still working in this tree: writing into it now would be counted as that run's change. */
 function busyTree(meta) {
   const [other] = activeInplace(meta.root).filter((m) => m.id !== meta.id);
@@ -675,6 +679,9 @@ export async function run(o) {
     if (!prev) {
       throw new UsageError(`unknown run ${o.rebriefOf}`);
     }
+    if (stillWorking(prev)) {
+      throw new UsageError(workingHint(prev.id));
+    }
     if (prev.retryUsed || prev.rebriefOf) {
       throw new UsageError("retry limit reached for this task: fix it yourself, drop it, or ask the user");
     }
@@ -696,6 +703,9 @@ export async function run(o) {
     }
     if (o.role !== "reviewer") {
       throw new UsageError("--review requires --role reviewer");
+    }
+    if (stillWorking(target)) {
+      throw new UsageError(workingHint(target.id));
     }
     const patchFile = path.join(runDir(target.id), "patch.diff");
     if (!target.files || !fs.existsSync(patchFile)) {
@@ -857,6 +867,9 @@ export async function followup(id, brief) {
   if (!meta) {
     throw new UsageError(`unknown run ${id}`);
   }
+  if (stillWorking(meta)) {
+    throw new UsageError(workingHint(id));
+  }
   if (meta.retryUsed || meta.rebriefOf) {
     throw new UsageError("retry limit reached for this task");
   }
@@ -899,6 +912,9 @@ export async function followup(id, brief) {
   meta.retryUsed = true;
   meta.phase = "running";
   meta.pid = process.pid;
+  // Until it finishes, the previous result is no longer the run's: a
+  // follow-up that fails halfway must not leave it applicable.
+  meta.status = null;
   meta.checks = [];
   meta.hint = null;
   meta.resetCopies = [];
@@ -929,6 +945,9 @@ export function apply(id) {
   }
   if (meta.discarded) {
     throw new UsageError("run was discarded");
+  }
+  if (stillWorking(meta)) {
+    return envelope(meta, { status: "conflict", hint: workingHint(id) });
   }
   if (!meta.editing || !APPLICABLE.has(meta.status)) {
     throw new UsageError(`cannot apply a run with status ${meta.status}`);
@@ -975,6 +994,9 @@ export async function discard(id) {
   }
   if (meta.discarded) {
     return envelope(meta);
+  }
+  if (stillWorking(meta)) {
+    return envelope(meta, { status: "conflict", hint: workingHint(id) });
   }
   if (meta.isolation === "worktree") {
     cleanupWorktree(meta);

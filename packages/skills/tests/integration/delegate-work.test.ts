@@ -12,6 +12,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  */
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runner = path.resolve(here, "../../skills/delegate-work/scripts/lib/runner.mjs");
+const state = path.resolve(here, "../../skills/delegate-work/scripts/lib/state.mjs");
 const adapter = (name: string) => path.resolve(here, `../../skills/delegate-work/adapters/${name}.mjs`);
 
 describe("delegate-work", () => {
@@ -143,6 +144,27 @@ describe("delegate-work", () => {
       git("config", "--unset", "core.hooksPath");
       fs.rmSync(hooks, { recursive: true });
     }
+  });
+
+  it("shouldRefuseToActOnARunThatIsStillWorking", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+
+    const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+    const meta = S.loadMeta(r.id);
+    // As a follow-up in another dispatch process leaves it while it works.
+    S.saveMeta(r.id, { ...meta, phase: "running", pid: process.pid });
+    try {
+      expect(R.apply(r.id).status).toBe("conflict");
+      expect((await R.discard(r.id)).status).toBe("conflict");
+      await expect(
+        R.run({ cwd: repo, rebriefOf: r.id, role: "fixer", brief: "Better.", model: "fake" }),
+      ).rejects.toThrow(`Run ${r.id} is still working`);
+      await expect(R.followup(r.id, "More.")).rejects.toThrow("still working");
+    } finally {
+      S.saveMeta(r.id, meta);
+    }
+    expect((await R.discard(r.id)).status).toBe("ok");
   });
 
   it("shouldPlanABatchWithoutRunningIt", async () => {
