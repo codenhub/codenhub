@@ -508,7 +508,8 @@ describe("delegate-work", () => {
       expect(r.status).toBe("ok");
       expect(r.isolation).toBe("worktree");
       expect(r.applied).toBe(false);
-      await R.discard(r.id);
+      expect(fs.readFileSync(path.join(r.worktree, "src", "a.txt"), "utf8")).toMatch(/first\n$/);
+      expect((await R.discard(r.id)).worktree).toBeNull();
     });
 
     it("shouldPointPwdAtTheWorktreeForTheWorkerAndTheChecks", async () => {

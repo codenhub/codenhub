@@ -54,6 +54,8 @@ export function envelope(meta, extra = {}) {
     status: meta.status,
     worker: meta.worker ?? null,
     isolation: meta.isolation,
+    // Where an undecided worktree result can be read, as a reviewer would.
+    worktree: meta.worktree && !meta.applied && !meta.discarded ? meta.worktree : null,
     lineage: { rebriefOf: meta.rebriefOf ?? null, reviewOf: meta.reviewOf ?? null },
     summary: meta.summary ?? null,
     report: cap(meta.report, REPORT_CAP),
