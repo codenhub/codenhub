@@ -13,6 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runner = path.resolve(here, "../../skills/delegate-work/scripts/lib/runner.mjs");
 const state = path.resolve(here, "../../skills/delegate-work/scripts/lib/state.mjs");
+const proc = path.resolve(here, "../../skills/delegate-work/scripts/lib/proc.mjs");
 const adapter = (name: string) => path.resolve(here, `../../skills/delegate-work/adapters/${name}.mjs`);
 
 describe("delegate-work", () => {
@@ -373,6 +374,34 @@ describe("delegate-work", () => {
       fs.writeFileSync(configFile, original);
       for (const k of ["DW_TOKEN", "DW_PASSED_TOKEN", "DW_PLAIN"]) {
         delete process.env[k];
+      }
+    }
+  });
+
+  it("shouldStripPasswordsInAnyNameFormButKeepTheWorkingDirectory", async () => {
+    const { withoutSecrets } = await import(proc);
+    const env = {
+      PGPASSWORD: "x",
+      MYSQL_PWD: "x",
+      REDIS_URL: "redis://:password@localhost:6379",
+      OLDPWD: "/previous",
+      DW_PLAIN_URL: "https://example.com/path",
+    };
+    Object.assign(process.env, env);
+
+    try {
+      const stripped = Object.keys(withoutSecrets([]));
+      expect(stripped).toEqual(expect.arrayContaining(["PGPASSWORD", "MYSQL_PWD", "REDIS_URL"]));
+      expect(stripped).not.toContain("PWD");
+      expect(stripped).not.toContain("OLDPWD");
+      expect(stripped).not.toContain("DW_PLAIN_URL");
+    } finally {
+      for (const k of Object.keys(env)) {
+        if (saved[k] === undefined) {
+          delete process.env[k];
+        } else {
+          process.env[k] = saved[k];
+        }
       }
     }
   });

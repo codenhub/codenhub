@@ -53,8 +53,12 @@ export function runSync(resolved, args, opts = {}) {
 // Variables that usually hold credentials, by name or by a URL with a
 // password in it. Workers, and the checks that run their code, don't get
 // them unless a harness needs one for its own login or the config passes it.
-const SECRET_NAME = /(^|_)(TOKEN|SECRET|PASSWORD|PASSWD|PASSPHRASE|CREDENTIALS?|APIKEY|KEY|PAT|AUTH)S?(_|$)/i;
-const SECRET_VALUE = /^[a-z][a-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/i;
+// A password anywhere in the name (PGPASSWORD), and a PWD part after another
+// (MYSQL_PWD) but not PWD itself, the working directory. A URL's user may be
+// empty (redis://:password@host).
+const SECRET_NAME =
+  /(^|_)(TOKEN|SECRET|PASSPHRASE|CREDENTIALS?|APIKEY|KEY|PAT|AUTH)S?(_|$)|PASSW(OR)?D|_PWD(_|$)/i;
+const SECRET_VALUE = /^[a-z][a-z0-9+.-]*:\/\/[^/\s:@]*:[^/\s@]+@/i;
 const nameRule = (p) =>
   p instanceof RegExp ? p : new RegExp(`^${p.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*")}$`, "i");
 
