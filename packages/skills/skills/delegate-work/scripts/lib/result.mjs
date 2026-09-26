@@ -1,4 +1,5 @@
 const cap = (s, n) => (s && s.length > n ? s.slice(0, n - 1) + "…" : (s ?? null));
+const REPORT_CAP = 4000;
 
 /** Parse the RESULT block a worker ends with. Tolerant of formatting drift. */
 export function parseResult(text) {
@@ -49,7 +50,9 @@ export function envelope(meta, extra = {}) {
     isolation: meta.isolation,
     lineage: { rebriefOf: meta.rebriefOf ?? null, reviewOf: meta.reviewOf ?? null },
     summary: meta.summary ?? null,
-    report: cap(meta.report, 4000),
+    report: cap(meta.report, REPORT_CAP),
+    reportTruncated: (meta.report?.length ?? 0) > REPORT_CAP,
+    reportPath: meta.reportPath ?? null,
     files: meta.files ?? { changed: [], outOfScope: [] },
     checks: meta.checks ?? [],
     denied: meta.denied ?? [],

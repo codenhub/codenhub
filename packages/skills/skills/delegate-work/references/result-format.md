@@ -37,6 +37,8 @@ Never treat exit code 0 as "the task succeeded".
   "lineage": { "rebriefOf": null, "reviewOf": null },
   "summary": "Guarded parseDate against empty strings; added test case.",
   "report": null,
+  "reportTruncated": false,
+  "reportPath": null,
   "files": {
     "changed": [
       { "path": "src/validation.ts", "added": 4, "removed": 1 },
@@ -70,7 +72,9 @@ Never treat exit code 0 as "the task succeeded".
 | `isolation`       | `inplace` (changes are already in the working tree) or `worktree` (changes wait for `apply`). |
 | `lineage`         | `rebriefOf`: the task this run retries. `reviewOf`: the result this review covers. |
 | `summary`         | Worker's own summary, capped at 600 characters. Unverified claim. |
-| `report`          | `scout` and `reviewer` only: findings, capped at 4000 characters (full text in the log). `null` for editing roles. A `reviewer` report starts with a verdict line: `approve`, `approve-with-nits` or `reject`. |
+| `report`          | `scout` and `reviewer` only: findings, capped at 4000 characters. `null` for editing roles. A `reviewer` report starts with a verdict line: `approve`, `approve-with-nits` or `reject`. |
+| `reportTruncated` | `true` when `report` was cut at the cap. |
+| `reportPath`      | The whole report, outside the repository. Read it when `reportTruncated` is `true` and the rest matters. |
 | `files.changed`   | From `git diff`, not from the worker's claims. |
 | `files.outOfScope`| Changed files not matching `--allow`. Non-empty forces status `out_of_scope`. |
 | `checks`          | Verification commands from user config, or inferred from the project (fast set for `fixer`, full set for `builder`). `tail` is the last ≤ 20 lines of output, only when `ok` is false. **Empty means nothing could be inferred:** `ok` then only means "in scope and finished", and you must verify the change yourself before applying. |

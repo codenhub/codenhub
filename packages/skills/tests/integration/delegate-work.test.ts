@@ -106,6 +106,16 @@ describe("delegate-work", () => {
     fs.rmSync(path.join(repo, ".gitignore"));
   });
 
+  it("shouldKeepTheWholeReportWhenTheResultCutsIt", async () => {
+    const R = await import(runner);
+
+    const r = await R.run({ cwd: repo, role: "scout", brief: "Map the code.", model: "fake" });
+    expect(r.status).toBe("ok");
+    expect(r.report.length).toBe(4000);
+    expect(r.reportTruncated).toBe(true);
+    expect(fs.readFileSync(r.reportPath, "utf8")).toMatch(/end of report$/);
+  });
+
   it("shouldNotRestoreThroughALinkTheWorkerMade", async () => {
     const R = await import(runner);
     const outside = path.join(tmp, "outside");

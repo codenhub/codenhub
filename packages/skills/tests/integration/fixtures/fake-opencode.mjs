@@ -11,11 +11,16 @@ if (cmd === "--version") {
   console.log("fake/model");
 } else if (cmd === "run") {
   const prompt = fs.readFileSync(0, "utf8");
-  const file = "src/a.txt";
-  fs.appendFileSync(file, `${prompt.includes("FOLLOW-UP") ? "second" : "first"}\n`);
   const sessionID = "ses_fake";
   const emit = (ev) => console.log(JSON.stringify({ sessionID, ...ev }));
   emit({ type: "step_start", part: {} });
+  if (prompt.includes("read-only task")) {
+    const report = `${"finding\n".repeat(600)}end of report`;
+    emit({ type: "text", part: { text: `RESULT\nstatus: done\nsummary: read the code\nreport:\n${report}` } });
+    process.exit(0);
+  }
+  const file = "src/a.txt";
+  fs.appendFileSync(file, `${prompt.includes("FOLLOW-UP") ? "second" : "first"}\n`);
   emit({ type: "tool_use", part: { tool: "write", state: { status: "completed", input: { path: file } } } });
   // A route that edits, then fails as a provider would.
   if (process.argv.includes("fake/broken")) {

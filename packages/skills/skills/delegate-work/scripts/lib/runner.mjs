@@ -454,6 +454,11 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   if (!meta.editing) {
     meta.report =
       [parsed.verdict && `verdict: ${parsed.verdict}`, parsed.report].filter(Boolean).join("\n") || parsed.summary;
+    // The result caps the report; the whole text stays readable here.
+    if (meta.report) {
+      meta.reportPath = path.join(runDir(meta.id), "report.md");
+      fs.writeFileSync(meta.reportPath, meta.report);
+    }
   }
   fs.writeFileSync(path.join(runDir(meta.id), "patch.diff"), G.patch(meta.snap, post, meta.workDir));
 
