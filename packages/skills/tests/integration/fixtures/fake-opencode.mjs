@@ -15,8 +15,10 @@ if (cmd === "--version") {
   const emit = (ev) => console.log(JSON.stringify({ sessionID, ...ev }));
   emit({ type: "step_start", part: {} });
   if (prompt.includes("read-only task")) {
-    const report = `${"finding\n".repeat(600)}end of report`;
-    emit({ type: "text", part: { text: `RESULT\nstatus: done\nsummary: read the code\nreport:\n${report}` } });
+    const report = prompt.includes("SHORT") ? "one finding" : `${"finding\n".repeat(600)}end of report`;
+    const verdict = prompt.match(/VERDICT (\S+)/)?.[1];
+    const text = `RESULT\nstatus: done\nsummary: read the code\n${verdict ? `verdict: ${verdict}\n` : ""}report:\n${report}`;
+    emit({ type: "text", part: { text } });
     process.exit(0);
   }
   const file = "src/a.txt";

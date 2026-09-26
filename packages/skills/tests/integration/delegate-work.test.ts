@@ -161,6 +161,19 @@ describe("delegate-work", () => {
     }
   });
 
+  it("shouldStartAReviewWithItsVerdictOnlyWhenItIsAKnownOne", async () => {
+    const R = await import(runner);
+    const review = (brief: string) => R.run({ cwd: repo, role: "reviewer", brief, model: "fake" });
+
+    const good = await review("Review. SHORT VERDICT approve-with-nits");
+    expect(good.report).toBe("verdict: approve-with-nits\none finding");
+    expect(good.hint).toBeNull();
+
+    const odd = await review("Review. SHORT VERDICT looks-fine");
+    expect(odd.report).toBe("one finding");
+    expect(odd.hint).toContain("no valid verdict");
+  });
+
   it("shouldKeepTheWholeReportWhenTheResultCutsIt", async () => {
     const R = await import(runner);
 

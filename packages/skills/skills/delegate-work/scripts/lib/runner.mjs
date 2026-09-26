@@ -14,6 +14,7 @@ import { activeInplace, loadMeta, newRun, runDir, saveMeta, setCooldown } from "
 
 export const EDITING = new Set(["fixer", "builder"]);
 export const APPLICABLE = new Set(["ok", "failed_checks", "blocked"]);
+const VERDICTS = new Set(["approve", "approve-with-nits", "reject"]);
 const DEFAULT_STEPS = { scout: 40, fixer: 40, builder: 150, reviewer: 30 };
 const DEFAULT_TIMEOUT = { scout: 300, fixer: 600, builder: 1800, reviewer: 600 };
 
@@ -452,8 +453,11 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   meta.notes = parsed.notes;
   meta.summary = parsed.summary;
   if (!meta.editing) {
-    meta.report =
-      [parsed.verdict && `verdict: ${parsed.verdict}`, parsed.report].filter(Boolean).join("\n") || parsed.summary;
+    const verdict = meta.role === "reviewer" && VERDICTS.has(parsed.verdict) ? parsed.verdict : null;
+    meta.report = [verdict && `verdict: ${verdict}`, parsed.report].filter(Boolean).join("\n") || parsed.summary;
+    if (meta.role === "reviewer" && !verdict) {
+      meta.hint = "The reviewer gave no valid verdict (approve, approve-with-nits or reject); judge from the report.";
+    }
     // The result caps the report; the whole text stays readable here.
     if (meta.report) {
       meta.reportPath = path.join(runDir(meta.id), "report.md");
