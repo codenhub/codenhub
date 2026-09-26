@@ -512,6 +512,17 @@ describe("delegate-work", () => {
     60000,
   );
 
+  it("shouldReadAResultBlockWrittenWithMarkdown", async () => {
+    const { parseResult } = await import(path.resolve(runner, "../result.mjs"));
+
+    const bold = parseResult("RESULT\n**status:** blocked\n**summary:** no access\n**verdict:** reject");
+    expect(bold).toMatchObject({ status: "blocked", summary: "no access", verdict: "reject" });
+    expect(parseResult("RESULT\nstatus: **done**\nverdict: `approve`")).toMatchObject({
+      status: "done",
+      verdict: "approve",
+    });
+  });
+
   it("shouldKeepTheFirstResultWhenAFollowUpCannotRun", async () => {
     const R = await import(runner);
     const a = path.join(repo, "src", "a.txt");
