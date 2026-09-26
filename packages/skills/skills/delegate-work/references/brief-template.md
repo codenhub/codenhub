@@ -29,7 +29,8 @@ What to find out, and what form the answer should take
 
 REVIEW CRITERIA                                   (reviewer: required)
 What to judge the change against: the original acceptance list, conventions
-to check, specific risks to look for.
+to check, specific risks to look for. With --review <id>, the original brief
+and the diff are appended for you; don't paste them.
 
 OUT OF SCOPE
 Nearby things the worker might be tempted to touch but must not.
