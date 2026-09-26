@@ -22,7 +22,10 @@ if (cmd === "--version") {
     process.exit(0);
   }
   const file = "src/a.txt";
-  fs.appendFileSync(file, `${prompt.includes("FOLLOW-UP") ? "second" : "first"}\n`);
+  // REPORT-ONLY: the event without the write, as when a harness edits another tree.
+  if (!prompt.includes("REPORT-ONLY")) {
+    fs.appendFileSync(file, `${prompt.includes("FOLLOW-UP") ? "second" : "first"}\n`);
+  }
   emit({ type: "tool_use", part: { tool: "write", state: { status: "completed", input: { path: file } } } });
   // A route that edits, then fails as a provider would.
   if (process.argv.includes("fake/broken")) {

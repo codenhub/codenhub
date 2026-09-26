@@ -440,14 +440,14 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   }
   // Writes git can't see (ignored files, paths outside the tree) are known
   // only from the harness's edit events, and can't be restored from the snapshot.
-  if (meta.editing) {
-    const seen = new Set(changed.map((c) => c.path));
-    for (const f of reported) {
-      if (!seen.has(f) && !matchAny(f, meta.allow)) {
-        outOfScope.push(`(invisible to git, not restored) ${f}`);
-      }
-    }
+  const seen = new Set(changed.map((c) => c.path));
+  const unseen = meta.editing ? [...reported].filter((f) => !seen.has(f)) : [];
+  for (const f of unseen.filter((f) => !matchAny(f, meta.allow))) {
+    outOfScope.push(`(invisible to git, not restored) ${f}`);
   }
+  // An allowed edit the work dir doesn't show: reverted, ignored, or written
+  // into another directory (a harness that ignored the work dir it was given).
+  const missing = unseen.filter((f) => matchAny(f, meta.allow));
 
   meta.post = post;
   meta.files = { changed, outOfScope };
@@ -546,6 +546,10 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
         .map((c) => c.path)
         .join(", ")}`;
     }
+  }
+  if (missing.length) {
+    const note = `The worker reported editing ${missing.slice(0, 10).join(", ")}, but the work dir doesn't show them changed: reverted, gitignored, or written somewhere else. Check your working tree.`;
+    meta.hint = [meta.hint, note].filter(Boolean).join(" ");
   }
   return meta;
 }

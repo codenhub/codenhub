@@ -106,6 +106,20 @@ describe("delegate-work", () => {
     fs.rmSync(path.join(repo, ".gitignore"));
   });
 
+  it("shouldPointOutReportedEditsTheWorkDirDoesNotShow", async () => {
+    const R = await import(runner);
+
+    const r = await R.run({
+      cwd: repo,
+      role: "fixer",
+      allow: ["src/a.txt"],
+      brief: "Add a line. REPORT-ONLY",
+      model: "fake",
+    });
+    expect(r.status).toBe("no_changes");
+    expect(r.hint).toContain("reported editing src/a.txt, but the work dir doesn't show them changed");
+  });
+
   it("shouldPlanABatchWithoutRunningIt", async () => {
     const R = await import(runner);
     const runs = path.join(process.env.DELEGATE_WORK_STATE as string, "runs");
