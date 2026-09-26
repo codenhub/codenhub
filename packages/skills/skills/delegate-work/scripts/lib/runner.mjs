@@ -10,7 +10,7 @@ import { linkDeps, removeDirSafe, removeWorktree, stripLinks, unlinkSafe } from 
 import { start, withoutSecrets } from "./proc.mjs";
 import { envelope, parseResult } from "./result.mjs";
 import { candidates, nextTier, orchestratorPools } from "./route.mjs";
-import { activeInplace, alive, loadMeta, newRun, runDir, saveMeta, setCooldown } from "./state.mjs";
+import { activeInplace, BEAT_MS, loadMeta, newRun, runDir, saveMeta, setCooldown, working } from "./state.mjs";
 
 export const EDITING = new Set(["fixer", "builder"]);
 export const APPLICABLE = new Set(["ok", "failed_checks", "blocked"]);
@@ -293,11 +293,21 @@ async function resetWork(meta) {
   }
 }
 
+/** runAttempts(), saving meta as it goes: however long the worker and the checks take, the run shows it is alive. */
+async function execute(meta, ...rest) {
+  const beat = setInterval(() => saveMeta(meta.id, meta), BEAT_MS);
+  try {
+    return await runAttempts(meta, ...rest);
+  } finally {
+    clearInterval(beat);
+  }
+}
+
 /**
  * Run the worker over the candidate list, falling back on infrastructure
  * failures, then evaluate the outcome. Mutates and returns meta.
  */
-async function execute(meta, cfg, list, prompt, sessionId) {
+async function runAttempts(meta, cfg, list, prompt, sessionId) {
   const t0 = Date.now();
   const maxSteps = cfg.limits?.maxSteps?.[meta.role] ?? DEFAULT_STEPS[meta.role];
   const timeoutMs = 1000 * (cfg.limits?.timeoutSec?.[meta.role] ?? DEFAULT_TIMEOUT[meta.role]);
@@ -360,8 +370,12 @@ async function execute(meta, cfg, list, prompt, sessionId) {
         }
       },
     });
+    // Should dispatch be killed, the worker may outlive it; its run is still working then.
+    Object.assign(meta, { workerPid: proc.pid, workerStarted: Date.now() });
+    saveMeta(meta.id, meta);
     // oxlint-disable-next-line no-await-in-loop -- candidates run one at a time: the next only after this one failed.
     const res = await proc.done;
+    meta.workerPid = null;
     guardGitFile(meta);
     c.adapter.parseStderr?.(res.stderrTail, acc);
     meta.logPath = logPath;
@@ -563,9 +577,24 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   return meta;
 }
 
+/**
+ * Dispatch failed partway through a run: keep it as interrupted, so doctor
+ * lists it and discard restores what it may have written.
+ */
+function interrupted(meta, e) {
+  meta.phase = "interrupted";
+  meta.workerPid = null;
+  return new Error(`run ${meta.id} was interrupted (discard it to restore its files): ${e.message}`, { cause: e });
+}
+
 /** The run itself is still working (a first run or a follow-up): its result isn't final. */
-const stillWorking = (meta) => meta.phase === "running" && alive(meta.pid);
-const workingHint = (id) => `Run ${id} is still working; wait for its result.`;
+const stillWorking = working;
+const workingHint = (id) => {
+  const meta = loadMeta(id);
+  return meta && !working({ ...meta, workerPid: null })
+    ? `Run ${id}'s dispatch stopped, but its worker (process ${meta.workerPid}) is still running; wait for it to exit, or end it.`
+    : `Run ${id} is still working; wait for its result.`;
+};
 
 /** Another run still working in this tree: writing into it now would be counted as that run's change. */
 function busyTree(meta) {
@@ -873,8 +902,10 @@ export async function run(o) {
 
   try {
     await execute(meta, cfg, iso.candidates, prompt, null);
+  } catch (e) {
+    throw interrupted(meta, e);
   } finally {
-    meta.phase = "done";
+    meta.phase = meta.phase === "interrupted" ? meta.phase : "done";
     // Nothing to apply or discard later; the report is all there is.
     if (!editing && meta.worktree) {
       cleanupWorktree(meta);
@@ -960,8 +991,10 @@ export async function followup(id, brief) {
       brief,
       meta.sessionId,
     );
+  } catch (e) {
+    throw interrupted(meta, e);
   } finally {
-    meta.phase = "done";
+    meta.phase = meta.phase === "interrupted" ? meta.phase : "done";
     saveMeta(id, meta);
   }
   return envelope(meta);
@@ -1032,6 +1065,32 @@ export async function discard(id) {
   }
   if (meta.isolation === "worktree") {
     cleanupWorktree(meta);
+  } else if (meta.editing && meta.phase !== "done" && meta.snap) {
+    // Cut short (dispatch killed or failed): no result says what the worker
+    // wrote, so every allowed file that differs from the start goes back.
+    const busy = busyTree(meta);
+    if (busy) {
+      return envelope(meta, { status: "conflict", hint: busy });
+    }
+    const now = G.workingTree(meta.root, path.join(runDir(id), "discard.index"));
+    const files = G.numstat(meta.snap, now, meta.root)
+      .map((c) => c.path)
+      .filter((f) => inScope(f, meta.allow));
+    const linked = throughLinks(meta.root, files);
+    if (linked.length) {
+      return envelope(meta, { status: "conflict", hint: linkHint(linked) });
+    }
+    const copy = path.join(runDir(id), "discarded");
+    for (const f of files) {
+      if (fs.existsSync(path.join(meta.root, f))) {
+        fs.mkdirSync(path.dirname(path.join(copy, f)), { recursive: true });
+        fs.copyFileSync(path.join(meta.root, f), path.join(copy, f));
+      }
+    }
+    writeFrom(meta.root, meta.snap, files);
+    meta.hint = files.length
+      ? `The run was cut short; restored the allowed files that differed from its start: ${files.slice(0, 10).join(", ")}. Their versions before this discard are in ${copy}.`
+      : "The run was cut short; none of its allowed files differed from its start.";
   } else if (meta.editing && meta.post) {
     const busy = busyTree(meta);
     if (busy) {

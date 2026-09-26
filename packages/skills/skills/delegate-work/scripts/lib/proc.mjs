@@ -89,6 +89,17 @@ export function mergeEnv(env = {}) {
 // works in the repository instead of the worktree), so it names cwd instead.
 const inDir = (cwd) => (cwd ? { PWD: path.resolve(cwd) } : {});
 
+// Workers and checks still running, so a dispatch that is told to stop ends
+// them instead of leaving them editing the tree on their own.
+const live = new Set();
+
+/** End every worker and check this process started that is still running. */
+export function killChildren() {
+  for (const pid of live) {
+    killTree(pid);
+  }
+}
+
 export function killTree(pid) {
   if (!pid) {
     return;
@@ -124,6 +135,7 @@ export function start(cmd, args, { cwd, env, input, timeoutMs, onLine, stdoutFil
     child = spawn(resolved.file, args, opts);
   }
 
+  live.add(child.pid);
   let killedFor = null;
   const out = stdoutFile ? fs.createWriteStream(stdoutFile) : null;
   const err = stderrFile ? fs.createWriteStream(stderrFile) : null;
@@ -171,10 +183,12 @@ export function start(cmd, args, { cwd, env, input, timeoutMs, onLine, stdoutFil
   const done = new Promise((resolve) => {
     child.on("error", (e) => {
       clearTimeout(timer);
+      live.delete(child.pid);
       resolve({ code: -1, killedFor, stderrTail: stderrTail + String(e) });
     });
     child.on("close", (code) => {
       clearTimeout(timer);
+      live.delete(child.pid);
       buf += outText.end();
       stderrTail = (stderrTail + errText.end()).slice(-8000);
       if (buf && onLine) {
@@ -206,6 +220,7 @@ export async function runShell(command, { cwd, timeoutMs, env }) {
     windowsHide: true,
     stdio: ["ignore", "pipe", "pipe"],
   });
+  live.add(child.pid);
   let output = "";
   const collect = (stream) => {
     const text = new StringDecoder("utf8");
@@ -226,5 +241,6 @@ export async function runShell(command, { cwd, timeoutMs, env }) {
   clearTimeout(timer);
   // Wrapper scripts may leave background processes behind; clean them up.
   killTree(child.pid);
+  live.delete(child.pid);
   return { ok: code === 0 && !timedOut, timedOut, output };
 }

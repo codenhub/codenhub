@@ -6,6 +6,7 @@ import { adapters, harnessNames } from "../adapters/index.mjs";
 import { defaultPath, load, TIERS, userPath, validate } from "./lib/config.mjs";
 import { git, gitProblem, repoRoot } from "./lib/git.mjs";
 import { harnessModels, routeContext } from "./lib/models.mjs";
+import { killChildren } from "./lib/proc.mjs";
 import { parseAge, prune } from "./lib/prune.mjs";
 import { candidates, orchestratorPools } from "./lib/route.mjs";
 import * as R from "./lib/runner.mjs";
@@ -16,6 +17,15 @@ import { cooldowns } from "./lib/state.mjs";
 // would run as dispatch. This turns that off for this process's lookups; it
 // has no effect set only in a child's environment.
 process.env.NoDefaultCurrentDirectoryInExePath = "1";
+
+// Stopped from outside (Ctrl+C, a closing terminal), end the workers and
+// checks too; the run stays "running" and reads as interrupted.
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+  process.on(signal, () => {
+    killChildren();
+    process.exit(130);
+  });
+}
 
 const BATCH_FIELDS = new Set(["role", "allow", "read", "tier", "kind", "model", "brief", "briefFile"]);
 

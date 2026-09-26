@@ -84,6 +84,14 @@ Dispatch turns that lookup off for itself and everything it starts
 (`NoDefaultCurrentDirectoryInExePath`), so a `git.exe` a worker leaves in its
 worktree never runs as dispatch.
 
+A running run saves its state every five minutes; a `running` state older
+than 20 minutes belongs to a dispatch that is gone, whatever process now has
+its pid. Stopped with Ctrl+C or a closing terminal, dispatch ends its workers
+and checks too. A forced kill, which it can't catch (as some command timeouts
+do), may leave the worker running: the run counts as working until it exits,
+then as interrupted, and `discard` restores its allowed files from the
+snapshot, keeping a copy.
+
 ## Checks
 
 `fixer` runs the fast set, `builder` the full set. A project's `checks.fast` /

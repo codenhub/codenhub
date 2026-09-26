@@ -45,7 +45,14 @@ export function newRun() {
   }
 }
 
+/** A running run's meta is saved at least this often; older, its pid is someone else's. */
+export const BEAT_MS = 5 * 60000;
+const STALE_MS = 4 * BEAT_MS;
+
 export function saveMeta(id, meta) {
+  if (meta.phase === "running") {
+    meta.beat = Date.now();
+  }
   fs.writeFileSync(path.join(runDir(id), "meta.json"), JSON.stringify(meta, null, 2));
 }
 
@@ -66,6 +73,18 @@ export const alive = (pid) => {
   }
 };
 
+// No worker lives this long; a pid older than this belongs to another process.
+const MAX_WORKER_MS = 6 * 3600000;
+
+/**
+ * The run is still working: its dispatch is (and says so), or the worker it
+ * started is, as when dispatch was killed and its worker was not.
+ */
+export const working = (meta) =>
+  meta.phase === "running" &&
+  ((Date.now() - (meta.beat ?? 0) < STALE_MS && alive(meta.pid)) ||
+    (!!meta.workerPid && Date.now() - (meta.workerStarted ?? 0) < MAX_WORKER_MS && alive(meta.workerPid)));
+
 /** Editing runs currently active in place on this repo (for isolation: auto). */
 export function activeInplace(root) {
   const dir = runsDir();
@@ -76,7 +95,7 @@ export function activeInplace(root) {
     .readdirSync(dir)
     .map(loadMeta)
     .filter(
-      (m) => m && m.phase === "running" && m.isolation === "inplace" && m.editing && m.root === root && alive(m.pid),
+      (m) => m && m.isolation === "inplace" && m.editing && m.root === root && working(m),
     );
 }
 

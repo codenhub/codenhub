@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -511,6 +511,35 @@ describe("delegate-work", () => {
     },
     60000,
   );
+
+  it("shouldRestoreTheAllowedFilesOfARunThatWasCutShort", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+    const { prune } = await import(path.resolve(runner, "../prune.mjs"));
+    const a = path.join(repo, "src", "a.txt");
+    const before = fs.readFileSync(a, "utf8");
+
+    const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+    // As a dispatch killed halfway leaves it: running, its process gone, no result.
+    const gone = spawnSync(process.execPath, ["-e", ""]).pid;
+    const meta = S.loadMeta(r.id);
+    S.saveMeta(r.id, { ...meta, phase: "running", pid: gone, workerPid: null, post: undefined, status: undefined });
+    fs.appendFileSync(a, "half\n");
+
+    const listed = prune({ maxAgeMs: Infinity, dryRun: true }).kept.find((k: { id: string }) => k.id === r.id);
+    expect(listed.reason).toContain("interrupted; partial edits may be in the working tree");
+    // Its worker outliving dispatch still counts as working.
+    S.saveMeta(r.id, { ...S.loadMeta(r.id), workerPid: process.pid, workerStarted: Date.now() });
+    expect((await R.discard(r.id)).hint).toContain("dispatch stopped, but its worker");
+    S.saveMeta(r.id, { ...S.loadMeta(r.id), workerPid: null });
+    const d = await R.discard(r.id);
+    expect(d.status).toBeNull();
+    expect(fs.readFileSync(a, "utf8")).toBe(before);
+    expect(d.hint).toContain("restored the allowed files that differed from its start: src/a.txt");
+    const copy = d.hint.match(/are in (\S+?)\.$/)[1];
+    expect(fs.readFileSync(path.join(copy, "src", "a.txt"), "utf8")).toBe(`${before}first\nhalf\n`);
+    expect(prune({ maxAgeMs: Infinity, dryRun: true }).kept.map((k: { id: string }) => k.id)).not.toContain(r.id);
+  });
 
   describe("with a harness that can't be contained in place", () => {
     let opencode: { containedInPlace?: boolean };

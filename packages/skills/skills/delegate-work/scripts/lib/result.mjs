@@ -51,7 +51,8 @@ export function envelope(meta, extra = {}) {
     v: 1,
     id: meta.id,
     role: meta.role,
-    status: meta.status,
+    // null for a run that never finished (cut short, then discarded).
+    status: meta.status ?? null,
     worker: meta.worker ?? null,
     isolation: meta.isolation,
     // Where an undecided worktree result can be read, as a reviewer would.
