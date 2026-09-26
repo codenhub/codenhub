@@ -99,6 +99,13 @@ ecosystem found at the repository root contributes:
   keyed by path, so a worktree finds none: set `virtualenvs.in-project` or
   configure the checks.
 
+Checks and workers run with pnpm's `verify-deps-before-run` off. pnpm 10+
+installs before `pnpm run` when dependencies look stale, and in a worktree
+they always do (its paths differ from the ones pnpm recorded): the install
+wrote through the linked `node_modules` and repointed the repository's own
+links at the worktree. A change to the install markers during the checks
+still makes the run `out_of_scope`.
+
 Worktrees get the project's venv linked. Its editable install still points at
 the repository, so with a `src/` directory the checks (and the worker) get
 `PYTHONPATH=src` to test the worktree's code.

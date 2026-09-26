@@ -40,6 +40,11 @@ const SKIP_WALK = new Set([
   ".wrangler",
 ]);
 const DEP_DIRS = new Set(["node_modules", ".venv", "venv"]);
+// pnpm 10+ installs before `pnpm run` when it thinks dependencies are stale,
+// and in a worktree they always look stale: its paths differ from the ones
+// pnpm recorded. The install writes through the linked node_modules and
+// repoints the repository's own links at the worktree.
+const NO_AUTO_INSTALL = { pnpm_config_verify_deps_before_run: "false" };
 const INSTALL_MARKERS = [".package-lock.json", ".modules.yaml", ".yarn-state.yml", ".yarn-integrity", "pyvenv.cfg"];
 
 function findDepDirs(root, depth = 4) {
@@ -325,6 +330,7 @@ async function execute(meta, cfg, list, prompt, sessionId) {
           ...(cfg.project.passEnv ?? []),
         ]),
         ...gitEnv,
+        ...NO_AUTO_INSTALL,
         ...checkEnv(meta.checkList ?? []),
         ...cmd.env,
         DELEGATE_WORK_WORKER: "1",
@@ -507,20 +513,27 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
     meta.status = "no_changes";
   } else if (meta.editing) {
     const timeout = 1000 * (cfg.limits?.checkTimeoutSec ?? 900);
+    const depsBeforeChecks = depsFingerprint(meta.root, depDirs);
     meta.checks = await runChecks(meta.checkList, meta.workDir, timeout, {
       ...withoutSecrets(cfg.project.passEnv ?? []),
       ...gitEnv,
+      ...NO_AUTO_INSTALL,
     });
     // The checks ran the worker's code.
     guardGitFile(meta);
+    if (depsFingerprint(meta.root, depDirs) !== depsBeforeChecks) {
+      meta.files.outOfScope.push("(dependency folder changed during the checks: install detected)");
+    }
     // What checks leave behind (unignored reports, caches) isn't someone's edit.
     meta.settled = meta.checkList.length
       ? G.workingTree(meta.workDir, path.join(runDir(meta.id), "settled.index"))
       : meta.post;
     meta.status = meta.checks.every((c) => c.ok) ? "ok" : "failed_checks";
     if (meta.gitFileRestored) {
-      meta.status = "out_of_scope";
       meta.files.outOfScope.push("(worktree .git file changed by the checks: restored)");
+    }
+    if (meta.files.outOfScope.length) {
+      meta.status = "out_of_scope";
     }
     if (!meta.checkList.length) {
       meta.hint = "No checks could be inferred for this project; verify the change yourself.";

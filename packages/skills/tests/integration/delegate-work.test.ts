@@ -233,6 +233,30 @@ describe("delegate-work", () => {
     }
   });
 
+  it("shouldStopPnpmInstallingBeforeScriptsInWorkersAndChecks", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    config.projects = {
+      [`${repo.replaceAll("\\", "/")}/**`]: {
+        checks: {
+          fast: ["node -e \"process.exit(process.env.pnpm_config_verify_deps_before_run === 'false' ? 0 : 1)\""],
+        },
+      },
+    };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+
+    try {
+      const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+      expect(r.summary).toContain("pnpm_config_verify_deps_before_run=false");
+      expect(r.checks).toEqual([{ name: "check1", ok: true, tail: "" }]);
+      await R.discard(r.id);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
   it("shouldKeepSecretsFromWorkersAndChecksUnlessPassed", async () => {
     const R = await import(runner);
     const configFile = process.env.DELEGATE_WORK_CONFIG as string;
