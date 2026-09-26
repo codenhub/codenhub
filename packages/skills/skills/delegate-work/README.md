@@ -70,7 +70,10 @@ before the next route runs, the files it restores are copied into the run's
 state first, in case you edited one meanwhile.
 
 Dispatch's own git commands also run no programs from repository config
-(`core.fsmonitor`, external diff, textconv). A worktree's `.git` file, which
+(`core.fsmonitor`, hooks, external diff, textconv): a `core.hooksPath`
+inside the tree, as husky and similar setups use, is a folder a worker can
+write to. Workers and checks in a worktree get the same settings. A
+worktree's `.git` file, which
 points git at the repository and so at its config, is put back as git wrote
 it after every worker and after the checks; a changed one makes the run
 `out_of_scope`.

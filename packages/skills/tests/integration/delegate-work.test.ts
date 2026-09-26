@@ -120,6 +120,31 @@ describe("delegate-work", () => {
     expect(r.hint).toContain("reported editing src/a.txt, but the work dir doesn't show them changed");
   });
 
+  it("shouldNotRunTheRepositorysGitHooks", async () => {
+    const R = await import(runner);
+    const sentinel = path.join(tmp, "hook-ran");
+    const hooks = path.join(repo, ".githooks");
+    fs.mkdirSync(hooks);
+    // Git runs post-index-change whenever it writes an index: every snapshot.
+    fs.writeFileSync(
+      path.join(hooks, "post-index-change"),
+      `#!/bin/sh\necho ran > "${sentinel.replaceAll("\\", "/")}"\n`,
+      { mode: 0o755 },
+    );
+    const git = (...args: string[]) => execFileSync("git", args, { cwd: repo, stdio: "ignore" });
+    git("config", "core.hooksPath", ".githooks");
+
+    try {
+      const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+      expect(r.status).toBe("ok");
+      expect(fs.existsSync(sentinel)).toBe(false);
+      await R.discard(r.id);
+    } finally {
+      git("config", "--unset", "core.hooksPath");
+      fs.rmSync(hooks, { recursive: true });
+    }
+  });
+
   it("shouldPlanABatchWithoutRunningIt", async () => {
     const R = await import(runner);
     const runs = path.join(process.env.DELEGATE_WORK_STATE as string, "runs");
