@@ -539,6 +539,87 @@ function busyTree(meta) {
   return other ? `In-place run ${other.id} is still working in this tree; try again when it finishes.` : null;
 }
 
+const IN_PLACE_ONLY_HINT =
+  "Every usable route for this tier edits only in a worktree; rerun without --isolation inplace.";
+
+/**
+ * Isolation for a run and the candidates that can run with it. Some harnesses
+ * can't be kept to the allowlist in the real tree (containedInPlace: false):
+ * an editing run that may reach one gets a worktree, or skips them when in
+ * place was asked for. "auto" is left for a lone editing run, which works in
+ * place unless another run holds the tree.
+ */
+function isolationFor(o, editing, candidates) {
+  const uncontained = (c) => editing && c.adapter.containedInPlace === false;
+  let isolation = o.isolation ?? "auto";
+  if (isolation === "auto" && !editing) {
+    isolation = "inplace";
+  } else if (isolation === "auto" && (o.forceWorktree || candidates.some(uncontained))) {
+    isolation = "worktree";
+  }
+  if (isolation === "worktree") {
+    return { isolation, candidates, skipped: [] };
+  }
+  return {
+    isolation,
+    candidates: candidates.filter((c) => !uncontained(c)),
+    skipped: candidates
+      .filter(uncontained)
+      .map((c) => ({ modelId: c.modelId, route: c.route.id, reason: `${c.route.harness}: can't edit in place` })),
+  };
+}
+
+/** What `run` would do, without running anything or touching run state. */
+function plan(o, { editing, tier, kind, picked, workDirOverride, lineage }) {
+  const base = {
+    v: 1,
+    id: null,
+    role: o.role,
+    lineage: { rebriefOf: lineage.prev?.id ?? null, reviewOf: lineage.target?.id ?? null },
+  };
+  if (picked.native) {
+    return {
+      ...base,
+      status: "use_native",
+      worker: { ...picked.native, tier, kind, skipped: picked.skipped ?? [] },
+      isolation: null,
+      fallbacks: [],
+      hint: `Run this brief as a native subagent with ${picked.native.model}.`,
+    };
+  }
+  const iso = isolationFor(o, editing, picked.candidates);
+  const skipped = [...(picked.skipped ?? []), ...iso.skipped];
+  const [first, ...rest] = iso.candidates;
+  if (!first) {
+    return {
+      ...base,
+      status: "not_available",
+      worker: { tier, kind, skipped },
+      isolation: null,
+      fallbacks: [],
+      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : "No usable route for this tier. Run `dispatch doctor`.",
+    };
+  }
+  return {
+    ...base,
+    status: "planned",
+    worker: {
+      modelId: first.modelId,
+      route: first.route.id,
+      harness: first.route.harness,
+      model: first.route.model,
+      family: first.family,
+      tier,
+      kind,
+      skipped,
+    },
+    // "auto" works in place unless another in-place run holds the tree then.
+    isolation: workDirOverride ? "worktree" : iso.isolation === "auto" ? "inplace" : iso.isolation,
+    fallbacks: rest.map((c) => ({ modelId: c.modelId, route: c.route.id })),
+    hint: "Nothing ran. Dispatch it without --plan.",
+  };
+}
+
 // ---------- public commands ----------
 
 export async function run(o) {
@@ -615,19 +696,6 @@ export async function run(o) {
   if (!brief?.trim()) {
     throw new UsageError("empty brief");
   }
-  // Only once the invocation is known to be valid: this uses up the task's retry.
-  if (prev) {
-    if (!prev.discarded) {
-      const d = await discard(prev.id);
-      if (d.status === "conflict") {
-        throw new UsageError(d.hint);
-      }
-    }
-    prev = loadMeta(prev.id);
-    prev.retryUsed = true;
-    saveMeta(prev.id, prev);
-  }
-
   tier ??= cfg.roles?.[o.role]?.tier ?? "standard";
   const kind = o.kind ?? "code";
   const level = o.role === "builder" ? "full" : o.role === "fixer" ? "fast" : "none";
@@ -645,6 +713,23 @@ export async function run(o) {
     pools: orchestratorPools(cfg, o.orchestrator),
     external: o.external,
   });
+
+  if (o.plan) {
+    return plan(o, { editing, tier, kind, picked, workDirOverride, lineage: { prev, target } });
+  }
+
+  // Only once the invocation is known to be valid: this uses up the task's retry.
+  if (prev) {
+    if (!prev.discarded) {
+      const d = await discard(prev.id);
+      if (d.status === "conflict") {
+        throw new UsageError(d.hint);
+      }
+    }
+    prev = loadMeta(prev.id);
+    prev.retryUsed = true;
+    saveMeta(prev.id, prev);
+  }
 
   const id = newRun();
   const meta = {
@@ -690,34 +775,20 @@ export async function run(o) {
     return envelope(meta);
   }
 
-  let isolation = o.isolation ?? "auto";
-  // Some harnesses can't be kept to the allowlist in the real tree (see
-  // containedInPlace); an editing run that may reach one gets a worktree.
-  const uncontained = (c) => editing && c.adapter.containedInPlace === false;
-  if (isolation === "auto") {
-    isolation = !editing
-      ? "inplace"
-      : o.forceWorktree || picked.candidates.some(uncontained)
-        ? "worktree"
-        : claimInplace(meta);
+  const iso = isolationFor(o, editing, picked.candidates);
+  meta.skipped.push(...iso.skipped);
+  if (!iso.candidates.length) {
+    Object.assign(meta, {
+      status: "not_available",
+      isolation: null,
+      phase: "done",
+      worker: { tier, kind, skipped: meta.skipped },
+      hint: IN_PLACE_ONLY_HINT,
+    });
+    saveMeta(id, meta);
+    return envelope(meta);
   }
-  if (isolation === "inplace" && picked.candidates.some(uncontained)) {
-    for (const c of picked.candidates.filter(uncontained)) {
-      meta.skipped.push({ modelId: c.modelId, route: c.route.id, reason: `${c.route.harness}: can't edit in place` });
-    }
-    picked.candidates = picked.candidates.filter((c) => !uncontained(c));
-    if (!picked.candidates.length) {
-      Object.assign(meta, {
-        status: "not_available",
-        isolation: null,
-        phase: "done",
-        worker: { tier, kind, skipped: meta.skipped },
-        hint: "Every usable route for this tier edits only in a worktree; rerun without --isolation inplace.",
-      });
-      saveMeta(id, meta);
-      return envelope(meta);
-    }
-  }
+  const isolation = iso.isolation === "auto" ? claimInplace(meta) : iso.isolation;
   meta.isolation = workDirOverride ? "worktree" : isolation;
   meta.phase = "running";
 
@@ -753,7 +824,7 @@ export async function run(o) {
   saveMeta(id, meta);
 
   try {
-    await execute(meta, cfg, picked.candidates, prompt, null);
+    await execute(meta, cfg, iso.candidates, prompt, null);
   } finally {
     meta.phase = "done";
     // Nothing to apply or discard later; the report is all there is.
@@ -982,7 +1053,9 @@ export async function batch(tasks, common) {
     }
   };
   await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
-  const totals = { ok: 0, failed_checks: 0, out_of_scope: 0, other: 0 };
+  const totals = common.plan
+    ? { planned: 0, use_native: 0, not_available: 0, other: 0 }
+    : { ok: 0, failed_checks: 0, out_of_scope: 0, other: 0 };
   for (const r of results) {
     totals[r.status in totals ? r.status : "other"]++;
   }

@@ -117,6 +117,11 @@ asks for an external run.
    node scripts/dispatch.mjs run --role builder --allow "src/rates/**" --read "src/types.ts" --brief -
    node scripts/dispatch.mjs run --batch <batch.json>
    ```
+   A batch prints nothing until every worker in it finishes, so tasks meant
+   for native subagents would wait for the slowest external one. Before a
+   batch, run it with `--plan`: it routes every task and runs nothing. Start
+   the `use_native` tasks as native subagents, then dispatch a batch of the
+   `planned` ones.
    Workers start from the current working tree, including uncommitted changes.
    Isolation defaults to `auto`: read-only roles and a single editing worker run
    in place; parallel editing workers each get an isolated copy, and so does an

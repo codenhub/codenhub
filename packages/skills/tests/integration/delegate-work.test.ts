@@ -106,6 +106,21 @@ describe("delegate-work", () => {
     fs.rmSync(path.join(repo, ".gitignore"));
   });
 
+  it("shouldPlanABatchWithoutRunningIt", async () => {
+    const R = await import(runner);
+    const runs = path.join(process.env.DELEGATE_WORK_STATE as string, "runs");
+    const before = fs.readdirSync(runs);
+    const task = { role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" };
+
+    const r = await R.batch([task, { ...task, allow: ["src/b.txt"] }], { cwd: repo, plan: true });
+    expect(r.batch.map((t: { status: string }) => t.status)).toEqual(["planned", "planned"]);
+    expect(r.batch[0].worker.route).toBe("fake-route");
+    // Two editing tasks get worktrees.
+    expect(r.batch[0].isolation).toBe("worktree");
+    expect(r.totals).toEqual({ planned: 2, use_native: 0, not_available: 0, other: 0 });
+    expect(fs.readdirSync(runs)).toEqual(before);
+  });
+
   it("shouldKeepTheWholeReportWhenTheResultCutsIt", async () => {
     const R = await import(runner);
 

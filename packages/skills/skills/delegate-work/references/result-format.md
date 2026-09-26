@@ -127,6 +127,21 @@ already in the working tree. Either way, `apply` or `discard` each result.
 After applying several, run the full checks once in the working tree
 (SKILL.md, step 7).
 
+## Plan result
+
+`run --plan` and `run --batch <file> --plan` route without running anything
+or creating run state. Each task comes back with `id: null` and one of:
+
+| Status          | Meaning |
+|-----------------|---------|
+| `use_native`    | As for `run`: `worker.model` is the native model to use. |
+| `planned`       | `run` would start `worker` (model, route, harness), falling back to `fallbacks` in order, with the given `isolation`. |
+| `not_available` | As for `run`. |
+
+`isolation` is what the batch as given would use: dropping tasks before the
+real run can turn a worktree into an in-place run. A plan's `totals` count
+`planned`, `use_native`, `not_available` and `other`.
+
 ## Prune result
 
 `prune` removes runs older than `limits.pruneAfterHours` (or `--older-than`,
