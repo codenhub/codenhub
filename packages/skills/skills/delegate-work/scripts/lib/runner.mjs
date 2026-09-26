@@ -264,7 +264,9 @@ async function resetWork(meta) {
   if (!meta.editing) {
     return;
   }
-  if (meta.isolation === "worktree") {
+  // A follow-up goes back to the result it followed up, not to the start.
+  const base = meta.resetTo ?? meta.snap;
+  if (meta.isolation === "worktree" && !meta.resetTo) {
     const ex = [...(meta.linked ?? []), ...(meta.copied ?? [])].flatMap((p) => ["-e", p]);
     // Only dispatch's own links may stay: git must not clean through one a worker made.
     stripLinks(
@@ -273,9 +275,15 @@ async function resetWork(meta) {
     );
     G.git(["reset", "-q", "--hard", meta.snap], { cwd: meta.workDir });
     G.git(["clean", "-q", "-fd", ...ex], { cwd: meta.workDir });
+  } else if (meta.isolation === "worktree") {
+    const tree = G.workingTree(meta.workDir, path.join(runDir(meta.id), "reset.index"));
+    const files = G.numstat(base, tree, meta.workDir)
+      .map((c) => c.path)
+      .filter((f) => !throughLinks(meta.workDir, [f]).length);
+    writeFrom(meta.workDir, base, files);
   } else {
     const tree = G.workingTree(meta.root, path.join(runDir(meta.id), "reset.index"));
-    const files = G.numstat(meta.snap, tree, meta.root).map((c) => c.path);
+    const files = G.numstat(base, tree, meta.root).map((c) => c.path);
     // Anything edited in the tree meanwhile is restored too; keep a copy.
     meta.resets = (meta.resets ?? 0) + 1;
     const copy = path.join(runDir(meta.id), `reset-${meta.resets}`);
@@ -289,7 +297,7 @@ async function resetWork(meta) {
     if (fs.existsSync(copy)) {
       meta.resetCopies = [...(meta.resetCopies ?? []), copy];
     }
-    writeFrom(meta.root, meta.snap, files);
+    writeFrom(meta.root, base, files);
   }
 }
 
@@ -925,6 +933,9 @@ export async function run(o) {
   return envelope(meta);
 }
 
+// What a follow-up that fails to run hands back.
+const FIRST_RESULT = ["status", "files", "checks", "denied", "notes", "summary", "hint", "post", "settled"];
+
 export async function followup(id, brief) {
   const meta = loadMeta(id);
   if (!meta) {
@@ -972,6 +983,9 @@ export async function followup(id, brief) {
       );
     }
   }
+  // Should the follow-up fail to run, the tree goes back to this result and it stands.
+  const first = Object.fromEntries(FIRST_RESULT.map((k) => [k, meta[k]]));
+  meta.resetTo = settled;
   meta.retryUsed = true;
   meta.phase = "running";
   meta.pid = process.pid;
@@ -995,6 +1009,12 @@ export async function followup(id, brief) {
     throw interrupted(meta, e);
   } finally {
     meta.phase = meta.phase === "interrupted" ? meta.phase : "done";
+    delete meta.resetTo;
+    if (meta.status === "harness_error" || meta.status === "not_available") {
+      const why = meta.hint;
+      Object.assign(meta, first);
+      meta.hint = `The follow-up couldn't run (${why}); the tree is back to this result, still to decide. The retry is used.`;
+    }
     saveMeta(id, meta);
   }
   return envelope(meta);

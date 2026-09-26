@@ -512,6 +512,26 @@ describe("delegate-work", () => {
     60000,
   );
 
+  it("shouldKeepTheFirstResultWhenAFollowUpCannotRun", async () => {
+    const R = await import(runner);
+    const a = path.join(repo, "src", "a.txt");
+
+    const first = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+    const kept = fs.readFileSync(a, "utf8");
+    try {
+      const second = await R.followup(first.id, "FOLLOW-UP BREAK: add another line.");
+      expect(second.status).toBe("ok");
+      expect(second.files.changed.map((c: { path: string }) => c.path)).toEqual(["src/a.txt"]);
+      expect(second.hint).toContain("The follow-up couldn't run");
+      expect(second.retryAvailable).toBe(false);
+      expect(fs.readFileSync(a, "utf8")).toBe(kept);
+      expect(R.apply(first.id).applied).toBe(true);
+      R.unapply(first.id);
+    } finally {
+      fs.rmSync(path.join(process.env.DELEGATE_WORK_STATE as string, "cooldowns.json"), { force: true });
+    }
+  });
+
   it("shouldRestoreTheAllowedFilesOfARunThatWasCutShort", async () => {
     const R = await import(runner);
     const S = await import(state);
