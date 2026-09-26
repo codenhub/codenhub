@@ -898,6 +898,7 @@ export async function followup(id, brief) {
   meta.checks = [];
   meta.hint = null;
   meta.resetCopies = [];
+  meta.gitFileRestored = false;
   saveMeta(id, meta);
   try {
     await execute(
