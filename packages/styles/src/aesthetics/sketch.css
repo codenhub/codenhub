@@ -16,7 +16,7 @@
     --ui-corner-bl: initial;
     --ui-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
     --ui-radius-surface: 255px 15px 225px 15px / 15px 225px 15px 255px;
-    --ui-radius-pill: 48% 52% 46% 54% / 53% 46% 54% 47%;
+    --ui-radius-pill: var(--ui-radius);
     --ui-radius-tight: 11px 1px 7px 2px / 2px 7px 1px 11px;
     --ui-corner-shape: round;
 
@@ -69,25 +69,10 @@
     font-family: var(--font-sketch, cursive);
   }
 
-  /* Rotate a small set of inked outlines by sibling position. Skip other
-     aesthetics nested inside sketch so their own material still wins. */
+  /* Rotate distinct inked outlines across sibling and parent positions.
+     Skip other aesthetics nested inside sketch so their own material wins. */
   .sketch
-    :is(
-      .btn,
-      .card,
-      .panel,
-      .alert,
-      .ipt,
-      .textarea,
-      .select,
-      .input-group,
-      .badge,
-      .kbd,
-      .code,
-      .pre,
-      .tooltip-bubble,
-      .data-table
-    ):not(
+    :is(.btn, .card, .panel, .alert, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):not(
       :is(
         .glass,
         .glass *,
@@ -100,28 +85,13 @@
         .chunky-tile,
         .chunky-tile *
       )
-    ):nth-child(3n + 2) {
-    --ui-radius: 225px 18px 255px 12px / 18px 255px 12px 225px;
-    --ui-radius-surface: 225px 18px 255px 12px / 18px 255px 12px 225px;
+    ):nth-child(4n + 2) {
+    --ui-radius: 18px 240px 15px 255px / 240px 15px 255px 18px;
+    --ui-radius-surface: 18px 240px 15px 255px / 240px 15px 255px 18px;
   }
 
   .sketch
-    :is(
-      .btn,
-      .card,
-      .panel,
-      .alert,
-      .ipt,
-      .textarea,
-      .select,
-      .input-group,
-      .badge,
-      .kbd,
-      .code,
-      .pre,
-      .tooltip-bubble,
-      .data-table
-    ):not(
+    :is(.btn, .card, .panel, .alert, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):not(
       :is(
         .glass,
         .glass *,
@@ -134,12 +104,168 @@
         .chunky-tile,
         .chunky-tile *
       )
-    ):nth-child(3n) {
-    --ui-radius: 240px 12px 215px 20px / 12px 215px 20px 240px;
-    --ui-radius-surface: 240px 12px 215px 20px / 12px 215px 20px 240px;
+    ):nth-child(4n + 3) {
+    --ui-radius: 245px 220px 15px 18px / 18px 15px 245px 235px;
+    --ui-radius-surface: 245px 220px 15px 18px / 18px 15px 245px 235px;
   }
 
-  /* The class may be applied to the component itself instead of an ancestor. */
+  .sketch
+    :is(.btn, .card, .panel, .alert, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n) {
+    --ui-radius: 18px 250px 225px 15px / 245px 15px 18px 235px;
+    --ui-radius-surface: 18px 250px 225px 15px / 245px 15px 18px 235px;
+  }
+
+  /* Stacked form fields alternate outlines so sequential form rows don't
+     all share the exact same child-2 shape. */
+  .sketch
+    .field:nth-child(4n + 1)
+    :is(.ipt, .textarea, .select, .input-group):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    --ui-radius-surface: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  }
+
+  .sketch
+    .field:nth-child(4n + 2)
+    :is(.ipt, .textarea, .select, .input-group):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-radius: 18px 240px 15px 255px / 240px 15px 255px 18px;
+    --ui-radius-surface: 18px 240px 15px 255px / 240px 15px 255px 18px;
+  }
+
+  .sketch
+    .field:nth-child(4n + 3)
+    :is(.ipt, .textarea, .select, .input-group):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-radius: 245px 220px 15px 18px / 18px 15px 245px 235px;
+    --ui-radius-surface: 245px 220px 15px 18px / 18px 15px 245px 235px;
+  }
+
+  .sketch
+    .field:nth-child(4n)
+    :is(.ipt, .textarea, .select, .input-group):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-radius: 18px 250px 225px 15px / 245px 15px 18px 235px;
+    --ui-radius-surface: 18px 250px 225px 15px / 245px 15px 18px 235px;
+  }
+
+  /* Chips and compact controls rotate through small asymmetric profiles. */
+  .sketch
+    :is(.badge, .kbd, .code, .checkbox, .switch, .progress):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n + 2) {
+    --ui-radius-tight: 2px 8px 1px 10px / 8px 2px 10px 1px;
+  }
+
+  .sketch
+    :is(.badge, .kbd, .code, .checkbox, .switch, .progress):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n + 3) {
+    --ui-radius-tight: 8px 2px 10px 1px / 1px 9px 2px 8px;
+  }
+
+  .sketch
+    :is(.badge, .kbd, .code, .checkbox, .switch, .progress):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n) {
+    --ui-radius-tight: 1px 10px 2px 7px / 9px 1px 8px 2px;
+  }
+
+  /* Direct class application on elements. */
   .sketch:is(
     .btn,
     .card,
@@ -149,15 +275,12 @@
     .textarea,
     .select,
     .input-group,
-    .badge,
-    .kbd,
-    .code,
     .pre,
     .tooltip-bubble,
     .data-table
-  ):nth-child(3n + 2) {
-    --ui-radius: 225px 18px 255px 12px / 18px 255px 12px 225px;
-    --ui-radius-surface: 225px 18px 255px 12px / 18px 255px 12px 225px;
+  ):nth-child(4n + 2) {
+    --ui-radius: 18px 240px 15px 255px / 240px 15px 255px 18px;
+    --ui-radius-surface: 18px 240px 15px 255px / 240px 15px 255px 18px;
   }
 
   .sketch:is(
@@ -169,19 +292,45 @@
     .textarea,
     .select,
     .input-group,
-    .badge,
-    .kbd,
-    .code,
     .pre,
     .tooltip-bubble,
     .data-table
-  ):nth-child(3n) {
-    --ui-radius: 240px 12px 215px 20px / 12px 215px 20px 240px;
-    --ui-radius-surface: 240px 12px 215px 20px / 12px 215px 20px 240px;
+  ):nth-child(4n + 3) {
+    --ui-radius: 245px 220px 15px 18px / 18px 15px 245px 235px;
+    --ui-radius-surface: 245px 220px 15px 18px / 18px 15px 245px 235px;
   }
 
-  /* A pill button is still an action, not a radio: use its own rotated box
-     radius while the radio and switch keep the round pill material. */
+  .sketch:is(
+    .btn,
+    .card,
+    .panel,
+    .alert,
+    .ipt,
+    .textarea,
+    .select,
+    .input-group,
+    .pre,
+    .tooltip-bubble,
+    .data-table
+  ):nth-child(4n) {
+    --ui-radius: 18px 250px 225px 15px / 245px 15px 18px 235px;
+    --ui-radius-surface: 18px 250px 225px 15px / 245px 15px 18px 235px;
+  }
+
+  .sketch:is(.badge, .kbd, .code, .checkbox, .switch, .progress):nth-child(4n + 2) {
+    --ui-radius-tight: 2px 8px 1px 10px / 8px 2px 10px 1px;
+  }
+
+  .sketch:is(.badge, .kbd, .code, .checkbox, .switch, .progress):nth-child(4n + 3) {
+    --ui-radius-tight: 8px 2px 10px 1px / 1px 9px 2px 8px;
+  }
+
+  .sketch:is(.badge, .kbd, .code, .checkbox, .switch, .progress):nth-child(4n) {
+    --ui-radius-tight: 1px 10px 2px 7px / 9px 1px 8px 2px;
+  }
+
+  /* Pill elimination: pill buttons read their rotated box radius, while badges,
+     progress bars, and switches take chip-sized box outlines. */
   .sketch.btn.pill,
   .sketch
     .btn.pill:not(
@@ -201,11 +350,9 @@
     --ui-radius-pill: var(--ui-radius);
   }
 
-  /* The track and its pseudo-element read the same pill token. Give this
-     switch its own chip-sized box so neither part turns into an oval. */
-  .sketch.switch,
+  .sketch:is(.badge, .progress, .switch),
   .sketch
-    .switch:not(
+    :is(.badge, .progress, .switch):not(
       :is(
         .glass,
         .glass *,
@@ -220,6 +367,27 @@
       )
     ) {
     --ui-radius-pill: var(--ui-radius-tight);
+  }
+
+  /* Radios and circular tooltip triggers are the true round controls, taking an
+     organic, subtly uneven circle without wide oval distortion. */
+  .sketch:is(.radio, .tooltip-icon),
+  .sketch
+    :is(.radio, .tooltip-icon):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-radius-pill: 48% 52% 46% 54% / 53% 46% 54% 47%;
   }
 
   .sketch

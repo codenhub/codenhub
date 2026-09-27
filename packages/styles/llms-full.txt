@@ -995,7 +995,7 @@ A parallelogram slants its sides into the content, so give a surface that takes 
 
 ## Sketch
 
-Sketch starts with `255px 15px 225px 15px / 15px 225px 15px 255px` and rotates between three uneven elliptical outlines on sibling components. The shape is stable for a given DOM order, not random on each render; components alone in separate wrappers keep the base outline. These are complete `border-radius` values, used as written rather than scaled or patterned. To choose a shape on an isolated component, set `--ui-radius` (or `--ui-radius-surface` on a surface) directly on it. The 1px ink edge is solid by default, while checkboxes, dividers, and table rules use dashed lines for contrast. Set `--ui-line-style: dashed` on any other component to opt in; `--ui-rule-style: solid` overrides a divider or table's dashed rules. The 2px hard shadow is a small neutral depth cue.
+Sketch starts with `255px 15px 225px 15px / 15px 225px 15px 255px` and rotates through four distinct hand-drawn outlines on sibling components, container wrappers, and sequential form fields. The shape is stable for a given DOM order, not random on each render; sequential `.field` rows alternate outlines so stacked forms avoid repetitive shapes. These are complete `border-radius` values, used as written rather than scaled or patterned. To choose a shape on an isolated component, set `--ui-radius` (or `--ui-radius-surface` on a surface) directly on it. The 1px ink edge is solid by default, while checkboxes, dividers, and table rules use dashed lines for contrast. Set `--ui-line-style: dashed` on any other component to opt in; `--ui-rule-style: solid` overrides a divider or table's dashed rules. The 2px hard shadow is a small neutral depth cue.
 
 ```html
 <section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>
@@ -1009,8 +1009,8 @@ The dashed button uses `ghost edged` to expose its boundary: a default filled bu
 **Exceptions:**
 
 - `--font-sketch` is yours to supply. The package ships no handwriting font and falls back to the platform `cursive` generic family.
-- Chips — checkboxes, key caps, and code — use one compact elliptical sketch outline through `--ui-radius-tight`, with two nearly sharp corners and two pronounced curves instead of even rounding. Set that token on a chip to choose a different complete radius.
-- Sketch has no pill-shaped controls by default: `.btn.pill` uses the same irregular box outline as other buttons (including sibling variation), and a switch's track and knob use that compact, strongly asymmetric chip outline. Radios are the circular control, subtly asymmetric so they remain distinguishable from checkboxes. An explicit `--ui-radius-pill` on a button or switch still wins.
+- Chips — checkboxes, key caps, code chips, badges, and progress bars — rotate through compact asymmetric sketch outlines through `--ui-radius-tight`, with two nearly sharp corners and two pronounced curves instead of even rounding. Set that token on a chip to choose a different complete radius.
+- Sketch eliminates pill shapes: `.btn.pill` uses the same irregular box outline as other buttons (including sibling variation), and badges, progress bars, and switches take compact chip-sized box outlines (`--ui-radius-tight`), preventing wide egg distortion. Radios and circular tooltip triggers are the circular controls, subtly asymmetric so they remain distinguishable from checkboxes. An explicit `--ui-radius-pill` on an element still wins.
 - Buttons press with the plain `scale(0.97)` gesture; reduced motion disables it.
 - Forced-colors mode replaces dashed accents with the package's solid accessible fallback, like every other material line.
 

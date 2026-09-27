@@ -614,12 +614,14 @@
         "kbd",
         "panel",
         "pre",
+        "progress",
+        "radio",
         "select",
         "switch",
         "textarea",
         "tooltip-bubble"
       ],
-      "selectorReason": "The CSS-only variation rotates complete radii by sibling position on inked components; material tokens on the region alone would give every sibling the same outline. Pill buttons read their own rotated box radius, while switch tracks and knobs read a chip-sized box radius; radios alone keep the round pill token. Checkbox and rule accents need component-local tokens to keep every other edge solid. Other nested aesthetics are excluded so they keep their own material."
+      "selectorReason": "The CSS-only variation rotates complete radii by sibling and container position on inked components; material tokens on the region alone would give every element the same outline. Pill shapes are eliminated: pill buttons read their rotated box radius, while badges, progress bars, and switches take chip-sized box outlines; radios alone keep the round circle token. Checkbox and rule accents need component-local tokens to keep every other edge solid. Other nested aesthetics are excluded so they keep their own material."
     }
   ]
 }

@@ -1604,7 +1604,7 @@ test.describe("aesthetics", () => {
         return values;
       });
 
-      expect(radii[1]).toBe("225px 18px 255px 12px / 18px 255px 12px 225px");
+      expect(radii[1]).toBe("18px 240px 15px 255px / 240px 15px 255px 18px");
       expect(radii[0]).not.toBe(radii[1]);
       expect(radii[2]).toBe("9px");
     });
@@ -1643,7 +1643,7 @@ test.describe("aesthetics", () => {
       expect(radii[1]).toEqual({ track: "8px", knob: "8px" });
     });
 
-    test("gives checkbox, code, and key caps one small sketch outline", async ({ page }) => {
+    test("gives checkbox, code, and key caps rotating small sketch outlines", async ({ page }) => {
       await page.goto(withAesthetic(FORMS_URL, "sketch"));
 
       const radii = await page.evaluate(() => {
@@ -1659,7 +1659,63 @@ test.describe("aesthetics", () => {
         return values;
       });
 
-      expect(radii).toEqual(Array(3).fill("11px 1px 7px 2px / 2px 7px 1px 11px"));
+      expect(new Set(radii).size).toBe(3);
+      expect(radii[0]).toBe("11px 1px 7px 2px / 2px 7px 1px 11px");
+      expect(radii[1]).toBe("2px 8px 1px 10px / 8px 2px 10px 1px");
+      expect(radii[2]).toBe("8px 2px 10px 1px / 1px 9px 2px 8px");
+    });
+
+    test("eliminates pill eggs from badges and progress bars in favor of chip outlines", async ({ page }) => {
+      await page.goto(withAesthetic(FEEDBACK_URL, "sketch"));
+
+      const measured = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const row = document.createElement("div");
+
+        row.innerHTML =
+          '<span class="badge">Badge with a long text</span>' +
+          '<div class="progress" style="--progress-value: 50%"></div>';
+        host.append(row);
+        const badge = getComputedStyle(row.children[0]!).borderRadius;
+        const progress = getComputedStyle(row.children[1]!).borderRadius;
+        const fill = getComputedStyle(row.children[1]!, "::after").borderRadius;
+
+        row.remove();
+        return { badge, fill, progress };
+      });
+
+      expect(measured.badge).not.toContain("% / ");
+      expect(measured.badge).toBe("11px 1px 7px 2px / 2px 7px 1px 11px");
+      expect(measured.progress).not.toContain("% / ");
+      expect(measured.progress).toBe("2px 8px 1px 10px / 8px 2px 10px 1px");
+      expect(measured.fill).toBe(measured.progress);
+    });
+
+    test("varies outlines across sequential form fields", async ({ page }) => {
+      await page.goto(withAesthetic(FORMS_URL, "sketch"));
+
+      const radii = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const form = document.createElement("div");
+
+        form.innerHTML =
+          '<div class="field"><label class="label">One</label><input class="ipt"></div>' +
+          '<div class="field"><label class="label">Two</label><input class="ipt"></div>' +
+          '<div class="field"><label class="label">Three</label><input class="ipt"></div>';
+        host.append(form);
+        const values = Array.from(
+          form.querySelectorAll<HTMLInputElement>(".ipt"),
+          (input) => getComputedStyle(input).borderRadius,
+        );
+
+        form.remove();
+        return values;
+      });
+
+      expect(new Set(radii).size).toBe(3);
+      expect(radii[0]).toBe("255px 15px 225px / 15px 225px 15px 255px");
+      expect(radii[1]).toBe("18px 240px 15px 255px / 240px 15px 255px 18px");
+      expect(radii[2]).toBe("245px 220px 15px 18px / 18px 15px 245px 235px");
     });
 
     test("allows complete chip radii outside sketch instead of capping them", async ({ page }) => {
