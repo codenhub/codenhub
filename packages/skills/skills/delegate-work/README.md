@@ -98,6 +98,9 @@ do), may leave the worker running: the run counts as working until it exits,
 then as interrupted, and `discard` restores its allowed files from the
 snapshot, keeping a copy.
 
+A run's state is written aside and renamed into place, so a concurrent
+`doctor`, `prune` or `discard` never reads it half-written.
+
 ## Checks
 
 `fixer` runs the fast set, `builder` the full set. A project's `checks.fast` /

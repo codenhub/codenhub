@@ -5,6 +5,8 @@ import path from "node:path";
 
 import { canonical } from "./glob.mjs";
 
+const WIN = process.platform === "win32";
+
 /**
  * Not the temp dir: sandboxed workers (Codex) may write anywhere in it, and
  * this holds every run's state and worktree. Not AppData either: packaged
@@ -48,12 +50,37 @@ export function newRun() {
 /** A running run's meta is saved at least this often; older, its pid is someone else's. */
 export const BEAT_MS = 5 * 60000;
 const STALE_MS = 4 * BEAT_MS;
+const RENAME_RETRIES = 100;
+const RENAME_WAIT_MS = 10;
+const renameWait = new Int32Array(new SharedArrayBuffer(4));
 
+/**
+ * Written aside and renamed over, so another dispatch (doctor, prune, a
+ * discard) never reads a half-written file, nor does a killed write leave one.
+ */
 export function saveMeta(id, meta) {
   if (meta.phase === "running") {
     meta.beat = Date.now();
   }
-  fs.writeFileSync(path.join(runDir(id), "meta.json"), JSON.stringify(meta, null, 2));
+  const file = path.join(runDir(id), "meta.json");
+  const temporary = `${file}.${process.pid}.${crypto.randomBytes(6).toString("hex")}.tmp`;
+  try {
+    fs.writeFileSync(temporary, JSON.stringify(meta, null, 2));
+    // Windows refuses to replace a file while another process briefly has it open for reading.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        fs.renameSync(temporary, file);
+        break;
+      } catch (e) {
+        if (!WIN || !["EPERM", "EACCES"].includes(e.code) || attempt >= RENAME_RETRIES) {
+          throw e;
+        }
+        Atomics.wait(renameWait, 0, 0, RENAME_WAIT_MS);
+      }
+    }
+  } finally {
+    fs.rmSync(temporary, { force: true });
+  }
 }
 
 export function loadMeta(id) {
