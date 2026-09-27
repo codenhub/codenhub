@@ -260,11 +260,11 @@ export function resolveChecks(root, level, project) {
 /** Variables the checks need, for the worker that runs them too. */
 export const checkEnv = (checks) => Object.assign({}, ...checks.map((c) => c.env ?? {}));
 
-export async function runChecks(checks, cwd, timeoutMs, env) {
+export async function runChecks({ checks, cwd, timeoutMs, env, onStart, onFinish }) {
   const results = [];
   for (const c of checks) {
     // oxlint-disable-next-line no-await-in-loop -- checks share the tree and build outputs; they run in turn.
-    const r = await runShell(c.cmd, { cwd, timeoutMs, env: { ...env, ...c.env } });
+    const r = await runShell(c.cmd, { cwd, timeoutMs, env: { ...env, ...c.env }, onStart, onFinish });
     const tail = r.ok ? "" : r.output.trim().split(/\r?\n/).slice(-20).join("\n");
     results.push({ name: c.name, ok: r.ok, tail: r.timedOut ? `timed out\n${tail}` : tail });
   }

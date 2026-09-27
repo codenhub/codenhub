@@ -203,7 +203,7 @@ export function start(cmd, args, { cwd, env, input, timeoutMs, onLine, stdoutFil
 }
 
 /** Run a shell command (project check scripts). Returns ok + output tail. */
-export async function runShell(command, { cwd, timeoutMs, env }) {
+export async function runShell(command, { cwd, timeoutMs, env, onStart, onFinish }) {
   // cmd.exe reads `/` in an unquoted program path as a switch
   // (`.venv/Scripts/python.exe` → "'.venv' is not recognized"). Commands are
   // written with `/` because workers run them in bash or PowerShell.
@@ -221,6 +221,7 @@ export async function runShell(command, { cwd, timeoutMs, env }) {
     stdio: ["ignore", "pipe", "pipe"],
   });
   live.add(child.pid);
+  onStart?.(child.pid);
   let output = "";
   const collect = (stream) => {
     const text = new StringDecoder("utf8");
@@ -242,5 +243,6 @@ export async function runShell(command, { cwd, timeoutMs, env }) {
   // Wrapper scripts may leave background processes behind; clean them up.
   killTree(child.pid);
   live.delete(child.pid);
+  onFinish?.();
   return { ok: code === 0 && !timedOut, timedOut, output };
 }

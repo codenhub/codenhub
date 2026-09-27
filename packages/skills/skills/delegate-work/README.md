@@ -94,9 +94,12 @@ A running run saves its state every five minutes; a `running` state older
 than 20 minutes belongs to a dispatch that is gone, whatever process now has
 its pid. Stopped with Ctrl+C or a closing terminal, dispatch ends its workers
 and checks too. A forced kill, which it can't catch (as some command timeouts
-do), may leave the worker running: the run counts as working until it exits,
-then as interrupted, and `discard` restores its allowed files from the
-snapshot, keeping a copy.
+do), may leave the worker or a check running: the run counts as working until
+it exits, then as interrupted, and `discard` restores its allowed files from
+the snapshot, keeping a copy. A check counts while any process it started
+does: off Windows, its shell's process group; on Windows, where the shell
+dies with dispatch and the command it ran doesn't, the processes descended
+from the shell, found by their recorded parent.
 
 A run's state is written aside and renamed into place, so a concurrent
 `doctor`, `prune` or `discard` never reads it half-written.

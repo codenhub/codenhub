@@ -58,3 +58,17 @@ it("shouldKeepRunMetadataReadableDuringConcurrentUpdates", async () => {
   }
 }, 15000);
 
+it.skipIf(process.platform === "win32")("shouldCountACheckAsWorkingWhileItsGroupOutlivesItsShell", async () => {
+  const { working } = await import(statePath);
+  // The shell exits at once, leaving a process it started in its group, as a check dispatch was killed during may.
+  const shell = spawn("sh", ["-c", "sleep 30 &"], { detached: true, stdio: "ignore" });
+  await new Promise((resolve) => shell.on("close", resolve));
+  const meta = { phase: "interrupted", checkPid: shell.pid, checkStarted: Date.now() };
+
+  try {
+    expect(working(meta)).toBe(true);
+  } finally {
+    process.kill(-(shell.pid as number), "SIGKILL");
+  }
+  await expect.poll(() => working(meta)).toBe(false);
+});

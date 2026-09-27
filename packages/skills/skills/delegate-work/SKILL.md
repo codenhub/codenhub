@@ -133,7 +133,8 @@ run; that request covers the reviews and retries of the same work.
    its checks, and a batch prints nothing until every worker in it finishes.
    Run `dispatch` where a command timeout won't cut it off, such as in the
    background, and wait for its result; a dispatch stopped halfway leaves an
-   interrupted run, which `discard` cleans up. Before a batch, run it with
+   interrupted run, which `discard` cleans up once its worker or checks
+   have stopped. Before a batch, run it with
    `--plan`: it routes every task and runs nothing. Dispatch the `planned`
    ones with `--isolation worktree`, then start the `use_native` ones as
    native subagents: an editing worker in place would take their edits for

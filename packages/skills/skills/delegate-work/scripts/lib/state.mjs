@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -100,17 +101,69 @@ export const alive = (pid) => {
   }
 };
 
-// No worker lives this long; a pid older than this belongs to another process.
-const MAX_WORKER_MS = 6 * 3600000;
+// FILETIME counts 100 ns steps from 1601; Date.now() counts ms from 1970.
+const FILETIME_EPOCH_MS = 11644473600000;
+// CreationDate and Date.now() read the same clock, but not at the same instant.
+const CLOCK_SLACK_MS = 2000;
 
 /**
- * The run is still working: its dispatch is (and says so), or the worker it
- * started is, as when dispatch was killed and its worker was not.
+ * Processes a check started that are still running once its shell is gone.
+ * Off Windows the shell leads its own process group (see runShell), which
+ * lives while any of them does. Windows has no groups, and ends dispatch's
+ * own children with it (node puts them in a kill-on-close job) but not
+ * theirs: the shell dies and the command it ran goes on. A process keeps its
+ * parent's id after the parent exits, so the survivors are found by it; only
+ * those started after the check did, since the id may have been reused. When
+ * the processes can't be listed, the shell alone counts.
+ */
+function descendantsAlive(pid, since) {
+  if (!WIN) {
+    return alive(-pid);
+  }
+  const listed = spawnSync(
+    "powershell.exe",
+    [
+      "-NoProfile",
+      "-NonInteractive",
+      "-Command",
+      'Get-CimInstance Win32_Process -Property ProcessId,ParentProcessId,CreationDate | ForEach-Object { "$($_.ProcessId) $($_.ParentProcessId) $($_.CreationDate.ToFileTimeUtc())" }',
+    ],
+    { encoding: "utf8", windowsHide: true, timeout: 30000 },
+  );
+  if (listed.status !== 0) {
+    return false;
+  }
+  const children = new Map();
+  for (const line of listed.stdout.split(/\r?\n/)) {
+    const [id, parent, created] = line.trim().split(" ").map(Number);
+    if (id && created / 10000 - FILETIME_EPOCH_MS >= since - CLOCK_SLACK_MS) {
+      children.set(parent, [...(children.get(parent) ?? []), id]);
+    }
+  }
+  const seen = new Set([pid]);
+  for (const p of seen) {
+    for (const child of children.get(p) ?? []) {
+      seen.add(child);
+    }
+  }
+  return seen.size > 1;
+}
+
+const checkAlive = (pid, since) => alive(pid) || descendantsAlive(pid, since ?? 0);
+
+// No worker lives this long; a pid older than this belongs to another process.
+const MAX_WORKER_MS = 6 * 3600000;
+const recent = (started) => Date.now() - (started ?? 0) < MAX_WORKER_MS;
+
+/**
+ * The run is still working: its dispatch is (and says so), or the worker or
+ * check it started is, as when dispatch was killed or failed and they were not.
  */
 export const working = (meta) =>
-  meta.phase === "running" &&
-  ((Date.now() - (meta.beat ?? 0) < STALE_MS && alive(meta.pid)) ||
-    (!!meta.workerPid && Date.now() - (meta.workerStarted ?? 0) < MAX_WORKER_MS && alive(meta.workerPid)));
+  (meta.phase === "running" && Date.now() - (meta.beat ?? 0) < STALE_MS && alive(meta.pid)) ||
+  ((meta.phase === "running" || meta.phase === "interrupted") &&
+    ((!!meta.workerPid && recent(meta.workerStarted) && alive(meta.workerPid)) ||
+      (!!meta.checkPid && recent(meta.checkStarted) && checkAlive(meta.checkPid, meta.checkStarted))));
 
 /** Editing runs currently active in place on this repo (for isolation: auto). */
 export function activeInplace(root) {

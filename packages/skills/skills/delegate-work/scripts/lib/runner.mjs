@@ -414,6 +414,7 @@ async function runAttempts(meta, cfg, list, prompt, sessionId) {
     // oxlint-disable-next-line no-await-in-loop -- candidates run one at a time: the next only after this one failed.
     const res = await proc.done;
     meta.workerPid = null;
+    saveMeta(meta.id, meta);
     guardGitFile(meta);
     c.adapter.parseStderr?.(res.stderrTail, acc);
     meta.logPath = logPath;
@@ -581,10 +582,20 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   } else if (meta.editing) {
     const timeout = 1000 * (cfg.limits?.checkTimeoutSec ?? 900);
     const depsBeforeChecks = depsFingerprint(meta.root, depDirs);
-    meta.checks = await runChecks(meta.checkList, meta.workDir, timeout, {
-      ...withoutSecrets(cfg.project.passEnv ?? []),
-      ...gitEnv,
-      ...NO_AUTO_INSTALL,
+    meta.checks = await runChecks({
+      checks: meta.checkList,
+      cwd: meta.workDir,
+      timeoutMs: timeout,
+      env: { ...withoutSecrets(cfg.project.passEnv ?? []), ...gitEnv, ...NO_AUTO_INSTALL },
+      // Should dispatch be killed, a check may outlive it; its run is still working then.
+      onStart: (pid) => {
+        Object.assign(meta, { checkPid: pid, checkStarted: Date.now() });
+        saveMeta(meta.id, meta);
+      },
+      onFinish: () => {
+        meta.checkPid = null;
+        saveMeta(meta.id, meta);
+      },
     });
     // The checks ran the worker's code.
     guardGitFile(meta);
@@ -623,11 +634,11 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
 
 /**
  * Dispatch failed partway through a run: keep it as interrupted, so doctor
- * lists it and discard restores what it may have written.
+ * lists it and discard restores what it may have written. A worker or check
+ * it leaves running keeps the run working until it exits.
  */
 function interrupted(meta, e) {
   meta.phase = "interrupted";
-  meta.workerPid = null;
   return new Error(`run ${meta.id} was interrupted (discard it to restore its files): ${e.message}`, { cause: e });
 }
 
@@ -635,8 +646,9 @@ function interrupted(meta, e) {
 const stillWorking = working;
 const workingHint = (id) => {
   const meta = loadMeta(id);
-  return meta && !working({ ...meta, workerPid: null })
-    ? `Run ${id}'s dispatch stopped, but its worker (process ${meta.workerPid}) is still running; wait for it to exit, or end it.`
+  const survivor = meta?.checkPid ? "check" : "worker";
+  return meta && !working({ ...meta, workerPid: null, checkPid: null })
+    ? `Run ${id}'s dispatch stopped, but its ${survivor} (process ${meta[`${survivor}Pid`]}) is still running; wait for it to exit, or end it.`
     : `Run ${id} is still working; wait for its result.`;
 };
 

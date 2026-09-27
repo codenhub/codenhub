@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -166,6 +166,20 @@ describe("delegate-work", () => {
       S.saveMeta(r.id, meta);
     }
     expect((await R.discard(r.id)).status).toBe("ok");
+  });
+
+  it("shouldNotDiscardAStillRunningCheckAfterDispatchFailsInternally", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+    const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+    const meta = S.loadMeta(r.id);
+    S.saveMeta(r.id, { ...meta, phase: "interrupted", checkPid: process.pid, checkStarted: Date.now() });
+    try {
+      expect((await R.discard(r.id)).status).toBe("conflict");
+    } finally {
+      S.saveMeta(r.id, meta);
+      await R.discard(r.id);
+    }
   });
 
   it("shouldRefuseAnInPlaceRunWhileAnotherHoldsTheTree", async () => {
@@ -595,6 +609,88 @@ describe("delegate-work", () => {
     expect(fs.readFileSync(path.join(copy, "src", "a.txt"), "utf8")).toBe(`${before}first\nhalf\n`);
     expect(prune({ maxAgeMs: Infinity, dryRun: true }).kept.map((k: { id: string }) => k.id)).not.toContain(r.id);
   });
+
+  it("shouldRefuseDiscardWhileACheckSurvivesAForceKilledDispatch", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const started = path.join(tmp, "check-started");
+    const gate = path.join(tmp, "check-release");
+    const finished = path.join(tmp, "check-finished");
+    const checkScript = path.join(tmp, "long-check.cjs");
+    fs.writeFileSync(
+      checkScript,
+      `const fs = require("node:fs");\nfs.writeFileSync(${JSON.stringify(started)}, String(process.pid));\nconst timer = setInterval(() => { if (!fs.existsSync(${JSON.stringify(gate)})) return; clearInterval(timer); fs.appendFileSync("src/a.txt", "late\\n"); fs.writeFileSync(${JSON.stringify(finished)}, "done"); }, 25);\n`,
+    );
+    const config = JSON.parse(original);
+    config.projects = { [`${repo.replaceAll("\\", "/")}/**`]: { checks: { fast: [`node "${checkScript}"`] } } };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+    const dispatch = path.resolve(runner, "../../dispatch.mjs");
+    const before = fs.readFileSync(path.join(repo, "src", "a.txt"), "utf8");
+    const child = spawn(
+      process.execPath,
+      [dispatch, "run", "--role", "fixer", "--allow", "src/a.txt", "--model", "fake", "--brief", "-"],
+      {
+        cwd: repo,
+        env: process.env,
+        stdio: ["pipe", "ignore", "pipe"],
+      },
+    );
+    child.stdin.end("Add a line.");
+    const waitFor = async (predicate: () => boolean) => {
+      const deadline = Date.now() + 10000;
+      while (!predicate()) {
+        if (Date.now() > deadline) {
+          throw new Error("timed out waiting for check process");
+        }
+        // oxlint-disable-next-line no-await-in-loop -- polls for check process lifecycle events.
+        await new Promise<void>((resolve) => setTimeout(resolve, 25));
+      }
+    };
+
+    try {
+      await waitFor(() => fs.existsSync(started));
+      const meta = fs
+        .readdirSync(S.runsDir())
+        .map(S.loadMeta)
+        .find((entry: { pid: number }) => entry?.pid === child.pid);
+      expect(meta).toBeDefined();
+      expect(meta.checkPid).toBeTruthy();
+      expect(S.alive(meta.checkPid)).toBe(true);
+      const checkChildPid = Number(fs.readFileSync(started, "utf8"));
+      child.kill("SIGKILL");
+      await new Promise<void>((resolve) => child.on("close", () => resolve()));
+      expect(S.loadMeta(meta.id).checkPid).toBe(meta.checkPid);
+      expect(S.alive(checkChildPid)).toBe(true);
+      const refused = await R.discard(meta.id);
+      expect(refused.status).toBe("conflict");
+      expect(refused.hint).toContain("dispatch stopped, but its check");
+      const { prune } = await import(path.resolve(runner, "../prune.mjs"));
+      expect(prune({ maxAgeMs: 0, dryRun: true }).kept.map((entry: { id: string }) => entry.id)).toContain(meta.id);
+      fs.writeFileSync(gate, "continue");
+      await waitFor(() => fs.existsSync(finished));
+      await waitFor(() => !S.alive(checkChildPid));
+      await waitFor(() => !S.working(S.loadMeta(meta.id)));
+      // Its last write landed before discard, which restores it with the rest.
+      const d = await R.discard(meta.id);
+      expect(d.status).toBeNull();
+      expect(d.hint).toContain("restored the allowed files");
+      expect(fs.readFileSync(path.join(repo, "src", "a.txt"), "utf8")).toBe(before);
+    } finally {
+      child.kill("SIGKILL");
+      fs.writeFileSync(gate, "continue");
+      if (fs.existsSync(started)) {
+        await waitFor(() => fs.existsSync(finished));
+        const checkPid = Number(fs.readFileSync(started, "utf8"));
+        await waitFor(() => !S.alive(checkPid));
+      }
+      fs.writeFileSync(configFile, original);
+      for (const file of [started, gate, finished, checkScript]) {
+        fs.rmSync(file, { force: true });
+      }
+    }
+  }, 20000);
 
   it.skipIf(process.platform === "win32")("shouldRestoreAnExecutableFileAsExecutable", async () => {
     const R = await import(runner);
