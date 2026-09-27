@@ -9,7 +9,7 @@ import { expectSameColor, readSrgb } from "./test-utils";
    that may never have loaded the base stylesheet. So unlike the aesthetic
    suite, which reads the shared playground fixtures, these build a blank page
    and load only the built files a consumer in that position would: an aesthetic
-   entrypoint, and sometimes the theme. See docs/internal/solo-utilities.md. */
+   entrypoint, and sometimes the theme. See docs/internal/model.md#solo-classes. */
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const built = (file: string) => readFile(path.join(packageRoot, "dist", file), "utf8");
 
@@ -63,6 +63,7 @@ const ALL_SOLO = `
   <div id="pixel" class="pixel-solo">pixel</div>
   <div id="chunky-tile" class="chunky-tile-solo">chunky tile</div>
   <div id="cyber" class="cyber-solo">cyber</div>
+  <div id="sketch" class="sketch-solo">sketch</div>
 `;
 
 test.describe("solo utilities", () => {
@@ -81,12 +82,14 @@ test.describe("solo utilities", () => {
       "clip-path",
       "corner-shape",
       "font-family",
+      "text-shadow",
     ];
     const glass = await read(page, "#glass", properties);
     const neobrutalism = await read(page, "#neobrutalism", properties);
     const pixel = await read(page, "#pixel", properties);
     const tile = await read(page, "#chunky-tile", properties);
     const cyber = await read(page, "#cyber", properties);
+    const sketch = await read(page, "#sketch", properties);
 
     const backdrop =
       glass["backdrop-filter"] && glass["backdrop-filter"] !== "none"
@@ -122,6 +125,11 @@ test.describe("solo utilities", () => {
     } else {
       expect(cyber["border-top-right-radius"], "cyber squares where no bevel is drawn").toBe("0px");
     }
+
+    expect(sketch["border-top-width"], "sketch line").toBe("1px");
+    expect(sketch["border-top-left-radius"], "sketch uneven corner").toBe("255px 15px");
+    expect(sketch["box-shadow"], "sketch offset").toMatch(/\b2px 2px 0px 0px\b/);
+    expect(sketch["font-family"], "sketch font falls back to cursive").toContain("cursive");
   });
 
   /* The colours are the theme's foundation tokens with the shipped literal as
@@ -152,6 +160,13 @@ test.describe("solo utilities", () => {
     const themed = await read(page, "#solo", ["border-top-color"]);
 
     expectSameColor(themed["border-top-color"]!, "rgb(255, 0, 0)", "a themed foundation token is followed");
+  });
+
+  test("uses a solid border in forced colors without the theme stylesheet", async ({ page }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await load(page, ["aesthetics/sketch.css"], `<div id="solo" class="sketch-solo">x</div>`);
+
+    expect((await read(page, "#solo", ["border-top-style"]))["border-top-style"]).toBe("solid");
   });
 
   test("take each knob from an ancestor", async ({ page }) => {

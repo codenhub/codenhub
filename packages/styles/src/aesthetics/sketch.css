@@ -1,0 +1,90 @@
+/* Sketch: uneven elliptical corners, a dashed ink edge, and a small hard shadow.
+   The handwriting face is consumer-supplied, so this file has no font asset or
+   network side effect. Load after the base stylesheet. */
+
+@layer theme, base, components, utilities;
+
+@layer components {
+  .sketch {
+    /* Complete radii are taken as written, without the size step or corner
+       pattern. Chips need a single length because checkbox's `min()` cap cannot
+       accept an elliptical value. */
+    --ui-corner: initial;
+    --ui-corner-surface: initial;
+    --ui-corner-tl: initial;
+    --ui-corner-tr: initial;
+    --ui-corner-br: initial;
+    --ui-corner-bl: initial;
+    --ui-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    --ui-radius-surface: 255px 15px 225px 15px / 15px 225px 15px 255px;
+    --ui-radius-pill: initial;
+    --ui-radius-tight: var(--radius-small);
+    --ui-corner-shape: round;
+
+    --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
+    --ui-control-ink: initial;
+    --ui-border-width: 1px;
+    --ui-border-max: 100px;
+    --ui-line-style: dashed;
+
+    --ui-shadow-ink: 0%;
+    /* The foundation depth colour is restated so a sketch region nested inside
+       cyber does not inherit cyber's transparent depth. */
+    --elevation-color: light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55));
+    --ui-shadow-x: 2px;
+    --ui-shadow-y: 2px;
+    --ui-shadow-blur: 0px;
+    --ui-shadow-spread: 0px;
+    --ui-shadow-inset: ;
+    --ui-shadow-edge: initial;
+    --ui-shadow-2-x: initial;
+    --ui-shadow-2-y: initial;
+    --ui-shadow-2-blur: initial;
+    --ui-shadow-2-spread: initial;
+    --ui-shadow-2-ink: initial;
+    --ui-shadow-2-inset: initial;
+    --ui-halo-blur: initial;
+    --ui-halo-spread: initial;
+    --ui-halo-ink: initial;
+    --ui-focus-inset: initial;
+
+    --ui-active-shadow-x: initial;
+    --ui-active-shadow-y: initial;
+    --ui-active-transform: initial;
+    --ui-active-translate-x: initial;
+    --ui-active-translate-y: initial;
+    --ui-hover-transform: none;
+    --ui-clip: none;
+    --ui-clip-tight: none;
+    --ui-backdrop: none;
+    --ui-surface-image: initial;
+    --ui-surface-ground: initial;
+    --ui-surface-shadow: initial;
+    --ui-bg-alpha: 1;
+    --ui-label-weight: initial;
+    --ui-label-tracking: initial;
+    --ui-label-case: initial;
+    --ui-label-shadow: initial;
+
+    font-family: var(--font-sketch, cursive);
+  }
+}
+
+/* Solo: the look on one unstyled element. It uses standalone fallbacks rather
+   than material tokens inherited from an aesthetic around it. */
+.sketch-solo {
+  --_sketch-ink: light-dark(var(--color-neutral-950, oklch(14.5% 0 0)), var(--color-neutral-50, oklch(98.5% 0 0)));
+
+  border: 1px dashed var(--_sketch-ink);
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  box-shadow: 2px 2px 0 0 var(--_sketch-ink);
+  font-family: var(--font-sketch, cursive);
+}
+
+/* This entrypoint may be the only package stylesheet loaded, so it cannot rely
+   on theme.css's forced-colors material reset. */
+@media (forced-colors: active) {
+  .sketch-solo {
+    border-style: solid;
+  }
+}

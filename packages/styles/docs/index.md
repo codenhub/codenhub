@@ -5,7 +5,7 @@ description: What @codenhub/styles is, what it covers, and where to go next.
 
 # @codenhub/styles
 
-`@codenhub/styles` is a CSS-only design system: tokens, a reset, typography and layout utilities, and composable classes for buttons, forms, feedback, surfaces, and tooltips. Every component separates three independent choices — which color, how much of it, and what it's made of — so changing one never requires a component-specific variant. Four optional aesthetics (`.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`) restyle that same component set without touching markup.
+`@codenhub/styles` is a CSS-only design system: tokens, a reset, typography and layout utilities, and composable classes for buttons, forms, feedback, surfaces, and tooltips. Every component separates three independent choices — which color, how much of it, and what it's made of — so changing one never requires a component-specific variant. Six optional aesthetics (`.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`, `.cyber`, `.sketch`) restyle that same component set without touching markup.
 
 The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source entrypoints for a project that already runs Tailwind. Both cover the same classes; the difference is which build processes them.
 
@@ -14,7 +14,7 @@ The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source 
 - Publishes color, foundation, intent, presentation, and material design tokens as CSS custom properties, themed with `light-dark()`.
 - Provides a reset, focus-visible handling, and responsive layout/content utilities.
 - Provides composable classes for buttons, form controls and toggles, alerts, badges, loaders, progress, cards/panels, tables, quotes, code, and tooltips.
-- Provides five opt-in aesthetics that restyle the same components by setting material tokens, not by adding component variants, each with a solo class that paints the look onto an element the package does not style.
+- Provides six opt-in aesthetics that restyle the same components by setting material tokens, not by adding component variants, each with a solo class that paints the look onto an element the package does not style.
 - Provides classless mappings so plain HTML elements pick up base styling without added classes, from a dedicated entrypoint.
 - Publishes Tailwind CSS v4 source entrypoints alongside the compiled output.
 
@@ -23,7 +23,7 @@ The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source 
 - No JavaScript. There is no runtime, no framework bindings, and no build-time code generation beyond the CSS itself.
 - No semantic HTML, ARIA, keyboard behavior, focus management, validation, or announcement timing. See [Accessibility](./accessibility.md) for the exact line between what the CSS provides and what an application must still add.
 - No theme-toggling logic. Theme selection is a class or attribute a consumer applies; wiring a toggle to system preference, storage, or a user setting is outside this package. The `@codenhub/theme` package covers that need for consumers who want it.
-- No shipped font binaries. `.pixel`, `.chunky-tile`, and `.cyber` accept a consumer-supplied font and fall back to a system stack when none is given.
+- No shipped font binaries. `.pixel`, `.chunky-tile`, `.cyber`, and `.sketch` accept a consumer-supplied font and fall back to a system stack when none is given.
 - No compatibility layer for removed tokens or classes. Breaking changes are documented, not silently aliased.
 
 ## Next steps

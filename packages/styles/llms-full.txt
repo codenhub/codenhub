@@ -59,7 +59,7 @@ Licensed under Apache-2.0. Embedded SVG icons derived from [Lucide](https://luci
 
 # @codenhub/styles
 
-`@codenhub/styles` is a CSS-only design system: tokens, a reset, typography and layout utilities, and composable classes for buttons, forms, feedback, surfaces, and tooltips. Every component separates three independent choices — which color, how much of it, and what it's made of — so changing one never requires a component-specific variant. Four optional aesthetics (`.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`) restyle that same component set without touching markup.
+`@codenhub/styles` is a CSS-only design system: tokens, a reset, typography and layout utilities, and composable classes for buttons, forms, feedback, surfaces, and tooltips. Every component separates three independent choices — which color, how much of it, and what it's made of — so changing one never requires a component-specific variant. Six optional aesthetics (`.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`, `.cyber`, `.sketch`) restyle that same component set without touching markup.
 
 The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source entrypoints for a project that already runs Tailwind. Both cover the same classes; the difference is which build processes them.
 
@@ -68,7 +68,7 @@ The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source 
 - Publishes color, foundation, intent, presentation, and material design tokens as CSS custom properties, themed with `light-dark()`.
 - Provides a reset, focus-visible handling, and responsive layout/content utilities.
 - Provides composable classes for buttons, form controls and toggles, alerts, badges, loaders, progress, cards/panels, tables, quotes, code, and tooltips.
-- Provides five opt-in aesthetics that restyle the same components by setting material tokens, not by adding component variants, each with a solo class that paints the look onto an element the package does not style.
+- Provides six opt-in aesthetics that restyle the same components by setting material tokens, not by adding component variants, each with a solo class that paints the look onto an element the package does not style.
 - Provides classless mappings so plain HTML elements pick up base styling without added classes, from a dedicated entrypoint.
 - Publishes Tailwind CSS v4 source entrypoints alongside the compiled output.
 
@@ -77,7 +77,7 @@ The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source 
 - No JavaScript. There is no runtime, no framework bindings, and no build-time code generation beyond the CSS itself.
 - No semantic HTML, ARIA, keyboard behavior, focus management, validation, or announcement timing. See [Accessibility](docs/accessibility.md) for the exact line between what the CSS provides and what an application must still add.
 - No theme-toggling logic. Theme selection is a class or attribute a consumer applies; wiring a toggle to system preference, storage, or a user setting is outside this package. The `@codenhub/theme` package covers that need for consumers who want it.
-- No shipped font binaries. `.pixel`, `.chunky-tile`, and `.cyber` accept a consumer-supplied font and fall back to a system stack when none is given.
+- No shipped font binaries. `.pixel`, `.chunky-tile`, `.cyber`, and `.sketch` accept a consumer-supplied font and fall back to a system stack when none is given.
 - No compatibility layer for removed tokens or classes. Breaking changes are documented, not silently aliased.
 
 ## Next steps
@@ -175,8 +175,8 @@ Compiled entrypoints are ready-to-import CSS and require only tooling that can r
 | `@codenhub/styles/palette`       | Generated, self-contained `--palette-*` custom properties: every intent/presentation cell's fill, text, and edge color, plus the flat `border`/`surface`/`text` neutral tokens, pre-composed to a flat value. For a consumer that cannot take this package as a build-time dependency (an optional peer, for example) but wants to look consistent with it. Not a replacement for the components themselves when Tailwind is available -- see [Customizing → Generated palette](docs/usage/customizing.md#generated-palette). |
 | `@codenhub/styles/components`    | Compiled theme tokens, typography utilities, and every component class. Includes static reduced-motion loader masks; no reset, layout/content utilities, or native mappings.                                                                                                                                                                                                                                                                                                                                               |
 | `@codenhub/styles/native`        | Compiled complete surface plus classless mappings for headings, text, content elements, form controls, and buttons. Applies the reset and broad element selectors.                                                                                                                                                                                                                                                                                                                                                         |
-| `@codenhub/styles/aesthetics`    | Compiled `.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`, and `.cyber` classes, and each one's `-solo` class. Adds no tokens or components of its own; import after the base stylesheet.                                                                                                                                                                                                                                                                                                                               |
-| `@codenhub/styles/aesthetics/*`  | One compiled aesthetic and its solo class: `/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, or `/cyber`. Same rules and ordering as the combined file.                                                                                                                                                                                                                                                                                                                                                                 |
+| `@codenhub/styles/aesthetics`    | Compiled `.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`, `.cyber`, and `.sketch` classes, and each one's `-solo` class. Adds no tokens or components of its own; import after the base stylesheet.                                                                                                                                                                                                                                                                                                                    |
+| `@codenhub/styles/aesthetics/*`  | One compiled aesthetic and its solo class: `/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, `/cyber`, or `/sketch`. Same rules and ordering as the combined file.                                                                                                                                                                                                                                                                                                                                                      |
 | `@codenhub/styles/tw`            | Source equivalent of the complete stylesheet. Imports Tailwind itself, theme, typography, utilities, components, and reset; applies the same global rules.                                                                                                                                                                                                                                                                                                                                                                 |
 | `@codenhub/styles/tw/theme`      | Source theme, tokens, and presentation classes. Imports Tailwind's theme layer; emits root/system/explicit theme selectors and defines the package's custom `dark:` variant.                                                                                                                                                                                                                                                                                                                                               |
 | `@codenhub/styles/tw/components` | Published Tailwind source for theme, typography, buttons, feedback, forms, loaders, surfaces, and tooltips, including static reduced-motion loader masks. No reset, layout/content utilities, or native mappings.                                                                                                                                                                                                                                                                                                          |
@@ -190,7 +190,7 @@ Compiled entrypoints are ready-to-import CSS and require only tooling that can r
 | `@codenhub/styles/tw/native`     | Source complete surface plus reset and classless native-element mappings; broadest global effects.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `@codenhub/styles/tw/typography` | Source theme plus typography utilities; sets theme selectors but no reset or classless mappings.                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `@codenhub/styles/tw/utilities`  | Source theme and typography composition plus layout and content utilities; safelists the package utility names.                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `@codenhub/styles/tw/aesthetics` | Source aesthetics, combined. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, and `/cyber` publish one apiece. Plain CSS with no theme or reset side effects.                                                                                                                                                                                                                                                                                                                                            |
+| `@codenhub/styles/tw/aesthetics` | Source aesthetics, combined. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, `/cyber`, and `/sketch` publish one apiece. Plain CSS with no theme or reset side effects.                                                                                                                                                                                                                                                                                                                                 |
 
 Avoid importing overlapping entrypoints in the same build unless duplicate generated CSS is acceptable; pick the narrowest entrypoint that covers what a page needs.
 
@@ -766,6 +766,7 @@ The shipped [aesthetic classes](docs/usage/aesthetics.md) set material tokens fo
 | `--cyber-glow`           | `.cyber`        | Blur of the glow.                                                                             | `8px`                              |
 | `--cyber-ink`            | `.cyber`        | Neutral line and glow colour, where no intent sets one.                                       | Theme ink (near-black, near-white) |
 | `--font-cyber`           | `.cyber`        | Consumer-supplied technical font stack.                                                       | Falls back to the monospace stack  |
+| `--font-sketch`          | `.sketch`       | Consumer-supplied handwriting font stack.                                                     | Falls back to `cursive`            |
 
 Every aesthetic's knobs reach the same way: each knob is _read_ with its default as a `var()` fallback rather than declared, so it resolves once into a private on the aesthetic's own class (`--_pixel-unit`, `--_neo-offset`, `--_tile-radius`, `--_tile-lift`, and so on). Set a knob on the element carrying the aesthetic class, or on any ancestor including `:root`:
 
@@ -855,6 +856,7 @@ Like presentation, an aesthetic class cascades to any subtree:
 | `.pixel`        | Corners cut by one grid unit, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
 | `.chunky-tile`  | Rounded slabs seated on a darker shade of themselves, with a press that moves the element down into its own bar.                |
 | `.cyber`        | Bevelled corners, a thin bright edge, and a glow in the component's own colour.                                                 |
+| `.sketch`       | Uneven elliptical corners, a dashed ink line, a small offset shadow, and an optional handwriting face.                          |
 
 Aesthetics compose with every supported fill and edge pair. `.ghost.edgeless` intentionally removes the visible material traits from components whose aesthetic is expressed only through their fill, edge, or elevation.
 
@@ -991,17 +993,34 @@ A parallelogram slants its sides into the content, so give a surface that takes 
 - `--font-cyber` is yours to supply. The package ships no font binary, so the aesthetic falls back to the monospace stack.
 - Casing is left alone, for the reason [Chunky tile](#chunky-tile) gives.
 
+## Sketch
+
+Sketch takes the same uneven elliptical radius on controls and surfaces: `255px 15px 225px 15px / 15px 225px 15px 255px`. It is a complete `border-radius` value, used as written rather than scaled or patterned. The 1px dashed line is the ink; the 2px hard shadow is a small neutral depth cue.
+
+```html
+<section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>
+  <button class="btn primary">Send note</button>
+</section>
+```
+
+**Exceptions:**
+
+- `--font-sketch` is yours to supply. The package ships no handwriting font and falls back to the platform `cursive` generic family.
+- Chips — checkboxes, key caps, and code — use the existing plain `--radius-small` (`4px`) through `--ui-radius-tight` rather than the elliptical corner. A checkbox caps its chip corner with `min()`, which accepts one length but not a slash-separated elliptical radius.
+- Forced-colors mode replaces the dashed line with the package's solid accessible fallback, like every other material line.
+
 ## Solo classes
 
 An aesthetic class sets material tokens and nothing paints until a component reads them, so `.glass` on an element this package does not style -- a toast from another library, a dialog, a plain `<div>` on a page without the base stylesheet -- changes nothing. Each aesthetic also ships a solo class that paints its look directly onto the one element carrying it:
 
-| Aesthetic       | Solo class           | Paints                                                                                    |
-| --------------- | -------------------- | ----------------------------------------------------------------------------------------- |
-| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner. |
-| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                       |
-| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.              |
-| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                            |
-| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.        |
+| Aesthetic       | Solo class           | Paints                                                                                         |
+| --------------- | -------------------- | ---------------------------------------------------------------------------------------------- |
+| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner.      |
+| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                            |
+| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.                   |
+| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                                 |
+| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.             |
+| `.sketch`       | `.sketch-solo`       | Uneven elliptical corners, a 1px dashed ink line, the 2px offset shadow, the handwriting face. |
 
 ```css
 /* The only stylesheet from this package on the page. */
@@ -1015,7 +1034,7 @@ An aesthetic class sets material tokens and nothing paints until a component rea
 A solo class ships in the same entrypoint as its aesthetic, and needs nothing else loaded:
 
 - **It paints material, not colour.** Edge, corner, depth, silhouette, backdrop, font, and press. No intent, no fill amount, no hover tint -- the element has no presentation to compose. Glass's translucent ground is the one fill, because it is glass's material.
-- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, and the font knobs all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
+- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, and the font knobs (including `--font-sketch`) all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
 - **It ignores the aesthetic around it.** It reads no `--ui-*` or `--elevation-color`, so a `.glass-solo` inside a `.pixel` region keeps its corners. The elevation modifiers do not reach it either.
 - **It beats a foreign component's own styles.** The rules are unlayered and one class deep, so they win over a component's zero-specificity or layered rules wherever the two load. The flip side is that a Tailwind utility on the same element (`rounded-none`) loses to it: tune a solo class through its knobs.
 - **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` that is not disabled; a container stays put, so a toast does not sink when clicked. Reduced motion drops the movement. Chunky tile's heavier label follows the same rule.
@@ -1908,7 +1927,7 @@ Use ARIA or data attributes when native attributes are not available for the ele
 
 # 0.5.0
 
-A foundation release: no new aesthetic, and every structural change and cleanup the `0.x` line needed, in one minor.
+A foundation update with an opt-in sketch aesthetic.
 
 ## Breaking
 
@@ -1920,6 +1939,7 @@ A foundation release: no new aesthetic, and every structural change and cleanup 
 
 ## Added
 
+- **`.sketch` and `.sketch-solo`**: a hand-drawn treatment with uneven elliptical corners, a dashed ink line, a small offset shadow, and an optional consumer-supplied handwriting font. The solo class paints an unstyled element directly; the cascading class restyles package components. Both ship in the aesthetic aggregate and dedicated compiled and Tailwind CSS entrypoints. See [Aesthetics](docs/usage/aesthetics.md#sketch).
 - **Corner scale.** `.p-xs` sets a size step of `0.5`, `.sm` and `.p-sm` `0.75`, and `.lg` and `.p-lg` `1.25`, and the corner is multiplied by it; when a size and a padding class sit on one element, the smaller step wins. A bevel stays a true 45 degrees, so `.cyber`'s 25% cap is gone. Depth follows the step down, never up: a `.p-xs` button sits on half its aesthetic's shadow, which also retires chunky tile's one selector list. `--ui-scale` overrides the step. A press that travels into the depth -- `--ui-active-translate-x` and `-y`, which chunky tile and neobrutalism now set instead of a translating `--ui-active-transform` -- scales the same way, elevation included, so it always lands flat on the slab, and a `.flat` button under either no longer drops. See [Customizing → Corner size and pattern](docs/usage/customizing.md#corner-size-and-pattern).
 - **Corner pattern.** `.cut-diagonal` keeps the top-left and bottom-right corners and squares the other two, `.cut-diagonal-reverse` the opposite pair, wherever the corner is computed -- on a control under `.cyber`, but not a surface, which keeps its own shape. Both set `--ui-corner-tl`, `-tr`, `-br`, and `-bl`, which you can set yourself.
 - **`--ui-line-style`**: `solid`, `dashed`, `dotted`, or `double` for every line a component draws -- the box's edge, the progress track, and the table's rules.

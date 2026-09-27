@@ -95,7 +95,7 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
     patterns: [/\.stack\{/, /\.data-table\{/, /--_capped:/, /background-color:var\(--_bg\)/],
   },
   "./tw/aesthetics": {
-    patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/, /\.cyber\{/],
+    patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/, /\.cyber\{/, /\.sketch\{/],
   },
   "./tw/aesthetics/neobrutalism": { patterns: [/\.neobrutalism\{/, /--ui-shadow-x:/, /--ui-ink:/] },
   "./tw/aesthetics/glass": { patterns: [/\.glass\{/, /--ui-backdrop:/, /--glass-radius,/] },
@@ -109,6 +109,9 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
      square where an engine cannot draw it; both halves are asserted. */
   "./tw/aesthetics/cyber": {
     patterns: [/\.cyber\{/, /--cyber-cut,/, /--ui-corner-shape:\s*bevel/, /@supports not \(corner-shape:\s*bevel\)/],
+  },
+  "./tw/aesthetics/sketch": {
+    patterns: [/\.sketch\{/, /--ui-radius:/, /--ui-radius-tight:/, /--ui-line-style:\s*dashed/, /--font-sketch,/],
   },
   /* The aesthetic publishes the silhouette and the inset edge as material
      tokens; the declarations that consume them belong to `box` and `surface`. */
@@ -156,7 +159,7 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   "./native": { target: "dist/native.css", patterns: [/button,/, /h1\{/, /\.btn\{/] },
   "./aesthetics": {
     target: "dist/aesthetics/index.css",
-    patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/, /\.cyber\{/],
+    patterns: [/\.neobrutalism\{/, /\.glass\{/, /\.pixel\{/, /\.chunky-tile\{/, /\.cyber\{/, /\.sketch\{/],
   },
   "./aesthetics/neobrutalism": {
     target: "dist/aesthetics/neobrutalism.css",
@@ -177,6 +180,16 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
   "./aesthetics/cyber": {
     target: "dist/aesthetics/cyber.css",
     patterns: [/\.cyber\{/, /--ui-corner-shape:bevel/, /@supports not \(corner-shape:bevel\)/],
+  },
+  "./aesthetics/sketch": {
+    target: "dist/aesthetics/sketch.css",
+    patterns: [
+      /\.sketch\{/,
+      /--ui-radius:/,
+      /--ui-radius-tight:var\(--radius-small\)/,
+      /--ui-line-style:dashed/,
+      /--font-sketch,/,
+    ],
   },
 };
 const aggregateExportTargets = ["dist/components.css", "dist/index.css"];
@@ -219,7 +232,7 @@ for (const [exportName, contract] of Object.entries(compiledExportContracts)) {
   });
 }
 
-/* Cascade layers (docs/internal/cascade-layers.md). A browser orders layers by
+/* Cascade layers (docs/internal/model.md#cascade-layers). A browser orders layers by
    the first time it meets each name, so every compiled entrypoint has to name
    the package's four in Tailwind's order before it uses one -- a sheet that
    opened `components` first would rank it below `theme` and `base` when loaded

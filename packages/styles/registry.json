@@ -594,6 +594,11 @@
       "class": "cyber",
       "solo": "cyber-solo",
       "completeShadow": false
+    },
+    {
+      "class": "sketch",
+      "solo": "sketch-solo",
+      "completeShadow": false
     }
   ]
 }

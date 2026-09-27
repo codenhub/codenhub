@@ -1,6 +1,6 @@
 ---
 title: Aesthetics
-description: The five shipped aesthetics in depth, their solo classes, and their documented exceptions.
+description: The six shipped aesthetics in depth, their solo classes, and their documented exceptions.
 order: 4
 ---
 
@@ -31,6 +31,7 @@ Like presentation, an aesthetic class cascades to any subtree:
 | `.pixel`        | Corners cut by one grid unit, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
 | `.chunky-tile`  | Rounded slabs seated on a darker shade of themselves, with a press that moves the element down into its own bar.                |
 | `.cyber`        | Bevelled corners, a thin bright edge, and a glow in the component's own colour.                                                 |
+| `.sketch`       | Uneven elliptical corners, a dashed ink line, a small offset shadow, and an optional handwriting face.                          |
 
 Aesthetics compose with every supported fill and edge pair. `.ghost.edgeless` intentionally removes the visible material traits from components whose aesthetic is expressed only through their fill, edge, or elevation.
 
@@ -167,17 +168,34 @@ A parallelogram slants its sides into the content, so give a surface that takes 
 - `--font-cyber` is yours to supply. The package ships no font binary, so the aesthetic falls back to the monospace stack.
 - Casing is left alone, for the reason [Chunky tile](#chunky-tile) gives.
 
+## Sketch
+
+Sketch takes the same uneven elliptical radius on controls and surfaces: `255px 15px 225px 15px / 15px 225px 15px 255px`. It is a complete `border-radius` value, used as written rather than scaled or patterned. The 1px dashed line is the ink; the 2px hard shadow is a small neutral depth cue.
+
+```html
+<section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>
+  <button class="btn primary">Send note</button>
+</section>
+```
+
+**Exceptions:**
+
+- `--font-sketch` is yours to supply. The package ships no handwriting font and falls back to the platform `cursive` generic family.
+- Chips — checkboxes, key caps, and code — use the existing plain `--radius-small` (`4px`) through `--ui-radius-tight` rather than the elliptical corner. A checkbox caps its chip corner with `min()`, which accepts one length but not a slash-separated elliptical radius.
+- Forced-colors mode replaces the dashed line with the package's solid accessible fallback, like every other material line.
+
 ## Solo classes
 
 An aesthetic class sets material tokens and nothing paints until a component reads them, so `.glass` on an element this package does not style -- a toast from another library, a dialog, a plain `<div>` on a page without the base stylesheet -- changes nothing. Each aesthetic also ships a solo class that paints its look directly onto the one element carrying it:
 
-| Aesthetic       | Solo class           | Paints                                                                                    |
-| --------------- | -------------------- | ----------------------------------------------------------------------------------------- |
-| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner. |
-| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                       |
-| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.              |
-| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                            |
-| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.        |
+| Aesthetic       | Solo class           | Paints                                                                                         |
+| --------------- | -------------------- | ---------------------------------------------------------------------------------------------- |
+| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner.      |
+| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                            |
+| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.                   |
+| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                                 |
+| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.             |
+| `.sketch`       | `.sketch-solo`       | Uneven elliptical corners, a 1px dashed ink line, the 2px offset shadow, the handwriting face. |
 
 ```css
 /* The only stylesheet from this package on the page. */
@@ -191,7 +209,7 @@ An aesthetic class sets material tokens and nothing paints until a component rea
 A solo class ships in the same entrypoint as its aesthetic, and needs nothing else loaded:
 
 - **It paints material, not colour.** Edge, corner, depth, silhouette, backdrop, font, and press. No intent, no fill amount, no hover tint -- the element has no presentation to compose. Glass's translucent ground is the one fill, because it is glass's material.
-- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, and the font knobs all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
+- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, and the font knobs (including `--font-sketch`) all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
 - **It ignores the aesthetic around it.** It reads no `--ui-*` or `--elevation-color`, so a `.glass-solo` inside a `.pixel` region keeps its corners. The elevation modifiers do not reach it either.
 - **It beats a foreign component's own styles.** The rules are unlayered and one class deep, so they win over a component's zero-specificity or layered rules wherever the two load. The flip side is that a Tailwind utility on the same element (`rounded-none`) loses to it: tune a solo class through its knobs.
 - **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` that is not disabled; a container stays put, so a toast does not sink when clicked. Reduced motion drops the movement. Chunky tile's heavier label follows the same rule.

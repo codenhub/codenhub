@@ -163,6 +163,7 @@ The shipped [aesthetic classes](./aesthetics.md) set material tokens for you. On
 | `--cyber-glow`           | `.cyber`        | Blur of the glow.                                                                             | `8px`                              |
 | `--cyber-ink`            | `.cyber`        | Neutral line and glow colour, where no intent sets one.                                       | Theme ink (near-black, near-white) |
 | `--font-cyber`           | `.cyber`        | Consumer-supplied technical font stack.                                                       | Falls back to the monospace stack  |
+| `--font-sketch`          | `.sketch`       | Consumer-supplied handwriting font stack.                                                     | Falls back to `cursive`            |
 
 Every aesthetic's knobs reach the same way: each knob is _read_ with its default as a `var()` fallback rather than declared, so it resolves once into a private on the aesthetic's own class (`--_pixel-unit`, `--_neo-offset`, `--_tile-radius`, `--_tile-lift`, and so on). Set a knob on the element carrying the aesthetic class, or on any ancestor including `:root`:
 

@@ -28,6 +28,7 @@ const AESTHETICS = [
   { label: "Pixel", value: "pixel" },
   { label: "Chunky tile", value: "chunky-tile" },
   { label: "Cyber", value: "cyber" },
+  { label: "Sketch", value: "sketch" },
 ];
 
 const params = new URLSearchParams(window.location.search);

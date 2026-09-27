@@ -554,7 +554,7 @@ test.describe("aesthetics", () => {
          beneath `--ui-surface-ground` rather than as that public token -- so
          glass's ground still wins in its region. Written as the public token,
          each one's own declaration beat glass's inherited one and the three sat
-         opaque inside a glass region. See docs/internal/cascade-layers.md (L6). */
+         opaque inside a glass region. See docs/internal/model.md#cascade-layers. */
       const panel = await readStyles(page, "panel-default-none", BACKDROP_PROPERTIES);
       const namedPanel = await readStyles(page, "panel-default-destructive", BACKDROP_PROPERTIES);
       const softCard = await readStyles(page, "card-soft-edged-none", BACKDROP_PROPERTIES);
@@ -1571,6 +1571,68 @@ test.describe("aesthetics", () => {
       expect(resting["--ui-active-transform"].trim(), "press").toBe("scale(.97)");
       expect(resting["--ui-hover-transform"].trim(), "hover holds still").toBe("none");
       expect(reduced["--ui-active-transform"].trim(), "reduced motion").toBe("none");
+    });
+  });
+
+  test.describe("sketch", () => {
+    test("draws uneven corners, dashed ink, and a small offset shadow", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "sketch"));
+
+      const card = await readStyles(page, "card-default-none", [
+        "border-radius",
+        "border-top-style",
+        "box-shadow",
+        "font-family",
+      ]);
+
+      expect(card["border-radius"], "uneven surface corner").toBe("255px 15px 225px / 15px 225px 15px 255px");
+      expect(card["border-top-style"], "ink line").toBe("dashed");
+      expect(card["box-shadow"], "small offset shadow").toMatch(/\b2px 2px 0px 0px\b/);
+      expect(card["font-family"], "handwriting fallback").toContain("cursive");
+    });
+
+    test("keeps chips on a single valid radius and clears material from nested aesthetics", async ({ page }) => {
+      await page.goto(withAesthetic(FORMS_URL, "sketch"));
+
+      const checkbox = await readStyles(page, "checkbox-default-none", ["--ui-radius-tight", "border-radius"]);
+
+      expect(checkbox["--ui-radius-tight"].trim(), "single chip radius").toBe(".25rem");
+      expect(checkbox["border-radius"], "checkbox min cap stays valid").toBe("4px");
+
+      const nested = await page.evaluate(() => {
+        const build = (ancestor = "") => {
+          const outer = document.createElement("div");
+          const inner = document.createElement("div");
+          const card = document.createElement("div");
+
+          outer.className = ancestor;
+          inner.className = "sketch";
+          card.className = "card";
+          inner.append(card);
+          outer.append(inner);
+          document.body.append(outer);
+
+          const styles = getComputedStyle(card);
+          const result = {
+            backgroundColor: styles.backgroundColor,
+            boxShadow: styles.boxShadow,
+            clipPath: styles.clipPath,
+            radius: styles.borderRadius,
+          };
+
+          outer.remove();
+          return result;
+        };
+
+        return { cyber: build("cyber"), glass: build("glass"), pixel: build("pixel"), plain: build() };
+      });
+
+      expect(nested.pixel.clipPath, "pixel clip cleared").toBe("none");
+      for (const [name, styles] of Object.entries(nested)) {
+        expect(styles.radius, `${name} sketch radius`).toBe("255px 15px 225px / 15px 225px 15px 255px");
+        expect(styles.backgroundColor, `${name} sketch ground`).toBe(nested.plain.backgroundColor);
+        expect(styles.boxShadow, `${name} sketch shadow`).toBe(nested.plain.boxShadow);
+      }
     });
   });
 });
