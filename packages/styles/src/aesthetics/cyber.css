@@ -66,6 +66,7 @@
     --ui-border-width: 1px;
     --ui-border-max: 100px;
     --ui-line-style: initial;
+    --ui-rule-style: initial;
 
     /* The glow is light, not depth, so it is the halo: the component's own intent
        colour at 40%, blurred, with no offset. Elevation does not scale it, so

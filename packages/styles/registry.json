@@ -99,7 +99,8 @@
       ]
     },
     "--ui-radius-surface": { "readers": ["surface"] },
-    "--ui-line-style": { "readers": ["box", "data-table", "progress"] },
+    "--ui-line-style": { "readers": ["box", "data-table", "divider", "progress"] },
+    "--ui-rule-style": { "readers": ["data-table", "divider"] },
     "--ui-shadow-2-x": { "readers": ["box"] },
     "--ui-shadow-2-y": { "readers": ["box"] },
     "--ui-shadow-2-blur": { "readers": ["box"] },
@@ -598,7 +599,27 @@
     {
       "class": "sketch",
       "solo": "sketch-solo",
-      "completeShadow": false
+      "completeShadow": false,
+      "selectors": [
+        "alert",
+        "badge",
+        "btn",
+        "card",
+        "checkbox",
+        "code",
+        "data-table",
+        "divider",
+        "input-group",
+        "ipt",
+        "kbd",
+        "panel",
+        "pre",
+        "select",
+        "switch",
+        "textarea",
+        "tooltip-bubble"
+      ],
+      "selectorReason": "The CSS-only variation rotates complete radii by sibling position on inked components; material tokens on the region alone would give every sibling the same outline. Pill buttons read their own rotated box radius, while switch tracks and knobs read a chip-sized box radius; radios alone keep the round pill token. Checkbox and rule accents need component-local tokens to keep every other edge solid. Other nested aesthetics are excluded so they keep their own material."
     }
   ]
 }

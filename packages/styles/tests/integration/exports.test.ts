@@ -186,8 +186,9 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
     patterns: [
       /\.sketch\{/,
       /--ui-radius:/,
-      /--ui-radius-tight:var\(--radius-small\)/,
-      /--ui-line-style:dashed/,
+      /--ui-radius-tight:11px 1px 7px 2px \/ 2px 7px 1px 11px/,
+      /--ui-line-style:solid/,
+      /--ui-rule-style:dashed/,
       /--font-sketch,/,
     ],
   },

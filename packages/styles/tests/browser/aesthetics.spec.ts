@@ -1575,7 +1575,239 @@ test.describe("aesthetics", () => {
   });
 
   test.describe("sketch", () => {
-    test("draws uneven corners, dashed ink, and a small offset shadow", async ({ page }) => {
+    test("scales pressed buttons and opts out under reduced motion", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "sketch"));
+
+      const resting = await readStyles(page, "btn-default-none", ["--ui-active-transform"]);
+
+      await page.emulateMedia({ reducedMotion: "reduce" });
+
+      const reduced = await readStyles(page, "btn-default-none", ["--ui-active-transform"]);
+
+      expect(resting["--ui-active-transform"].trim()).toBe("scale(.97)");
+      expect(reduced["--ui-active-transform"].trim()).toBe("none");
+    });
+
+    test("gives pill buttons the same sketch outline as ordinary buttons", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "sketch"));
+
+      const radii = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const row = document.createElement("div");
+
+        row.innerHTML =
+          '<button class="btn">Ordinary</button><button class="btn pill">Pill</button><button class="btn pill" style="--ui-radius-pill: 9px">Custom</button>';
+        host.append(row);
+        const values = Array.from(row.children, (element) => getComputedStyle(element).borderRadius);
+
+        row.remove();
+        return values;
+      });
+
+      expect(radii[1]).toBe("225px 18px 255px 12px / 18px 255px 12px 225px");
+      expect(radii[0]).not.toBe(radii[1]);
+      expect(radii[2]).toBe("9px");
+    });
+
+    test("keeps the radio round and slightly uneven", async ({ page }) => {
+      await page.goto(withAesthetic(FORMS_URL, "sketch"));
+
+      const radio = await readStyles(page, "radio-default-none", ["border-radius"]);
+
+      expect(radio["border-radius"]).toContain("% / ");
+    });
+
+    test("gives the switch track and knob matching box outlines", async ({ page }) => {
+      await page.goto(withAesthetic(FORMS_URL, "sketch"));
+
+      const radii = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const row = document.createElement("div");
+
+        row.innerHTML =
+          '<input type="checkbox" class="switch"><input type="checkbox" class="switch" style="--ui-radius-pill: 8px">';
+        host.append(row);
+        const values = Array.from(row.children, (element) => ({
+          track: getComputedStyle(element).borderRadius,
+          knob: getComputedStyle(element, "::after").borderRadius,
+        }));
+
+        row.remove();
+        return values;
+      });
+
+      expect(radii[0]).toEqual({
+        track: "11px 1px 7px 2px / 2px 7px 1px 11px",
+        knob: "11px 1px 7px 2px / 2px 7px 1px 11px",
+      });
+      expect(radii[1]).toEqual({ track: "8px", knob: "8px" });
+    });
+
+    test("gives checkbox, code, and key caps one small sketch outline", async ({ page }) => {
+      await page.goto(withAesthetic(FORMS_URL, "sketch"));
+
+      const radii = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const row = document.createElement("div");
+
+        row.innerHTML =
+          '<input type="checkbox" class="checkbox"><code class="code">code</code><kbd class="kbd">K</kbd>';
+        host.append(row);
+        const values = Array.from(row.children, (element) => getComputedStyle(element).borderRadius);
+
+        row.remove();
+        return values;
+      });
+
+      expect(radii).toEqual(Array(3).fill("11px 1px 7px 2px / 2px 7px 1px 11px"));
+    });
+
+    test("allows complete chip radii outside sketch instead of capping them", async ({ page }) => {
+      await page.goto(FORMS_URL);
+
+      const radii = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const row = document.createElement("div");
+
+        row.innerHTML =
+          '<input type="checkbox" class="checkbox" style="--ui-radius-tight: 12px 2px / 2px 12px"><code class="code" style="--ui-radius-tight: 12px 2px / 2px 12px">code</code><kbd class="kbd" style="--ui-radius-tight: 12px 2px / 2px 12px">K</kbd>';
+        host.append(row);
+        const values = Array.from(row.children, (element) => getComputedStyle(element).borderRadius);
+
+        row.remove();
+        return values;
+      });
+
+      expect(radii).toEqual(Array(3).fill("12px 2px / 2px 12px"));
+    });
+
+    test("uses solid ink on boxes and the solo class", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "sketch"));
+
+      const card = await readStyles(page, "card-default-none", ["border-top-style"]);
+      const solo = await page.evaluate(() => {
+        const node = document.createElement("div");
+
+        node.className = "sketch-solo";
+        document.body.append(node);
+        const style = getComputedStyle(node).borderTopStyle;
+
+        node.remove();
+        return style;
+      });
+
+      expect(card["border-top-style"]).toBe("solid");
+      expect(solo).toBe("solid");
+    });
+
+    test("dashes checkboxes and rules without changing other controls", async ({ page }) => {
+      await page.goto(withAesthetic(FORMS_URL, "sketch"));
+
+      const checkbox = await readStyles(page, "checkbox-default-none", ["border-top-style"]);
+      const radio = await readStyles(page, "radio-default-none", ["border-top-style"]);
+
+      await page.goto(withAesthetic(SURFACES_URL, "sketch"));
+
+      const rules = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const divider = document.createElement("hr");
+
+        divider.className = "divider";
+        host.append(divider);
+        const style = getComputedStyle(divider).borderTopStyle;
+
+        divider.remove();
+        return style;
+      });
+
+      expect(checkbox["border-top-style"]).toBe("dashed");
+      expect(radio["border-top-style"]).toBe("solid");
+      expect(rules).toBe("dashed");
+    });
+
+    test("keeps table rules dashed and allows a per-element line override", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "sketch"));
+
+      const styles = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const row = document.createElement("div");
+
+        row.innerHTML =
+          '<hr class="divider vertical"><table class="data-table"><thead><tr><th>Head</th></tr></thead></table><button class="btn ghost edged" style="--ui-line-style: dashed">Note</button>';
+        host.append(row);
+        const divider = getComputedStyle(row.children[0]!).borderInlineStartStyle;
+        const table = getComputedStyle(row.querySelector("th")!).borderBottomStyle;
+        const button = getComputedStyle(row.children[2]!).borderTopStyle;
+
+        row.remove();
+        return { divider, table, button };
+      });
+
+      expect(styles).toEqual({ divider: "dashed", table: "dashed", button: "dashed" });
+    });
+
+    test("restores solid accents in forced colors", async ({ page }) => {
+      await page.emulateMedia({ forcedColors: "active" });
+      await page.goto(withAesthetic(FORMS_URL, "sketch"));
+
+      const checkbox = await readStyles(page, "checkbox-default-none", ["border-top-style"]);
+      const divider = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const rule = document.createElement("hr");
+
+        rule.className = "divider";
+        host.append(rule);
+        const style = getComputedStyle(rule).borderTopStyle;
+
+        rule.remove();
+        return style;
+      });
+
+      expect(checkbox["border-top-style"]).toBe("solid");
+      expect(divider).toBe("solid");
+    });
+
+    test("varies sibling outlines while keeping explicit radius overrides", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "sketch"));
+
+      const radii = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const row = document.createElement("div");
+
+        row.innerHTML =
+          '<button class="btn">One</button><button class="btn">Two</button><button class="btn">Three</button><button class="btn" style="--ui-radius: 8px">Four</button>';
+        host.append(row);
+
+        const values = Array.from(row.children, (element) => getComputedStyle(element).borderRadius);
+
+        row.remove();
+        return values;
+      });
+
+      expect(new Set(radii.slice(0, 3)).size).toBe(3);
+      expect(radii[3]).toBe("8px");
+    });
+
+    test("varies siblings with sketch applied directly to each button", async ({ page }) => {
+      await page.goto(BUTTONS_URL);
+
+      const radii = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const row = document.createElement("div");
+
+        row.innerHTML =
+          '<button class="btn sketch">One</button><button class="btn sketch">Two</button><button class="btn sketch">Three</button>';
+        host.append(row);
+        const values = Array.from(row.children, (element) => getComputedStyle(element).borderRadius);
+
+        row.remove();
+        return values;
+      });
+
+      expect(new Set(radii).size).toBe(3);
+    });
+
+    test("draws uneven corners, solid ink, and a small offset shadow", async ({ page }) => {
       await page.goto(withAesthetic(SURFACES_URL, "sketch"));
 
       const card = await readStyles(page, "card-default-none", [
@@ -1586,18 +1818,18 @@ test.describe("aesthetics", () => {
       ]);
 
       expect(card["border-radius"], "uneven surface corner").toBe("255px 15px 225px / 15px 225px 15px 255px");
-      expect(card["border-top-style"], "ink line").toBe("dashed");
+      expect(card["border-top-style"], "ink line").toBe("solid");
       expect(card["box-shadow"], "small offset shadow").toMatch(/\b2px 2px 0px 0px\b/);
       expect(card["font-family"], "handwriting fallback").toContain("cursive");
     });
 
-    test("keeps chips on a single valid radius and clears material from nested aesthetics", async ({ page }) => {
+    test("keeps sketch chips irregular and clears material from nested aesthetics", async ({ page }) => {
       await page.goto(withAesthetic(FORMS_URL, "sketch"));
 
       const checkbox = await readStyles(page, "checkbox-default-none", ["--ui-radius-tight", "border-radius"]);
 
-      expect(checkbox["--ui-radius-tight"].trim(), "single chip radius").toBe(".25rem");
-      expect(checkbox["border-radius"], "checkbox min cap stays valid").toBe("4px");
+      expect(checkbox["--ui-radius-tight"].trim(), "complete chip radius").toBe("11px 1px 7px 2px / 2px 7px 1px 11px");
+      expect(checkbox["border-radius"], "sketch checkbox silhouette").toBe("11px 1px 7px 2px / 2px 7px 1px 11px");
 
       const nested = await page.evaluate(() => {
         const build = (ancestor = "") => {

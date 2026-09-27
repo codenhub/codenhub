@@ -1,4 +1,4 @@
-/* Sketch: uneven elliptical corners, a dashed ink edge, and a small hard shadow.
+/* Sketch: uneven elliptical corners, a solid ink edge, and a small hard shadow.
    The handwriting face is consumer-supplied, so this file has no font asset or
    network side effect. Load after the base stylesheet. */
 
@@ -7,8 +7,7 @@
 @layer components {
   .sketch {
     /* Complete radii are taken as written, without the size step or corner
-       pattern. Chips need a single length because checkbox's `min()` cap cannot
-       accept an elliptical value. */
+       pattern. Chips use a smaller version of the same irregular outline. */
     --ui-corner: initial;
     --ui-corner-surface: initial;
     --ui-corner-tl: initial;
@@ -17,15 +16,16 @@
     --ui-corner-bl: initial;
     --ui-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
     --ui-radius-surface: 255px 15px 225px 15px / 15px 225px 15px 255px;
-    --ui-radius-pill: initial;
-    --ui-radius-tight: var(--radius-small);
+    --ui-radius-pill: 48% 52% 46% 54% / 53% 46% 54% 47%;
+    --ui-radius-tight: 11px 1px 7px 2px / 2px 7px 1px 11px;
     --ui-corner-shape: round;
 
     --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
     --ui-control-ink: initial;
     --ui-border-width: 1px;
     --ui-border-max: 100px;
-    --ui-line-style: dashed;
+    --ui-line-style: solid;
+    --ui-rule-style: initial;
 
     --ui-shadow-ink: 0%;
     /* The foundation depth colour is restated so a sketch region nested inside
@@ -50,7 +50,7 @@
 
     --ui-active-shadow-x: initial;
     --ui-active-shadow-y: initial;
-    --ui-active-transform: initial;
+    --ui-active-transform: scale(0.97);
     --ui-active-translate-x: initial;
     --ui-active-translate-y: initial;
     --ui-hover-transform: none;
@@ -68,6 +68,216 @@
 
     font-family: var(--font-sketch, cursive);
   }
+
+  /* Rotate a small set of inked outlines by sibling position. Skip other
+     aesthetics nested inside sketch so their own material still wins. */
+  .sketch
+    :is(
+      .btn,
+      .card,
+      .panel,
+      .alert,
+      .ipt,
+      .textarea,
+      .select,
+      .input-group,
+      .badge,
+      .kbd,
+      .code,
+      .pre,
+      .tooltip-bubble,
+      .data-table
+    ):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(3n + 2) {
+    --ui-radius: 225px 18px 255px 12px / 18px 255px 12px 225px;
+    --ui-radius-surface: 225px 18px 255px 12px / 18px 255px 12px 225px;
+  }
+
+  .sketch
+    :is(
+      .btn,
+      .card,
+      .panel,
+      .alert,
+      .ipt,
+      .textarea,
+      .select,
+      .input-group,
+      .badge,
+      .kbd,
+      .code,
+      .pre,
+      .tooltip-bubble,
+      .data-table
+    ):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(3n) {
+    --ui-radius: 240px 12px 215px 20px / 12px 215px 20px 240px;
+    --ui-radius-surface: 240px 12px 215px 20px / 12px 215px 20px 240px;
+  }
+
+  /* The class may be applied to the component itself instead of an ancestor. */
+  .sketch:is(
+    .btn,
+    .card,
+    .panel,
+    .alert,
+    .ipt,
+    .textarea,
+    .select,
+    .input-group,
+    .badge,
+    .kbd,
+    .code,
+    .pre,
+    .tooltip-bubble,
+    .data-table
+  ):nth-child(3n + 2) {
+    --ui-radius: 225px 18px 255px 12px / 18px 255px 12px 225px;
+    --ui-radius-surface: 225px 18px 255px 12px / 18px 255px 12px 225px;
+  }
+
+  .sketch:is(
+    .btn,
+    .card,
+    .panel,
+    .alert,
+    .ipt,
+    .textarea,
+    .select,
+    .input-group,
+    .badge,
+    .kbd,
+    .code,
+    .pre,
+    .tooltip-bubble,
+    .data-table
+  ):nth-child(3n) {
+    --ui-radius: 240px 12px 215px 20px / 12px 215px 20px 240px;
+    --ui-radius-surface: 240px 12px 215px 20px / 12px 215px 20px 240px;
+  }
+
+  /* A pill button is still an action, not a radio: use its own rotated box
+     radius while the radio and switch keep the round pill material. */
+  .sketch.btn.pill,
+  .sketch
+    .btn.pill:not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-radius-pill: var(--ui-radius);
+  }
+
+  /* The track and its pseudo-element read the same pill token. Give this
+     switch its own chip-sized box so neither part turns into an oval. */
+  .sketch.switch,
+  .sketch
+    .switch:not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-radius-pill: var(--ui-radius-tight);
+  }
+
+  .sketch
+    .checkbox:not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-line-style: dashed;
+  }
+
+  .sketch
+    .divider:not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ),
+  .sketch
+    .data-table:not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-rule-style: dashed;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sketch {
+      --ui-active-transform: none;
+    }
+  }
 }
 
 /* Solo: the look on one unstyled element. It uses standalone fallbacks rather
@@ -75,7 +285,7 @@
 .sketch-solo {
   --_sketch-ink: light-dark(var(--color-neutral-950, oklch(14.5% 0 0)), var(--color-neutral-50, oklch(98.5% 0 0)));
 
-  border: 1px dashed var(--_sketch-ink);
+  border: 1px solid var(--_sketch-ink);
   border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
   box-shadow: 2px 2px 0 0 var(--_sketch-ink);
   font-family: var(--font-sketch, cursive);

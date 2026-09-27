@@ -201,7 +201,7 @@
   & td {
     @apply px-4 py-3 align-top;
 
-    border-bottom-style: var(--ui-line-style, solid);
+    border-bottom-style: var(--ui-rule-style, var(--ui-line-style, solid));
     border-bottom-width: var(--_width);
     border-color: var(--table-rule);
   }
@@ -220,7 +220,7 @@
   }
 
   & tfoot tr:first-child > * {
-    border-top-style: var(--ui-line-style, solid);
+    border-top-style: var(--ui-rule-style, var(--ui-line-style, solid));
     border-top-width: var(--_width);
     border-top-color: var(--table-boundary);
   }
@@ -317,11 +317,10 @@
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
 
-  /* Capped at its own radius: a control radius is sized for a control, and a key
-     cap this small would read as a lozenge. A squaring aesthetic still reaches it. */
-  border-radius: min(
-    var(--ui-radius-tight, var(--ui-radius, var(--ui-corner, var(--radius-small)))),
-    var(--radius-small)
+  /* A small default remains when no aesthetic asks for a complete chip shape. */
+  border-radius: var(
+    --ui-radius-tight,
+    min(var(--ui-radius, var(--ui-corner, var(--radius-small))), var(--radius-small))
   );
   clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 
@@ -340,9 +339,9 @@
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
 
-  border-radius: min(
-    var(--ui-radius-tight, var(--ui-radius, var(--ui-corner, var(--radius-small)))),
-    var(--radius-small)
+  border-radius: var(
+    --ui-radius-tight,
+    min(var(--ui-radius, var(--ui-corner, var(--radius-small))), var(--radius-small))
   );
   clip-path: var(--ui-clip-tight, var(--ui-clip, none));
 

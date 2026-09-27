@@ -109,10 +109,10 @@
     }
   }
 
-  /* A pill is a shape the author asked for, so it outranks the aesthetic's
-     radius. It still takes the corner shape from `box`, so under a bevelling
-     aesthetic the full radius cuts to points at both ends. */
+  /* A pill normally takes the round material ahead of the box radius. Sketch
+     gives this token the button's own box outline; a bevel still cuts the full
+     radius to points under cyber. */
   &.pill {
-    @apply rounded-full;
+    border-radius: var(--ui-radius-pill, calc(infinity * 1px));
   }
 }

@@ -463,8 +463,9 @@ Beyond composition, the package strives for three things, in this order: that it
 | `--ui-scale`              | _the step_           | Override for the size step the modifiers publish.           |
 | `--ui-corner-shape`       | `round`              | What the radius draws: an arc, or a `bevel` cut.            |
 | `--ui-radius-pill`        | `--ui-corner`        | Corner for what is fully round by default.                  |
-| `--ui-radius-tight`       | `--ui-corner`        | Corner for chips, before their `--radius-small` cap.        |
+| `--ui-radius-tight`       | _small computed_     | Complete chip radius, used as written when set.             |
 | `--ui-line-style`         | `solid`              | `solid`, `dashed`, `dotted`, or `double` (3px and up).      |
+| `--ui-rule-style`         | `--ui-line-style`    | Divider and table rules without changing box edges.         |
 | `--ui-border-width`       | `--border-width`     | Edge thickness.                                             |
 | `--ui-border-max`         | `100px`              | Ceiling on the computed edge width.                         |
 | `--ui-ink`                | `--color-border`     | Neutral line color when no intent is set.                   |
@@ -503,7 +504,7 @@ Beyond composition, the package strives for three things, in this order: that it
 | `--ui-label-case`         | per component        | `text-transform`; `.btn` falls back to `none`.              |
 | `--ui-label-shadow`       | per component        | `text-shadow` with no colour, so it takes the label's.      |
 
-The corner, line, second layer, halo, surface image, and label rows are the 0.5.0 structural additions. `registry.json` records under `material` which utilities read each one. Every aesthetic names or clears every one of them, which `registry.test.ts` checks. Colour-bearing depth and halo are parts rather than completed shadows: a completed value declared on an ancestor would resolve its intent colour there instead of on the nested component. `--ui-shadow-2-ink` and `--ui-halo-ink` are presence switches; undeclared, their entire layers disappear. The second depth layer scales with elevation, while the halo does not, so `.flat` removes depth without extinguishing the glow. The second layer has no pressed counterpart: the ordinary press is the supported behavior. In forced colours, the new layers, surface image, label shadow, and non-solid line styles reset to the plain treatment.
+The corner, line, second layer, halo, surface image, and label rows are the 0.5.0 structural additions. `registry.json` records under `material` which utilities read each one. Every aesthetic names or clears every one of them, which `registry.test.ts` checks. On a checkbox, key cap, or code chip, an unset `--ui-radius-tight` computes the small default as `min(--ui-radius or --ui-corner, --radius-small)`; an explicit `--ui-radius-tight` is a whole radius, including slash-separated elliptical values, and is not capped. A material that asks for a large chip corner gets one rather than silently reverting to the default. Colour-bearing depth and halo are parts rather than completed shadows: a completed value declared on an ancestor would resolve its intent colour there instead of on the nested component. `--ui-shadow-2-ink` and `--ui-halo-ink` are presence switches; undeclared, their entire layers disappear. The second depth layer scales with elevation, while the halo does not, so `.flat` removes depth without extinguishing the glow. The second layer has no pressed counterpart: the ordinary press is the supported behavior. In forced colours, the new layers, surface image, label shadow, and non-solid line styles reset to the plain treatment.
 
 Corner scale uses the tighter of a size and padding modifier on the same element; their private steps are restated on each box so a small card does not shrink its children. A public `--ui-scale` overrides the step. A complete `--ui-radius` overrides the computed corner and is not scaled. Four `--ui-corner-*` switches let `.cut-diagonal` and `.cut-diagonal-reverse` place that computed corner; a whole surface radius (as in cyber) bypasses the pattern. A `double` line needs at least 3px to show two strokes. The surface image does not reach controls, where it could obscure a select's chevron or its label. Label shadows take the label's own `currentColor`, rather than an unrelated hue.
 
@@ -809,16 +810,18 @@ Bevelled corners, a thin bright edge, and a glow in the component's own colour. 
 - The glow is the halo: the intent colour at 40% (`--ui-halo-ink`), blurred by `--cyber-glow` (`8px`) with no offset or spread. Elevation does not scale it, so every component glows, fields and chips included, and `.flat` does not put it out. There is no depth.
 - The press is the base `scale(0.97)`, restated, and `none` under reduced motion. The glow holds still on hover and on press.
 - Reads `--font-cyber` and falls back to monospace.
-- Every other aesthetic declares `--ui-corner-shape: round` and clears `--ui-radius-pill` and `--ui-radius-tight`, so a region nested inside `.cyber` inherits none of its corners.
+- Every other aesthetic declares `--ui-corner-shape: round` and resets `--ui-radius-pill` and `--ui-radius-tight` to its own material (or clears them), so a region nested inside `.cyber` inherits none of its corners.
 
 ### `.sketch`
 
-Uneven elliptical corners, dashed ink, and a small hard offset shadow.
+Uneven elliptical corners, solid ink with dashed accents, and a small hard offset shadow.
 
-- Controls and surfaces take the complete, unscaled `255px 15px 225px 15px / 15px 225px 15px 255px` radius through `--ui-radius` and `--ui-radius-surface`. A complete radius is used as written, so the corner switches and size step do not reshape it.
-- Chips take the existing plain `--radius-small` (`4px`) through `--ui-radius-tight`. Checkbox's chip radius passes through `min()`, which cannot accept an elliptical slash-separated value.
-- The edge is 1px `dashed` through `--ui-line-style`. Forced colours replaces it with the material contract's solid fallback.
+- Controls and surfaces start with the complete, unscaled `255px 15px 225px 15px / 15px 225px 15px 255px` radius through `--ui-radius` and `--ui-radius-surface`. Sibling components rotate through two more complete radii by position; this is deterministic CSS rather than runtime randomness. Explicit radii on a component override the rotation, and nested aesthetics are excluded. The corner switches and size step do not reshape a complete radius.
+- Radios and other fully round parts take a subtly asymmetrical rounded `--ui-radius-pill`; a `.btn.pill` instead takes the same irregular box radius as its sibling buttons, and a switch track and knob use the shared small chip box. The radio remains circular enough to distinguish it from a checkbox. The component-local token overrides leave an explicit `--ui-radius-pill` on a button or switch in control. There are no pill-shaped controls under sketch by default.
+- Checkboxes, key caps, and code chips share a compact elliptical version of the box outline through the complete `--ui-radius-tight` value: two near-sharp corners against two much deeper curves. The switch track and knob read the same token so their box shapes stay aligned without a separate switch exception.
+- The edge is 1px solid through `--ui-line-style`; checkboxes use dashed lines, and dividers and table rules use `--ui-rule-style: dashed`. Forced colours replaces the dashed accents with the material contract's solid fallback.
 - The shadow is a neutral 2px right-and-down offset with no blur or spread, scaled by elevation like every part-based depth cue.
+- Buttons press with `scale(0.97)`, like the plain look; reduced motion turns off that transform.
 - Reads `--font-sketch` and falls back to the platform `cursive` generic family. The package ships no font binary.
 
 ## Solo classes

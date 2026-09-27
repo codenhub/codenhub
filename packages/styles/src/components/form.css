@@ -468,14 +468,11 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  /* Capped at its own radius: a control radius is sized for a 40px control, and
-     14px of it on a 16px box renders as a circle, which is the one shape a
-     checkbox must not be. A squaring aesthetic still reaches it, through the
-     chip corner first -- `.cyber` squares chips outright, which is also what
-     tells its checkbox from its diamond radio. */
-  border-radius: min(
-    var(--ui-radius-tight, var(--ui-radius, var(--ui-corner, var(--radius-small)))),
-    var(--radius-small)
+  /* A chip keeps a small default even under a large control corner, but an
+     explicit tight radius is a complete shape, including elliptical corners. */
+  border-radius: var(
+    --ui-radius-tight,
+    min(var(--ui-radius, var(--ui-corner, var(--radius-small))), var(--radius-small))
   );
 
   /* Chip geometry: the tight silhouette, and an inset edge no thicker than the
@@ -517,7 +514,9 @@
 /* The same control with a round silhouette and a dot for its mark, and the
    same fill cap raise given on `checkbox`. */
 @utility radio {
-  @apply text-control inline-grid size-4 cursor-pointer place-content-center rounded-full;
+  @apply text-control inline-grid size-4 cursor-pointer place-content-center;
+
+  border-radius: var(--ui-radius-pill, calc(infinity * 1px));
 
   --_d-fill: 12%;
   --_d-fg-on-fill: 0%;

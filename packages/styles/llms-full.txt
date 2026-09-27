@@ -651,7 +651,7 @@ Components read each with a fallback, so leaving them unset produces the default
 | `--ui-scale`              | Overrides the size step the size and padding classes set.                                                     | The step                                  |
 | `--ui-corner-shape`       | What every corner draws: `round`, or `bevel` for a straight cut. Chromium only today.                         | `round`                                   |
 | `--ui-radius-pill`        | Corner for what is fully round by default: badges, switches, progress, the tooltip icon.                      | `--ui-radius`, `--ui-corner`, then full   |
-| `--ui-radius-tight`       | Corner for chips -- checkbox, `.kbd`, `.code` -- before their `--radius-small` cap.                           | `--ui-radius`, `--ui-corner`, then small  |
+| `--ui-radius-tight`       | Complete radius for chips -- checkbox, `.kbd`, `.code` -- when set; otherwise a small computed default.       | `min(--ui-radius or --ui-corner, small)`  |
 | `--ui-line-style`         | Style of every line a component draws: `solid`, `dashed`, `dotted`, or `double` (3px wide or more).           | `solid`                                   |
 | `--ui-border-width`       | Edge thickness.                                                                                               | `--border-width`                          |
 | `--ui-border-max`         | Ceiling on computed edge width.                                                                               | `100px`                                   |
@@ -707,7 +707,7 @@ Which corners take the corner is its own choice. `.cut-diagonal` keeps the top-l
 
 ### Lines, layers, and labels
 
-`--ui-line-style` reaches every line a component draws: the box's edge, the progress track, and the table's rules. A dashed or dotted line keeps its colour, so it keeps its contrast; `double` needs a width of 3px or more to draw two lines.
+`--ui-line-style` reaches every line a component draws: the box's edge, the progress track, and dividers and table rules. `--ui-rule-style` optionally overrides just dividers and table rules, without changing the box edge; sketch uses it for dashed accents. A dashed or dotted line keeps its colour, so it keeps its contrast; `double` needs a width of 3px or more to draw two lines.
 
 `--ui-shadow-2-*` adds a second depth layer that elevation scales like the first, for a two-tone bevel or a soft shadow under a hard one. `--ui-halo-*` is light rather than depth -- a glow in the element's own intent colour -- so elevation does not scale it and `.flat` leaves it on. Each appears only when its ink is set.
 
@@ -723,7 +723,7 @@ Clipping removes borders, outlines, and outer shadows. An aesthetic that uses a 
 
 A clip is not the only way to cut a corner. `--ui-corner-shape: bevel` draws the corner the radius sets as a straight cut instead of an arc, and the border, outer shadow, focus outline, and backdrop all follow it -- so a bevelled element keeps its glow and its line, where a clipped one loses both. `.cyber` uses it. Engines without `corner-shape` ignore it and draw the radius round, so an aesthetic that bevels should square its radius under `@supports not (corner-shape: bevel)`. A bevel on a full radius cuts to points: a radio, a `.btn.pill`, and anything reading `--ui-radius-pill` become diamonds or pointed hexagons.
 
-`--ui-radius` accepts any `border-radius` value and is used as written, so it can place the corner per side: `10px 0` cuts only top-left and bottom-right. The pill and chip corners are separate tokens, because a pill's full radius and a chip's `min()` cap cannot take a per-corner value, and each falls back to `--ui-radius`, then `--ui-corner`, when unset.
+`--ui-radius` accepts any `border-radius` value and is used as written, so it can place the corner per side: `10px 0` cuts only top-left and bottom-right. The pill and chip corners are separate tokens. An unset chip corner computes a small default from `--ui-radius`, then `--ui-corner`, capped at `--radius-small`; an explicit `--ui-radius-tight` is used as written, even for a per-corner or elliptical value. Aesthetic and consumer overrides can therefore give a chip a larger or more irregular shape. `.btn.pill` takes `--ui-radius-pill` ahead of the other radii except under sketch, where it takes the button's own sketch outline; an explicit `--ui-radius-pill` on that button still wins.
 
 Declare `--ui-shadow-edge` when that ring _is_ the border. The ring then takes the element's edge color, which carries the edge axis as its alpha, so `.edged` draws it and `.edgeless` does not — the same answer a real border gives. Without it the ring paints on every component the aesthetic reaches and the edge classes have no effect. Use `--ui-shadow-ink` instead when the shadow is depth cast in the intent's own ink, such as a hard offset slab, which an `.edgeless` element still gets.
 
@@ -856,7 +856,7 @@ Like presentation, an aesthetic class cascades to any subtree:
 | `.pixel`        | Corners cut by one grid unit, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
 | `.chunky-tile`  | Rounded slabs seated on a darker shade of themselves, with a press that moves the element down into its own bar.                |
 | `.cyber`        | Bevelled corners, a thin bright edge, and a glow in the component's own colour.                                                 |
-| `.sketch`       | Uneven elliptical corners, a dashed ink line, a small offset shadow, and an optional handwriting face.                          |
+| `.sketch`       | Varying elliptical corners, a solid ink line with dashed accents, a small offset shadow, and an optional handwriting face.      |
 
 Aesthetics compose with every supported fill and edge pair. `.ghost.edgeless` intentionally removes the visible material traits from components whose aesthetic is expressed only through their fill, edge, or elevation.
 
@@ -995,32 +995,37 @@ A parallelogram slants its sides into the content, so give a surface that takes 
 
 ## Sketch
 
-Sketch takes the same uneven elliptical radius on controls and surfaces: `255px 15px 225px 15px / 15px 225px 15px 255px`. It is a complete `border-radius` value, used as written rather than scaled or patterned. The 1px dashed line is the ink; the 2px hard shadow is a small neutral depth cue.
+Sketch starts with `255px 15px 225px 15px / 15px 225px 15px 255px` and rotates between three uneven elliptical outlines on sibling components. The shape is stable for a given DOM order, not random on each render; components alone in separate wrappers keep the base outline. These are complete `border-radius` values, used as written rather than scaled or patterned. To choose a shape on an isolated component, set `--ui-radius` (or `--ui-radius-surface` on a surface) directly on it. The 1px ink edge is solid by default, while checkboxes, dividers, and table rules use dashed lines for contrast. Set `--ui-line-style: dashed` on any other component to opt in; `--ui-rule-style: solid` overrides a divider or table's dashed rules. The 2px hard shadow is a small neutral depth cue.
 
 ```html
 <section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>
   <button class="btn primary">Send note</button>
+  <button class="btn ghost edged" style="--ui-line-style: dashed">Draft note</button>
 </section>
 ```
+
+The dashed button uses `ghost edged` to expose its boundary: a default filled button has no distinct ink edge to dash. Set `--ui-line-style` on one component, or on a wrapper to cascade it to its descendants. Sketch's checkbox defaults to dashed; dividers and table rules take their style from `--ui-rule-style` if it is set.
 
 **Exceptions:**
 
 - `--font-sketch` is yours to supply. The package ships no handwriting font and falls back to the platform `cursive` generic family.
-- Chips — checkboxes, key caps, and code — use the existing plain `--radius-small` (`4px`) through `--ui-radius-tight` rather than the elliptical corner. A checkbox caps its chip corner with `min()`, which accepts one length but not a slash-separated elliptical radius.
-- Forced-colors mode replaces the dashed line with the package's solid accessible fallback, like every other material line.
+- Chips — checkboxes, key caps, and code — use one compact elliptical sketch outline through `--ui-radius-tight`, with two nearly sharp corners and two pronounced curves instead of even rounding. Set that token on a chip to choose a different complete radius.
+- Sketch has no pill-shaped controls by default: `.btn.pill` uses the same irregular box outline as other buttons (including sibling variation), and a switch's track and knob use that compact, strongly asymmetric chip outline. Radios are the circular control, subtly asymmetric so they remain distinguishable from checkboxes. An explicit `--ui-radius-pill` on a button or switch still wins.
+- Buttons press with the plain `scale(0.97)` gesture; reduced motion disables it.
+- Forced-colors mode replaces dashed accents with the package's solid accessible fallback, like every other material line.
 
 ## Solo classes
 
 An aesthetic class sets material tokens and nothing paints until a component reads them, so `.glass` on an element this package does not style -- a toast from another library, a dialog, a plain `<div>` on a page without the base stylesheet -- changes nothing. Each aesthetic also ships a solo class that paints its look directly onto the one element carrying it:
 
-| Aesthetic       | Solo class           | Paints                                                                                         |
-| --------------- | -------------------- | ---------------------------------------------------------------------------------------------- |
-| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner.      |
-| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                            |
-| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.                   |
-| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                                 |
-| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.             |
-| `.sketch`       | `.sketch-solo`       | Uneven elliptical corners, a 1px dashed ink line, the 2px offset shadow, the handwriting face. |
+| Aesthetic       | Solo class           | Paints                                                                                        |
+| --------------- | -------------------- | --------------------------------------------------------------------------------------------- |
+| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner.     |
+| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                           |
+| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.                  |
+| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                                |
+| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.            |
+| `.sketch`       | `.sketch-solo`       | Uneven elliptical corners, a 1px solid ink line, the 2px offset shadow, the handwriting face. |
 
 ```css
 /* The only stylesheet from this package on the page. */
@@ -1070,7 +1075,7 @@ Size and shape classes:
 
 | Class                                                                  | Purpose                                                                                                                                                                                                                                   |
 | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).                                                                                                                                                                                   |
+| `.pill`                                                                | Fully rounded button corners by default; under sketch it takes the button's irregular box outline.                                                                                                                                        |
 | `.sm`                                                                  | Smaller button.                                                                                                                                                                                                                           |
 | `.lg`                                                                  | Larger button.                                                                                                                                                                                                                            |
 | `.p-xs`                                                                | Tightest padding modifier (`px-2 py-0.5`; icon `p-0.5`). Also drops the `--control-height` minimum so a chip-sized button fits a table cell or a dense toolbar; every other size and padding class keeps that floor for a labeled button. |
@@ -1934,15 +1939,16 @@ A foundation update with an opt-in sketch aesthetic.
 - **The package sits in named cascade layers.** Every entrypoint declares Tailwind's layer order first and places everything in it: foundation tokens and the palette in `theme`, resets in `base`, the intent, presentation, elevation, and aesthetic classes in `components`, and every component in `utilities` -- including on `/components` and `/native`, which emitted them unlayered. Your own utility or unlayered CSS now beats all four class families on the same element, and an aesthetic on `<html>` keeps its tokens over the theme's in any load order. CSS that relied on a package class beating it now loses to it, and a rule of yours in `@layer components` contests the class families by specificity instead of losing outright. See [Setup](docs/setup.md).
 - **Aesthetics set `--ui-corner`, not `--ui-radius`.** The corner is now a length at the default size that scales with the element (below); `--ui-radius` and `--ui-radius-surface` take a complete radius used as written, and every shipped aesthetic sets `--ui-corner` and `--ui-corner-surface` instead. If you set `--ui-radius` yourself, nothing changes for you. An aesthetic of your own moves to `--ui-corner` to get the scale and the corner pattern. `--ui-radius-pill` and `--ui-radius-tight` fall back through `--ui-radius`, then `--ui-corner`.
 - **`--ui-button-weight` and `--ui-button-tracking` are `--ui-label-weight` and `--ui-label-tracking`**, read by `.badge` as well as `.btn`. The old names are removed without an alias. Under `.chunky-tile`, badges now take the heavier label too.
+- **Explicit chip radii are no longer capped.** Checkbox, `.kbd`, and `.code` keep a small default radius when `--ui-radius-tight` is unset, but a supplied value now applies as a complete `border-radius`, including elliptical shapes. A consumer setting a large value now gets the large corner it asked for instead of the previous `--radius-small` ceiling.
 - **Alias classes removed**, each a second name for a class that already had one: `.dense`, `.compact`, and `.spacious` (use `.p-xs`, `.p-sm`, and `.p-lg`); `.danger` and `.error` (use `.destructive`, and `.hint.destructive` for `.hint.error`); and `.elevation-none`, `.elevation-sm`, and `.elevation-md` (use `.flat`, `.raised`, and `.floating`). `.theme-light` and `.theme-dark` stay.
 - **`.cyber` glows everything, flat or not.** Its glow moved from depth onto the new halo, so fields, chips, badges, and alerts glow too, `.flat` no longer puts the glow out, and `.raised` and `.floating` add no shadow under it.
 
 ## Added
 
-- **`.sketch` and `.sketch-solo`**: a hand-drawn treatment with uneven elliptical corners, a dashed ink line, a small offset shadow, and an optional consumer-supplied handwriting font. The solo class paints an unstyled element directly; the cascading class restyles package components. Both ship in the aesthetic aggregate and dedicated compiled and Tailwind CSS entrypoints. See [Aesthetics](docs/usage/aesthetics.md#sketch).
+- **`.sketch` and `.sketch-solo`**: a hand-drawn treatment with uneven elliptical corners, a solid ink line (dashed checkboxes and rules under `.sketch`), a small offset shadow, and an optional consumer-supplied handwriting font. Sibling components rotate between three stable outlines; pill buttons use the box outline, switch tracks and knobs use the small box outline, radios stay subtly circular, and chips share the small irregular outline. Buttons keep the plain press scale with reduced-motion opt-out. The solo class paints an unstyled element directly; the cascading class restyles package components. Both ship in the aesthetic aggregate and dedicated compiled and Tailwind CSS entrypoints. See [Aesthetics](docs/usage/aesthetics.md#sketch).
 - **Corner scale.** `.p-xs` sets a size step of `0.5`, `.sm` and `.p-sm` `0.75`, and `.lg` and `.p-lg` `1.25`, and the corner is multiplied by it; when a size and a padding class sit on one element, the smaller step wins. A bevel stays a true 45 degrees, so `.cyber`'s 25% cap is gone. Depth follows the step down, never up: a `.p-xs` button sits on half its aesthetic's shadow, which also retires chunky tile's one selector list. `--ui-scale` overrides the step. A press that travels into the depth -- `--ui-active-translate-x` and `-y`, which chunky tile and neobrutalism now set instead of a translating `--ui-active-transform` -- scales the same way, elevation included, so it always lands flat on the slab, and a `.flat` button under either no longer drops. See [Customizing → Corner size and pattern](docs/usage/customizing.md#corner-size-and-pattern).
 - **Corner pattern.** `.cut-diagonal` keeps the top-left and bottom-right corners and squares the other two, `.cut-diagonal-reverse` the opposite pair, wherever the corner is computed -- on a control under `.cyber`, but not a surface, which keeps its own shape. Both set `--ui-corner-tl`, `-tr`, `-br`, and `-bl`, which you can set yourself.
-- **`--ui-line-style`**: `solid`, `dashed`, `dotted`, or `double` for every line a component draws -- the box's edge, the progress track, and the table's rules.
+- **`--ui-line-style`**: `solid`, `dashed`, `dotted`, or `double` for every line a component draws -- the box's edge, the progress track, and dividers and table rules. `--ui-rule-style` overrides only dividers and table rules.
 - **A second depth layer**, `--ui-shadow-2-x`, `-y`, `-blur`, `-spread`, `-ink`, and `-inset`, which elevation scales like the first. It appears only when its ink is set.
 - **A halo**, `--ui-halo-blur`, `--ui-halo-spread`, and `--ui-halo-ink`: light in the element's own intent colour, which elevation does not scale and `.flat` does not remove.
 - **`--ui-surface-image`**, a painted layer over a surface's plate -- cards, panels, alerts, and tooltips, not controls. Your own `background-image` on a surface still wins.

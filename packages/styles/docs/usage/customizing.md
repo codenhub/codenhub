@@ -48,7 +48,7 @@ Components read each with a fallback, so leaving them unset produces the default
 | `--ui-scale`              | Overrides the size step the size and padding classes set.                                                     | The step                                  |
 | `--ui-corner-shape`       | What every corner draws: `round`, or `bevel` for a straight cut. Chromium only today.                         | `round`                                   |
 | `--ui-radius-pill`        | Corner for what is fully round by default: badges, switches, progress, the tooltip icon.                      | `--ui-radius`, `--ui-corner`, then full   |
-| `--ui-radius-tight`       | Corner for chips -- checkbox, `.kbd`, `.code` -- before their `--radius-small` cap.                           | `--ui-radius`, `--ui-corner`, then small  |
+| `--ui-radius-tight`       | Complete radius for chips -- checkbox, `.kbd`, `.code` -- when set; otherwise a small computed default.       | `min(--ui-radius or --ui-corner, small)`  |
 | `--ui-line-style`         | Style of every line a component draws: `solid`, `dashed`, `dotted`, or `double` (3px wide or more).           | `solid`                                   |
 | `--ui-border-width`       | Edge thickness.                                                                                               | `--border-width`                          |
 | `--ui-border-max`         | Ceiling on computed edge width.                                                                               | `100px`                                   |
@@ -104,7 +104,7 @@ Which corners take the corner is its own choice. `.cut-diagonal` keeps the top-l
 
 ### Lines, layers, and labels
 
-`--ui-line-style` reaches every line a component draws: the box's edge, the progress track, and the table's rules. A dashed or dotted line keeps its colour, so it keeps its contrast; `double` needs a width of 3px or more to draw two lines.
+`--ui-line-style` reaches every line a component draws: the box's edge, the progress track, and dividers and table rules. `--ui-rule-style` optionally overrides just dividers and table rules, without changing the box edge; sketch uses it for dashed accents. A dashed or dotted line keeps its colour, so it keeps its contrast; `double` needs a width of 3px or more to draw two lines.
 
 `--ui-shadow-2-*` adds a second depth layer that elevation scales like the first, for a two-tone bevel or a soft shadow under a hard one. `--ui-halo-*` is light rather than depth -- a glow in the element's own intent colour -- so elevation does not scale it and `.flat` leaves it on. Each appears only when its ink is set.
 
@@ -120,7 +120,7 @@ Clipping removes borders, outlines, and outer shadows. An aesthetic that uses a 
 
 A clip is not the only way to cut a corner. `--ui-corner-shape: bevel` draws the corner the radius sets as a straight cut instead of an arc, and the border, outer shadow, focus outline, and backdrop all follow it -- so a bevelled element keeps its glow and its line, where a clipped one loses both. `.cyber` uses it. Engines without `corner-shape` ignore it and draw the radius round, so an aesthetic that bevels should square its radius under `@supports not (corner-shape: bevel)`. A bevel on a full radius cuts to points: a radio, a `.btn.pill`, and anything reading `--ui-radius-pill` become diamonds or pointed hexagons.
 
-`--ui-radius` accepts any `border-radius` value and is used as written, so it can place the corner per side: `10px 0` cuts only top-left and bottom-right. The pill and chip corners are separate tokens, because a pill's full radius and a chip's `min()` cap cannot take a per-corner value, and each falls back to `--ui-radius`, then `--ui-corner`, when unset.
+`--ui-radius` accepts any `border-radius` value and is used as written, so it can place the corner per side: `10px 0` cuts only top-left and bottom-right. The pill and chip corners are separate tokens. An unset chip corner computes a small default from `--ui-radius`, then `--ui-corner`, capped at `--radius-small`; an explicit `--ui-radius-tight` is used as written, even for a per-corner or elliptical value. Aesthetic and consumer overrides can therefore give a chip a larger or more irregular shape. `.btn.pill` takes `--ui-radius-pill` ahead of the other radii except under sketch, where it takes the button's own sketch outline; an explicit `--ui-radius-pill` on that button still wins.
 
 Declare `--ui-shadow-edge` when that ring _is_ the border. The ring then takes the element's edge color, which carries the edge axis as its alpha, so `.edged` draws it and `.edgeless` does not — the same answer a real border gives. Without it the ring paints on every component the aesthetic reaches and the edge classes have no effect. Use `--ui-shadow-ink` instead when the shadow is depth cast in the intent's own ink, such as a hard offset slab, which an `.edgeless` element still gets.
 
