@@ -111,7 +111,15 @@ const tailwindExportContracts: Record<string, TailwindExportContract> = {
     patterns: [/\.cyber\{/, /--cyber-cut,/, /--ui-corner-shape:\s*bevel/, /@supports not \(corner-shape:\s*bevel\)/],
   },
   "./tw/aesthetics/sketch": {
-    patterns: [/\.sketch\{/, /--ui-radius:/, /--ui-radius-tight:/, /--ui-line-style:\s*dashed/, /--font-sketch,/],
+    patterns: [
+      /\.sketch\{/,
+      /--sketch-radius,/,
+      /--sketch-radius-surface,/,
+      /--ui-radius:/,
+      /--ui-radius-tight:/,
+      /--ui-line-style:\s*dashed/,
+      /--font-sketch,/,
+    ],
   },
   /* The aesthetic publishes the silhouette and the inset edge as material
      tokens; the declarations that consume them belong to `box` and `surface`. */
@@ -185,6 +193,8 @@ const compiledExportContracts: Record<string, CompiledExportContract> = {
     target: "dist/aesthetics/sketch.css",
     patterns: [
       /\.sketch\{/,
+      /--sketch-radius,/,
+      /--sketch-radius-surface,/,
       /--ui-radius:/,
       /--ui-radius-tight:11px 1px 7px 2px \/ 2px 7px 1px 11px/,
       /--ui-line-style:solid/,

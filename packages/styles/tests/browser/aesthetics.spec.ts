@@ -1863,7 +1863,7 @@ test.describe("aesthetics", () => {
       expect(new Set(radii).size).toBe(3);
     });
 
-    test("draws uneven corners, solid ink, and a small offset shadow", async ({ page }) => {
+    test("draws subtle uneven corners on surfaces, solid ink, and a small offset shadow", async ({ page }) => {
       await page.goto(withAesthetic(SURFACES_URL, "sketch"));
 
       const card = await readStyles(page, "card-default-none", [
@@ -1873,10 +1873,57 @@ test.describe("aesthetics", () => {
         "font-family",
       ]);
 
-      expect(card["border-radius"], "uneven surface corner").toBe("255px 15px 225px / 15px 225px 15px 255px");
+      expect(card["border-radius"], "subtle uneven surface corner").toBe("28px 12px 24px 14px / 14px 26px 12px 28px");
       expect(card["border-top-style"], "ink line").toBe("solid");
       expect(card["box-shadow"], "small offset shadow").toMatch(/\b2px 2px 0px 0px\b/);
       expect(card["font-family"], "handwriting fallback").toContain("cursive");
+    });
+
+    test("varies sibling surface outlines while keeping explicit radius overrides", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "sketch"));
+
+      const radii = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const row = document.createElement("div");
+
+        row.innerHTML =
+          '<div class="card">One</div><div class="card">Two</div><div class="card">Three</div><div class="card" style="--ui-radius-surface: 8px">Four</div>';
+        host.append(row);
+
+        const values = Array.from(row.children, (element) => getComputedStyle(element).borderRadius);
+
+        row.remove();
+        return values;
+      });
+
+      expect(new Set(radii.slice(0, 3)).size).toBe(3);
+      expect(radii[3]).toBe("8px");
+    });
+
+    test("allows customizing control and surface outlines via --sketch-radius and --sketch-radius-surface knobs", async ({
+      page,
+    }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "sketch"));
+
+      const measured = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const section = document.createElement("section");
+        section.className = "sketch";
+        section.style.setProperty("--sketch-radius", "4px");
+        section.style.setProperty("--sketch-radius-surface", "16px");
+
+        section.innerHTML = '<div class="card"><button class="btn">Action</button></div>';
+        host.append(section);
+
+        const card = getComputedStyle(section.querySelector(".card")!).borderRadius;
+        const btn = getComputedStyle(section.querySelector(".btn")!).borderRadius;
+
+        section.remove();
+        return { card, btn };
+      });
+
+      expect(measured.card).toBe("16px");
+      expect(measured.btn).toBe("4px");
     });
 
     test("keeps sketch chips irregular and clears material from nested aesthetics", async ({ page }) => {
@@ -1917,7 +1964,7 @@ test.describe("aesthetics", () => {
 
       expect(nested.pixel.clipPath, "pixel clip cleared").toBe("none");
       for (const [name, styles] of Object.entries(nested)) {
-        expect(styles.radius, `${name} sketch radius`).toBe("255px 15px 225px / 15px 225px 15px 255px");
+        expect(styles.radius, `${name} sketch radius`).toBe("28px 12px 24px 14px / 14px 26px 12px 28px");
         expect(styles.backgroundColor, `${name} sketch ground`).toBe(nested.plain.backgroundColor);
         expect(styles.boxShadow, `${name} sketch shadow`).toBe(nested.plain.boxShadow);
       }

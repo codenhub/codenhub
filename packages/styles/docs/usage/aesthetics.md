@@ -170,7 +170,7 @@ A parallelogram slants its sides into the content, so give a surface that takes 
 
 ## Sketch
 
-Sketch starts with `255px 15px 225px 15px / 15px 225px 15px 255px` and rotates through four distinct hand-drawn outlines on sibling components, container wrappers, and sequential form fields. The shape is stable for a given DOM order, not random on each render; sequential `.field` rows alternate outlines so stacked forms avoid repetitive shapes. These are complete `border-radius` values, used as written rather than scaled or patterned. To choose a shape on an isolated component, set `--ui-radius` (or `--ui-radius-surface` on a surface) directly on it. The 1px ink edge is solid by default, while checkboxes, dividers, and table rules use dashed lines for contrast. Set `--ui-line-style: dashed` on any other component to opt in; `--ui-rule-style: solid` overrides a divider or table's dashed rules. The 2px hard shadow is a small neutral depth cue.
+Sketch gives controls expressive, hand-drawn outlines starting with `255px 15px 225px 15px / 15px 225px 15px 255px` while giving containers and surfaces subtle, bounded asymmetrical outlines (starting with `28px 12px 24px 14px / 14px 26px 12px 28px`) that cleanly frame content without encroaching on interior padding. Sibling components, container wrappers, and sequential form fields rotate through four distinct outlines. The shape is stable for a given DOM order, not random on each render; sequential `.field` rows alternate outlines so stacked forms avoid repetitive shapes. These are complete `border-radius` values, used as written rather than scaled or patterned. Knobs `--sketch-radius` (for controls) and `--sketch-radius-surface` (for surfaces) customize the outlines from `:root` or an ancestor; to choose a shape on an isolated component, set `--ui-radius` (or `--ui-radius-surface` on a surface) directly on it. The 1px ink edge is solid by default, while checkboxes, dividers, and table rules use dashed lines for contrast. Set `--ui-line-style: dashed` on any other component to opt in; `--ui-rule-style: solid` overrides a divider or table's dashed rules. The 2px hard shadow is a small neutral depth cue.
 
 ```html
 <section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>
@@ -193,14 +193,14 @@ The dashed button uses `ghost edged` to expose its boundary: a default filled bu
 
 An aesthetic class sets material tokens and nothing paints until a component reads them, so `.glass` on an element this package does not style -- a toast from another library, a dialog, a plain `<div>` on a page without the base stylesheet -- changes nothing. Each aesthetic also ships a solo class that paints its look directly onto the one element carrying it:
 
-| Aesthetic       | Solo class           | Paints                                                                                        |
-| --------------- | -------------------- | --------------------------------------------------------------------------------------------- |
-| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner.     |
-| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                           |
-| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.                  |
-| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                                |
-| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.            |
-| `.sketch`       | `.sketch-solo`       | Uneven elliptical corners, a 1px solid ink line, the 2px offset shadow, the handwriting face. |
+| Aesthetic       | Solo class           | Paints                                                                                                                                                             |
+| --------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner.                                                                          |
+| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                                                                                                |
+| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.                                                                                       |
+| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                                                                                                     |
+| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.                                                                                 |
+| `.sketch`       | `.sketch-solo`       | Uneven elliptical corners (surface outline on a pane, expressive control outline on an action), a 1px solid ink line, the 2px offset shadow, the handwriting face. |
 
 ```css
 /* The only stylesheet from this package on the page. */
@@ -214,7 +214,7 @@ An aesthetic class sets material tokens and nothing paints until a component rea
 A solo class ships in the same entrypoint as its aesthetic, and needs nothing else loaded:
 
 - **It paints material, not colour.** Edge, corner, depth, silhouette, backdrop, font, and press. No intent, no fill amount, no hover tint -- the element has no presentation to compose. Glass's translucent ground is the one fill, because it is glass's material.
-- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, and the font knobs (including `--font-sketch`) all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
+- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, `--sketch-radius`, `--sketch-radius-surface`, and the font knobs (including `--font-sketch`) all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
 - **It ignores the aesthetic around it.** It reads no `--ui-*` or `--elevation-color`, so a `.glass-solo` inside a `.pixel` region keeps its corners. The elevation modifiers do not reach it either.
 - **It beats a foreign component's own styles.** The rules are unlayered and one class deep, so they win over a component's zero-specificity or layered rules wherever the two load. The flip side is that a Tailwind utility on the same element (`rounded-none`) loses to it: tune a solo class through its knobs.
 - **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` that is not disabled; a container stays put, so a toast does not sink when clicked. Reduced motion drops the movement. Chunky tile's heavier label follows the same rule.
