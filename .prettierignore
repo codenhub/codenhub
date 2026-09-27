@@ -12,3 +12,4 @@
 # Third-party Markdown, kept byte-for-byte as received from upstream.
 packages/icons/data/
 packages/skills/skills/
+packages/skills/drafts/

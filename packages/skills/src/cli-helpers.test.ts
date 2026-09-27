@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 
@@ -12,6 +13,7 @@ import {
   getHarnessesForScope,
   groupByDest,
   HARNESS_DESTINATIONS,
+  loadSkills,
   PromptExitError,
   EXIT_CODE_CANCELLED,
   EXCLUDE_FOLDER_AGENTS,
@@ -151,5 +153,47 @@ describe("cli-helpers", () => {
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Step One"));
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Summary One"));
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Step Two"));
+  });
+});
+
+describe("loadSkills", () => {
+  let root: string;
+  const skillsDir = () => path.join(root, "skills");
+  const draftsDir = () => path.join(root, "drafts");
+  const addSkill = (dir: string, id: string) => {
+    fs.mkdirSync(path.join(dir, id), { recursive: true });
+    fs.writeFileSync(path.join(dir, id, "SKILL.md"), `---\nname: ${id}\ndescription: ${id} skill\n---\n`);
+  };
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), "skills-load-"));
+    addSkill(skillsDir(), "bundled");
+  });
+
+  afterEach(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it("should leave drafts out unless they are asked for", () => {
+    addSkill(draftsDir(), "unfinished");
+    expect(loadSkills(skillsDir(), draftsDir(), false).map((skill) => skill.id)).toEqual(["bundled"]);
+  });
+
+  it("should add drafts labeled as drafts when they are asked for", () => {
+    addSkill(draftsDir(), "unfinished");
+    const skills = loadSkills(skillsDir(), draftsDir(), true);
+    expect(skills.map((skill) => [skill.id, skill.name])).toEqual([
+      ["bundled", "bundled"],
+      ["unfinished", "unfinished (draft)"],
+    ]);
+  });
+
+  it("should fail when drafts are asked for but none exist, as in a published install", () => {
+    expect(() => loadSkills(skillsDir(), draftsDir(), true)).toThrow("repository checkout");
+  });
+
+  it("should fail when a draft has a bundled skill's ID", () => {
+    addSkill(draftsDir(), "bundled");
+    expect(() => loadSkills(skillsDir(), draftsDir(), true)).toThrow('Draft skill "bundled"');
   });
 });

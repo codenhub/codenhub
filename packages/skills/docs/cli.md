@@ -16,7 +16,7 @@ Use `npx @codenhub/skills@latest` for the npm equivalent. Node.js 18.0.0 or newe
 
 With no arguments and a TTY, the CLI opens a wizard for scope, skills, harnesses, and cleanup. Existing harness paths are preselected, but the user can change the selection.
 
-When stdin is not a TTY, or when any argument is supplied, the CLI does not prompt. It installs all skills unless `--skills` selects a subset. Without an explicit harness selection, it installs to harnesses detected for the selected scope. Detection succeeds when the destination or its parent directory exists. If none are detected, the command fails rather than writing to every possible destination; use `--all-harnesses` to opt into all destinations.
+When stdin is not a TTY, or when any argument other than `--include-drafts` is supplied, the CLI does not prompt. It installs all skills unless `--skills` selects a subset. Without an explicit harness selection, it installs to harnesses detected for the selected scope. Detection succeeds when the destination or its parent directory exists. If none are detected, the command fails rather than writing to every possible destination; use `--all-harnesses` to opt into all destinations.
 
 ## Options
 
@@ -30,6 +30,7 @@ When stdin is not a TTY, or when any argument is supplied, the CLI does not prom
 | `--harnesses=<list>` | Install to comma-separated harness labels, matched case-insensitively. |
 | `--all-harnesses`    | Select every harness valid for the chosen scope.                       |
 | `--cleanup`          | Remove selected destination roots before copying.                      |
+| `--include-drafts`   | Also offer draft skills. Works only from a repository checkout.        |
 | `--help`, `-h`       | Print command help.                                                    |
 
 Harness labels include their scope, for example `OpenCode Workspace` and `OpenCode Global`. A label supplied to `--harnesses` must be valid for the selected scope.
@@ -69,6 +70,19 @@ The package does not validate that a harness can interpret every bundled file. H
 `--cleanup` recursively removes each selected harness's entire skills destination before installation. This deletes all content in that directory, including skills and files not managed by `@codenhub/skills`. For example, selecting `OpenCode Workspace` removes `.opencode/skills` as a whole. Labels that share a destination, such as `Codex Workspace` and `Agent Skills Workspace`, remove that one directory.
 
 Cleanup occurs before any skill is copied. A cleanup failure is printed and the installer continues, so the affected destination may contain a mixture of old and newly copied content. Do not use this option on a shared or manually managed skills directory without a backup.
+
+## Draft Skills
+
+Draft skills live in the repository beside the bundled ones, in `packages/skills/drafts/`, and are not published. The installer ignores them unless `--include-drafts` is given, which adds them to the skills it offers, each labeled `(draft)` in the wizard. The flag says where skills come from rather than what to install, so on its own it keeps the wizard; with other options, `--all-skills` and the default selection include the drafts too.
+
+Run it from a checkout after building the package, from the directory to install into:
+
+```sh
+pnpm build skills
+node <checkout>/packages/skills/dist/cli.js --include-drafts
+```
+
+From a published install, which has no drafts, the flag fails with exit code `1`. So does a draft whose ID matches a bundled skill.
 
 ## Automation Example
 

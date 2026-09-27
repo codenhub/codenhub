@@ -28,7 +28,7 @@ if (skill) {
 }
 ```
 
-The CLI is interactive only when invoked without arguments in a TTY. Before using `--cleanup`, review its destructive behavior in the [CLI guide](docs/cli.md#destructive-cleanup).
+The CLI is interactive only when invoked in a TTY without arguments (`--include-drafts` aside). Before using `--cleanup`, review its destructive behavior in the [CLI guide](docs/cli.md#destructive-cleanup).
 
 ## Documentation
 

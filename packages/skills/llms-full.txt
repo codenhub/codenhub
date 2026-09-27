@@ -30,7 +30,7 @@ if (skill) {
 }
 ```
 
-The CLI is interactive only when invoked without arguments in a TTY. Before using `--cleanup`, review its destructive behavior in the [CLI guide](docs/cli.md#destructive-cleanup).
+The CLI is interactive only when invoked in a TTY without arguments (`--include-drafts` aside). Before using `--cleanup`, review its destructive behavior in the [CLI guide](docs/cli.md#destructive-cleanup).
 
 ## Documentation
 
@@ -193,7 +193,7 @@ Use `npx @codenhub/skills@latest` for the npm equivalent. Node.js 18.0.0 or newe
 
 With no arguments and a TTY, the CLI opens a wizard for scope, skills, harnesses, and cleanup. Existing harness paths are preselected, but the user can change the selection.
 
-When stdin is not a TTY, or when any argument is supplied, the CLI does not prompt. It installs all skills unless `--skills` selects a subset. Without an explicit harness selection, it installs to harnesses detected for the selected scope. Detection succeeds when the destination or its parent directory exists. If none are detected, the command fails rather than writing to every possible destination; use `--all-harnesses` to opt into all destinations.
+When stdin is not a TTY, or when any argument other than `--include-drafts` is supplied, the CLI does not prompt. It installs all skills unless `--skills` selects a subset. Without an explicit harness selection, it installs to harnesses detected for the selected scope. Detection succeeds when the destination or its parent directory exists. If none are detected, the command fails rather than writing to every possible destination; use `--all-harnesses` to opt into all destinations.
 
 ## Options
 
@@ -207,6 +207,7 @@ When stdin is not a TTY, or when any argument is supplied, the CLI does not prom
 | `--harnesses=<list>` | Install to comma-separated harness labels, matched case-insensitively. |
 | `--all-harnesses`    | Select every harness valid for the chosen scope.                       |
 | `--cleanup`          | Remove selected destination roots before copying.                      |
+| `--include-drafts`   | Also offer draft skills. Works only from a repository checkout.        |
 | `--help`, `-h`       | Print command help.                                                    |
 
 Harness labels include their scope, for example `OpenCode Workspace` and `OpenCode Global`. A label supplied to `--harnesses` must be valid for the selected scope.
@@ -247,6 +248,19 @@ The package does not validate that a harness can interpret every bundled file. H
 
 Cleanup occurs before any skill is copied. A cleanup failure is printed and the installer continues, so the affected destination may contain a mixture of old and newly copied content. Do not use this option on a shared or manually managed skills directory without a backup.
 
+## Draft Skills
+
+Draft skills live in the repository beside the bundled ones, in `packages/skills/drafts/`, and are not published. The installer ignores them unless `--include-drafts` is given, which adds them to the skills it offers, each labeled `(draft)` in the wizard. The flag says where skills come from rather than what to install, so on its own it keeps the wizard; with other options, `--all-skills` and the default selection include the drafts too.
+
+Run it from a checkout after building the package, from the directory to install into:
+
+```sh
+pnpm build skills
+node <checkout>/packages/skills/dist/cli.js --include-drafts
+```
+
+From a published install, which has no drafts, the flag fails with exit code `1`. So does a draft whose ID matches a bundled skill.
+
 ## Automation Example
 
 Install two skills into every workspace harness without prompts:
@@ -270,7 +284,6 @@ This page records the origin and license context of skill assets shipped by `@co
 | `caveman`                 | Adapted from [JuliusBrussee/caveman]                       | MIT        |
 | `caveman-commit`          | Adapted from [JuliusBrussee/caveman]                       | MIT        |
 | `caveman-review`          | Adapted from [JuliusBrussee/caveman]                       | MIT        |
-| `delegate-work`           | Original Coden Agency work                                 | Apache-2.0 |
 | `frontend-design`         | Adapted from [Anthropic's official frontend-design plugin] | Apache-2.0 |
 | `subagent-specialist`     | Adapted from [obra/superpowers]                            | MIT        |
 | `test-driven-development` | Adapted from [obra/superpowers]                            | MIT        |
@@ -364,13 +377,16 @@ Supporting Markdown, YAML, notices, examples, and reference files may accompany 
 | `caveman`                 | Provides an ultra-compressed communication mode.               |
 | `caveman-commit`          | Generates terse Conventional Commit messages.                  |
 | `caveman-review`          | Produces compressed, actionable code-review findings.          |
-| `delegate-work`           | Delegates scoped tasks to other models through CLI harnesses.  |
 | `frontend-design`         | Guides distinctive production-grade frontend design.           |
 | `subagent-specialist`     | Plans, delegates, reviews, and integrates parallel agent work. |
 | `test-driven-development` | Applies fail-first red-green-refactor development.             |
 | `writing-skills`          | Creates, reviews, tests, and validates skill bundles.          |
 
 Skill wording and support files may change while the package is experimental. Use the installed `SKILL.md` and accompanying assets as the authoritative skill content for the installed package version.
+
+## Drafts
+
+Skills still in development live in `drafts/` in the repository, in the same format. They are not published, not listed here, and not installed unless the CLI is run from a checkout with `--include-drafts` (see the [CLI guide](docs/cli.md#draft-skills)). Promoting a draft means moving its directory to `skills/` and adding it to this inventory and to [Skill provenance](docs/provenance.md).
 
 ## Third-Party Material
 

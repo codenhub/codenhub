@@ -1,6 +1,7 @@
 import * as os from "os";
 import * as path from "path";
 
+import { getSkills, type Skill } from "./index.js";
 import { ANSI } from "./prompts.js";
 
 const HOME = os.homedir();
@@ -110,6 +111,31 @@ export function groupByDest(harnesses: HarnessDestination[]): DestinationGroup[]
     }
   }
   return Array.from(groups.values());
+}
+
+export const INCLUDE_DRAFTS_FLAG = "--include-drafts";
+
+/**
+ * The bundled skills, plus the drafts beside them when asked for. Drafts are
+ * not published, so they exist only in a repository checkout; each one is
+ * labeled as a draft wherever the installer shows its name.
+ */
+export function loadSkills(skillsDir: string, draftsDir: string, shouldIncludeDrafts: boolean): Skill[] {
+  const skills = getSkills(skillsDir);
+  if (!shouldIncludeDrafts) {
+    return skills;
+  }
+  const drafts = getSkills(draftsDir);
+  if (drafts.length === 0) {
+    throw new Error(
+      `${INCLUDE_DRAFTS_FLAG} found no draft skills in "${draftsDir}". Drafts are not published; run the installer from a repository checkout.`,
+    );
+  }
+  const clash = drafts.find((draft) => skills.some((skill) => skill.id === draft.id));
+  if (clash) {
+    throw new Error(`Draft skill "${clash.id}" has the same ID as a bundled skill.`);
+  }
+  return [...skills, ...drafts.map((draft) => ({ ...draft, name: `${draft.name} (draft)` }))];
 }
 
 export const EXCLUDE_FOLDER_AGENTS = "agents";

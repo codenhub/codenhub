@@ -10,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  * OpenCode 2.0.17), trimmed to the fields the adapters read.
  */
 const here = path.dirname(fileURLToPath(import.meta.url));
-const adapter = (name: string) => path.resolve(here, `../../skills/delegate-work/adapters/${name}.mjs`);
+const adapter = (name: string) => path.resolve(here, `../../drafts/delegate-work/adapters/${name}.mjs`);
 const state = path.join(os.tmpdir(), "delegate-work-adapters-test");
 const newAcc = () => ({ sessionId: null, edits: [], denied: [], texts: [], stepTexts: [], errors: [], steps: 0 });
 
