@@ -5,7 +5,9 @@ never seen this codebase and cannot ask questions. Omit sections that don't
 apply to the role; never leave a placeholder in.
 
 `--allow` and `--read` are passed as flags, not written in the brief. The worker
-preamble is prepended automatically; don't repeat its rules here.
+preamble is prepended automatically; don't repeat its rules here. For a
+`use_native` task, the result's `promptPath` holds the brief with the preamble
+in front: give a native subagent that, not the brief alone.
 
 ```
 GOAL
