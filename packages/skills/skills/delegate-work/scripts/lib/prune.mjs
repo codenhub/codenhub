@@ -99,8 +99,12 @@ export function prune({ maxAgeMs, dryRun = false }) {
   if (!dryRun && fs.existsSync(promptsDir())) {
     for (const f of fs.readdirSync(promptsDir())) {
       const file = path.join(promptsDir(), f);
-      if (now - fs.statSync(file).mtimeMs >= maxAgeMs) {
-        fs.rmSync(file, { force: true });
+      try {
+        if (now - fs.statSync(file).mtimeMs >= maxAgeMs) {
+          fs.rmSync(file, { force: true });
+        }
+      } catch {
+        // Removed meanwhile (another prune): nothing left to do for it.
       }
     }
   }
