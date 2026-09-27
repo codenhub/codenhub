@@ -8,7 +8,7 @@ import { expect, it } from "vitest";
 
 const statePath = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../../skills/delegate-work/scripts/lib/state.mjs",
+  "../../drafts/delegate-work/scripts/lib/state.mjs",
 );
 
 it("shouldKeepRunMetadataReadableDuringConcurrentUpdates", async () => {

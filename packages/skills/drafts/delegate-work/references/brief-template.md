@@ -1,13 +1,8 @@
 # Brief template
 
-A worker knows only what the brief says. Write it for a capable engineer who has
-never seen this codebase and cannot ask questions. Omit sections that don't
-apply to the role; never leave a placeholder in.
+A worker knows only what the brief says. Write it for a capable engineer who has never seen this codebase and cannot ask questions. Omit sections that don't apply to the role; never leave a placeholder in.
 
-`--allow` and `--read` are passed as flags, not written in the brief. The worker
-preamble is prepended automatically; don't repeat its rules here. For a
-`use_native` task, the result's `promptPath` holds the brief with the preamble
-in front: give a native subagent that, not the brief alone.
+`--allow` and `--read` are passed as flags, not written in the brief. The worker preamble is prepended automatically; don't repeat its rules here. For a `use_native` task, the result's `promptPath` holds the brief with the preamble in front: give a native subagent that, not the brief alone.
 
 ```
 GOAL

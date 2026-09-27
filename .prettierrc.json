@@ -4,7 +4,15 @@
   "overrides": [
     {
       "files": "**/docs/reference/**/*.md",
-      "options": { "embeddedLanguageFormatting": "off" }
+      "options": {
+        "embeddedLanguageFormatting": "off"
+      }
+    },
+    {
+      "files": ["packages/skills/skills/**/*.md", "packages/skills/drafts/**/*.md"],
+      "options": {
+        "embeddedLanguageFormatting": "off"
+      }
     }
   ]
 }

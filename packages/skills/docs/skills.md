@@ -43,13 +43,16 @@ Supporting Markdown, YAML, notices, examples, and reference files may accompany 
 | `caveman`                 | Provides an ultra-compressed communication mode.               |
 | `caveman-commit`          | Generates terse Conventional Commit messages.                  |
 | `caveman-review`          | Produces compressed, actionable code-review findings.          |
-| `delegate-work`           | Delegates scoped tasks to other models through CLI harnesses.  |
 | `frontend-design`         | Guides distinctive production-grade frontend design.           |
 | `subagent-specialist`     | Plans, delegates, reviews, and integrates parallel agent work. |
 | `test-driven-development` | Applies fail-first red-green-refactor development.             |
 | `writing-skills`          | Creates, reviews, tests, and validates skill bundles.          |
 
 Skill wording and support files may change while the package is experimental. Use the installed `SKILL.md` and accompanying assets as the authoritative skill content for the installed package version.
+
+## Drafts
+
+Skills still in development live in `drafts/` in the repository, in the same format. They are not published, not listed here, and not installed unless the CLI is run from a checkout with `--include-drafts` (see the [CLI guide](cli.md#draft-skills)). Promoting a draft means moving its directory to `skills/` and adding it to this inventory and to [Skill provenance](provenance.md).
 
 ## Third-Party Material
 

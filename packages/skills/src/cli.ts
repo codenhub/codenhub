@@ -8,6 +8,8 @@ import {
   findHarnessByLabel,
   getHarnessesForScope,
   groupByDest,
+  INCLUDE_DRAFTS_FLAG,
+  loadSkills,
   PromptExitError,
   EXIT_CODE_CANCELLED,
   clearScreen,
@@ -16,21 +18,32 @@ import {
   type State,
 } from "./cli-helpers.js";
 import { createWizardSteps, getActiveSteps } from "./cli-steps.js";
-import { getSkills, copyRecursiveSync } from "./index.js";
+import { copyRecursiveSync, type Skill } from "./index.js";
 import { ANSI, BACK, CancelledError } from "./prompts.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SKILLS_SRC_DIR = path.resolve(__dirname, "../skills");
+const DRAFTS_SRC_DIR = path.resolve(__dirname, "../drafts");
 
 async function main() {
-  const skills = getSkills(SKILLS_SRC_DIR);
+  const argv = process.argv.slice(2);
+  // Says where skills come from, not what to install, so it keeps the wizard.
+  const shouldIncludeDrafts = argv.includes(INCLUDE_DRAFTS_FLAG);
+  const args = argv.filter((arg) => arg !== INCLUDE_DRAFTS_FLAG);
+
+  let skills: Skill[];
+  try {
+    skills = loadSkills(SKILLS_SRC_DIR, DRAFTS_SRC_DIR, shouldIncludeDrafts);
+  } catch (err: unknown) {
+    console.error(`${ANSI.RED}Error: ${err instanceof Error ? err.message : String(err)}${ANSI.RESET}`);
+    process.exit(1);
+  }
   if (skills.length === 0) {
     console.error(`${ANSI.RED}Error: No skills found in source directory.${ANSI.RESET}`);
     process.exit(1);
   }
 
-  const args = process.argv.slice(2);
   if (args.includes("--help") || args.includes("-h")) {
     console.log(
       `Usage: codenhub-skills [options]\n\n` +
@@ -43,6 +56,7 @@ async function main() {
         `  --all-skills      Install all available skills\n` +
         `  --harnesses=<list> Comma-separated list of harnesses to install to\n` +
         `  --all-harnesses   Install to all valid harnesses for the selected scope\n` +
+        `  --include-drafts  Also offer the draft skills (repository checkout only)\n` +
         `  --help, -h        Display this help message`,
     );
     process.exit(0);
@@ -163,7 +177,7 @@ async function main() {
       } else {
         console.error(`${ANSI.RED}Unknown argument: ${arg}${ANSI.RESET}`);
         console.error(
-          `Usage: codenhub-skills [--local|--global|--both] [--cleanup] [--harnesses=...] [--all-harnesses] [--skills=...] [--all-skills]`,
+          `Usage: codenhub-skills [--local|--global|--both] [--cleanup] [--harnesses=...] [--all-harnesses] [--skills=...] [--all-skills] [--include-drafts]`,
         );
         process.exit(1);
       }

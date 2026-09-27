@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-22
+last_updated: 2026-09-27
 scope: Durable repository-level documentation under root `docs/`.
 ---
 
@@ -38,7 +38,7 @@ Templates that would copy repository governance metadata into consumer-facing ou
 
 Markdown in this repository is not hard-wrapped. Write each paragraph and list item as a single line and let the editor wrap it on screen. Markdown renders a lone newline inside a paragraph as a space, so wrapped and unwrapped source read identically once rendered, and leaving prose unwrapped keeps an edit to one word from reflowing a whole paragraph in the diff.
 
-`pnpm format:check` enforces this: it runs Prettier over every Markdown file with `proseWrap` set to `never`, and `pnpm verify` and the `pre-commit` hook run the same check. The rule is the formatter's to keep — do not hand-wrap prose to a column, and do not add a `max_line_length` for Markdown to editor configuration. Third-party Markdown listed in `.prettierignore`, such as vendored icon attributions and adapted agent skills, is kept as received and is exempt.
+`pnpm format:check` enforces this: it runs Prettier over every Markdown file with `proseWrap` set to `never`, and `pnpm verify` and the `pre-commit` hook run the same check. The rule is the formatter's to keep — do not hand-wrap prose to a column, and do not add a `max_line_length` for Markdown to editor configuration. Third-party Markdown listed in `.prettierignore`, the vendored icon attributions, is kept as received and is exempt. Agent skills, adapted ones included, are formatted like the rest, but with their fenced examples left as written: an agent reads a skill as raw text, where an example's line breaks are part of what it shows.
 
 ## Source of truth
 

@@ -238,9 +238,7 @@ export function activeInplace(root) {
   return fs
     .readdirSync(dir)
     .map(loadMeta)
-    .filter(
-      (m) => m && m.isolation === "inplace" && m.editing && m.root === root && working(m),
-    );
+    .filter((m) => m && m.isolation === "inplace" && m.editing && m.root === root && working(m));
 }
 
 export const promptsDir = () => path.join(baseDir(), "prompts");

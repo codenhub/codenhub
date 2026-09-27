@@ -9,11 +9,9 @@ metadata:
 
 ## Overview
 
-Use strict test-first development: write a failing test, make it pass with the
-smallest possible implementation, then refactor while keeping tests green.
+Use strict test-first development: write a failing test, make it pass with the smallest possible implementation, then refactor while keeping tests green.
 
-**Core principle:** If the test did not fail first for the expected reason, the
-test does not prove the behavior.
+**Core principle:** If the test did not fail first for the expected reason, the test does not prove the behavior.
 
 ## When To Use
 
@@ -28,24 +26,17 @@ Possible exceptions (only with explicit user confirmation in this conversation):
 
 - throwaway prototypes
 - generated code
-- strictly non-executable configuration edits (comments, whitespace, key
-  ordering, or descriptive metadata that no runtime/build/deploy tooling reads)
+- strictly non-executable configuration edits (comments, whitespace, key ordering, or descriptive metadata that no runtime/build/deploy tooling reads)
 
-Any configuration change that can affect runtime behavior (flags, permissions,
-routing, dependency resolution, build output, or environment loading) requires
-tests.
+Any configuration change that can affect runtime behavior (flags, permissions, routing, dependency resolution, build output, or environment loading) requires tests.
 
 Do not self-approve exception paths.
 
-When a change appears to qualify for the config-only exception and explicit
-confirmation is missing, ask once for explicit confirmation for this exact
-change. If confirmation is still missing, run full TDD.
+When a change appears to qualify for the config-only exception and explicit confirmation is missing, ask once for explicit confirmation for this exact change. If confirmation is still missing, run full TDD.
 
-If there is any uncertainty about runtime impact, treat the change as behavior
-changing and run tests.
+If there is any uncertainty about runtime impact, treat the change as behavior changing and run tests.
 
-Exception authorization must be explicit for this exact change in the
-conversation. Generic urgency language is not approval to skip TDD.
+Exception authorization must be explicit for this exact change in the conversation. Generic urgency language is not approval to skip TDD.
 
 Config-only exception checklist (all must be true):
 
@@ -99,11 +90,9 @@ Confirm:
 - test fails for the expected missing-behavior reason
 - failure is not caused by setup, typos, stale fixtures, or harness issues
 
-If the failure is a setup or harness error, fix setup and re-run until the
-failure reflects the expected missing behavior.
+If the failure is a setup or harness error, fix setup and re-run until the failure reflects the expected missing behavior.
 
-If the test passes immediately, it is not proving new behavior. Fix the test or
-choose a different scenario.
+If the test passes immediately, it is not proving new behavior. Fix the test or choose a different scenario.
 
 ### 3) GREEN - Write Minimal Code
 
@@ -127,21 +116,17 @@ Run:
 - tests that cover touched public interfaces and integration boundaries
 - repo-required smoke or pre-merge suites before finishing
 
-If baseline failures exist before coding (flaky or not), run the exact
-verification commands before coding and capture failing test IDs plus error
-signatures as baseline evidence.
+If baseline failures exist before coding (flaky or not), run the exact verification commands before coding and capture failing test IDs plus error signatures as baseline evidence.
 
 If uncertain, run the broader suite.
 
 Confirm:
 
 - new test passes
-- existing tests remain green, or only baseline failures with matching test IDs
-  and error signatures remain
+- existing tests remain green, or only baseline failures with matching test IDs and error signatures remain
 - no new warnings or runtime errors
 
-For baseline handling and flaky failure triage, use
-`verification-baselines.md`.
+For baseline handling and flaky failure triage, use `verification-baselines.md`.
 
 ### 5) REFACTOR - Improve Design Safely
 
@@ -154,8 +139,7 @@ Allowed work:
 - extract helpers
 - simplify design
 
-Do not change behavior during refactor. If behavior changes, start another RED
-cycle first.
+Do not change behavior during refactor. If behavior changes, start another RED cycle first.
 
 ### 6) Repeat
 
@@ -199,23 +183,17 @@ Stop and restart the cycle when you see:
 
 For bugs, start by writing a failing regression test that reproduces the issue.
 
-If deterministic reproduction is not immediately possible, write the smallest
-deterministic characterization test (contract, property, or boundary case) that
-captures the observed failure before changing production code.
+If deterministic reproduction is not immediately possible, write the smallest deterministic characterization test (contract, property, or boundary case) that captures the observed failure before changing production code.
 
-If you cannot produce a failing automated test, stop and ask the user before
-shipping a bug fix.
+If you cannot produce a failing automated test, stop and ask the user before shipping a bug fix.
 
-Then run the normal RED-GREEN-REFACTOR cycle. Never ship a bug fix without a
-reproduction or characterization test.
+Then run the normal RED-GREEN-REFACTOR cycle. Never ship a bug fix without a reproduction or characterization test.
 
 ## Testing Anti-Patterns
 
-When adding or changing tests, especially with mocks, review
-`testing-anti-patterns.md`.
+When adding or changing tests, especially with mocks, review `testing-anti-patterns.md`.
 
-When baseline failures or flaky tests appear during verification, review
-`verification-baselines.md`.
+When baseline failures or flaky tests appear during verification, review `verification-baselines.md`.
 
 ## Verification Checklist
 

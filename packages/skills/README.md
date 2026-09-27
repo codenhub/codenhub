@@ -28,7 +28,7 @@ if (skill) {
 }
 ```
 
-The CLI is interactive only when invoked without arguments in a TTY. Before using `--cleanup`, review its destructive behavior in the [CLI guide](docs/cli.md#destructive-cleanup).
+The CLI is interactive only when invoked in a TTY without arguments (`--include-drafts` aside). Before using `--cleanup`, review its destructive behavior in the [CLI guide](docs/cli.md#destructive-cleanup).
 
 ## Documentation
 
@@ -39,7 +39,7 @@ The CLI is interactive only when invoked without arguments in a TTY. Before usin
 
 ## Requirements
 
-- Node.js 18.0.0 or newer.
+- Node.js 22 or newer.
 - Filesystem permission to read source skills and modify selected destinations.
 - A TTY for the interactive wizard; explicit CLI options support automation.
 

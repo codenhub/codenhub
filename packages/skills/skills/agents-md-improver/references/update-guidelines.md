@@ -2,8 +2,7 @@
 
 ## Core Principle
 
-Only add information that will genuinely help future agent sessions. Attention
-and context are limited, so every line must earn its place.
+Only add information that will genuinely help future agent sessions. Attention and context are limited, so every line must earn its place.
 
 ## What TO Add
 
@@ -140,8 +139,7 @@ Section: Commands (new section after ## Architecture)
 
 ### 3. Explain Why
 
-> **Why this helps:** The build commands were not documented, which forces
-> future sessions to inspect `package.json` before they can work efficiently.
+> **Why this helps:** The build commands were not documented, which forces future sessions to inspect `package.json` before they can work efficiently.
 
 ## Validation Checklist
 

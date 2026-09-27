@@ -10,7 +10,7 @@ Import all public symbols from `@codenhub/skills`:
 import { copyRecursiveSync, getSkills, parseFrontmatter, type CopyRecursiveOptions, type Skill } from "@codenhub/skills";
 ```
 
-All operations are synchronous and require Node.js 18.0.0 or newer.
+All operations are synchronous and require Node.js 22 or newer.
 
 ## `parseFrontmatter`
 

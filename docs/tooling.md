@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-23
+last_updated: 2026-09-27
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -145,7 +145,7 @@ Package runs are killed when they exceed `--timeout`. This is what keeps one han
 
 `lint`, `format`, and `cloc` run from the repository root over resolved paths rather than once per package. Selecting nothing falls back to the whole repository, which is why `pnpm cloc` needs no argument.
 
-`format` runs two formatters in sequence: `oxfmt` over every resolved path, then Prettier over the Markdown among them. `oxfmt` does not format Markdown, and Prettier is the one holding the `proseWrap` rule `docs/README.md` sets. Both always run, so a failure in one still surfaces the other's findings or fixes. Tool arguments after `--` reach `oxfmt` only, because Prettier shares none of its flags. Markdown that `.prettierignore` lists — vendored icon attributions and adapted agent skills — is left as received.
+`format` runs two formatters in sequence: `oxfmt` over every resolved path, then Prettier over the Markdown among them. `oxfmt` does not format Markdown, and Prettier is the one holding the `proseWrap` rule `docs/README.md` sets. Both always run, so a failure in one still surfaces the other's findings or fixes. Tool arguments after `--` reach `oxfmt` only, because Prettier shares none of its flags. Markdown that `.prettierignore` lists, the vendored icon attributions, is left as received. In agent skills (`packages/skills/skills/` and `drafts/`), `.prettierrc.json` turns off `embeddedLanguageFormatting`, so fenced examples keep their line breaks.
 
 ## Browser tests
 

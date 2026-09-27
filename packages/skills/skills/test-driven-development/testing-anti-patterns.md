@@ -1,12 +1,10 @@
 # Testing Anti-Patterns
 
-Load this reference when writing tests, adding mocks, or considering test-only
-helpers in production code.
+Load this reference when writing tests, adding mocks, or considering test-only helpers in production code.
 
 ## Overview
 
-Tests should verify behavior that matters to users and calling code. Mocks are
-tools for isolation, not the target of assertions.
+Tests should verify behavior that matters to users and calling code. Mocks are tools for isolation, not the target of assertions.
 
 **Core principle:** Test real behavior, not mock behavior.
 

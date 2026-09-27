@@ -11,10 +11,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  * and run state in a temp dir, with a fake harness standing in for OpenCode.
  */
 const here = path.dirname(fileURLToPath(import.meta.url));
-const runner = path.resolve(here, "../../skills/delegate-work/scripts/lib/runner.mjs");
-const state = path.resolve(here, "../../skills/delegate-work/scripts/lib/state.mjs");
-const proc = path.resolve(here, "../../skills/delegate-work/scripts/lib/proc.mjs");
-const adapter = (name: string) => path.resolve(here, `../../skills/delegate-work/adapters/${name}.mjs`);
+const runner = path.resolve(here, "../../drafts/delegate-work/scripts/lib/runner.mjs");
+const state = path.resolve(here, "../../drafts/delegate-work/scripts/lib/state.mjs");
+const proc = path.resolve(here, "../../drafts/delegate-work/scripts/lib/proc.mjs");
+const adapter = (name: string) => path.resolve(here, `../../drafts/delegate-work/adapters/${name}.mjs`);
 
 describe("delegate-work", () => {
   let tmp: string;
