@@ -759,6 +759,63 @@ describe("delegate-work", () => {
     }
   }, 20000);
 
+  it("shouldRefuseDiscardWhileAWorkerSurvivesAForceKilledDispatch", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+    const gate = path.join(tmp, "worker-release");
+    const started = `${gate}.started`;
+    const before = fs.readFileSync(path.join(repo, "src", "a.txt"), "utf8");
+    // On Windows the worker runs through a .cmd shim, which dies with dispatch while the worker goes on.
+    const dispatch = path.resolve(runner, "../../dispatch.mjs");
+    const child = spawn(
+      process.execPath,
+      [dispatch, "run", "--role", "fixer", "--allow", "src/a.txt", "--model", "fake", "--brief", "-"],
+      { cwd: repo, env: process.env, stdio: ["pipe", "ignore", "ignore"] },
+    );
+    child.stdin.end(`Add a line. HOLD ${gate.replaceAll("\\", "/")}`);
+    const waitFor = async (predicate: () => boolean) => {
+      const deadline = Date.now() + 10000;
+      while (!predicate()) {
+        if (Date.now() > deadline) {
+          throw new Error("timed out waiting for the worker");
+        }
+        // oxlint-disable-next-line no-await-in-loop -- polls for the worker's lifecycle.
+        await new Promise<void>((resolve) => setTimeout(resolve, 25));
+      }
+    };
+
+    try {
+      await waitFor(() => fs.existsSync(started));
+      const worker = Number(fs.readFileSync(started, "utf8"));
+      const meta = fs
+        .readdirSync(S.runsDir())
+        .map(S.loadMeta)
+        .find((entry: { pid: number }) => entry?.pid === child.pid);
+      child.kill("SIGKILL");
+      await new Promise<void>((resolve) => child.on("close", () => resolve()));
+      expect(S.alive(worker)).toBe(true);
+      const refused = await R.discard(meta.id);
+      expect(refused.status).toBe("conflict");
+      expect(refused.hint).toContain("dispatch stopped, but its worker");
+      fs.writeFileSync(gate, "continue");
+      await waitFor(() => !S.alive(worker));
+      await waitFor(() => !S.working(S.loadMeta(meta.id)));
+      const d = await R.discard(meta.id);
+      expect(d.status).toBeNull();
+      expect(fs.readFileSync(path.join(repo, "src", "a.txt"), "utf8")).toBe(before);
+    } finally {
+      child.kill("SIGKILL");
+      fs.writeFileSync(gate, "continue");
+      if (fs.existsSync(started)) {
+        const worker = Number(fs.readFileSync(started, "utf8"));
+        await waitFor(() => !S.alive(worker));
+      }
+      for (const file of [started, gate]) {
+        fs.rmSync(file, { force: true });
+      }
+    }
+  }, 20000);
+
   it.skipIf(process.platform === "win32")("shouldRestoreAnExecutableFileAsExecutable", async () => {
     const R = await import(runner);
     const tool = path.join(repo, "tool.sh");

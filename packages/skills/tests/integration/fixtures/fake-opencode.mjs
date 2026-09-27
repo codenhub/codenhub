@@ -34,6 +34,15 @@ if (cmd === "--version") {
     fs.appendFileSync(file, `${prompt.includes("FOLLOW-UP") ? "second" : "first"}\n`);
   }
   emit({ type: "tool_use", part: { tool: "write", state: { status: "completed", input: { path: file } } } });
+  // HOLD <file>: keep working until that file exists, then write once more.
+  const hold = prompt.match(/HOLD (\S+)/)?.[1];
+  if (hold) {
+    fs.writeFileSync(`${hold}.started`, String(process.pid));
+    while (!fs.existsSync(hold)) {
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
+    }
+    fs.appendFileSync(file, "late\n");
+  }
   // A route that edits, then fails as a provider would; BREAK: this run only.
   if (process.argv.includes("fake/broken") || prompt.includes("BREAK")) {
     emit({ type: "error", error: { type: "provider", status: 503, message: "The service is currently unavailable." } });

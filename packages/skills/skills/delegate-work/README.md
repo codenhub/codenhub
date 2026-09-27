@@ -96,10 +96,15 @@ its pid. Stopped with Ctrl+C or a closing terminal, dispatch ends its workers
 and checks too. A forced kill, which it can't catch (as some command timeouts
 do), may leave the worker or a check running: the run counts as working until
 it exits, then as interrupted, and `discard` restores its allowed files from
-the snapshot, keeping a copy. A check counts while any process it started
-does: off Windows, its shell's process group; on Windows, where the shell
-dies with dispatch and the command it ran doesn't, the processes descended
-from the shell, found by their recorded parent.
+the snapshot, keeping a copy. A worker or check counts while any process it
+started does. Off Windows that is its process group. On Windows, where
+dispatch's own children die with it but theirs don't (a check's shell, a
+harness's `.cmd` shim), it is the processes descended from it, found by the
+parent id they keep; dispatch lists them with PowerShell only once it is
+gone. Start times tell a process from a later one that reused its id. Where
+they can't be read (macOS; Windows when PowerShell can't list processes),
+a process counts for at most six hours from its start, and on Windows an
+unreadable list counts as still running, which the hint says.
 
 A run's state is written aside and renamed into place, so a concurrent
 `doctor`, `prune` or `discard` never reads it half-written.

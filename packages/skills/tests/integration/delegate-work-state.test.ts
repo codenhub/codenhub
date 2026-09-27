@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -60,10 +60,11 @@ it("shouldKeepRunMetadataReadableDuringConcurrentUpdates", async () => {
 
 it.skipIf(process.platform === "win32")("shouldCountACheckAsWorkingWhileItsGroupOutlivesItsShell", async () => {
   const { working } = await import(statePath);
+  const checkStarted = Date.now();
   // The shell exits at once, leaving a process it started in its group, as a check dispatch was killed during may.
   const shell = spawn("sh", ["-c", "sleep 30 &"], { detached: true, stdio: "ignore" });
   await new Promise((resolve) => shell.on("close", resolve));
-  const meta = { phase: "interrupted", checkPid: shell.pid, checkStarted: Date.now() };
+  const meta = { phase: "interrupted", checkPid: shell.pid, checkStarted };
 
   try {
     expect(working(meta)).toBe(true);
@@ -71,4 +72,42 @@ it.skipIf(process.platform === "win32")("shouldCountACheckAsWorkingWhileItsGroup
     process.kill(-(shell.pid as number), "SIGKILL");
   }
   await expect.poll(() => working(meta)).toBe(false);
+});
+
+it.skipIf(!["win32", "linux"].includes(process.platform))(
+  "shouldTellAWorkerFromAProcessThatReusedItsPid",
+  async () => {
+    const { working } = await import(statePath);
+    const workerStarted = Date.now();
+    const worker = spawn(process.execPath, ["-e", "setTimeout(() => {}, 30000)"], { stdio: "ignore" });
+
+    try {
+      expect(working({ phase: "interrupted", workerPid: worker.pid, workerStarted })).toBe(true);
+      // Recorded as started before this process existed: the pid is someone else's now.
+      expect(working({ phase: "interrupted", workerPid: worker.pid, workerStarted: workerStarted - 60000 })).toBe(
+        false,
+      );
+    } finally {
+      worker.kill("SIGKILL");
+    }
+  },
+  15000,
+);
+
+it.skipIf(process.platform !== "win32")("shouldCountAWorkerAsWorkingWhenProcessesCannotBeListed", async () => {
+  const { working } = await import(statePath);
+  const gone = spawnSync(process.execPath, ["-e", ""]).pid;
+  const path = process.env.PATH;
+  // No PATH, no powershell.exe to list the processes with.
+  process.env.PATH = "";
+
+  try {
+    const seen: { unlisted?: boolean } = {};
+    expect(working({ phase: "interrupted", workerPid: gone, workerStarted: Date.now() }, seen)).toBe(true);
+    expect(seen.unlisted).toBe(true);
+    // Past the bound, the pid is taken for someone else's.
+    expect(working({ phase: "interrupted", workerPid: gone, workerStarted: Date.now() - 7 * 3600000 })).toBe(false);
+  } finally {
+    process.env.PATH = path;
+  }
 });

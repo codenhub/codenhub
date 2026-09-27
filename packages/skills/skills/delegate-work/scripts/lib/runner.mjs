@@ -665,10 +665,15 @@ function interrupted(meta, e) {
 const stillWorking = working;
 const workingHint = (id) => {
   const meta = loadMeta(id);
-  const survivor = meta?.checkPid ? "check" : "worker";
-  return meta && !working({ ...meta, workerPid: null, checkPid: null })
-    ? `Run ${id}'s dispatch stopped, but its ${survivor} (process ${meta[`${survivor}Pid`]}) is still running; wait for it to exit, or end it.`
-    : `Run ${id} is still working; wait for its result.`;
+  if (!meta || working({ ...meta, workerPid: null, checkPid: null })) {
+    return `Run ${id} is still working; wait for its result.`;
+  }
+  const survivor = meta.checkPid ? "check" : "worker";
+  const seen = {};
+  working(meta, seen);
+  return seen.unlisted
+    ? `Run ${id}'s dispatch stopped, and the processes couldn't be listed to see whether its ${survivor} (process ${meta[`${survivor}Pid`]}) or what it started still runs; it counts as running until 6 hours after it started. End it if it does, or wait.`
+    : `Run ${id}'s dispatch stopped, but its ${survivor} (process ${meta[`${survivor}Pid`]}) or a process it started is still running; wait for it to exit, or end it.`;
 };
 
 /** Another run still working in this tree: writing into it now would be counted as that run's change. */
@@ -1165,6 +1170,8 @@ export function apply(id) {
     }
   }
   meta.applied = true;
+  // Found stopped above: no process of this run is left to look for.
+  Object.assign(meta, { workerPid: null, checkPid: null });
   saveMeta(id, meta);
   return envelope(meta);
 }
@@ -1228,6 +1235,7 @@ export async function discard(id) {
     writeFrom(meta.root, meta.snap, files);
   }
   meta.discarded = true;
+  Object.assign(meta, { workerPid: null, checkPid: null });
   saveMeta(id, meta);
   return envelope(meta);
 }

@@ -103,23 +103,16 @@ export const alive = (pid) => {
 
 // FILETIME counts 100 ns steps from 1601; Date.now() counts ms from 1970.
 const FILETIME_EPOCH_MS = 11644473600000;
-// CreationDate and Date.now() read the same clock, but not at the same instant.
+// A start time and Date.now() read the same clock, but not at the same
+// instant; Linux gives boot time in whole seconds.
 const CLOCK_SLACK_MS = 2000;
 
-/**
- * Processes a check started that are still running once its shell is gone.
- * Off Windows the shell leads its own process group (see runShell), which
- * lives while any of them does. Windows has no groups, and ends dispatch's
- * own children with it (node puts them in a kill-on-close job) but not
- * theirs: the shell dies and the command it ran goes on. A process keeps its
- * parent's id after the parent exits, so the survivors are found by it; only
- * those started after the check did, since the id may have been reused. When
- * the processes can't be listed, the shell alone counts.
- */
-function descendantsAlive(pid, since) {
-  if (!WIN) {
-    return alive(-pid);
-  }
+/** Every running process: pid → { parent, group, created (ms) }. Null when they can't be listed. */
+function processTable() {
+  return WIN ? windowsProcesses() : process.platform === "linux" ? linuxProcesses() : null;
+}
+
+function windowsProcesses() {
   const listed = spawnSync(
     "powershell.exe",
     [
@@ -131,39 +124,110 @@ function descendantsAlive(pid, since) {
     { encoding: "utf8", windowsHide: true, timeout: 30000 },
   );
   if (listed.status !== 0) {
-    return false;
+    return null;
   }
-  const children = new Map();
+  const table = new Map();
   for (const line of listed.stdout.split(/\r?\n/)) {
     const [id, parent, created] = line.trim().split(" ").map(Number);
-    if (id && created / 10000 - FILETIME_EPOCH_MS >= since - CLOCK_SLACK_MS) {
-      children.set(parent, [...(children.get(parent) ?? []), id]);
+    if (id && created) {
+      table.set(id, { parent, group: null, created: created / 10000 - FILETIME_EPOCH_MS });
     }
   }
-  const seen = new Set([pid]);
-  for (const p of seen) {
-    for (const child of children.get(p) ?? []) {
-      seen.add(child);
-    }
-  }
-  return seen.size > 1;
+  return table.size ? table : null;
 }
 
-const checkAlive = (pid, since) => alive(pid) || descendantsAlive(pid, since ?? 0);
+let clockTicks;
+function linuxProcesses() {
+  try {
+    const boot = Number(fs.readFileSync("/proc/stat", "utf8").match(/^btime (\d+)$/m)[1]) * 1000;
+    clockTicks ??= Number(spawnSync("getconf", ["CLK_TCK"], { encoding: "utf8" }).stdout) || 100;
+    const table = new Map();
+    for (const id of fs.readdirSync("/proc").filter((d) => /^\d+$/.test(d))) {
+      let stat;
+      try {
+        stat = fs.readFileSync(`/proc/${id}/stat`, "utf8");
+      } catch {
+        continue; // Exited while listing.
+      }
+      // Fields after the name, which is in parentheses and may hold anything.
+      const [state, parent, group, ...rest] = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+      if (state !== "Z") {
+        table.set(Number(id), {
+          parent: Number(parent),
+          group: Number(group),
+          created: boot + (Number(rest[16]) / clockTicks) * 1000,
+        });
+      }
+    }
+    return table;
+  } catch {
+    return null;
+  }
+}
 
-// No worker lives this long; a pid older than this belongs to another process.
+// Without a start time to tell them apart, a pid older than this belongs to another process.
 const MAX_WORKER_MS = 6 * 3600000;
-const recent = (started) => Date.now() - (started ?? 0) < MAX_WORKER_MS;
+
+/**
+ * The process dispatch started at `since` (a worker, a check's shell), or one
+ * it started, is still running. Windows ends dispatch's own children with it
+ * (node puts them in a kill-on-close job) but not theirs: a check's shell or
+ * a harness's .cmd shim dies and what it ran goes on. A process keeps its
+ * parent's id after the parent exits, so those are found by it; off Windows,
+ * also by the process group the one dispatch started leads (see start and
+ * runShell). Start times tell a process from a later one that reused its id.
+ * When they can't be read, a pid is trusted for MAX_WORKER_MS, and on Windows,
+ * where only the listing finds the survivors, the run counts as working.
+ */
+function survives(pid, since, listing) {
+  const table = listing();
+  if (!table) {
+    return Date.now() - since < MAX_WORKER_MS && (WIN || alive(pid) || alive(-pid));
+  }
+  // A process that took over the pid came after everything this one started.
+  const own = table.get(pid);
+  const reusedAt = own && own.created > since + CLOCK_SLACK_MS ? own.created : Infinity;
+  if (own && reusedAt === Infinity) {
+    return true;
+  }
+  const ours = (p) => p.created >= since - CLOCK_SLACK_MS && p.created < reusedAt;
+  const found = new Set([pid]);
+  for (const p of found) {
+    for (const [id, q] of table) {
+      if (q.parent === p && (p !== pid || ours(q))) {
+        found.add(id);
+      }
+    }
+  }
+  return found.size > 1 || [...table.values()].some((q) => q.group === pid && ours(q));
+}
 
 /**
  * The run is still working: its dispatch is (and says so), or the worker or
  * check it started is, as when dispatch was killed or failed and they were not.
+ * `seen.unlisted` is set when that took processes Windows couldn't list.
  */
-export const working = (meta) =>
-  (meta.phase === "running" && Date.now() - (meta.beat ?? 0) < STALE_MS && alive(meta.pid)) ||
-  ((meta.phase === "running" || meta.phase === "interrupted") &&
-    ((!!meta.workerPid && recent(meta.workerStarted) && alive(meta.workerPid)) ||
-      (!!meta.checkPid && recent(meta.checkStarted) && checkAlive(meta.checkPid, meta.checkStarted))));
+export function working(meta, seen = {}) {
+  if (meta.phase === "running" && Date.now() - (meta.beat ?? 0) < STALE_MS && alive(meta.pid)) {
+    return true;
+  }
+  if (meta.phase !== "running" && meta.phase !== "interrupted") {
+    return false;
+  }
+  // Listed once, and only when a process is left to look for.
+  let table;
+  const listing = () => {
+    if (table === undefined) {
+      table = processTable();
+      seen.unlisted = WIN && !table;
+    }
+    return table;
+  };
+  return (
+    (!!meta.workerPid && survives(meta.workerPid, meta.workerStarted ?? 0, listing)) ||
+    (!!meta.checkPid && survives(meta.checkPid, meta.checkStarted ?? 0, listing))
+  );
+}
 
 /** Editing runs currently active in place on this repo (for isolation: auto). */
 export function activeInplace(root) {
