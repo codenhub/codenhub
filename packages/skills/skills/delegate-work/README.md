@@ -183,6 +183,50 @@ its checks), for example a test suite that needs a token:
 
     "projects": { "C:/work/api/**": { "passEnv": ["STRIPE_TEST_KEY"] } }
 
+## Known limitations
+
+Where the skill has been run, and what to expect elsewhere.
+
+**Platforms.** Every harness has been verified on Windows with real runs
+(see the harness notes). Linux runs the test suite with a fake harness; real
+harnesses there are not verified, in particular whether Codex's sandbox
+refuses writes through a worktree's linked dependency folders, where agy
+keeps its login (a worker's separate home may lose it), and whether a
+harness starts processes outside its process group. macOS is untested.
+Checks run through `cmd.exe` on Windows and `/bin/sh` elsewhere (`dash` on
+Debian and Ubuntu), so configured checks need to suit that shell.
+
+**Hosts.** The orchestrator has been Claude Code, and once OpenCode. Codex
+and Antigravity, as desktop apps, have not.
+
+- Only Claude Code is recognized as the orchestrator (through `CLAUDECODE`),
+  so only its own models come back as `use_native`. Under another host, its
+  models run as external workers on the same quota. An `orchestrators`
+  entry in your config gives a host its quota pools; the host is picked by
+  an environment variable it sets (`env`), or by `--orchestrator <name>` on
+  each run.
+- A builder takes up to 30 minutes plus its checks. The host must let a
+  command run that long or in the background; a host that kills it leaves
+  an interrupted run to `discard`.
+- A host that sandboxes its commands, as Codex does, is expected to keep
+  dispatch from writing its state under the home directory, starting
+  processes with piped output (Codex's unelevated Windows sandbox refuses
+  that), and reaching the network for its workers: run dispatch outside
+  that sandbox.
+
+**Behavior to know.**
+
+- An editing worker in place shares your working tree: edits made there
+  while it or its checks run count as its own.
+- Checks must only verify: one that rewrites files makes every run
+  `out_of_scope`.
+- OpenCode loads plugins, so a repository's own OpenCode plugins run in
+  its workers.
+- Claude Code workers' sessions appear in your Claude Code session history.
+- Not handled: renames that change only a file name's case on Windows, two
+  rebriefs of one run, or two runs claiming the tree in place, racing each
+  other, and validating a project's `packageManager` field.
+
 ## Harness notes
 
 Per-harness mechanics, verified versions and known limits:
