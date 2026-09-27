@@ -538,18 +538,16 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   }
   fs.writeFileSync(path.join(runDir(meta.id), "patch.diff"), G.patch(meta.snap, post, meta.workDir));
 
-  // Restore out-of-scope files wherever the work dir is shared (the real tree,
-  // or a reviewed run's worktree). A private worktree is simply never applied.
-  const quarantine = () => {
+  // Restore files to their version in ref wherever the work dir is shared (the
+  // real tree, or a reviewed run's worktree), keeping the changed versions in
+  // dir. A private worktree is simply never applied. Says whether it ran.
+  const restoreShared = (candidates, ref, dir, what) => {
     if (meta.isolation !== "inplace" && !meta.sharedWorkDir) {
-      return;
+      return false;
     }
-    // Real changed paths only: the notes in parentheses aren't files, but a
-    // file's name may start with one.
-    const candidates = outOfScope.filter((f) => seen.has(f));
     const linked = throughLinks(meta.workDir, candidates);
     const files = candidates.filter((f) => !linked.includes(f));
-    const qdir = path.join(runDir(meta.id), "quarantine");
+    const qdir = path.join(runDir(meta.id), dir);
     for (const f of files) {
       const src = path.join(meta.workDir, f);
       if (fs.existsSync(src)) {
@@ -557,16 +555,26 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
         fs.copyFileSync(src, path.join(qdir, f));
       }
     }
-    writeFrom(meta.workDir, meta.snap, files);
+    writeFrom(meta.workDir, ref, files);
     const notes = [meta.hint];
     if (files.length) {
-      notes.push(`Out-of-scope files were restored; their changed versions are kept in ${qdir}.`);
+      notes.push(`${what} were restored; their changed versions are kept in ${qdir}.`);
     }
     if (linked.length) {
       notes.push(linkHint(linked));
     }
     meta.hint = notes.filter(Boolean).join(" ") || null;
+    return true;
   };
+  // Real changed paths only: the notes in parentheses aren't files, but a
+  // file's name may start with one.
+  const quarantine = () =>
+    restoreShared(
+      outOfScope.filter((f) => seen.has(f)),
+      meta.snap,
+      "quarantine",
+      "Out-of-scope files",
+    );
 
   if (killed === "timeout" || killed === "steps") {
     meta.status = "timeout";
@@ -602,11 +610,22 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
     if (depsFingerprint(meta.root, depDirs) !== depsBeforeChecks) {
       meta.files.outOfScope.push("(dependency folder changed during the checks: install detected)");
     }
-    // What checks leave behind (unignored reports, caches) isn't someone's edit.
     meta.settled = meta.checkList.length
       ? G.workingTree(meta.workDir, path.join(runDir(meta.id), "settled.index"))
       : meta.post;
     meta.status = meta.checks.every((c) => c.ok) ? "ok" : "failed_checks";
+    // The checks verified the worker's version, and apply installs that one.
+    // A check that rewrote a file (a formatter, a generator) leaves a version
+    // nothing verified; ignored output (builds, caches) isn't part of either.
+    const checkEdits = G.numstat(meta.post, meta.settled, meta.workDir)
+      .map((c) => c.path)
+      .filter((f) => !ignore.includes(f));
+    if (checkEdits.length) {
+      meta.files.outOfScope.push(`(checks changed git-visible files: ${checkEdits.slice(0, 10).join(", ")})`);
+      if (restoreShared(checkEdits, meta.post, "checks-quarantine", "Files the checks changed")) {
+        meta.settled = G.workingTree(meta.workDir, path.join(runDir(meta.id), "restored.index"));
+      }
+    }
     if (meta.gitFileRestored) {
       meta.files.outOfScope.push("(worktree .git file changed by the checks: restored)");
     }

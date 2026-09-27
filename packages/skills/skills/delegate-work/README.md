@@ -135,6 +135,14 @@ wrote through the linked `node_modules` and repointed the repository's own
 links at the worktree. A change to the install markers during the checks
 still makes the run `out_of_scope`.
 
+A check that changes a file git sees (a formatter that fixes, a generator)
+makes the run `out_of_scope`, even when every check passed: the checks
+verified the worker's version, which is what `apply` would install, and the
+tree now holds another. In place, the worker's version is put back and the
+checks' copies kept in the run's state. Ignored output (builds, caches) doesn't
+count. Configure checks that only verify, such as `format:check`, not
+`format`.
+
 Worktrees get the project's venv linked. Its editable install still points at
 the repository, so with a `src/` directory the checks (and the worker) get
 `PYTHONPATH=src` to test the worktree's code.

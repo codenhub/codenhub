@@ -362,6 +362,73 @@ describe("delegate-work", () => {
     await R.discard(rebrief.id);
   });
 
+  it("shouldRejectChecksThatChangeGitVisibleFilesBeforeApply", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    config.projects = {
+      [`${repo.replaceAll("\\", "/")}/**`]: {
+        checks: {
+          fast: ["node -e \"require('fs').writeFileSync('src/a.txt', 'modified by checks\\n')\""],
+        },
+      },
+    };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+    const before = fs.readFileSync(path.join(repo, "src/a.txt"), "utf8");
+
+    try {
+      const result = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt"],
+        brief: "Add a line.",
+        model: "fake",
+        isolation: "worktree",
+      });
+      expect(result.checks[0].ok).toBe(true);
+      expect(result.status).toBe("out_of_scope");
+      expect(result.files.outOfScope).toEqual(expect.arrayContaining([expect.stringContaining("checks changed")]));
+      expect(() => R.apply(result.id)).toThrow("cannot apply");
+      await R.discard(result.id);
+      expect(fs.readFileSync(path.join(repo, "src/a.txt"), "utf8")).toBe(before);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
+  it("shouldRestoreCheckEditsInPlaceSoTheRunCanBeDiscarded", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    config.projects = {
+      [`${repo.replaceAll("\\", "/")}/**`]: {
+        checks: { fast: ["node -e \"require('fs').writeFileSync('src/a.txt', 'modified by checks\\n')\""] },
+      },
+    };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+    const file = path.join(repo, "src/a.txt");
+    const before = fs.readFileSync(file, "utf8");
+
+    try {
+      const result = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt"],
+        brief: "Add a line.",
+        model: "fake",
+      });
+      expect(result.status).toBe("out_of_scope");
+      expect(fs.readFileSync(file, "utf8")).toBe(`${before}first\n`);
+      const discarded = await R.discard(result.id);
+      expect(discarded.status).toBe("out_of_scope");
+      expect(fs.readFileSync(file, "utf8")).toBe(before);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
   it("shouldStartAReviewWithItsVerdictOnlyWhenItIsAKnownOne", async () => {
     const R = await import(runner);
     const review = (brief: string) => R.run({ cwd: repo, role: "reviewer", brief, model: "fake" });
