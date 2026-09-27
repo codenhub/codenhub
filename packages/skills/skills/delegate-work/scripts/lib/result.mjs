@@ -31,7 +31,13 @@ export function parseResult(text) {
     }
   }
   const join = (k) => (acc[k] ?? []).join("\n").trim() || null;
-  const word = (k) => join(k)?.replace(/[*_`]/g, "").split(/[\s|]/)[0].toLowerCase() || null;
+  // Markers only around the word: not_needed keeps its underscore.
+  const word = (k) =>
+    join(k)
+      ?.replace(/^[*_`\s]+/, "")
+      .split(/[\s|]/)[0]
+      .replace(/[*_`]+$/, "")
+      .toLowerCase() || null;
   out.status = word("status");
   out.summary = cap(join("summary")?.replace(/^\s*[-*]\s+/gm, ""), 600);
   out.notes = (acc.notes ?? [])

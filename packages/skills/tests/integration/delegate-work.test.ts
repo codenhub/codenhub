@@ -524,6 +524,8 @@ describe("delegate-work", () => {
       status: "done",
       verdict: "approve",
     });
+    expect(parseResult("RESULT\nstatus: _not_needed_").status).toBe("not_needed");
+    expect(parseResult("RESULT\nstatus: not_needed | done").status).toBe("not_needed");
   });
 
   it("shouldKeepTheFirstResultWhenAFollowUpCannotRun", async () => {
