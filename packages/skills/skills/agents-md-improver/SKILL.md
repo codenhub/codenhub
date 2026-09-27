@@ -7,11 +7,9 @@ metadata:
 
 # AGENTS.md Improver
 
-Audit, evaluate, and improve `AGENTS.md` files across a codebase so future
-agent sessions have better project guidance.
+Audit, evaluate, and improve `AGENTS.md` files across a codebase so future agent sessions have better project guidance.
 
-This skill can update `AGENTS.md` files. After presenting a quality report and
-getting user approval, it makes targeted improvements.
+This skill can update `AGENTS.md` files. After presenting a quality report and getting user approval, it makes targeted improvements.
 
 ## Tool Compatibility
 
@@ -25,13 +23,10 @@ getting user approval, it makes targeted improvements.
 Determine the target file before auditing anything:
 
 1. If the user explicitly names a file, use that file as the primary target.
-2. Otherwise, search for `AGENTS.md` files and default to the project root
-   `AGENTS.md` when it exists.
-3. Only inspect related instruction files such as `AGENTS_LONG.md` when the
-   user asks for them or they are necessary to explain the target file.
+2. Otherwise, search for `AGENTS.md` files and default to the project root `AGENTS.md` when it exists.
+3. Only inspect related instruction files such as `AGENTS_LONG.md` when the user asks for them or they are necessary to explain the target file.
 
-Use the host environment's file search capability instead of assuming shell
-commands like `find` are available.
+Use the host environment's file search capability instead of assuming shell commands like `find` are available.
 
 **File Types & Locations:**
 
@@ -45,9 +40,7 @@ commands like `find` are available.
 
 ### Phase 2: Quality Assessment
 
-For each target `AGENTS.md` file, evaluate against the quality criteria. See
-[references/quality-criteria.md](references/quality-criteria.md) for detailed
-rubrics.
+For each target `AGENTS.md` file, evaluate against the quality criteria. See [references/quality-criteria.md](references/quality-criteria.md) for detailed rubrics.
 
 **Quick Assessment Checklist:**
 
@@ -108,8 +101,7 @@ Format:
 
 ### Phase 4: Targeted Updates
 
-After outputting the quality report, ask the user for confirmation before
-updating anything.
+After outputting the quality report, ask the user for confirmation before updating anything.
 
 **Update Guidelines (Critical):**
 
@@ -151,14 +143,11 @@ sessions to get started quickly.
 
 ### Phase 5: Apply Updates
 
-After user approval, apply changes using the host environment's editing
-capability. Preserve the existing content structure unless restructuring is part
-of the approved improvement.
+After user approval, apply changes using the host environment's editing capability. Preserve the existing content structure unless restructuring is part of the approved improvement.
 
 ## Templates
 
-See [references/templates.md](references/templates.md) for `AGENTS.md`
-templates by project type.
+See [references/templates.md](references/templates.md) for `AGENTS.md` templates by project type.
 
 ## Common Issues to Flag
 
@@ -203,11 +192,7 @@ When presenting recommendations, remind users:
 
 ## Failure Modes To Handle
 
-- If no target file exists, say so clearly and ask whether to create one or use a
-  different file.
-- If several candidate files exist, explain the candidates and anchor the audit
-  to the user-requested file or the root `AGENTS.md` by default.
-- If a recommendation cannot be verified from the repository, label it as
-  uncertain instead of stating it as fact.
-- If the file is already high quality, say so explicitly and avoid editing for
-  the sake of editing.
+- If no target file exists, say so clearly and ask whether to create one or use a different file.
+- If several candidate files exist, explain the candidates and anchor the audit to the user-requested file or the root `AGENTS.md` by default.
+- If a recommendation cannot be verified from the repository, label it as uncertain instead of stating it as fact.
+- If the file is already high quality, say so explicitly and avoid editing for the sake of editing.

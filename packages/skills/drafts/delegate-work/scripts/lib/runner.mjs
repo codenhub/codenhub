@@ -225,7 +225,7 @@ function claimInplace(meta) {
 // ---------- prompt ----------
 
 function preamble({ role, allow, read, checks }) {
-  const tpl = fs.readFileSync(path.join(skillDir, "references", "worker-preamble.md"), "utf8");
+  const tpl = fs.readFileSync(path.join(skillDir, "references", "worker-preamble.txt"), "utf8");
   const report =
     {
       scout: "report:\n<your whole answer, in the form the task asks for>",
@@ -468,9 +468,7 @@ async function runAttempts(meta, cfg, list, prompt, sessionId) {
   meta.durationMs = Date.now() - t0;
   if (!outcome) {
     meta.status = lastFailure ? "harness_error" : "not_available";
-    meta.hint = lastFailure
-      ? hintFor(lastFailure.kind, lastFailure.harness)
-      : noRouteHint(meta.skipped);
+    meta.hint = lastFailure ? hintFor(lastFailure.kind, lastFailure.harness) : noRouteHint(meta.skipped);
     meta.files = { changed: [], outOfScope: [] };
   } else {
     await evaluate(meta, cfg, outcome);

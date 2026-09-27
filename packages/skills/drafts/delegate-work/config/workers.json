@@ -24,9 +24,7 @@
   "orchestrators": {
     "claude-code": {
       "env": "CLAUDECODE",
-      "pools": [
-        "claude-pro"
-      ]
+      "pools": ["claude-pro"]
     }
   },
   "roles": {
@@ -61,9 +59,7 @@
     }
   },
   "tiers": {
-    "light": [
-      "example-light"
-    ],
+    "light": ["example-light"],
     "standard": [],
     "strong": []
   },

@@ -30,7 +30,9 @@ function pending(meta) {
   }
   if (!APPLICABLE.has(meta.status)) {
     // Its out-of-scope files are restored; its in-scope edits stay until discard.
-    return meta.isolation === "inplace" ? `${meta.status}, not discarded: its edits are still in the working tree` : null;
+    return meta.isolation === "inplace"
+      ? `${meta.status}, not discarded: its edits are still in the working tree`
+      : null;
   }
   return meta.isolation === "worktree"
     ? "unapplied worktree result"

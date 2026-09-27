@@ -9,7 +9,6 @@
 **/test-results/
 **/.wrangler/
 
-# Third-party Markdown, kept byte-for-byte as received from upstream.
+# Third-party Markdown, kept byte-for-byte as received from upstream. Agent
+# skills are formatted; .prettierrc.json keeps their fenced examples as written.
 packages/icons/data/
-packages/skills/skills/
-packages/skills/drafts/
