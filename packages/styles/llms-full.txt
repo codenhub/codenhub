@@ -750,25 +750,25 @@ Variables prefixed `--_` are internal composition outputs — `--_bg`, `--_fg`, 
 
 The shipped [aesthetic classes](docs/usage/aesthetics.md) set material tokens for you. Only aesthetics with a token listed below expose an aesthetic-specific token. Tune all other behavior through the shared material tokens above. Listed tokens are available only where that aesthetic's stylesheet is imported.
 
-| Token                     | Aesthetic       | Purpose                                                                                       | Default                                         |
-| ------------------------- | --------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `--neo-offset`            | `.neobrutalism` | Hard shadow offset and distance the press travels.                                            | `4px`                                           |
-| `--glass-radius`          | `.glass`        | Control corner radius.                                                                        | `0.75rem`                                       |
-| `--glass-radius-surface`  | `.glass`        | Surface corner radius.                                                                        | `1rem`                                          |
-| `--pixel-unit`            | `.pixel`        | One pixel of the grid. The corner cut and the ring are one.                                   | `4px`                                           |
-| `--font-pixel`            | `.pixel`        | Consumer-supplied pixel font stack.                                                           | Falls back to the monospace stack               |
-| `--tile-radius`           | `.chunky-tile`  | Corner radius, on controls and surfaces alike.                                                | `0.75rem`                                       |
-| `--tile-lift`             | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.                                         | `4px`                                           |
-| `--font-rounded`          | `.chunky-tile`  | Consumer-supplied rounded font stack.                                                         | Falls back to the page stack                    |
-| `--cyber-cut`             | `.cyber`        | The cut at the default size, on controls and surfaces alike; controls scale it with the step. | `0.625rem`                                      |
-| `--cyber-shape`           | `.cyber`        | Where controls take the cut: any `border-radius` value.                                       | `<cut> 0` (top-left, bottom-right)              |
-| `--cyber-shape-surface`   | `.cyber`        | Where surfaces take the cut: any `border-radius` value.                                       | `0 <cut>` (top-right, bottom-left)              |
-| `--cyber-glow`            | `.cyber`        | Blur of the glow.                                                                             | `8px`                                           |
-| `--cyber-ink`             | `.cyber`        | Neutral line and glow colour, where no intent sets one.                                       | Theme ink (near-black, near-white)              |
-| `--font-cyber`            | `.cyber`        | Consumer-supplied technical font stack.                                                       | Falls back to the monospace stack               |
-| `--sketch-radius`         | `.sketch`       | Control outline radius: any `border-radius` value.                                            | Irregular box outline with sibling variation    |
-| `--sketch-radius-surface` | `.sketch`       | Surface container outline radius: any `border-radius` value.                                  | Subtle irregular outline with sibling variation |
-| `--font-sketch`           | `.sketch`       | Consumer-supplied handwriting font stack.                                                     | Falls back to `cursive`                         |
+| Token                     | Aesthetic       | Purpose                                                                                       | Default                                               |
+| ------------------------- | --------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `--neo-offset`            | `.neobrutalism` | Hard shadow offset and distance the press travels.                                            | `4px`                                                 |
+| `--glass-radius`          | `.glass`        | Control corner radius.                                                                        | `0.75rem`                                             |
+| `--glass-radius-surface`  | `.glass`        | Surface corner radius.                                                                        | `1rem`                                                |
+| `--pixel-unit`            | `.pixel`        | One pixel of the grid. The corner cut and the ring are one.                                   | `4px`                                                 |
+| `--font-pixel`            | `.pixel`        | Consumer-supplied pixel font stack.                                                           | Falls back to the monospace stack                     |
+| `--tile-radius`           | `.chunky-tile`  | Corner radius, on controls and surfaces alike.                                                | `0.75rem`                                             |
+| `--tile-lift`             | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.                                         | `4px`                                                 |
+| `--font-rounded`          | `.chunky-tile`  | Consumer-supplied rounded font stack.                                                         | Falls back to the page stack                          |
+| `--cyber-cut`             | `.cyber`        | The cut at the default size, on controls and surfaces alike; controls scale it with the step. | `0.625rem`                                            |
+| `--cyber-shape`           | `.cyber`        | Where controls take the cut: any `border-radius` value.                                       | `<cut> 0` (top-left, bottom-right)                    |
+| `--cyber-shape-surface`   | `.cyber`        | Where surfaces take the cut: any `border-radius` value.                                       | `0 <cut>` (top-right, bottom-left)                    |
+| `--cyber-glow`            | `.cyber`        | Blur of the glow.                                                                             | `8px`                                                 |
+| `--cyber-ink`             | `.cyber`        | Neutral line and glow colour, where no intent sets one.                                       | Theme ink (near-black, near-white)                    |
+| `--font-cyber`            | `.cyber`        | Consumer-supplied technical font stack.                                                       | Falls back to the monospace stack                     |
+| `--sketch-radius`         | `.sketch`       | Control outline radius: any `border-radius` value.                                            | Irregular box outline with sibling variation          |
+| `--sketch-radius-surface` | `.sketch`       | Surface container outline radius: any `border-radius` value.                                  | Sharp irregular square outline with sibling variation |
+| `--font-sketch`           | `.sketch`       | Consumer-supplied handwriting font stack.                                                     | Falls back to `cursive`                               |
 
 Every aesthetic's knobs reach the same way: each knob is _read_ with its default as a `var()` fallback rather than declared, so it resolves once into a private on the aesthetic's own class (`--_pixel-unit`, `--_neo-offset`, `--_tile-radius`, `--_tile-lift`, and so on). Set a knob on the element carrying the aesthetic class, or on any ancestor including `:root`:
 
@@ -997,7 +997,7 @@ A parallelogram slants its sides into the content, so give a surface that takes 
 
 ## Sketch
 
-Sketch gives controls expressive, hand-drawn outlines starting with `255px 15px 225px 15px / 15px 225px 15px 255px` while giving containers and surfaces subtle, bounded asymmetrical outlines (starting with `28px 12px 24px 14px / 14px 26px 12px 28px`) that cleanly frame content without encroaching on interior padding. Sibling components, container wrappers, and sequential form fields rotate through four distinct outlines. The shape is stable for a given DOM order, not random on each render; sequential `.field` rows alternate outlines so stacked forms avoid repetitive shapes. These are complete `border-radius` values, used as written rather than scaled or patterned. Knobs `--sketch-radius` (for controls) and `--sketch-radius-surface` (for surfaces) customize the outlines from `:root` or an ancestor; to choose a shape on an isolated component, set `--ui-radius` (or `--ui-radius-surface` on a surface) directly on it. The 1px ink edge is solid by default, while checkboxes, dividers, and table rules use dashed lines for contrast. Set `--ui-line-style: dashed` on any other component to opt in; `--ui-rule-style: solid` overrides a divider or table's dashed rules. The 2px hard shadow is a small neutral depth cue.
+Sketch gives controls expressive, hand-drawn outlines starting with `255px 15px 225px 15px / 15px 225px 15px 255px` while giving containers and surfaces sharp, hand-drawn square contours (starting with `80px 4px 75px 5px / 3px 70px 4px 80px`) tailored to container dimensions so cards and panels stay pointy without encroaching on interior padding. Sibling components, container wrappers, and sequential form fields rotate through four distinct outlines. The shape is stable for a given DOM order, not random on each render; sequential `.field` rows alternate outlines so stacked forms avoid repetitive shapes. These are complete `border-radius` values, used as written rather than scaled or patterned. Knobs `--sketch-radius` (for controls) and `--sketch-radius-surface` (for surfaces) customize the outlines from `:root` or an ancestor; to choose a shape on an isolated component, set `--ui-radius` (or `--ui-radius-surface` on a surface) directly on it. The 1px ink edge is solid by default, while checkboxes, dividers, and table rules use dashed lines for contrast. Set `--ui-line-style: dashed` on any other component to opt in; `--ui-rule-style: solid` overrides a divider or table's dashed rules. The 2px hard shadow is a small neutral depth cue.
 
 ```html
 <section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>
@@ -1020,14 +1020,14 @@ The dashed button uses `ghost edged` to expose its boundary: a default filled bu
 
 An aesthetic class sets material tokens and nothing paints until a component reads them, so `.glass` on an element this package does not style -- a toast from another library, a dialog, a plain `<div>` on a page without the base stylesheet -- changes nothing. Each aesthetic also ships a solo class that paints its look directly onto the one element carrying it:
 
-| Aesthetic       | Solo class           | Paints                                                                                                                                                             |
-| --------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner.                                                                          |
-| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                                                                                                |
-| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.                                                                                       |
-| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                                                                                                     |
-| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.                                                                                 |
-| `.sketch`       | `.sketch-solo`       | Uneven elliptical corners (surface outline on a pane, expressive control outline on an action), a 1px solid ink line, the 2px offset shadow, the handwriting face. |
+| Aesthetic       | Solo class           | Paints                                                                                                                                                                   |
+| --------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner.                                                                                |
+| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                                                                                                      |
+| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.                                                                                             |
+| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                                                                                                           |
+| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.                                                                                       |
+| `.sketch`       | `.sketch-solo`       | Uneven elliptical corners (sharp surface outline on a pane, expressive control outline on an action), a 1px solid ink line, the 2px offset shadow, the handwriting face. |
 
 ```css
 /* The only stylesheet from this package on the page. */

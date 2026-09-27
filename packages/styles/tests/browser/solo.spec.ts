@@ -127,7 +127,7 @@ test.describe("solo utilities", () => {
     }
 
     expect(sketch["border-top-width"], "sketch line").toBe("1px");
-    expect(sketch["border-top-left-radius"], "sketch uneven corner").toBe("28px 14px");
+    expect(sketch["border-top-left-radius"], "sketch uneven corner").toBe("80px 3px");
     expect(sketch["box-shadow"], "sketch offset").toMatch(/\b2px 2px 0px 0px\b/);
     expect(sketch["font-family"], "sketch font falls back to cursive").toContain("cursive");
   });
@@ -310,7 +310,7 @@ test.describe("solo utilities", () => {
     const container = await read(page, "#container", ["border-top-left-radius"]);
 
     expect(action["border-top-left-radius"], "action control radius").toBe("255px 15px");
-    expect(container["border-top-left-radius"], "container surface radius").toBe("28px 14px");
+    expect(container["border-top-left-radius"], "container surface radius").toBe("80px 3px");
   });
 
   test("weight chunky tile's label on an action only", async ({ page }) => {

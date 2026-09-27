@@ -26,6 +26,8 @@ The foundation was built for structure, not for a look. Any new material part mu
 
 Implement the three remaining aesthetics below for `0.5.0`, including their standalone solo classes, compiled and `/tw` exports, registry entries, public documentation, playground coverage, and cross-browser tests. Their visual direction awaits references from the maintainer before design or implementation. Nothing is committed for a later release yet.
 
+- **Rounded sketch.** A rounded hand-drawn variant for `.sketch` (e.g., an opt-in modifier or shape knob) so consumers can select rounded hand-drawn contours alongside the default sharp, pointy-cornered hand-drawn square outlines. Pointy/sharp contours remain the resting aesthetic for both controls and surfaces.
+
 ## 0.5.0 aesthetics
 
 Aesthetics compose the foundation rather than justify new tokens. The decisions below set their release scope; exact appearance, knobs, and browser fallbacks must be reviewed against real screens before claiming completion.

@@ -8,8 +8,8 @@
   .sketch {
     /* Complete radii are taken as written, without the size step or corner
        pattern. Chips use a smaller version of the same irregular outline.
-       Surfaces use bounded subtle asymmetry to frame containers cleanly
-       without encroaching on interior padding. Knobs follow R8. */
+       Surfaces use sharp, hand-drawn square contours tailored for container
+       dimensions to avoid interior padding encroachment. Knobs follow R8. */
     --ui-corner: initial;
     --ui-corner-surface: initial;
     --ui-corner-tl: initial;
@@ -17,7 +17,7 @@
     --ui-corner-br: initial;
     --ui-corner-bl: initial;
     --ui-radius: var(--sketch-radius, 255px 15px 225px 15px / 15px 225px 15px 255px);
-    --ui-radius-surface: var(--sketch-radius-surface, 28px 12px 24px 14px / 14px 26px 12px 28px);
+    --ui-radius-surface: var(--sketch-radius-surface, 80px 4px 75px 5px / 3px 70px 4px 80px);
     --ui-radius-pill: var(--ui-radius);
     --ui-radius-tight: 11px 1px 7px 2px / 2px 7px 1px 11px;
     --ui-corner-shape: round;
@@ -127,8 +127,9 @@
     --ui-radius: var(--sketch-radius, 18px 250px 225px 15px / 245px 15px 18px 235px);
   }
 
-  /* Surfaces rotate through subtle outlines so cards and panels vary without
-     encroaching on interior padding. */
+  /* Surfaces rotate through sharp hand-drawn square outlines tailored to
+     container dimensions so cards and panels stay pointy without encroaching
+     on interior padding. */
   .sketch
     :is(.card, .panel, .alert):not(
       :is(
@@ -144,7 +145,7 @@
         .chunky-tile *
       )
     ):nth-child(4n + 2) {
-    --ui-radius-surface: var(--sketch-radius-surface, 14px 28px 12px 26px / 26px 14px 28px 12px);
+    --ui-radius-surface: var(--sketch-radius-surface, 4px 75px 5px 80px / 75px 3px 80px 4px);
   }
 
   .sketch
@@ -162,7 +163,7 @@
         .chunky-tile *
       )
     ):nth-child(4n + 3) {
-    --ui-radius-surface: var(--sketch-radius-surface, 26px 24px 14px 16px / 16px 14px 26px 24px);
+    --ui-radius-surface: var(--sketch-radius-surface, 75px 70px 4px 5px / 4px 3px 75px 70px);
   }
 
   .sketch
@@ -180,7 +181,7 @@
         .chunky-tile *
       )
     ):nth-child(4n) {
-    --ui-radius-surface: var(--sketch-radius-surface, 16px 26px 24px 14px / 24px 14px 16px 26px);
+    --ui-radius-surface: var(--sketch-radius-surface, 5px 80px 75px 4px / 75px 4px 5px 70px);
   }
 
   /* Stacked form fields alternate outlines so sequential form rows don't
@@ -330,15 +331,15 @@
   }
 
   .sketch:is(.card, .panel, .alert):nth-child(4n + 2) {
-    --ui-radius-surface: var(--sketch-radius-surface, 14px 28px 12px 26px / 26px 14px 28px 12px);
+    --ui-radius-surface: var(--sketch-radius-surface, 4px 75px 5px 80px / 75px 3px 80px 4px);
   }
 
   .sketch:is(.card, .panel, .alert):nth-child(4n + 3) {
-    --ui-radius-surface: var(--sketch-radius-surface, 26px 24px 14px 16px / 16px 14px 26px 24px);
+    --ui-radius-surface: var(--sketch-radius-surface, 75px 70px 4px 5px / 4px 3px 75px 70px);
   }
 
   .sketch:is(.card, .panel, .alert):nth-child(4n) {
-    --ui-radius-surface: var(--sketch-radius-surface, 16px 26px 24px 14px / 24px 14px 16px 26px);
+    --ui-radius-surface: var(--sketch-radius-surface, 5px 80px 75px 4px / 75px 4px 5px 70px);
   }
 
   .sketch:is(.badge, .kbd, .code, .checkbox, .switch, .progress):nth-child(4n + 2) {
@@ -480,7 +481,7 @@
   border: 1px solid var(--_sketch-ink);
   /* The surface shape: the element this exists for is usually a pane. An action
      takes the control shape below. */
-  border-radius: var(--sketch-radius-surface, 28px 12px 24px 14px / 14px 26px 12px 28px);
+  border-radius: var(--sketch-radius-surface, 80px 4px 75px 5px / 3px 70px 4px 80px);
   box-shadow: 2px 2px 0 0 var(--_sketch-ink);
   font-family: var(--font-sketch, cursive);
 }

@@ -1863,7 +1863,7 @@ test.describe("aesthetics", () => {
       expect(new Set(radii).size).toBe(3);
     });
 
-    test("draws subtle uneven corners on surfaces, solid ink, and a small offset shadow", async ({ page }) => {
+    test("draws sharp uneven corners on surfaces, solid ink, and a small offset shadow", async ({ page }) => {
       await page.goto(withAesthetic(SURFACES_URL, "sketch"));
 
       const card = await readStyles(page, "card-default-none", [
@@ -1873,7 +1873,7 @@ test.describe("aesthetics", () => {
         "font-family",
       ]);
 
-      expect(card["border-radius"], "subtle uneven surface corner").toBe("28px 12px 24px 14px / 14px 26px 12px 28px");
+      expect(card["border-radius"], "sharp uneven surface corner").toBe("80px 4px 75px 5px / 3px 70px 4px 80px");
       expect(card["border-top-style"], "ink line").toBe("solid");
       expect(card["box-shadow"], "small offset shadow").toMatch(/\b2px 2px 0px 0px\b/);
       expect(card["font-family"], "handwriting fallback").toContain("cursive");
@@ -1964,7 +1964,7 @@ test.describe("aesthetics", () => {
 
       expect(nested.pixel.clipPath, "pixel clip cleared").toBe("none");
       for (const [name, styles] of Object.entries(nested)) {
-        expect(styles.radius, `${name} sketch radius`).toBe("28px 12px 24px 14px / 14px 26px 12px 28px");
+        expect(styles.radius, `${name} sketch radius`).toBe("80px 4px 75px 5px / 3px 70px 4px 80px");
         expect(styles.backgroundColor, `${name} sketch ground`).toBe(nested.plain.backgroundColor);
         expect(styles.boxShadow, `${name} sketch shadow`).toBe(nested.plain.boxShadow);
       }
