@@ -39,7 +39,7 @@ The CLI is interactive only when invoked in a TTY without arguments (`--include-
 
 ## Requirements
 
-- Node.js 18.0.0 or newer.
+- Node.js 22 or newer.
 - Filesystem permission to read source skills and modify selected destinations.
 - A TTY for the interactive wizard; explicit CLI options support automation.
 

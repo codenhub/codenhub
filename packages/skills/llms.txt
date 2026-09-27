@@ -2,7 +2,7 @@
 
 > Experimental AI agent skill assets, a multi-harness installer, and synchronous Node.js utilities for discovering and copying skill directories.
 
-Requires Node.js 18 or newer. Treat `skills/**` Markdown as shipped agent
+Requires Node.js 22 or newer. Treat `skills/**` Markdown as shipped agent
 instructions rather than package-documentation pages. Review cleanup and path
 constraints before writing to harness destinations.
 
