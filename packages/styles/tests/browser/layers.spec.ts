@@ -7,7 +7,7 @@ import { expect, test, type Page } from "./fixtures";
 /* The layer map: everything the package ships sits in `theme`, `base`,
    `components`, or `utilities`, so a consumer's own utility or unlayered CSS
    beats the aesthetic, presentation, intent, and elevation classes on every
-   entrypoint and in any load order. See docs/internal/cascade-layers.md.
+   entrypoint and in any load order. See docs/internal/model.md#cascade-layers.
 
    Like the solo suite, these build a blank page from the built files a consumer
    links, rather than a playground page: the playground compiles everything

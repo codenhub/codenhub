@@ -30,7 +30,7 @@
      on the same element too -- `.card.soft.glass` went opaque. Restated
      `initial` here so a quiet ground cannot inherit into a surface nested
      inside one, the way `box` restates `--_d-ground`. See
-     docs/internal/cascade-layers.md (L6). */
+     docs/internal/model.md#cascade-layers. */
   --_d-surface-ground: initial;
   --_d-ground: var(--ui-surface-ground, var(--_d-surface-ground, var(--color-background)));
 

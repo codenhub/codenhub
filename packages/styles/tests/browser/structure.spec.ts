@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { expect, test, type Page } from "./fixtures";
 
-/* The promises docs/internal/structure.md makes, one test each, on a blank page
+/* The promises docs/internal/model.md#material-tokens makes, one test each, on a blank page
    built from the files a consumer links -- the way the layer suite reads them,
    because the playground compiles everything through Tailwind again. */
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");

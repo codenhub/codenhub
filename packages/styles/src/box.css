@@ -18,7 +18,7 @@
      separate term rather than a write of `--ui-fill`, for two reasons. A
      component writing `--ui-fill` from `utilities` would beat a consumer's own
      `[--ui-fill:...]` utility, which the layer map reserves for state
-     (docs/internal/cascade-layers.md, L4); a private competes with nothing a
+     (docs/internal/model.md#cascade-layers); a private competes with nothing a
      consumer writes. And `--ui-fill` cascades by design, so a neutral panel
      writing `0%` would turn every badge and button inside it ghost, where a
      cap bounds the component and stops there (below). A state that means the
@@ -79,7 +79,7 @@
      Blend first, amount after (`--_edge-amount` below) -- the other order lands
      `.edgeless` on the fill colour, which the border box then paints as a second
      coat: a ring around an element that asked for no edge. See
-     docs/internal/boundary-contrast.md. */
+     docs/internal/model.md#presentation. */
   --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-border));
   /* How much line there is, as an input rather than a result. A component that
      must keep its line whatever the edge class says raises `--_edge-floor`
@@ -108,7 +108,7 @@
      Restated `initial` here, before any modifier, because a custom property
      inherits and a `.card.p-xs` would otherwise shrink every button inside it;
      the modifier rules outrank this one on specificity. `--ui-scale` is the
-     public override, undeclared by the package. See docs/internal/structure.md. */
+     public override, undeclared by the package. See docs/internal/model.md#material-tokens. */
   --_scale-size: initial;
   --_scale-pad: initial;
   --_scale: var(--ui-scale, min(var(--_scale-size, var(--_scale-pad, 1)), var(--_scale-pad, var(--_scale-size, 1))));

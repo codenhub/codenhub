@@ -2,7 +2,7 @@
  * Computes `src/palette.css`: every `intent x presentation` cell's `bg`, `fg`,
  * and `edge`, rest and hover, light and dark, baked to a flat custom
  * property, plus the three flat neutral tokens (`border`/`surface`/`text`)
- * `docs/internal/generated-palette-neutral-tokens.md` adds.
+ * described in `docs/internal/generated-palette.md#flat-neutral-values`.
  *
  * This does not reimplement `box.css`'s formula -- that would be exactly the
  * hand-retyping this file exists to prevent (see
@@ -337,7 +337,7 @@ async function main() {
         "   `docs/internal/generated-palette.md` for what this is and why it exists.",
         "",
         "   Tokens, so they sit in `theme` with the rest, behind the package's layer",
-        "   order -- see `src/theme.css` and docs/internal/cascade-layers.md. */",
+        "   order -- see `src/theme.css` and docs/internal/model.md#cascade-layers. */",
         "@layer theme, base, components, utilities;",
         "",
         "@layer theme {",

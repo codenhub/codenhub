@@ -26,7 +26,7 @@
      Case and shadow fall back to `none`, which is what a button already does:
      the user agent stops both inheriting into one. The shadow is written
      without a colour, so it takes the label's own and cannot lower its
-     contrast. See docs/internal/cascade-layers.md (L5). */
+     contrast. See docs/internal/model.md#cascade-layers. */
   font-weight: var(--ui-label-weight, var(--font-weight-semibold));
   letter-spacing: var(--ui-label-tracking);
   text-transform: var(--ui-label-case, none);

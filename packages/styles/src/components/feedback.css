@@ -140,8 +140,8 @@
    same contract as `.loader`/`.skeleton`. `.progress` cannot `@apply box`
    (the fill is a `::after`, not the element's own background), so it hand-
    reimplements the formula the way `.quote` does -- see
-   docs/internal/progress-presentation-axes.md for the decision and why the
-   other three indicators do not get the same treatment. */
+   docs/internal/model.md#components-that-do-not-take-the-whole-of-box for the
+   decision and why the other three indicators do not get the same treatment. */
 @utility progress {
   --_d-fill: 12%;
   --_d-fg-on-fill: 0%;

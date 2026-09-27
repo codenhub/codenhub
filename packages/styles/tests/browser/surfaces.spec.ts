@@ -156,7 +156,7 @@ test.describe("surfaces", () => {
      private default `surface` restates on every surface -- so a card nested
      inside it rests on the page ground like any other card, rather than
      inheriting the outer card's. It inherited it while the quiet ground was the
-     public `--ui-surface-ground`. See docs/internal/cascade-layers.md (L6).
+     public `--ui-surface-ground`. See docs/internal/model.md#cascade-layers.
 
      `.soft` is presentation, which cascades by design, so both nested cards
      rest soft; the reference is a card under a plain `.soft` container, which

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-24
+last_updated: 2026-09-27
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -18,22 +18,21 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**`0.5.0` is cut** and ships once its pull request is merged and the merge is tagged; `@codenhub/styles@0.4.0` is the current npm version until then. It is a foundation release and ships no new aesthetic: the cascade layers, per [`cascade-layers.md`](./cascade-layers.md); the structure the material contract did not express, per [`structure.md`](./structure.md); the boundary contrast of a line over its own plate and of controls under glass and chunky tile, per [`boundary-contrast.md`](./boundary-contrast.md); a stylesheet that survives inlining; the theme on every entry that promises it; and the removal of three alias sets. [`docs/changelog/0.5.0.md`](../changelog/0.5.0.md) records it, leading with the layers' breaking change.
+**`0.5.0` is a local, unreleased draft**: `@codenhub/styles@0.4.0` remains the current npm version. The foundation changes and sketch aesthetic are implemented; glitch, synthwave/retro, and retro-OS bevel remain part of the planned 0.5.0 scope but are not implemented. The [0.5.0 changelog](../changelog/0.5.0.md) describes only the work already implemented and MUST be updated as the remaining looks land before publishing.
 
-The foundation is built for structure, not for a look. Each structural item was decided in its own document before it was built, under [What enters the material contract](./model.md#what-enters-the-material-contract), and the same holds for whatever comes next. No item is justified by the aesthetic that would use it; [Later / Possible](#later--possible) lists those as compositions of the foundation, not as reasons for it.
+The foundation was built for structure, not for a look. Any new material part must still pass [What enters the material contract](./model.md#what-enters-the-material-contract), independently of the aesthetic that would use it. An aesthetic the foundation cannot express without breaking that rule needs a separate decision before implementation.
 
 ## Planned
 
-Nothing is planned past `0.5.0` yet. [Later / Possible](#later--possible) holds the aesthetics wanted next.
+Implement the three remaining aesthetics below for `0.5.0`, including their standalone solo classes, compiled and `/tw` exports, registry entries, public documentation, playground coverage, and cross-browser tests. Their visual direction awaits references from the maintainer before design or implementation. Nothing is committed for a later release yet.
 
-## Later / Possible
+## 0.5.0 aesthetics
 
-Aesthetics are compositions of the foundation, not reasons for it. The four below are wanted after `0.5.0`. Each records the parts it would compose from and the questions that stay its own; a look the foundation cannot express without breaking a guarantee waits, rather than bending the model.
+Aesthetics compose the foundation rather than justify new tokens. The decisions below set their release scope; exact appearance, knobs, and browser fallbacks must be reviewed against real screens before claiming completion.
 
-- **Glitch.** A colour split (offset copies in two hues) and a slice or jitter motion. Would compose from the second depth layer or the label shadow for the split. The movement has no token: ambient motion is [not exposed](./structure.md#7-ambient-motion), so it would be the application's own animation. Its own questions: fixed hues sit close to what [R1](./model.md#rules-for-aesthetics) bars; whether it is a cascading aesthetic or an effect on a single element; and the maintainer has further direction for it. Not started.
-- **Sketch.** A hand-drawn look: uneven elliptical corners, an ink line, and a small offset shadow. The corners are a plain `--ui-radius`/`--ui-radius-surface` value (`255px 15px 225px 15px / 15px 225px 15px 255px`, for example); chips take a single length through `--ui-radius-tight`, so the checkbox's `min()` cap no longer turns invalid, and they take a plain corner rather than a wobble. Would compose from `--ui-line-style` for a dashed or dotted line; the offset shadow is the existing parts. A handwriting face would be consumer-supplied, the way `.pixel` reads `--font-pixel`. Not started.
-- **Synthwave / retro.** A glow, a grid or scanline ground, and glowing labels. Would compose from the halo, `--ui-surface-image`, and the label shadow. Its own question: its signature is palette, which [R1](./model.md#rules-for-aesthetics) gives to intent, so the hues come from the application's palette or a published knob in the way `--cyber-ink` works, never from the aesthetic. Not started.
-- **Retro-OS bevel.** The raised two-tone edge of a late-90s desktop UI, light top-left and dark bottom-right, with a press that inverts the two. Would compose from two inset layers -- the first and `--ui-shadow-2-*`. The inverting press needs a pressed counterpart for the second layer, which [Structure](./structure.md#4-depth-in-layers) left until a component needs it, and `outset`/`inset` line styles were not taken. Not started.
+- **Glitch.** Static color split without built-in motion or slicing; hues come from intent or consumer knobs, not a preset palette ([R1](./model.md#rules-for-aesthetics)). Its treatment needs new visual references before implementation. Not started.
+- **Synthwave/retro.** A future aesthetic direction for `0.5.0`; visual references are awaited before defining its appearance, tokens, or implementation. No look has been selected.
+- **Retro-OS bevel (`.retro-os`).** A raised two-tone edge with the standard press, not an inverted pressed bevel. Its treatment needs visual references before implementation. Not started.
 
 ## Aesthetics assessed and deferred
 
@@ -47,11 +46,11 @@ Two measurements shaped the material tokens and outlive the change that needed t
 
 ## Versioning
 
-`0.4.0` is the current published release, cut through the same tag workflow as `0.2.0` and `0.3.0` before it, and `0.5.0` is cut to follow it the same way. `0.1.0` carried the whole model rewrite over the manually published `0.0.4`; `0.1.1` is the first version cut through the tag workflow -- pushing `@codenhub/styles@0.1.1` triggered `.github/workflows/publish.yml`, which publishes through trusted publishing with provenance and refuses a tag whose version disagrees with the manifest. Every release from here follows that path.
+`0.4.0` is the current published release. `0.5.0` remains untagged and unreleased until its expanded scope is implemented and verified. Release authorization and tagging follow `docs/specs/packages-lifecycle.md`.
 
 The stress-test pass's fixes, across all three screens, land as one minor (`0.2.0`) rather than a run of patches: several change default token values (`--progress-surface`, `--color-border`) that affect every consumer already using `.progress` or `.card.soft.edged`, not just new ones, which is a real behavior change and not patch-level even pre-1.0.
 
-`0.5.0` is one minor for the same reason: the cascade layers change what beats what for every consumer, and the edge-contrast fix and any removal change default rendering, so the foundation lands together rather than as a run of releases each breaking a little.
+`0.5.0` is one minor because the cascade layers change what beats what for every consumer, and the edge-contrast fix and removals change default rendering. The new aesthetics remain opt-in additions to that release.
 
 The package stays on `0.x` while the public contract is still young, so a necessary breaking correction stays explicit and cheap. Documentation status remains `active`: supported for normal consumer use, not frozen against future semver-major changes.
 
@@ -69,7 +68,7 @@ The package stays on `0.x` while the public contract is still young, so a necess
 ## References
 
 - [Model](./model.md)
-- [Cascade layers](./cascade-layers.md)
+- [Cascade layers](./model.md#cascade-layers)
 - [Accessibility](../accessibility.md)
 - [Overview](../index.md)
 - [Setup](../setup.md)

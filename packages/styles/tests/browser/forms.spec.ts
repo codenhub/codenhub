@@ -22,7 +22,7 @@ test.describe("forms", () => {
      layered at any specificity. When the control classes joined the reset,
      every invalid field drew a plain grey line and the only thing still marking
      the error was the hint underneath it. Intent now sits in `components` and
-     the rule in `utilities` at 0-2-0 (docs/internal/cascade-layers.md). Asserting
+     the rule in `utilities` at 0-2-0 (docs/internal/model.md#cascade-layers). Asserting
      "not transparent" is what let that through, so this names the color. */
   test("marks an invalid control destructive over any intent class", async ({ page }) => {
     await page.goto(FORMS_URL);

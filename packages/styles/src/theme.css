@@ -5,7 +5,7 @@
    rank the same. The four class families -- intent, presentation, elevation,
    and every aesthetic -- sit in `components`, below every utility, so a
    consumer's own utility or unlayered CSS beats them. Components are
-   `@utility` rules in `utilities`. See docs/internal/cascade-layers.md. */
+   `@utility` rules in `utilities`. See docs/internal/model.md#cascade-layers. */
 @layer theme, base, components, utilities;
 
 @import "tailwindcss/theme.css" layer(theme);
@@ -299,7 +299,7 @@
    and nothing an aesthetic layers on top. Unlayered, so it beats every layered
    declaration of these tokens -- an aesthetic's and a consumer's utility alike --
    the way the other `forced-colors` blocks do. See
-   docs/internal/structure.md. */
+   docs/internal/model.md#material-tokens. */
 @media (forced-colors: active) {
   * {
     --ui-line-style: solid;

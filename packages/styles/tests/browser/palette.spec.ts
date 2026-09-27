@@ -14,7 +14,7 @@ import { getColorDistance } from "./test-utils";
    `scripts/generate-palette.mjs` used to generate `src/palette.css` -- through
    the same `getColorDistance` contract the rest of this suite already trusts.
    A `box.css` change nobody regenerated the palette for fails here. The three
-   flat neutral tokens (`docs/internal/generated-palette-neutral-tokens.md`)
+   flat neutral tokens (`docs/internal/generated-palette.md#flat-neutral-values`)
    get the same live-vs-generated check below, just without the `.box`
    probe/hover apparatus, since they carry no intent, presentation, or
    hover state of their own. */

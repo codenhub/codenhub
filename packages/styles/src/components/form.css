@@ -166,7 +166,7 @@
    (`--_fill-cap`, `--_edge-floor`) or a state's intent slots, so nothing a
    consumer writes competes with them. They used to be unlayered, which stopped
    working once `/components` and `/native` put the components in `utilities`
-   too. See docs/internal/cascade-layers.md (L4). */
+   too. See docs/internal/model.md#cascade-layers. */
 @layer utilities {
   /* A fill class on the element names its own cap; the 6% cascade cap in the
      utility is for a container reaching a field nobody classed. Both raise

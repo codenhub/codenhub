@@ -1,14 +1,14 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-23
+last_updated: 2026-09-27
 scope: Decision to generate a flat, published output of `@codenhub/styles`' composed colors, for consumers that cannot depend on the Tailwind pipeline that produces them.
 ---
 
 # A generated palette for consumers outside the Tailwind pipeline
 
-This is agreed direction, shipped in `0.3.0` as `./palette`. Future work touching this surface MUST follow it, and the current generator and output are expected to comply, per the repository root `docs/README.md`'s `IMPLEMENTED` status.
+This is the maintained contract for `./palette`, shipped in `0.3.0`. The current generator and output are expected to comply, per the repository root `docs/README.md`'s `IMPLEMENTED` status.
 
-This document intentionally contains no example file contents or drop-in code, only the real, independently verifiable numbers that motivate it and the naming/structure rules an implementer derives the actual output from -- see [`.progress` gains presentation](./progress-presentation-axes.md) for why a prescriptive snippet here would go stale and get trusted over the real generator output.
+This document contains no drop-in code: source and generator own the implementation, while this document owns the durable naming and output rules.
 
 ## The problem
 
@@ -30,7 +30,7 @@ Two independently verifiable divergences exist today in `@codenhub/toaster`'s ha
 
 The last row matters most. [`theme.css`](../../src/theme.css#L122-L127) records why warning is the one intent whose contrast ink is not the page color: white on amber-600 measures 3.07:1, so the package moved the ink dark instead of the hue. That reasoning lives only as a comment in `@codenhub/styles`; nothing pins it to toaster's independently hardcoded pair. Today the fallback (`#a16207` + white) happens to clear WCAG AA by a narrow margin (roughly 4.9:1) only because the wrong hue and the wrong ink direction partly cancel out. Correcting only the hue to the real amber-600 without also correcting the ink would drop that pairing to roughly 3.2:1 -- a real failure, in exactly the situation `theme.css` already found and fixed once.
 
-**A missing composition rule.** `box.css` blends a component's border color toward its own resolved background, scaled by the fill amount (P3, [`box.css#L78`](../../src/box.css#L78)), specifically so a filled, edged box does not draw a ring of a different color around its own plate -- a measured bug (1.53:1 / 1.82:1 rings) `presentation.css` and [Model](./model.md#fill-how-much-of-the-intent-color-fills-the-box) both record. Toaster's equivalent rule ([`packages/toaster/src/styles/index.css#L120`](../../../toaster/src/styles/index.css#L120)) blends toward `transparent` instead -- the pre-fix approach `@codenhub/styles` tried and rejected. `.coden-toast.solid.edged` most likely reproduces the bug P3 exists to prevent. (History since: the rejected approach applied the edge amount before the blend, which landed `.edgeless` on the fill colour. The blend toward `--_bg` that replaced it painted a translucent plate twice, and `0.5.0` moved `box` to a blend toward `transparent` in the fixed order -- see [Boundary contrast](./boundary-contrast.md).)
+**A missing composition rule.** Copying `box.css`'s formula into another package can silently lose a term. In 0.5.0 the edge blend changed to fade toward `transparent` in the correct order: the plate already runs under the border, so blending toward the plate double-paints a translucent fill. Generated colors must follow the live composition rather than a hand-copied formula. See [Model](./model.md#fill-how-much-of-the-intent-color-fills-the-box).
 
 Both divergences were introduced by someone who clearly understood `box.css` well -- toaster's own comments accurately narrate `box.css`'s reasoning back at it -- and were still lost in translation. The formula's shape survived being copied; the reasoning behind each of its terms did not.
 
@@ -46,7 +46,7 @@ Ground does not need its own free-standing dimension the way the earlier draft o
 
 - **`.solid` is ground-independent entirely.** At 100% fill, `--_bg`'s `color-mix()` contributes 0% of whatever ground it is mixed with, so `bg`, `edge`, and their hover values are the same regardless of ground. One set of `.solid` values covers every ground.
 - **`fg` is always ground-independent**, for every presentation -- `--_fg`'s composition ([`box.css#L70`](../../src/box.css#L70)) never references `--_d-ground` at all.
-- **Only `.soft` and `.ghost`'s `bg`/`edge` actually vary by ground.** These are the only cells that need the three-ground split below. (Since `0.5.0` only `bg` does: the edge fades toward `transparent` rather than toward the ground-mixed plate, so its three ground values are equal. The split is kept, since the tokens are published.)
+- **Only `.soft` and `.ghost`'s `bg` actually varies by ground.** The published ground-qualified edge names remain for compatibility, but their values are equal across grounds since the edge fades toward `transparent` rather than the ground-mixed plate.
 
 The closed, already-established ground set from `registry.json`'s own component defaults decides what each `.soft`/`.ghost` cell composites against at generation time -- not an open set, and not a new one invented for this proposal: `transparent` (`.badge`/`.btn`'s ground, the default, no suffix), `--color-background` (`.alert`'s ground via `--ui-surface-ground`, suffix `page`), and `--intent-subtle` (`.pre`/`.code`/`.kbd`/`.tooltip-bubble`'s ground, suffix `subtle`). These ground token names are generator inputs, resolved to that token's actual light/dark value once, at generation time -- the published output is always the composited color, never a `var(--color-background)`/`var(--intent-subtle)` reference. `./palette` stays self-contained this way; it never needs `./theme` loaded alongside it to resolve anything, which is the whole point of baking rather than composing live. A `.ghost` cell's `bg` on the `transparent` ground is `transparent` itself, and on `page`/`subtle` is that ground's resolved color -- trivial values, but generated for naming consistency with `.soft`'s non-trivial ones rather than special-cased away.
 
@@ -64,6 +64,10 @@ Counted out: `.solid` contributes 5 values per intent (`bg`, `fg`, `edge`, `bg-h
 - A `-hover` suffix on `bg` and `edge` -- never on `fg`.
 
 Examples: `--palette-success-soft-bg` (transparent ground), `--palette-success-soft-subtle-bg`, `--palette-success-soft-subtle-bg-hover`, `--palette-success-solid-fg`, `--palette-success-ghost-page-edge`. `palette` was checked against the package's existing token namespaces (`--color-*`, `--intent-*`, `--ui-*`) and does not collide with any of them.
+
+### Flat neutral values
+
+The same export includes `--palette-border`, `--palette-surface`, and `--palette-text`: pre-resolved light and dark values of `--color-border`, `--color-surface`, and `--color-text`. They are not intent/presentation cells and take no intent, presentation, ground, or hover segment. An optional-peer consumer needs the neutral border, surface, and text colors too; without these values it would have to compile Tailwind's neutral OKLCH ramp and resolve `light-dark()` in a browser just to obtain three constants. Verify each value against its live theme counterpart in both themes, as `tests/browser/palette.spec.ts` does. Additional flat neutral tokens need a concrete consumer rather than speculative expansion.
 
 ### Dark mode
 
@@ -83,7 +87,6 @@ This does not touch the `intent x presentation x aesthetic` axis model, `box.css
 
 - [Model](./model.md)
 - [Roadmap](./roadmap.md)
-- [`.progress` gains presentation](./progress-presentation-axes.md)
 - `registry.json`, `package.json`
 - `../../src/box.css`, `../../src/presentation.css`, `../../src/theme.css`
 - `../../../toaster/src/styles/index.css` -- external example only, not a target of this proposal
