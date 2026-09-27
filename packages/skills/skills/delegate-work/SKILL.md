@@ -206,7 +206,8 @@ makes it cheaper than a fresh run.
 node scripts/dispatch.mjs followup <id> --brief -
 ```
 
-**Rebrief** — fresh run with a better brief. The tier goes up one step
+**Rebrief** — fresh run with a better brief. It keeps the run's role,
+allowlist and read list unless given; the tier goes up one step
 automatically.
 ```
 node scripts/dispatch.mjs run --rebrief-of <id> --brief -

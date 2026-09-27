@@ -329,6 +329,25 @@ describe("delegate-work", () => {
     }
   });
 
+  it("shouldInheritTheRoleWhenRebriefingWithoutAnExplicitRole", async () => {
+    const R = await import(runner);
+    const first = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+
+    const result = spawnSync(
+      process.execPath,
+      [path.resolve(runner, "../../dispatch.mjs"), "run", "--rebrief-of", first.id, "--model", "fake", "--brief", "-"],
+      { cwd: repo, input: "Better brief.", encoding: "utf8", env: process.env },
+    );
+    if (result.status !== 0) {
+      throw new Error(`rebrief failed: ${result.stderr}`);
+    }
+    expect(result.status).toBe(0);
+    const rebrief = JSON.parse(result.stdout);
+    expect(rebrief.role).toBe("fixer");
+    expect(rebrief.lineage.rebriefOf).toBe(first.id);
+    await R.discard(rebrief.id);
+  });
+
   it("shouldStartAReviewWithItsVerdictOnlyWhenItIsAKnownOne", async () => {
     const R = await import(runner);
     const review = (brief: string) => R.run({ cwd: repo, role: "reviewer", brief, model: "fake" });

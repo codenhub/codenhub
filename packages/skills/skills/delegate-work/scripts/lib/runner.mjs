@@ -742,7 +742,13 @@ function plan(o, { editing, tier, kind, picked, workDirOverride, lineage, prompt
 
 // ---------- public commands ----------
 
-export async function run(o) {
+export async function run(options) {
+  // A rebrief is the same task: its role comes with it unless given.
+  const inherited = options.rebriefOf && !options.role ? loadMeta(options.rebriefOf) : null;
+  if (options.rebriefOf && !options.role && !inherited) {
+    throw new UsageError(`unknown run ${options.rebriefOf}`);
+  }
+  const o = inherited ? { ...options, role: inherited.role } : options;
   const problem = G.gitProblem();
   if (problem) {
     throw new UsageError(problem);
