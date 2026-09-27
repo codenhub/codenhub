@@ -3,11 +3,7 @@ import path from "node:path";
 
 import { removeDirSafe, removeWorktree } from "./links.mjs";
 import { APPLICABLE, EDITING } from "./runner.mjs";
-import { alive, loadMeta, runDir, runsDir } from "./state.mjs";
-
-// A run's meta is saved when it starts; no run lives this long, so a
-// "running" run this old has a reused pid, not a live worker.
-const MAX_RUN_MS = 6 * 3600000;
+import { loadMeta, promptsDir, runDir, runsDir, working } from "./state.mjs";
 
 /** "90m", "24h", "7d", "0" → ms. */
 export function parseAge(s) {
@@ -23,16 +19,18 @@ function pending(meta) {
   if (!meta) {
     return "unreadable run state";
   }
-  if (meta.phase === "running") {
-    return EDITING.has(meta.role) && meta.isolation === "inplace"
-      ? "interrupted; partial edits may be in the working tree"
-      : "interrupted";
-  }
-  if (!EDITING.has(meta.role) || meta.applied || meta.discarded || !APPLICABLE.has(meta.status)) {
+  if (!EDITING.has(meta.role) || meta.applied || meta.discarded) {
     return null;
+  }
+  if (meta.phase === "running" || meta.phase === "interrupted") {
+    return meta.isolation === "inplace" ? "interrupted; partial edits may be in the working tree" : "interrupted";
   }
   if (!meta.files?.changed?.length) {
     return null;
+  }
+  if (!APPLICABLE.has(meta.status)) {
+    // Its out-of-scope files are restored; its in-scope edits stay until discard.
+    return meta.isolation === "inplace" ? `${meta.status}, not discarded: its edits are still in the working tree` : null;
   }
   return meta.isolation === "worktree"
     ? "unapplied worktree result"
@@ -75,7 +73,7 @@ export function prune({ maxAgeMs, dryRun = false }) {
     const entry = { id, role: meta?.role ?? null, status: meta?.status ?? null, ageHours: +(age / 3600000).toFixed(1) };
     const left = pending(meta);
 
-    if (meta?.phase === "running" && alive(meta.pid) && age < MAX_RUN_MS) {
+    if (meta && working(meta)) {
       out.kept.push({ ...entry, reason: "running" });
       continue;
     }
@@ -96,6 +94,19 @@ export function prune({ maxAgeMs, dryRun = false }) {
       }
     }
     out.removed.push({ ...entry, ...(left ? { dropped: left } : {}) });
+  }
+  // Prompts kept for native subagents: nothing refers to them once the task is done.
+  if (!dryRun && fs.existsSync(promptsDir())) {
+    for (const f of fs.readdirSync(promptsDir())) {
+      const file = path.join(promptsDir(), f);
+      try {
+        if (now - fs.statSync(file).mtimeMs >= maxAgeMs) {
+          fs.rmSync(file, { force: true });
+        }
+      } catch {
+        // Removed meanwhile (another prune): nothing left to do for it.
+      }
+    }
   }
   return out;
 }

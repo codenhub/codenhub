@@ -6,10 +6,26 @@ import { adapters, harnessNames } from "../adapters/index.mjs";
 import { defaultPath, load, TIERS, userPath, validate } from "./lib/config.mjs";
 import { git, gitProblem, repoRoot } from "./lib/git.mjs";
 import { harnessModels, routeContext } from "./lib/models.mjs";
+import { killChildren } from "./lib/proc.mjs";
 import { parseAge, prune } from "./lib/prune.mjs";
 import { candidates, orchestratorPools } from "./lib/route.mjs";
 import * as R from "./lib/runner.mjs";
 import { cooldowns } from "./lib/state.mjs";
+
+// Windows looks for a bare program name (git, taskkill) in the working
+// directory before PATH, and a work dir is where a worker writes: its git.exe
+// would run as dispatch. This turns that off for this process's lookups; it
+// has no effect set only in a child's environment.
+process.env.NoDefaultCurrentDirectoryInExePath = "1";
+
+// Stopped from outside (Ctrl+C, a closing terminal), end the workers and
+// checks too; the run stays "running" and reads as interrupted.
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+  process.on(signal, () => {
+    killChildren();
+    process.exit(130);
+  });
+}
 
 const BATCH_FIELDS = new Set(["role", "allow", "read", "tier", "kind", "model", "brief", "briefFile"]);
 
@@ -20,7 +36,7 @@ const HELP = `dispatch — delegate scoped tasks to worker agents
             [--kind code|ui|text] [--model <id>] [--external]
             [--isolation auto|inplace|worktree] [--orchestrator <name>]
             [--rebrief-of <id>] [--review <id>] [--plan]
-  run       --batch <file.json> [--external] [--plan]
+  run       --batch <file.json> [--external] [--plan] [--isolation auto|worktree]
                                     tasks: [{ role, allow, read, tier, kind, model,
                                     brief | briefFile }]
             --plan: route only, run nothing (status use_native, planned or
@@ -30,6 +46,7 @@ const HELP = `dispatch — delegate scoped tasks to worker agents
   discard   <id>                    drop the change
   unapply   <id>                    revert an applied change
   diff      <id>                    print the change as a patch
+  show      <id>                    print the run's result again
   prune     [--older-than <age>] [--all] [--dry-run]
                                     remove run state older than <age> (90m, 24h, 7d;
                                     default limits.pruneAfterHours): worktrees, logs,
@@ -173,8 +190,10 @@ function doctor(cwd) {
   const tiers = {};
   for (const t of TIERS) {
     const c = candidates(cfg, adapters, { tier: t, kind: "code", estimate: 0, pools, external: false });
+    // What --external would run instead, which the native answer hides.
+    const external = () => candidates(cfg, adapters, { tier: t, kind: "code", estimate: 0, pools, external: true });
     tiers[t] = c.native
-      ? { native: c.native.model }
+      ? { native: c.native.model, external: external().candidates.map((x) => `${x.modelId} via ${x.route.id}`) }
       : {
           usable: c.candidates
             .map((x) => `${x.modelId} via ${x.route.id}`)
@@ -242,7 +261,18 @@ async function main() {
             brief: t.brief ?? readBrief(t.briefFile),
           };
         });
-        out(await R.batch(tasks, { cwd, orchestrator: o.orchestrator, external: o.external, plan: o.plan }));
+        if (o.isolation !== undefined && !["auto", "worktree"].includes(o.isolation)) {
+          throw new R.UsageError("a batch takes --isolation auto or worktree");
+        }
+        out(
+          await R.batch(tasks, {
+            cwd,
+            orchestrator: o.orchestrator,
+            external: o.external,
+            plan: o.plan,
+            isolation: o.isolation,
+          }),
+        );
         return 0;
       }
       out(
@@ -279,6 +309,9 @@ async function main() {
       return 0;
     case "diff":
       process.stdout.write(R.diff(o.pos[0]));
+      return 0;
+    case "show":
+      out(R.show(o.pos[0]));
       return 0;
     case "prune": {
       const hours = load(null).limits?.pruneAfterHours ?? 24;

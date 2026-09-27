@@ -100,8 +100,10 @@ You never pick a model. You describe the task; configuration maps it to models.
 
 If the best choice for a task is a model you can already run as a native
 subagent, `dispatch` returns `use_native` with the model to use instead of
-running anything. Follow it. Pass `--external` only when the user explicitly
-asks for an external run.
+running anything. Follow it: start a native subagent with that model and give
+it the text at the result's `promptPath`, your brief with the worker rules in
+front. Pass `--external` only when the user explicitly asks for an external
+run; that request covers the reviews and retries of the same work.
 
 ## Workflow (external dispatch)
 
@@ -109,7 +111,11 @@ asks for an external run.
    depend on others (sequential). Tasks in the same batch must not touch the
    same files. `dispatch` refuses a batch whose allowlists reach a common
    existing file or a path one of them names; it can't foresee two wildcards
-   creating the same new file, so name new files explicitly.
+   creating the same new file, so name new files explicitly. Checks run the
+   project's own commands, often the whole test suite, not just the worker's
+   files: a failure the worker didn't cause still makes its result
+   `failed_checks`. Fix known failures first, or run a task that depends on
+   another's change after it.
 2. **Brief.** Fill in `references/brief-template.md` for each task. Every
    editing brief must name the files it may touch (`--allow`). Files the worker
    should read but not edit go in `--read`. Pass briefs through stdin or a
@@ -123,11 +129,16 @@ asks for an external run.
    node scripts/dispatch.mjs run --role builder --allow "src/rates/**" --read "src/types.ts" --brief -
    node scripts/dispatch.mjs run --batch <batch.json>
    ```
-   A batch prints nothing until every worker in it finishes, so tasks meant
-   for native subagents would wait for the slowest external one. Before a
-   batch, run it with `--plan`: it routes every task and runs nothing. Start
-   the `use_native` tasks as native subagents, then dispatch a batch of the
-   `planned` ones.
+   A run lasts up to its role's time budget (30 minutes for a builder) plus
+   its checks, and a batch prints nothing until every worker in it finishes.
+   Run `dispatch` where a command timeout won't cut it off, such as in the
+   background, and wait for its result; a dispatch stopped halfway leaves an
+   interrupted run, which `discard` cleans up once its worker or checks
+   have stopped. Before a batch, run it with
+   `--plan`: it routes every task and runs nothing. Dispatch the `planned`
+   ones with `--isolation worktree`, then start the `use_native` ones as
+   native subagents: an editing worker in place would take their edits for
+   its own and restore them.
    Workers start from the current working tree, including uncommitted changes.
    Isolation defaults to `auto`: read-only roles and a single editing worker run
    in place; parallel editing workers each get an isolated copy, and so does an
@@ -158,11 +169,16 @@ asks for an external run.
    covers every changed file. When it returns `use_native`, brief the native
    reviewer yourself with the same parts: your criteria, the original brief,
    the diff (`dispatch diff <id>`), and where to read the changed files (the
-   result's `worktree`, or your working tree for an in-place result).
+   result's `worktree`, or your working tree for an in-place result). When it
+   returns `not_available` (no other family can run here), or the builder was
+   a native subagent (there is no run to review), review it yourself against
+   the checklist. Don't lower the reviewer's tier to reach another family: a
+   light reviewer tends to approve without looking.
 6. **Decide.**
    - Accept: `node scripts/dispatch.mjs apply <id>`
    - Reject: `node scripts/dispatch.mjs discard <id>`
    - Otherwise follow the status table in `references/result-format.md`.
+   Read-only results (`scout`, `reviewer`) need neither.
 7. **Integrate.** After applying a batch of more than one editing result, run
    the project's full checks once in the real working tree. Each worker's
    checks only proved its change in isolation. If integration fails, undo
@@ -172,9 +188,12 @@ asks for an external run.
 Run `node scripts/dispatch.mjs doctor` once per session before the first
 dispatch; it reports which harnesses, models and tiers are usable here, and
 under `runs.pending` any results from earlier sessions still waiting for
-`apply` or `discard`. Decide those first, or tell the user. When `runs.hint`
-says so, run `node scripts/dispatch.mjs prune`: it removes old run state and
-discards unapplied worktree results, and never touches the working tree.
+`apply` or `discard`; `node scripts/dispatch.mjs show <id>` prints one's
+result. Decide those first, or tell the user. When `runs.hint` says so, run
+`node scripts/dispatch.mjs prune`: it removes old run state and discards
+unapplied worktree results, and never touches the working tree. Don't prune
+while `runs.pending` lists a result the user hasn't decided on, unless they
+agree.
 
 ## Retries
 
@@ -188,13 +207,17 @@ makes it cheaper than a fresh run.
 node scripts/dispatch.mjs followup <id> --brief -
 ```
 
-**Rebrief** — fresh run with a better brief. The tier goes up one step
+**Rebrief** — fresh run with a better brief. It keeps the run's role,
+allowlist and read list unless given; the tier goes up one step
 automatically.
 ```
 node scripts/dispatch.mjs run --rebrief-of <id> --brief -
 ```
 
-After the retry, fix it yourself, drop it, or ask the user.
+After the retry, finish it yourself, drop it, or ask the user. To finish a
+result yourself, `apply` it first (`failed_checks` and `blocked` results
+apply too), then edit your working tree. Never edit a result's `worktree`:
+`apply` copies the worker's version and drops the worktree with your edits.
 
 ## Context discipline
 
@@ -202,8 +225,11 @@ After the retry, fix it yourself, drop it, or ask the user.
   full transcripts, or files the worker changed unless reviewing them.
 - Retain from each result only what the next decision needs.
 - For large batches, or once your context is getting heavy, hand the batch to a
-  single native subagent acting as manager: it receives the task list, runs
-  steps 3–7, and returns one report in the manager format from
+  single native subagent acting as manager. Route the batch with `--plan`
+  first and keep the `use_native` tasks yourself: a subagent usually can't
+  start its own. Give the manager this skill's path, the `planned` tasks
+  with their briefs, allowlists and read lists, and whether it may `apply`.
+  It runs steps 3–7 and returns one report in the manager format from
   `references/result-format.md`. You keep the plan and final decisions.
 - Respect `maxParallel` from configuration; don't launch more workers than you
   can review.

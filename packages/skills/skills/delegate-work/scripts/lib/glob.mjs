@@ -3,7 +3,8 @@ import path from "node:path";
 
 const WIN = process.platform === "win32";
 
-export const toPosix = (p) => p.replace(/\\/g, "/");
+// Only Windows separates with a backslash; elsewhere it is part of a file name.
+export const toPosix = (p) => (WIN ? p.replace(/\\/g, "/") : p);
 
 export function globToRegex(glob) {
   const g = toPosix(glob).replace(/^\.\//, "");

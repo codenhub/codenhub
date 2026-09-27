@@ -6,11 +6,21 @@ import { checkEnv, resolveChecks, runChecks } from "./checks.mjs";
 import { load, skillDir, validate } from "./config.mjs";
 import * as G from "./git.mjs";
 import { canonical, matchAny, toPosix } from "./glob.mjs";
-import { linkDeps, removeDirSafe, removeWorktree, stripLinks, unlinkSafe } from "./links.mjs";
+import { linkDeps, linksTo, removeDirSafe, removeWorktree, stripLinks, unlinkSafe } from "./links.mjs";
 import { start, withoutSecrets } from "./proc.mjs";
 import { envelope, parseResult } from "./result.mjs";
 import { candidates, nextTier, orchestratorPools } from "./route.mjs";
-import { activeInplace, alive, loadMeta, newRun, runDir, saveMeta, setCooldown } from "./state.mjs";
+import {
+  activeInplace,
+  BEAT_MS,
+  loadMeta,
+  newRun,
+  runDir,
+  savePrompt,
+  saveMeta,
+  setCooldown,
+  working,
+} from "./state.mjs";
 
 export const EDITING = new Set(["fixer", "builder"]);
 export const APPLICABLE = new Set(["ok", "failed_checks", "blocked"]);
@@ -91,6 +101,8 @@ function depsFingerprint(root, dirs) {
     .join("|");
 }
 
+const WIN = process.platform === "win32";
+
 const cleanupWorktree = (meta) => removeWorktree(meta.worktree, meta.root);
 
 /**
@@ -144,7 +156,14 @@ function throughLinks(root, files) {
 
 const linkHint = (files) => `Not written, their path goes through a link: ${files.slice(0, 10).join(", ")}`;
 
-/** Make files in root byte-identical to their version in ref (snapshot or post tree). */
+/** Files that are symbolic links in ref: a worker's link may point anywhere, so apply won't write one. */
+const linksIn = (ref, files, cwd) => files.filter((f) => G.mode(ref, f, cwd) === "120000");
+
+/**
+ * Make files in root byte-identical to their version in ref (snapshot or post
+ * tree), executable bit and links included where the OS has them. Git on
+ * Windows checks a link out as a file holding its target, and so does this.
+ */
 function writeFrom(root, ref, files) {
   const linked = throughLinks(root, files);
   if (linked.length) {
@@ -154,11 +173,22 @@ function writeFrom(root, ref, files) {
   for (const f of files) {
     const data = G.blob(ref, f, root);
     const full = path.join(root, f);
-    if (data) {
-      fs.mkdirSync(path.dirname(full), { recursive: true });
-      fs.writeFileSync(full, data);
-    } else {
+    if (!data) {
       fs.rmSync(full, { force: true });
+      continue;
+    }
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    const mode = WIN ? null : G.mode(ref, f, root);
+    if (mode === "120000") {
+      fs.rmSync(full, { force: true });
+      fs.symlinkSync(data.toString("utf8"), full);
+      continue;
+    }
+    fs.writeFileSync(full, data);
+    if (mode) {
+      const now = fs.statSync(full).mode & 0o777;
+      // Executable wherever readable, as git checks it out; otherwise not executable at all.
+      fs.chmodSync(full, mode === "100755" ? now | ((now & 0o444) >> 2) : now & ~0o111);
     }
   }
 }
@@ -264,7 +294,9 @@ async function resetWork(meta) {
   if (!meta.editing) {
     return;
   }
-  if (meta.isolation === "worktree") {
+  // A follow-up goes back to the result it followed up, not to the start.
+  const base = meta.resetTo ?? meta.snap;
+  if (meta.isolation === "worktree" && !meta.resetTo) {
     const ex = [...(meta.linked ?? []), ...(meta.copied ?? [])].flatMap((p) => ["-e", p]);
     // Only dispatch's own links may stay: git must not clean through one a worker made.
     stripLinks(
@@ -273,9 +305,15 @@ async function resetWork(meta) {
     );
     G.git(["reset", "-q", "--hard", meta.snap], { cwd: meta.workDir });
     G.git(["clean", "-q", "-fd", ...ex], { cwd: meta.workDir });
+  } else if (meta.isolation === "worktree") {
+    const tree = G.workingTree(meta.workDir, path.join(runDir(meta.id), "reset.index"));
+    const files = G.numstat(base, tree, meta.workDir)
+      .map((c) => c.path)
+      .filter((f) => !throughLinks(meta.workDir, [f]).length);
+    writeFrom(meta.workDir, base, files);
   } else {
     const tree = G.workingTree(meta.root, path.join(runDir(meta.id), "reset.index"));
-    const files = G.numstat(meta.snap, tree, meta.root).map((c) => c.path);
+    const files = G.numstat(base, tree, meta.root).map((c) => c.path);
     // Anything edited in the tree meanwhile is restored too; keep a copy.
     meta.resets = (meta.resets ?? 0) + 1;
     const copy = path.join(runDir(meta.id), `reset-${meta.resets}`);
@@ -289,7 +327,17 @@ async function resetWork(meta) {
     if (fs.existsSync(copy)) {
       meta.resetCopies = [...(meta.resetCopies ?? []), copy];
     }
-    writeFrom(meta.root, meta.snap, files);
+    writeFrom(meta.root, base, files);
+  }
+}
+
+/** runAttempts(), saving meta as it goes: however long the worker and the checks take, the run shows it is alive. */
+async function execute(meta, ...rest) {
+  const beat = setInterval(() => saveMeta(meta.id, meta), BEAT_MS);
+  try {
+    return await runAttempts(meta, ...rest);
+  } finally {
+    clearInterval(beat);
   }
 }
 
@@ -297,7 +345,7 @@ async function resetWork(meta) {
  * Run the worker over the candidate list, falling back on infrastructure
  * failures, then evaluate the outcome. Mutates and returns meta.
  */
-async function execute(meta, cfg, list, prompt, sessionId) {
+async function runAttempts(meta, cfg, list, prompt, sessionId) {
   const t0 = Date.now();
   const maxSteps = cfg.limits?.maxSteps?.[meta.role] ?? DEFAULT_STEPS[meta.role];
   const timeoutMs = 1000 * (cfg.limits?.timeoutSec?.[meta.role] ?? DEFAULT_TIMEOUT[meta.role]);
@@ -360,8 +408,13 @@ async function execute(meta, cfg, list, prompt, sessionId) {
         }
       },
     });
+    // Should dispatch be killed, the worker may outlive it; its run is still working then.
+    Object.assign(meta, { workerPid: proc.pid, workerStarted: Date.now() });
+    saveMeta(meta.id, meta);
     // oxlint-disable-next-line no-await-in-loop -- candidates run one at a time: the next only after this one failed.
     const res = await proc.done;
+    meta.workerPid = null;
+    saveMeta(meta.id, meta);
     guardGitFile(meta);
     c.adapter.parseStderr?.(res.stderrTail, acc);
     meta.logPath = logPath;
@@ -417,7 +470,7 @@ async function execute(meta, cfg, list, prompt, sessionId) {
     meta.status = lastFailure ? "harness_error" : "not_available";
     meta.hint = lastFailure
       ? hintFor(lastFailure.kind, lastFailure.harness)
-      : "No usable route. Run `dispatch doctor`.";
+      : noRouteHint(meta.skipped);
     meta.files = { changed: [], outOfScope: [] };
   } else {
     await evaluate(meta, cfg, outcome);
@@ -444,6 +497,12 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   }
   if (meta.gitFileRestored) {
     outOfScope.push("(worktree .git file changed: restored)");
+  }
+  // The checks would run whatever tools a replaced dependency link holds.
+  for (const d of meta.linked ?? []) {
+    if (!linksTo(path.join(meta.workDir, d), path.join(meta.root, d))) {
+      outOfScope.push(`(dependency link ${d} replaced)`);
+    }
   }
   // Writes git can't see (ignored files, paths outside the tree) are known
   // only from the harness's edit events, and can't be restored from the snapshot.
@@ -479,18 +538,16 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   }
   fs.writeFileSync(path.join(runDir(meta.id), "patch.diff"), G.patch(meta.snap, post, meta.workDir));
 
-  // Restore out-of-scope files wherever the work dir is shared (the real tree,
-  // or a reviewed run's worktree). A private worktree is simply never applied.
-  const quarantine = () => {
+  // Restore files to their version in ref wherever the work dir is shared (the
+  // real tree, or a reviewed run's worktree), keeping the changed versions in
+  // dir. A private worktree is simply never applied. Says whether it ran.
+  const restoreShared = (candidates, ref, dir, what) => {
     if (meta.isolation !== "inplace" && !meta.sharedWorkDir) {
-      return;
+      return false;
     }
-    // Real changed paths only: the notes in parentheses aren't files, but a
-    // file's name may start with one.
-    const candidates = outOfScope.filter((f) => seen.has(f));
     const linked = throughLinks(meta.workDir, candidates);
     const files = candidates.filter((f) => !linked.includes(f));
-    const qdir = path.join(runDir(meta.id), "quarantine");
+    const qdir = path.join(runDir(meta.id), dir);
     for (const f of files) {
       const src = path.join(meta.workDir, f);
       if (fs.existsSync(src)) {
@@ -498,16 +555,26 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
         fs.copyFileSync(src, path.join(qdir, f));
       }
     }
-    writeFrom(meta.workDir, meta.snap, files);
+    writeFrom(meta.workDir, ref, files);
     const notes = [meta.hint];
     if (files.length) {
-      notes.push(`Out-of-scope files were restored; their changed versions are kept in ${qdir}.`);
+      notes.push(`${what} were restored; their changed versions are kept in ${qdir}.`);
     }
     if (linked.length) {
       notes.push(linkHint(linked));
     }
     meta.hint = notes.filter(Boolean).join(" ") || null;
+    return true;
   };
+  // Real changed paths only: the notes in parentheses aren't files, but a
+  // file's name may start with one.
+  const quarantine = () =>
+    restoreShared(
+      outOfScope.filter((f) => seen.has(f)),
+      meta.snap,
+      "quarantine",
+      "Out-of-scope files",
+    );
 
   if (killed === "timeout" || killed === "steps") {
     meta.status = "timeout";
@@ -523,21 +590,42 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   } else if (meta.editing) {
     const timeout = 1000 * (cfg.limits?.checkTimeoutSec ?? 900);
     const depsBeforeChecks = depsFingerprint(meta.root, depDirs);
-    meta.checks = await runChecks(meta.checkList, meta.workDir, timeout, {
-      ...withoutSecrets(cfg.project.passEnv ?? []),
-      ...gitEnv,
-      ...NO_AUTO_INSTALL,
+    meta.checks = await runChecks({
+      checks: meta.checkList,
+      cwd: meta.workDir,
+      timeoutMs: timeout,
+      env: { ...withoutSecrets(cfg.project.passEnv ?? []), ...gitEnv, ...NO_AUTO_INSTALL },
+      // Should dispatch be killed, a check may outlive it; its run is still working then.
+      onStart: (pid) => {
+        Object.assign(meta, { checkPid: pid, checkStarted: Date.now() });
+        saveMeta(meta.id, meta);
+      },
+      onFinish: () => {
+        meta.checkPid = null;
+        saveMeta(meta.id, meta);
+      },
     });
     // The checks ran the worker's code.
     guardGitFile(meta);
     if (depsFingerprint(meta.root, depDirs) !== depsBeforeChecks) {
       meta.files.outOfScope.push("(dependency folder changed during the checks: install detected)");
     }
-    // What checks leave behind (unignored reports, caches) isn't someone's edit.
     meta.settled = meta.checkList.length
       ? G.workingTree(meta.workDir, path.join(runDir(meta.id), "settled.index"))
       : meta.post;
     meta.status = meta.checks.every((c) => c.ok) ? "ok" : "failed_checks";
+    // The checks verified the worker's version, and apply installs that one.
+    // A check that rewrote a file (a formatter, a generator) leaves a version
+    // nothing verified; ignored output (builds, caches) isn't part of either.
+    const checkEdits = G.numstat(meta.post, meta.settled, meta.workDir)
+      .map((c) => c.path)
+      .filter((f) => !ignore.includes(f));
+    if (checkEdits.length) {
+      meta.files.outOfScope.push(`(checks changed git-visible files: ${checkEdits.slice(0, 10).join(", ")})`);
+      if (restoreShared(checkEdits, meta.post, "checks-quarantine", "Files the checks changed")) {
+        meta.settled = G.workingTree(meta.workDir, path.join(runDir(meta.id), "restored.index"));
+      }
+    }
     if (meta.gitFileRestored) {
       meta.files.outOfScope.push("(worktree .git file changed by the checks: restored)");
     }
@@ -563,15 +651,48 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   return meta;
 }
 
+/**
+ * Dispatch failed partway through a run: keep it as interrupted, so doctor
+ * lists it and discard restores what it may have written. A worker or check
+ * it leaves running keeps the run working until it exits.
+ */
+function interrupted(meta, e) {
+  meta.phase = "interrupted";
+  return new Error(`run ${meta.id} was interrupted (discard it to restore its files): ${e.message}`, { cause: e });
+}
+
 /** The run itself is still working (a first run or a follow-up): its result isn't final. */
-const stillWorking = (meta) => meta.phase === "running" && alive(meta.pid);
-const workingHint = (id) => `Run ${id} is still working; wait for its result.`;
+const stillWorking = working;
+const workingHint = (id) => {
+  const meta = loadMeta(id);
+  if (!meta || working({ ...meta, workerPid: null, checkPid: null })) {
+    return `Run ${id} is still working; wait for its result.`;
+  }
+  const survivor = meta.checkPid ? "check" : "worker";
+  const seen = {};
+  working(meta, seen);
+  return seen.unlisted
+    ? `Run ${id}'s dispatch stopped, and the processes couldn't be listed to see whether its ${survivor} (process ${meta[`${survivor}Pid`]}) or what it started still runs; it counts as running until 6 hours after it started. End it if it does, or wait.`
+    : `Run ${id}'s dispatch stopped, but its ${survivor} (process ${meta[`${survivor}Pid`]}) or a process it started is still running; wait for it to exit, or end it.`;
+};
 
 /** Another run still working in this tree: writing into it now would be counted as that run's change. */
 function busyTree(meta) {
   const [other] = activeInplace(meta.root).filter((m) => m.id !== meta.id);
   return other ? `In-place run ${other.id} is still working in this tree; try again when it finishes.` : null;
 }
+
+/** Why nothing could run: each route left out and its reason, which doctor alone wouldn't say. */
+function noRouteHint(skipped) {
+  const why = skipped
+    .slice(0, 6)
+    .map((s) => `${s.modelId}${s.route ? ` via ${s.route}` : ""} (${s.reason})`)
+    .join("; ");
+  return why ? `No usable route for this tier: ${why}.` : "No usable route for this tier. Run `dispatch doctor`.";
+}
+
+const nativeHint = (model) =>
+  `Run this task as a native subagent with ${model}, and give it the text at promptPath: your brief with the worker rules in front.`;
 
 const IN_PLACE_ONLY_HINT =
   "Every usable route for this tier edits only in a worktree; rerun without --isolation inplace.";
@@ -604,7 +725,7 @@ function isolationFor(o, editing, candidates) {
 }
 
 /** What `run` would do, without running anything or touching run state. */
-function plan(o, { editing, tier, kind, picked, workDirOverride, lineage }) {
+function plan(o, { editing, tier, kind, picked, workDirOverride, lineage, prompt }) {
   const base = {
     v: 1,
     id: null,
@@ -618,7 +739,8 @@ function plan(o, { editing, tier, kind, picked, workDirOverride, lineage }) {
       worker: { ...picked.native, tier, kind, skipped: picked.skipped ?? [] },
       isolation: null,
       fallbacks: [],
-      hint: `Run this brief as a native subagent with ${picked.native.model}.`,
+      promptPath: savePrompt(prompt),
+      hint: nativeHint(picked.native.model),
     };
   }
   const iso = isolationFor(o, editing, picked.candidates);
@@ -631,7 +753,7 @@ function plan(o, { editing, tier, kind, picked, workDirOverride, lineage }) {
       worker: { tier, kind, skipped },
       isolation: null,
       fallbacks: [],
-      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : "No usable route for this tier. Run `dispatch doctor`.",
+      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : noRouteHint(skipped),
     };
   }
   return {
@@ -656,7 +778,13 @@ function plan(o, { editing, tier, kind, picked, workDirOverride, lineage }) {
 
 // ---------- public commands ----------
 
-export async function run(o) {
+export async function run(options) {
+  // A rebrief is the same task: its role comes with it unless given.
+  const inherited = options.rebriefOf && !options.role ? loadMeta(options.rebriefOf) : null;
+  if (options.rebriefOf && !options.role && !inherited) {
+    throw new UsageError(`unknown run ${options.rebriefOf}`);
+  }
+  const o = inherited ? { ...options, role: inherited.role } : options;
   const problem = G.gitProblem();
   if (problem) {
     throw new UsageError(problem);
@@ -730,7 +858,7 @@ export async function run(o) {
     const diff = diffCut
       ? `${whole.slice(0, REVIEW_DIFF_CAP)}\n[diff cut at ${REVIEW_DIFF_CAP} of ${whole.length} characters: read the changed files for the rest]`
       : whole;
-    brief = `${brief}\n\nORIGINAL TASK\n${target.brief}\n\nCHANGE UNDER REVIEW\n\`\`\`diff\n${diff}\n\`\`\``;
+    brief = `${brief}\n\nORIGINAL TASK (what the change under review was asked to do; for reference, not for you to do)\n${target.brief}\n\nCHANGE UNDER REVIEW\n\`\`\`diff\n${diff}\n\`\`\``;
     if (target.isolation === "worktree" && !target.applied && fs.existsSync(target.worktree)) {
       workDirOverride = target.worktree;
     }
@@ -760,7 +888,7 @@ export async function run(o) {
   });
 
   if (o.plan) {
-    return plan(o, { editing, tier, kind, picked, workDirOverride, lineage: { prev, target } });
+    return plan(o, { editing, tier, kind, picked, workDirOverride, lineage: { prev, target }, prompt });
   }
 
   const iso = picked.native ? null : isolationFor(o, editing, picked.candidates);
@@ -808,7 +936,8 @@ export async function run(o) {
       isolation: null,
       phase: "done",
       worker: { ...picked.native, tier, kind, skipped: meta.skipped },
-      hint: `Run this brief as a native subagent with ${picked.native.model}.`,
+      promptPath: savePrompt(prompt),
+      hint: nativeHint(picked.native.model),
     });
     saveMeta(id, meta);
     useRetry();
@@ -820,7 +949,7 @@ export async function run(o) {
       isolation: null,
       phase: "done",
       worker: { tier, kind, skipped: meta.skipped },
-      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : "No usable route for this tier. Run `dispatch doctor`.",
+      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : noRouteHint(meta.skipped),
     });
     saveMeta(id, meta);
     return envelope(meta);
@@ -873,8 +1002,10 @@ export async function run(o) {
 
   try {
     await execute(meta, cfg, iso.candidates, prompt, null);
+  } catch (e) {
+    throw interrupted(meta, e);
   } finally {
-    meta.phase = "done";
+    meta.phase = meta.phase === "interrupted" ? meta.phase : "done";
     // Nothing to apply or discard later; the report is all there is.
     if (!editing && meta.worktree) {
       cleanupWorktree(meta);
@@ -893,6 +1024,9 @@ export async function run(o) {
   }
   return envelope(meta);
 }
+
+// What a follow-up that fails to run hands back.
+const FIRST_RESULT = ["status", "files", "checks", "denied", "notes", "summary", "hint", "post", "settled"];
 
 export async function followup(id, brief) {
   const meta = loadMeta(id);
@@ -926,6 +1060,12 @@ export async function followup(id, brief) {
   if (!fs.existsSync(meta.workDir)) {
     throw new UsageError("the tree this run worked in is gone (applied or discarded since); use --rebrief-of instead");
   }
+  if (meta.isolation === "inplace") {
+    const busy = busyTree(meta);
+    if (busy) {
+      throw new UsageError(busy);
+    }
+  }
   // The follow-up is judged against the original snapshot, so anything edited
   // since would count as the worker's change (and be restored if out of scope).
   const now = G.workingTree(meta.workDir, path.join(runDir(id), "now.index"));
@@ -941,6 +1081,9 @@ export async function followup(id, brief) {
       );
     }
   }
+  // Should the follow-up fail to run, the tree goes back to this result and it stands.
+  const first = Object.fromEntries(FIRST_RESULT.map((k) => [k, meta[k]]));
+  meta.resetTo = settled;
   meta.retryUsed = true;
   meta.phase = "running";
   meta.pid = process.pid;
@@ -960,8 +1103,16 @@ export async function followup(id, brief) {
       brief,
       meta.sessionId,
     );
+  } catch (e) {
+    throw interrupted(meta, e);
   } finally {
-    meta.phase = "done";
+    meta.phase = meta.phase === "interrupted" ? meta.phase : "done";
+    delete meta.resetTo;
+    if (meta.status === "harness_error" || meta.status === "not_available") {
+      const why = meta.hint;
+      Object.assign(meta, first);
+      meta.hint = `The follow-up couldn't run (${why}); the tree is back to this result, still to decide. The retry is used.`;
+    }
     saveMeta(id, meta);
   }
   return envelope(meta);
@@ -996,6 +1147,13 @@ export function apply(id) {
     if (linked.length) {
       return envelope(meta, { status: "conflict", hint: linkHint(linked) });
     }
+    const madeLinks = linksIn(meta.post, files, meta.root);
+    if (madeLinks.length) {
+      return envelope(meta, {
+        status: "conflict",
+        hint: `The worker made these symbolic links, which apply doesn't write: ${madeLinks.slice(0, 10).join(", ")}. Check where they point in \`dispatch diff ${id}\`, and make them yourself if they belong.`,
+      });
+    }
     const moved = foreignEdits(meta.root, meta.snap, meta.post, files);
     if (moved.length) {
       return envelope(meta, {
@@ -1012,6 +1170,8 @@ export function apply(id) {
     }
   }
   meta.applied = true;
+  // Found stopped above: no process of this run is left to look for.
+  Object.assign(meta, { workerPid: null, checkPid: null });
   saveMeta(id, meta);
   return envelope(meta);
 }
@@ -1032,6 +1192,32 @@ export async function discard(id) {
   }
   if (meta.isolation === "worktree") {
     cleanupWorktree(meta);
+  } else if (meta.editing && meta.phase !== "done" && meta.snap) {
+    // Cut short (dispatch killed or failed): no result says what the worker
+    // wrote, so every allowed file that differs from the start goes back.
+    const busy = busyTree(meta);
+    if (busy) {
+      return envelope(meta, { status: "conflict", hint: busy });
+    }
+    const now = G.workingTree(meta.root, path.join(runDir(id), "discard.index"));
+    const files = G.numstat(meta.snap, now, meta.root)
+      .map((c) => c.path)
+      .filter((f) => inScope(f, meta.allow));
+    const linked = throughLinks(meta.root, files);
+    if (linked.length) {
+      return envelope(meta, { status: "conflict", hint: linkHint(linked) });
+    }
+    const copy = path.join(runDir(id), "discarded");
+    for (const f of files) {
+      if (fs.existsSync(path.join(meta.root, f))) {
+        fs.mkdirSync(path.dirname(path.join(copy, f)), { recursive: true });
+        fs.copyFileSync(path.join(meta.root, f), path.join(copy, f));
+      }
+    }
+    writeFrom(meta.root, meta.snap, files);
+    meta.hint = files.length
+      ? `The run was cut short; restored the allowed files that differed from its start: ${files.slice(0, 10).join(", ")}. Their versions before this discard are in ${copy}.`
+      : "The run was cut short; none of its allowed files differed from its start.";
   } else if (meta.editing && meta.post) {
     const busy = busyTree(meta);
     if (busy) {
@@ -1049,6 +1235,7 @@ export async function discard(id) {
     writeFrom(meta.root, meta.snap, files);
   }
   meta.discarded = true;
+  Object.assign(meta, { workerPid: null, checkPid: null });
   saveMeta(id, meta);
   return envelope(meta);
 }
@@ -1079,6 +1266,14 @@ export function unapply(id) {
   meta.applied = false;
   meta.discarded = true;
   saveMeta(id, meta);
+  return envelope(meta);
+}
+
+export function show(id) {
+  const meta = loadMeta(id);
+  if (!meta) {
+    throw new UsageError(`unknown run ${id}`);
+  }
   return envelope(meta);
 }
 
@@ -1117,10 +1312,12 @@ function overlappingTask(root, tasks) {
   return null;
 }
 
-export async function batch(tasks, common) {
+export async function batch(tasks, { isolation, ...common }) {
   const cfg = load(G.repoRoot(common.cwd));
   const limit = Math.max(1, cfg.limits?.maxParallel ?? 4);
   const editingCount = tasks.filter((t) => EDITING.has(t.role)).length;
+  // Editing tasks side by side, or beside other edits (native subagents), each get a worktree.
+  const forceWorktree = editingCount > 1 || isolation === "worktree";
   const overlap = overlappingTask(G.repoRoot(common.cwd), tasks);
   if (overlap) {
     throw new UsageError(overlap);
@@ -1131,7 +1328,7 @@ export async function batch(tasks, common) {
   for (const [i, t] of tasks.entries()) {
     try {
       // oxlint-disable-next-line no-await-in-loop -- one after another: the first invalid task stops the batch.
-      planned.push(await run({ ...common, ...t, forceWorktree: editingCount > 1, plan: true }));
+      planned.push(await run({ ...common, ...t, forceWorktree, plan: true }));
     } catch (e) {
       throw e instanceof UsageError ? new UsageError(`task ${i}: ${e.message}`) : e;
     }
@@ -1146,7 +1343,7 @@ export async function batch(tasks, common) {
       const i = next++;
       try {
         // oxlint-disable-next-line no-await-in-loop -- each pool slot runs its tasks in turn; slots run in parallel.
-        results[i] = await run({ ...common, ...tasks[i], forceWorktree: editingCount > 1 });
+        results[i] = await run({ ...common, ...tasks[i], forceWorktree });
       } catch (e) {
         results[i] = { v: 1, id: null, role: tasks[i].role, status: "harness_error", hint: String(e.message ?? e) };
       }

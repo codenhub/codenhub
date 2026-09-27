@@ -10,7 +10,7 @@ disagree, the code wins and this file gets fixed.
 |------|----------------------------------------------------------------------|
 | 0    | A result was produced. Read `status` — the task may still have failed. |
 | 1    | Bad invocation (arguments, missing brief). No result.                |
-| 2    | `dispatch` itself broke. No result or a partial one; stderr explains. |
+| 2    | `dispatch` itself broke. No result or a partial one; stderr explains. A run it broke in is kept as interrupted: `discard <id>` restores its allowed files. |
 
 Never treat exit code 0 as "the task succeeded".
 
@@ -71,7 +71,7 @@ Never treat exit code 0 as "the task succeeded".
 | `role`            | `scout`, `fixer`, `builder` or `reviewer`. |
 | `status`          | See the status table. |
 | `worker`          | What actually ran, and the tier/kind it was chosen for. `route` names which access path was used; `family` is the model family, which `--review` uses to pick a reviewer from another one. `skipped` lists models or routes passed over and why (context too small, unavailable, cooling down, blocked by data policy, failed and fell back). |
-| `isolation`       | `inplace` (changes are already in the working tree) or `worktree` (changes wait for `apply`); `null` when nothing ran (`use_native`, `not_available`). |
+| `isolation`       | `inplace` (changes are already in the working tree) or `worktree` (changes wait for `apply`); `null` when nothing ran (`use_native`, `not_available`). A `--review` result gives the reviewed run's. Read-only results need no `apply` or `discard`. |
 | `worktree`        | The worktree holding the change while a `worktree` result waits for `apply` or `discard`, outside the repository; `null` otherwise. Its files are the worker's version, for review. |
 | `lineage`         | `rebriefOf`: the task this run retries. `reviewOf`: the result this review covers. |
 | `summary`         | Worker's own summary, capped at 600 characters. Unverified claim. |
@@ -83,7 +83,9 @@ Never treat exit code 0 as "the task succeeded".
 | `checks`          | Verification commands from user config, or inferred from the project (fast set for `fixer`, full set for `builder`). `tail` is the last ≤ 20 lines of output, only when `ok` is false. **Empty means nothing could be inferred:** `ok` then only means "in scope and finished", and you must verify the change yourself before applying. |
 | `denied`          | Actions the harness refused, one line each, at most 20: its own wording where it gave one, otherwise the tool and its target; paths in the work dir are made relative. |
 | `notes`           | Out-of-scope observations from the worker. Never acted on automatically. |
-| `hint`            | Set by `dispatch` when it can suggest a concrete next step (e.g. re-authenticate a harness). |
+| `hint`            | Set by `dispatch` when it can suggest a concrete next step (e.g. re-authenticate a harness), or explain the status (why no route could run). |
+| `promptPath`      | `use_native` only: a file with your brief and the worker rules in front of it. Give its text to the native subagent. |
+| `durationMs`      | How long the worker and the checks took. |
 | `applied`         | Whether `apply` accepted the change. In place, the change is in the working tree either way; `false` there means it is not decided yet. |
 | `retryAvailable`  | `false` once this task's single retry (follow-up or rebrief) is used. `dispatch` refuses further retries. |
 | `logPath`         | Full worker log, outside the repository. Read only to diagnose. |
@@ -97,14 +99,14 @@ by reading the log by default.
 |------------------|---------|---------------------|
 | `ok`             | Changes in scope and every check that ran passed (or read-only role finished). With an empty `checks`, nothing verified the change. | Editing roles: review the diff; for a `builder` result that adds logic or changes more than one file, get a cross-model review; then `apply` or `discard`. Read-only roles: use `report`. |
 | `no_changes`     | An editing role (`fixer` or `builder`) finished without changing anything. The status comes from the diff; of the worker's own RESULT status (`done`, `not_needed`, `blocked`), only `blocked` changes it. | Read `summary`: a worker that found nothing to do says why there. Usually the brief was wrong or the issue doesn't exist. Rebrief or drop. |
-| `failed_checks`  | In scope, but a check failed. | Read the failing `tail`. Small and local → `followup` (refused if files changed since the run); otherwise `--rebrief-of` (tier goes up); if `retryAvailable` is false, fix it yourself or `discard`. |
-| `out_of_scope`   | Touched files outside `--allow`, or anything inside dependency folders (`node_modules`, virtual environments). Changes are quarantined; in place, those files are already restored. Entries in parentheses are not restored: an install, or a write git can't see (an ignored file), known only from the worker's own edit events. | `discard`. Tell the user about any `(invisible to git, not restored)` file: it is still as the worker left it. If the extra file was genuinely needed, rebrief with a wider allowlist. |
-| `blocked`        | Worker stopped because a needed action was denied. Edits it made before stopping are kept and in scope, but the checks did not run. | Check `denied`. If `files.changed` has useful partial work, review and verify it, then `apply` it (or `followup` to finish); otherwise `discard`. Do the denied action yourself if appropriate, then rebrief what's left. |
+| `failed_checks`  | In scope, but a check failed. | Read the failing `tail`. Small and local → `followup` (refused if files changed since the run); otherwise `--rebrief-of` (tier goes up); if `retryAvailable` is false, `apply` it and fix it yourself, or `discard`. A follow-up that can't run (a harness failure) hands this result back, with a `hint` saying so. |
+| `out_of_scope`   | Touched files outside `--allow`, or anything inside dependency folders (`node_modules`, virtual environments). Changes are quarantined; in place, the out-of-scope files are already restored, and the in-scope edits stay until `discard`. Entries in parentheses are notes, not files: `(invisible to git, not restored) <path>` is a write git can't see (an ignored file); `(dependency folder changed: install detected)` is an install, not undone; `(dependency link <dir> replaced)` means the checks would have run the worker's own tools, so they didn't run; `(checks changed git-visible files: ...)` means a check rewrote files (a formatter that fixes, a generator), so what passed isn't what `apply` would install; in place, the worker's version is already back. | `discard`. Tell the user about any `(invisible to git, not restored)` file and any install: they are still as the worker left them. If the extra file was genuinely needed, rebrief with a wider allowlist. |
+| `blocked`        | Worker stopped: a needed action was denied, it needed a file outside the allowlist, or an existing test contradicts the task. Edits it made before stopping are kept and in scope, but the checks did not run. | Read `summary` for why, and `denied` for refused actions. If `files.changed` has useful partial work, review and verify it, then `apply` it (or `followup` to finish); otherwise `discard`. Do the denied action yourself if appropriate, then rebrief what's left. |
 | `timeout`        | Killed by the time or step budget. | `discard`. Task was too large or too vague: split or sharpen it, then `--rebrief-of` if retry is available. |
-| `conflict`       | `apply`, `discard` or `unapply` found the files changed by someone else since the snapshot, a file whose path goes through a symlink or junction, another in-place run still working in the tree, or the run itself still working (a follow-up in progress). Nothing was overwritten. | If a run is still working, retry when it finishes. Otherwise inspect with `dispatch diff <id>`; merge by hand, rebrief from the current state, or `discard`. |
+| `conflict`       | `apply`, `discard` or `unapply` found the files changed by someone else since the snapshot, a file whose path goes through a symlink or junction, a symbolic link the worker made (`apply` doesn't write those), another in-place run still working in the tree, or the run itself still working (a follow-up in progress, or a worker or check left running when dispatch stopped). Nothing was overwritten. | If a run is still working, retry when it finishes. Otherwise inspect with `dispatch diff <id>`. From `apply`: merge by hand and then `discard` the run, rebrief from the current state, or `discard`. From `unapply`: restore the files by hand; the run stays applied. |
 | `harness_error`  | Worker process failed (auth, rate limit, crash) and every fallback failed too. | Follow `hint`. Otherwise use native subagents or do it inline. |
-| `use_native`     | The chosen model shares the orchestrator's quota pool. Nothing ran. `worker.model` names the model. | Run the same brief as a native subagent with that model. A first run's `use_native` uses no retry; a rebrief's does, since the native run is the retry. |
-| `not_available`  | No configured harness is usable for this role here. | Run `doctor`; fall back to native subagents or inline. |
+| `use_native`     | The chosen model shares the orchestrator's quota pool. Nothing ran. `worker.model` names the model. | Run a native subagent with that model and give it the text at `promptPath`: the brief alone lacks the worker rules (scope, no traces, the RESULT block). A first run's `use_native` uses no retry; a rebrief's does, since the native run is the retry. |
+| `not_available`  | No configured route can run this task here. `hint` lists each route left out and why (not logged in, cooling down, same family as the reviewed work). | Fall back to native subagents or inline; run `doctor` only when the hint names a setup problem. For a cross-model review, see SKILL.md step 5. |
 
 Retry limit per task: one follow-up **or** one rebrief, enforced by
 `dispatch`. After that, do it yourself, drop it, or ask the user.
@@ -124,8 +126,8 @@ Retry limit per task: one follow-up **or** one rebrief, enforced by
 The workers run in parallel, limited by `maxParallel`. With two or more
 editing tasks, every editing worker gets its own worktree; a batch with a
 single editing task runs it in place, like a lone `run`, unless one of its
-routes is a harness that only edits in a worktree (Codex). Read-only tasks run
-in place. Worktree results are not applied automatically; in-place changes are
+routes is a harness that only edits in a worktree (Codex), or the batch was
+given `--isolation worktree`. Read-only tasks run in place. Worktree results are not applied automatically; in-place changes are
 already in the working tree. Either way, `apply` or `discard` each result.
 After applying several, run the full checks once in the working tree
 (SKILL.md, step 7).
@@ -137,7 +139,7 @@ or creating run state. Each task comes back with `id: null` and one of:
 
 | Status          | Meaning |
 |-----------------|---------|
-| `use_native`    | As for `run`: `worker.model` is the native model to use. |
+| `use_native`    | As for `run`: `worker.model` is the native model to use, and `promptPath` the text to give it. |
 | `planned`       | `run` would start `worker` (model, route, harness), falling back to `fallbacks` in order, with the given `isolation`. |
 | `not_available` | As for `run`. |
 
@@ -170,11 +172,14 @@ or every run with `--all`) that are not running:
 |-----------|---------------|
 | `unapplied worktree result` | The change was discarded with its worktree. |
 | `undecided in-place change (already in the working tree)` | The change stays in the tree as it is; it can no longer be discarded or unapplied through `dispatch`. |
-| `interrupted; partial edits may be in the working tree` | An in-place run whose process died. Check the allowed files with git. |
+| `interrupted; partial edits may be in the working tree` | An in-place run cut short (dispatch killed or broken). While it is still listed, `discard` restores its allowed files, keeping a copy; once pruned, check them with git. |
+| `<status>, not discarded: its edits are still in the working tree` | An in-place `out_of_scope` or `timeout` result nobody discarded. Once pruned, its in-scope edits stay in the tree. |
 | `interrupted` / `unreadable run state` | Nothing left to decide. |
 
 `kept` lists running runs and, for recent runs, anything still pending.
-`doctor` reports the same pending list under `runs.pending`.
+`doctor` reports the same pending list under `runs.pending`; `dispatch show
+<id>` prints a pending run's result. Don't prune a pending result the user
+hasn't decided on unless they agree.
 
 ## Manager report
 
@@ -187,9 +192,15 @@ instead of the raw batch:
   "applied": ["a1b2c3", "d4e5f6"],
   "discarded": [{ "id": "g7h8i9", "reason": "out of scope: touched package.json" }],
   "needsDecision": [{ "id": "j0k1l2", "question": "Test expects old date format; update test or keep behavior?" }],
+  "unfinished": [{ "task": 3, "status": "harness_error", "hint": "All configured routes are rate-limited…" }],
+  "tellUser": ["src/cache.json was written by a worker outside git's view; it is still as the worker left it."],
   "notes": ["parseTime has the same empty-string issue."]
 }
 ```
 
 The manager may `apply` results that pass the review checklist. Anything
-requiring judgment goes to `needsDecision`, not into the code.
+requiring judgment goes to `needsDecision`, not into the code. `unfinished`
+holds tasks that produced no result to decide (`not_available`,
+`harness_error`), for the orchestrator to run another way. `tellUser` holds
+what the user must hear: files left as a worker made them, installs, denied
+actions they may want to do themselves.

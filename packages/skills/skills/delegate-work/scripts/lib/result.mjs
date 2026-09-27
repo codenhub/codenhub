@@ -19,7 +19,8 @@ export function parseResult(text) {
   const acc = {};
   for (const raw of block.split(/\r?\n/)) {
     const line = raw.replace(/^\s*[*_`]+|[*_`]+\s*$/g, "");
-    const m = line.match(/^\s*(status|summary|notes|verdict|report)\s*:\s*(.*)$/i);
+    // Markdown around a key or its value: **status:** blocked, status: **blocked**.
+    const m = line.match(/^\s*[*_`]*(status|summary|notes|verdict|report)[*_`]*\s*:\s*[*_`]*\s*(.*)$/i);
     if (m && key !== "report") {
       key = m[1].toLowerCase();
       acc[key] = m[2] ? [m[2]] : [];
@@ -30,12 +31,19 @@ export function parseResult(text) {
     }
   }
   const join = (k) => (acc[k] ?? []).join("\n").trim() || null;
-  out.status = join("status")?.split(/[\s|]/)[0].toLowerCase() ?? null;
+  // Markers only around the word: not_needed keeps its underscore.
+  const word = (k) =>
+    join(k)
+      ?.replace(/^[*_`\s]+/, "")
+      .split(/[\s|]/)[0]
+      .replace(/[*_`]+$/, "")
+      .toLowerCase() || null;
+  out.status = word("status");
   out.summary = cap(join("summary")?.replace(/^\s*[-*]\s+/gm, ""), 600);
   out.notes = (acc.notes ?? [])
     .map((l) => l.replace(/^\s*[-*]\s*/, "").trim())
     .filter((l) => l && !/^(none|n\/a|nothing)\.?$/i.test(l));
-  out.verdict = join("verdict")?.split(/\s/)[0].toLowerCase() ?? null;
+  out.verdict = word("verdict");
   const report = join("report");
   // Some workers write the answer above the block and only point at it under
   // report ("findings are listed above"). A short report under a longer text
@@ -51,7 +59,8 @@ export function envelope(meta, extra = {}) {
     v: 1,
     id: meta.id,
     role: meta.role,
-    status: meta.status,
+    // null for a run that never finished (cut short, then discarded).
+    status: meta.status ?? null,
     worker: meta.worker ?? null,
     isolation: meta.isolation,
     // Where an undecided worktree result can be read, as a reviewer would.
@@ -66,9 +75,11 @@ export function envelope(meta, extra = {}) {
     denied: meta.denied ?? [],
     notes: meta.notes ?? [],
     hint: meta.hint ?? null,
+    ...(meta.promptPath ? { promptPath: meta.promptPath } : {}),
     durationMs: meta.durationMs ?? null,
     applied: !!meta.applied,
-    retryAvailable: !meta.retryUsed,
+    // A rebrief is the task's retry even when it couldn't run.
+    retryAvailable: !meta.retryUsed && !meta.rebriefOf,
     logPath: meta.logPath ?? null,
     ...extra,
   };
