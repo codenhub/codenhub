@@ -3,7 +3,8 @@ import os from "node:os";
 import { defineConfig, devices } from "@playwright/test";
 
 const isSourceMode = process.argv.includes("--ui") || process.env.STYLES_TEST_SOURCE === "1";
-const defaultWorkers = process.env.CI ? 2 : Math.min(4, Math.max(2, Math.floor(os.cpus().length / 2)));
+const cpuCount = typeof os.availableParallelism === "function" ? os.availableParallelism() : os.cpus().length;
+const defaultWorkers = process.env.CI ? 2 : Math.min(4, Math.max(2, Math.floor(cpuCount / 2)));
 
 export default defineConfig({
   testDir: "./tests/browser",
