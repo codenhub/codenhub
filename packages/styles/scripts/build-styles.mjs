@@ -44,7 +44,7 @@ const binPath = path.join(packageRoot, "node_modules", ".bin", binName);
 
 async function compileJob({ input, output }) {
   if (process.platform === "win32") {
-    const commandLine = `"${binPath}" -i ${input} -o ${output} --minify`;
+    const commandLine = `""${binPath}" -i ${input} -o ${output} --minify"`;
     await executeFile(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", commandLine], {
       cwd: packageRoot,
       windowsVerbatimArguments: true,
