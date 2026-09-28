@@ -38,55 +38,55 @@ Material tokens describe what a component is _made of_ rather than which intent 
 
 Components read each with a fallback, so leaving them unset produces the default look. Setting them on a container restyles the whole subtree. Only shadow geometry is split into colorless parts that inherit safely; color-capable inputs such as `--ui-ink` and `--ui-surface-shadow` may include their own colors.
 
-| Token                     | Purpose                                                                                                       | Fallback                                  |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `--ui-corner`             | Control corner at the default size; scaled by the size step.                                                  | `--radius-control`                        |
-| `--ui-corner-surface`     | Surface corner at the default padding; scaled by the size step.                                               | `--radius-surface`                        |
-| `--ui-corner-tl`          | `0` or `1`: whether the top-left takes the corner. `-tr`, `-br`, and `-bl` for the others.                    | `1`                                       |
-| `--ui-radius`             | A complete control radius, used as written: overrides the corner, the step, and the pattern.                  | Computed from the corner                  |
-| `--ui-radius-surface`     | A complete surface radius, used as written.                                                                   | Computed from the corner                  |
-| `--ui-scale`              | Overrides the size step the size and padding classes set.                                                     | The step                                  |
-| `--ui-corner-shape`       | What every corner draws: `round`, or `bevel` for a straight cut. Chromium only today.                         | `round`                                   |
-| `--ui-radius-pill`        | Corner for what is fully round by default: badges, switches, progress, the tooltip icon.                      | `--ui-radius`, `--ui-corner`, then full   |
-| `--ui-radius-tight`       | Complete radius for chips -- checkbox, `.kbd`, `.code` -- when set; otherwise a small computed default.       | `min(--ui-radius or --ui-corner, small)`  |
-| `--ui-line-style`         | Style of every line a component draws: `solid`, `dashed`, `dotted`, or `double` (3px wide or more).           | `solid`                                   |
-| `--ui-border-width`       | Edge thickness.                                                                                               | `--border-width`                          |
-| `--ui-border-max`         | Ceiling on computed edge width.                                                                               | `100px`                                   |
-| `--ui-ink`                | Neutral line color when no intent is set.                                                                     | `--color-border`                          |
-| `--ui-control-ink`        | Neutral line color of fields, selects, checkboxes, radios, and switches when no intent is set.                | `--ui-ink`, then `--color-control-border` |
-| `--ui-rule`               | Lines inside a table. Unset draws the head and foot boundaries only; `0%` draws none; `100%` rules every row. | unset                                     |
-| `--ui-shadow-x`           | Shadow horizontal offset.                                                                                     | `0px`                                     |
-| `--ui-shadow-y`           | Shadow vertical offset.                                                                                       | `0px`                                     |
-| `--ui-shadow-blur`        | Shadow blur radius.                                                                                           | `0px`                                     |
-| `--ui-shadow-spread`      | Shadow spread radius.                                                                                         | `0px`                                     |
-| `--ui-shadow-inset`       | The `inset` keyword for an inner ring.                                                                        | Empty                                     |
-| `--ui-hover-shadow-x`     | Shadow horizontal offset while hovered.                                                                       | `--ui-shadow-x`                           |
-| `--ui-hover-shadow-y`     | Shadow vertical offset while hovered.                                                                         | `--ui-shadow-y`                           |
-| `--ui-active-shadow-x`    | Shadow horizontal offset while pressed.                                                                       | `--ui-shadow-x`                           |
-| `--ui-active-shadow-y`    | Shadow vertical offset while pressed.                                                                         | `--ui-shadow-y`                           |
-| `--ui-active-transform`   | Transform while pressed. `none` under `prefers-reduced-motion`.                                               | `scale(0.97)`                             |
-| `--ui-active-translate-x` | Distance a press travels into the element's depth; `-y` beside it. Scaled like the shadow.                    | `0px`                                     |
-| `--ui-shadow-ink`         | Percentage of shadow color taken from intent ink.                                                             | `0%`                                      |
-| `--ui-shadow-2-x`         | A second depth layer: `-x`, `-y`, `-blur`, `-spread`, and `-inset`, like the first. Elevation scales it.      | `0px`                                     |
-| `--ui-shadow-2-ink`       | The second layer's share of intent ink. Unset, there is no second layer.                                      | Unset                                     |
-| `--ui-shadow-2-color`     | The colour the second layer's ink mixes toward, so it can lighten where the first darkens.                    | `--elevation-color`                       |
-| `--ui-halo-blur`          | Blur of a halo around the element; `--ui-halo-spread` beside it. Elevation does not scale it.                 | `0px`                                     |
-| `--ui-halo-ink`           | The halo's share of the intent colour, over nothing. Unset, there is no halo.                                 | Unset                                     |
-| `--ui-shadow-edge`        | Declared, even empty, when the shadow is the element's edge rather than its depth. Read for presence.         | Unset                                     |
-| `--ui-elevation`          | Unitless multiplier over shadow geometry.                                                                     | `1`                                       |
-| `--ui-surface-shadow`     | Complete multi-layer shadow accepted by surfaces only.                                                        | Unset                                     |
-| `--ui-surface-ground`     | Ground a surface sits on.                                                                                     | `--color-background`                      |
-| `--ui-bg-alpha`           | Multiplier over fill for translucent materials.                                                               | `1`                                       |
-| `--ui-backdrop`           | Backdrop filter accepted by surfaces only.                                                                    | `none`                                    |
-| `--ui-surface-image`      | A painted layer over a surface's plate: any `background-image` value. Surfaces only.                          | `none`                                    |
-| `--ui-hover-transform`    | Transform while an interactive element is hovered.                                                            | `none`                                    |
-| `--ui-clip`               | Structural component silhouette.                                                                              | `none`                                    |
-| `--ui-clip-tight`         | Compact component silhouette.                                                                                 | `--ui-clip`                               |
-| `--ui-focus-inset`        | Inset focus layer width.                                                                                      | Unset                                     |
-| `--ui-label-weight`       | Label weight of `.btn` (and, with `/native`, a bare `<button>`) and `.badge`.                                 | Semibold on a button, bold on a badge     |
-| `--ui-label-tracking`     | Label letter spacing. Unset, the label inherits it.                                                           | Unset                                     |
-| `--ui-label-case`         | Label `text-transform`.                                                                                       | `none` on a button; inherited on a badge  |
-| `--ui-label-shadow`       | Label `text-shadow`, written without a colour so it takes the label's own.                                    | `none` on a button; inherited on a badge  |
+| Token                     | Purpose                                                                                                                                              | Fallback                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `--ui-corner`             | Control corner at the default size; scaled by the size step.                                                                                         | `--radius-control`                        |
+| `--ui-corner-surface`     | Surface corner at the default padding; scaled by the size step.                                                                                      | `--radius-surface`                        |
+| `--ui-corner-tl`          | `0` or `1`: whether the top-left takes the corner. `-tr`, `-br`, and `-bl` for the others.                                                           | `1`                                       |
+| `--ui-radius`             | A complete control radius, used as written: overrides the corner, the step, and the pattern.                                                         | Computed from the corner                  |
+| `--ui-radius-surface`     | A complete surface radius, used as written.                                                                                                          | Computed from the corner                  |
+| `--ui-scale`              | Overrides the size step the size and padding classes set.                                                                                            | The step                                  |
+| `--ui-corner-shape`       | What every corner draws: `round`, or `bevel` for a straight cut. Chromium only today.                                                                | `round`                                   |
+| `--ui-radius-pill`        | Corner for what is fully round by default: badges, switches, progress, the tooltip icon; `.btn.pill` and `.radio` read it with no fallback but full. | `--ui-radius`, `--ui-corner`, then full   |
+| `--ui-radius-tight`       | Complete radius for chips -- checkbox, `.kbd`, `.code` -- when set; otherwise a small computed default.                                              | `min(--ui-radius or --ui-corner, small)`  |
+| `--ui-line-style`         | Style of every line a component draws: `solid`, `dashed`, `dotted`, or `double` (3px wide or more).                                                  | `solid`                                   |
+| `--ui-border-width`       | Edge thickness.                                                                                                                                      | `--border-width`                          |
+| `--ui-border-max`         | Ceiling on computed edge width.                                                                                                                      | `100px`                                   |
+| `--ui-ink`                | Neutral line color when no intent is set.                                                                                                            | `--color-border`                          |
+| `--ui-control-ink`        | Neutral line color of fields, selects, checkboxes, radios, and switches when no intent is set.                                                       | `--ui-ink`, then `--color-control-border` |
+| `--ui-rule`               | Lines inside a table. Unset draws the head and foot boundaries only; `0%` draws none; `100%` rules every row.                                        | unset                                     |
+| `--ui-shadow-x`           | Shadow horizontal offset.                                                                                                                            | `0px`                                     |
+| `--ui-shadow-y`           | Shadow vertical offset.                                                                                                                              | `0px`                                     |
+| `--ui-shadow-blur`        | Shadow blur radius.                                                                                                                                  | `0px`                                     |
+| `--ui-shadow-spread`      | Shadow spread radius.                                                                                                                                | `0px`                                     |
+| `--ui-shadow-inset`       | The `inset` keyword for an inner ring.                                                                                                               | Empty                                     |
+| `--ui-hover-shadow-x`     | Shadow horizontal offset while hovered.                                                                                                              | `--ui-shadow-x`                           |
+| `--ui-hover-shadow-y`     | Shadow vertical offset while hovered.                                                                                                                | `--ui-shadow-y`                           |
+| `--ui-active-shadow-x`    | Shadow horizontal offset while pressed.                                                                                                              | `--ui-shadow-x`                           |
+| `--ui-active-shadow-y`    | Shadow vertical offset while pressed.                                                                                                                | `--ui-shadow-y`                           |
+| `--ui-active-transform`   | Transform while pressed. `none` under `prefers-reduced-motion`.                                                                                      | `scale(0.97)`                             |
+| `--ui-active-translate-x` | Distance a press travels into the element's depth; `-y` beside it. Scaled like the shadow.                                                           | `0px`                                     |
+| `--ui-shadow-ink`         | Percentage of shadow color taken from intent ink.                                                                                                    | `0%`                                      |
+| `--ui-shadow-2-x`         | A second depth layer: `-x`, `-y`, `-blur`, `-spread`, and `-inset`, like the first. Elevation scales it.                                             | `0px`                                     |
+| `--ui-shadow-2-ink`       | The second layer's share of intent ink. Unset, there is no second layer.                                                                             | Unset                                     |
+| `--ui-shadow-2-color`     | The colour the second layer's ink mixes toward, so it can lighten where the first darkens.                                                           | `--elevation-color`                       |
+| `--ui-halo-blur`          | Blur of a halo around the element; `--ui-halo-spread` beside it. Elevation does not scale it.                                                        | `0px`                                     |
+| `--ui-halo-ink`           | The halo's share of the intent colour, over nothing. Unset, there is no halo.                                                                        | Unset                                     |
+| `--ui-shadow-edge`        | Declared, even empty, when the shadow is the element's edge rather than its depth. Read for presence.                                                | Unset                                     |
+| `--ui-elevation`          | Unitless multiplier over shadow geometry.                                                                                                            | `1`                                       |
+| `--ui-surface-shadow`     | Complete multi-layer shadow accepted by surfaces only.                                                                                               | Unset                                     |
+| `--ui-surface-ground`     | Ground a surface sits on.                                                                                                                            | `--color-background`                      |
+| `--ui-bg-alpha`           | Multiplier over fill for translucent materials.                                                                                                      | `1`                                       |
+| `--ui-backdrop`           | Backdrop filter accepted by surfaces only.                                                                                                           | `none`                                    |
+| `--ui-surface-image`      | A painted layer over a surface's plate: any `background-image` value. Surfaces only.                                                                 | `none`                                    |
+| `--ui-hover-transform`    | Transform while an interactive element is hovered.                                                                                                   | `none`                                    |
+| `--ui-clip`               | Structural component silhouette.                                                                                                                     | `none`                                    |
+| `--ui-clip-tight`         | Compact component silhouette.                                                                                                                        | `--ui-clip`                               |
+| `--ui-focus-inset`        | Inset focus layer width.                                                                                                                             | Unset                                     |
+| `--ui-label-weight`       | Label weight of `.btn` (and, with `/native`, a bare `<button>`) and `.badge`.                                                                        | Semibold on a button, bold on a badge     |
+| `--ui-label-tracking`     | Label letter spacing. Unset, the label inherits it.                                                                                                  | Unset                                     |
+| `--ui-label-case`         | Label `text-transform`.                                                                                                                              | `none` on a button; inherited on a badge  |
+| `--ui-label-shadow`       | Label `text-shadow`, written without a colour so it takes the label's own.                                                                           | `none` on a button; inherited on a badge  |
 
 ```html
 <section style="--ui-corner: 0; --ui-border-width: 3px">
@@ -166,7 +166,7 @@ The shipped [aesthetic classes](./aesthetics.md) set material tokens for you. On
 | `--font-cyber`                    | `.cyber`                     | Consumer-supplied technical font stack.                                                         | Falls back to the monospace stack                                  |
 | `--sketch-radius`                 | `.sketch`                    | Control outline radius: any `border-radius` value.                                              | Irregular box outline with sibling variation                       |
 | `--sketch-radius-surface`         | `.sketch`                    | Surface container outline radius: any `border-radius` value.                                    | Sharp irregular square outline with sibling variation              |
-| `--sketch-radius-rounded`         | `.sketch`, `.sketch-rounded` | Rounded control outline radius: expressive elliptical contour with sibling variation.           | `26px 10px 24px 11px / 12px 22px 11px 22px` with sibling variation |
+| `--sketch-radius-rounded`         | `.sketch`, `.sketch-rounded` | Rounded control outline radius: expressive elliptical contour with sibling variation.           | `26px 10px 24px 11px / 12px 23px 11px 20px` with sibling variation |
 | `--sketch-radius-surface-rounded` | `.sketch`, `.sketch-rounded` | Rounded surface container outline radius: expressive elliptical contour with sibling variation. | `38px 16px 36px 17px / 16px 34px 17px 32px` with sibling variation |
 | `--sketch-radius-pill`            | `.sketch`                    | Pill button outline radius: organic hand-drawn pill contour avoiding egg-shaped distortion.     | `24px 16px 23px 17px / 17px 21px 16px 20px` with sibling variation |
 | `--font-sketch`                   | `.sketch`                    | Consumer-supplied handwriting font stack.                                                       | Falls back to `cursive`                                            |

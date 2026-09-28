@@ -170,9 +170,22 @@ A parallelogram slants its sides into the content, so give a surface that takes 
 
 ## Sketch
 
-Sketch gives controls expressive, hand-drawn outlines starting with `255px 15px 225px 15px / 15px 225px 15px 255px` while giving containers and surfaces sharp, hand-drawn square contours (starting with `80px 4px 75px 5px / 3px 70px 4px 80px`) tailored to container dimensions so cards and panels stay pointy without encroaching on interior padding. Sibling components, container wrappers, and sequential form fields rotate through four distinct outlines. The shape is stable for a given DOM order, not random on each render; sequential `.field` rows alternate outlines so stacked forms avoid repetitive shapes. These are complete `border-radius` values, used as written rather than scaled or patterned. Knobs `--sketch-radius` (for controls) and `--sketch-radius-surface` (for surfaces) customize the outlines from `:root` or an ancestor; to choose a shape on an isolated component, set `--ui-radius` (or `--ui-radius-surface` on a surface) directly on it. The 1px ink edge is solid by default, while checkboxes, dividers, and table rules use dashed lines for contrast. Set `--ui-line-style: dashed` on any other component to opt in; `--ui-rule-style: solid` overrides a divider or table's dashed rules. The 2px hard shadow is a small neutral depth cue.
+Hand-drawn outlines: controls take long, uneven elliptical corners, and cards, panels, and alerts take sharper ones that stay clear of their padding. Siblings rotate through four outlines by position, and a field's control takes its field's position, so a row of buttons or a stacked form does not repeat one shape. The rotation is stable for a given DOM order, not random on each render. Every outline is a complete `border-radius`, used as written rather than scaled by the size step or placed by `.cut-diagonal`.
 
-To opt into subtle rounded hand-drawn contours instead of pointy corners, add `.sketch-rounded` on the container or individual components:
+The 1px ink line is solid; checkboxes, dividers, and table rules are dashed. `--ui-line-style: dashed` dashes any other component, and `--ui-rule-style: solid` puts a divider or table back to solid. The 2px hard shadow is a small neutral depth cue.
+
+`--sketch-radius`, `--sketch-radius-surface`, and `--sketch-radius-pill` replace the control, surface, and pill-button outlines. Set one and every position takes that one outline. To shape a single component instead, set `--ui-radius` (`--ui-radius-surface` on a surface) on it.
+
+```html
+<section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>
+  <button class="btn primary">Send note</button>
+  <button class="btn ghost edged" style="--ui-line-style: dashed">Draft note</button>
+</section>
+```
+
+The dashed button is `ghost edged` because a filled button has no separate line to dash.
+
+`.sketch-rounded` trades the long corners for short, rounded ones, bounded so a wide element keeps straight top and bottom edges. Put it beside `.sketch` on the region, or on one component inside it. `--sketch-radius-rounded` and `--sketch-radius-surface-rounded` are its knobs.
 
 ```html
 <section class="sketch sketch-rounded">
@@ -182,24 +195,14 @@ To opt into subtle rounded hand-drawn contours instead of pointy corners, add `.
 </section>
 ```
 
-Under `.sketch-rounded`, controls take expressive, hand-drawn elliptical contours starting with `26px 10px 24px 11px / 12px 22px 11px 22px`, surfaces start with `38px 16px 36px 17px / 16px 34px 17px 32px`, and chips take `9px 3px 8px 4px / 4px 8px 3px 8px`, all rotating through four sibling steps. Bounded pixel radii guarantee straight top and bottom edges on wide elements, preventing egg-shaped distortion. Knobs `--sketch-radius-rounded` and `--sketch-radius-surface-rounded` customize the rounded contours.
-
-```html
-<section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>
-  <button class="btn primary">Send note</button>
-  <button class="btn ghost edged" style="--ui-line-style: dashed">Draft note</button>
-</section>
-```
-
-The dashed button uses `ghost edged` to expose its boundary: a default filled button has no distinct ink edge to dash. Set `--ui-line-style` on one component, or on a wrapper to cascade it to its descendants. Sketch's checkbox defaults to dashed; dividers and table rules take their style from `--ui-rule-style` if it is set.
-
 **Exceptions:**
 
-- `--font-sketch` is yours to supply. The package ships no handwriting font and falls back to the platform `cursive` generic family.
-- Chips — checkboxes, key caps, code chips, badges, and progress bars — rotate through compact asymmetric sketch outlines through `--ui-radius-tight`, with two nearly sharp corners and two pronounced curves instead of even rounding (or organic rounded chip outlines under `.sketch-rounded`). Set that token on a chip to choose a different complete radius.
-- Pill buttons (`.btn.pill`) take organic hand-drawn rounded pill contours (`24px 16px 23px 17px / 17px 21px 16px 20px` with 4-step sibling rotation via `--sketch-radius-pill`), capped to match button half-height so buttons of any width keep flat horizontal edges without oval/egg distortion. Badges, progress bars, and switches take compact chip-sized box outlines (`--ui-radius-tight`). Radios and circular tooltip triggers are the true circular controls, subtly asymmetric so they remain distinguishable from checkboxes. An explicit `--ui-radius-pill` on an element still wins.
-- Buttons press with the plain `scale(0.97)` gesture; reduced motion disables it.
-- Forced-colors mode replaces dashed accents with the package's solid accessible fallback, like every other material line.
+- Sketch names components to rotate their outlines, so its outlines reach only this package's components; a region of another aesthetic nested inside a sketch region keeps that aesthetic's corners.
+- Chips -- checkboxes, key caps, code, badges, switches, and progress bars -- rotate through small uneven outlines through `--ui-radius-tight`. Set that token on a chip to choose its shape.
+- A `.btn.pill` takes a rounded pill bounded to its own height, so a wide one does not become an oval. Badges, progress bars, and switches take their chip outline. Radios and the tooltip icon stay circles, slightly uneven, so a radio is never mistaken for a checkbox. An explicit `--ui-radius-pill` on an element still wins.
+- `--font-sketch` is yours to supply. The package ships no handwriting font and falls back to the platform `cursive` family.
+- Buttons press with the plain `scale(0.97)`; reduced motion turns it off.
+- Forced-colours mode draws the dashed accents solid, like every other material line.
 
 ## Solo classes
 

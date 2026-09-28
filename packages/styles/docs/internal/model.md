@@ -450,62 +450,62 @@ Beyond composition, the package strives for three things, in this order: that it
 
 ### Material tokens
 
-| Token                     | Fallback             | Meaning                                                     |
-| ------------------------- | -------------------- | ----------------------------------------------------------- |
-| `--ui-corner`             | `--radius-control`   | Control corner at scale 1; `box` scales it by the step.     |
-| `--ui-corner-surface`     | `--radius-surface`   | Surface corner at scale 1; `surface` scales it.             |
-| `--ui-corner-tl`          | `1`                  | `0` or `1`: whether the top-left takes the corner.          |
-| `--ui-corner-tr`          | `1`                  | The same, top-right.                                        |
-| `--ui-corner-br`          | `1`                  | The same, bottom-right.                                     |
-| `--ui-corner-bl`          | `1`                  | The same, bottom-left.                                      |
-| `--ui-radius`             | _computed_           | A complete control radius, taken as written, unscaled.      |
-| `--ui-radius-surface`     | _computed_           | A complete surface radius, taken as written, unscaled.      |
-| `--ui-scale`              | _the step_           | Override for the size step the modifiers publish.           |
-| `--ui-corner-shape`       | `round`              | What the radius draws: an arc, or a `bevel` cut.            |
-| `--ui-radius-pill`        | `--ui-corner`        | Corner for what is fully round by default.                  |
-| `--ui-radius-tight`       | _small computed_     | Complete chip radius, used as written when set.             |
-| `--ui-line-style`         | `solid`              | `solid`, `dashed`, `dotted`, or `double` (3px and up).      |
-| `--ui-rule-style`         | `--ui-line-style`    | Divider and table rules without changing box edges.         |
-| `--ui-border-width`       | `--border-width`     | Edge thickness.                                             |
-| `--ui-border-max`         | `100px`              | Ceiling on the computed edge width.                         |
-| `--ui-ink`                | `--color-border`     | Neutral line color when no intent is set.                   |
-| `--ui-control-ink`        | `--ui-ink`           | Neutral line color for controls; read ahead of `--ui-ink`.  |
-| `--ui-shadow-x`           | `0px`                | Shadow offset, colorless so it inherits safely.             |
-| `--ui-shadow-y`           | `0px`                | Shadow offset.                                              |
-| `--ui-shadow-blur`        | `0px`                | Shadow blur.                                                |
-| `--ui-shadow-spread`      | `0px`                | Shadow spread.                                              |
-| `--ui-shadow-inset`       | _empty_              | The `inset` keyword, when the edge is an inner ring.        |
-| `--ui-hover-shadow-x`     | `--ui-shadow-x`      | Shadow offset while hovered.                                |
-| `--ui-hover-shadow-y`     | `--ui-shadow-y`      | Shadow offset while hovered.                                |
-| `--ui-active-shadow-x`    | `--ui-shadow-x`      | Shadow offset while pressed.                                |
-| `--ui-active-shadow-y`    | `--ui-shadow-y`      | Shadow offset while pressed.                                |
-| `--ui-active-transform`   | `scale(0.97)`        | Transform while pressed; `none` under reduced motion.       |
-| `--ui-active-translate-x` | `0px`                | Press travel into the depth, `-y` too; scaled like it.      |
-| `--ui-shadow-ink`         | `0%`                 | How much of the shadow is the intent's own ink.             |
-| `--ui-shadow-2-x`         | `0px`                | Second depth layer, in parts; `-y`, `-blur`, `-spread` too. |
-| `--ui-shadow-2-ink`       | _undefined_          | Second layer's ink; undefined, the layer is absent.         |
-| `--ui-shadow-2-inset`     | _empty_              | The `inset` keyword for the second layer.                   |
-| `--ui-shadow-2-color`     | `--elevation-color`  | Base the second layer's ink mixes toward.                   |
-| `--ui-halo-blur`          | `0px`                | Halo blur; `--ui-halo-spread` beside it.                    |
-| `--ui-halo-ink`           | _undefined_          | Halo's share of the intent colour; undefined, no halo.      |
-| `--elevation-color`       | _theme_              | The base that ink mixes toward; depth's own colour.         |
-| `--ui-shadow-edge`        | _undefined_          | Declared, even empty, when the shadow is the edge.          |
-| `--ui-elevation`          | `1`                  | Unitless multiplier over the shadow geometry.               |
-| `--ui-surface-shadow`     | _unset_              | Complete value; resolved by surfaces only.                  |
-| `--ui-surface-ground`     | `--color-background` | Ground a surface sits on; how glass goes translucent.       |
-| `--ui-bg-alpha`           | `1`                  | Multiplier over fill, for translucency.                     |
-| `--ui-backdrop`           | `none`               | Backdrop filter; resolved by surfaces only.                 |
-| `--ui-surface-image`      | `none`               | Painted layer; resolved by surfaces only.                   |
-| `--ui-hover-transform`    | `none`               | Transform applied on interactive hover.                     |
-| `--ui-clip`               | `none`               | Silhouette for structural components.                       |
-| `--ui-clip-tight`         | `--ui-clip`          | Silhouette for chips.                                       |
-| `--ui-focus-inset`        | _undefined_          | Inset focus layer width. Undefined means no layer.          |
-| `--ui-label-weight`       | per component        | Label weight; `.btn` and `.badge`.                          |
-| `--ui-label-tracking`     | _undefined_          | Label tracking; undefined inherits.                         |
-| `--ui-label-case`         | per component        | `text-transform`; `.btn` falls back to `none`.              |
-| `--ui-label-shadow`       | per component        | `text-shadow` with no colour, so it takes the label's.      |
+| Token                     | Fallback                           | Meaning                                                                     |
+| ------------------------- | ---------------------------------- | --------------------------------------------------------------------------- |
+| `--ui-corner`             | `--radius-control`                 | Control corner at scale 1; `box` scales it by the step.                     |
+| `--ui-corner-surface`     | `--radius-surface`                 | Surface corner at scale 1; `surface` scales it.                             |
+| `--ui-corner-tl`          | `1`                                | `0` or `1`: whether the top-left takes the corner.                          |
+| `--ui-corner-tr`          | `1`                                | The same, top-right.                                                        |
+| `--ui-corner-br`          | `1`                                | The same, bottom-right.                                                     |
+| `--ui-corner-bl`          | `1`                                | The same, bottom-left.                                                      |
+| `--ui-radius`             | _computed_                         | A complete control radius, taken as written, unscaled.                      |
+| `--ui-radius-surface`     | _computed_                         | A complete surface radius, taken as written, unscaled.                      |
+| `--ui-scale`              | _the step_                         | Override for the size step the modifiers publish.                           |
+| `--ui-corner-shape`       | `round`                            | What the radius draws: an arc, or a `bevel` cut.                            |
+| `--ui-radius-pill`        | `--ui-radius`, `--ui-corner`, full | Corner for what is fully round; `.btn.pill` and `.radio` fall back to full. |
+| `--ui-radius-tight`       | _small computed_                   | Complete chip radius, used as written when set.                             |
+| `--ui-line-style`         | `solid`                            | `solid`, `dashed`, `dotted`, or `double` (3px and up).                      |
+| `--ui-rule-style`         | `--ui-line-style`                  | Divider and table rules without changing box edges.                         |
+| `--ui-border-width`       | `--border-width`                   | Edge thickness.                                                             |
+| `--ui-border-max`         | `100px`                            | Ceiling on the computed edge width.                                         |
+| `--ui-ink`                | `--color-border`                   | Neutral line color when no intent is set.                                   |
+| `--ui-control-ink`        | `--ui-ink`                         | Neutral line color for controls; read ahead of `--ui-ink`.                  |
+| `--ui-shadow-x`           | `0px`                              | Shadow offset, colorless so it inherits safely.                             |
+| `--ui-shadow-y`           | `0px`                              | Shadow offset.                                                              |
+| `--ui-shadow-blur`        | `0px`                              | Shadow blur.                                                                |
+| `--ui-shadow-spread`      | `0px`                              | Shadow spread.                                                              |
+| `--ui-shadow-inset`       | _empty_                            | The `inset` keyword, when the edge is an inner ring.                        |
+| `--ui-hover-shadow-x`     | `--ui-shadow-x`                    | Shadow offset while hovered.                                                |
+| `--ui-hover-shadow-y`     | `--ui-shadow-y`                    | Shadow offset while hovered.                                                |
+| `--ui-active-shadow-x`    | `--ui-shadow-x`                    | Shadow offset while pressed.                                                |
+| `--ui-active-shadow-y`    | `--ui-shadow-y`                    | Shadow offset while pressed.                                                |
+| `--ui-active-transform`   | `scale(0.97)`                      | Transform while pressed; `none` under reduced motion.                       |
+| `--ui-active-translate-x` | `0px`                              | Press travel into the depth, `-y` too; scaled like it.                      |
+| `--ui-shadow-ink`         | `0%`                               | How much of the shadow is the intent's own ink.                             |
+| `--ui-shadow-2-x`         | `0px`                              | Second depth layer, in parts; `-y`, `-blur`, `-spread` too.                 |
+| `--ui-shadow-2-ink`       | _undefined_                        | Second layer's ink; undefined, the layer is absent.                         |
+| `--ui-shadow-2-inset`     | _empty_                            | The `inset` keyword for the second layer.                                   |
+| `--ui-shadow-2-color`     | `--elevation-color`                | Base the second layer's ink mixes toward.                                   |
+| `--ui-halo-blur`          | `0px`                              | Halo blur; `--ui-halo-spread` beside it.                                    |
+| `--ui-halo-ink`           | _undefined_                        | Halo's share of the intent colour; undefined, no halo.                      |
+| `--elevation-color`       | _theme_                            | The base that ink mixes toward; depth's own colour.                         |
+| `--ui-shadow-edge`        | _undefined_                        | Declared, even empty, when the shadow is the edge.                          |
+| `--ui-elevation`          | `1`                                | Unitless multiplier over the shadow geometry.                               |
+| `--ui-surface-shadow`     | _unset_                            | Complete value; resolved by surfaces only.                                  |
+| `--ui-surface-ground`     | `--color-background`               | Ground a surface sits on; how glass goes translucent.                       |
+| `--ui-bg-alpha`           | `1`                                | Multiplier over fill, for translucency.                                     |
+| `--ui-backdrop`           | `none`                             | Backdrop filter; resolved by surfaces only.                                 |
+| `--ui-surface-image`      | `none`                             | Painted layer; resolved by surfaces only.                                   |
+| `--ui-hover-transform`    | `none`                             | Transform applied on interactive hover.                                     |
+| `--ui-clip`               | `none`                             | Silhouette for structural components.                                       |
+| `--ui-clip-tight`         | `--ui-clip`                        | Silhouette for chips.                                                       |
+| `--ui-focus-inset`        | _undefined_                        | Inset focus layer width. Undefined means no layer.                          |
+| `--ui-label-weight`       | per component                      | Label weight; `.btn` and `.badge`.                                          |
+| `--ui-label-tracking`     | _undefined_                        | Label tracking; undefined inherits.                                         |
+| `--ui-label-case`         | per component                      | `text-transform`; `.btn` falls back to `none`.                              |
+| `--ui-label-shadow`       | per component                      | `text-shadow` with no colour, so it takes the label's.                      |
 
-The corner, line, second layer, halo, surface image, and label rows are the 0.5.0 structural additions. `registry.json` records under `material` which utilities read each one, and the surface ground, surface shadow, fill alpha, and backdrop beside them: the tokens a region nested inside glass or retro OS would otherwise inherit. Every aesthetic names or clears every one of them, which `registry.test.ts` checks. On a checkbox, key cap, or code chip, an unset `--ui-radius-tight` computes the small default as `min(--ui-radius or --ui-corner, --radius-small)`; an explicit `--ui-radius-tight` is a whole radius, including slash-separated elliptical values, and is not capped. A material that asks for a large chip corner gets one rather than silently reverting to the default. Colour-bearing depth and halo are parts rather than completed shadows: a completed value declared on an ancestor would resolve its intent colour there instead of on the nested component. `--ui-shadow-2-ink` and `--ui-halo-ink` are presence switches; undeclared, their entire layers disappear. The second layer mixes toward its own base, `--ui-shadow-2-color`, which defaults to `--elevation-color`: one shared base lets both layers walk an intent toward the same end only, and a two-tone bevel needs a shade and a highlight from one intent. The second depth layer scales with elevation, while the halo does not, so `.flat` removes depth without extinguishing the glow. The second layer has no pressed counterpart: the ordinary press is the supported behavior. In forced colours, the new layers, surface image, label shadow, and non-solid line styles reset to the plain treatment.
+The corner, line, second layer, halo, surface image, and label rows are the 0.5.0 structural additions. `registry.json` records under `material` which utilities read each one, and the surface ground, surface shadow, fill alpha, and backdrop beside them: the tokens a region nested inside glass would otherwise inherit. Every aesthetic names or clears every one of them, which `registry.test.ts` checks. On a checkbox, key cap, or code chip, an unset `--ui-radius-tight` computes the small default as `min(--ui-radius or --ui-corner, --radius-small)`; an explicit `--ui-radius-tight` is a whole radius, including slash-separated elliptical values, and is not capped. A material that asks for a large chip corner gets one rather than silently reverting to the default. Colour-bearing depth and halo are parts rather than completed shadows: a completed value declared on an ancestor would resolve its intent colour there instead of on the nested component. `--ui-shadow-2-ink` and `--ui-halo-ink` are presence switches; undeclared, their entire layers disappear. The second layer mixes toward its own base, `--ui-shadow-2-color`, which defaults to `--elevation-color`: one shared base lets both layers walk an intent toward the same end only, and a two-tone bevel needs a shade and a highlight from one intent. The second depth layer scales with elevation, while the halo does not, so `.flat` removes depth without extinguishing the glow. The second layer has no pressed counterpart: the ordinary press is the supported behavior. In forced colours, the new layers, surface image, label shadow, and non-solid line styles reset to the plain treatment.
 
 Corner scale uses the tighter of a size and padding modifier on the same element; their private steps are restated on each box so a small card does not shrink its children. A public `--ui-scale` overrides the step. A complete `--ui-radius` overrides the computed corner and is not scaled. Four `--ui-corner-*` switches let `.cut-diagonal` and `.cut-diagonal-reverse` place that computed corner; a whole surface radius (as in cyber) bypasses the pattern. A `double` line needs at least 3px to show two strokes. The surface image does not reach controls, where it could obscure a select's chevron or its label. Label shadows take the label's own `currentColor`, rather than an unrelated hue.
 
@@ -817,11 +817,12 @@ Bevelled corners, a thin bright edge, and a glow in the component's own colour. 
 
 Uneven elliptical corners, solid ink with dashed accents, and a small hard offset shadow.
 
-- Controls start with the expressive, unscaled `255px 15px 225px 15px / 15px 225px 15px 255px` outline through `--ui-radius`, while surfaces start with sharp hand-drawn square contours (`80px 4px 75px 5px / 3px 70px 4px 80px`) through `--ui-radius-surface` tailored to container dimensions so cards and panels stay pointy and hand-drawn without encroaching on interior padding. Sibling and container-wrapped components rotate through three more distinct complete radii by position; stacked form fields alternate outlines so sequential form rows do not repeat one shape. Knobs `--sketch-radius` and `--sketch-radius-surface` customize the respective outlines, read with fallback defaults per [R8](#rules-for-aesthetics). Explicit radii on a component override the rotation, and nested aesthetics are excluded. The corner switches and size step do not reshape a complete radius.
-- An opt-in `.sketch-rounded` modifier class provides expressive, hand-drawn elliptical rounded contours across controls (`26px 10px 24px 11px / 12px 22px 11px 22px`), surfaces (`38px 16px 36px 17px / 16px 34px 17px 32px`), and chips (`9px 3px 8px 4px / 4px 8px 3px 8px`), with 4-step sibling rotation. Knobs `--sketch-radius-rounded` and `--sketch-radius-surface-rounded` customize these outlines with fallback defaults per [R8](#rules-for-aesthetics). Bounded pixel radii keep top and bottom edges straight on wide elements, preventing egg-shaped distortion. `.sketch-solo.sketch-rounded` supports the same rounded contours on unstyled elements.
-- Pill buttons take organic hand-drawn rounded pill contours (`24px 16px 23px 17px / 17px 21px 16px 20px` with 4-step sibling rotation via `--ui-radius-pill` and knob `--sketch-radius-pill`), capped to match button half-height so wide buttons keep flat horizontal edges without egg-shaped distortion. Badges, progress bars, and switches take the compact chip-sized box outline `--ui-radius-tight`. Radios and circular tooltip triggers are the true round controls, taking an organic, subtly uneven circle (`48% 52% 46% 54% / 53% 46% 54% 47%`) that keeps them circular and distinguishable from checkboxes. Explicit `--ui-radius-pill` overrides on an element remain in control.
-- Checkboxes, key caps, code chips, badges, switches, and progress bars rotate through small asymmetric profiles via `--ui-radius-tight`.
-- The edge is 1px solid through `--ui-line-style`; checkboxes use dashed lines, and dividers and table rules use `--ui-rule-style: dashed`. Forced colours replaces the dashed accents with the material contract's solid fallback.
+- Every outline is a complete radius -- `--ui-radius`, `--ui-radius-surface`, `--ui-radius-tight`, and `--ui-radius-pill` -- so the size step and the corner switches do not reshape it. Controls take long uneven corners; surfaces take sharper ones that stay clear of their padding.
+- One region token would give every element the same outline, so the aesthetic writes a rotation onto components by sibling position, four steps, and a field's control takes its field's position. This is its R3 exception, recorded in the registry. The rules share one root that skips any region of another aesthetic nested inside a sketch region; that root is the only place the other aesthetics are named, and `registry.test.ts` fails when one is missing.
+- `.sketch-rounded` is a modifier: short rounded corners, bounded in pixels so a wide element keeps straight top and bottom edges, rotated the same way. On the region or on one component.
+- A `.btn.pill` takes a rounded pill bounded to the button's half-height; badges, progress bars, and switches take their chip outline; radios and the tooltip icon stay slightly uneven circles, so a radio is never read as a checkbox.
+- Knobs `--sketch-radius`, `--sketch-radius-surface`, `--sketch-radius-pill`, `--sketch-radius-rounded`, and `--sketch-radius-surface-rounded` are read with fallbacks per [R8](#rules-for-aesthetics); a set knob replaces every step of its rotation. An explicit radius on a component wins over the rotation.
+- The edge is 1px solid through `--ui-line-style`; checkboxes are dashed, and dividers and table rules take `--ui-rule-style: dashed`. Forced colours draws them solid.
 - The shadow is a neutral 2px right-and-down offset with no blur or spread, scaled by elevation like every part-based depth cue.
 - Buttons press with `scale(0.97)`, like the plain look; reduced motion turns off that transform.
 - Reads `--font-sketch` and falls back to the platform `cursive` generic family. The package ships no font binary.
