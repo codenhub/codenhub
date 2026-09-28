@@ -1,0 +1,6 @@
+ponytail-review
+Adapted from: https://github.com/DietrichGebert/ponytail
+Original copyright: Copyright (c) 2026 DietrichGebert
+Original license: MIT
+License text: https://github.com/DietrichGebert/ponytail/blob/main/LICENSE
+Changes: Adapted for the @codenhub/skills package format; removed harness-specific commands and configuration, and merged the upstream review, audit, and debt skills into one, harvesting standard TODO markers and commit trailers instead of the branded code marker.

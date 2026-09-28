@@ -61,6 +61,8 @@ The rest of the authoring guidance, such as how a description is phrased or whet
 | `caveman-commit`          | Generates terse Conventional Commit messages.                  |
 | `caveman-review`          | Produces compressed, actionable code-review findings.          |
 | `frontend-design`         | Guides distinctive production-grade frontend design.           |
+| `ponytail`                | Builds the simplest solution that works, nothing speculative.  |
+| `ponytail-review`         | Finds over-engineering and ledgers deferred work.              |
 | `subagent-specialist`     | Plans, delegates, reviews, and integrates parallel agent work. |
 | `test-driven-development` | Applies fail-first red-green-refactor development.             |
 | `writing-skills`          | Authors, reviews, and evaluates skills against the rules.      |
