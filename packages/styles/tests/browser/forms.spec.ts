@@ -137,6 +137,34 @@ test.describe("forms", () => {
      as `<ring>, var(--ui-shadow, none)` makes the whole declaration invalid, so
      the ring silently disappears. Asserted on a real focus because that is the
      only state where the composed list applies. */
+  /* The browser paints the open list over the select's own background, and a
+     ghost select has none, so the options carry an opaque ground of their own
+     that their text reads on, in both themes. */
+  test("paints a select's options on an opaque ground their text reads on", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    for (const theme of ["light", "dark"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one theme, then the other, on one page.
+      const option = await page.evaluate((name) => {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(name);
+        const select = document.createElement("select");
+
+        select.className = "select";
+        select.innerHTML = "<option>One</option>";
+        document.querySelector('[data-testid="preview-root"]')!.append(select);
+        const styles = getComputedStyle(select.options[0]!);
+        const result = { background: styles.backgroundColor, color: styles.color };
+
+        select.remove();
+        return result;
+      }, theme);
+
+      expect(readSrgb(option.background).alpha, `${theme} ground`).toBe(1);
+      expect(getColorDistance(option.background, option.color), `${theme} text on ground`).toBeGreaterThan(150);
+    }
+  });
+
   test("keeps a focus ring on text controls", async ({ page }) => {
     await page.goto(FORMS_URL);
 

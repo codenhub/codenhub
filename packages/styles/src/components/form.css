@@ -346,6 +346,17 @@
     calc(100% - 0.6875rem) center;
   background-repeat: no-repeat;
   background-size: 0.3125rem 0.3125rem;
+
+  /* The open list is painted by the browser, over the select's own background
+     when it has one. A ghost select has none, so Chromium falls back to its
+     default popup -- white on Windows -- while the options inherit the select's
+     text, near-white in the dark theme: white on white. The options take the
+     page's ground and text instead, which follow the theme. */
+  & option,
+  & optgroup {
+    background-color: var(--color-background);
+    color: var(--color-text);
+  }
 }
 
 /* A wrapper that owns the field box so a control can carry adornments beside it
