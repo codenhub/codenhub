@@ -49,8 +49,8 @@ const GROUNDS = [
    `[data-theme="dark"]`), not the `prefers-color-scheme` arm -- the doc's
    "Dark mode" section is explicit that no OS-preference fallback is generated. */
 const THEMES = ["light", "dark"];
-/* The three neutral surface tokens `docs/internal/generated-palette-neutral-
-   tokens.md` adds: no intent, no presentation, no ground, no hover -- so each
+/* The three flat neutral tokens (`docs/internal/generated-palette.md`, "Flat
+   neutral values"): no intent, no presentation, no ground, no hover -- so each
    is one flat probe reading straight off its `theme.css` token, not a
    `.box`-composed cell. `channel` picks which computed field `toDeclarations`
    reads back off the probe: `border`/`surface` render as a background,
