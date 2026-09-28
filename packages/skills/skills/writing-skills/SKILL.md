@@ -1,222 +1,95 @@
 ---
 name: writing-skills
-description: Use when creating, reviewing, testing, revising, or validating skill bundles, including SKILL.md and supporting files.
+description: Covers authoring agent skills (SKILL.md bundles) to the Agent Skills specification. Use when creating a new skill, editing, reviewing, or auditing an existing one, fixing a skill agents ignore or misapply, or turning a repeated workflow into a skill.
 metadata:
   short-description: Create and validate reusable skills
 ---
 
 # Writing Skills
 
-## Overview
+A skill is instructions another agent loads in the middle of its own task. It earns its place only by changing what that agent does; every other line is context the agent pays for and ignores.
 
-Writing skills is test-driven development applied to process documentation.
+## Before Writing
 
-A skill should teach reusable guidance that future agents can discover and apply. Use this skill only for explicit skill work. Do not create or edit skills in the middle of unrelated implementation.
+- **Confirm a skill is the right tool.** Write one for reusable procedure or knowledge an agent lacks and would not infer. Put project facts in the project's agent instructions or docs, and enforce anything a linter, test, or script can check there instead.
+- **Find the gap.** Run the task without the skill, or recall a real run, and name what went wrong. A rule with no observed failure behind it is a guess.
+- **Check what exists.** Extend an existing skill before adding an overlapping one. Every installed skill's description is loaded into every session.
 
-**Core principle:** If you did not watch an agent fail without the skill, you do not know whether the skill teaches the right thing.
+## Hard Rules
 
-Load supporting references only when needed:
+These are mechanical. When the repository ships automated skill checks, run them; otherwise verify each by hand.
 
-- `best-practices.md`: structure, discovery, examples, file layout, and bundled assets
-- `testing-skills-with-subagents.md`: testing workflow, pressure scenarios, and meta-testing
-- `persuasion-principles.md`: discipline-enforcing skills that must resist rationalization
+Frontmatter:
 
-## Tool Compatibility
+- `name`: 1–64 characters of `a-z`, `0-9`, and single hyphens, not starting or ending with one; equal to the directory name; never containing `anthropic` or `claude`.
+- `description`: 1–1024 characters on one line, no XML tags. Block scalars (`>` or `|`) are not portable.
+- Only the specification's keys: `name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`. Harness-specific settings belong in that harness's own files, such as `agents/openai.yaml`.
 
-- Keep instructions tool-agnostic and avoid provider-specific wording.
-- When behavior differs across tools, resolve conflicts in this order: OpenCode > Claude Code > Codex CLI > Gemini CLI.
+Layout:
 
-## What a Good Skill Is
+- The `SKILL.md` body stays under 500 lines.
+- Supporting files live in `references/`, `scripts/`, or `assets/`; `agents/` holds harness metadata, and `NOTICE` or `LICENSE` carry attribution.
+- `SKILL.md` links every reference file with a relative, forward-slash path. A file nothing links is never read.
+- References stay one level deep: a reference file does not point to another file in the skill. Agents often only preview a file reached through a second hop.
+- A reference file over 100 lines opens with a `## Contents` section.
 
-- A reference guide for reusable techniques, patterns, tools, or reference material
-- Discoverable from its name and description
-- Focused on future execution, not a story about one past task
-- Concise enough to load cheaply
-- Backed by observed failures and re-testing
+## The Description
 
-Common skill types:
+The description is the only part of a skill always in context. If it does not match the task, the rest of the skill does not exist.
 
-- **Technique:** concrete method with steps to follow
-- **Pattern:** way of thinking about a class of problems
-- **Reference:** information to retrieve and apply correctly
+- Say what the skill covers and when to use it, in the third person.
+- Lead with the words that appear in real requests: task names, file types, tools, symptoms, error text.
+- Match the real scope. A skill meant for every coding task says so; a narrow one names its triggers and, when it helps, what it is not for.
+- Never summarize the workflow. An agent given the steps in the description follows those and skips the body.
 
-## Minimal Shape
+```yaml
+# Bad: vague, and the second one summarizes the workflow
+description: Helps with tests.
+description: Use for TDD - write a test, watch it fail, write code, refactor.
 
-Keep the skill easy to scan and easy to discover.
-
-- Minimal bundle shape: `skill-name/SKILL.md`
-- Supporting files: only for heavy reference material, reusable assets, or substantial worked examples
-- Paths in file references: use forward slashes
-
-Frontmatter rules:
-
-- `name` and `description` are required
-- `name` uses letters, numbers, and hyphens only
-- `description` starts with `Use when...`
-- `description` is written in third person
-- `description` focuses on triggering conditions and searchable keywords instead of summarizing the full workflow
-
-Suggested body shape:
-
-1. Overview
-2. When to use
-3. Core pattern or rules
-4. Quick reference
-5. Implementation notes or links to supporting files
-6. Common mistakes
-
-## Discovery and Clarity
-
-- Use words an agent would actually search for: symptoms, synonyms, tools, commands, libraries, file types, and error phrases
-- Prefer descriptive names such as `writing-skills` over vague labels such as `helper` or `utils`
-- Keep `SKILL.md` concise; move heavy detail into supporting files
-- Use one strong example instead of many weak ones
-- When cross-referencing another skill, refer to it by skill name and explain why it is needed
-
-## TDD Mapping for Skills
-
-| TDD concept     | Skill creation                                                    |
-| --------------- | ----------------------------------------------------------------- |
-| Test case       | Pressure scenario with a delegated worker                         |
-| Production code | Skill document (`SKILL.md`)                                       |
-| RED             | Agent violates the rule or misses the technique without the skill |
-| GREEN           | Agent complies with the skill present                             |
-| REFACTOR        | Close loopholes while maintaining compliance                      |
-| Minimal code    | Write only what addresses the observed failures                   |
-
-The entire skill creation process follows RED-GREEN-REFACTOR.
-
-## Change Types and Validation Depth
-
-Classify each update before editing:
-
-- **Behavioral change:** modifies triggers, required or forbidden actions, workflow ordering, escalation gates, tool expectations, or anything likely to change agent decisions
-- **Editorial change:** wording, formatting, typo fixes, heading cleanup, or link/path corrections intended to preserve behavior
-
-Validation policy:
-
-- Behavioral changes require full RED-GREEN-REFACTOR with a failing baseline first
-- Editorial changes require lightweight validation:
-  1. state the no-behavior-change intent
-  2. run at least one before/after scenario or targeted prompt to confirm unchanged decisions
-  3. verify frontmatter, links, and references still follow local skill rules
-- If uncertain whether a change is behavioral, treat it as behavioral
-
-## The Iron Law
-
-```text
-NO BEHAVIORAL SKILL CHANGE WITHOUT A FAILING TEST FIRST
+# Good: domain plus triggers
+description: Enforces test-first development. Use when implementing features, fixing bugs, or changing behavior in code with a test suite.
 ```
 
-This applies to new skills and any edit that can change agent behavior.
+## The Body
 
-For editorial or reference-only updates, use the lightweight validation policy above.
+- **Assume a capable agent.** Add only what it lacks: project-specific steps, non-obvious constraints, judgment it gets wrong. Cut explanations of general concepts.
+- **Write imperatives with one term per concept.** Give a default and its exception instead of a menu: "Use X. For Y, use Z."
+- **Match freedom to fragility.** Heuristics for judgment calls; exact commands or a script for steps that break under variation.
+- **Make rules unconditional.** A rule that applies only when a label, prefix, keyword, or mode name is present gets skipped whenever that marker is missing. State where the rule applies and list its exceptions.
+- **Keep the skill out of its output.** Code, comments, commits, and documents a skill produces follow the project's conventions and never name the skill or the agent.
+- **Stay tool-agnostic.** Describe capabilities ("run the tests", "delegate to a subagent when available"), not one harness's tool names or slash commands.
+- **Show format with one example.** One realistic input and output beats several abstract ones.
+- **Avoid time-sensitive statements.** Describe the current way; drop what it replaced.
+- **Push rare branches into references.** Say in `SKILL.md` when to read each one.
 
-Write or edit a behavioral skill change before baseline testing? Discard that draft and start from an observed failure instead.
+For workflow, template, example, and script patterns, read [references/patterns.md](references/patterns.md).
 
-**No exceptions for behavioral edits:**
+## Evaluate To The Risk
 
-- Not for simple additions
-- Not for a new section that feels obvious
-- Do not keep untested wording as reference material
-- Do not adapt the draft while pretending you are still in RED
+| Change                                                                           | Minimum evidence                                                                                                                                            |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New skill, or a behavioral change: triggers, rules, workflow order, gates        | Run at least three realistic scenarios without the change and record the failures. Rerun with it: each targeted failure is gone and nothing else got worse. |
+| Discipline skill: a rule agents are tempted to skip under pressure               | The above, plus pressure scenarios. Counter each rationalization you observe, quoted verbatim.                                                              |
+| Editorial change: wording, formatting, or links with no intended behavior change | The hard rules, then a re-read of the diff confirming no rule, trigger, or order changed. When unsure, treat the change as behavioral.                      |
 
-## RED-GREEN-REFACTOR
+Run scenarios in a fresh context that holds only the skill and the task, such as a subagent or a new session. Read [references/evaluation.md](references/evaluation.md) to design and run them.
 
-### RED
+State what was evaluated and the result where the change is reviewed. If a change was not evaluated, say so.
 
-Run a representative scenario without the skill. Document:
+## Review Checklist
 
-- what the agent chose
-- what rationalizations it used, verbatim
-- which pressures or missing cues triggered the failure
+- [ ] The gap was observed, not imagined.
+- [ ] Every hard rule passes.
+- [ ] The description says what and when, in the third person, with real trigger words and no workflow.
+- [ ] Every line changes behavior; nothing restates what a capable agent already knows.
+- [ ] No rule depends on a marker being present, and no output names the skill.
+- [ ] Instructions are tool-agnostic.
+- [ ] Evaluation matches the risk, and its result is recorded.
 
-### GREEN
+## Common Mistakes
 
-Write the smallest skill that addresses those specific failures.
-
-Run the same scenario with the skill present. The agent should now comply or apply the technique correctly.
-
-### REFACTOR
-
-If the agent finds a new loophole, encode an explicit counter and test again.
-
-For the full testing method, read `testing-skills-with-subagents.md`.
-
-## Testing Summary
-
-Different skill types need different tests:
-
-| Skill type           | Test focus                                                      | Success criteria                                 |
-| -------------------- | --------------------------------------------------------------- | ------------------------------------------------ |
-| Discipline-enforcing | Pressure scenarios, combined pressures, rationalization capture | Agent follows the rule under pressure            |
-| Technique            | Application, variation, missing-information scenarios           | Agent applies the method in a new scenario       |
-| Pattern              | Recognition, application, counter-examples                      | Agent recognizes when and how to use the pattern |
-| Reference            | Retrieval, application, gap testing                             | Agent finds and uses the right information       |
-
-Also test against the execution profiles you care about so the skill is not only clear for one kind of model or tool environment.
-
-## Hardening Against Rationalization
-
-Skills that enforce discipline need to survive pressure and excuse-making.
-
-Compact rules:
-
-- Close loopholes explicitly
-- Address spirit-vs-letter arguments directly
-- Keep a rationalization table for recurring excuses
-- Keep a red-flags list for common failure language
-- If a rule is ignored in the same contexts repeatedly, add those violation signals to the description
-
-Example:
-
-Bad:
-
-```markdown
-Write code before test? Delete it.
-```
-
-Better:
-
-```markdown
-Write code before test? Delete it. Start over.
-
-**No exceptions:**
-
-- Do not keep it as reference
-- Do not adapt it while writing tests
-- Delete means delete
-```
-
-Use `persuasion-principles.md` only when the skill needs stronger framing against authority, urgency, sunk cost, or similar pressure.
-
-## Stop Before the Next Skill
-
-After writing one skill, finish validation before moving to the next.
-
-Do not:
-
-- batch multiple untested skills together
-- move on before the current skill is verified
-- skip re-testing because batching feels faster
-
-## Compact Checklist
-
-Use your task tracker or checklist for each item:
-
-- [ ] Classified the change as behavioral or editorial
-- [ ] For behavioral changes, observed baseline failure without the skill
-- [ ] For behavioral changes, captured failures and rationalizations verbatim
-- [ ] For editorial changes, documented no-behavior-change intent and ran a before/after check
-- [ ] Chose a clear, discoverable name
-- [ ] Wrote a trigger-focused description with searchable terms
-- [ ] Wrote the minimal content needed to address observed failures or the stated editorial intent
-- [ ] Justified every supporting file
-- [ ] Re-ran scenarios with the skill present
-- [ ] Closed new loopholes and re-tested when behavior changed
-
-## Bottom Line
-
-Creating skills is TDD for process documentation.
-
-Same law: failing test first. Same cycle: RED, GREEN, REFACTOR. Same goal: reusable guidance that future agents can actually discover and follow.
+- Narrating one past task instead of writing reusable guidance.
+- Adding rules for failures nobody observed.
+- Growing `SKILL.md` with material only one branch needs.
+- Writing several skills and evaluating none of them; finish one first.

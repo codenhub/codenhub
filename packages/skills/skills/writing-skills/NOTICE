@@ -3,4 +3,4 @@ Adapted from: https://github.com/obra/superpowers
 Original copyright: Copyright (c) 2025 Jesse Vincent
 Original license: MIT
 License text: https://github.com/obra/superpowers/blob/main/LICENSE
-Changes: Adapted skill instructions and prompts for the @codenhub/skills package format and conventions.
+Changes: Rewritten around the Agent Skills specification and a risk-scaled evaluation loop; keeps the upstream's baseline and pressure-testing method in condensed form.
