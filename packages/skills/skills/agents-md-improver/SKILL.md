@@ -1,6 +1,6 @@
 ---
 name: agents-md-improver
-description: Audit and improve AGENTS.md files in repositories. Use when the user asks to check, audit, update, improve, or fix AGENTS.md files. Evaluate the target file against a quality rubric, output a report, then make targeted updates after approval.
+description: Audits and improves AGENTS.md files in repositories. Use when the user asks to check, audit, update, improve, or fix AGENTS.md files.
 metadata:
   short-description: Audit and improve AGENTS.md files
 ---

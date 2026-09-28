@@ -1,6 +1,6 @@
 ---
 name: subagent-specialist
-description: Specialist workflow for planning, dispatching, reviewing, and integrating delegated workers. Use for parallelizable work, independent implementation tasks, multiple unrelated bug investigations, or quality-focused implementer + spec-review + code-review workflows.
+description: Coordinates work delegated to subagents or other workers, from planning through integration. Use for parallelizable work, independent implementation tasks, several unrelated bug investigations, or delegated work that needs review before it is integrated.
 ---
 
 # Subagent Specialist
