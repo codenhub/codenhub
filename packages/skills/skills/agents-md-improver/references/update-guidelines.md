@@ -1,5 +1,13 @@
 # AGENTS.md Update Guidelines
 
+## Contents
+
+- Core Principle
+- What TO Add
+- What NOT to Add
+- Diff Format for Updates
+- Validation Checklist
+
 ## Core Principle
 
 Only add information that will genuinely help future agent sessions. Attention and context are limited, so every line must earn its place.

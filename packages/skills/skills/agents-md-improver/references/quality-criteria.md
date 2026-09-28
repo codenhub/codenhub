@@ -1,5 +1,11 @@
 # AGENTS.md Quality Criteria
 
+## Contents
+
+- Scoring Rubric: six weighted criteria, 100 points
+- Assessment Process
+- Red Flags
+
 ## Scoring Rubric
 
 ### 1. Commands and Workflows (20 points)
