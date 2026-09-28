@@ -1,121 +1,107 @@
 ---
 title: Overview
+description: What the validation package does, how to read results, and where to go next.
 ---
 
-# Validate Application Inputs
+# Validate data and shapes
 
-`@codenhub/validation` provides declarative data and structure validation, primitive coercion helpers, and deep customization without runtime dependencies. Version 0.1.0 is built from scratch as a pure declarative schema builder with zero legacy baggage. It allows defining typed schemas for unknown request parameters, API payloads, form submissions, or environment variables and validating them with discriminated results or throwing parsers.
+`@codenhub/validation` answers one question: does this unknown value look the way I said it should? You describe the expected data as a schema, run a value through it, and get either the value with its TypeScript type or a complete list of what is wrong. It ships the validators most applications need and lets you build any others from small, composable pieces.
 
-## Setup
+Validation matters wherever data crosses a boundary you do not control: a request body, a form, a query string, an environment variable, a file read from disk, a message from another service. TypeScript cannot check those at runtime, so the type you wrote for them is a promise nothing enforces until a schema does.
 
-### Installation
+## Installation
 
 ```sh
 pnpm add @codenhub/validation
 ```
 
-### Quick start
+The package is ESM only and has no runtime dependencies. All public symbols are imported from `@codenhub/validation`; there are no subpath exports.
 
-Create reusable validator schemas using `val` and run `.validate()` against unknown boundary data:
+## A first schema
+
+Everything starts from `val`, which holds one factory per kind of data. A schema is built by calling factories and chaining rules onto them:
 
 ```ts
 import { val, type Infer } from "@codenhub/validation";
 
-const signupSchema = val.object({
-  username: val.string().min(3).max(30).trim(),
+const signup = val.object({
+  username: val.string().trim().min(3).max(30),
   email: val.string().email(),
   age: val.number().int().min(18).optional(),
   newsletter: val.boolean().default(false),
-  tags: val.array(val.string()).default([]),
+  tags: val.array(val.string()).max(5).default([]),
 });
 
-export type SignupInput = Infer<typeof signupSchema>;
+export type Signup = Infer<typeof signup>;
+```
 
-const result = signupSchema.validate(payload);
+`Infer` reads the TypeScript type a schema produces, so the schema is the single source of truth: no separate interface to keep in sync. Here `Signup` has a required `username` and `email`, an optional `age`, and a `newsletter` and `tags` that are always present because they have defaults.
+
+Schemas are immutable. Every method that adds a rule returns a new schema and leaves the original alone, so a base schema can be shared and extended freely:
+
+```ts
+const username = val.string().trim().min(3);
+const adminUsername = username.startsWith("admin_");
+```
+
+## Reading the result
+
+`validate` returns a result you branch on. It never throws for invalid input:
+
+```ts
+const result = signup.validate(requestBody);
 
 if (result.ok) {
-  // result.value is strongly typed as SignupInput
-  console.log("Registered:", result.value.username);
+  save(result.value); // typed as Signup
 } else {
-  // result.error contains code, message, path, and child issues
-  console.error("Validation failed:", result.error.message);
-  for (const issue of result.error.issues ?? []) {
-    console.error(`- [${issue.path.join(".")}] ${issue.message}`);
+  for (const issue of result.error.issues) {
+    console.log(issue.path, issue.message);
   }
 }
 ```
 
-## Validation Modes
+`result.value` is not the input you passed in. It is a new value after the schema has run: defaults filled in, `trim()` applied, unknown object properties dropped, transforms mapped. The input is never modified.
 
-Schemas can be evaluated across multiple execution workflows depending on whether application boundaries prefer safe result types, thrown exceptions, assertions, or async resolution:
+When something is wrong the schema reports **every** problem it can find, not just the first, each with a stable `code`, the `path` to the offending value, and a human-readable `message`. See [Errors and messages](errors.md) for the full shape.
 
-### Discriminated Results
+## Ways to run a schema
 
-The default execution mode returns a `ValidationResult<T>` that discriminates on `ok: true | false`:
+| Method                                  | Returns                                         | Use it when                                               |
+| --------------------------------------- | ----------------------------------------------- | --------------------------------------------------------- |
+| `schema.validate(input, options?)`      | `{ ok: true, value }` or `{ ok: false, error }` | You handle failure as a normal outcome.                   |
+| `schema.parse(input, options?)`         | The value, or throws `ValidationError`          | A failure should abort, such as inside a request handler. |
+| `schema.is(input)`                      | `boolean`, narrowing the type                   | You only need a yes or no.                                |
+| `schema.validateAsync(input, options?)` | A promise of the `validate` result              | The schema has async rules.                               |
+| `schema.parseAsync(input, options?)`    | A promise of the value, or rejects              | Same, but throwing.                                       |
 
-```ts
-const res = schema.validate(input);
-if (res.ok) {
-  handleSuccess(res.value);
-} else {
-  handleFailure(res.error);
-}
-```
+`options` is optional and accepts:
 
-### Throwing Parsers
+- `abortEarly`: stop at the first issue instead of collecting all of them. Default `false`.
+- `includeInput`: keep the invalid value on each issue as `input`. Default `false`. Enable it only when retaining the value is safe: inputs can hold passwords and tokens.
+- `context`: any value you want your own checks to reach, available as `ctx.options.context`. See [Customization](customization.md).
 
-When exceptions are preferred at application boundaries (e.g. RPC handlers or controllers), use `.parse()`:
+### Sync and async
 
-```ts
-import { parse } from "@codenhub/validation";
+Validation stays synchronous until one of your callbacks (`refine`, `check`, `transform`) returns a promise, so a plain schema costs nothing extra. If a schema does contain async work, the sync methods `validate`, `parse` and `is` throw an `Error` that tells you to use `validateAsync` or `parseAsync`. They never guess or silently report the input as invalid. `validateAsync` and `parseAsync` work on every schema, sync or not.
 
-try {
-  const user = schema.parse(input);
-  // or standalone: parse(input, schema);
-} catch (error) {
-  // Throws ValidationError with .issues and .flatten()
-}
-```
+Independent properties and array items run their async checks concurrently. Issues are still reported in the order the schema lists them, not the order the promises settle. With `abortEarly`, work runs one step at a time and nothing starts after the first failure.
 
-### Asynchronous Validation
+## Objects
 
-Schemas with asynchronous refinements, transforms, or checks evaluate via `.validateAsync()` or `.parseAsync()`:
+`val.object(shape)` accepts plain objects: created by `{}`, `Object.create(null)` or `JSON.parse`. Arrays, class instances, `Map`s and `null` are rejected.
 
-```ts
-import { parseAsync, validateAsync } from "@codenhub/validation";
+- Properties not listed in the shape are dropped from the output. Call `.strict()` to reject them with an `unrecognized_key` issue instead, or `.passthrough()` to copy them through unvalidated.
+- Only own properties are read, so inherited values never satisfy a required property.
+- A property whose schema accepts `undefined` (through `.optional()`, `.nullish()` or `val.undefined()`) is optional in the inferred type, and is left out of the output when absent.
+- `.extend()`, `.pick()`, `.omit()`, `.partial()` and `.required()` derive new object schemas from existing ones. They start a fresh schema, so rules added earlier with `refine` or `check` are not carried over; add them after deriving.
 
-const res = await schema.validateAsync(input);
-const value = await schema.parseAsync(input);
-```
+## Standard Schema
 
-### Type Guards and Assertions
-
-Validate input type conformance without creating full error trees using `.is()`, `val.is()`, or assertion functions:
-
-```ts
-import { assert, is } from "@codenhub/validation";
-
-if (schema.is(input)) {
-  // input is narrowed to schema output type
-}
-
-assert(input, schema);
-// input is asserted as schema output type in current scope or throws ValidationError
-```
-
-## Standard Schema v1
-
-All schemas implement the [Standard Schema v1](https://standardschema.dev/) specification via the `~standard` property. This enables direct interoperability with modern forms and libraries (such as TanStack Form or React Hook Form) without external adapters.
-
-## Requirements
-
-- ESM-aware package resolution.
-- Browser, Node.js, and SSR runtimes are supported.
-- No runtime dependencies.
-
-All public symbols are imported from `@codenhub/validation`; there are no public subpath exports. Error input is omitted by default; enable `includeInput` only when retaining the original value is safe. URL and email validators intentionally accept public host shapes only.
+Every schema implements [Standard Schema v1](https://standardschema.dev/) through its `~standard` property, so libraries that accept any Standard Schema (form libraries, API frameworks, routers) can use it without an adapter. The `validate` function there returns a promise only when the schema contains async work.
 
 ## Next steps
 
-- [Results and coercion](results-and-coercion.md) explains error shapes, result construction, custom validators, pipeline composition, and primitive coercion.
-- [Validator reference](validators.md) documents all schema builders including strings, numbers, booleans, dates, objects, arrays, records, tuples, unions, and modifiers.
+- [Validator reference](validators.md) lists every factory and rule with its failure code.
+- [Customization](customization.md) shows how to write your own rules, transforms, async checks and reusable validators.
+- [Errors and messages](errors.md) explains issues, error codes, `params`, message functions and localization.
+- [Coercion](coercion.md) covers text input such as environment variables and form values.

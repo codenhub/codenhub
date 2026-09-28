@@ -27,7 +27,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
   - `@codenhub/error`: canonical translation map for built-in registry message keys; framework error-boundary adapters.
   - `@codenhub/i18n`: pluralization and ICU formatting.
   - `@codenhub/toaster`: stacking / position container controls; richer interactions and animation.
-  - `@codenhub/validation`: form-schema adapters; custom validator pipeline.
+  - `@codenhub/validation`: form-schema adapters; input-type inference (`InferInput`); a global error map.
   - `@codenhub/kbd`: key-combo recording / remapping helper.
   - `@codenhub/skills`: npm-publish validation and a clean-machine `npx` / `pnpm dlx` path; more core skill templates.
   - `@codenhub/components`: property / event declaration API stabilization; expanded component library.

@@ -1,18 +1,14 @@
 # @codenhub/validation
 
-> Zero-dependency validation and primitive coercion helpers that return typed
-> results instead of throwing for ordinary invalid input. The package is
-> experimental.
+> Zero-dependency schema validation for TypeScript. Build a schema with `val`, run unknown input through it, and get the typed value or every issue found. Extend it with custom checks, transforms, async rules and localizable messages. The package is experimental.
 
-Use `val` for type-specific constraints, `coerce` for primitive conversion, and
-`custom` to normalize consumer-defined validators. Original input is excluded
-from failures unless explicitly requested.
+Schemas are immutable and inferred with `Infer`. `validate` returns a result and never throws for invalid input; `parse` throws a `ValidationError`; async rules need `validateAsync` or `parseAsync`. Every schema implements Standard Schema v1. Issues never contain the input unless `includeInput` is set.
 
 ## Documentation
 
-- [Documentation overview](docs/index.md): Scope, stability, entrypoint, and
-  navigation.
-- [Results and coercion](docs/results-and-coercion.md): Error model, result
-  helpers, custom validators, and coercion constraints.
-- [Validator reference](docs/validators.md): All validator methods, defaults,
-  and failure codes.
+- [Documentation overview](docs/index.md): Schemas, results, execution modes and objects.
+- [Validator reference](docs/validators.md): Every `val` factory and rule with its failure code.
+- [Customization](docs/customization.md): `refine`, `check`, `transform`, `pipe`, `val.custom`, async rules, context and reusable checks.
+- [Errors and messages](docs/errors.md): Issue shape, codes and `params`, message functions, localization and form errors.
+- [Coercion](docs/coercion.md): `val.coerce.*` and `val.json` for text input such as environment variables.
+- [Changelog](docs/changelog/index.md): Release notes and 0.0.1 migration.
