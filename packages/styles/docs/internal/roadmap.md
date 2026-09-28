@@ -18,21 +18,19 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**`0.5.0` is a local, unreleased draft**: `@codenhub/styles@0.4.0` remains the current npm version. The foundation changes, sketch aesthetic, and rounded sketch variant are implemented; glitch, synthwave/retro, and retro-OS bevel remain part of the planned 0.5.0 scope but are not implemented. The [0.5.0 changelog](../changelog/0.5.0.md) describes only the work already implemented and MUST be updated as the remaining looks land before publishing.
+**`0.5.0` is a local, unreleased draft**: `@codenhub/styles@0.4.0` remains the current npm version. Its scope is the foundation changes and the sketch aesthetic with its rounded variant, all implemented; the [0.5.0 changelog](../changelog/0.5.0.md) describes that scope.
 
 The foundation was built for structure, not for a look. Any new material part must still pass [What enters the material contract](./model.md#what-enters-the-material-contract), independently of the aesthetic that would use it. An aesthetic the foundation cannot express without breaking that rule needs a separate decision before implementation.
 
 ## Planned
 
-Implement the three remaining aesthetics below for `0.5.0`, including their standalone solo classes, compiled and `/tw` exports, registry entries, public documentation, playground coverage, and cross-browser tests. Their visual direction awaits references from the maintainer before design or implementation. Nothing is committed for a later release yet.
+The aesthetics below were planned for `0.5.0` and moved out of it. They carry no release commitment. Each still needs its solo class, compiled and `/tw` exports, a registry entry, public documentation, playground coverage, and cross-browser tests when it lands.
 
-## 0.5.0 aesthetics
-
-Aesthetics compose the foundation rather than justify new tokens. The decisions below set their release scope; exact appearance, knobs, and browser fallbacks must be reviewed against real screens before claiming completion.
+Aesthetics compose the foundation rather than justify new tokens. Exact appearance, knobs, and browser fallbacks must be reviewed against real screens before claiming completion.
 
 - **Glitch.** Static color split without built-in motion or slicing; hues come from intent or consumer knobs, not a preset palette ([R1](./model.md#rules-for-aesthetics)). Its treatment needs new visual references before implementation. Not started.
-- **Synthwave/retro.** A future aesthetic direction for `0.5.0`; visual references are awaited before defining its appearance, tokens, or implementation. No look has been selected.
-- **Retro-OS bevel (`.retro-os`).** A raised two-tone edge with the standard press, not an inverted pressed bevel. Its treatment needs visual references before implementation. Not started.
+- **Synthwave/retro.** Visual references are awaited before defining its appearance, tokens, or implementation. No look has been selected.
+- **Retro-OS bevel (`.retro-os`).** A raised two-tone edge with the standard press, not an inverted pressed bevel. A first implementation -- square corners, a 1px ink line, the two depth layers inset as a shade and a white highlight, and a grey surface face -- was built and rejected on review because it did not read as a retro OS; the design starts over from references. The foundation part it needed stays: `--ui-shadow-2-color`, which lets the second layer lighten where the first darkens.
 
 ## Aesthetics assessed and deferred
 
@@ -46,11 +44,11 @@ Two measurements shaped the material tokens and outlive the change that needed t
 
 ## Versioning
 
-`0.4.0` is the current published release. `0.5.0` remains untagged and unreleased until its expanded scope is implemented and verified. Release authorization and tagging follow `docs/specs/packages-lifecycle.md`.
+`0.4.0` is the current published release. `0.5.0` remains untagged and unreleased until it is verified and released. Release authorization and tagging follow `docs/specs/packages-lifecycle.md`.
 
 The stress-test pass's fixes, across all three screens, land as one minor (`0.2.0`) rather than a run of patches: several change default token values (`--progress-surface`, `--color-border`) that affect every consumer already using `.progress` or `.card.soft.edged`, not just new ones, which is a real behavior change and not patch-level even pre-1.0.
 
-`0.5.0` is one minor because the cascade layers change what beats what for every consumer, and the edge-contrast fix and removals change default rendering. The new aesthetics remain opt-in additions to that release.
+`0.5.0` is one minor because the cascade layers change what beats what for every consumer, and the edge-contrast fix and removals change default rendering. The sketch aesthetic is an opt-in addition to that release.
 
 The package stays on `0.x` while the public contract is still young, so a necessary breaking correction stays explicit and cheap. Documentation status remains `active`: supported for normal consumer use, not frozen against future semver-major changes.
 
