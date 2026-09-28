@@ -86,6 +86,17 @@ describe("skill catalog", () => {
     expect(adapted.filter((id) => !fs.existsSync(path.join(root, "skills", id, "NOTICE")))).toEqual([]);
   });
 
+  // The installer can copy one skill alone, so its upstream license text must travel inside its directory.
+  it("should ship the upstream license text with every adapted skill", () => {
+    const adapted = [...provenance].filter(([, origin]) => origin.startsWith("Adapted from")).map(([id]) => id);
+    const unlicensed = adapted.filter((id) => {
+      const dir = path.join(root, "skills", id);
+      const notice = fs.existsSync(path.join(dir, "NOTICE")) ? read(path.join(dir, "NOTICE")) : "";
+      return !notice.includes("Permission is hereby granted") && !fs.existsSync(path.join(dir, "LICENSE"));
+    });
+    expect(unlicensed).toEqual([]);
+  });
+
   it("should keep drafts apart from the bundled skills", () => {
     const ids = new Set(skills.map((skill) => skill.id));
     expect(drafts.filter((draft) => ids.has(draft.id)).map((draft) => draft.id)).toEqual([]);

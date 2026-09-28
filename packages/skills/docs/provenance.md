@@ -4,7 +4,7 @@ title: Provenance
 
 # Skill Provenance
 
-This page records the origin and license context of skill assets shipped by `@codenhub/skills`. The package-level legal terms are in [NOTICE](../NOTICE). Each adapted skill also carries a `NOTICE` file in its own directory so its attribution is copied during installation.
+This page records the origin and license context of skill assets shipped by `@codenhub/skills`. The package-level legal terms are in [NOTICE](../NOTICE). Each adapted skill also carries its attribution and upstream license text in its own directory, in `NOTICE` and, where the license is long, `LICENSE`, so both are copied when the installer copies that skill alone.
 
 | Skill                     | Origin                                                     | License    |
 | ------------------------- | ---------------------------------------------------------- | ---------- |
