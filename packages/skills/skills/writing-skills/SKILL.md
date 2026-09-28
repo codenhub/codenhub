@@ -23,7 +23,8 @@ Frontmatter:
 
 - `name`: 1–64 characters of `a-z`, `0-9`, and single hyphens, not starting or ending with one; equal to the directory name; never containing `anthropic` or `claude`.
 - `description`: 1–1024 characters on one line, no XML tags. Block scalars (`>` or `|`) are not portable.
-- Only the specification's keys: `name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`. Harness-specific settings belong in that harness's own files, such as `agents/openai.yaml`.
+- `compatibility`, when present: 1–500 characters.
+- Only the specification's keys: `name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`. A harness setting that has its own file goes there, such as `agents/openai.yaml` for Codex; one that only that harness's frontmatter accepts, such as a model override, is left out so the skill loads the same in every harness.
 
 Layout:
 
@@ -72,7 +73,7 @@ Current models follow instructions closely, so phrasing changes how often a rule
 - **Use plain directives.** "Run the tests before committing." Capitals, "CRITICAL", and "You MUST" make current models over-apply a rule; add emphasis only when an evaluation shows the plain wording is ignored.
 - **Give the reason for a rule that is not obvious.** "Never use ellipses; a text-to-speech engine reads the output" lets the agent handle cases the rule did not list.
 - **Say what to do.** State the wanted behavior, and pair a necessary prohibition with its alternative: "Do not mock the database; use the test container."
-- **Put the most important rules first, and keep them few.** Adherence drops as instructions pile up, and earlier ones win.
+- **Put the most important rules first, and keep them few.** Adherence drops as instructions pile up, and a model that starts dropping them tends to drop later ones first.
 - **Keep exact values in `SKILL.md`.** Output formats, thresholds, and required strings the task depends on belong in the body, not in a reference the agent may not read.
 
 ## Evaluate To The Risk

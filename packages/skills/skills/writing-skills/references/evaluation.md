@@ -28,7 +28,7 @@ Record each scenario with the behavior that counts as a pass:
 
 Stop when every scenario passes on two consecutive runs. One pass can be luck.
 
-Never skip the baseline because the skill looks right. Skills can make agents worse, and skills an agent writes without testing against a baseline tend not to help at all.
+Never skip the baseline because the skill looks right. Skills can make agents worse, and skills a model writes for itself, unchecked, give no benefit on average.
 
 If an agent fails with the skill present, ask it in the same context how the skill should have been written to prevent the failure. The answer shows whether the skill was unclear, missing a rule, or burying one.
 
