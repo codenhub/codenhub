@@ -6,44 +6,104 @@ title: Results and Coercion
 
 ## Result Model
 
-`ValidationResult<T>` is `ValidationOk<T> | ValidationErr`. Success contains `{ ok: true, value }`; failure contains `{ ok: false, error }`.
+`ValidationResult<T>` is a discriminated union: `ValidationOk<T> | ValidationErr`.
 
-`ValidationError` extends `ValidationIssue` with optional child `issues`. Both contain a `code`, `message`, and `path`, plus optional `input`, `expected`, and `received`. A `ValidationPathSegment` is a string or number. Stable `ValidationErrorCode` values are `invalid_type`, `invalid_value`, `invalid_format`, `too_small`, `too_big`, `missing_key`, and `custom`.
+- Success: `{ ok: true, value: T }`
+- Failure: `{ ok: false, error: ValidationError }`
 
-`ValidationOptions` accepts `path` and `includeInput`. Paths default to `[]`. Original input is omitted by validators and coercers unless `includeInput` is `true`; retain it only when safe.
+`ValidationError` extends `ValidationIssue` with child `issues`. Each issue contains:
 
-`ok(value)` creates `ValidationOk<T>`. `err(input)` creates `ValidationErr` from a string, `ValidationIssue`, or `ValidationErrorOptions`. String failures use `code: "custom"` and an empty path. Unknown codes normalize to `custom`, invalid path segments are removed, and missing messages become `"Invalid value"`.
+- `code`: Stable machine code (`invalid_type`, `invalid_value`, `invalid_format`, `too_small`, `too_big`, `missing_key`, `custom`).
+- `message`: Human-readable error description.
+- `path`: Segment array describing location (`readonly (string | number)[]`).
+- `input`: Retained only when `includeInput: true` is configured in `ValidationOptions`.
+- `expected` / `received`: Optional descriptive strings.
 
-`parseResult<T>(value)` accepts success/failure result-like objects, `ValidationErrorOptions`, `Error`, and string values. Unrecognized values become a custom `"Invalid value"` failure. It does not throw for normal unknown input, though hostile property access can still throw.
+### Multi-issue aggregation
+
+By default (`abortEarly: false`), object and array validation runs across all fields and elements, collecting all encountered errors in `error.issues`. Callers can pass `{ abortEarly: true }` in `ValidationOptions` to halt execution on the first error.
+
+```ts
+const result = schema.validate(data, { abortEarly: false });
+if (!result.ok) {
+  for (const issue of result.error.issues ?? []) {
+    console.error(issue.path.join("."), issue.message);
+  }
+}
+```
 
 ## Custom Validators
 
-`custom<T>(value, validator, options?)` calls the validator and normalizes its returned or thrown value with `parseResult`. Failure paths are replaced by the path in `options` when supplied.
+`val.custom()` builds reusable, first-class validator schemas that integrate into objects, arrays, and pipelines:
 
 ```ts
-import { custom, err, ok } from "@codenhub/validation";
+import { val } from "@codenhub/validation";
 
-const result = custom<string>(
-  "usr_123",
-  (value) => {
-    if (typeof value !== "string") return err("Expected a string");
-    return value.startsWith("usr_") ? ok(value) : err("Invalid user id");
-  },
-  { path: ["userId"] },
-);
+const hexColor = val.custom<string>((input, ctx) => {
+  if (typeof input !== "string") {
+    return ctx.fail({ code: "invalid_type", message: "Expected hex color string" });
+  }
+  if (!/^#[0-9a-f]{6}$/i.test(input)) {
+    return ctx.fail({ code: "invalid_format", message: "Invalid hex color format" });
+  }
+  return ctx.ok(input.toLowerCase());
+});
+
+const themeSchema = val.object({
+  primary: hexColor,
+  accent: hexColor,
+});
+```
+
+### Refinements & Transformations
+
+Every validator supports `.refine()` and `.transform()`:
+
+```ts
+const passwordSchema = val
+  .string()
+  .min(8)
+  .refine((val) => /[A-Z]/.test(val), "Must contain at least one uppercase letter")
+  .refine((val) => /[0-9]/.test(val), "Must contain at least one number");
+
+const trimmedEmail = val
+  .string()
+  .email()
+  .transform((val) => val.trim().toLowerCase());
+```
+
+Cross-field validation can be attached to object schemas:
+
+```ts
+const passwordResetSchema = val
+  .object({
+    password: val.string().min(8),
+    confirmPassword: val.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+```
+
+### Pipelines
+
+`val.pipe()` combines multiple validators in sequence, piping the output of one step into the next:
+
+```ts
+const portSchema = val.pipe(val.coerce.int(), val.number().port());
 ```
 
 ## Primitive Coercion
 
-The `coerce` object returns `ValidationResult` values:
+Coercion is available both as declarative validator schemas via `val.coerce.*` and as direct functional helpers via `coerce.*`:
 
-| Method                    | Accepted input and result                                                                                                                                     |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `int(value, options?)`    | String-convertible primitives in signed decimal integer form; returns a safe integer. Exponent, decimal, empty, and unsafe values fail with `invalid_format`. |
-| `number(value, options?)` | Signed finite decimal forms, including `.5` and `1.`; exponent, empty, and non-finite values fail with `invalid_format`.                                      |
-| `bool(value, options?)`   | Booleans or case-insensitive strings `true`, `false`, `1`, `0`, `yes`, `no`, `on`, and `off`. Other primitives fail with `invalid_format`.                    |
-| `string(value, options?)` | Stringifies defined primitives. `null`, `undefined`, objects, functions, and failed string conversion return `invalid_type`.                                  |
+| Direct helper                    | Schema factory        | Behavior                                                          |
+| -------------------------------- | --------------------- | ----------------------------------------------------------------- |
+| `coerce.int(value, options?)`    | `val.coerce.int()`    | Coerces decimal integer strings or primitives to a safe integer.  |
+| `coerce.number(value, options?)` | `val.coerce.number()` | Coerces decimal numeric strings or primitives to a finite number. |
+| `coerce.bool(value, options?)`   | `val.coerce.bool()`   | Coerces booleans, `1`/`0`, `yes`/`no`, `on`/`off` to boolean.     |
+| `coerce.string(value, options?)` | `val.coerce.string()` | Coerces defined primitives to string; rejects null and undefined. |
+| `coerce.date(value, options?)`   | `val.coerce.date()`   | Coerces Date instances, timestamps, and ISO strings to a Date.    |
 
-Objects and functions are rejected by all coercers. Symbols may be converted to strings, but are not accepted by numeric or boolean format checks. Coercion does not perform subsequent domain validation; for example, pass an integer result to `val.number(value).port()` to enforce the port range.
-
-The public type exports `ValidationErrorInput`, `ValidationErrorOptions`, `ValidationIssue`, `ValidationError`, `ValidationOptions`, `ValidationOk`, `ValidationErr`, `ValidationResult`, `ValidationErrorCode`, and `ValidationPathSegment` describe these workflows.
+Objects and functions are rejected by all coercers.

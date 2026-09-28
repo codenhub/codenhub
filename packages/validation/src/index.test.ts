@@ -176,3 +176,23 @@ describe("custom", () => {
     });
   });
 });
+
+describe("val.validate and val.is", () => {
+  it("validates data using val.validate", () => {
+    const schema = val.string().email();
+    expect(val.validate("test@example.com", schema)).toEqual({
+      ok: true,
+      value: "test@example.com",
+    });
+    expect(val.validate("not-an-email", schema)).toMatchObject({
+      ok: false,
+    });
+  });
+
+  it("checks data type conformance using val.is", () => {
+    const schema = val.number().int();
+    expect(val.is(42, schema)).toBe(true);
+    expect(val.is("42", schema)).toBe(false);
+    expect(val.is(3.14, schema)).toBe(false);
+  });
+});

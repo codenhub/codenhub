@@ -1,3 +1,4 @@
+import { BaseValidator, type ValidationContext } from "./core";
 import { fail, ok, type ValidationOptions, type ValidationResult } from "./result";
 
 const DECIMAL_INTEGER_PATTERN = /^[+-]?\d+$/;
@@ -147,6 +148,89 @@ export const coerce = {
 
     return stringify(value, options);
   },
+
+  /** Coerces date string, timestamp number, or Date instance to a valid Date object. */
+  date(value: unknown, options: ValidationOptions = {}): ValidationResult<Date> {
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) {
+        return fail(
+          {
+            code: "invalid_format",
+            message: "Cannot coerce invalid date to Date",
+            expected: "valid date",
+            received: "Invalid Date",
+          },
+          options,
+        );
+      }
+      return ok(value);
+    }
+
+    if (typeof value === "number") {
+      if (!Number.isFinite(value)) {
+        return fail(
+          {
+            code: "invalid_format",
+            message: `Cannot coerce ${value} to Date`,
+            expected: "finite timestamp",
+            received: String(value),
+          },
+          options,
+        );
+      }
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) {
+        return fail(
+          {
+            code: "invalid_format",
+            message: `Cannot coerce ${value} to Date`,
+            expected: "valid timestamp",
+            received: String(value),
+          },
+          options,
+        );
+      }
+      return ok(parsed);
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed.length === 0) {
+        return fail(
+          {
+            code: "invalid_format",
+            message: "Cannot coerce empty string to Date",
+            expected: "non-empty date string",
+            received: '""',
+          },
+          options,
+        );
+      }
+      const parsed = new Date(trimmed);
+      if (Number.isNaN(parsed.getTime())) {
+        return fail(
+          {
+            code: "invalid_format",
+            message: `Cannot coerce "${value}" to Date`,
+            expected: "valid date string",
+            received: value,
+          },
+          options,
+        );
+      }
+      return ok(parsed);
+    }
+
+    return fail(
+      {
+        code: "invalid_type",
+        message: "Cannot coerce value to Date",
+        expected: "Date, timestamp, or date string",
+        received: typeof value,
+      },
+      options,
+    );
+  },
 };
 
 const stringify = (value: unknown, options: ValidationOptions): ValidationResult<string> => {
@@ -170,4 +254,63 @@ const stringify = (value: unknown, options: ValidationOptions): ValidationResult
       options,
     );
   }
+};
+
+/**
+ * Schema validator that coerces raw input to a target type before producing results.
+ *
+ * @typeParam T - The coerced output type.
+ */
+export class CoerceValidator<T> extends BaseValidator<T, unknown> {
+  /**
+   * Constructs a CoerceValidator.
+   *
+   * @param coerceFn - Underlying coercion function.
+   * @param typeName - Descriptive name of the target coerced type.
+   */
+  constructor(
+    private readonly coerceFn: (value: unknown, options?: ValidationOptions) => ValidationResult<T>,
+    readonly typeName: string,
+  ) {
+    super();
+  }
+
+  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<T> {
+    const res = this.coerceFn(input, { ...ctx.options, path: ctx.path });
+    if (!res.ok) {
+      ctx.addIssue(res.error);
+      return res;
+    }
+    return ctx.ok(res.value);
+  }
+}
+
+/**
+ * Factory collection of coercion-based schema validators.
+ */
+export interface ValCoerce {
+  /** Creates a validator that coerces input to a safe integer. */
+  int(): CoerceValidator<number>;
+  /** Creates a validator that coerces input to a finite number. */
+  number(): CoerceValidator<number>;
+  /** Creates a validator that coerces input to a boolean. */
+  bool(): CoerceValidator<boolean>;
+  /** Creates a validator that coerces input to a boolean (alias for bool). */
+  boolean(): CoerceValidator<boolean>;
+  /** Creates a validator that coerces input to a string. */
+  string(): CoerceValidator<string>;
+  /** Creates a validator that coerces input to a Date instance. */
+  date(): CoerceValidator<Date>;
+}
+
+/**
+ * Registry of schema validator factories that coerce input before validation.
+ */
+export const valCoerce: ValCoerce = {
+  int: () => new CoerceValidator<number>(coerce.int, "int"),
+  number: () => new CoerceValidator<number>(coerce.number, "number"),
+  bool: () => new CoerceValidator<boolean>(coerce.bool, "bool"),
+  boolean: () => new CoerceValidator<boolean>(coerce.bool, "boolean"),
+  string: () => new CoerceValidator<string>(coerce.string, "string"),
+  date: () => new CoerceValidator<Date>(coerce.date, "date"),
 };

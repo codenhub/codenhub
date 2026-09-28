@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { val } from ".";
+import { type ValidationErr, val } from ".";
 
 describe("string validators", () => {
   it("normalizes valid email addresses", () => {
@@ -142,5 +142,167 @@ describe("string validators", () => {
         received: "abc",
       },
     });
+  });
+});
+
+describe("StringValidator (0.1.0 schema API)", () => {
+  it("validates basic string type", () => {
+    const schema = val.string();
+    expect(schema.validate("hello")).toEqual({ ok: true, value: "hello" });
+    expect(schema.validate(123)).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_type",
+        message: "Expected string, got 123",
+        path: [],
+        expected: "string",
+        received: "123",
+      },
+    });
+    expect(schema.is("hello")).toBe(true);
+    expect(schema.is(null)).toBe(false);
+  });
+
+  it("chains min, max, length, and nonEmpty with custom messages", () => {
+    const schema = val.string().min(3, "Too short").max(5, "Too long");
+    expect(schema.validate("abcd")).toEqual({ ok: true, value: "abcd" });
+    expect(schema.validate("ab")).toEqual({
+      ok: false,
+      error: {
+        code: "too_small",
+        message: "Too short",
+        path: [],
+        expected: "at least 3 characters",
+        received: "2 characters",
+      },
+    });
+    expect(schema.validate("abcdef")).toEqual({
+      ok: false,
+      error: {
+        code: "too_big",
+        message: "Too long",
+        path: [],
+        expected: "at most 5 characters",
+        received: "6 characters",
+      },
+    });
+
+    const exactSchema = val.string().length(4, "Must be 4 chars");
+    expect(exactSchema.validate("four")).toEqual({ ok: true, value: "four" });
+    expect(exactSchema.validate("three")).toEqual({
+      ok: false,
+      error: {
+        code: "too_big",
+        message: "Must be 4 chars",
+        path: [],
+        expected: "exactly 4 characters",
+        received: "5 characters",
+      },
+    });
+
+    const nonEmptySchema = val.string().nonEmpty("Required string");
+    expect(nonEmptySchema.validate("")).toEqual({
+      ok: false,
+      error: {
+        code: "too_small",
+        message: "Required string",
+        path: [],
+        expected: "non-empty string",
+        received: "empty string",
+      },
+    });
+  });
+
+  it("validates UUIDs", () => {
+    const schema = val.string().uuid("Invalid UUID v4");
+    expect(schema.validate("123e4567-e89b-12d3-a456-426614174000")).toEqual({
+      ok: true,
+      value: "123e4567-e89b-12d3-a456-426614174000",
+    });
+    expect(schema.validate("not-a-uuid")).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_format",
+        message: "Invalid UUID v4",
+        path: [],
+        expected: "UUID",
+        received: "not-a-uuid",
+      },
+    });
+  });
+
+  it("validates startsWith, endsWith, and includes", () => {
+    const schema = val.string().startsWith("pre_").endsWith("_post").includes("mid");
+    expect(schema.validate("pre_mid_post")).toEqual({ ok: true, value: "pre_mid_post" });
+
+    expect(schema.validate("bad_mid_post")).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_format",
+        message: 'Must start with "pre_"',
+        path: [],
+        expected: 'string starting with "pre_"',
+        received: "bad_mid_post",
+      },
+    });
+    expect(schema.validate("pre_mid_bad")).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_format",
+        message: 'Must end with "_post"',
+        path: [],
+        expected: 'string ending with "_post"',
+        received: "pre_mid_bad",
+      },
+    });
+    expect(schema.validate("pre__post")).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_format",
+        message: 'Must include "mid"',
+        path: [],
+        expected: 'string containing "mid"',
+        received: "pre__post",
+      },
+    });
+  });
+
+  it("transforms case and trims whitespace", () => {
+    const trimmedUpper = val.string().trim().toUpperCase();
+    expect(trimmedUpper.validate("  hello world  ")).toEqual({
+      ok: true,
+      value: "HELLO WORLD",
+    });
+
+    const lower = val.string().toLowerCase();
+    expect(lower.validate("ABC")).toEqual({ ok: true, value: "abc" });
+  });
+
+  it("accumulates multiple issues when abortEarly is false", () => {
+    const schema = val.string().min(5, "At least 5").startsWith("abc", "Must start with abc");
+    const result = schema.validate("xy", { abortEarly: false });
+
+    expect(result.ok).toBe(false);
+    const error = (result as ValidationErr).error;
+    expect(error.issues).toHaveLength(2);
+    expect(error.issues?.[0].message).toBe("At least 5");
+    expect(error.issues?.[1].message).toBe("Must start with abc");
+  });
+
+  it("aborts at first issue when abortEarly is true", () => {
+    const schema = val.string().min(5, "At least 5").startsWith("abc", "Must start with abc");
+    const result = schema.validate("xy", { abortEarly: true });
+
+    expect(result.ok).toBe(false);
+    const error = (result as ValidationErr).error;
+    expect(error.message).toBe("At least 5");
+    expect(error.issues).toBeUndefined();
+  });
+
+  it("supports aliases minLength, maxLength, notEmpty", () => {
+    const schema = val.string().minLength(3).maxLength(6).notEmpty();
+    expect(schema.validate("hello")).toEqual({ ok: true, value: "hello" });
+    expect(schema.validate("hi")).toMatchObject({ ok: false });
+    expect(schema.validate("toolongword")).toMatchObject({ ok: false });
   });
 });

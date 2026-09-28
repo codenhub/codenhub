@@ -36,6 +36,8 @@ export interface ValidationOptions {
   path?: readonly ValidationPathSegment[];
   /** Whether failures should retain the original input value for caller-side debugging. */
   includeInput?: boolean;
+  /** Whether to stop validation after the first issue encountered. Defaults to false. */
+  abortEarly?: boolean;
 }
 
 /** Structured input accepted by `err()` when callers construct validation failures. */
@@ -110,6 +112,21 @@ const getIssues = (inputIssues: unknown): readonly ValidationIssue[] | undefined
   }
 
   return inputIssues.map((issue) => normalizeError(issue));
+};
+
+const stripIssueInput = (issue: ValidationIssue): ValidationIssue => {
+  const result: ValidationIssue = {
+    code: issue.code,
+    message: issue.message,
+    path: issue.path,
+  };
+  if (issue.expected !== undefined) {
+    result.expected = issue.expected;
+  }
+  if (issue.received !== undefined) {
+    result.received = issue.received;
+  }
+  return result;
 };
 
 /** Creates a successful validation result for values that already passed caller-defined checks. */
@@ -189,16 +206,17 @@ export const normalizeError = (
     };
   }
 
-  const message =
-    typeof input.message === "string" && input.message.length > 0 ? input.message : GENERIC_VALIDATION_ERROR_MESSAGE;
+  const rawMessage = typeof input.message === "string" && input.message.length > 0 ? input.message : undefined;
+  const issues = getIssues(input.issues);
+  const message = rawMessage ?? issues?.[0]?.message ?? GENERIC_VALIDATION_ERROR_MESSAGE;
   const path = options.path ?? getPath(input.path);
   const error: ValidationError = {
-    code: getCode(input.code),
+    code: getCode(input.code ?? issues?.[0]?.code),
     message,
     path,
   };
 
-  if ("input" in input) {
+  if ("input" in input && options.includeInput !== false) {
     error.input = input.input;
   }
   if (typeof input.expected === "string") {
@@ -208,9 +226,8 @@ export const normalizeError = (
     error.received = input.received;
   }
 
-  const issues = getIssues(input.issues);
   if (issues !== undefined) {
-    error.issues = issues;
+    error.issues = options.includeInput === false ? issues.map(stripIssueInput) : issues;
   }
 
   return error;
@@ -225,10 +242,17 @@ export const normalizeError = (
  */
 export const fail = (input: ValidationErrorOptions, options: ValidationOptions = {}): ValidationErr => {
   const errorInput = options.includeInput ? input : { ...input, input: undefined };
-  const error = normalizeError(errorInput, { path: input.path ?? options.path });
+  const error = normalizeError(errorInput, {
+    path: input.path ?? options.path,
+    includeInput: options.includeInput,
+    abortEarly: options.abortEarly,
+  });
 
   if (!options.includeInput) {
     delete error.input;
+    if (error.issues) {
+      error.issues = error.issues.map(stripIssueInput);
+    }
   }
 
   return { ok: false, error };

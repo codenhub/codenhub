@@ -14,16 +14,26 @@ pnpm add @codenhub/validation
 
 ## Usage
 
-Validators and coercers return discriminated results instead of throwing for invalid input.
+Define declarative schemas and validate unknown boundary data returning discriminated results without throwing:
 
 ```ts
-import { coerce, val } from "@codenhub/validation";
+import { val, type Infer } from "@codenhub/validation";
 
-const coerced = coerce.int("3000", { path: ["port"] });
-const port = coerced.ok ? val.number(coerced.value).port() : coerced;
+const userSchema = val.object({
+  name: val.string().min(2),
+  email: val.string().email(),
+  role: val.enum(["admin", "user"]).default("user"),
+  age: val.number().int().min(18).optional(),
+});
 
-if (!port.ok) {
-  console.error(port.error.code, port.error.path);
+export type User = Infer<typeof userSchema>;
+
+const result = userSchema.validate(data);
+
+if (result.ok) {
+  console.log("Valid user:", result.value);
+} else {
+  console.error("Validation failed:", result.error.message, result.error.issues);
 }
 ```
 
@@ -42,6 +52,7 @@ if (!port.ok) {
 ## Notes
 
 - `includeInput` defaults to `false`; enable it only when retaining input is safe.
+- Object and array validation defaults to `abortEarly: false`, aggregating all field and element errors into `error.issues`.
 - URL and email validators intentionally accept public host shapes only.
 
 ## License
@@ -52,7 +63,7 @@ Licensed under Apache-2.0.
 
 # Validate Application Inputs
 
-`@codenhub/validation` validates unknown boundary values and performs explicit primitive coercion without runtime dependencies. It is useful when request parameters, environment values, form input, or other unknown data needs a typed success-or-failure result before entering application logic.
+`@codenhub/validation` provides declarative data and structure validation, primitive coercion helpers, and deep customization without runtime dependencies. It allows defining typed schemas for unknown request parameters, API payloads, form submissions, or environment variables and validating them with discriminated results.
 
 ## Setup
 
@@ -64,20 +75,36 @@ pnpm add @codenhub/validation
 
 ### Quick start
 
-Validators and coercers return a discriminated `ValidationResult` rather than throwing for ordinary invalid input:
+Create reusable validator schemas using `val` and run `.validate()` against unknown boundary data:
 
 ```ts
-import { coerce, val } from "@codenhub/validation";
+import { val, type Infer } from "@codenhub/validation";
 
-const coerced = coerce.int("3000", { path: ["port"] });
-const port = coerced.ok ? val.number(coerced.value).port() : coerced;
+const signupSchema = val.object({
+  username: val.string().min(3).max(30).trim(),
+  email: val.string().email(),
+  age: val.number().int().min(18).optional(),
+  newsletter: val.boolean().default(false),
+  tags: val.array(val.string()).default([]),
+});
 
-if (!port.ok) {
-  console.error(port.error.code, port.error.path);
+export type SignupInput = Infer<typeof signupSchema>;
+
+const result = signupSchema.validate(payload);
+
+if (result.ok) {
+  // result.value is strongly typed as SignupInput
+  console.log("Registered:", result.value.username);
+} else {
+  // result.error contains code, message, path, and child issues
+  console.error("Validation failed:", result.error.message);
+  for (const issue of result.error.issues ?? []) {
+    console.error(`- [${issue.path.join(".")}] ${issue.message}`);
+  }
 }
 ```
 
-Coercion only converts primitive values; follow it with a validator when the result must satisfy a domain constraint such as a valid port range.
+Validators never throw for ordinary validation failures; they return a `ValidationResult<T>` that discriminates on `ok: true | false`.
 
 ## Requirements
 
@@ -89,8 +116,8 @@ All public symbols are imported from `@codenhub/validation`; there are no public
 
 ## Next steps
 
-- [Results and coercion](docs/results-and-coercion.md) explains error shapes, result construction, custom validators, primitive conversion, and safe input retention.
-- [Validator reference](docs/validators.md) documents the string, number, object, and array validators with their defaults and constraints.
+- [Results and coercion](docs/results-and-coercion.md) explains error shapes, result construction, custom validators, pipeline composition, and primitive coercion.
+- [Validator reference](docs/validators.md) documents all schema builders including strings, numbers, booleans, dates, objects, arrays, records, tuples, unions, and modifiers.
 
 <!-- Source: docs/results-and-coercion.md -->
 
@@ -98,85 +125,218 @@ All public symbols are imported from `@codenhub/validation`; there are no public
 
 ## Result Model
 
-`ValidationResult<T>` is `ValidationOk<T> | ValidationErr`. Success contains `{ ok: true, value }`; failure contains `{ ok: false, error }`.
+`ValidationResult<T>` is a discriminated union: `ValidationOk<T> | ValidationErr`.
 
-`ValidationError` extends `ValidationIssue` with optional child `issues`. Both contain a `code`, `message`, and `path`, plus optional `input`, `expected`, and `received`. A `ValidationPathSegment` is a string or number. Stable `ValidationErrorCode` values are `invalid_type`, `invalid_value`, `invalid_format`, `too_small`, `too_big`, `missing_key`, and `custom`.
+- Success: `{ ok: true, value: T }`
+- Failure: `{ ok: false, error: ValidationError }`
 
-`ValidationOptions` accepts `path` and `includeInput`. Paths default to `[]`. Original input is omitted by validators and coercers unless `includeInput` is `true`; retain it only when safe.
+`ValidationError` extends `ValidationIssue` with child `issues`. Each issue contains:
 
-`ok(value)` creates `ValidationOk<T>`. `err(input)` creates `ValidationErr` from a string, `ValidationIssue`, or `ValidationErrorOptions`. String failures use `code: "custom"` and an empty path. Unknown codes normalize to `custom`, invalid path segments are removed, and missing messages become `"Invalid value"`.
+- `code`: Stable machine code (`invalid_type`, `invalid_value`, `invalid_format`, `too_small`, `too_big`, `missing_key`, `custom`).
+- `message`: Human-readable error description.
+- `path`: Segment array describing location (`readonly (string | number)[]`).
+- `input`: Retained only when `includeInput: true` is configured in `ValidationOptions`.
+- `expected` / `received`: Optional descriptive strings.
 
-`parseResult<T>(value)` accepts success/failure result-like objects, `ValidationErrorOptions`, `Error`, and string values. Unrecognized values become a custom `"Invalid value"` failure. It does not throw for normal unknown input, though hostile property access can still throw.
+### Multi-issue aggregation
+
+By default (`abortEarly: false`), object and array validation runs across all fields and elements, collecting all encountered errors in `error.issues`. Callers can pass `{ abortEarly: true }` in `ValidationOptions` to halt execution on the first error.
+
+```ts
+const result = schema.validate(data, { abortEarly: false });
+if (!result.ok) {
+  for (const issue of result.error.issues ?? []) {
+    console.error(issue.path.join("."), issue.message);
+  }
+}
+```
 
 ## Custom Validators
 
-`custom<T>(value, validator, options?)` calls the validator and normalizes its returned or thrown value with `parseResult`. Failure paths are replaced by the path in `options` when supplied.
+`val.custom()` builds reusable, first-class validator schemas that integrate into objects, arrays, and pipelines:
 
 ```ts
-import { custom, err, ok } from "@codenhub/validation";
+import { val } from "@codenhub/validation";
 
-const result = custom<string>(
-  "usr_123",
-  (value) => {
-    if (typeof value !== "string") return err("Expected a string");
-    return value.startsWith("usr_") ? ok(value) : err("Invalid user id");
-  },
-  { path: ["userId"] },
-);
+const hexColor = val.custom<string>((input, ctx) => {
+  if (typeof input !== "string") {
+    return ctx.fail({ code: "invalid_type", message: "Expected hex color string" });
+  }
+  if (!/^#[0-9a-f]{6}$/i.test(input)) {
+    return ctx.fail({ code: "invalid_format", message: "Invalid hex color format" });
+  }
+  return ctx.ok(input.toLowerCase());
+});
+
+const themeSchema = val.object({
+  primary: hexColor,
+  accent: hexColor,
+});
+```
+
+### Refinements & Transformations
+
+Every validator supports `.refine()` and `.transform()`:
+
+```ts
+const passwordSchema = val
+  .string()
+  .min(8)
+  .refine((val) => /[A-Z]/.test(val), "Must contain at least one uppercase letter")
+  .refine((val) => /[0-9]/.test(val), "Must contain at least one number");
+
+const trimmedEmail = val
+  .string()
+  .email()
+  .transform((val) => val.trim().toLowerCase());
+```
+
+Cross-field validation can be attached to object schemas:
+
+```ts
+const passwordResetSchema = val
+  .object({
+    password: val.string().min(8),
+    confirmPassword: val.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+```
+
+### Pipelines
+
+`val.pipe()` combines multiple validators in sequence, piping the output of one step into the next:
+
+```ts
+const portSchema = val.pipe(val.coerce.int(), val.number().port());
 ```
 
 ## Primitive Coercion
 
-The `coerce` object returns `ValidationResult` values:
+Coercion is available both as declarative validator schemas via `val.coerce.*` and as direct functional helpers via `coerce.*`:
 
-| Method                    | Accepted input and result                                                                                                                                     |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `int(value, options?)`    | String-convertible primitives in signed decimal integer form; returns a safe integer. Exponent, decimal, empty, and unsafe values fail with `invalid_format`. |
-| `number(value, options?)` | Signed finite decimal forms, including `.5` and `1.`; exponent, empty, and non-finite values fail with `invalid_format`.                                      |
-| `bool(value, options?)`   | Booleans or case-insensitive strings `true`, `false`, `1`, `0`, `yes`, `no`, `on`, and `off`. Other primitives fail with `invalid_format`.                    |
-| `string(value, options?)` | Stringifies defined primitives. `null`, `undefined`, objects, functions, and failed string conversion return `invalid_type`.                                  |
+| Direct helper                    | Schema factory        | Behavior                                                          |
+| -------------------------------- | --------------------- | ----------------------------------------------------------------- |
+| `coerce.int(value, options?)`    | `val.coerce.int()`    | Coerces decimal integer strings or primitives to a safe integer.  |
+| `coerce.number(value, options?)` | `val.coerce.number()` | Coerces decimal numeric strings or primitives to a finite number. |
+| `coerce.bool(value, options?)`   | `val.coerce.bool()`   | Coerces booleans, `1`/`0`, `yes`/`no`, `on`/`off` to boolean.     |
+| `coerce.string(value, options?)` | `val.coerce.string()` | Coerces defined primitives to string; rejects null and undefined. |
+| `coerce.date(value, options?)`   | `val.coerce.date()`   | Coerces Date instances, timestamps, and ISO strings to a Date.    |
 
-Objects and functions are rejected by all coercers. Symbols may be converted to strings, but are not accepted by numeric or boolean format checks. Coercion does not perform subsequent domain validation; for example, pass an integer result to `val.number(value).port()` to enforce the port range.
-
-The public type exports `ValidationErrorInput`, `ValidationErrorOptions`, `ValidationIssue`, `ValidationError`, `ValidationOptions`, `ValidationOk`, `ValidationErr`, `ValidationResult`, `ValidationErrorCode`, and `ValidationPathSegment` describe these workflows.
+Objects and functions are rejected by all coercers.
 
 <!-- Source: docs/validators.md -->
 
 # Validator Reference
 
-The `val` object exposes `string`, `number`, `object`, and `array` factories. Each accepts `unknown` plus optional `ValidationOptions`. A base-type failure is created immediately and every method on that returned validator reports the same failure. Validators return results and do not throw for ordinary invalid input.
+The `val` object provides declarative schema builders for primitive values, structures, unions, and custom constraints. Every schema extends `BaseValidator` and provides `.validate(input, options?)`, `.is(input)`, modifiers (`.optional()`, `.nullable()`, `.nullish()`, `.default()`), and customization methods (`.refine()`, `.transform()`, `.pipe()`).
 
 ## Strings
 
-`val.string(value, options?)` returns `StringValidators`. Non-string input fails with `invalid_type`.
+`val.string()` returns a `StringValidator`. Non-string input fails with `code: "invalid_type"`.
 
-| Method                                 | Success and constraints                                                                                                                                                           |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `email({ allowPlus = true }?)`         | Trims input, lowercases the public host, and validates common local-part and total length limits. Invalid shape or disallowed plus addressing returns `invalid_format`.           |
-| `url({ forceHttps = false }?)`         | Adds `https://` when absent and returns the normalized public HTTP(S) URL. Private/non-public host shapes, credentials, invalid URLs, or disallowed HTTP return `invalid_format`. |
-| `fileType(allowed)`                    | Returns the lowercase final extension without a dot. An empty normalized allow list returns `invalid_value`; missing or disallowed extensions return `invalid_format`.            |
-| `minLength(length, { trim = false }?)` | Optionally trims and enforces a finite non-negative minimum. Invalid limits return `invalid_value`; short values return `too_small`.                                              |
-| `maxLength(length, { trim = false }?)` | Optionally trims and enforces a finite non-negative maximum. Invalid limits return `invalid_value`; long values return `too_big`.                                                 |
-| `notEmpty({ trim = true }?)`           | Returns the checked value and fails empty strings with `too_small`.                                                                                                               |
-| `matches(pattern, message?)`           | Tests a copied `RegExp`, returns the original string, and uses `invalid_format` plus the optional message on mismatch. Invalid non-RegExp arguments may throw.                    |
+| Method                         | Description                                                                                         |
+| ------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `min(length, message?)`        | Enforces minimum string character length (`too_small`).                                             |
+| `max(length, message?)`        | Enforces maximum string character length (`too_big`).                                               |
+| `length(length, message?)`     | Enforces exact string length (`too_small` / `too_big`).                                             |
+| `nonEmpty(message?)`           | Requires length > 0 (`too_small`).                                                                  |
+| `email(options?, message?)`    | Validates public email address format (`invalid_format`). Supports `{ allowPlus: boolean }`.        |
+| `url(options?, message?)`      | Normalizes and validates public HTTP(S) URL (`invalid_format`). Supports `{ forceHttps: boolean }`. |
+| `uuid(message?)`               | Validates RFC 4122 UUID string (`invalid_format`).                                                  |
+| `regex(pattern, message?)`     | Tests against a `RegExp` pattern (`invalid_format`). Alias: `matches`.                              |
+| `startsWith(prefix, message?)` | Enforces required string prefix (`invalid_format`).                                                 |
+| `endsWith(suffix, message?)`   | Enforces required string suffix (`invalid_format`).                                                 |
+| `includes(search, message?)`   | Enforces substring presence (`invalid_format`).                                                     |
+| `fileType(allowed, message?)`  | Validates file extension against an allow list (`invalid_format`).                                  |
+| `trim()`                       | Transformation trimming whitespace before further checks.                                           |
+| `toLowerCase()`                | Transformation lowercasing the string.                                                              |
+| `toUpperCase()`                | Transformation uppercasing the string.                                                              |
 
 ## Numbers
 
-`val.number(value, options?)` returns `NumberValidators`. Non-number and `NaN` input returns `invalid_type`; infinities return `invalid_value` before any method-specific check.
+`val.number()` returns a `NumberValidator`. Rejects non-numbers, `NaN`, and non-finite input.
 
-`positive`, `negative`, `nonNegative`, `nonPositive`, `nonZero`, `int`, and `safeInt` enforce their named constraint and return `invalid_value` on failure. `finite()` succeeds because non-finite input is rejected by the factory. `port()` accepts integers from 1 through 65535.
+| Method                            | Description                                                                          |
+| --------------------------------- | ------------------------------------------------------------------------------------ |
+| `min(min, message?)`              | Enforces minimum value, inclusive (`too_small`). Alias: `gte`.                       |
+| `max(max, message?)`              | Enforces maximum value, inclusive (`too_big`). Alias: `lte`.                         |
+| `gt(limit, message?)`             | Enforces strictly greater than limit (`too_small`).                                  |
+| `lt(limit, message?)`             | Enforces strictly less than limit (`too_big`).                                       |
+| `range({ min?, max? }, message?)` | Enforces inclusive range bounds (`too_small` / `too_big`).                           |
+| `int(message?)`                   | Enforces integer value (`invalid_value`).                                            |
+| `safeInt(message?)`               | Enforces safe integer value within `Number.MIN_SAFE_INTEGER` and `MAX_SAFE_INTEGER`. |
+| `positive(message?)`              | Requires number > 0 (`invalid_value`).                                               |
+| `negative(message?)`              | Requires number < 0 (`invalid_value`).                                               |
+| `nonNegative(message?)`           | Requires number >= 0 (`invalid_value`).                                              |
+| `nonPositive(message?)`           | Requires number <= 0 (`invalid_value`).                                              |
+| `nonZero(message?)`               | Requires number !== 0 (`invalid_value`).                                             |
+| `multipleOf(step, message?)`      | Enforces number is a multiple of step (`invalid_value`).                             |
+| `port(message?)`                  | Requires integer between 1 and 65535 (`invalid_value`).                              |
+| `finite(message?)`                | Requires finite number.                                                              |
 
-`range({ min?, max? })` uses inclusive bounds. Non-finite bounds or `min > max` return `invalid_value`; values outside valid bounds return `too_small` or `too_big`.
+## Booleans
+
+`val.boolean()` returns a `BooleanValidator`. Rejects non-boolean input with `invalid_type`.
+
+| Method            | Description                                 |
+| ----------------- | ------------------------------------------- |
+| `true(message?)`  | Requires literal `true` (`invalid_value`).  |
+| `false(message?)` | Requires literal `false` (`invalid_value`). |
+
+## Dates
+
+`val.date()` returns a `DateValidator`. Rejects non-Date instances and invalid dates with `NaN` timestamp.
+
+| Method                   | Description                                        |
+| ------------------------ | -------------------------------------------------- |
+| `min(minDate, message?)` | Requires date on or after `minDate` (`too_small`). |
+| `max(maxDate, message?)` | Requires date on or before `maxDate` (`too_big`).  |
+
+## Literals & Enums
+
+- `val.literal(value, message?)`: Requires exact equality (`===`) with string, number, or boolean literal.
+- `val.enum(values, message?)`: Accepts an array or tuple of allowed string values (`invalid_value`).
+
+## Any & Unknown
+
+- `val.any()`: Accepts any input, typed as `any`.
+- `val.unknown()`: Accepts any input, typed as `unknown`.
 
 ## Objects
 
-`val.object(value, options?)` returns `ObjectValidators`. Only objects with `Object.prototype` or a null prototype are accepted; arrays, `null`, functions, and class instances return `invalid_type`.
+`val.object(shape)` creates an `ObjectValidator` that validates plain object shapes. Nested objects and properties validate recursively with full path reporting.
 
-- `plain()` returns the original `PlainObject`.
-- `hasKeys(keys)` requires each string as an own property. The first missing key returns `missing_key` and is appended to the error path. Inherited properties do not satisfy the check.
+- `strict(message?)`: Rejects objects with unknown keys with `invalid_value`.
+- `passthrough()`: Preserves unknown keys in output.
+- `strip()`: Strips unknown keys (default mode).
+- `extend(extraShape)`: Merges two object schemas into a combined schema.
+- `pick(keys)`: Creates a new schema retaining only the specified keys.
+- `omit(keys)`: Creates a new schema omitting the specified keys.
+- `partial()`: Creates a new schema where every property is made optional.
 
 ## Arrays
 
-`val.array<T>(value, options?)` returns `ArrayValidators<T>`. Non-arrays return `invalid_type`. `minLength(length)` and `maxLength(length)` require finite, non-negative limits; invalid limits return `invalid_value`, while length failures return `too_small` or `too_big`. `notEmpty()` returns `too_small` for an empty array. Successful array validators return the original array, not a copy.
+`val.array(elementValidator?)` creates an `ArrayValidator`. When an element validator is supplied, each item is validated and element issues record child indices (`path: ["items", 0]`).
 
-`StringValidators`, `NumberValidators`, `ObjectValidators`, `ArrayValidators<T>`, and `PlainObject` are exported for reusable consumer type boundaries.
+- `min(length, message?)`: Minimum item count (`too_small`).
+- `max(length, message?)`: Maximum item count (`too_big`).
+- `length(length, message?)`: Exact item count.
+- `nonEmpty(message?)`: Requires at least one element (`too_small`).
+
+## Records, Tuples, and Unions
+
+- `val.record(valueValidator, keyValidator?)`: Validates arbitrary key-value dictionaries.
+- `val.tuple([v1, v2, ...])`: Validates fixed-length arrays where each element matches its positional validator.
+- `val.union([v1, v2, ...])`: Validates that at least one branch succeeds. If all branches fail, combines branch issues into a failure.
+
+## Modifiers (All Validators)
+
+Every validator provides common modifier methods:
+
+- `.optional()`: Accepts `undefined` or the valid value (`T | undefined`).
+- `.nullable()`: Accepts `null` or the valid value (`T | null`).
+- `.nullish()`: Accepts `null`, `undefined`, or the valid value (`T | null | undefined`).
+- `.default(fallback)`: Replaces `undefined` with `fallback` (or `fallback()`).
