@@ -88,6 +88,9 @@
        slab on everything the edge axis rests at zero. */
     --ui-shadow-edge: initial;
     --ui-backdrop: none;
+    --ui-surface-ground: initial;
+    --ui-surface-shadow: initial;
+    --ui-bg-alpha: 1;
     --ui-surface-image: initial;
 
     /* The control ink glass and chunky tile name, cleared so a region nested

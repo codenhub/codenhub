@@ -120,6 +120,9 @@
     --ui-active-translate-x: initial;
     --ui-active-translate-y: initial;
     --ui-backdrop: none;
+    --ui-surface-ground: initial;
+    --ui-surface-shadow: initial;
+    --ui-bg-alpha: 1;
     --ui-surface-image: initial;
 
     /* Consumer-supplied. The package ships no font binary, so the aesthetic has no

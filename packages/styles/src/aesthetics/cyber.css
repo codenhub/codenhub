@@ -110,6 +110,8 @@
     --ui-shadow-inset: ;
     --ui-shadow-edge: initial;
     --ui-backdrop: none;
+    --ui-surface-ground: initial;
+    --ui-surface-shadow: initial;
     --ui-surface-image: initial;
     --ui-bg-alpha: 1;
 
