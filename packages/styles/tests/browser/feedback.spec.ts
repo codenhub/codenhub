@@ -76,7 +76,7 @@ test.describe("feedback", () => {
      element's own background -- so the track hand-reimplements the formula the
      way `.quote` does, and `composition: "none"` drops it from `axes.spec.ts`'s
      generic probe the same way it drops `.quote`. This is that component's own
-     dedicated coverage instead. See docs/internal/progress-presentation-axes.md. */
+     dedicated coverage instead. See docs/internal/model.md#components-that-do-not-take-the-whole-of-box. */
   test("renders every progress track presentation", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 

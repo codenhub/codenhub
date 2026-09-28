@@ -9,7 +9,7 @@
    aesthetic's token class sits in `components`, below every utility, so a
    consumer's own utility or unlayered CSS beats it; the solo class stays
    unlayered, because it has to beat a foreign component's unlayered CSS. See
-   docs/internal/cascade-layers.md. */
+   docs/internal/model.md#cascade-layers. */
 @layer theme, base, components, utilities;
 
 @layer components {
@@ -32,7 +32,7 @@
        line: 600 in light, where the tile's 400 left a field at 1.65:1 against
        the page (2.87:1 now, a checkbox 8.63:1), and 400 in dark, where the
        tile's 600 sat too close to the page (3.40:1 now, 8.62:1). See
-       docs/internal/boundary-contrast.md. */
+       docs/internal/model.md#presentation. */
     --ui-control-ink: light-dark(var(--color-neutral-600), var(--color-neutral-400));
 
     /* One knob for both radii, where glass splits them: a tile and the button
@@ -47,6 +47,7 @@
     --ui-border-width: 2px;
     --ui-border-max: 100px;
     --ui-line-style: initial;
+    --ui-rule-style: initial;
 
     /* What makes the bar a *shade*, not a repeat. `box` mixes the bar
        `color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink), var(--elevation-color))`,
@@ -71,14 +72,8 @@
     --ui-shadow-y: var(--_tile-lift);
     --ui-shadow-blur: 0px;
     --ui-shadow-spread: 0px;
-    /* No second depth layer and no halo, cleared so a region nested inside another
+    /* No halo, cleared so a region nested inside another
        aesthetic does not inherit one. */
-    --ui-shadow-2-x: initial;
-    --ui-shadow-2-y: initial;
-    --ui-shadow-2-blur: initial;
-    --ui-shadow-2-spread: initial;
-    --ui-shadow-2-ink: initial;
-    --ui-shadow-2-inset: initial;
     --ui-halo-blur: initial;
     --ui-halo-spread: initial;
     --ui-halo-ink: initial;
@@ -119,6 +114,8 @@
     --ui-shadow-inset: ;
     --ui-shadow-edge: initial;
     --ui-backdrop: none;
+    --ui-surface-ground: initial;
+    --ui-surface-shadow: initial;
     --ui-surface-image: initial;
     --ui-bg-alpha: 1;
 
@@ -133,7 +130,7 @@
        rather than as a button, and a badge beside it takes the same label. Label
        tokens rather than a selector list naming `.btn`: a selector list either loses to `.btn`'s own
        weight or beats a consumer's `font-*` utility, depending on where it is
-       layered, and a token does neither. See docs/internal/cascade-layers.md (L5).
+       layered, and a token does neither. See docs/internal/model.md#cascade-layers.
 
        Casing is deliberately not here. The chunky-tile look is usually drawn with
        uppercase labels and an earlier draft set `text-transform`, but how a label
@@ -150,7 +147,7 @@
 }
 
 /* Solo: the same look painted onto the one element carrying the class, for an
-   element the package does not style. See docs/internal/solo-utilities.md and
+   element the package does not style. See docs/internal/model.md#solo-classes and
    the note on `.glass-solo`: own knobs and foundation tokens with literal
    fallbacks, never a shared `--ui-*`, `--intent-*`, or `--elevation-color`
    token, unlayered, and not for this package's own components. */

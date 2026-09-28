@@ -28,6 +28,8 @@ const AESTHETICS = [
   { label: "Pixel", value: "pixel" },
   { label: "Chunky tile", value: "chunky-tile" },
   { label: "Cyber", value: "cyber" },
+  { label: "Sketch", value: "sketch" },
+  { label: "Sketch rounded", value: "sketch sketch-rounded" },
 ];
 
 const params = new URLSearchParams(window.location.search);
@@ -54,11 +56,12 @@ const applyAesthetic = (value) => {
     return;
   }
 
-  for (const aesthetic of AESTHETICS) {
-    if (aesthetic.value) {
-      root.classList.toggle(aesthetic.value, aesthetic.value === value);
-    }
-  }
+  /* A value is a class list, so a modifier such as `.sketch-rounded` is
+     previewed with the aesthetic it belongs to. */
+  const classesOf = (entry) => entry.split(" ").filter(Boolean);
+
+  root.classList.remove(...AESTHETICS.flatMap((aesthetic) => classesOf(aesthetic.value)));
+  root.classList.add(...classesOf(value));
 
   root.dataset.aesthetic = value || "default";
 };

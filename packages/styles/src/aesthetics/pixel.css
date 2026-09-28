@@ -11,7 +11,7 @@
    aesthetic's token class sits in `components`, below every utility, so a
    consumer's own utility or unlayered CSS beats it; the solo class stays
    unlayered, because it has to beat a foreign component's unlayered CSS. See
-   docs/internal/cascade-layers.md. */
+   docs/internal/model.md#cascade-layers. */
 @layer theme, base, components, utilities;
 
 @layer components {
@@ -37,6 +37,7 @@
     --ui-border-width: 2px;
     --ui-border-max: 0px;
     --ui-line-style: initial;
+    --ui-rule-style: initial;
 
     /* The ring is one unit deep, which is exactly the corner cut, so the staircase
        is covered and the line does not read as broken at the corners. Spread is not
@@ -50,14 +51,8 @@
        two `color-mix()` results that WebKit resolves as zero (see `box`). */
     --ui-shadow-edge: ;
     --ui-shadow-spread: var(--_pixel-unit);
-    /* No second depth layer and no halo, cleared so a region nested inside another
+    /* No halo, cleared so a region nested inside another
        aesthetic does not inherit one. */
-    --ui-shadow-2-x: initial;
-    --ui-shadow-2-y: initial;
-    --ui-shadow-2-blur: initial;
-    --ui-shadow-2-spread: initial;
-    --ui-shadow-2-ink: initial;
-    --ui-shadow-2-inset: initial;
     --ui-halo-blur: initial;
     --ui-halo-spread: initial;
     --ui-halo-ink: initial;
@@ -118,6 +113,9 @@
     --ui-active-translate-x: initial;
     --ui-active-translate-y: initial;
     --ui-backdrop: none;
+    --ui-surface-ground: initial;
+    --ui-surface-shadow: initial;
+    --ui-bg-alpha: 1;
     --ui-surface-image: initial;
 
     /* Consumer-supplied. The package ships no font binary, so the aesthetic has no
@@ -138,7 +136,7 @@
 }
 
 /* Solo: the same look painted onto the one element carrying the class, for an
-   element the package does not style. See docs/internal/solo-utilities.md and
+   element the package does not style. See docs/internal/model.md#solo-classes and
    the note on `.glass-solo`: own knobs and foundation tokens with literal
    fallbacks, never a shared `--ui-*`, `--intent-*`, or `--elevation-color`
    token, unlayered, and not for this package's own components. */

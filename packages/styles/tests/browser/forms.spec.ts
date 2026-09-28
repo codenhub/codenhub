@@ -22,7 +22,7 @@ test.describe("forms", () => {
      layered at any specificity. When the control classes joined the reset,
      every invalid field drew a plain grey line and the only thing still marking
      the error was the hint underneath it. Intent now sits in `components` and
-     the rule in `utilities` at 0-2-0 (docs/internal/cascade-layers.md). Asserting
+     the rule in `utilities` at 0-2-0 (docs/internal/model.md#cascade-layers). Asserting
      "not transparent" is what let that through, so this names the color. */
   test("marks an invalid control destructive over any intent class", async ({ page }) => {
     await page.goto(FORMS_URL);
@@ -131,6 +131,35 @@ test.describe("forms", () => {
     );
     expect(Number.parseFloat(styles.inheritedBorderWidth)).toBeGreaterThan(0);
     expect(isTransparent(styles.inheritedBorderColor)).toBe(false);
+  });
+
+  /* The browser paints the open list over the select's own background, and a
+     ghost select has none, so the options carry an opaque ground of their own
+     that their text reads on, in both themes, at the 4.5:1 WCAG 1.4.3 asks of
+     normal text. */
+  test("paints a select's options on an opaque ground their text reads on", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    for (const theme of ["light", "dark"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one theme, then the other, on one page.
+      const option = await page.evaluate((name) => {
+        document.documentElement.classList.remove("light", "dark");
+        document.documentElement.classList.add(name);
+        const select = document.createElement("select");
+
+        select.className = "select";
+        select.innerHTML = "<option>One</option>";
+        document.querySelector('[data-testid="preview-root"]')!.append(select);
+        const styles = getComputedStyle(select.options[0]!);
+        const result = { background: styles.backgroundColor, color: styles.color };
+
+        select.remove();
+        return result;
+      }, theme);
+
+      expect(readSrgb(option.background).alpha, `${theme} ground`).toBe(1);
+      expect(getContrastRatio(option.color, option.background), `${theme} text on ground`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   /* `none` is only valid as an entire `box-shadow` value. Composing a focus ring

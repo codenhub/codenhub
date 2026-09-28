@@ -166,7 +166,7 @@
    (`--_fill-cap`, `--_edge-floor`) or a state's intent slots, so nothing a
    consumer writes competes with them. They used to be unlayered, which stopped
    working once `/components` and `/native` put the components in `utilities`
-   too. See docs/internal/cascade-layers.md (L4). */
+   too. See docs/internal/model.md#cascade-layers. */
 @layer utilities {
   /* A fill class on the element names its own cap; the 6% cascade cap in the
      utility is for a container reaching a field nobody classed. Both raise
@@ -346,6 +346,17 @@
     calc(100% - 0.6875rem) center;
   background-repeat: no-repeat;
   background-size: 0.3125rem 0.3125rem;
+
+  /* The open list is painted by the browser, over the select's own background
+     when it has one. A ghost select has none, so Chromium falls back to its
+     default popup -- white on Windows -- while the options inherit the select's
+     text, near-white in the dark theme: white on white. The options take the
+     page's ground and text instead, which follow the theme. */
+  & option,
+  & optgroup {
+    background-color: var(--color-background);
+    color: var(--color-text);
+  }
 }
 
 /* A wrapper that owns the field box so a control can carry adornments beside it
@@ -468,14 +479,11 @@
   --_d-border: 100%;
   --_d-elevation: 0;
 
-  /* Capped at its own radius: a control radius is sized for a 40px control, and
-     14px of it on a 16px box renders as a circle, which is the one shape a
-     checkbox must not be. A squaring aesthetic still reaches it, through the
-     chip corner first -- `.cyber` squares chips outright, which is also what
-     tells its checkbox from its diamond radio. */
-  border-radius: min(
-    var(--ui-radius-tight, var(--ui-radius, var(--ui-corner, var(--radius-small)))),
-    var(--radius-small)
+  /* A chip keeps a small default even under a large control corner, but an
+     explicit tight radius is a complete shape, including elliptical corners. */
+  border-radius: var(
+    --ui-radius-tight,
+    min(var(--ui-radius, var(--ui-corner, var(--radius-small))), var(--radius-small))
   );
 
   /* Chip geometry: the tight silhouette, and an inset edge no thicker than the
@@ -517,7 +525,9 @@
 /* The same control with a round silhouette and a dot for its mark, and the
    same fill cap raise given on `checkbox`. */
 @utility radio {
-  @apply text-control inline-grid size-4 cursor-pointer place-content-center rounded-full;
+  @apply text-control inline-grid size-4 cursor-pointer place-content-center;
+
+  border-radius: var(--ui-radius-pill, calc(infinity * 1px));
 
   --_d-fill: 12%;
   --_d-fg-on-fill: 0%;

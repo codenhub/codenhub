@@ -780,6 +780,23 @@ test("an aesthetic names a component only with a recorded reason", async () => {
   expect(problems).toEqual([]);
 });
 
+/* Sketch writes its rotation onto components, so it has to skip a region of
+   another aesthetic nested inside it or overrule that aesthetic's corners. Every
+   list of aesthetics it names is that exclusion, and a list missing one is how a
+   new aesthetic would silently take sketch's outlines. */
+test("sketch excludes every other aesthetic from its rotation", async () => {
+  const source = withoutComments(await read("src/aesthetics/sketch.css"));
+  const others = (registry.aesthetics ?? []).map((aesthetic) => aesthetic.class).filter((name) => name !== "sketch");
+  const lists = [...source.matchAll(/:is\(([^()]*)\)/g)]
+    .map(([, list]) => list!.split(",").map((selector) => selector.trim().replace(/^\./, "")))
+    .filter((names) => names.some((name) => others.includes(name)));
+
+  expect(lists.length).toBeGreaterThan(0);
+  for (const names of lists) {
+    expect(names.toSorted()).toEqual(others.toSorted());
+  }
+});
+
 /* A solo class is the aesthetic painted onto one element the package does not
    style, so it has to work with nothing else in scope. `--ui-*` and
    `--elevation-color` belong to whichever aesthetic an ancestor carries -- a
@@ -787,7 +804,7 @@ test("an aesthetic names a component only with a recorded reason", async () => {
    inside `.chunky-tile` it would cast a black shadow -- and `--intent-*` exists only where
    the package's own reset declared it. Reading either would make the look
    depend on surroundings the class exists to ignore. See
-   docs/internal/solo-utilities.md (S2). */
+   docs/internal/model.md#solo-classes. */
 test("every aesthetic ships its solo class, and the solo class reads no shared token", async () => {
   const problems: string[] = [];
 
@@ -843,7 +860,7 @@ test("every aesthetic declares a whole shadow geometry", async () => {
 /* The label weight and tracking are declared by chunky tile and cleared with
    `initial` by every other aesthetic, so an aesthetic nested inside chunky tile
    keeps the button's and the badge's own label rather than inheriting chunky
-   tile's heavier one. See docs/internal/cascade-layers.md (L5). */
+   tile's heavier one. See docs/internal/model.md#cascade-layers. */
 test("every aesthetic declares or clears the label weight and tracking", async () => {
   const problems: string[] = [];
 
@@ -877,7 +894,7 @@ test("every aesthetic declares or clears the label weight and tracking", async (
 /* `--ui-control-ink` is named by the aesthetics whose surface ink does not suit
    a control's boundary and cleared with `initial` by every other, so a region
    nested inside glass or chunky tile draws its controls in its own ink. See
-   docs/internal/boundary-contrast.md. */
+   docs/internal/model.md#presentation. */
 test("every aesthetic names or clears the control ink", async () => {
   const named = new Set(["glass", "chunky-tile"]);
   const problems: string[] = [];
@@ -1066,7 +1083,9 @@ test("both intent resets and the root floor declare every slot the neutral inten
 test("every aesthetic's complete-shadow flag matches its stylesheet", async () => {
   const problems = (await aestheticSources())
     .map(({ aesthetic, name, source }) => ({
-      complete: /--ui-(surface-)?shadow:/.test(withoutComments(source)),
+      complete: [...withoutComments(source).matchAll(/--ui-(?:surface-)?shadow:\s*([^;]+);/g)].some(
+        ([, value]) => value.trim() !== "initial",
+      ),
       declared: aesthetic.completeShadow,
       name,
     }))

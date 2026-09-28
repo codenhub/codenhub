@@ -26,7 +26,7 @@
      Case and shadow fall back to `none`, which is what a button already does:
      the user agent stops both inheriting into one. The shadow is written
      without a colour, so it takes the label's own and cannot lower its
-     contrast. See docs/internal/cascade-layers.md (L5). */
+     contrast. See docs/internal/model.md#cascade-layers. */
   font-weight: var(--ui-label-weight, var(--font-weight-semibold));
   letter-spacing: var(--ui-label-tracking);
   text-transform: var(--ui-label-case, none);
@@ -109,10 +109,10 @@
     }
   }
 
-  /* A pill is a shape the author asked for, so it outranks the aesthetic's
-     radius. It still takes the corner shape from `box`, so under a bevelling
-     aesthetic the full radius cuts to points at both ends. */
+  /* A pill normally takes the round material ahead of the box radius. Sketch
+     gives this token the button's own box outline; a bevel still cuts the full
+     radius to points under cyber. */
   &.pill {
-    @apply rounded-full;
+    border-radius: var(--ui-radius-pill, calc(infinity * 1px));
   }
 }

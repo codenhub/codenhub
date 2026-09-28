@@ -12,7 +12,7 @@
    aesthetic's token class sits in `components`, below every utility, so a
    consumer's own utility or unlayered CSS beats it; the solo class stays
    unlayered, because it has to beat a foreign component's unlayered CSS. See
-   docs/internal/cascade-layers.md. */
+   docs/internal/model.md#cascade-layers. */
 @layer theme, base, components, utilities;
 
 @layer components {
@@ -27,6 +27,7 @@
     --ui-border-width: 1px;
     --ui-border-max: 100px;
     --ui-line-style: initial;
+    --ui-rule-style: initial;
 
     /* Glass catches light from above whatever is under it, so the edge is a light
        hairline in both themes rather than a theme-following ink. */
@@ -37,7 +38,7 @@
        theme's ink at 55% instead: translucent, so it tints whatever is behind
        the pane rather than drawing a flat grey, and 6.31:1 on a checkbox, 2.31:1
        on a field's 60% resting line, in light. See
-       docs/internal/boundary-contrast.md. */
+       docs/internal/model.md#presentation. */
     --ui-control-ink: light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55));
 
     --ui-bg-alpha: 0.8;
@@ -53,14 +54,8 @@
     --ui-shadow-y: 0px;
     --ui-shadow-blur: 0px;
     --ui-shadow-spread: 0px;
-    /* No second depth layer and no halo, cleared so a region nested inside another
+    /* No halo, cleared so a region nested inside another
        aesthetic does not inherit one. */
-    --ui-shadow-2-x: initial;
-    --ui-shadow-2-y: initial;
-    --ui-shadow-2-blur: initial;
-    --ui-shadow-2-spread: initial;
-    --ui-shadow-2-ink: initial;
-    --ui-shadow-2-inset: initial;
     --ui-halo-blur: initial;
     --ui-halo-spread: initial;
     --ui-halo-ink: initial;
@@ -120,7 +115,7 @@
 /* Solo: the same look painted onto the one element carrying the class, for an
    element the package does not style -- a toast from another library, a plain
    `<div>` on a page that never loaded the base stylesheet. See
-   docs/internal/solo-utilities.md.
+   docs/internal/model.md#solo-classes.
 
    It reads the aesthetic's own knobs and the theme's foundation tokens, each
    with its shipped literal as the fallback, and never a `--ui-*`, `--intent-*`,

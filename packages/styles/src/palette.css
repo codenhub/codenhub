@@ -3,7 +3,7 @@
    `docs/internal/generated-palette.md` for what this is and why it exists.
 
    Tokens, so they sit in `theme` with the rest, behind the package's layer
-   order -- see `src/theme.css` and docs/internal/cascade-layers.md. */
+   order -- see `src/theme.css` and docs/internal/model.md#cascade-layers. */
 @layer theme, base, components, utilities;
 
 @layer theme {

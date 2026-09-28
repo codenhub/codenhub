@@ -1,5 +1,5 @@
 /* Cyber: bevelled corners, a thin bright edge, and a glow in the component's own
-   colour. See docs/internal/cyber-aesthetic.md for the decision.
+   colour. See docs/internal/model.md#cyber for the decision.
 
    Tier 1 only. The bevel is `corner-shape`, not `clip-path`: a clip removes
    every outer shadow, so a clipped chamfer has nothing left to glow, and an
@@ -11,7 +11,7 @@
    aesthetic's token class sits in `components`, below every utility, so a
    consumer's own utility or unlayered CSS beats it; the solo class stays
    unlayered, because it has to beat a foreign component's unlayered CSS. See
-   docs/internal/cascade-layers.md. */
+   docs/internal/model.md#cascade-layers. */
 @layer theme, base, components, utilities;
 
 @layer components {
@@ -66,6 +66,7 @@
     --ui-border-width: 1px;
     --ui-border-max: 100px;
     --ui-line-style: initial;
+    --ui-rule-style: initial;
 
     /* The glow is light, not depth, so it is the halo: the component's own intent
        colour at 40%, blurred, with no offset. Elevation does not scale it, so
@@ -81,14 +82,6 @@
     --ui-halo-blur: var(--_cyber-glow);
     --ui-halo-spread: 0px;
     --ui-halo-ink: 40%;
-    /* No second depth layer, cleared so a region nested inside another
-       aesthetic does not inherit one. */
-    --ui-shadow-2-x: initial;
-    --ui-shadow-2-y: initial;
-    --ui-shadow-2-blur: initial;
-    --ui-shadow-2-spread: initial;
-    --ui-shadow-2-ink: initial;
-    --ui-shadow-2-inset: initial;
 
     /* The glow holds still under the pointer and under a press; the press is the
        base scale, restated because a region nested inside another aesthetic must
@@ -108,6 +101,8 @@
     --ui-shadow-inset: ;
     --ui-shadow-edge: initial;
     --ui-backdrop: none;
+    --ui-surface-ground: initial;
+    --ui-surface-shadow: initial;
     --ui-surface-image: initial;
     --ui-bg-alpha: 1;
 
@@ -149,7 +144,7 @@
 }
 
 /* Solo: the same look painted onto the one element carrying the class, for an
-   element the package does not style. See docs/internal/solo-utilities.md and
+   element the package does not style. See docs/internal/model.md#solo-classes and
    the note on `.glass-solo`: own knobs and foundation tokens with literal
    fallbacks, never a shared `--ui-*`, `--intent-*`, or `--elevation-color`
    token, unlayered, and not for this package's own components. */

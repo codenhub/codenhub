@@ -88,11 +88,13 @@
 
   border-color: var(--divider-color);
   border-top-width: var(--divider-width);
+  border-top-style: var(--ui-rule-style, var(--ui-line-style, solid));
 
   &.vertical {
     @apply h-auto w-0 self-stretch border-s border-t-0;
 
     border-inline-start-width: var(--divider-width);
+    border-inline-start-style: var(--ui-rule-style, var(--ui-line-style, solid));
   }
 }
 

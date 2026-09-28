@@ -8,7 +8,7 @@
    aesthetic's token class sits in `components`, below every utility, so a
    consumer's own utility or unlayered CSS beats it; the solo class stays
    unlayered, because it has to beat a foreign component's unlayered CSS. See
-   docs/internal/cascade-layers.md. */
+   docs/internal/model.md#cascade-layers. */
 @layer theme, base, components, utilities;
 
 @layer components {
@@ -28,6 +28,7 @@
     --ui-border-width: 2px;
     --ui-border-max: 100px;
     --ui-line-style: initial;
+    --ui-rule-style: initial;
 
     /* Hard, unblurred, and offset. Scaled by each component's own elevation, so
        the registry decides which components sit on a slab and `.flat` takes one
@@ -40,14 +41,8 @@
     --ui-shadow-y: var(--_neo-offset);
     --ui-shadow-blur: 0px;
     --ui-shadow-spread: 0px;
-    /* No second depth layer and no halo, cleared so a region nested inside another
+    /* No halo, cleared so a region nested inside another
        aesthetic does not inherit one. */
-    --ui-shadow-2-x: initial;
-    --ui-shadow-2-y: initial;
-    --ui-shadow-2-blur: initial;
-    --ui-shadow-2-spread: initial;
-    --ui-shadow-2-ink: initial;
-    --ui-shadow-2-inset: initial;
     --ui-halo-blur: initial;
     --ui-halo-spread: initial;
     --ui-halo-ink: initial;
@@ -86,6 +81,9 @@
        slab on everything the edge axis rests at zero. */
     --ui-shadow-edge: initial;
     --ui-backdrop: none;
+    --ui-surface-ground: initial;
+    --ui-surface-shadow: initial;
+    --ui-bg-alpha: 1;
     --ui-surface-image: initial;
 
     /* The control ink glass and chunky tile name, cleared so a region nested
@@ -118,7 +116,7 @@
 }
 
 /* Solo: the same look painted onto the one element carrying the class, for an
-   element the package does not style. See docs/internal/solo-utilities.md and
+   element the package does not style. See docs/internal/model.md#solo-classes and
    the note on `.glass-solo`: own knobs and foundation tokens with literal
    fallbacks, never a shared `--ui-*`, `--intent-*`, or `--elevation-color`
    token, unlayered, and not for this package's own components. */

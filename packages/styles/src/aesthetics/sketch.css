@@ -1,0 +1,326 @@
+/* Sketch: uneven elliptical corners, a solid ink edge, and a small hard shadow.
+   The handwriting face is consumer-supplied, so this file has no font asset or
+   network side effect. Load after the base stylesheet. */
+
+/* The layer map, stated before anything uses a layer -- see `theme.css`. The
+   aesthetic's token class sits in `components`, below every utility, so a
+   consumer's own utility or unlayered CSS beats it; the solo class stays
+   unlayered, because it has to beat a foreign component's unlayered CSS. See
+   docs/internal/model.md#cascade-layers. */
+@layer theme, base, components, utilities;
+
+@layer components {
+  .sketch {
+    /* Complete radii are taken as written, without the size step or corner
+       pattern. Chips use a smaller version of the same irregular outline.
+       Surfaces use sharp, hand-drawn square contours tailored for container
+       dimensions to avoid interior padding encroachment. Knobs follow R8. */
+    --ui-corner: initial;
+    --ui-corner-surface: initial;
+    --ui-corner-tl: initial;
+    --ui-corner-tr: initial;
+    --ui-corner-br: initial;
+    --ui-corner-bl: initial;
+    --ui-radius: var(--sketch-radius, 255px 15px 225px 15px / 15px 225px 15px 255px);
+    --ui-radius-surface: var(--sketch-radius-surface, 80px 4px 75px 5px / 3px 70px 4px 80px);
+    --ui-radius-pill: var(--sketch-radius-pill, 20px 22px 21px 19px / 20px 22px 21px 19px);
+    --ui-radius-tight: 11px 1px 7px 2px / 2px 7px 1px 11px;
+    --ui-corner-shape: round;
+
+    --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
+    --ui-control-ink: initial;
+    --ui-border-width: 1px;
+    --ui-border-max: 100px;
+    --ui-line-style: solid;
+    --ui-rule-style: initial;
+
+    --ui-shadow-ink: 0%;
+    /* The foundation depth colour is restated so a sketch region nested inside
+       cyber does not inherit cyber's transparent depth. */
+    --elevation-color: light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55));
+    --ui-shadow-x: 2px;
+    --ui-shadow-y: 2px;
+    --ui-shadow-blur: 0px;
+    --ui-shadow-spread: 0px;
+    --ui-shadow-inset: ;
+    --ui-shadow-edge: initial;
+    --ui-halo-blur: initial;
+    --ui-halo-spread: initial;
+    --ui-halo-ink: initial;
+    --ui-focus-inset: initial;
+
+    --ui-active-shadow-x: initial;
+    --ui-active-shadow-y: initial;
+    --ui-active-transform: scale(0.97);
+    --ui-active-translate-x: initial;
+    --ui-active-translate-y: initial;
+    --ui-hover-transform: none;
+    --ui-clip: none;
+    --ui-clip-tight: none;
+    --ui-backdrop: none;
+    --ui-surface-image: initial;
+    --ui-surface-ground: initial;
+    --ui-surface-shadow: initial;
+    --ui-bg-alpha: 1;
+    --ui-label-weight: initial;
+    --ui-label-tracking: initial;
+    --ui-label-case: initial;
+    --ui-label-shadow: initial;
+
+    font-family: var(--font-sketch, cursive);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sketch {
+      --ui-active-transform: none;
+    }
+  }
+
+  /* Rounded variant: bounded elliptical corners, so the top and bottom edges of
+     a wide element stay straight instead of bulging into an egg. On the region
+     with `.sketch`, or on one component inside it. Knobs follow R8. */
+  .sketch-rounded {
+    --ui-radius: var(--sketch-radius-rounded, 26px 10px 24px 11px / 12px 23px 11px 20px);
+    --ui-radius-surface: var(--sketch-radius-surface-rounded, 38px 16px 36px 17px / 16px 34px 17px 32px);
+    --ui-radius-pill: var(--sketch-radius-pill, 24px 16px 23px 17px / 17px 21px 16px 20px);
+    --ui-radius-tight: 9px 3px 8px 4px / 4px 8px 3px 7px;
+  }
+
+  /* One region token gives every element the same outline, so the rotation and
+     the dashed accents are written on components, which the registry records.
+     The root is a component carrying either class, or one inside either region
+     and not inside another aesthetic nested there, which keeps its own
+     material. The list below is the one place other aesthetics are named, and
+     `registry.test.ts` fails when one is missing from it.
+
+     Rotation is by sibling position, and a field's control takes its field's
+     position instead of its own, so stacked rows alternate. It is stable for a
+     given DOM order. A knob, when set, is one outline for every position. */
+  :is(
+    .sketch,
+    .sketch-rounded,
+    :is(.sketch, .sketch-rounded)
+      :not(
+        :is(.sketch, .sketch-rounded) :is(.neobrutalism, .glass, .pixel, .chunky-tile, .cyber),
+        :is(.sketch, .sketch-rounded) :is(.neobrutalism, .glass, .pixel, .chunky-tile, .cyber) *
+      )
+  ) {
+    /* The pointed outlines: controls, fields, surfaces, and chips. */
+    &:is(.sketch, .sketch *):not(.sketch-rounded, .sketch-rounded *) {
+      &:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table) {
+        &:nth-child(4n + 2) {
+          --ui-radius: var(--sketch-radius, 18px 240px 15px 255px / 240px 15px 255px 18px);
+        }
+
+        &:nth-child(4n + 3) {
+          --ui-radius: var(--sketch-radius, 245px 220px 15px 18px / 18px 15px 245px 235px);
+        }
+
+        &:nth-child(4n) {
+          --ui-radius: var(--sketch-radius, 18px 250px 225px 15px / 245px 15px 18px 235px);
+        }
+      }
+
+      &:is(.ipt, .textarea, .select, .input-group) {
+        .field:nth-child(4n + 1) & {
+          --ui-radius: var(--sketch-radius, 255px 15px 225px 15px / 15px 225px 15px 255px);
+        }
+
+        .field:nth-child(4n + 2) & {
+          --ui-radius: var(--sketch-radius, 18px 240px 15px 255px / 240px 15px 255px 18px);
+        }
+
+        .field:nth-child(4n + 3) & {
+          --ui-radius: var(--sketch-radius, 245px 220px 15px 18px / 18px 15px 245px 235px);
+        }
+
+        .field:nth-child(4n) & {
+          --ui-radius: var(--sketch-radius, 18px 250px 225px 15px / 245px 15px 18px 235px);
+        }
+      }
+
+      &:is(.card, .panel, .alert) {
+        &:nth-child(4n + 2) {
+          --ui-radius-surface: var(--sketch-radius-surface, 4px 75px 5px 80px / 75px 3px 80px 4px);
+        }
+
+        &:nth-child(4n + 3) {
+          --ui-radius-surface: var(--sketch-radius-surface, 75px 70px 4px 5px / 4px 3px 75px 70px);
+        }
+
+        &:nth-child(4n) {
+          --ui-radius-surface: var(--sketch-radius-surface, 5px 80px 75px 4px / 75px 4px 5px 70px);
+        }
+      }
+
+      &:is(.badge, .kbd, .code, .checkbox, .switch, .progress) {
+        &:nth-child(4n + 2) {
+          --ui-radius-tight: 2px 8px 1px 10px / 8px 2px 10px 1px;
+        }
+
+        &:nth-child(4n + 3) {
+          --ui-radius-tight: 8px 2px 10px 1px / 1px 9px 2px 8px;
+        }
+
+        &:nth-child(4n) {
+          --ui-radius-tight: 1px 10px 2px 7px / 9px 1px 8px 2px;
+        }
+      }
+    }
+
+    /* The rounded outlines, in the same four places. */
+    &:is(.sketch-rounded, .sketch-rounded *) {
+      &:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table) {
+        &:nth-child(4n + 2) {
+          --ui-radius: var(--sketch-radius-rounded, 11px 25px 12px 24px / 23px 11px 22px 12px);
+        }
+
+        &:nth-child(4n + 3) {
+          --ui-radius: var(--sketch-radius-rounded, 24px 12px 26px 10px / 11px 23px 12px 22px);
+        }
+
+        &:nth-child(4n) {
+          --ui-radius: var(--sketch-radius-rounded, 12px 24px 10px 25px / 22px 12px 23px 11px);
+        }
+      }
+
+      &:is(.ipt, .textarea, .select, .input-group) {
+        .field:nth-child(4n + 1) & {
+          --ui-radius: var(--sketch-radius-rounded, 26px 10px 24px 11px / 12px 23px 11px 20px);
+        }
+
+        .field:nth-child(4n + 2) & {
+          --ui-radius: var(--sketch-radius-rounded, 11px 25px 12px 24px / 23px 11px 22px 12px);
+        }
+
+        .field:nth-child(4n + 3) & {
+          --ui-radius: var(--sketch-radius-rounded, 24px 12px 26px 10px / 11px 23px 12px 22px);
+        }
+
+        .field:nth-child(4n) & {
+          --ui-radius: var(--sketch-radius-rounded, 12px 24px 10px 25px / 22px 12px 23px 11px);
+        }
+      }
+
+      &:is(.card, .panel, .alert) {
+        &:nth-child(4n + 2) {
+          --ui-radius-surface: var(--sketch-radius-surface-rounded, 17px 36px 18px 34px / 33px 16px 32px 17px);
+        }
+
+        &:nth-child(4n + 3) {
+          --ui-radius-surface: var(--sketch-radius-surface-rounded, 35px 18px 38px 15px / 17px 32px 16px 34px);
+        }
+
+        &:nth-child(4n) {
+          --ui-radius-surface: var(--sketch-radius-surface-rounded, 18px 35px 16px 37px / 31px 17px 34px 16px);
+        }
+      }
+
+      &:is(.badge, .kbd, .code, .checkbox, .switch, .progress) {
+        &:nth-child(4n + 2) {
+          --ui-radius-tight: 4px 8px 3px 9px / 8px 3px 8px 4px;
+        }
+
+        &:nth-child(4n + 3) {
+          --ui-radius-tight: 8px 4px 9px 3px / 3px 9px 4px 8px;
+        }
+
+        &:nth-child(4n) {
+          --ui-radius-tight: 3px 9px 4px 8px / 9px 4px 8px 3px;
+        }
+      }
+    }
+
+    /* A pill button keeps a rounded pill in either variant, bounded to the
+       button's half-height so a wide one keeps flat top and bottom edges. */
+    &.btn.pill {
+      --ui-radius-pill: var(--sketch-radius-pill, 24px 16px 23px 17px / 17px 21px 16px 20px);
+
+      &:nth-child(4n + 2) {
+        --ui-radius-pill: var(--sketch-radius-pill, 17px 23px 16px 24px / 21px 16px 20px 17px);
+      }
+
+      &:nth-child(4n + 3) {
+        --ui-radius-pill: var(--sketch-radius-pill, 23px 17px 24px 16px / 16px 20px 17px 21px);
+      }
+
+      &:nth-child(4n) {
+        --ui-radius-pill: var(--sketch-radius-pill, 16px 24px 17px 23px / 20px 17px 21px 16px);
+      }
+    }
+
+    /* Badges, progress bars, and switches take their chip outline where they
+       would be fully round. */
+    &:is(.badge, .progress, .switch) {
+      --ui-radius-pill: var(--ui-radius-tight);
+    }
+
+    /* Radios and the tooltip trigger stay circles, slightly uneven, so a radio
+       is never mistaken for a checkbox. */
+    &:is(.radio, .tooltip-icon) {
+      --ui-radius-pill: 48% 52% 46% 54% / 53% 46% 54% 47%;
+    }
+
+    /* The dashed accents; every other line stays solid. */
+    &:is(.sketch, .sketch *) {
+      &.checkbox {
+        --ui-line-style: dashed;
+      }
+
+      &:is(.divider, .data-table) {
+        --ui-rule-style: dashed;
+      }
+    }
+  }
+}
+
+/* Solo: the look on one unstyled element. It uses standalone fallbacks rather
+   than material tokens inherited from an aesthetic around it. */
+.sketch-solo {
+  --_sketch-ink: light-dark(var(--color-neutral-950, oklch(14.5% 0 0)), var(--color-neutral-50, oklch(98.5% 0 0)));
+
+  border: 1px solid var(--_sketch-ink);
+  /* The surface shape: the element this exists for is usually a pane. An action
+     takes the control shape below. */
+  border-radius: var(--sketch-radius-surface, 80px 4px 75px 5px / 3px 70px 4px 80px);
+  box-shadow: 2px 2px 0 0 var(--_sketch-ink);
+  font-family: var(--font-sketch, cursive);
+}
+
+/* An action takes the expressive control shape. */
+.sketch-solo:is(
+  button,
+  a[href],
+  [role="button"],
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"]
+) {
+  border-radius: var(--sketch-radius, 255px 15px 225px 15px / 15px 225px 15px 255px);
+}
+
+/* With `.sketch-rounded`, the rounded outlines, through their own knobs. */
+.sketch-solo.sketch-rounded {
+  border-radius: var(--sketch-radius-surface-rounded, 38px 16px 36px 17px / 16px 34px 17px 32px);
+}
+
+.sketch-solo.sketch-rounded:is(
+  button,
+  a[href],
+  [role="button"],
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"]
+) {
+  border-radius: var(--sketch-radius-rounded, 26px 10px 24px 11px / 12px 23px 11px 20px);
+}
+
+/* This entrypoint may be the only package stylesheet loaded, so it cannot rely
+   on theme.css's forced-colors material reset. */
+@media (forced-colors: active) {
+  .sketch-solo {
+    border-style: solid;
+  }
+}

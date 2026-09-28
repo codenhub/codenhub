@@ -70,7 +70,7 @@
     },
     "size": ["sm", "lg"],
     "padding": ["p-xs", "p-sm", "p-lg", "flush"],
-    "shape": ["pill", "icon", "cut-diagonal", "cut-diagonal-reverse"],
+    "shape": ["pill", "icon", "cut-diagonal", "cut-diagonal-reverse", "sketch-rounded"],
     "state": ["disabled", "interactive", "hoverable", "pressable", "active", "indeterminate"],
     "layout": ["vertical", "horizontal", "between", "tight", "loose", "narrow", "wide"],
     "rule": ["ruled", "ruleless"]
@@ -99,16 +99,15 @@
       ]
     },
     "--ui-radius-surface": { "readers": ["surface"] },
-    "--ui-line-style": { "readers": ["box", "data-table", "progress"] },
-    "--ui-shadow-2-x": { "readers": ["box"] },
-    "--ui-shadow-2-y": { "readers": ["box"] },
-    "--ui-shadow-2-blur": { "readers": ["box"] },
-    "--ui-shadow-2-spread": { "readers": ["box"] },
-    "--ui-shadow-2-ink": { "readers": ["box"] },
-    "--ui-shadow-2-inset": { "readers": ["box"] },
+    "--ui-line-style": { "readers": ["box", "data-table", "divider", "progress"] },
+    "--ui-rule-style": { "readers": ["data-table", "divider"] },
     "--ui-halo-blur": { "readers": ["box"] },
     "--ui-halo-spread": { "readers": ["box"] },
     "--ui-halo-ink": { "readers": ["box"] },
+    "--ui-surface-ground": { "readers": ["surface", "tooltip-bubble"] },
+    "--ui-surface-shadow": { "readers": ["surface"] },
+    "--ui-bg-alpha": { "readers": ["box", "data-table", "progress", "quote"] },
+    "--ui-backdrop": { "readers": ["surface"] },
     "--ui-surface-image": { "readers": ["surface"] },
     "--ui-active-translate-x": { "readers": ["box-active"] },
     "--ui-active-translate-y": { "readers": ["box-active"] },
@@ -594,6 +593,33 @@
       "class": "cyber",
       "solo": "cyber-solo",
       "completeShadow": false
+    },
+    {
+      "class": "sketch",
+      "solo": "sketch-solo",
+      "completeShadow": false,
+      "selectors": [
+        "alert",
+        "badge",
+        "btn",
+        "card",
+        "checkbox",
+        "code",
+        "data-table",
+        "divider",
+        "input-group",
+        "ipt",
+        "kbd",
+        "panel",
+        "pre",
+        "progress",
+        "radio",
+        "select",
+        "switch",
+        "textarea",
+        "tooltip-bubble"
+      ],
+      "selectorReason": "The CSS-only variation rotates complete radii by sibling and container position on inked components; material tokens on the region alone would give every element the same outline. Pill shapes are eliminated: pill buttons read their rotated box radius, while badges, progress bars, and switches take chip-sized box outlines; radios alone keep the round circle token. Checkbox and rule accents need component-local tokens to keep every other edge solid. Other nested aesthetics are excluded so they keep their own material."
     }
   ]
 }

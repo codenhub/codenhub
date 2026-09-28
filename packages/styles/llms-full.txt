@@ -59,7 +59,7 @@ Licensed under Apache-2.0. Embedded SVG icons derived from [Lucide](https://luci
 
 # @codenhub/styles
 
-`@codenhub/styles` is a CSS-only design system: tokens, a reset, typography and layout utilities, and composable classes for buttons, forms, feedback, surfaces, and tooltips. Every component separates three independent choices — which color, how much of it, and what it's made of — so changing one never requires a component-specific variant. Four optional aesthetics (`.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`) restyle that same component set without touching markup.
+`@codenhub/styles` is a CSS-only design system: tokens, a reset, typography and layout utilities, and composable classes for buttons, forms, feedback, surfaces, and tooltips. Every component separates three independent choices — which color, how much of it, and what it's made of — so changing one never requires a component-specific variant. Six optional aesthetics (`.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`, `.cyber`, `.sketch`) restyle that same component set without touching markup.
 
 The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source entrypoints for a project that already runs Tailwind. Both cover the same classes; the difference is which build processes them.
 
@@ -68,7 +68,7 @@ The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source 
 - Publishes color, foundation, intent, presentation, and material design tokens as CSS custom properties, themed with `light-dark()`.
 - Provides a reset, focus-visible handling, and responsive layout/content utilities.
 - Provides composable classes for buttons, form controls and toggles, alerts, badges, loaders, progress, cards/panels, tables, quotes, code, and tooltips.
-- Provides five opt-in aesthetics that restyle the same components by setting material tokens, not by adding component variants, each with a solo class that paints the look onto an element the package does not style.
+- Provides six opt-in aesthetics that restyle the same components by setting material tokens, not by adding component variants, each with a solo class that paints the look onto an element the package does not style.
 - Provides classless mappings so plain HTML elements pick up base styling without added classes, from a dedicated entrypoint.
 - Publishes Tailwind CSS v4 source entrypoints alongside the compiled output.
 
@@ -77,7 +77,7 @@ The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source 
 - No JavaScript. There is no runtime, no framework bindings, and no build-time code generation beyond the CSS itself.
 - No semantic HTML, ARIA, keyboard behavior, focus management, validation, or announcement timing. See [Accessibility](docs/accessibility.md) for the exact line between what the CSS provides and what an application must still add.
 - No theme-toggling logic. Theme selection is a class or attribute a consumer applies; wiring a toggle to system preference, storage, or a user setting is outside this package. The `@codenhub/theme` package covers that need for consumers who want it.
-- No shipped font binaries. `.pixel`, `.chunky-tile`, and `.cyber` accept a consumer-supplied font and fall back to a system stack when none is given.
+- No shipped font binaries. `.pixel`, `.chunky-tile`, `.cyber`, and `.sketch` accept a consumer-supplied font and fall back to a system stack when none is given.
 - No compatibility layer for removed tokens or classes. Breaking changes are documented, not silently aliased.
 
 ## Next steps
@@ -175,8 +175,8 @@ Compiled entrypoints are ready-to-import CSS and require only tooling that can r
 | `@codenhub/styles/palette`       | Generated, self-contained `--palette-*` custom properties: every intent/presentation cell's fill, text, and edge color, plus the flat `border`/`surface`/`text` neutral tokens, pre-composed to a flat value. For a consumer that cannot take this package as a build-time dependency (an optional peer, for example) but wants to look consistent with it. Not a replacement for the components themselves when Tailwind is available -- see [Customizing → Generated palette](docs/usage/customizing.md#generated-palette). |
 | `@codenhub/styles/components`    | Compiled theme tokens, typography utilities, and every component class. Includes static reduced-motion loader masks; no reset, layout/content utilities, or native mappings.                                                                                                                                                                                                                                                                                                                                               |
 | `@codenhub/styles/native`        | Compiled complete surface plus classless mappings for headings, text, content elements, form controls, and buttons. Applies the reset and broad element selectors.                                                                                                                                                                                                                                                                                                                                                         |
-| `@codenhub/styles/aesthetics`    | Compiled `.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`, and `.cyber` classes, and each one's `-solo` class. Adds no tokens or components of its own; import after the base stylesheet.                                                                                                                                                                                                                                                                                                                               |
-| `@codenhub/styles/aesthetics/*`  | One compiled aesthetic and its solo class: `/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, or `/cyber`. Same rules and ordering as the combined file.                                                                                                                                                                                                                                                                                                                                                                 |
+| `@codenhub/styles/aesthetics`    | Compiled `.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`, `.cyber`, and `.sketch` classes, and each one's `-solo` class. Adds no tokens or components of its own; import after the base stylesheet.                                                                                                                                                                                                                                                                                                                    |
+| `@codenhub/styles/aesthetics/*`  | One compiled aesthetic and its solo class: `/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, `/cyber`, or `/sketch`. Same rules and ordering as the combined file.                                                                                                                                                                                                                                                                                                                                                      |
 | `@codenhub/styles/tw`            | Source equivalent of the complete stylesheet. Imports Tailwind itself, theme, typography, utilities, components, and reset; applies the same global rules.                                                                                                                                                                                                                                                                                                                                                                 |
 | `@codenhub/styles/tw/theme`      | Source theme, tokens, and presentation classes. Imports Tailwind's theme layer; emits root/system/explicit theme selectors and defines the package's custom `dark:` variant.                                                                                                                                                                                                                                                                                                                                               |
 | `@codenhub/styles/tw/components` | Published Tailwind source for theme, typography, buttons, feedback, forms, loaders, surfaces, and tooltips, including static reduced-motion loader masks. No reset, layout/content utilities, or native mappings.                                                                                                                                                                                                                                                                                                          |
@@ -190,7 +190,7 @@ Compiled entrypoints are ready-to-import CSS and require only tooling that can r
 | `@codenhub/styles/tw/native`     | Source complete surface plus reset and classless native-element mappings; broadest global effects.                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `@codenhub/styles/tw/typography` | Source theme plus typography utilities; sets theme selectors but no reset or classless mappings.                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `@codenhub/styles/tw/utilities`  | Source theme and typography composition plus layout and content utilities; safelists the package utility names.                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `@codenhub/styles/tw/aesthetics` | Source aesthetics, combined. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, and `/cyber` publish one apiece. Plain CSS with no theme or reset side effects.                                                                                                                                                                                                                                                                                                                                            |
+| `@codenhub/styles/tw/aesthetics` | Source aesthetics, combined. `/tw/aesthetics/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, `/cyber`, and `/sketch` publish one apiece. Plain CSS with no theme or reset side effects.                                                                                                                                                                                                                                                                                                                                 |
 
 Avoid importing overlapping entrypoints in the same build unless duplicate generated CSS is acceptable; pick the narrowest entrypoint that covers what a page needs.
 
@@ -641,54 +641,52 @@ Material tokens describe what a component is _made of_ rather than which intent 
 
 Components read each with a fallback, so leaving them unset produces the default look. Setting them on a container restyles the whole subtree. Only shadow geometry is split into colorless parts that inherit safely; color-capable inputs such as `--ui-ink` and `--ui-surface-shadow` may include their own colors.
 
-| Token                     | Purpose                                                                                                       | Fallback                                  |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `--ui-corner`             | Control corner at the default size; scaled by the size step.                                                  | `--radius-control`                        |
-| `--ui-corner-surface`     | Surface corner at the default padding; scaled by the size step.                                               | `--radius-surface`                        |
-| `--ui-corner-tl`          | `0` or `1`: whether the top-left takes the corner. `-tr`, `-br`, and `-bl` for the others.                    | `1`                                       |
-| `--ui-radius`             | A complete control radius, used as written: overrides the corner, the step, and the pattern.                  | Computed from the corner                  |
-| `--ui-radius-surface`     | A complete surface radius, used as written.                                                                   | Computed from the corner                  |
-| `--ui-scale`              | Overrides the size step the size and padding classes set.                                                     | The step                                  |
-| `--ui-corner-shape`       | What every corner draws: `round`, or `bevel` for a straight cut. Chromium only today.                         | `round`                                   |
-| `--ui-radius-pill`        | Corner for what is fully round by default: badges, switches, progress, the tooltip icon.                      | `--ui-radius`, `--ui-corner`, then full   |
-| `--ui-radius-tight`       | Corner for chips -- checkbox, `.kbd`, `.code` -- before their `--radius-small` cap.                           | `--ui-radius`, `--ui-corner`, then small  |
-| `--ui-line-style`         | Style of every line a component draws: `solid`, `dashed`, `dotted`, or `double` (3px wide or more).           | `solid`                                   |
-| `--ui-border-width`       | Edge thickness.                                                                                               | `--border-width`                          |
-| `--ui-border-max`         | Ceiling on computed edge width.                                                                               | `100px`                                   |
-| `--ui-ink`                | Neutral line color when no intent is set.                                                                     | `--color-border`                          |
-| `--ui-control-ink`        | Neutral line color of fields, selects, checkboxes, radios, and switches when no intent is set.                | `--ui-ink`, then `--color-control-border` |
-| `--ui-rule`               | Lines inside a table. Unset draws the head and foot boundaries only; `0%` draws none; `100%` rules every row. | unset                                     |
-| `--ui-shadow-x`           | Shadow horizontal offset.                                                                                     | `0px`                                     |
-| `--ui-shadow-y`           | Shadow vertical offset.                                                                                       | `0px`                                     |
-| `--ui-shadow-blur`        | Shadow blur radius.                                                                                           | `0px`                                     |
-| `--ui-shadow-spread`      | Shadow spread radius.                                                                                         | `0px`                                     |
-| `--ui-shadow-inset`       | The `inset` keyword for an inner ring.                                                                        | Empty                                     |
-| `--ui-hover-shadow-x`     | Shadow horizontal offset while hovered.                                                                       | `--ui-shadow-x`                           |
-| `--ui-hover-shadow-y`     | Shadow vertical offset while hovered.                                                                         | `--ui-shadow-y`                           |
-| `--ui-active-shadow-x`    | Shadow horizontal offset while pressed.                                                                       | `--ui-shadow-x`                           |
-| `--ui-active-shadow-y`    | Shadow vertical offset while pressed.                                                                         | `--ui-shadow-y`                           |
-| `--ui-active-transform`   | Transform while pressed. `none` under `prefers-reduced-motion`.                                               | `scale(0.97)`                             |
-| `--ui-active-translate-x` | Distance a press travels into the element's depth; `-y` beside it. Scaled like the shadow.                    | `0px`                                     |
-| `--ui-shadow-ink`         | Percentage of shadow color taken from intent ink.                                                             | `0%`                                      |
-| `--ui-shadow-2-x`         | A second depth layer: `-x`, `-y`, `-blur`, `-spread`, and `-inset`, like the first. Elevation scales it.      | `0px`                                     |
-| `--ui-shadow-2-ink`       | The second layer's share of intent ink. Unset, there is no second layer.                                      | Unset                                     |
-| `--ui-halo-blur`          | Blur of a halo around the element; `--ui-halo-spread` beside it. Elevation does not scale it.                 | `0px`                                     |
-| `--ui-halo-ink`           | The halo's share of the intent colour, over nothing. Unset, there is no halo.                                 | Unset                                     |
-| `--ui-shadow-edge`        | Declared, even empty, when the shadow is the element's edge rather than its depth. Read for presence.         | Unset                                     |
-| `--ui-elevation`          | Unitless multiplier over shadow geometry.                                                                     | `1`                                       |
-| `--ui-surface-shadow`     | Complete multi-layer shadow accepted by surfaces only.                                                        | Unset                                     |
-| `--ui-surface-ground`     | Ground a surface sits on.                                                                                     | `--color-background`                      |
-| `--ui-bg-alpha`           | Multiplier over fill for translucent materials.                                                               | `1`                                       |
-| `--ui-backdrop`           | Backdrop filter accepted by surfaces only.                                                                    | `none`                                    |
-| `--ui-surface-image`      | A painted layer over a surface's plate: any `background-image` value. Surfaces only.                          | `none`                                    |
-| `--ui-hover-transform`    | Transform while an interactive element is hovered.                                                            | `none`                                    |
-| `--ui-clip`               | Structural component silhouette.                                                                              | `none`                                    |
-| `--ui-clip-tight`         | Compact component silhouette.                                                                                 | `--ui-clip`                               |
-| `--ui-focus-inset`        | Inset focus layer width.                                                                                      | Unset                                     |
-| `--ui-label-weight`       | Label weight of `.btn` (and, with `/native`, a bare `<button>`) and `.badge`.                                 | Semibold on a button, bold on a badge     |
-| `--ui-label-tracking`     | Label letter spacing. Unset, the label inherits it.                                                           | Unset                                     |
-| `--ui-label-case`         | Label `text-transform`.                                                                                       | `none` on a button; inherited on a badge  |
-| `--ui-label-shadow`       | Label `text-shadow`, written without a colour so it takes the label's own.                                    | `none` on a button; inherited on a badge  |
+| Token                     | Purpose                                                                                                                                              | Fallback                                  |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `--ui-corner`             | Control corner at the default size; scaled by the size step.                                                                                         | `--radius-control`                        |
+| `--ui-corner-surface`     | Surface corner at the default padding; scaled by the size step.                                                                                      | `--radius-surface`                        |
+| `--ui-corner-tl`          | `0` or `1`: whether the top-left takes the corner. `-tr`, `-br`, and `-bl` for the others.                                                           | `1`                                       |
+| `--ui-radius`             | A complete control radius, used as written: overrides the corner, the step, and the pattern.                                                         | Computed from the corner                  |
+| `--ui-radius-surface`     | A complete surface radius, used as written.                                                                                                          | Computed from the corner                  |
+| `--ui-scale`              | Overrides the size step the size and padding classes set.                                                                                            | The step                                  |
+| `--ui-corner-shape`       | What every corner draws: `round`, or `bevel` for a straight cut. Chromium only today.                                                                | `round`                                   |
+| `--ui-radius-pill`        | Corner for what is fully round by default: badges, switches, progress, the tooltip icon; `.btn.pill` and `.radio` read it with no fallback but full. | `--ui-radius`, `--ui-corner`, then full   |
+| `--ui-radius-tight`       | Complete radius for chips -- checkbox, `.kbd`, `.code` -- when set; otherwise a small computed default.                                              | `min(--ui-radius or --ui-corner, small)`  |
+| `--ui-line-style`         | Style of every line a component draws: `solid`, `dashed`, `dotted`, or `double` (3px wide or more).                                                  | `solid`                                   |
+| `--ui-border-width`       | Edge thickness.                                                                                                                                      | `--border-width`                          |
+| `--ui-border-max`         | Ceiling on computed edge width.                                                                                                                      | `100px`                                   |
+| `--ui-ink`                | Neutral line color when no intent is set.                                                                                                            | `--color-border`                          |
+| `--ui-control-ink`        | Neutral line color of fields, selects, checkboxes, radios, and switches when no intent is set.                                                       | `--ui-ink`, then `--color-control-border` |
+| `--ui-rule`               | Lines inside a table. Unset draws the head and foot boundaries only; `0%` draws none; `100%` rules every row.                                        | unset                                     |
+| `--ui-shadow-x`           | Shadow horizontal offset.                                                                                                                            | `0px`                                     |
+| `--ui-shadow-y`           | Shadow vertical offset.                                                                                                                              | `0px`                                     |
+| `--ui-shadow-blur`        | Shadow blur radius.                                                                                                                                  | `0px`                                     |
+| `--ui-shadow-spread`      | Shadow spread radius.                                                                                                                                | `0px`                                     |
+| `--ui-shadow-inset`       | The `inset` keyword for an inner ring.                                                                                                               | Empty                                     |
+| `--ui-hover-shadow-x`     | Shadow horizontal offset while hovered.                                                                                                              | `--ui-shadow-x`                           |
+| `--ui-hover-shadow-y`     | Shadow vertical offset while hovered.                                                                                                                | `--ui-shadow-y`                           |
+| `--ui-active-shadow-x`    | Shadow horizontal offset while pressed.                                                                                                              | `--ui-shadow-x`                           |
+| `--ui-active-shadow-y`    | Shadow vertical offset while pressed.                                                                                                                | `--ui-shadow-y`                           |
+| `--ui-active-transform`   | Transform while pressed. `none` under `prefers-reduced-motion`.                                                                                      | `scale(0.97)`                             |
+| `--ui-active-translate-x` | Distance a press travels into the element's depth; `-y` beside it. Scaled like the shadow.                                                           | `0px`                                     |
+| `--ui-shadow-ink`         | Percentage of shadow color taken from intent ink.                                                                                                    | `0%`                                      |
+| `--ui-halo-blur`          | Blur of a halo around the element; `--ui-halo-spread` beside it. Elevation does not scale it.                                                        | `0px`                                     |
+| `--ui-halo-ink`           | The halo's share of the intent colour, over nothing. Unset, there is no halo.                                                                        | Unset                                     |
+| `--ui-shadow-edge`        | Declared, even empty, when the shadow is the element's edge rather than its depth. Read for presence.                                                | Unset                                     |
+| `--ui-elevation`          | Unitless multiplier over shadow geometry.                                                                                                            | `1`                                       |
+| `--ui-surface-shadow`     | Complete multi-layer shadow accepted by surfaces only.                                                                                               | Unset                                     |
+| `--ui-surface-ground`     | Ground a surface sits on.                                                                                                                            | `--color-background`                      |
+| `--ui-bg-alpha`           | Multiplier over fill for translucent materials.                                                                                                      | `1`                                       |
+| `--ui-backdrop`           | Backdrop filter accepted by surfaces only.                                                                                                           | `none`                                    |
+| `--ui-surface-image`      | A painted layer over a surface's plate: any `background-image` value. Surfaces only.                                                                 | `none`                                    |
+| `--ui-hover-transform`    | Transform while an interactive element is hovered.                                                                                                   | `none`                                    |
+| `--ui-clip`               | Structural component silhouette.                                                                                                                     | `none`                                    |
+| `--ui-clip-tight`         | Compact component silhouette.                                                                                                                        | `--ui-clip`                               |
+| `--ui-focus-inset`        | Inset focus layer width.                                                                                                                             | Unset                                     |
+| `--ui-label-weight`       | Label weight of `.btn` (and, with `/native`, a bare `<button>`) and `.badge`.                                                                        | Semibold on a button, bold on a badge     |
+| `--ui-label-tracking`     | Label letter spacing. Unset, the label inherits it.                                                                                                  | Unset                                     |
+| `--ui-label-case`         | Label `text-transform`.                                                                                                                              | `none` on a button; inherited on a badge  |
+| `--ui-label-shadow`       | Label `text-shadow`, written without a colour so it takes the label's own.                                                                           | `none` on a button; inherited on a badge  |
 
 ```html
 <section style="--ui-corner: 0; --ui-border-width: 3px">
@@ -707,15 +705,15 @@ Which corners take the corner is its own choice. `.cut-diagonal` keeps the top-l
 
 ### Lines, layers, and labels
 
-`--ui-line-style` reaches every line a component draws: the box's edge, the progress track, and the table's rules. A dashed or dotted line keeps its colour, so it keeps its contrast; `double` needs a width of 3px or more to draw two lines.
+`--ui-line-style` reaches every line a component draws: the box's edge, the progress track, and dividers and table rules. `--ui-rule-style` optionally overrides just dividers and table rules, without changing the box edge; sketch uses it for dashed accents. A dashed or dotted line keeps its colour, so it keeps its contrast; `double` needs a width of 3px or more to draw two lines.
 
-`--ui-shadow-2-*` adds a second depth layer that elevation scales like the first, for a two-tone bevel or a soft shadow under a hard one. `--ui-halo-*` is light rather than depth -- a glow in the element's own intent colour -- so elevation does not scale it and `.flat` leaves it on. Each appears only when its ink is set.
+`--ui-halo-*` is light rather than depth -- a glow in the element's own intent colour -- so elevation does not scale it and `.flat` leaves it on. It appears only when its ink is set.
 
 `--ui-surface-image` lays any `background-image` over a surface's plate: cards, panels, alerts, and tooltips, not controls. Whoever sets it owns the contrast of the text over it, and your own `background-image` on a surface still wins.
 
 `--ui-label-*` treats the label of a button or a badge: weight, tracking, case, and a text shadow. Write the shadow without a colour -- `0 0 6px` -- so it takes the label's own colour and cannot lower its contrast. Your own `font-*`, `tracking-*`, and case utilities still win.
 
-Under forced colours each of these draws its plain version: a solid line, no second layer, no halo, no painted layer, and no label shadow.
+Under forced colours each of these draws its plain version: a solid line, no halo, no painted layer, and no label shadow.
 
 ### Shape and ring composition
 
@@ -723,7 +721,7 @@ Clipping removes borders, outlines, and outer shadows. An aesthetic that uses a 
 
 A clip is not the only way to cut a corner. `--ui-corner-shape: bevel` draws the corner the radius sets as a straight cut instead of an arc, and the border, outer shadow, focus outline, and backdrop all follow it -- so a bevelled element keeps its glow and its line, where a clipped one loses both. `.cyber` uses it. Engines without `corner-shape` ignore it and draw the radius round, so an aesthetic that bevels should square its radius under `@supports not (corner-shape: bevel)`. A bevel on a full radius cuts to points: a radio, a `.btn.pill`, and anything reading `--ui-radius-pill` become diamonds or pointed hexagons.
 
-`--ui-radius` accepts any `border-radius` value and is used as written, so it can place the corner per side: `10px 0` cuts only top-left and bottom-right. The pill and chip corners are separate tokens, because a pill's full radius and a chip's `min()` cap cannot take a per-corner value, and each falls back to `--ui-radius`, then `--ui-corner`, when unset.
+`--ui-radius` accepts any `border-radius` value and is used as written, so it can place the corner per side: `10px 0` cuts only top-left and bottom-right. The pill and chip corners are separate tokens. An unset chip corner computes a small default from `--ui-radius`, then `--ui-corner`, capped at `--radius-small`; an explicit `--ui-radius-tight` is used as written, even for a per-corner or elliptical value. Aesthetic and consumer overrides can therefore give a chip a larger or more irregular shape. `.btn.pill` takes `--ui-radius-pill` ahead of the other radii; under sketch it takes organic hand-drawn pill contours avoiding egg distortion, while an explicit `--ui-radius-pill` on that button still wins.
 
 Declare `--ui-shadow-edge` when that ring _is_ the border. The ring then takes the element's edge color, which carries the edge axis as its alpha, so `.edged` draws it and `.edgeless` does not — the same answer a real border gives. Without it the ring paints on every component the aesthetic reaches and the edge classes have no effect. Use `--ui-shadow-ink` instead when the shadow is depth cast in the intent's own ink, such as a hard offset slab, which an `.edgeless` element still gets.
 
@@ -750,22 +748,28 @@ Variables prefixed `--_` are internal composition outputs — `--_bg`, `--_fg`, 
 
 The shipped [aesthetic classes](docs/usage/aesthetics.md) set material tokens for you. Only aesthetics with a token listed below expose an aesthetic-specific token. Tune all other behavior through the shared material tokens above. Listed tokens are available only where that aesthetic's stylesheet is imported.
 
-| Token                    | Aesthetic       | Purpose                                                                                       | Default                            |
-| ------------------------ | --------------- | --------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `--neo-offset`           | `.neobrutalism` | Hard shadow offset and distance the press travels.                                            | `4px`                              |
-| `--glass-radius`         | `.glass`        | Control corner radius.                                                                        | `0.75rem`                          |
-| `--glass-radius-surface` | `.glass`        | Surface corner radius.                                                                        | `1rem`                             |
-| `--pixel-unit`           | `.pixel`        | One pixel of the grid. The corner cut and the ring are one.                                   | `4px`                              |
-| `--font-pixel`           | `.pixel`        | Consumer-supplied pixel font stack.                                                           | Falls back to the monospace stack  |
-| `--tile-radius`          | `.chunky-tile`  | Corner radius, on controls and surfaces alike.                                                | `0.75rem`                          |
-| `--tile-lift`            | `.chunky-tile`  | Depth of the seated bar, and how far a press travels.                                         | `4px`                              |
-| `--font-rounded`         | `.chunky-tile`  | Consumer-supplied rounded font stack.                                                         | Falls back to the page stack       |
-| `--cyber-cut`            | `.cyber`        | The cut at the default size, on controls and surfaces alike; controls scale it with the step. | `0.625rem`                         |
-| `--cyber-shape`          | `.cyber`        | Where controls take the cut: any `border-radius` value.                                       | `<cut> 0` (top-left, bottom-right) |
-| `--cyber-shape-surface`  | `.cyber`        | Where surfaces take the cut: any `border-radius` value.                                       | `0 <cut>` (top-right, bottom-left) |
-| `--cyber-glow`           | `.cyber`        | Blur of the glow.                                                                             | `8px`                              |
-| `--cyber-ink`            | `.cyber`        | Neutral line and glow colour, where no intent sets one.                                       | Theme ink (near-black, near-white) |
-| `--font-cyber`           | `.cyber`        | Consumer-supplied technical font stack.                                                       | Falls back to the monospace stack  |
+| Token                             | Aesthetic                    | Purpose                                                                                         | Default                                                            |
+| --------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `--neo-offset`                    | `.neobrutalism`              | Hard shadow offset and distance the press travels.                                              | `4px`                                                              |
+| `--glass-radius`                  | `.glass`                     | Control corner radius.                                                                          | `0.75rem`                                                          |
+| `--glass-radius-surface`          | `.glass`                     | Surface corner radius.                                                                          | `1rem`                                                             |
+| `--pixel-unit`                    | `.pixel`                     | One pixel of the grid. The corner cut and the ring are one.                                     | `4px`                                                              |
+| `--font-pixel`                    | `.pixel`                     | Consumer-supplied pixel font stack.                                                             | Falls back to the monospace stack                                  |
+| `--tile-radius`                   | `.chunky-tile`               | Corner radius, on controls and surfaces alike.                                                  | `0.75rem`                                                          |
+| `--tile-lift`                     | `.chunky-tile`               | Depth of the seated bar, and how far a press travels.                                           | `4px`                                                              |
+| `--font-rounded`                  | `.chunky-tile`               | Consumer-supplied rounded font stack.                                                           | Falls back to the page stack                                       |
+| `--cyber-cut`                     | `.cyber`                     | The cut at the default size, on controls and surfaces alike; controls scale it with the step.   | `0.625rem`                                                         |
+| `--cyber-shape`                   | `.cyber`                     | Where controls take the cut: any `border-radius` value.                                         | `<cut> 0` (top-left, bottom-right)                                 |
+| `--cyber-shape-surface`           | `.cyber`                     | Where surfaces take the cut: any `border-radius` value.                                         | `0 <cut>` (top-right, bottom-left)                                 |
+| `--cyber-glow`                    | `.cyber`                     | Blur of the glow.                                                                               | `8px`                                                              |
+| `--cyber-ink`                     | `.cyber`                     | Neutral line and glow colour, where no intent sets one.                                         | Theme ink (near-black, near-white)                                 |
+| `--font-cyber`                    | `.cyber`                     | Consumer-supplied technical font stack.                                                         | Falls back to the monospace stack                                  |
+| `--sketch-radius`                 | `.sketch`                    | Control outline radius: any `border-radius` value.                                              | Irregular box outline with sibling variation                       |
+| `--sketch-radius-surface`         | `.sketch`                    | Surface container outline radius: any `border-radius` value.                                    | Sharp irregular square outline with sibling variation              |
+| `--sketch-radius-rounded`         | `.sketch`, `.sketch-rounded` | Rounded control outline radius: expressive elliptical contour with sibling variation.           | `26px 10px 24px 11px / 12px 23px 11px 20px` with sibling variation |
+| `--sketch-radius-surface-rounded` | `.sketch`, `.sketch-rounded` | Rounded surface container outline radius: expressive elliptical contour with sibling variation. | `38px 16px 36px 17px / 16px 34px 17px 32px` with sibling variation |
+| `--sketch-radius-pill`            | `.sketch`                    | Pill button outline radius: organic hand-drawn pill contour avoiding egg-shaped distortion.     | `24px 16px 23px 17px / 17px 21px 16px 20px` with sibling variation |
+| `--font-sketch`                   | `.sketch`                    | Consumer-supplied handwriting font stack.                                                       | Falls back to `cursive`                                            |
 
 Every aesthetic's knobs reach the same way: each knob is _read_ with its default as a `var()` fallback rather than declared, so it resolves once into a private on the aesthetic's own class (`--_pixel-unit`, `--_neo-offset`, `--_tile-radius`, `--_tile-lift`, and so on). Set a knob on the element carrying the aesthetic class, or on any ancestor including `:root`:
 
@@ -855,6 +859,7 @@ Like presentation, an aesthetic class cascades to any subtree:
 | `.pixel`        | Corners cut by one grid unit, a chunky outline drawn as an inset ring, and the consumer-supplied `--font-pixel` over monospace. |
 | `.chunky-tile`  | Rounded slabs seated on a darker shade of themselves, with a press that moves the element down into its own bar.                |
 | `.cyber`        | Bevelled corners, a thin bright edge, and a glow in the component's own colour.                                                 |
+| `.sketch`       | Varying elliptical corners, a solid ink line with dashed accents, a small offset shadow, and an optional handwriting face.      |
 
 Aesthetics compose with every supported fill and edge pair. `.ghost.edgeless` intentionally removes the visible material traits from components whose aesthetic is expressed only through their fill, edge, or elevation.
 
@@ -991,17 +996,54 @@ A parallelogram slants its sides into the content, so give a surface that takes 
 - `--font-cyber` is yours to supply. The package ships no font binary, so the aesthetic falls back to the monospace stack.
 - Casing is left alone, for the reason [Chunky tile](#chunky-tile) gives.
 
+## Sketch
+
+Hand-drawn outlines: controls take long, uneven elliptical corners, and cards, panels, and alerts take sharper ones that stay clear of their padding. Siblings rotate through four outlines by position, and a field's control takes its field's position, so a row of buttons or a stacked form does not repeat one shape. The rotation is stable for a given DOM order, not random on each render. Every outline is a complete `border-radius`, used as written rather than scaled by the size step or placed by `.cut-diagonal`.
+
+The 1px ink line is solid; checkboxes, dividers, and table rules are dashed. `--ui-line-style: dashed` dashes any other component, and `--ui-rule-style: solid` puts a divider or table back to solid. The 2px hard shadow is a small neutral depth cue.
+
+`--sketch-radius`, `--sketch-radius-surface`, and `--sketch-radius-pill` replace the control, surface, and pill-button outlines. Set one and every position takes that one outline. To shape a single component instead, set `--ui-radius` (`--ui-radius-surface` on a surface) on it.
+
+```html
+<section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>
+  <button class="btn primary">Send note</button>
+  <button class="btn ghost edged" style="--ui-line-style: dashed">Draft note</button>
+</section>
+```
+
+The dashed button is `ghost edged` because a filled button has no separate line to dash.
+
+`.sketch-rounded` trades the long corners for short, rounded ones, bounded so a wide element keeps straight top and bottom edges. Put it beside `.sketch` on the region, or on one component inside it. `--sketch-radius-rounded` and `--sketch-radius-surface-rounded` are its knobs.
+
+```html
+<section class="sketch sketch-rounded">
+  <div class="card">
+    <button class="btn primary">Rounded action</button>
+  </div>
+</section>
+```
+
+**Exceptions:**
+
+- Sketch names components to rotate their outlines, so its outlines reach only this package's components; a region of another aesthetic nested inside a sketch region keeps that aesthetic's corners.
+- Chips -- checkboxes, key caps, code, badges, switches, and progress bars -- rotate through small uneven outlines through `--ui-radius-tight`. Set that token on a chip to choose its shape.
+- A `.btn.pill` takes a rounded pill bounded to its own height, so a wide one does not become an oval. Badges, progress bars, and switches take their chip outline. Radios and the tooltip icon stay circles, slightly uneven, so a radio is never mistaken for a checkbox. An explicit `--ui-radius-pill` on an element still wins.
+- `--font-sketch` is yours to supply. The package ships no handwriting font and falls back to the platform `cursive` family.
+- Buttons press with the plain `scale(0.97)`; reduced motion turns it off.
+- Forced-colours mode draws the dashed accents solid, like every other material line.
+
 ## Solo classes
 
 An aesthetic class sets material tokens and nothing paints until a component reads them, so `.glass` on an element this package does not style -- a toast from another library, a dialog, a plain `<div>` on a page without the base stylesheet -- changes nothing. Each aesthetic also ships a solo class that paints its look directly onto the one element carrying it:
 
-| Aesthetic       | Solo class           | Paints                                                                                    |
-| --------------- | -------------------- | ----------------------------------------------------------------------------------------- |
-| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner. |
-| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                       |
-| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.              |
-| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                            |
-| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.        |
+| Aesthetic       | Solo class           | Paints                                                                                                                                                                                                                               |
+| --------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner.                                                                                                                                            |
+| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                                                                                                                                                                  |
+| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.                                                                                                                                                         |
+| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                                                                                                                                                                       |
+| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.                                                                                                                                                   |
+| `.sketch`       | `.sketch-solo`       | Uneven elliptical corners (sharp surface outline on a pane, expressive control outline on an action; subtle rounded contours when paired with `.sketch-rounded`), a 1px solid ink line, the 2px offset shadow, the handwriting face. |
 
 ```css
 /* The only stylesheet from this package on the page. */
@@ -1015,7 +1057,7 @@ An aesthetic class sets material tokens and nothing paints until a component rea
 A solo class ships in the same entrypoint as its aesthetic, and needs nothing else loaded:
 
 - **It paints material, not colour.** Edge, corner, depth, silhouette, backdrop, font, and press. No intent, no fill amount, no hover tint -- the element has no presentation to compose. Glass's translucent ground is the one fill, because it is glass's material.
-- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, and the font knobs all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
+- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, `--sketch-radius`, `--sketch-radius-surface`, `--sketch-radius-rounded`, `--sketch-radius-surface-rounded`, and the font knobs (including `--font-sketch`) all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
 - **It ignores the aesthetic around it.** It reads no `--ui-*` or `--elevation-color`, so a `.glass-solo` inside a `.pixel` region keeps its corners. The elevation modifiers do not reach it either.
 - **It beats a foreign component's own styles.** The rules are unlayered and one class deep, so they win over a component's zero-specificity or layered rules wherever the two load. The flip side is that a Tailwind utility on the same element (`rounded-none`) loses to it: tune a solo class through its knobs.
 - **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` that is not disabled; a container stays put, so a toast does not sink when clicked. Reduced motion drops the movement. Chunky tile's heavier label follows the same rule.
@@ -1051,7 +1093,7 @@ Size and shape classes:
 
 | Class                                                                  | Purpose                                                                                                                                                                                                                                   |
 | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.pill`                                                                | Fully rounded button corners (`border-radius: 9999px`).                                                                                                                                                                                   |
+| `.pill`                                                                | Fully rounded button corners by default; under sketch it takes organic hand-drawn pill contours avoiding egg-shaped distortion.                                                                                                           |
 | `.sm`                                                                  | Smaller button.                                                                                                                                                                                                                           |
 | `.lg`                                                                  | Larger button.                                                                                                                                                                                                                            |
 | `.p-xs`                                                                | Tightest padding modifier (`px-2 py-0.5`; icon `p-0.5`). Also drops the `--control-height` minimum so a chip-sized button fits a table cell or a dense toolbar; every other size and padding class keeps that floor for a labeled button. |
@@ -1908,34 +1950,37 @@ Use ARIA or data attributes when native attributes are not available for the ele
 
 # 0.5.0
 
-A foundation release: no new aesthetic, and every structural change and cleanup the `0.x` line needed, in one minor.
+A foundation update with an opt-in sketch aesthetic and rounded sketch variant.
 
 ## Breaking
 
 - **The package sits in named cascade layers.** Every entrypoint declares Tailwind's layer order first and places everything in it: foundation tokens and the palette in `theme`, resets in `base`, the intent, presentation, elevation, and aesthetic classes in `components`, and every component in `utilities` -- including on `/components` and `/native`, which emitted them unlayered. Your own utility or unlayered CSS now beats all four class families on the same element, and an aesthetic on `<html>` keeps its tokens over the theme's in any load order. CSS that relied on a package class beating it now loses to it, and a rule of yours in `@layer components` contests the class families by specificity instead of losing outright. See [Setup](docs/setup.md).
 - **Aesthetics set `--ui-corner`, not `--ui-radius`.** The corner is now a length at the default size that scales with the element (below); `--ui-radius` and `--ui-radius-surface` take a complete radius used as written, and every shipped aesthetic sets `--ui-corner` and `--ui-corner-surface` instead. If you set `--ui-radius` yourself, nothing changes for you. An aesthetic of your own moves to `--ui-corner` to get the scale and the corner pattern. `--ui-radius-pill` and `--ui-radius-tight` fall back through `--ui-radius`, then `--ui-corner`.
 - **`--ui-button-weight` and `--ui-button-tracking` are `--ui-label-weight` and `--ui-label-tracking`**, read by `.badge` as well as `.btn`. The old names are removed without an alias. Under `.chunky-tile`, badges now take the heavier label too.
+- **Explicit chip radii are no longer capped.** Checkbox, `.kbd`, and `.code` keep a small default radius when `--ui-radius-tight` is unset, but a supplied value now applies as a complete `border-radius`, including elliptical shapes. A consumer setting a large value now gets the large corner it asked for instead of the previous `--radius-small` ceiling.
 - **Alias classes removed**, each a second name for a class that already had one: `.dense`, `.compact`, and `.spacious` (use `.p-xs`, `.p-sm`, and `.p-lg`); `.danger` and `.error` (use `.destructive`, and `.hint.destructive` for `.hint.error`); and `.elevation-none`, `.elevation-sm`, and `.elevation-md` (use `.flat`, `.raised`, and `.floating`). `.theme-light` and `.theme-dark` stay.
 - **`.cyber` glows everything, flat or not.** Its glow moved from depth onto the new halo, so fields, chips, badges, and alerts glow too, `.flat` no longer puts the glow out, and `.raised` and `.floating` add no shadow under it.
 
 ## Added
 
+- **`.sketch`, `.sketch-rounded`, and `.sketch-solo`**: a hand-drawn treatment with uneven elliptical corners, a solid ink line (dashed checkboxes and rules under `.sketch`), a small offset shadow, and an optional consumer-supplied handwriting font. Sibling components rotate between four stable outlines; pill buttons take organic hand-drawn rounded pill contours without oval distortion; switch tracks, knobs, and chips take compact irregular box outlines, and radios stay subtly circular. The opt-in `.sketch-rounded` modifier class provides subtle, organic hand-drawn rounded contours across controls, surfaces, chips, and solo elements with 4-step sibling rotation and no egg-shaped distortion on wide elements. The solo class paints an unstyled element directly; the cascading class restyles package components. Both ship in the aesthetic aggregate and dedicated compiled and Tailwind CSS entrypoints. See [Aesthetics](docs/usage/aesthetics.md#sketch).
 - **Corner scale.** `.p-xs` sets a size step of `0.5`, `.sm` and `.p-sm` `0.75`, and `.lg` and `.p-lg` `1.25`, and the corner is multiplied by it; when a size and a padding class sit on one element, the smaller step wins. A bevel stays a true 45 degrees, so `.cyber`'s 25% cap is gone. Depth follows the step down, never up: a `.p-xs` button sits on half its aesthetic's shadow, which also retires chunky tile's one selector list. `--ui-scale` overrides the step. A press that travels into the depth -- `--ui-active-translate-x` and `-y`, which chunky tile and neobrutalism now set instead of a translating `--ui-active-transform` -- scales the same way, elevation included, so it always lands flat on the slab, and a `.flat` button under either no longer drops. See [Customizing → Corner size and pattern](docs/usage/customizing.md#corner-size-and-pattern).
 - **Corner pattern.** `.cut-diagonal` keeps the top-left and bottom-right corners and squares the other two, `.cut-diagonal-reverse` the opposite pair, wherever the corner is computed -- on a control under `.cyber`, but not a surface, which keeps its own shape. Both set `--ui-corner-tl`, `-tr`, `-br`, and `-bl`, which you can set yourself.
-- **`--ui-line-style`**: `solid`, `dashed`, `dotted`, or `double` for every line a component draws -- the box's edge, the progress track, and the table's rules.
-- **A second depth layer**, `--ui-shadow-2-x`, `-y`, `-blur`, `-spread`, `-ink`, and `-inset`, which elevation scales like the first. It appears only when its ink is set.
+- **`--ui-line-style`**: `solid`, `dashed`, `dotted`, or `double` for every line a component draws -- the box's edge, the progress track, and dividers and table rules. `--ui-rule-style` overrides only dividers and table rules.
 - **A halo**, `--ui-halo-blur`, `--ui-halo-spread`, and `--ui-halo-ink`: light in the element's own intent colour, which elevation does not scale and `.flat` does not remove.
 - **`--ui-surface-image`**, a painted layer over a surface's plate -- cards, panels, alerts, and tooltips, not controls. Your own `background-image` on a surface still wins.
 - **`--ui-label-case` and `--ui-label-shadow`**, beside the weight and tracking: the label's `text-transform`, and a `text-shadow` written without a colour so it takes the label's own.
 - **`--ui-control-ink`**, a neutral line for controls read ahead of `--ui-ink`. Glass and chunky tile set it, so an unchecked checkbox under glass (1.33:1 before) and a field under chunky tile (1.65:1 before) draw a boundary that reads.
 
-Under forced colours, each new part draws its plain version: a solid line, no second layer, no halo, no painted layer, and no label shadow.
+Under forced colours, each new part draws its plain version: a solid line, no halo, no painted layer, and no label shadow.
 
 ## Fixed
 
 - **A stylesheet survives being inlined.** The loader art's SVG data URIs carried a literal `</style>`, so a stylesheet pasted into an HTML `<style>` element ended at the first loader and silently dropped every rule after it. It is now percent-encoded.
 - **Every entry ships the theme it promises.** `/components`, `/tw/components`, `/tw/feedback`, and `/tw/tooltip` shipped no colour token at all, and every other focused `/tw` component entry lost the palette ramp the tokens are built from. Each entry now declares every colour it reads, and `/components` works alone.
 - **A line fades into a translucent plate instead of ringing it.** A neutral `.solid.edged`, and any plate `--ui-bg-alpha` thins, drew a ring 1.54:1 against its own fill; the line now fades toward transparent as the fill fills in. The generated palette's edge tokens follow.
+- **A select's options read in the dark theme.** The open list is painted over the select's own background, and a ghost `.select` has none, so Chromium drew its default white popup under options that inherited the near-white text. Options and option groups now take the page's ground and text colour.
+- **A region nested inside glass keeps its own surfaces.** Neobrutalism, pixel, chunky tile, and cyber left glass's translucent ground, fill alpha, and two-layer surface shadow in place, so their cards inside a glass region came out as half glass. Every aesthetic now clears them.
 - **Surfaces under glass stay glass.** A neutral `.card.soft`, `.panel`, and `.alert` sat opaque inside a glass region, and `.card.soft.glass` did on the same element; their quiet ground is now a private default beneath `--ui-surface-ground`.
 
 <!-- Source: docs/changelog/0.4.0.md -->

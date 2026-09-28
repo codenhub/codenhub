@@ -18,7 +18,7 @@
      separate term rather than a write of `--ui-fill`, for two reasons. A
      component writing `--ui-fill` from `utilities` would beat a consumer's own
      `[--ui-fill:...]` utility, which the layer map reserves for state
-     (docs/internal/cascade-layers.md, L4); a private competes with nothing a
+     (docs/internal/model.md#cascade-layers); a private competes with nothing a
      consumer writes. And `--ui-fill` cascades by design, so a neutral panel
      writing `0%` would turn every badge and button inside it ghost, where a
      cap bounds the component and stops there (below). A state that means the
@@ -79,7 +79,7 @@
      Blend first, amount after (`--_edge-amount` below) -- the other order lands
      `.edgeless` on the fill colour, which the border box then paints as a second
      coat: a ring around an element that asked for no edge. See
-     docs/internal/boundary-contrast.md. */
+     docs/internal/model.md#presentation. */
   --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-border));
   /* How much line there is, as an input rather than a result. A component that
      must keep its line whatever the edge class says raises `--_edge-floor`
@@ -108,7 +108,7 @@
      Restated `initial` here, before any modifier, because a custom property
      inherits and a `.card.p-xs` would otherwise shrink every button inside it;
      the modifier rules outrank this one on specificity. `--ui-scale` is the
-     public override, undeclared by the package. See docs/internal/structure.md. */
+     public override, undeclared by the package. See docs/internal/model.md#material-tokens. */
   --_scale-size: initial;
   --_scale-pad: initial;
   --_scale: var(--ui-scale, min(var(--_scale-size, var(--_scale-pad, 1)), var(--_scale-pad, var(--_scale-size, 1))));
@@ -150,23 +150,13 @@
      and hands `var()` its fallback -- the idiom `--_focus-stack` also uses. */
   --_edge-shadow-color: var(--ui-shadow-edge) var(--_edge);
   --_shadow-color: var(--_edge-shadow-color, var(--_depth-color));
-  /* A second depth layer, in parts like the first and scaled the same way, so
-     `.flat`, `.raised`, and `.floating` reach both. Its ink is its presence: with
-     `--ui-shadow-2-ink` undeclared the whole layer, leading comma included, is
-     invalid at computed-value time and `var()` drops it -- no empty layer sits
-     in every box's shadow. Hover and press move the first layer only. */
-  --_shadow-2-layer:
-    ,
-    var(--ui-shadow-2-inset,) calc(var(--ui-shadow-2-x, 0px) * var(--_depth))
-      calc(var(--ui-shadow-2-y, 0px) * var(--_depth)) calc(var(--ui-shadow-2-blur, 0px) * var(--_depth))
-      var(--ui-shadow-2-spread, 0px)
-      color-mix(in oklab, var(--intent-border) var(--ui-shadow-2-ink), var(--elevation-color));
-  --_shadow-parts: var(--ui-shadow-inset,) var(--_sx) var(--_sy) var(--_sb) var(--_ss) var(--_shadow-color)
-    var(--_shadow-2-layer,);
+  --_shadow-parts: var(--ui-shadow-inset,) var(--_sx) var(--_sy) var(--_sb) var(--_ss) var(--_shadow-color);
   /* A shadow that is not depth: light in the element's own intent colour, with
-     no offset. Outside the depth layers, and not scaled by elevation, so `.flat`
+     no offset. Outside the depth layer, and not scaled by elevation, so `.flat`
      leaves it alone and a field resting at zero still takes it. Present only
-     when `--ui-halo-ink` is declared, the way the second layer is. */
+     when `--ui-halo-ink` is declared: undeclared, the whole layer, leading
+     comma included, is invalid at computed-value time and `var()` drops it, so
+     no empty layer sits in every box's shadow. */
   --_halo-layer:
     ,
     0 0 var(--ui-halo-blur, 0px) var(--ui-halo-spread, 0px)

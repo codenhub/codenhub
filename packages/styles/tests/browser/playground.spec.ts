@@ -33,9 +33,9 @@ test("puts the chosen aesthetic on the preview root and leaves the chrome alone"
      chrome makes it harder to read what actually changed. */
   await expect(page.locator(".playground-nav")).not.toHaveClass(/neobrutalism/);
 
-  await page.getByTestId("aesthetic-select").selectOption("pixel");
+  await page.getByTestId("aesthetic-select").selectOption("sketch");
 
-  await expect(root).toHaveClass(/pixel/);
+  await expect(root).toHaveClass(/sketch/);
   await expect(root).not.toHaveClass(/neobrutalism/);
 });
 
