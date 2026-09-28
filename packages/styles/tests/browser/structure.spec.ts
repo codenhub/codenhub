@@ -175,44 +175,6 @@ test.describe("line style", () => {
 });
 
 test.describe("shadow layers", () => {
-  test("a second depth layer paints only when asked for, and elevation scales it", async ({ page }) => {
-    await load(
-      page,
-      `<button data-testid="plain" class="btn">b</button>
-       <div class="c-layer">
-         <button data-testid="layered" class="btn">b</button>
-         <button data-testid="floating" class="btn floating">b</button>
-         <button data-testid="flat" class="btn flat">b</button>
-       </div>`,
-      `.c-layer { --ui-shadow-2-y: 3px; --ui-shadow-2-blur: 6px; --ui-shadow-2-ink: 0%; }`,
-    );
-
-    const layers = (shadow: string) => shadow.split(/,(?![^(]*\))/).length;
-
-    expect(layers(await read(page, "plain", "box-shadow")), "no empty layer by default").toBe(1);
-    expect(await read(page, "layered", "box-shadow")).toMatch(/0px 3px 6px 0px/);
-    expect(await read(page, "floating", "box-shadow")).toMatch(/0px 6px 12px 0px/);
-    expect(await read(page, "flat", "box-shadow")).toMatch(/0px 0px 0px 0px[^,]*$/);
-  });
-
-  test("the second layer mixes toward its own base colour", async ({ page }) => {
-    await load(
-      page,
-      `<div class="c-shared"><button data-testid="shared" class="btn ghost">b</button></div>
-       <div class="c-own"><button data-testid="own" class="btn ghost">b</button></div>
-       <span data-testid="white" style="color: color-mix(in oklab, red 0%, rgb(255 255 255))">w</span>
-       <span data-testid="black" style="color: color-mix(in oklab, red 0%, rgb(0 0 0))">k</span>`,
-      `.c-shared, .c-own { --elevation-color: rgb(0 0 0); --ui-shadow-2-y: 2px; --ui-shadow-2-ink: 0%; }
-       .c-own { --ui-shadow-2-color: rgb(255 255 255); }`,
-    );
-
-    const secondLayer = async (testId: string) =>
-      (await read(page, testId, "box-shadow")).split(/,(?![^(]*\))/)[1]!.trim();
-
-    expect(await secondLayer("shared"), "the depth colour by default").toContain(await read(page, "black", "color"));
-    expect(await secondLayer("own"), "its own base when named").toContain(await read(page, "white", "color"));
-  });
-
   test(".flat keeps the halo, and a field takes it", async ({ page }) => {
     await load(
       page,
@@ -282,13 +244,12 @@ test.describe("forced colours", () => {
          <button data-testid="button" class="btn edged">b</button>
          <div data-testid="card" class="card">c</div>
        </div>`,
-      `.c-parts { --ui-line-style: dashed; --ui-shadow-2-ink: 50%; --ui-surface-image: linear-gradient(red, blue);
+      `.c-parts { --ui-line-style: dashed; --ui-surface-image: linear-gradient(red, blue);
          --ui-label-shadow: 0 0 4px; }`,
     );
 
     expect(await read(page, "button", "--ui-line-style")).toBe("solid");
     expect(await read(page, "button", "border-top-style")).toBe("solid");
-    expect(await read(page, "button", "--ui-shadow-2-ink")).toBe("");
     expect(await read(page, "button", "--ui-halo-ink"), "cyber's halo").toBe("");
     expect(await read(page, "card", "--ui-surface-image")).toBe("none");
     expect(await read(page, "button", "--ui-label-shadow")).toBe("none");

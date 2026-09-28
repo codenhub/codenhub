@@ -67,9 +67,6 @@ Components read each with a fallback, so leaving them unset produces the default
 | `--ui-active-transform`   | Transform while pressed. `none` under `prefers-reduced-motion`.                                                                                      | `scale(0.97)`                             |
 | `--ui-active-translate-x` | Distance a press travels into the element's depth; `-y` beside it. Scaled like the shadow.                                                           | `0px`                                     |
 | `--ui-shadow-ink`         | Percentage of shadow color taken from intent ink.                                                                                                    | `0%`                                      |
-| `--ui-shadow-2-x`         | A second depth layer: `-x`, `-y`, `-blur`, `-spread`, and `-inset`, like the first. Elevation scales it.                                             | `0px`                                     |
-| `--ui-shadow-2-ink`       | The second layer's share of intent ink. Unset, there is no second layer.                                                                             | Unset                                     |
-| `--ui-shadow-2-color`     | The colour the second layer's ink mixes toward, so it can lighten where the first darkens.                                                           | `--elevation-color`                       |
 | `--ui-halo-blur`          | Blur of a halo around the element; `--ui-halo-spread` beside it. Elevation does not scale it.                                                        | `0px`                                     |
 | `--ui-halo-ink`           | The halo's share of the intent colour, over nothing. Unset, there is no halo.                                                                        | Unset                                     |
 | `--ui-shadow-edge`        | Declared, even empty, when the shadow is the element's edge rather than its depth. Read for presence.                                                | Unset                                     |
@@ -107,13 +104,13 @@ Which corners take the corner is its own choice. `.cut-diagonal` keeps the top-l
 
 `--ui-line-style` reaches every line a component draws: the box's edge, the progress track, and dividers and table rules. `--ui-rule-style` optionally overrides just dividers and table rules, without changing the box edge; sketch uses it for dashed accents. A dashed or dotted line keeps its colour, so it keeps its contrast; `double` needs a width of 3px or more to draw two lines.
 
-`--ui-shadow-2-*` adds a second depth layer that elevation scales like the first, for a two-tone bevel or a soft shadow under a hard one. Its ink mixes toward `--ui-shadow-2-color`, so a bevel's highlight can lighten toward white where the first layer's shade darkens toward `--elevation-color`. `--ui-halo-*` is light rather than depth -- a glow in the element's own intent colour -- so elevation does not scale it and `.flat` leaves it on. Each appears only when its ink is set.
+`--ui-halo-*` is light rather than depth -- a glow in the element's own intent colour -- so elevation does not scale it and `.flat` leaves it on. It appears only when its ink is set.
 
 `--ui-surface-image` lays any `background-image` over a surface's plate: cards, panels, alerts, and tooltips, not controls. Whoever sets it owns the contrast of the text over it, and your own `background-image` on a surface still wins.
 
 `--ui-label-*` treats the label of a button or a badge: weight, tracking, case, and a text shadow. Write the shadow without a colour -- `0 0 6px` -- so it takes the label's own colour and cannot lower its contrast. Your own `font-*`, `tracking-*`, and case utilities still win.
 
-Under forced colours each of these draws its plain version: a solid line, no second layer, no halo, no painted layer, and no label shadow.
+Under forced colours each of these draws its plain version: a solid line, no halo, no painted layer, and no label shadow.
 
 ### Shape and ring composition
 

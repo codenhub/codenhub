@@ -82,15 +82,6 @@
     --ui-halo-blur: var(--_cyber-glow);
     --ui-halo-spread: 0px;
     --ui-halo-ink: 40%;
-    /* No second depth layer, cleared so a region nested inside another
-       aesthetic does not inherit one. */
-    --ui-shadow-2-x: initial;
-    --ui-shadow-2-y: initial;
-    --ui-shadow-2-blur: initial;
-    --ui-shadow-2-spread: initial;
-    --ui-shadow-2-ink: initial;
-    --ui-shadow-2-inset: initial;
-    --ui-shadow-2-color: initial;
 
     /* The glow holds still under the pointer and under a press; the press is the
        base scale, restated because a region nested inside another aesthetic must

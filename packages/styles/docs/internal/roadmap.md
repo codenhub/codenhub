@@ -30,7 +30,7 @@ Aesthetics compose the foundation rather than justify new tokens. Exact appearan
 
 - **Glitch.** Static color split without built-in motion or slicing; hues come from intent or consumer knobs, not a preset palette ([R1](./model.md#rules-for-aesthetics)). Its treatment needs new visual references before implementation. Not started.
 - **Synthwave/retro.** Visual references are awaited before defining its appearance, tokens, or implementation. No look has been selected.
-- **Retro-OS bevel (`.retro-os`).** A raised two-tone edge with the standard press, not an inverted pressed bevel. A first implementation -- square corners, a 1px ink line, the two depth layers inset as a shade and a white highlight, and a grey surface face -- was built and rejected on review because it did not read as a retro OS; the design starts over from references. The foundation part it needed stays: `--ui-shadow-2-color`, which lets the second layer lighten where the first darkens.
+- **Retro-OS bevel (`.retro-os`).** A raised two-tone edge with the standard press, not an inverted pressed bevel. A first implementation -- square corners, a 1px ink line, the two depth layers inset as a shade and a white highlight, and a grey surface face -- was built and rejected on review because it did not read as a retro OS; the design starts over from references. A two-tone bevel needs two depth layers with separate base colours, which the foundation no longer carries; whether the new design needs them is decided with it.
 
 ## Aesthetics assessed and deferred
 
