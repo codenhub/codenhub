@@ -38,7 +38,7 @@ Two rungs work? Take the higher one and move on.
 
 ## Skipped and Deferred Work
 
-Everything left out stays findable, in the project's own conventions. Never name this skill, the agent, or a mode in code, comments, or commits.
+Everything left out stays findable, in the project's own conventions. Never name this skill or a mode in code, comments, or commits, and name the agent only where the project's conventions require it.
 
 - **A shortcut with a known ceiling** (a global lock, a quadratic scan, a naive heuristic) gets a `TODO:` comment in the project's comment syntax, naming the ceiling and when to revisit it: `// TODO: global lock; use per-account locks if throughput matters`.
 - **A skipped feature with a natural home** (the function or config where it would plug in) gets a `TODO:` there: `// TODO: no retry; add one if the upstream API starts failing transiently`.
