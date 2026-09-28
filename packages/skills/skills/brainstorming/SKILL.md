@@ -9,7 +9,7 @@ metadata:
 
 Help turn ideas into fully formed designs through natural collaborative dialogue. Start by understanding the current project context, then ask simple, direct questions to refine the idea.
 
-Once you understand what you're building, present the design and get user approval before any implementation action. Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. Design approval does not approve documentation, planning, or implementation. After approval, recommend writing a concise spec when formalizing the decisions would help preserve context, coordinate work, or guide implementation, but do not require one. If the user explicitly wants brainstorming only, deferred documentation, or direct implementation, follow that intent. If the next step is unclear, ask one short question such as `Do you want a short spec first, or should I proceed to the change?` instead of assuming a handoff.
+Once you understand what you're building, present the design and get user approval before any implementation action. Do NOT invoke any implementation skill, write any code, scaffold any project, or take any implementation action until you have presented a design and the user has approved it. Design approval does not approve documentation, planning, or implementation; see After the Design for the handoff.
 
 ## Anti-Pattern: "This Is Too Simple To Need A Design"
 
@@ -25,12 +25,7 @@ Use these stages as the default flow. For complex work, cover them all. For simp
 2. **Ask clarifying questions** - keep them simple and direct; group closely related easy questions when they can be answered together; separate questions that need discussion
 3. **Propose options** - compare 2-3 approaches when there are meaningful choices; otherwise state the single obvious approach and why it is sufficient
 4. **Present design** - for complex work, present the design in sections, get a response on each section, revisit any deferred or partial approvals, then give a short summary of the full design and get one final approval; for simple work, a single concise design and one approval is enough
-5. **Transition or stop** - recommend a concise spec when formalizing the approved design would help; if the user wants to proceed directly, complete brainstorming and hand off to implementation outside this skill; if the user explicitly wants brainstorming only, stop after the approved design; if the next step is unclear, ask one short question
-
-## Tool Compatibility
-
-- Keep instructions tool-agnostic and avoid provider-specific wording.
-- When behavior differs across tools, resolve conflicts in this order: OpenCode > Claude Code > Codex CLI > Gemini CLI.
+5. **Transition or stop** - follow After the Design
 
 ## Process Flow
 
@@ -44,15 +39,8 @@ Explore project context
      -> simple work: concise design -> approval
   -> Final design approved?
      -> no: revise and continue
-     -> yes + formal documentation would help: recommend a concise spec, then follow the user's choice
-     -> yes + wants to proceed directly: brainstorming complete; end this skill and hand off to the implementation phase
-     -> yes + explicitly wants brainstorming only: stop after the approved design
-     -> yes + next step unclear: ask one short question
+     -> yes: follow After the Design
 ```
-
-Do NOT invoke `frontend-design` or any other implementation skill from brainstorming. If the user wants to proceed directly, finish brainstorming first, then let implementation happen as the next phase outside this skill.
-
-Recommend a concise spec only when the approved design should be formalized or carried forward. If the user explicitly wants to stop at brainstorming, defer documentation, or proceed directly to the change, do not force a spec. When the user's intent is unclear after final design approval, ask one short question such as `Do you want a short spec first, or should I proceed to the change?`.
 
 ## The Process
 
@@ -100,11 +88,10 @@ Recommend a concise spec only when the approved design should be formalized or c
 
 ## After the Design
 
-**Documentation:**
-
-- Recommend writing a concise spec to formalize the validated design when the decisions should be preserved, shared, or carried forward.
-- Do not force a spec. If the user wants brainstorming only, deferred documentation, or direct implementation, follow that intent.
-- If the user wants to keep going but it is unclear whether they want a spec, more planning, or direct implementation, ask `Do you want a short spec first, or should I proceed to the change?`.
+- Recommend a concise spec when the approved design should be preserved, shared, or carried forward. Never force one.
+- If the user wants brainstorming only, stop after the approved design.
+- If the user wants to proceed directly, brainstorming is complete; implementation happens outside this skill.
+- If the next step is unclear, ask: `Do you want a short spec first, or should I proceed to the change?`
 
 ## Key Principles
 

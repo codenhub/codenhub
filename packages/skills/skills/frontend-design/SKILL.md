@@ -3,14 +3,9 @@ name: frontend-design
 description: Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics.
 ---
 
-This skill guides the coding agent in creating distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Implement real working code with exceptional attention to aesthetic details and creative choices.
+Build distinctive, production-grade frontend interfaces that avoid generic "AI slop" aesthetics. Implement real working code with exceptional attention to aesthetic details and creative choices.
 
 The user provides frontend requirements: a component, page, application, or interface to build. They may include context about the purpose, audience, or technical constraints.
-
-## Tool Compatibility
-
-- Keep instructions tool-agnostic and avoid provider-specific wording.
-- When behavior differs across tools, resolve conflicts in this order: OpenCode > Claude Code > Codex CLI > Gemini CLI.
 
 ## Design Thinking
 
@@ -56,5 +51,3 @@ When applying this skill:
 - Refine the result for both desktop and mobile instead of treating responsiveness as a follow-up.
 - Prefer modern, production-ready framework patterns already present in the codebase instead of introducing novelty for its own sake.
 - Push toward concrete design decisions, polished implementation details, and cohesive execution rather than generic safe choices.
-
-Remember: strong creative results come from a clear aesthetic direction and enough room to execute it with conviction. Do not hold back; think outside the box and commit fully to a distinctive vision.
