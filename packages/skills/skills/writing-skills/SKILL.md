@@ -23,7 +23,8 @@ Frontmatter:
 
 - `name`: 1–64 characters of `a-z`, `0-9`, and single hyphens, not starting or ending with one; equal to the directory name; never containing `anthropic` or `claude`.
 - `description`: 1–1024 characters on one line, no XML tags. Block scalars (`>` or `|`) are not portable.
-- Only the specification's keys: `name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`. Harness-specific settings belong in that harness's own files, such as `agents/openai.yaml`.
+- `compatibility`, when present: 1–500 characters.
+- Only the specification's keys: `name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`. A harness setting that has its own file goes there, such as `agents/openai.yaml` for Codex; one that only that harness's frontmatter accepts, such as a model override, is left out so the skill loads the same in every harness.
 
 Layout:
 
@@ -56,9 +57,9 @@ description: Enforces test-first development on code changes. Use when implement
 - **Assume a capable agent.** Add only what it lacks: project-specific steps, non-obvious constraints, judgment it gets wrong. Cut explanations of general concepts.
 - **Write imperatives with one term per concept.** Give a default and its exception instead of a menu: "Use X. For Y, use Z."
 - **Match freedom to fragility.** Heuristics for judgment calls; exact commands or a script for steps that break under variation.
-- **Make rules unconditional.** A rule that applies only when a label, prefix, keyword, or mode name is present gets skipped whenever that marker is missing. State where the rule applies and list its exceptions.
-- **Keep the skill out of its output.** Code, comments, commits, and documents a skill produces follow the project's conventions and never name the skill or the agent.
-- **Stay tool-agnostic.** Describe capabilities ("run the tests", "delegate to a subagent when available"), not one harness's tool names or slash commands.
+- **Tie rules to situations, not markers.** A rule that applies only when a label, prefix, keyword, or mode name is present gets skipped whenever that marker is missing. State the situation where the rule applies, such as the files or task it covers, and list its exceptions.
+- **Keep the skill out of its output.** Code, comments, commits, and documents a skill produces follow the project's conventions and never name the skill. They name the agent or model only where those conventions require it, such as a co-author trailer.
+- **Name capabilities, not harness tools.** Describe what to do ("run the tests", "delegate to a subagent when available"), not one harness's tool names or slash commands, so the skill works in every harness. A skill built to drive one tool server, such as a specific MCP server, is the exception: it names that server and its tools exactly, and a review keeps those names instead of replacing them with generic capabilities.
 - **Steer format with examples.** Examples steer format and tone more reliably than description. Make them mirror real use, and vary them enough that the agent does not copy an unintended pattern.
 - **Avoid time-sensitive statements.** Describe the current way; drop what it replaced.
 - **Push rare branches into references.** Say in `SKILL.md` when to read each one.
@@ -72,18 +73,22 @@ Current models follow instructions closely, so phrasing changes how often a rule
 - **Use plain directives.** "Run the tests before committing." Capitals, "CRITICAL", and "You MUST" make current models over-apply a rule; add emphasis only when an evaluation shows the plain wording is ignored.
 - **Give the reason for a rule that is not obvious.** "Never use ellipses; a text-to-speech engine reads the output" lets the agent handle cases the rule did not list.
 - **Say what to do.** State the wanted behavior, and pair a necessary prohibition with its alternative: "Do not mock the database; use the test container."
-- **Put the most important rules first, and keep them few.** Adherence drops as instructions pile up, and earlier ones win.
+- **Put the most important rules first, and keep them few.** Adherence drops as instructions pile up, and a model that starts dropping them tends to drop later ones first.
 - **Keep exact values in `SKILL.md`.** Output formats, thresholds, and required strings the task depends on belong in the body, not in a reference the agent may not read.
 
 ## Evaluate To The Risk
 
-| Change                                                                           | Minimum evidence                                                                                                                                                                                                                           |
-| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| New skill, or a behavioral change: triggers, rules, workflow order, gates        | Run at least three realistic scenarios without the change and record each outcome. Rerun with it: every failure the change targets is gone, and scenarios that already passed, such as one where the skill should not trigger, still pass. |
-| Discipline skill: a rule agents are tempted to skip under pressure               | The above, plus pressure scenarios. Counter each rationalization you observe, quoted verbatim.                                                                                                                                             |
-| Editorial change: wording, formatting, or links with no intended behavior change | The hard rules, then a re-read of the diff confirming no rule, trigger, or order changed. When unsure, treat the change as behavioral.                                                                                                     |
+| Change                                                                           | Minimum evidence                                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New skill, or a behavioral change: triggers, rules, workflow order, gates        | Run at least three realistic scenarios without the change and record each outcome. Run them with it until two consecutive runs pass: every failure the change targets is gone, and scenarios that already passed, such as one where the skill should not trigger, still pass. |
+| Discipline skill: a rule agents are tempted to skip under pressure               | The above, plus pressure scenarios. Counter each rationalization you observe, quoted verbatim.                                                                                                                                                                                |
+| Editorial change: wording, formatting, or links with no intended behavior change | The hard rules, then a re-read of the diff confirming no rule, trigger, or order changed. When unsure, treat the change as behavioral.                                                                                                                                        |
 
-Run scenarios in a fresh context that holds only the skill and the task, such as a subagent or a new session. Read [references/evaluation.md](references/evaluation.md) to design and run them.
+Run scenarios in a fresh context that holds only the skill and the task, such as a subagent or a new session. That context has the skill loaded already, so it cannot test the description. For a new skill or a trigger change, also install the skill beside the others the agent will have, send requests that do not name it, and check that it loads and that a near-miss request does not load it.
+
+Run scenarios on each model that will use the skill, including the least capable one. A skill that works on one model can fail on another.
+
+Read [references/evaluation.md](references/evaluation.md) to design and run them.
 
 State what was evaluated and the result where the change is reviewed. If a change was not evaluated, say so.
 
@@ -95,8 +100,8 @@ State what was evaluated and the result where the change is reviewed. If a chang
 - [ ] Every line changes behavior; nothing restates what a capable agent already knows.
 - [ ] No rule depends on a marker being present, and no output names the skill.
 - [ ] Rules are plain directives, with reasons where they are not obvious and no emphasis without evidence.
-- [ ] Instructions are tool-agnostic.
-- [ ] Evaluation matches the risk, and its result is recorded.
+- [ ] Instructions name capabilities, not harness tools, except the tool server a skill exists to drive.
+- [ ] Evaluation matches the risk, ran on the models that will use the skill, and its result is recorded.
 
 ## Common Mistakes
 

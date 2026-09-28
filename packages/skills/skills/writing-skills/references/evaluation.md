@@ -22,15 +22,19 @@ Record each scenario with the behavior that counts as a pass:
 
 ## Running
 
-1. **Baseline.** Run every scenario in a fresh context without the skill or change. Record what the agent did and, when it went wrong, its reasoning in its own words.
+1. **Baseline.** Run every scenario in a fresh context without the skill or change, on each model that will use the skill. Record what the agent did and, when it went wrong, its reasoning in its own words.
 2. **With the change.** Run the same scenarios with the skill present. Compare against the expected behavior, not against a feeling that the output improved.
 3. **Fix and rerun.** Address the specific failure you saw, then rerun every scenario; a fix for one can break another.
 
-Stop when every scenario passes on a rerun. One pass can be luck.
+Stop when every scenario passes on two consecutive runs. One pass can be luck.
 
-Never skip the baseline because the skill looks right. Skills can make agents worse, and skills an agent writes without testing against a baseline tend not to help at all.
+Never skip the baseline because the skill looks right. Skills can make agents worse, and skills a model writes for itself, unchecked, give no benefit on average.
 
 If an agent fails with the skill present, ask it in the same context how the skill should have been written to prevent the failure. The answer shows whether the skill was unclear, missing a rule, or burying one.
+
+## Triggering
+
+A scenario that hands the agent the skill tests the body, never the description. To test the description, install the skill where the harness discovers it, beside the other skills the agent will have, and send requests that do not name it. A run passes when the agent loads the skill for a request it covers and leaves it unloaded for a near miss, such as a request a neighboring skill owns. Harnesses shorten descriptions differently when many skills are installed, so test in each harness that will load the skill.
 
 ## Pressure Scenarios
 
