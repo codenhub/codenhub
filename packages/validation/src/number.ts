@@ -117,6 +117,22 @@ export class NumberValidator extends Validator<number> {
   }
 
   /**
+   * Requires a value other than zero.
+   *
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  nonZero(message?: Message): this {
+    return this.addStep(
+      constraint((value) => value !== 0, {
+        code: "invalid_value",
+        message: message ?? "Must not be zero",
+        params: { type: "number", format: "nonZero" },
+      }),
+    );
+  }
+
+  /**
    * Requires a whole number.
    *
    * @param message - Failure message.

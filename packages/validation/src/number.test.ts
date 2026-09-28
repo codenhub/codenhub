@@ -62,6 +62,10 @@ describe("bounds", () => {
     expect(accepts(val.number().nonPositive(), -1, 0, 1)).toEqual([true, true, false]);
   });
 
+  it("nonZero rejects zero of either sign", () => {
+    expect(accepts(val.number().nonZero(), -1, 0, -0, 1)).toEqual([true, false, false, true]);
+  });
+
   it("reports every violated bound", () => {
     expect(codesOf(val.number().min(10).int().validate(1.5))).toEqual(["too_small", "invalid_value"]);
   });
