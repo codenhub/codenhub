@@ -313,6 +313,22 @@ test.describe("solo utilities", () => {
     expect(container["border-top-left-radius"], "container surface radius").toBe("80px 3px");
   });
 
+  test("draws rounded contours on sketch-solo when paired with sketch-rounded", async ({ page }) => {
+    await load(
+      page,
+      ["aesthetics/sketch.css"],
+      '<button id="action" class="sketch-solo sketch-rounded">Go</button><div id="container" class="sketch-solo sketch-rounded">Pane</div><button id="custom" class="sketch-solo sketch-rounded" style="--sketch-radius-rounded: 10px">Custom</button>',
+    );
+
+    const action = await read(page, "#action", ["border-top-left-radius"]);
+    const container = await read(page, "#container", ["border-top-left-radius"]);
+    const custom = await read(page, "#custom", ["border-top-left-radius"]);
+
+    expect(action["border-top-left-radius"], "action rounded radius").toBe("26px 12px");
+    expect(container["border-top-left-radius"], "container rounded surface radius").toBe("38px 16px");
+    expect(custom["border-top-left-radius"], "custom knob overrides").toBe("10px");
+  });
+
   test("weight chunky tile's label on an action only", async ({ page }) => {
     await load(
       page,

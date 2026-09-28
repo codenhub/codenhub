@@ -18,15 +18,13 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**`0.5.0` is a local, unreleased draft**: `@codenhub/styles@0.4.0` remains the current npm version. The foundation changes and sketch aesthetic are implemented; glitch, synthwave/retro, and retro-OS bevel remain part of the planned 0.5.0 scope but are not implemented. The [0.5.0 changelog](../changelog/0.5.0.md) describes only the work already implemented and MUST be updated as the remaining looks land before publishing.
+**`0.5.0` is a local, unreleased draft**: `@codenhub/styles@0.4.0` remains the current npm version. The foundation changes, sketch aesthetic, and rounded sketch variant are implemented; glitch, synthwave/retro, and retro-OS bevel remain part of the planned 0.5.0 scope but are not implemented. The [0.5.0 changelog](../changelog/0.5.0.md) describes only the work already implemented and MUST be updated as the remaining looks land before publishing.
 
 The foundation was built for structure, not for a look. Any new material part must still pass [What enters the material contract](./model.md#what-enters-the-material-contract), independently of the aesthetic that would use it. An aesthetic the foundation cannot express without breaking that rule needs a separate decision before implementation.
 
 ## Planned
 
 Implement the three remaining aesthetics below for `0.5.0`, including their standalone solo classes, compiled and `/tw` exports, registry entries, public documentation, playground coverage, and cross-browser tests. Their visual direction awaits references from the maintainer before design or implementation. Nothing is committed for a later release yet.
-
-- **Rounded sketch.** A rounded hand-drawn variant for `.sketch` (e.g., an opt-in modifier or shape knob) so consumers can select rounded hand-drawn contours alongside the default sharp, pointy-cornered hand-drawn square outlines. Pointy/sharp contours remain the resting aesthetic for both controls and surfaces.
 
 ## 0.5.0 aesthetics
 

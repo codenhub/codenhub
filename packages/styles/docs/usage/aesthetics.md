@@ -172,6 +172,18 @@ A parallelogram slants its sides into the content, so give a surface that takes 
 
 Sketch gives controls expressive, hand-drawn outlines starting with `255px 15px 225px 15px / 15px 225px 15px 255px` while giving containers and surfaces sharp, hand-drawn square contours (starting with `80px 4px 75px 5px / 3px 70px 4px 80px`) tailored to container dimensions so cards and panels stay pointy without encroaching on interior padding. Sibling components, container wrappers, and sequential form fields rotate through four distinct outlines. The shape is stable for a given DOM order, not random on each render; sequential `.field` rows alternate outlines so stacked forms avoid repetitive shapes. These are complete `border-radius` values, used as written rather than scaled or patterned. Knobs `--sketch-radius` (for controls) and `--sketch-radius-surface` (for surfaces) customize the outlines from `:root` or an ancestor; to choose a shape on an isolated component, set `--ui-radius` (or `--ui-radius-surface` on a surface) directly on it. The 1px ink edge is solid by default, while checkboxes, dividers, and table rules use dashed lines for contrast. Set `--ui-line-style: dashed` on any other component to opt in; `--ui-rule-style: solid` overrides a divider or table's dashed rules. The 2px hard shadow is a small neutral depth cue.
 
+To opt into subtle rounded hand-drawn contours instead of pointy corners, add `.sketch-rounded` on the container or individual components:
+
+```html
+<section class="sketch sketch-rounded">
+  <div class="card">
+    <button class="btn primary">Rounded action</button>
+  </div>
+</section>
+```
+
+Under `.sketch-rounded`, controls take expressive, hand-drawn elliptical contours starting with `26px 10px 24px 11px / 12px 22px 11px 22px`, surfaces start with `38px 16px 36px 17px / 16px 34px 17px 32px`, and chips take `9px 3px 8px 4px / 4px 8px 3px 8px`, all rotating through four sibling steps. Bounded pixel radii guarantee straight top and bottom edges on wide elements, preventing egg-shaped distortion. Knobs `--sketch-radius-rounded` and `--sketch-radius-surface-rounded` customize the rounded contours.
+
 ```html
 <section class="sketch" style='--font-sketch: "Comic Sans MS", cursive'>
   <button class="btn primary">Send note</button>
@@ -184,8 +196,8 @@ The dashed button uses `ghost edged` to expose its boundary: a default filled bu
 **Exceptions:**
 
 - `--font-sketch` is yours to supply. The package ships no handwriting font and falls back to the platform `cursive` generic family.
-- Chips — checkboxes, key caps, code chips, badges, and progress bars — rotate through compact asymmetric sketch outlines through `--ui-radius-tight`, with two nearly sharp corners and two pronounced curves instead of even rounding. Set that token on a chip to choose a different complete radius.
-- Sketch eliminates pill shapes: `.btn.pill` uses the same irregular box outline as other buttons (including sibling variation), and badges, progress bars, and switches take compact chip-sized box outlines (`--ui-radius-tight`), preventing wide egg distortion. Radios and circular tooltip triggers are the circular controls, subtly asymmetric so they remain distinguishable from checkboxes. An explicit `--ui-radius-pill` on an element still wins.
+- Chips — checkboxes, key caps, code chips, badges, and progress bars — rotate through compact asymmetric sketch outlines through `--ui-radius-tight`, with two nearly sharp corners and two pronounced curves instead of even rounding (or organic rounded chip outlines under `.sketch-rounded`). Set that token on a chip to choose a different complete radius.
+- Pill buttons (`.btn.pill`) take organic hand-drawn rounded pill contours (`24px 16px 23px 17px / 17px 21px 16px 20px` with 4-step sibling rotation via `--sketch-radius-pill`), capped to match button half-height so buttons of any width keep flat horizontal edges without oval/egg distortion. Badges, progress bars, and switches take compact chip-sized box outlines (`--ui-radius-tight`). Radios and circular tooltip triggers are the true circular controls, subtly asymmetric so they remain distinguishable from checkboxes. An explicit `--ui-radius-pill` on an element still wins.
 - Buttons press with the plain `scale(0.97)` gesture; reduced motion disables it.
 - Forced-colors mode replaces dashed accents with the package's solid accessible fallback, like every other material line.
 
@@ -193,14 +205,14 @@ The dashed button uses `ghost edged` to expose its boundary: a default filled bu
 
 An aesthetic class sets material tokens and nothing paints until a component reads them, so `.glass` on an element this package does not style -- a toast from another library, a dialog, a plain `<div>` on a page without the base stylesheet -- changes nothing. Each aesthetic also ships a solo class that paints its look directly onto the one element carrying it:
 
-| Aesthetic       | Solo class           | Paints                                                                                                                                                                   |
-| --------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner.                                                                                |
-| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                                                                                                      |
-| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.                                                                                             |
-| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                                                                                                           |
-| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.                                                                                       |
-| `.sketch`       | `.sketch-solo`       | Uneven elliptical corners (sharp surface outline on a pane, expressive control outline on an action), a 1px solid ink line, the 2px offset shadow, the handwriting face. |
+| Aesthetic       | Solo class           | Paints                                                                                                                                                                                                                               |
+| --------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner.                                                                                                                                            |
+| `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                                                                                                                                                                  |
+| `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.                                                                                                                                                         |
+| `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                                                                                                                                                                       |
+| `.cyber`        | `.cyber-solo`        | The surface diagonal (the control one on an action), 1px edge, the glow, the font.                                                                                                                                                   |
+| `.sketch`       | `.sketch-solo`       | Uneven elliptical corners (sharp surface outline on a pane, expressive control outline on an action; subtle rounded contours when paired with `.sketch-rounded`), a 1px solid ink line, the 2px offset shadow, the handwriting face. |
 
 ```css
 /* The only stylesheet from this package on the page. */
@@ -214,7 +226,7 @@ An aesthetic class sets material tokens and nothing paints until a component rea
 A solo class ships in the same entrypoint as its aesthetic, and needs nothing else loaded:
 
 - **It paints material, not colour.** Edge, corner, depth, silhouette, backdrop, font, and press. No intent, no fill amount, no hover tint -- the element has no presentation to compose. Glass's translucent ground is the one fill, because it is glass's material.
-- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, `--sketch-radius`, `--sketch-radius-surface`, and the font knobs (including `--font-sketch`) all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
+- **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, `--sketch-radius`, `--sketch-radius-surface`, `--sketch-radius-rounded`, `--sketch-radius-surface-rounded`, and the font knobs (including `--font-sketch`) all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
 - **It ignores the aesthetic around it.** It reads no `--ui-*` or `--elevation-color`, so a `.glass-solo` inside a `.pixel` region keeps its corners. The elevation modifiers do not reach it either.
 - **It beats a foreign component's own styles.** The rules are unlayered and one class deep, so they win over a component's zero-specificity or layered rules wherever the two load. The flip side is that a Tailwind utility on the same element (`rounded-none`) loses to it: tune a solo class through its knobs.
 - **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` that is not disabled; a container stays put, so a toast does not sink when clicked. Reduced motion drops the movement. Chunky tile's heavier label follows the same rule.

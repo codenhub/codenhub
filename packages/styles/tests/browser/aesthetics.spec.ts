@@ -1588,7 +1588,7 @@ test.describe("aesthetics", () => {
       expect(reduced["--ui-active-transform"].trim()).toBe("none");
     });
 
-    test("gives pill buttons the same sketch outline as ordinary buttons", async ({ page }) => {
+    test("gives pill buttons an organic hand-drawn pill contour", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "sketch"));
 
       const radii = await page.evaluate(() => {
@@ -1604,7 +1604,7 @@ test.describe("aesthetics", () => {
         return values;
       });
 
-      expect(radii[1]).toBe("18px 240px 15px 255px / 240px 15px 255px 18px");
+      expect(radii[1]).toBe("17px 23px 16px 24px / 21px 16px 20px 17px");
       expect(radii[0]).not.toBe(radii[1]);
       expect(radii[2]).toBe("9px");
     });
@@ -1968,6 +1968,102 @@ test.describe("aesthetics", () => {
         expect(styles.backgroundColor, `${name} sketch ground`).toBe(nested.plain.backgroundColor);
         expect(styles.boxShadow, `${name} sketch shadow`).toBe(nested.plain.boxShadow);
       }
+    });
+
+    test("draws subtle rounded hand-drawn contours on controls and surfaces under sketch-rounded", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "sketch"));
+
+      const measured = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const section = document.createElement("section");
+        section.className = "sketch-rounded";
+        section.innerHTML =
+          '<div class="card"><button class="btn">Action 1</button><button class="btn">Action 2</button></div>';
+        host.append(section);
+
+        const card = getComputedStyle(section.querySelector(".card")!).borderRadius;
+        const btn1 = getComputedStyle(section.querySelectorAll(".btn")[0]!).borderRadius;
+        const btn2 = getComputedStyle(section.querySelectorAll(".btn")[1]!).borderRadius;
+
+        section.remove();
+        return { card, btn1, btn2 };
+      });
+
+      expect(measured.card, "rounded card surface").toBe("38px 16px 36px 17px / 16px 34px 17px 32px");
+      expect(measured.btn1, "rounded btn 1").toBe("26px 10px 24px 11px / 12px 23px 11px 20px");
+      expect(measured.btn2, "rounded btn 2 sibling variation").toBe("11px 25px 12px 24px / 23px 11px 22px 12px");
+    });
+
+    test("rotates subtle rounded chip outlines under sketch-rounded", async ({ page }) => {
+      await page.goto(withAesthetic(FORMS_URL, "sketch"));
+
+      const radii = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const section = document.createElement("section");
+        section.className = "sketch-rounded";
+        section.innerHTML =
+          '<input type="checkbox" class="checkbox"><code class="code">code</code><kbd class="kbd">K</kbd>';
+        host.append(section);
+
+        const values = Array.from(section.children, (element) => getComputedStyle(element).borderRadius);
+
+        section.remove();
+        return values;
+      });
+
+      expect(radii[0]).toBe("9px 3px 8px 4px / 4px 8px 3px 7px");
+      expect(radii[1]).toBe("4px 8px 3px 9px / 8px 3px 8px 4px");
+      expect(radii[2]).toBe("8px 4px 9px 3px / 3px 9px 4px 8px");
+    });
+
+    test("allows customizing rounded sketch contours via knobs", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "sketch"));
+
+      const measured = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const section = document.createElement("section");
+        section.className = "sketch-rounded";
+        section.style.setProperty("--sketch-radius-rounded", "12px");
+        section.style.setProperty("--sketch-radius-surface-rounded", "20px");
+
+        section.innerHTML = '<div class="card"><button class="btn">Action</button></div>';
+        host.append(section);
+
+        const card = getComputedStyle(section.querySelector(".card")!).borderRadius;
+        const btn = getComputedStyle(section.querySelector(".btn")!).borderRadius;
+
+        section.remove();
+        return { card, btn };
+      });
+
+      expect(measured.card).toBe("20px");
+      expect(measured.btn).toBe("12px");
+    });
+
+    test("allows applying sketch-rounded directly to individual components", async ({ page }) => {
+      await page.goto(withAesthetic(SURFACES_URL, "sketch"));
+
+      const measured = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const row = document.createElement("div");
+
+        row.innerHTML =
+          '<div class="card">Sharp</div><div class="card sketch-rounded">Rounded</div><button class="btn">Sharp Btn</button><button class="btn sketch-rounded">Rounded Btn</button>';
+        host.append(row);
+
+        const sharpCard = getComputedStyle(row.children[0]!).borderRadius;
+        const roundedCard = getComputedStyle(row.children[1]!).borderRadius;
+        const sharpBtn = getComputedStyle(row.children[2]!).borderRadius;
+        const roundedBtn = getComputedStyle(row.children[3]!).borderRadius;
+
+        row.remove();
+        return { sharpCard, roundedCard, sharpBtn, roundedBtn };
+      });
+
+      expect(measured.sharpCard).toBe("80px 4px 75px 5px / 3px 70px 4px 80px");
+      expect(measured.roundedCard).toBe("17px 36px 18px 34px / 33px 16px 32px 17px");
+      expect(measured.sharpBtn).toBe("245px 220px 15px 18px / 18px 15px 245px 235px");
+      expect(measured.roundedBtn).toBe("12px 24px 10px 25px / 22px 12px 23px 11px");
     });
   });
 });

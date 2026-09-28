@@ -18,7 +18,7 @@
     --ui-corner-bl: initial;
     --ui-radius: var(--sketch-radius, 255px 15px 225px 15px / 15px 225px 15px 255px);
     --ui-radius-surface: var(--sketch-radius-surface, 80px 4px 75px 5px / 3px 70px 4px 80px);
-    --ui-radius-pill: var(--ui-radius);
+    --ui-radius-pill: var(--sketch-radius-pill, 20px 22px 21px 19px / 20px 22px 21px 19px);
     --ui-radius-tight: 11px 1px 7px 2px / 2px 7px 1px 11px;
     --ui-corner-shape: round;
 
@@ -75,6 +75,8 @@
      Skip other aesthetics nested inside sketch so their own material wins. */
   .sketch
     :is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):not(
+      .sketch-rounded,
+      .sketch-rounded *,
       :is(
         .glass,
         .glass *,
@@ -93,6 +95,8 @@
 
   .sketch
     :is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):not(
+      .sketch-rounded,
+      .sketch-rounded *,
       :is(
         .glass,
         .glass *,
@@ -111,6 +115,8 @@
 
   .sketch
     :is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):not(
+      .sketch-rounded,
+      .sketch-rounded *,
       :is(
         .glass,
         .glass *,
@@ -132,6 +138,8 @@
      on interior padding. */
   .sketch
     :is(.card, .panel, .alert):not(
+      .sketch-rounded,
+      .sketch-rounded *,
       :is(
         .glass,
         .glass *,
@@ -150,6 +158,8 @@
 
   .sketch
     :is(.card, .panel, .alert):not(
+      .sketch-rounded,
+      .sketch-rounded *,
       :is(
         .glass,
         .glass *,
@@ -168,6 +178,8 @@
 
   .sketch
     :is(.card, .panel, .alert):not(
+      .sketch-rounded,
+      .sketch-rounded *,
       :is(
         .glass,
         .glass *,
@@ -189,6 +201,8 @@
   .sketch
     .field:nth-child(4n + 1)
     :is(.ipt, .textarea, .select, .input-group):not(
+      .sketch-rounded,
+      .sketch-rounded *,
       :is(
         .glass,
         .glass *,
@@ -208,6 +222,8 @@
   .sketch
     .field:nth-child(4n + 2)
     :is(.ipt, .textarea, .select, .input-group):not(
+      .sketch-rounded,
+      .sketch-rounded *,
       :is(
         .glass,
         .glass *,
@@ -227,6 +243,8 @@
   .sketch
     .field:nth-child(4n + 3)
     :is(.ipt, .textarea, .select, .input-group):not(
+      .sketch-rounded,
+      .sketch-rounded *,
       :is(
         .glass,
         .glass *,
@@ -246,6 +264,8 @@
   .sketch
     .field:nth-child(4n)
     :is(.ipt, .textarea, .select, .input-group):not(
+      .sketch-rounded,
+      .sketch-rounded *,
       :is(
         .glass,
         .glass *,
@@ -265,6 +285,8 @@
   /* Chips and compact controls rotate through small asymmetric profiles. */
   .sketch
     :is(.badge, .kbd, .code, .checkbox, .switch, .progress):not(
+      .sketch-rounded,
+      .sketch-rounded *,
       :is(
         .glass,
         .glass *,
@@ -283,6 +305,8 @@
 
   .sketch
     :is(.badge, .kbd, .code, .checkbox, .switch, .progress):not(
+      .sketch-rounded,
+      .sketch-rounded *,
       :is(
         .glass,
         .glass *,
@@ -301,6 +325,8 @@
 
   .sketch
     :is(.badge, .kbd, .code, .checkbox, .switch, .progress):not(
+      .sketch-rounded,
+      .sketch-rounded *,
       :is(
         .glass,
         .glass *,
@@ -318,44 +344,71 @@
   }
 
   /* Direct class application on elements. */
-  .sketch:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):nth-child(4n + 2) {
+  .sketch:not(.sketch-rounded):is(
+    .btn,
+    .ipt,
+    .textarea,
+    .select,
+    .input-group,
+    .pre,
+    .tooltip-bubble,
+    .data-table
+  ):nth-child(4n + 2) {
     --ui-radius: var(--sketch-radius, 18px 240px 15px 255px / 240px 15px 255px 18px);
   }
 
-  .sketch:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):nth-child(4n + 3) {
+  .sketch:not(.sketch-rounded):is(
+    .btn,
+    .ipt,
+    .textarea,
+    .select,
+    .input-group,
+    .pre,
+    .tooltip-bubble,
+    .data-table
+  ):nth-child(4n + 3) {
     --ui-radius: var(--sketch-radius, 245px 220px 15px 18px / 18px 15px 245px 235px);
   }
 
-  .sketch:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):nth-child(4n) {
+  .sketch:not(.sketch-rounded):is(
+    .btn,
+    .ipt,
+    .textarea,
+    .select,
+    .input-group,
+    .pre,
+    .tooltip-bubble,
+    .data-table
+  ):nth-child(4n) {
     --ui-radius: var(--sketch-radius, 18px 250px 225px 15px / 245px 15px 18px 235px);
   }
 
-  .sketch:is(.card, .panel, .alert):nth-child(4n + 2) {
+  .sketch:not(.sketch-rounded):is(.card, .panel, .alert):nth-child(4n + 2) {
     --ui-radius-surface: var(--sketch-radius-surface, 4px 75px 5px 80px / 75px 3px 80px 4px);
   }
 
-  .sketch:is(.card, .panel, .alert):nth-child(4n + 3) {
+  .sketch:not(.sketch-rounded):is(.card, .panel, .alert):nth-child(4n + 3) {
     --ui-radius-surface: var(--sketch-radius-surface, 75px 70px 4px 5px / 4px 3px 75px 70px);
   }
 
-  .sketch:is(.card, .panel, .alert):nth-child(4n) {
+  .sketch:not(.sketch-rounded):is(.card, .panel, .alert):nth-child(4n) {
     --ui-radius-surface: var(--sketch-radius-surface, 5px 80px 75px 4px / 75px 4px 5px 70px);
   }
 
-  .sketch:is(.badge, .kbd, .code, .checkbox, .switch, .progress):nth-child(4n + 2) {
+  .sketch:not(.sketch-rounded):is(.badge, .kbd, .code, .checkbox, .switch, .progress):nth-child(4n + 2) {
     --ui-radius-tight: 2px 8px 1px 10px / 8px 2px 10px 1px;
   }
 
-  .sketch:is(.badge, .kbd, .code, .checkbox, .switch, .progress):nth-child(4n + 3) {
+  .sketch:not(.sketch-rounded):is(.badge, .kbd, .code, .checkbox, .switch, .progress):nth-child(4n + 3) {
     --ui-radius-tight: 8px 2px 10px 1px / 1px 9px 2px 8px;
   }
 
-  .sketch:is(.badge, .kbd, .code, .checkbox, .switch, .progress):nth-child(4n) {
+  .sketch:not(.sketch-rounded):is(.badge, .kbd, .code, .checkbox, .switch, .progress):nth-child(4n) {
     --ui-radius-tight: 1px 10px 2px 7px / 9px 1px 8px 2px;
   }
 
-  /* Pill elimination: pill buttons read their rotated box radius, while badges,
-     progress bars, and switches take chip-sized box outlines. */
+  /* Pill buttons take an organic hand-drawn rounded pill contour without oval
+     distortion, while badges, progress bars, and switches take chip-sized box outlines. */
   .sketch.btn.pill,
   .sketch
     .btn.pill:not(
@@ -372,7 +425,64 @@
         .chunky-tile *
       )
     ) {
-    --ui-radius-pill: var(--ui-radius);
+    --ui-radius-pill: var(--sketch-radius-pill, 24px 16px 23px 17px / 17px 21px 16px 20px);
+  }
+
+  .sketch.btn.pill:nth-child(4n + 2),
+  .sketch
+    .btn.pill:not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n + 2) {
+    --ui-radius-pill: var(--sketch-radius-pill, 17px 23px 16px 24px / 21px 16px 20px 17px);
+  }
+
+  .sketch.btn.pill:nth-child(4n + 3),
+  .sketch
+    .btn.pill:not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n + 3) {
+    --ui-radius-pill: var(--sketch-radius-pill, 23px 17px 24px 16px / 16px 20px 17px 21px);
+  }
+
+  .sketch.btn.pill:nth-child(4n),
+  .sketch
+    .btn.pill:not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n) {
+    --ui-radius-pill: var(--sketch-radius-pill, 16px 24px 17px 23px / 20px 17px 21px 16px);
   }
 
   .sketch:is(.badge, .progress, .switch),
@@ -471,6 +581,371 @@
       --ui-active-transform: none;
     }
   }
+
+  /* Rounded sketch variant: subtle hand-drawn elliptical corners with organic
+     sibling variation, avoiding mechanical uniformity and preventing egg-shaped
+     distortion on wide elements. Knobs follow R8. */
+  .sketch-rounded {
+    --ui-radius: var(--sketch-radius-rounded, 26px 10px 24px 11px / 12px 23px 11px 20px);
+    --ui-radius-surface: var(--sketch-radius-surface-rounded, 38px 16px 36px 17px / 16px 34px 17px 32px);
+    --ui-radius-pill: var(--sketch-radius-pill, 24px 16px 23px 17px / 17px 21px 16px 20px);
+    --ui-radius-tight: 9px 3px 8px 4px / 4px 8px 3px 7px;
+  }
+
+  .sketch-rounded
+    :is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n + 2) {
+    --ui-radius: var(--sketch-radius-rounded, 11px 25px 12px 24px / 23px 11px 22px 12px);
+  }
+
+  .sketch-rounded
+    :is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n + 3) {
+    --ui-radius: var(--sketch-radius-rounded, 24px 12px 26px 10px / 11px 23px 12px 22px);
+  }
+
+  .sketch-rounded
+    :is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n) {
+    --ui-radius: var(--sketch-radius-rounded, 12px 24px 10px 25px / 22px 12px 23px 11px);
+  }
+
+  .sketch-rounded
+    :is(.card, .panel, .alert):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n + 2) {
+    --ui-radius-surface: var(--sketch-radius-surface-rounded, 17px 36px 18px 34px / 33px 16px 32px 17px);
+  }
+
+  .sketch-rounded
+    :is(.card, .panel, .alert):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n + 3) {
+    --ui-radius-surface: var(--sketch-radius-surface-rounded, 35px 18px 38px 15px / 17px 32px 16px 34px);
+  }
+
+  .sketch-rounded
+    :is(.card, .panel, .alert):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n) {
+    --ui-radius-surface: var(--sketch-radius-surface-rounded, 18px 35px 16px 37px / 31px 17px 34px 16px);
+  }
+
+  .sketch-rounded
+    .field:nth-child(4n + 1)
+    :is(.ipt, .textarea, .select, .input-group):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-radius: var(--sketch-radius-rounded, 26px 10px 24px 11px / 12px 23px 11px 20px);
+  }
+
+  .sketch-rounded
+    .field:nth-child(4n + 2)
+    :is(.ipt, .textarea, .select, .input-group):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-radius: var(--sketch-radius-rounded, 11px 25px 12px 24px / 23px 11px 22px 12px);
+  }
+
+  .sketch-rounded
+    .field:nth-child(4n + 3)
+    :is(.ipt, .textarea, .select, .input-group):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-radius: var(--sketch-radius-rounded, 24px 12px 26px 10px / 11px 23px 12px 22px);
+  }
+
+  .sketch-rounded
+    .field:nth-child(4n)
+    :is(.ipt, .textarea, .select, .input-group):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-radius: var(--sketch-radius-rounded, 12px 24px 10px 25px / 22px 12px 23px 11px);
+  }
+
+  .sketch-rounded
+    :is(.badge, .kbd, .code, .checkbox, .switch, .progress):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n + 2) {
+    --ui-radius-tight: 4px 8px 3px 9px / 8px 3px 8px 4px;
+  }
+
+  .sketch-rounded
+    :is(.badge, .kbd, .code, .checkbox, .switch, .progress):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n + 3) {
+    --ui-radius-tight: 8px 4px 9px 3px / 3px 9px 4px 8px;
+  }
+
+  .sketch-rounded
+    :is(.badge, .kbd, .code, .checkbox, .switch, .progress):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n) {
+    --ui-radius-tight: 3px 9px 4px 8px / 9px 4px 8px 3px;
+  }
+
+  /* Direct class application on elements. */
+  .sketch-rounded:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):nth-child(
+    4n + 2
+  ) {
+    --ui-radius: var(--sketch-radius-rounded, 11px 25px 12px 24px / 23px 11px 22px 12px);
+  }
+
+  .sketch-rounded:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):nth-child(
+    4n + 3
+  ) {
+    --ui-radius: var(--sketch-radius-rounded, 24px 12px 26px 10px / 11px 23px 12px 22px);
+  }
+
+  .sketch-rounded:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table):nth-child(4n) {
+    --ui-radius: var(--sketch-radius-rounded, 12px 24px 10px 25px / 22px 12px 23px 11px);
+  }
+
+  .sketch-rounded:is(.card, .panel, .alert):nth-child(4n + 2) {
+    --ui-radius-surface: var(--sketch-radius-surface-rounded, 17px 36px 18px 34px / 33px 16px 32px 17px);
+  }
+
+  .sketch-rounded:is(.card, .panel, .alert):nth-child(4n + 3) {
+    --ui-radius-surface: var(--sketch-radius-surface-rounded, 35px 18px 38px 15px / 17px 32px 16px 34px);
+  }
+
+  .sketch-rounded:is(.card, .panel, .alert):nth-child(4n) {
+    --ui-radius-surface: var(--sketch-radius-surface-rounded, 18px 35px 16px 37px / 31px 17px 34px 16px);
+  }
+
+  .sketch-rounded:is(.badge, .kbd, .code, .checkbox, .switch, .progress):nth-child(4n + 2) {
+    --ui-radius-tight: 4px 8px 3px 9px / 8px 3px 8px 4px;
+  }
+
+  .sketch-rounded:is(.badge, .kbd, .code, .checkbox, .switch, .progress):nth-child(4n + 3) {
+    --ui-radius-tight: 8px 4px 9px 3px / 3px 9px 4px 8px;
+  }
+
+  .sketch-rounded:is(.badge, .kbd, .code, .checkbox, .switch, .progress):nth-child(4n) {
+    --ui-radius-tight: 3px 9px 4px 8px / 9px 4px 8px 3px;
+  }
+
+  .sketch-rounded:is(.badge, .progress, .switch),
+  .sketch-rounded
+    :is(.badge, .progress, .switch):not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ) {
+    --ui-radius-pill: var(--ui-radius-tight);
+  }
+
+  .sketch-rounded.btn.pill:nth-child(4n + 2),
+  .sketch-rounded
+    .btn.pill:not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n + 2) {
+    --ui-radius-pill: var(--sketch-radius-pill, 17px 23px 16px 24px / 21px 16px 20px 17px);
+  }
+
+  .sketch-rounded.btn.pill:nth-child(4n + 3),
+  .sketch-rounded
+    .btn.pill:not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n + 3) {
+    --ui-radius-pill: var(--sketch-radius-pill, 23px 17px 24px 16px / 16px 20px 17px 21px);
+  }
+
+  .sketch-rounded.btn.pill:nth-child(4n),
+  .sketch-rounded
+    .btn.pill:not(
+      :is(
+        .glass,
+        .glass *,
+        .pixel,
+        .pixel *,
+        .cyber,
+        .cyber *,
+        .neobrutalism,
+        .neobrutalism *,
+        .chunky-tile,
+        .chunky-tile *
+      )
+    ):nth-child(4n) {
+    --ui-radius-pill: var(--sketch-radius-pill, 16px 24px 17px 23px / 20px 17px 21px 16px);
+  }
 }
 
 /* Solo: the look on one unstyled element. It uses standalone fallbacks rather
@@ -497,6 +972,36 @@
   input[type="reset"]
 ) {
   border-radius: var(--sketch-radius, 255px 15px 225px 15px / 15px 225px 15px 255px);
+}
+
+/* Rounded solo variant: subtle hand-drawn elliptical corners on unstyled elements. */
+.sketch-solo.sketch-rounded,
+.sketch-solo .sketch-rounded {
+  border-radius: var(
+    --sketch-radius-surface-rounded,
+    var(--sketch-radius-surface, 38px 16px 36px 17px / 16px 34px 17px 32px)
+  );
+}
+
+.sketch-solo.sketch-rounded:is(
+  button,
+  a[href],
+  [role="button"],
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"]
+),
+.sketch-solo:is(
+  button,
+  a[href],
+  [role="button"],
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"]
+).sketch-rounded {
+  border-radius: var(--sketch-radius-rounded, var(--sketch-radius, 26px 10px 24px 11px / 12px 23px 11px 20px));
 }
 
 /* This entrypoint may be the only package stylesheet loaded, so it cannot rely

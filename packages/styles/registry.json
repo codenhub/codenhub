@@ -70,7 +70,7 @@
     },
     "size": ["sm", "lg"],
     "padding": ["p-xs", "p-sm", "p-lg", "flush"],
-    "shape": ["pill", "icon", "cut-diagonal", "cut-diagonal-reverse"],
+    "shape": ["pill", "icon", "cut-diagonal", "cut-diagonal-reverse", "sketch-rounded"],
     "state": ["disabled", "interactive", "hoverable", "pressable", "active", "indeterminate"],
     "layout": ["vertical", "horizontal", "between", "tight", "loose", "narrow", "wide"],
     "rule": ["ruled", "ruleless"]
