@@ -96,4 +96,15 @@ describe("DateValidator", () => {
     expectTypeOf<DOutput>().toEqualTypeOf<Date>();
     expectTypeOf<DInput>().toEqualTypeOf<unknown>();
   });
+
+  it("does not mutate receiver when chaining constraints", () => {
+    const minBound = new Date("2026-01-01T00:00:00.000Z");
+    const maxBound = new Date("2026-12-31T00:00:00.000Z");
+    const base = val.date().min(minBound);
+    const bounded = base.max(maxBound);
+
+    const futureDate = new Date("2027-01-01T00:00:00.000Z");
+    expect(base.validate(futureDate).ok).toBe(true);
+    expect(bounded.validate(futureDate).ok).toBe(false);
+  });
 });

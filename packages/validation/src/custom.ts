@@ -118,12 +118,10 @@ function legacyCustom<T>(
  * @typeParam TOutput - Output type produced by the custom validator.
  * @typeParam TInput - Accepted input type.
  * @param validator - Function performing the custom validation logic.
- * @param options - Optional validation configuration.
  * @returns A new CustomValidator schema instance.
  */
 export function custom<TOutput, TInput = unknown>(
   validator: (input: TInput, ctx: ValidationContext) => unknown,
-  options?: ValidationOptions,
 ): CustomValidator<TOutput, TInput>;
 /**
  * Runs a custom validator on an input value immediately (legacy runner).

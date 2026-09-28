@@ -68,6 +68,22 @@ describe("number validators", () => {
         path: [],
       },
     });
+    expect(val.number(1).range({ min: Number.NaN })).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_value",
+        message: "Range minimum must be a finite number",
+        path: [],
+      },
+    });
+    expect(val.number(1).range({ max: Number.NaN })).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_value",
+        message: "Range maximum must be a finite number",
+        path: [],
+      },
+    });
   });
 
   it("validates finite and port helpers", () => {
@@ -194,5 +210,13 @@ describe("NumberValidator (0.1.0 schema API)", () => {
     const schema = val.number().int().default(100);
     expect(schema.validate(undefined)).toEqual({ ok: true, value: 100 });
     expect(schema.validate(50)).toEqual({ ok: true, value: 50 });
+  });
+
+  it("does not mutate receiver when chaining constraints", () => {
+    const base = val.number().gt(0);
+    const bounded = base.lt(10);
+
+    expect(base.validate(20).ok).toBe(true);
+    expect(bounded.validate(20).ok).toBe(false);
   });
 });

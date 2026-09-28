@@ -239,7 +239,8 @@ export class ObjectValidator<TShape extends Record<string, Validator<unknown>>> 
 
     for (const [key, childValidator] of Object.entries(this._shape)) {
       const childPath = [...ctx.path, key];
-      const propValue = input[key];
+      const hasProp = Object.prototype.hasOwnProperty.call(input, key);
+      const propValue = hasProp ? input[key] : undefined;
       const res = childValidator.validate(propValue, {
         ...ctx.options,
         path: childPath,
@@ -260,8 +261,13 @@ export class ObjectValidator<TShape extends Record<string, Validator<unknown>>> 
           return ctx.fail(localIssues[0]);
         }
       } else {
-        if (res.value !== undefined || Object.prototype.hasOwnProperty.call(input, key)) {
-          output[key] = res.value;
+        if (res.value !== undefined || hasProp) {
+          Object.defineProperty(output, key, {
+            value: res.value,
+            writable: true,
+            enumerable: true,
+            configurable: true,
+          });
         }
       }
     }
@@ -269,7 +275,12 @@ export class ObjectValidator<TShape extends Record<string, Validator<unknown>>> 
     if (this.mode === "passthrough") {
       for (const key of Object.keys(input)) {
         if (!Object.prototype.hasOwnProperty.call(this._shape, key)) {
-          output[key] = input[key];
+          Object.defineProperty(output, key, {
+            value: input[key],
+            writable: true,
+            enumerable: true,
+            configurable: true,
+          });
         }
       }
     }
@@ -335,15 +346,26 @@ function legacyObject(value: unknown, options: ValidationOptions = {}): ObjectVa
 }
 
 /**
+ * Creates an empty object schema validator.
+ *
+ * @returns A new empty ObjectValidator instance.
+ */
+export function object(): ObjectValidator<Record<string, never>>;
+/**
  * Creates an object schema validator for a defined shape of field validators.
  *
  * @typeParam TShape - Schema mapping property names to child validators.
  * @param shape - Record mapping field names to validator schemas.
  * @returns A new ObjectValidator instance.
  */
-export function object<TShape extends Record<string, Validator<unknown>>>(shape: TShape): ObjectValidator<TShape>;
+export function object<TShape extends Record<string, Validator<unknown>>>(
+  shape: [keyof TShape] extends [never] ? never : TShape,
+): ObjectValidator<TShape>;
 /**
  * Evaluates legacy object checks on an input value.
+ *
+ * Note: `object({})` is treated as a target object value for legacy validation;
+ * call `object()` without arguments to construct an empty schema validator.
  *
  * @param value - Value to validate.
  * @param options - Validation options.
@@ -365,8 +387,12 @@ export function object(
     return legacyObject(shapeOrValue, options);
   }
 
-  if (shapeOrValue === undefined) {
+  if (arguments.length === 0) {
     return new ObjectValidator({});
+  }
+
+  if (shapeOrValue === undefined) {
+    return legacyObject(shapeOrValue, options);
   }
 
   if (!isPlainObject(shapeOrValue)) {
@@ -375,7 +401,7 @@ export function object(
 
   const values = Object.values(shapeOrValue);
   if (values.length === 0) {
-    return new ObjectValidator({});
+    return legacyObject(shapeOrValue, options);
   }
 
   const isShape = values.every((v) => isValidator(v));

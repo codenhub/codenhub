@@ -245,7 +245,7 @@ The `val` object provides declarative schema builders for primitive values, stru
 | `nonEmpty(message?)`           | Requires length > 0 (`too_small`).                                                                  |
 | `email(options?, message?)`    | Validates public email address format (`invalid_format`). Supports `{ allowPlus: boolean }`.        |
 | `url(options?, message?)`      | Normalizes and validates public HTTP(S) URL (`invalid_format`). Supports `{ forceHttps: boolean }`. |
-| `uuid(message?)`               | Validates RFC 4122 UUID string (`invalid_format`).                                                  |
+| `uuid(message?)`               | Validates RFC 9562 UUID string (`invalid_format`).                                                  |
 | `regex(pattern, message?)`     | Tests against a `RegExp` pattern (`invalid_format`). Alias: `matches`.                              |
 | `startsWith(prefix, message?)` | Enforces required string prefix (`invalid_format`).                                                 |
 | `endsWith(suffix, message?)`   | Enforces required string suffix (`invalid_format`).                                                 |
@@ -298,7 +298,7 @@ The `val` object provides declarative schema builders for primitive values, stru
 ## Literals & Enums
 
 - `val.literal(value, message?)`: Requires exact equality (`===`) with string, number, or boolean literal.
-- `val.enum(values, message?)`: Accepts an array or tuple of allowed string values (`invalid_value`).
+- `val.enum(values, message?)`: Accepts an array or tuple of allowed string or number values (`invalid_value`).
 
 ## Any & Unknown
 
@@ -307,7 +307,7 @@ The `val` object provides declarative schema builders for primitive values, stru
 
 ## Objects
 
-`val.object(shape)` creates an `ObjectValidator` that validates plain object shapes. Nested objects and properties validate recursively with full path reporting.
+`val.object(shape?)` creates an `ObjectValidator` that validates plain object shapes. Calling `val.object()` with no arguments constructs an empty schema validator, whereas `val.object({})` evaluates legacy checks against an empty object target. Nested objects and properties validate recursively with full path reporting.
 
 - `strict(message?)`: Rejects objects with unknown keys with `invalid_value`.
 - `passthrough()`: Preserves unknown keys in output.

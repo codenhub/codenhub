@@ -9,6 +9,12 @@ type BooleanCheck = (value: boolean, ctx: ValidationContext) => ValidationIssue 
 export class BooleanValidator extends BaseValidator<boolean, unknown> {
   private readonly checks: BooleanCheck[] = [];
 
+  protected clone(): BooleanValidator {
+    const copy = new BooleanValidator();
+    copy.checks.push(...this.checks);
+    return copy;
+  }
+
   protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<boolean> {
     if (typeof input !== "boolean") {
       return ctx.fail({
@@ -56,7 +62,8 @@ export class BooleanValidator extends BaseValidator<boolean, unknown> {
    * @returns This validator instance for method chaining.
    */
   true(message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (val !== true) {
         return {
           code: "invalid_value",
@@ -69,7 +76,7 @@ export class BooleanValidator extends BaseValidator<boolean, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -79,7 +86,8 @@ export class BooleanValidator extends BaseValidator<boolean, unknown> {
    * @returns This validator instance for method chaining.
    */
   false(message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (val !== false) {
         return {
           code: "invalid_value",
@@ -92,7 +100,7 @@ export class BooleanValidator extends BaseValidator<boolean, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 }
 

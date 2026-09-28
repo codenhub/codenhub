@@ -3,6 +3,7 @@ import { fail, ok, type ValidationOptions, type ValidationResult } from "./resul
 
 const DECIMAL_INTEGER_PATTERN = /^[+-]?\d+$/;
 const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+\.?\d*|\.\d+)$/;
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}(?::?\d{2})?)?)?$/;
 
 /** Primitive coercion helpers for boundary input such as env vars, forms, and query params. */
 export const coerce = {
@@ -202,6 +203,17 @@ export const coerce = {
             message: "Cannot coerce empty string to Date",
             expected: "non-empty date string",
             received: '""',
+          },
+          options,
+        );
+      }
+      if (!ISO_DATE_PATTERN.test(trimmed)) {
+        return fail(
+          {
+            code: "invalid_format",
+            message: `Cannot coerce "${value}" to Date`,
+            expected: "valid date string",
+            received: value,
           },
           options,
         );

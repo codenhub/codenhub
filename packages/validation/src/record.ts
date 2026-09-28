@@ -101,7 +101,12 @@ export class RecordValidator<TVal, TKey extends string = string> extends BaseVal
           return ctx.fail(localIssues[0]);
         }
       } else {
-        output[finalKey] = valRes.value;
+        Object.defineProperty(output, finalKey, {
+          value: valRes.value,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
       }
     }
 

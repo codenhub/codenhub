@@ -9,6 +9,12 @@ type DateCheck = (value: Date, ctx: ValidationContext) => ValidationIssue | unde
 export class DateValidator extends BaseValidator<Date, unknown> {
   private readonly checks: DateCheck[] = [];
 
+  protected clone(): DateValidator {
+    const copy = new DateValidator();
+    copy.checks.push(...this.checks);
+    return copy;
+  }
+
   protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<Date> {
     if (!(input instanceof Date)) {
       return ctx.fail({
@@ -67,7 +73,8 @@ export class DateValidator extends BaseValidator<Date, unknown> {
    * @returns This validator instance for method chaining.
    */
   min(minDate: Date, message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (Number.isNaN(minDate.getTime())) {
         return {
           code: "invalid_value",
@@ -87,7 +94,7 @@ export class DateValidator extends BaseValidator<Date, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -98,7 +105,8 @@ export class DateValidator extends BaseValidator<Date, unknown> {
    * @returns This validator instance for method chaining.
    */
   max(maxDate: Date, message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (Number.isNaN(maxDate.getTime())) {
         return {
           code: "invalid_value",
@@ -118,7 +126,7 @@ export class DateValidator extends BaseValidator<Date, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 }
 

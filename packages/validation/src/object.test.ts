@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type Infer, type InferObject, type ValidationErr, val } from ".";
+import { type Infer, type InferObject, type ValidationErr, type ValidationOk, val } from ".";
 
 describe("ObjectValidator", () => {
   it("validates valid object according to shape", () => {
@@ -338,5 +338,43 @@ describe("ObjectValidator", () => {
     };
     const validShape: ShapeInfer = validData;
     expect(validShape.requiredStr).toBe("hello");
+  });
+
+  it("treats inherited properties as missing and prevents prototype inheritance leakage", () => {
+    const input = { other: "value" };
+
+    const schema = val.object({ toString: val.string() });
+    const res = schema.validate(input) as ValidationErr;
+    expect(res.ok).toBe(false);
+    expect(res.error.code).toBe("invalid_type");
+    expect(res.error.received).toBe("undefined");
+
+    const optionalSchema = val.object({ toString: val.string().optional() });
+    const optRes = optionalSchema.validate(input) as ValidationOk<Record<string, unknown>>;
+    expect(optRes.ok).toBe(true);
+    expect(Object.prototype.hasOwnProperty.call(optRes.value, "toString")).toBe(false);
+  });
+
+  it("distinguishes val.object(), val.object(undefined), and val.object({})", () => {
+    const emptySchema = val.object();
+    expect(emptySchema.validate({ extra: 123 })).toEqual({ ok: true, value: {} });
+
+    const explicitUndefined = val.object(undefined).plain() as ValidationErr;
+    expect(explicitUndefined.ok).toBe(false);
+    expect(explicitUndefined.error.code).toBe("invalid_type");
+
+    const legacyEmpty = val.object({});
+    expect(legacyEmpty.plain()).toEqual({ ok: true, value: {} });
+    expect(legacyEmpty.hasKeys(["missing"]).ok).toBe(false);
+  });
+
+  it("prevents prototype pollution when input contains own __proto__ key", () => {
+    const raw = JSON.parse('{"__proto__": "polluted", "name": "safe"}') as Record<string, unknown>;
+    const schema = val.object({ name: val.string() }).passthrough();
+    const res = schema.validate(raw) as ValidationOk<Record<string, unknown>>;
+
+    expect(res.ok).toBe(true);
+    expect(Object.getPrototypeOf(res.value)).toBe(Object.prototype);
+    expect((res.value as Record<string, unknown>).__proto__).toBe("polluted");
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type ValidationErr, val } from ".";
+import { type ValidationErr, type ValidationOk, val } from ".";
 
 describe("RecordValidator", () => {
   it("validates records with valid values", () => {
@@ -128,5 +128,15 @@ describe("RecordValidator", () => {
 
     expect(schema.value).toBe(valSchema);
     expect(schema.key).toBe(keySchema);
+  });
+
+  it("prevents prototype pollution when input contains own __proto__ key", () => {
+    const raw = JSON.parse('{"__proto__": "polluted", "item": "safe"}') as Record<string, unknown>;
+    const schema = val.record(val.string());
+    const res = schema.validate(raw) as ValidationOk<Record<string, unknown>>;
+
+    expect(res.ok).toBe(true);
+    expect(Object.getPrototypeOf(res.value)).toBe(Object.prototype);
+    expect(res.value.__proto__).toBe("polluted");
   });
 });

@@ -17,6 +17,13 @@ export class NumberValidator extends BaseValidator<number, unknown> {
   private readonly checks: NumberCheck[] = [];
   private allowNonFinite = false;
 
+  protected clone(): NumberValidator {
+    const copy = new NumberValidator();
+    copy.checks.push(...this.checks);
+    copy.allowNonFinite = this.allowNonFinite;
+    return copy;
+  }
+
   protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<number> {
     if (typeof input !== "number" || Number.isNaN(input)) {
       return ctx.fail({
@@ -96,7 +103,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   gt(limit: number, message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (!Number.isFinite(limit)) {
         return {
           code: "invalid_value",
@@ -116,7 +124,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -127,7 +135,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   gte(limit: number, message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (!Number.isFinite(limit)) {
         return {
           code: "invalid_value",
@@ -147,7 +156,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -158,7 +167,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   lt(limit: number, message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (!Number.isFinite(limit)) {
         return {
           code: "invalid_value",
@@ -178,7 +188,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -189,7 +199,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   lte(limit: number, message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (!Number.isFinite(limit)) {
         return {
           code: "invalid_value",
@@ -209,7 +220,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -220,7 +231,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   range(bounds: { min?: number; max?: number }, message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (bounds.min !== undefined && !Number.isFinite(bounds.min)) {
         return {
           code: "invalid_value",
@@ -264,7 +276,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -274,7 +286,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   int(message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (!Number.isInteger(val)) {
         return {
           code: "invalid_value",
@@ -287,7 +300,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -297,7 +310,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   safeInt(message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (!Number.isSafeInteger(val)) {
         return {
           code: "invalid_value",
@@ -310,7 +324,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -320,7 +334,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   positive(message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (val <= 0) {
         return {
           code: "invalid_value",
@@ -333,7 +348,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -343,7 +358,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   negative(message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (val >= 0) {
         return {
           code: "invalid_value",
@@ -356,7 +372,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -366,7 +382,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   nonNegative(message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (val < 0) {
         return {
           code: "invalid_value",
@@ -379,7 +396,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -389,7 +406,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   nonPositive(message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (val > 0) {
         return {
           code: "invalid_value",
@@ -402,7 +420,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -412,7 +430,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   nonZero(message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (val === 0) {
         return {
           code: "invalid_value",
@@ -425,7 +444,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -436,7 +455,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   multipleOf(step: number, message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (!Number.isFinite(step) || step <= 0) {
         return {
           code: "invalid_value",
@@ -458,7 +478,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -468,7 +488,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   port(message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (!Number.isInteger(val) || val < 1 || val > 65535) {
         return {
           code: "invalid_value",
@@ -481,7 +502,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -491,7 +512,8 @@ export class NumberValidator extends BaseValidator<number, unknown> {
    * @returns This validator instance for method chaining.
    */
   finite(message?: string): this {
-    this.checks.push((val, ctx) => {
+    const copy = this.clone();
+    copy.checks.push((val, ctx) => {
       if (!Number.isFinite(val)) {
         return {
           code: "invalid_value",
@@ -504,7 +526,7 @@ export class NumberValidator extends BaseValidator<number, unknown> {
       }
       return undefined;
     });
-    return this;
+    return copy as this;
   }
 }
 
@@ -664,11 +686,25 @@ function legacyNumber(value: unknown, options: ValidationOptions = {}): NumberVa
             options,
           ),
     range: ({ min, max }: { min?: number; max?: number }) => {
-      if (
-        (min !== undefined && !Number.isFinite(min)) ||
-        (max !== undefined && !Number.isFinite(max)) ||
-        (min !== undefined && max !== undefined && min > max)
-      ) {
+      if (min !== undefined && !Number.isFinite(min)) {
+        return fail(
+          {
+            code: "invalid_value",
+            message: "Range minimum must be a finite number",
+          },
+          options,
+        );
+      }
+      if (max !== undefined && !Number.isFinite(max)) {
+        return fail(
+          {
+            code: "invalid_value",
+            message: "Range maximum must be a finite number",
+          },
+          options,
+        );
+      }
+      if (min !== undefined && max !== undefined && min > max) {
         return fail(
           {
             code: "invalid_value",

@@ -75,7 +75,17 @@ describe("coerce", () => {
     const now = new Date("2026-01-01T00:00:00.000Z");
     expect(coerce.date(now)).toEqual({ ok: true, value: now });
     expect(coerce.date(now.getTime())).toEqual({ ok: true, value: now });
-    expect(coerce.date("2026-01-01T00:00:00.000Z")).toEqual({ ok: true, value: now });
+    expect(coerce.date("2026-01-01")).toEqual({ ok: true, value: new Date("2026-01-01") });
+    expect(coerce.date("Jan 1, 2026")).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_format",
+        message: 'Cannot coerce "Jan 1, 2026" to Date',
+        path: [],
+        expected: "valid date string",
+        received: "Jan 1, 2026",
+      },
+    });
 
     expect(coerce.date("not-a-date")).toEqual({
       ok: false,

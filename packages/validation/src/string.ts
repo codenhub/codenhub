@@ -5,7 +5,7 @@ const PUBLIC_HOST_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2
 const EMAIL_LOCAL_PATTERN = /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*$/i;
 const EMAIL_LOCAL_MAX_LENGTH = 64;
 const EMAIL_MAX_LENGTH = 254;
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const isValidLengthLimit = (value: number): boolean => Number.isFinite(value) && value >= 0;
 
@@ -16,6 +16,12 @@ type StringStep = (value: string, ctx: ValidationContext) => { nextValue: string
  */
 export class StringValidator extends BaseValidator<string, unknown> {
   private readonly steps: StringStep[] = [];
+
+  protected clone(): StringValidator {
+    const copy = new StringValidator();
+    copy.steps.push(...this.steps);
+    return copy;
+  }
 
   protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<string> {
     if (typeof input !== "string") {
@@ -68,7 +74,8 @@ export class StringValidator extends BaseValidator<string, unknown> {
    * @returns This validator instance for method chaining.
    */
   min(length: number, message?: string): this {
-    this.steps.push((val, ctx) => {
+    const copy = this.clone();
+    copy.steps.push((val, ctx) => {
       if (!isValidLengthLimit(length)) {
         return {
           nextValue: val,
@@ -94,7 +101,7 @@ export class StringValidator extends BaseValidator<string, unknown> {
       }
       return { nextValue: val };
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -106,10 +113,10 @@ export class StringValidator extends BaseValidator<string, unknown> {
    * @returns This validator instance for method chaining.
    */
   minLength(length: number, messageOrOptions?: string | { trim?: boolean }, message?: string): this {
-    if (typeof messageOrOptions === "object" && messageOrOptions?.trim) {
-      this.trim();
-    }
     const msg = typeof messageOrOptions === "string" ? messageOrOptions : message;
+    if (typeof messageOrOptions === "object" && messageOrOptions?.trim) {
+      return this.trim().min(length, msg) as this;
+    }
     return this.min(length, msg);
   }
 
@@ -121,7 +128,8 @@ export class StringValidator extends BaseValidator<string, unknown> {
    * @returns This validator instance for method chaining.
    */
   max(length: number, message?: string): this {
-    this.steps.push((val, ctx) => {
+    const copy = this.clone();
+    copy.steps.push((val, ctx) => {
       if (!isValidLengthLimit(length)) {
         return {
           nextValue: val,
@@ -147,7 +155,7 @@ export class StringValidator extends BaseValidator<string, unknown> {
       }
       return { nextValue: val };
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -159,10 +167,10 @@ export class StringValidator extends BaseValidator<string, unknown> {
    * @returns This validator instance for method chaining.
    */
   maxLength(length: number, messageOrOptions?: string | { trim?: boolean }, message?: string): this {
-    if (typeof messageOrOptions === "object" && messageOrOptions?.trim) {
-      this.trim();
-    }
     const msg = typeof messageOrOptions === "string" ? messageOrOptions : message;
+    if (typeof messageOrOptions === "object" && messageOrOptions?.trim) {
+      return this.trim().max(length, msg) as this;
+    }
     return this.max(length, msg);
   }
 
@@ -174,7 +182,8 @@ export class StringValidator extends BaseValidator<string, unknown> {
    * @returns This validator instance for method chaining.
    */
   length(length: number, message?: string): this {
-    this.steps.push((val, ctx) => {
+    const copy = this.clone();
+    copy.steps.push((val, ctx) => {
       if (!isValidLengthLimit(length)) {
         return {
           nextValue: val,
@@ -200,7 +209,7 @@ export class StringValidator extends BaseValidator<string, unknown> {
       }
       return { nextValue: val };
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -210,7 +219,8 @@ export class StringValidator extends BaseValidator<string, unknown> {
    * @returns This validator instance for method chaining.
    */
   nonEmpty(message?: string): this {
-    this.steps.push((val, ctx) => {
+    const copy = this.clone();
+    copy.steps.push((val, ctx) => {
       if (val.length === 0) {
         return {
           nextValue: val,
@@ -226,7 +236,7 @@ export class StringValidator extends BaseValidator<string, unknown> {
       }
       return { nextValue: val };
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -237,10 +247,10 @@ export class StringValidator extends BaseValidator<string, unknown> {
    * @returns This validator instance for method chaining.
    */
   notEmpty(messageOrOptions?: string | { trim?: boolean }, message?: string): this {
-    if (typeof messageOrOptions === "object" && messageOrOptions?.trim) {
-      this.trim();
-    }
     const msg = typeof messageOrOptions === "string" ? messageOrOptions : message;
+    if (typeof messageOrOptions === "object" && messageOrOptions?.trim) {
+      return this.trim().nonEmpty(msg) as this;
+    }
     return this.nonEmpty(msg);
   }
 
@@ -253,7 +263,8 @@ export class StringValidator extends BaseValidator<string, unknown> {
    */
   email(options?: { allowPlus?: boolean }, message?: string): this {
     const allowPlus = options?.allowPlus ?? true;
-    this.steps.push((val, ctx) => {
+    const copy = this.clone();
+    copy.steps.push((val, ctx) => {
       const trimmed = val.trim();
       const [local, host, extra] = trimmed.split("@");
       if (extra !== undefined || local === undefined || host === undefined) {
@@ -292,7 +303,7 @@ export class StringValidator extends BaseValidator<string, unknown> {
 
       return { nextValue: `${local}@${host.toLowerCase()}` };
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -304,7 +315,8 @@ export class StringValidator extends BaseValidator<string, unknown> {
    */
   url(options?: { forceHttps?: boolean }, message?: string): this {
     const forceHttps = options?.forceHttps ?? false;
-    this.steps.push((val, ctx) => {
+    const copy = this.clone();
+    copy.steps.push((val, ctx) => {
       let input = val.trim();
       if (!/^https?:\/\//i.test(input)) {
         input = "https://" + input;
@@ -355,17 +367,18 @@ export class StringValidator extends BaseValidator<string, unknown> {
         };
       }
     });
-    return this;
+    return copy as this;
   }
 
   /**
-   * Validates that the string is a valid RFC 4122 UUID.
+   * Validates that the string is a valid RFC 9562 UUID.
    *
    * @param message - Optional custom failure message.
    * @returns This validator instance for method chaining.
    */
   uuid(message?: string): this {
-    this.steps.push((val, ctx) => {
+    const copy = this.clone();
+    copy.steps.push((val, ctx) => {
       if (!UUID_PATTERN.test(val)) {
         return {
           nextValue: val,
@@ -381,7 +394,7 @@ export class StringValidator extends BaseValidator<string, unknown> {
       }
       return { nextValue: val };
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -393,7 +406,9 @@ export class StringValidator extends BaseValidator<string, unknown> {
    */
   regex(pattern: RegExp, message?: string): this {
     const safePattern = new RegExp(pattern.source, pattern.flags);
-    this.steps.push((val, ctx) => {
+    const copy = this.clone();
+    copy.steps.push((val, ctx) => {
+      safePattern.lastIndex = 0;
       if (!safePattern.test(val)) {
         return {
           nextValue: val,
@@ -409,7 +424,7 @@ export class StringValidator extends BaseValidator<string, unknown> {
       }
       return { nextValue: val };
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -431,7 +446,8 @@ export class StringValidator extends BaseValidator<string, unknown> {
    * @returns This validator instance for method chaining.
    */
   startsWith(prefix: string, message?: string): this {
-    this.steps.push((val, ctx) => {
+    const copy = this.clone();
+    copy.steps.push((val, ctx) => {
       if (!val.startsWith(prefix)) {
         return {
           nextValue: val,
@@ -447,7 +463,7 @@ export class StringValidator extends BaseValidator<string, unknown> {
       }
       return { nextValue: val };
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -458,7 +474,8 @@ export class StringValidator extends BaseValidator<string, unknown> {
    * @returns This validator instance for method chaining.
    */
   endsWith(suffix: string, message?: string): this {
-    this.steps.push((val, ctx) => {
+    const copy = this.clone();
+    copy.steps.push((val, ctx) => {
       if (!val.endsWith(suffix)) {
         return {
           nextValue: val,
@@ -474,7 +491,7 @@ export class StringValidator extends BaseValidator<string, unknown> {
       }
       return { nextValue: val };
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -485,7 +502,8 @@ export class StringValidator extends BaseValidator<string, unknown> {
    * @returns This validator instance for method chaining.
    */
   includes(search: string, message?: string): this {
-    this.steps.push((val, ctx) => {
+    const copy = this.clone();
+    copy.steps.push((val, ctx) => {
       if (!val.includes(search)) {
         return {
           nextValue: val,
@@ -501,7 +519,7 @@ export class StringValidator extends BaseValidator<string, unknown> {
       }
       return { nextValue: val };
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -516,7 +534,8 @@ export class StringValidator extends BaseValidator<string, unknown> {
       .map((entry) => entry.toLowerCase().replace(/^\./, ""))
       .filter((entry) => entry.length > 0);
 
-    this.steps.push((val, ctx) => {
+    const copy = this.clone();
+    copy.steps.push((val, ctx) => {
       if (normalized.length === 0) {
         return {
           nextValue: val,
@@ -549,7 +568,7 @@ export class StringValidator extends BaseValidator<string, unknown> {
 
       return { nextValue: ext };
     });
-    return this;
+    return copy as this;
   }
 
   /**
@@ -558,8 +577,9 @@ export class StringValidator extends BaseValidator<string, unknown> {
    * @returns This validator instance for method chaining.
    */
   trim(): this {
-    this.steps.push((val) => ({ nextValue: val.trim() }));
-    return this;
+    const copy = this.clone();
+    copy.steps.push((val) => ({ nextValue: val.trim() }));
+    return copy as this;
   }
 
   /**
@@ -568,8 +588,9 @@ export class StringValidator extends BaseValidator<string, unknown> {
    * @returns This validator instance for method chaining.
    */
   toLowerCase(): this {
-    this.steps.push((val) => ({ nextValue: val.toLowerCase() }));
-    return this;
+    const copy = this.clone();
+    copy.steps.push((val) => ({ nextValue: val.toLowerCase() }));
+    return copy as this;
   }
 
   /**
@@ -578,8 +599,9 @@ export class StringValidator extends BaseValidator<string, unknown> {
    * @returns This validator instance for method chaining.
    */
   toUpperCase(): this {
-    this.steps.push((val) => ({ nextValue: val.toUpperCase() }));
-    return this;
+    const copy = this.clone();
+    copy.steps.push((val) => ({ nextValue: val.toUpperCase() }));
+    return copy as this;
   }
 }
 
@@ -637,23 +659,23 @@ function legacyString(value: unknown, options: ValidationOptions = {}): StringVa
       return new StringValidator().fileType(allowed).validate(value, options);
     },
     minLength(length: number, { trim = false } = {}): ValidationResult<string> {
-      const v = new StringValidator();
+      let v = new StringValidator();
       if (trim) {
-        v.trim();
+        v = v.trim();
       }
       return v.min(length).validate(value, options);
     },
     maxLength(length: number, { trim = false } = {}): ValidationResult<string> {
-      const v = new StringValidator();
+      let v = new StringValidator();
       if (trim) {
-        v.trim();
+        v = v.trim();
       }
       return v.max(length).validate(value, options);
     },
     notEmpty({ trim = true } = {}): ValidationResult<string> {
-      const v = new StringValidator();
+      let v = new StringValidator();
       if (trim) {
-        v.trim();
+        v = v.trim();
       }
       return v.nonEmpty().validate(value, options);
     },

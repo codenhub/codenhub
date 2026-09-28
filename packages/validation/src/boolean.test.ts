@@ -103,4 +103,12 @@ describe("BooleanValidator", () => {
     expectTypeOf<[BOutput]>().toEqualTypeOf<[boolean | undefined]>();
     expectTypeOf<BInput>().toEqualTypeOf<unknown>();
   });
+
+  it("does not mutate receiver when chaining constraints", () => {
+    const base = val.boolean();
+    const trueOnly = base.true();
+
+    expect(base.validate(false).ok).toBe(true);
+    expect(trueOnly.validate(false).ok).toBe(false);
+  });
 });

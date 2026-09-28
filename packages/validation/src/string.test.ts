@@ -305,4 +305,31 @@ describe("StringValidator (0.1.0 schema API)", () => {
     expect(schema.validate("hi")).toMatchObject({ ok: false });
     expect(schema.validate("toolongword")).toMatchObject({ ok: false });
   });
+
+  it("accepts RFC 9562 UUID versions 1 through 8", () => {
+    const schema = val.string().uuid();
+    // UUID v4
+    expect(schema.validate("123e4567-e89b-42d3-a456-426614174000").ok).toBe(true);
+    // UUID v7
+    expect(schema.validate("018f6e2b-2a9c-7000-8000-000000000000").ok).toBe(true);
+    // UUID v8
+    expect(schema.validate("018f6e2b-2a9c-8000-8000-000000000000").ok).toBe(true);
+    // Invalid version digit 9
+    expect(schema.validate("018f6e2b-2a9c-9000-8000-000000000000").ok).toBe(false);
+  });
+
+  it("resets regex lastIndex across repeated validations with stateful regex", () => {
+    const schema = val.string().regex(/abc/g);
+    expect(schema.validate("abc").ok).toBe(true);
+    expect(schema.validate("abc").ok).toBe(true);
+    expect(schema.validate("abc").ok).toBe(true);
+  });
+
+  it("does not mutate receiver when chaining constraints", () => {
+    const base = val.string().min(3);
+    const extended = base.max(5);
+
+    expect(base.validate("abcdef").ok).toBe(true);
+    expect(extended.validate("abcdef").ok).toBe(false);
+  });
 });
