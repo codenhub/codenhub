@@ -58,7 +58,7 @@ description: Enforces test-first development on code changes. Use when implement
 - **Match freedom to fragility.** Heuristics for judgment calls; exact commands or a script for steps that break under variation.
 - **Make rules unconditional.** A rule that applies only when a label, prefix, keyword, or mode name is present gets skipped whenever that marker is missing. State where the rule applies and list its exceptions.
 - **Keep the skill out of its output.** Code, comments, commits, and documents a skill produces follow the project's conventions and never name the skill. They name the agent or model only where those conventions require it, such as a co-author trailer.
-- **Stay tool-agnostic.** Describe capabilities ("run the tests", "delegate to a subagent when available"), not one harness's tool names or slash commands.
+- **Stay tool-agnostic.** Describe capabilities ("run the tests", "delegate to a subagent when available"), not one harness's tool names or slash commands. A skill built to drive one tool server, such as a specific MCP server, names that server and its tools exactly.
 - **Steer format with examples.** Examples steer format and tone more reliably than description. Make them mirror real use, and vary them enough that the agent does not copy an unintended pattern.
 - **Avoid time-sensitive statements.** Describe the current way; drop what it replaced.
 - **Push rare branches into references.** Say in `SKILL.md` when to read each one.
