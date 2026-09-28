@@ -48,7 +48,7 @@ description: Helps with tests.
 description: Use for TDD - write a test, watch it fail, write code, refactor.
 
 # Good: domain plus triggers
-description: Enforces test-first development. Use when implementing features, fixing bugs, or changing behavior in code with a test suite.
+description: Enforces test-first development on code changes. Use when implementing a feature, fixing a bug, refactoring, or otherwise changing behavior in code.
 ```
 
 ## The Body
@@ -59,11 +59,21 @@ description: Enforces test-first development. Use when implementing features, fi
 - **Make rules unconditional.** A rule that applies only when a label, prefix, keyword, or mode name is present gets skipped whenever that marker is missing. State where the rule applies and list its exceptions.
 - **Keep the skill out of its output.** Code, comments, commits, and documents a skill produces follow the project's conventions and never name the skill or the agent.
 - **Stay tool-agnostic.** Describe capabilities ("run the tests", "delegate to a subagent when available"), not one harness's tool names or slash commands.
-- **Show format with one example.** One realistic input and output beats several abstract ones.
+- **Steer format with examples.** Examples steer format and tone more reliably than description. Make them mirror real use, and vary them enough that the agent does not copy an unintended pattern.
 - **Avoid time-sensitive statements.** Describe the current way; drop what it replaced.
 - **Push rare branches into references.** Say in `SKILL.md` when to read each one.
 
 For workflow, template, example, and script patterns, read [references/patterns.md](references/patterns.md).
+
+## Wording
+
+Current models follow instructions closely, so phrasing changes how often a rule fires.
+
+- **Use plain directives.** "Run the tests before committing." Capitals, "CRITICAL", and "You MUST" make current models over-apply a rule; add emphasis only when an evaluation shows the plain wording is ignored.
+- **Give the reason for a rule that is not obvious.** "Never use ellipses; a text-to-speech engine reads the output" lets the agent handle cases the rule did not list.
+- **Say what to do.** State the wanted behavior, and pair a necessary prohibition with its alternative: "Do not mock the database; use the test container."
+- **Put the most important rules first, and keep them few.** Adherence drops as instructions pile up, and earlier ones win.
+- **Keep exact values in `SKILL.md`.** Output formats, thresholds, and required strings the task depends on belong in the body, not in a reference the agent may not read.
 
 ## Evaluate To The Risk
 
@@ -84,6 +94,7 @@ State what was evaluated and the result where the change is reviewed. If a chang
 - [ ] The description says what and when, in the third person, with real trigger words and no workflow.
 - [ ] Every line changes behavior; nothing restates what a capable agent already knows.
 - [ ] No rule depends on a marker being present, and no output names the skill.
+- [ ] Rules are plain directives, with reasons where they are not obvious and no emphasis without evidence.
 - [ ] Instructions are tool-agnostic.
 - [ ] Evaluation matches the risk, and its result is recorded.
 
