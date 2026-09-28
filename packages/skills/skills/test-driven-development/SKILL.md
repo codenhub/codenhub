@@ -126,7 +126,7 @@ Confirm:
 - existing tests remain green, or only baseline failures with matching test IDs and error signatures remain
 - no new warnings or runtime errors
 
-For baseline handling and flaky failure triage, use `verification-baselines.md`.
+For baseline handling and flaky failure triage, use [references/verification-baselines.md](references/verification-baselines.md).
 
 ### 5) REFACTOR - Improve Design Safely
 
@@ -191,9 +191,9 @@ Then run the normal RED-GREEN-REFACTOR cycle. Never ship a bug fix without a rep
 
 ## Testing Anti-Patterns
 
-When adding or changing tests, especially with mocks, review `testing-anti-patterns.md`.
+When adding or changing tests, especially with mocks, review [references/testing-anti-patterns.md](references/testing-anti-patterns.md).
 
-When baseline failures or flaky tests appear during verification, review `verification-baselines.md`.
+When baseline failures or flaky tests appear during verification, review [references/verification-baselines.md](references/verification-baselines.md).
 
 ## Verification Checklist
 

@@ -2,6 +2,15 @@
 
 Load this reference when writing tests, adding mocks, or considering test-only helpers in production code.
 
+## Contents
+
+- Overview
+- Iron Rules
+- Anti-Patterns 1-5: mock behavior, test-only methods, blind mocking, incomplete mocks, tests last
+- When Mocks Become Too Complex
+- Quick Diagnostic
+- Bottom Line
+
 ## Overview
 
 Tests should verify behavior that matters to users and calling code. Mocks are tools for isolation, not the target of assertions.
