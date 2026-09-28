@@ -59,7 +59,7 @@ description: Enforces test-first development on code changes. Use when implement
 - **Match freedom to fragility.** Heuristics for judgment calls; exact commands or a script for steps that break under variation.
 - **Tie rules to situations, not markers.** A rule that applies only when a label, prefix, keyword, or mode name is present gets skipped whenever that marker is missing. State the situation where the rule applies, such as the files or task it covers, and list its exceptions.
 - **Keep the skill out of its output.** Code, comments, commits, and documents a skill produces follow the project's conventions and never name the skill. They name the agent or model only where those conventions require it, such as a co-author trailer.
-- **Stay tool-agnostic.** Describe capabilities ("run the tests", "delegate to a subagent when available"), not one harness's tool names or slash commands. A skill built to drive one tool server, such as a specific MCP server, names that server and its tools exactly.
+- **Name capabilities, not harness tools.** Describe what to do ("run the tests", "delegate to a subagent when available"), not one harness's tool names or slash commands, so the skill works in every harness. A skill built to drive one tool server, such as a specific MCP server, is the exception: it names that server and its tools exactly, and a review keeps those names instead of replacing them with generic capabilities.
 - **Steer format with examples.** Examples steer format and tone more reliably than description. Make them mirror real use, and vary them enough that the agent does not copy an unintended pattern.
 - **Avoid time-sensitive statements.** Describe the current way; drop what it replaced.
 - **Push rare branches into references.** Say in `SKILL.md` when to read each one.
@@ -100,7 +100,7 @@ State what was evaluated and the result where the change is reviewed. If a chang
 - [ ] Every line changes behavior; nothing restates what a capable agent already knows.
 - [ ] No rule depends on a marker being present, and no output names the skill.
 - [ ] Rules are plain directives, with reasons where they are not obvious and no emphasis without evidence.
-- [ ] Instructions are tool-agnostic.
+- [ ] Instructions name capabilities, not harness tools, except the tool server a skill exists to drive.
 - [ ] Evaluation matches the risk, ran on the models that will use the skill, and its result is recorded.
 
 ## Common Mistakes
