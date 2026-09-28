@@ -77,13 +77,17 @@ Current models follow instructions closely, so phrasing changes how often a rule
 
 ## Evaluate To The Risk
 
-| Change                                                                           | Minimum evidence                                                                                                                                                                                                                           |
-| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| New skill, or a behavioral change: triggers, rules, workflow order, gates        | Run at least three realistic scenarios without the change and record each outcome. Rerun with it: every failure the change targets is gone, and scenarios that already passed, such as one where the skill should not trigger, still pass. |
-| Discipline skill: a rule agents are tempted to skip under pressure               | The above, plus pressure scenarios. Counter each rationalization you observe, quoted verbatim.                                                                                                                                             |
-| Editorial change: wording, formatting, or links with no intended behavior change | The hard rules, then a re-read of the diff confirming no rule, trigger, or order changed. When unsure, treat the change as behavioral.                                                                                                     |
+| Change                                                                           | Minimum evidence                                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New skill, or a behavioral change: triggers, rules, workflow order, gates        | Run at least three realistic scenarios without the change and record each outcome. Run them with it until two consecutive runs pass: every failure the change targets is gone, and scenarios that already passed, such as one where the skill should not trigger, still pass. |
+| Discipline skill: a rule agents are tempted to skip under pressure               | The above, plus pressure scenarios. Counter each rationalization you observe, quoted verbatim.                                                                                                                                                                                |
+| Editorial change: wording, formatting, or links with no intended behavior change | The hard rules, then a re-read of the diff confirming no rule, trigger, or order changed. When unsure, treat the change as behavioral.                                                                                                                                        |
 
-Run scenarios in a fresh context that holds only the skill and the task, such as a subagent or a new session. Read [references/evaluation.md](references/evaluation.md) to design and run them.
+Run scenarios in a fresh context that holds only the skill and the task, such as a subagent or a new session. That context has the skill loaded already, so it cannot test the description. For a new skill or a trigger change, also install the skill beside the others the agent will have, send requests that do not name it, and check that it loads and that a near-miss request does not load it.
+
+Run scenarios on each model that will use the skill, including the least capable one. A skill that works on one model can fail on another.
+
+Read [references/evaluation.md](references/evaluation.md) to design and run them.
 
 State what was evaluated and the result where the change is reviewed. If a change was not evaluated, say so.
 
@@ -96,7 +100,7 @@ State what was evaluated and the result where the change is reviewed. If a chang
 - [ ] No rule depends on a marker being present, and no output names the skill.
 - [ ] Rules are plain directives, with reasons where they are not obvious and no emphasis without evidence.
 - [ ] Instructions are tool-agnostic.
-- [ ] Evaluation matches the risk, and its result is recorded.
+- [ ] Evaluation matches the risk, ran on the models that will use the skill, and its result is recorded.
 
 ## Common Mistakes
 
