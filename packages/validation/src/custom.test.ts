@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { custom, err, ok, val, ValidationError } from ".";
+import { custom, err, ok, type ValidationErr, val, ValidationError } from ".";
 
 describe("custom validator", () => {
   it("creates a CustomValidator schema and validates boolean predicates", () => {
@@ -167,5 +167,23 @@ describe("custom validator", () => {
         path: ["data"],
       },
     });
+  });
+
+  it("does not fail with shared context issues when custom callback adds no issues", () => {
+    const customField = custom((_val) => {
+      // Returns void/undefined without adding any issues to context
+    });
+
+    const schema = val.object({
+      failing: val.string().min(10),
+      customField,
+    });
+
+    const result = schema.validate({ failing: "short", customField: "valid" }, { abortEarly: false });
+    expect(result.ok).toBe(false);
+    const err = (result as ValidationErr).error;
+    // Exactly one issue occurred at 'failing', not at 'customField'
+    expect(err.path).toEqual(["failing"]);
+    expect(err.issues).toBeUndefined();
   });
 });

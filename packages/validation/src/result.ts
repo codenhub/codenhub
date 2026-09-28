@@ -416,7 +416,15 @@ export const normalizeError = (
     errorOptions.issues = options.includeInput === false ? issues.map(stripIssueInput) : issues;
   }
 
-  return new ValidationError(errorOptions);
+  const err = new ValidationError(errorOptions);
+  for (const sym of Object.getOwnPropertySymbols(input)) {
+    Object.defineProperty(err, sym, {
+      value: (input as Record<symbol, unknown>)[sym],
+      enumerable: false,
+      configurable: true,
+    });
+  }
+  return err;
 };
 
 /**

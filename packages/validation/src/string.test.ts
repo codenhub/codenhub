@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { type ValidationErr, val } from ".";
+import { type Infer, type ValidationErr, val } from ".";
 
 describe("string validator constraints", () => {
   it("normalizes valid email addresses", () => {
@@ -588,6 +588,16 @@ describe("StringValidator Phase 2 feature expansion", () => {
       const schema = val.string().startsWith("{").json();
       expect(schema.validate('{"a":1}')).toEqual({ ok: true, value: { a: 1 } });
       expect(schema.validate("[1, 2]").ok).toBe(false);
+    });
+
+    it("preserves generic output type T with inner schema and returns unknown without schema", () => {
+      const untyped = val.string().json();
+      type UntypedOut = Infer<typeof untyped>;
+      expectTypeOf<UntypedOut>().toEqualTypeOf<unknown>();
+
+      const typed = val.string().json(val.number());
+      type TypedOut = Infer<typeof typed>;
+      expectTypeOf<TypedOut>().toEqualTypeOf<number>();
     });
   });
 });

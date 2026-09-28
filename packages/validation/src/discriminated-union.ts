@@ -47,20 +47,17 @@ export class DiscriminatedUnionValidator<
 
     for (const variant of _variants) {
       const discValidator = variant.shape[discriminatorKey];
-      if (discValidator instanceof LiteralValidator) {
-        this.variantMap.set(discValidator.value, variant);
-      } else if (
-        discValidator !== null &&
-        typeof discValidator === "object" &&
-        "value" in discValidator &&
-        (discValidator as { value: unknown }).value !== undefined
-      ) {
-        this.variantMap.set((discValidator as { value: unknown }).value, variant);
-      } else {
+      if (!(discValidator instanceof LiteralValidator)) {
         throw new Error(
           `Discriminated union variant does not define a literal validator for discriminator key "${discriminatorKey}"`,
         );
       }
+      if (this.variantMap.has(discValidator.value)) {
+        throw new Error(
+          `Duplicate discriminator value ${JSON.stringify(discValidator.value)} across variants for key "${discriminatorKey}"`,
+        );
+      }
+      this.variantMap.set(discValidator.value, variant);
     }
   }
 

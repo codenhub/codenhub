@@ -1,4 +1,4 @@
-import { BaseValidator, type ValidationContext } from "./core";
+import { BaseValidator, markAsyncRequired, type ValidationContext } from "./core";
 import { parseResult, type ValidationIssue, type ValidationResult } from "./result";
 
 /**
@@ -42,7 +42,12 @@ export class CustomValidator<TOutput, TInput = unknown> extends BaseValidator<TO
     return this.fn.constructor?.name === "AsyncFunction";
   }
 
-  private handleSyncResult(res: unknown, input: unknown, ctx: ValidationContext): ValidationResult<TOutput> {
+  private handleSyncResult(
+    res: unknown,
+    input: unknown,
+    ctx: ValidationContext,
+    issueCountBefore: number,
+  ): ValidationResult<TOutput> {
     if (typeof res === "boolean") {
       if (res) {
         return ctx.ok(input as unknown as TOutput);
@@ -79,8 +84,8 @@ export class CustomValidator<TOutput, TInput = unknown> extends BaseValidator<TO
     if (res === undefined) {
       if ("issues" in ctx && Array.isArray((ctx as unknown as { issues: unknown[] }).issues)) {
         const issuesList = (ctx as unknown as { issues: ValidationIssue[] }).issues;
-        if (issuesList.length > 0 && issuesList[0] !== undefined) {
-          return ctx.fail(issuesList[0]);
+        if (issuesList.length > issueCountBefore && issuesList[issueCountBefore] !== undefined) {
+          return ctx.fail(issuesList[issueCountBefore]);
         }
       }
       return ctx.ok(input as unknown as TOutput);
@@ -90,6 +95,11 @@ export class CustomValidator<TOutput, TInput = unknown> extends BaseValidator<TO
   }
 
   protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<TOutput> {
+    const issueCountBefore =
+      "issues" in ctx && Array.isArray((ctx as unknown as { issues: unknown[] }).issues)
+        ? (ctx as unknown as { issues: unknown[] }).issues.length
+        : 0;
+
     let res: unknown;
     try {
       res = this.fn(input as TInput, ctx);
@@ -107,18 +117,25 @@ export class CustomValidator<TOutput, TInput = unknown> extends BaseValidator<TO
       res instanceof Promise ||
       (typeof res === "object" && res !== null && typeof (res as Promise<unknown>).then === "function")
     ) {
-      return ctx.fail({
-        code: "custom",
-        message: "Async custom validator requires validateAsync()",
-        path: ctx.path,
-        input: ctx.options.includeInput ? input : undefined,
-      });
+      return ctx.fail(
+        markAsyncRequired({
+          code: "custom" as const,
+          message: "Async custom validator requires validateAsync()",
+          path: ctx.path,
+          input: ctx.options.includeInput ? input : undefined,
+        }),
+      );
     }
 
-    return this.handleSyncResult(res, input, ctx);
+    return this.handleSyncResult(res, input, ctx, issueCountBefore);
   }
 
   protected override async _validateAsync(input: unknown, ctx: ValidationContext): Promise<ValidationResult<TOutput>> {
+    const issueCountBefore =
+      "issues" in ctx && Array.isArray((ctx as unknown as { issues: unknown[] }).issues)
+        ? (ctx as unknown as { issues: unknown[] }).issues.length
+        : 0;
+
     let res: unknown;
     try {
       res = await this.fn(input as TInput, ctx);
@@ -132,7 +149,7 @@ export class CustomValidator<TOutput, TInput = unknown> extends BaseValidator<TO
       });
     }
 
-    return this.handleSyncResult(res, input, ctx);
+    return this.handleSyncResult(res, input, ctx, issueCountBefore);
   }
 }
 

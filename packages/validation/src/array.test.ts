@@ -214,4 +214,27 @@ describe("ArrayValidator", () => {
     expect(invalid.error.path).toEqual([1]);
     expect(invalid.error.message).toBe("Must have length > 2");
   });
+
+  it("runs uniqueness checks after element validation using validated output", () => {
+    const schema = val.array(val.string().trim()).unique();
+
+    // Input has distinct strings before trimming, but identical after trimming
+    const res = schema.validate(["hello", "hello "]) as ValidationErr;
+    expect(res.ok).toBe(false);
+    expect(res.error.code).toBe("invalid_value");
+    expect(res.error.path).toEqual([1]);
+  });
+
+  it("does not run uniqueness checks when element validation fails", () => {
+    let selectorCalled = false;
+    const schema = val.array(val.object({ id: val.number() })).unique((item) => {
+      selectorCalled = true;
+      return item.id;
+    });
+
+    // Element fails schema validation
+    const res = schema.validate([{ id: "not-a-number" }]);
+    expect(res.ok).toBe(false);
+    expect(selectorCalled).toBe(false);
+  });
 });

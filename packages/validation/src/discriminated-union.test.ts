@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type Infer, type ValidationErr, val } from ".";
+import { type Infer, type ValidationErr, type Validator, val } from ".";
 
 describe("DiscriminatedUnionValidator", () => {
   const circleSchema = val.object({
@@ -83,6 +83,29 @@ describe("DiscriminatedUnionValidator", () => {
     expect(() => {
       val.discriminatedUnion("type", [invalidVariant]);
     }).toThrow("Discriminated union variant does not define a literal validator");
+
+    // Also throws when discriminator has a 'value' property but is not a LiteralValidator
+    const pseudoLiteralVariant = val.object({
+      type: { value: "circle", validate: () => ({ ok: true, value: "circle" }) } as unknown as Validator<unknown>,
+    });
+    expect(() => {
+      val.discriminatedUnion("type", [pseudoLiteralVariant]);
+    }).toThrow("Discriminated union variant does not define a literal validator");
+  });
+
+  it("throws error when duplicate discriminator values exist across variants", () => {
+    const variant1 = val.object({
+      kind: val.literal("item"),
+      name: val.string(),
+    });
+    const variant2 = val.object({
+      kind: val.literal("item"),
+      description: val.string(),
+    });
+
+    expect(() => {
+      val.discriminatedUnion("kind", [variant1, variant2]);
+    }).toThrow('Duplicate discriminator value "item" across variants');
   });
 
   it("provides variants getter", () => {

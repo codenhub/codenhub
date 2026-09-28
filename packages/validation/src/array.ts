@@ -4,6 +4,10 @@ import { describeReceived, type ValidationIssue, type ValidationResult } from ".
 const isValidLengthLimit = (value: number): boolean => Number.isFinite(value) && value >= 0;
 
 type ArrayCheck = (input: unknown[], ctx: ValidationContext) => ValidationIssue | ValidationIssue[] | undefined;
+type UniquenessCheck<TItem> = (
+  items: TItem[],
+  ctx: ValidationContext,
+) => ValidationIssue | ValidationIssue[] | undefined;
 
 /**
  * Schema validator for array structures and element validation.
@@ -20,10 +24,12 @@ export class ArrayValidator<TItem = unknown> extends BaseValidator<TItem[], unkn
    *
    * @param elementValidator - Optional validator applied to every element of the array.
    * @param checks - Array of validation check functions.
+   * @param uniquenessChecks - Array of uniqueness check functions evaluated after element validation.
    */
   constructor(
     private readonly elementValidator?: Validator<TItem>,
     private readonly checks: readonly ArrayCheck[] = [],
+    private readonly uniquenessChecks: readonly UniquenessCheck<TItem>[] = [],
   ) {
     super();
   }
@@ -36,7 +42,7 @@ export class ArrayValidator<TItem = unknown> extends BaseValidator<TItem[], unkn
   }
 
   private clone(check: ArrayCheck): ArrayValidator<TItem> {
-    return new ArrayValidator(this.elementValidator, [...this.checks, check]);
+    return new ArrayValidator(this.elementValidator, [...this.checks, check], this.uniquenessChecks);
   }
 
   /**
@@ -159,7 +165,7 @@ export class ArrayValidator<TItem = unknown> extends BaseValidator<TItem[], unkn
    * @returns A new immutable ArrayValidator with the uniqueness constraint applied.
    */
   unique(keySelector?: (item: TItem) => unknown, message?: string): ArrayValidator<TItem> {
-    return this.clone((arr, ctx) => {
+    const check: UniquenessCheck<TItem> = (arr, ctx) => {
       const seen = new Set<unknown>();
       const issues: ValidationIssue[] = [];
 
@@ -185,7 +191,9 @@ export class ArrayValidator<TItem = unknown> extends BaseValidator<TItem[], unkn
       }
 
       return issues.length > 0 ? issues : undefined;
-    });
+    };
+
+    return new ArrayValidator(this.elementValidator, this.checks, [...this.uniquenessChecks, check]);
   }
 
   /**
@@ -300,7 +308,35 @@ export class ArrayValidator<TItem = unknown> extends BaseValidator<TItem[], unkn
       });
     }
 
-    return ctx.ok(this.elementValidator !== undefined ? output : (input as TItem[]));
+    const validatedItems = this.elementValidator !== undefined ? output : (input as TItem[]);
+
+    for (const check of this.uniquenessChecks) {
+      const result = check(validatedItems, ctx);
+      if (result !== undefined) {
+        const issues = Array.isArray(result) ? result : [result];
+        for (const issue of issues) {
+          localIssues.push(issue);
+          ctx.addIssue(issue);
+          if (ctx.options.abortEarly) {
+            return ctx.fail(issue);
+          }
+        }
+      }
+    }
+
+    if (localIssues.length > 0) {
+      if (localIssues.length === 1) {
+        return ctx.fail(localIssues[0]);
+      }
+      return ctx.fail({
+        code: localIssues[0]?.code ?? "invalid_value",
+        message: localIssues[0]?.message ?? "Array validation failed",
+        path: localIssues[0]?.path ?? ctx.path,
+        issues: localIssues,
+      });
+    }
+
+    return ctx.ok(validatedItems);
   }
 
   protected override async _validateAsync(input: unknown, ctx: ValidationContext): Promise<ValidationResult<TItem[]>> {
@@ -375,7 +411,35 @@ export class ArrayValidator<TItem = unknown> extends BaseValidator<TItem[], unkn
       });
     }
 
-    return ctx.ok(this.elementValidator !== undefined ? output : (input as TItem[]));
+    const validatedItems = this.elementValidator !== undefined ? output : (input as TItem[]);
+
+    for (const check of this.uniquenessChecks) {
+      const result = check(validatedItems, ctx);
+      if (result !== undefined) {
+        const issues = Array.isArray(result) ? result : [result];
+        for (const issue of issues) {
+          localIssues.push(issue);
+          ctx.addIssue(issue);
+          if (ctx.options.abortEarly) {
+            return ctx.fail(issue);
+          }
+        }
+      }
+    }
+
+    if (localIssues.length > 0) {
+      if (localIssues.length === 1) {
+        return ctx.fail(localIssues[0]);
+      }
+      return ctx.fail({
+        code: localIssues[0]?.code ?? "invalid_value",
+        message: localIssues[0]?.message ?? "Array validation failed",
+        path: localIssues[0]?.path ?? ctx.path,
+        issues: localIssues,
+      });
+    }
+
+    return ctx.ok(validatedItems);
   }
 }
 

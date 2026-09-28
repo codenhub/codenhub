@@ -105,4 +105,27 @@ describe("LazyValidator", () => {
     expect(lazyVal.schema).toBe(resolved);
     expect(callCount).toBe(1);
   });
+
+  it("avoids infinite recursion during isAsync() checks on self-referential schemas", () => {
+    interface TreeNode {
+      name: string;
+      children?: TreeNode[];
+    }
+
+    const treeSchema: Validator<TreeNode> = val.lazy(() =>
+      val.object({
+        name: val.string(),
+        children: val.array(treeSchema).optional(),
+      }),
+    );
+
+    // Standard schema validation triggers isAsync() under the hood
+    const standard = treeSchema["~standard"];
+    expect(standard).toBeDefined();
+
+    const result = standard.validate({ name: "root", children: [{ name: "child" }] });
+    expect(result).toEqual({
+      value: { name: "root", children: [{ name: "child" }] },
+    });
+  });
 });

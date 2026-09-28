@@ -470,6 +470,53 @@ describe("BaseValidator and modifiers", () => {
     expectTypeOf<InferredOutput>().toEqualTypeOf<string>();
     expectTypeOf<InferredInput>().toEqualTypeOf<unknown>();
   });
+
+  /* oxlint-disable promise/prefer-await-to-then */
+  it("fails synchronous validate() with async-required error when CatchValidator wraps an async validator", () => {
+    const asyncSchema = val.string().refineAsync(async (s) => s.length > 3);
+    const catchSchema = asyncSchema.catch("fallback");
+
+    // Synchronous validation should NOT resolve fallback for async-required errors
+    const syncRes = catchSchema.validate("ok");
+    expect(syncRes.ok).toBe(false);
+    expect((syncRes as ValidationErr).error.message).toContain("validateAsync()");
+
+    // Synchronous validation on non-async schema STILL resolves fallback
+    const syncCatch = val.string().min(5).catch("short");
+    const syncRes2 = syncCatch.validate("hi");
+    expect(syncRes2).toEqual({ ok: true, value: "short" });
+  });
+
+  it("resolves fallback in validateAsync() when inner async validator fails", async () => {
+    const asyncSchema = val.string().refineAsync(async (s) => s.length > 5);
+    const catchSchema = asyncSchema.catch("fallback");
+
+    const asyncRes = await catchSchema.validateAsync("hi");
+    expect(asyncRes).toEqual({ ok: true, value: "fallback" });
+  });
+  /* oxlint-enable promise/prefer-await-to-then */
+
+  it("does not trigger second validation run in ~standard when synchronous error message contains 'validateAsync()'", () => {
+    let callCount = 0;
+    const customValidator = val.custom((_input, ctx) => {
+      callCount++;
+      return ctx.fail({
+        code: "custom",
+        message: "You must use validateAsync() instead of manual loops",
+      });
+    });
+
+    const standardResult = customValidator["~standard"].validate("test");
+    // Should be synchronous result and evaluated only once
+    expect(callCount).toBe(1);
+    expect(standardResult).toMatchObject({
+      issues: [
+        {
+          message: "You must use validateAsync() instead of manual loops",
+        },
+      ],
+    });
+  });
 });
 
 async function asyncStandardFailureResult<T>(

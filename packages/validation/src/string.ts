@@ -1,4 +1,4 @@
-import { BaseValidator, type ValidationContext, type Validator } from "./core";
+import { BaseValidator, markAsyncRequired, type ValidationContext, type Validator } from "./core";
 import { describeReceived, type ValidationIssue, type ValidationResult } from "./result";
 
 const PUBLIC_HOST_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i;
@@ -581,19 +581,28 @@ export class StringValidator extends BaseValidator<string, unknown> {
   }
 
   /**
-   * Validates that the string is valid JSON and optionally validates the parsed JSON against a schema.
+   * Validates that the string is valid JSON without additional schema validation.
    *
-   * @typeParam T - Inferred output type of the parsed JSON data.
-   * @param schema - Optional validator schema to enforce on the parsed JSON data.
    * @param message - Optional custom failure message for JSON parsing errors.
    * @returns A validator schema producing the parsed JSON data.
    */
-  json<T = unknown>(schema?: Validator<T>, message?: string): Validator<T extends unknown ? unknown : T, unknown> {
-    return new JsonValidator<T extends unknown ? unknown : T>(
-      this.clone(),
-      schema as unknown as Validator<T extends unknown ? unknown : T> | undefined,
-      message,
-    );
+  json(message?: string): Validator<unknown, unknown>;
+  json(schema: undefined, message?: string): Validator<unknown, unknown>;
+  /**
+   * Validates that the string is valid JSON and validates the parsed JSON against a schema.
+   *
+   * @typeParam T - Inferred output type of the parsed JSON data.
+   * @param schema - Validator schema to enforce on the parsed JSON data.
+   * @param message - Optional custom failure message for JSON parsing errors.
+   * @returns A validator schema producing the parsed JSON data.
+   */
+  json<T>(schema: Validator<T>, message?: string): Validator<T, unknown>;
+  json<T = unknown>(schemaOrMessage?: Validator<T> | string, message?: string): Validator<T, unknown> {
+    const isValidator =
+      schemaOrMessage !== null && typeof schemaOrMessage === "object" && "validate" in schemaOrMessage;
+    const schema = isValidator ? (schemaOrMessage as Validator<T>) : undefined;
+    const msg = typeof schemaOrMessage === "string" ? schemaOrMessage : message;
+    return new JsonValidator<T>(this.clone(), schema, msg);
   }
 
   /**
@@ -844,12 +853,14 @@ export class JsonValidator<TOutput = unknown> extends BaseValidator<TOutput, unk
 
     if (this.schema) {
       if (this.isAsync()) {
-        return ctx.fail({
-          code: "custom",
-          message: "Async schema requires validateAsync()",
-          path: ctx.path,
-          input: parsed,
-        });
+        return ctx.fail(
+          markAsyncRequired({
+            code: "custom" as const,
+            message: "Async schema requires validateAsync()",
+            path: ctx.path,
+            input: parsed,
+          }),
+        );
       }
       const schemaRes = this.schema.validate(parsed as unknown as Parameters<typeof this.schema.validate>[0], {
         ...ctx.options,

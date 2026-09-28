@@ -11,6 +11,14 @@ export class NumberValidator extends BaseValidator<number, unknown> {
   protected readonly steps: NumberStep[] = [];
   protected allowNonFinite = false;
 
+  /**
+   * Clones this validator instance with its current steps and configuration.
+   *
+   * Subclasses that require constructor arguments must override `clone()` and preserve
+   * those arguments when copying (e.g. `CoercedNumberValidator`).
+   *
+   * @returns A shallow clone of this NumberValidator.
+   */
   protected clone(): NumberValidator {
     const copy = new (this.constructor as new () => NumberValidator)();
     copy.steps.push(...this.steps);

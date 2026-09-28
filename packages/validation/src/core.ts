@@ -358,6 +358,38 @@ function toStandardResult<T>(result: ValidationResult<T>): StandardSchemaV1.Resu
   };
 }
 
+/** Marker symbol to identify validation failures caused by synchronous execution of async-required validators. */
+export const ASYNC_REQUIRED_MARKER = Symbol.for("codenhub.validation.async_required");
+
+/**
+ * Attaches the non-enumerable ASYNC_REQUIRED_MARKER to an issue or error object.
+ */
+export function markAsyncRequired(target: ValidationErrorOptions): ValidationErrorOptions {
+  Object.defineProperty(target, ASYNC_REQUIRED_MARKER, {
+    value: true,
+    enumerable: false,
+    configurable: true,
+  });
+  return target;
+}
+
+/**
+ * Checks if a validation failure or issue tree originates from an async-required validator.
+ */
+export function isAsyncRequiredError(error: unknown): boolean {
+  if (error === null || typeof error !== "object") {
+    return false;
+  }
+  if ((error as Record<string | symbol, unknown>)[ASYNC_REQUIRED_MARKER] === true) {
+    return true;
+  }
+  const issues = (error as { issues?: readonly unknown[] }).issues;
+  if (Array.isArray(issues)) {
+    return issues.some(isAsyncRequiredError);
+  }
+  return false;
+}
+
 /**
  * Abstract base class for all validators providing composable modifiers.
  *
@@ -411,12 +443,15 @@ export abstract class BaseValidator<TOutput, TInput = unknown> implements Valida
         }
         try {
           const res = this.validate(value as TInput);
-          if (!res.ok && res.error.message.includes("validateAsync()")) {
+          if (!res.ok && isAsyncRequiredError(res.error)) {
             return this.validateAsync(value as TInput).then(toStandardResult);
           }
           return toStandardResult(res);
-        } catch {
-          return this.validateAsync(value as TInput).then(toStandardResult);
+        } catch (err) {
+          if (isAsyncRequiredError(err)) {
+            return this.validateAsync(value as TInput).then(toStandardResult);
+          }
+          throw err;
         }
       },
       types: {
@@ -808,6 +843,16 @@ class CatchValidator<TOutput, TInput> extends BaseValidator<TOutput, TInput> {
   }
 
   protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<TOutput> {
+    if (this.isAsync()) {
+      return ctx.fail(
+        markAsyncRequired({
+          code: "custom" as const,
+          message: "Async validator requires validateAsync()",
+          path: ctx.path,
+          input,
+        }),
+      );
+    }
     try {
       const res = runValidator(this.inner, input, ctx);
       if (res.ok) {
@@ -874,12 +919,14 @@ class RefineValidator<TOutput, TInput> extends BaseValidator<TOutput, TInput> {
 
   protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<TOutput> {
     if (this.asyncMode) {
-      return ctx.fail({
-        code: "custom",
-        message: "Async refinement requires validateAsync()",
-        path: ctx.path,
-        input,
-      });
+      return ctx.fail(
+        markAsyncRequired({
+          code: "custom" as const,
+          message: "Async refinement requires validateAsync()",
+          path: ctx.path,
+          input,
+        }),
+      );
     }
 
     const res = runValidator(this.inner, input, ctx);
@@ -901,12 +948,14 @@ class RefineValidator<TOutput, TInput> extends BaseValidator<TOutput, TInput> {
         isValid !== null &&
         typeof (isValid as unknown as Promise<boolean>).then === "function")
     ) {
-      return ctx.fail({
-        code: "custom",
-        message: "Async refinement requires validateAsync()",
-        path: ctx.path,
-        input: res.value,
-      });
+      return ctx.fail(
+        markAsyncRequired({
+          code: "custom" as const,
+          message: "Async refinement requires validateAsync()",
+          path: ctx.path,
+          input: res.value,
+        }),
+      );
     }
 
     if (!isValid) {
@@ -1016,12 +1065,14 @@ class CheckValidator<TOutput, TInput> extends BaseValidator<TOutput, TInput> {
       checkRes instanceof Promise ||
       (typeof checkRes === "object" && checkRes !== null && typeof (checkRes as Promise<unknown>).then === "function")
     ) {
-      return ctx.fail({
-        code: "custom",
-        message: "Async check requires validateAsync()",
-        path: ctx.path,
-        input: res.value,
-      });
+      return ctx.fail(
+        markAsyncRequired({
+          code: "custom" as const,
+          message: "Async check requires validateAsync()",
+          path: ctx.path,
+          input: res.value,
+        }),
+      );
     }
 
     const failure = this.handleCheckResult(checkRes, res.value, ctx, initialIssueCount);
@@ -1086,12 +1137,14 @@ class TransformValidator<TOutput, TNext, TInput> extends BaseValidator<TNext, TI
 
   protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<TNext> {
     if (this.asyncMode) {
-      return ctx.fail({
-        code: "custom",
-        message: "Async transform requires validateAsync()",
-        path: ctx.path,
-        input,
-      });
+      return ctx.fail(
+        markAsyncRequired({
+          code: "custom" as const,
+          message: "Async transform requires validateAsync()",
+          path: ctx.path,
+          input,
+        }),
+      );
     }
 
     const res = runValidator(this.inner, input, ctx);
@@ -1113,12 +1166,14 @@ class TransformValidator<TOutput, TNext, TInput> extends BaseValidator<TNext, TI
         nextValue !== null &&
         typeof (nextValue as unknown as Promise<unknown>).then === "function")
     ) {
-      return ctx.fail({
-        code: "custom",
-        message: "Async transform requires validateAsync()",
-        path: ctx.path,
-        input: res.value,
-      });
+      return ctx.fail(
+        markAsyncRequired({
+          code: "custom" as const,
+          message: "Async transform requires validateAsync()",
+          path: ctx.path,
+          input: res.value,
+        }),
+      );
     }
 
     return ctx.ok(nextValue as TNext);

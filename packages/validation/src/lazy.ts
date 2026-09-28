@@ -12,6 +12,7 @@ import { type ValidationResult } from "./result";
  */
 export class LazyValidator<TOutput, TInput = unknown> extends BaseValidator<TOutput, TInput> {
   private resolved?: Validator<TOutput, TInput>;
+  private isEvaluatingAsync = false;
 
   /**
    * Constructs a LazyValidator with a schema getter function.
@@ -33,8 +34,16 @@ export class LazyValidator<TOutput, TInput = unknown> extends BaseValidator<TOut
   }
 
   protected override isAsync(): boolean {
-    const s = this.schema;
-    return s instanceof BaseValidator ? (s as unknown as { isAsync(): boolean }).isAsync() : false;
+    if (this.isEvaluatingAsync) {
+      return false;
+    }
+    this.isEvaluatingAsync = true;
+    try {
+      const s = this.schema;
+      return s instanceof BaseValidator ? (s as unknown as { isAsync(): boolean }).isAsync() : false;
+    } finally {
+      this.isEvaluatingAsync = false;
+    }
   }
 
   protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<TOutput> {
