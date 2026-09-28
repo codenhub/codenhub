@@ -25,6 +25,38 @@ const provenance = new Map(
   ),
 );
 
+/** Top-level frontmatter keys the Agent Skills specification defines. */
+const specKeys = new Set(["name", "description", "license", "compatibility", "metadata", "allowed-tools"]);
+
+/** Top-level directories a skill may hold beside `SKILL.md`, its notices, and harness metadata in `agents/`. */
+const layout = new Set(["SKILL.md", "NOTICE", "LICENSE", "agents", "references", "scripts", "assets"]);
+
+const read = (file: string) => fs.readFileSync(file, "utf8");
+
+/** Every file under `dir`, as paths relative to it with forward slashes. */
+const walk = (dir: string): string[] =>
+  fs
+    .readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => path.relative(dir, path.join(entry.parentPath, entry.name)).split(path.sep).join("/"));
+
+/** Splits `SKILL.md` into its raw frontmatter and its body. */
+const split = (content: string) => {
+  const match = content.match(/^---\r?\n([\s\S]+?)\r?\n---\r?\n?/);
+  return { frontmatter: match?.[1] ?? "", body: match ? content.slice(match[0].length) : content };
+};
+
+/**
+ * Paths into the skill that a Markdown file references: relative link targets, and code spans naming a file under
+ * one of the specification's directories. Code spans elsewhere usually name files in the user's project instead.
+ */
+const references = (markdown: string) => [
+  ...[...markdown.matchAll(/\]\(([^)\s#]+)(?:#[^)]*)?\)/g)]
+    .map((m) => m[1])
+    .filter((target) => !/^[a-z]+:/i.test(target)),
+  ...[...markdown.matchAll(/`((?:references|scripts|assets)\/[^`\s]+)`/g)].map((m) => m[1]),
+];
+
 describe("skill catalog", () => {
   it("should hold bundled skills", () => {
     expect(skills.length).toBeGreaterThan(0);
@@ -57,5 +89,70 @@ describe("skill catalog", () => {
   it("should keep drafts apart from the bundled skills", () => {
     const ids = new Set(skills.map((skill) => skill.id));
     expect(drafts.filter((draft) => ids.has(draft.id)).map((draft) => draft.id)).toEqual([]);
+  });
+
+  describe.each(skills.map((skill) => [skill.id, skill]))("%s", (_, skill) => {
+    const skillMd = read(path.join(skill.path, "SKILL.md"));
+    const { frontmatter, body } = split(skillMd);
+    const meta = parseFrontmatter(skillMd);
+    const files = walk(skill.path);
+
+    it("should use only the frontmatter keys the specification defines", () => {
+      const keys = [...frontmatter.matchAll(/^([A-Za-z][\w-]*):/gm)].map((m) => m[1]);
+      expect(keys.filter((key) => !specKeys.has(key))).toEqual([]);
+    });
+
+    // Reserved words and XML tags are rejected by Anthropic's skill loaders; a folded or literal block scalar is not
+    // understood by the package's flat frontmatter parser, which would read the indicator as the description.
+    it("should keep name and description loadable by every harness", () => {
+      expect(meta.name).not.toMatch(/anthropic|claude/);
+      expect(`${meta.name} ${meta.description}`).not.toMatch(/<\/?[a-z][^>]*>/i);
+      expect(meta.description).not.toMatch(/^[>|][+-]?$/);
+    });
+
+    it("should keep the SKILL.md body under 500 lines", () => {
+      expect(body.split("\n").length).toBeLessThan(500);
+    });
+
+    it("should hold only the specification's directories", () => {
+      expect(fs.readdirSync(skill.path).filter((entry) => !layout.has(entry))).toEqual([]);
+    });
+
+    it("should reference only files that exist, with forward slashes", () => {
+      const targets = references(body);
+      expect(targets.filter((target) => target.includes("\\"))).toEqual([]);
+      expect(targets.filter((target) => !fs.existsSync(path.join(skill.path, target)))).toEqual([]);
+    });
+
+    it("should load every reference file from SKILL.md", () => {
+      const targets = new Set(references(body).map((target) => path.posix.normalize(target)));
+      expect(files.filter((file) => file.startsWith("references/") && !targets.has(file))).toEqual([]);
+    });
+
+    // Agents may only preview a file reached through another reference, so references stay one level deep.
+    it("should keep reference files one level deep", () => {
+      const nested = files
+        .filter((file) => file.startsWith("references/") && file.endsWith(".md"))
+        .filter((file) => references(read(path.join(skill.path, file))).length > 0);
+      expect(nested).toEqual([]);
+    });
+
+    it("should open long reference files with a contents section", () => {
+      const long = files
+        .filter((file) => file.startsWith("references/") && file.endsWith(".md"))
+        .filter((file) => {
+          const content = read(path.join(skill.path, file));
+          return content.split("\n").length > 100 && !/^## Contents$/m.test(content);
+        });
+      expect(long).toEqual([]);
+    });
+
+    it("should describe itself to Codex in agents/openai.yaml", () => {
+      const yaml = path.join(skill.path, "agents", "openai.yaml");
+      expect(fs.existsSync(yaml)).toBe(true);
+      for (const key of ["display_name", "short_description", "default_prompt"]) {
+        expect(read(yaml)).toMatch(new RegExp(`^  ${key}:`, "m"));
+      }
+    });
   });
 });

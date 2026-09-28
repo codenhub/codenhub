@@ -17,6 +17,8 @@ skills/
     NOTICE
     agents/
     references/
+    scripts/
+    assets/
 ```
 
 The programmatic discovery API recognizes the directory solely by the presence of `SKILL.md`. The installer copies the whole directory subject to its harness-specific `agents` exclusion.
@@ -34,6 +36,21 @@ description: Use when an agent needs the example workflow.
 
 Supporting Markdown, YAML, notices, examples, and reference files may accompany `SKILL.md`. Their meaning is harness- or skill-specific and is not interpreted by the package.
 
+## Quality Rules
+
+Bundled skills follow the [Agent Skills specification](https://agentskills.io/specification) and the authoring guidance in the bundled `writing-skills` skill. The package test suite enforces the rules that can be checked mechanically, so `pnpm test skills` fails when a bundled skill breaks one:
+
+- `name` matches the directory, uses lowercase letters, digits, and single hyphens, is at most 64 characters, and contains neither `anthropic` nor `claude`.
+- `description` is a single line of 1 to 1024 characters without XML tags.
+- Frontmatter uses only the specification's keys: `name`, `description`, `license`, `compatibility`, `metadata`, and `allowed-tools`.
+- The `SKILL.md` body is under 500 lines.
+- A skill holds only `SKILL.md`, `NOTICE`, `LICENSE`, `agents/`, `references/`, `scripts/`, and `assets/`.
+- Files that `SKILL.md` references exist and use forward slashes, and every file in `references/` is referenced from `SKILL.md`.
+- Reference files do not reference other files in the skill, and those over 100 lines open with a `## Contents` section.
+- `agents/openai.yaml` defines `display_name`, `short_description`, and `default_prompt`.
+
+The rest of the authoring guidance, such as how a description is phrased or whether a change was evaluated, needs judgment and is covered in review. Drafts are checked for valid metadata only.
+
 ## Bundled Inventory
 
 | Skill ID                  | Purpose                                                        |
@@ -46,7 +63,7 @@ Supporting Markdown, YAML, notices, examples, and reference files may accompany 
 | `frontend-design`         | Guides distinctive production-grade frontend design.           |
 | `subagent-specialist`     | Plans, delegates, reviews, and integrates parallel agent work. |
 | `test-driven-development` | Applies fail-first red-green-refactor development.             |
-| `writing-skills`          | Creates, reviews, tests, and validates skill bundles.          |
+| `writing-skills`          | Authors, reviews, and evaluates skills against the rules.      |
 
 Skill wording and support files may change while the package is experimental. Use the installed `SKILL.md` and accompanying assets as the authoritative skill content for the installed package version.
 
