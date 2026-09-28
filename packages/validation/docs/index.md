@@ -4,7 +4,7 @@ title: Overview
 
 # Validate Application Inputs
 
-`@codenhub/validation` validates unknown boundary values and performs explicit primitive coercion without runtime dependencies. It is useful when request parameters, environment values, form input, or other unknown data needs a typed success-or-failure result before entering application logic.
+`@codenhub/validation` provides declarative data and structure validation, primitive coercion helpers, and deep customization without runtime dependencies. It allows defining typed schemas for unknown request parameters, API payloads, form submissions, or environment variables and validating them with discriminated results.
 
 ## Setup
 
@@ -16,20 +16,36 @@ pnpm add @codenhub/validation
 
 ### Quick start
 
-Validators and coercers return a discriminated `ValidationResult` rather than throwing for ordinary invalid input:
+Create reusable validator schemas using `val` and run `.validate()` against unknown boundary data:
 
 ```ts
-import { coerce, val } from "@codenhub/validation";
+import { val, type Infer } from "@codenhub/validation";
 
-const coerced = coerce.int("3000", { path: ["port"] });
-const port = coerced.ok ? val.number(coerced.value).port() : coerced;
+const signupSchema = val.object({
+  username: val.string().min(3).max(30).trim(),
+  email: val.string().email(),
+  age: val.number().int().min(18).optional(),
+  newsletter: val.boolean().default(false),
+  tags: val.array(val.string()).default([]),
+});
 
-if (!port.ok) {
-  console.error(port.error.code, port.error.path);
+export type SignupInput = Infer<typeof signupSchema>;
+
+const result = signupSchema.validate(payload);
+
+if (result.ok) {
+  // result.value is strongly typed as SignupInput
+  console.log("Registered:", result.value.username);
+} else {
+  // result.error contains code, message, path, and child issues
+  console.error("Validation failed:", result.error.message);
+  for (const issue of result.error.issues ?? []) {
+    console.error(`- [${issue.path.join(".")}] ${issue.message}`);
+  }
 }
 ```
 
-Coercion only converts primitive values; follow it with a validator when the result must satisfy a domain constraint such as a valid port range.
+Validators never throw for ordinary validation failures; they return a `ValidationResult<T>` that discriminates on `ok: true | false`.
 
 ## Requirements
 
@@ -41,5 +57,5 @@ All public symbols are imported from `@codenhub/validation`; there are no public
 
 ## Next steps
 
-- [Results and coercion](results-and-coercion.md) explains error shapes, result construction, custom validators, primitive conversion, and safe input retention.
-- [Validator reference](validators.md) documents the string, number, object, and array validators with their defaults and constraints.
+- [Results and coercion](results-and-coercion.md) explains error shapes, result construction, custom validators, pipeline composition, and primitive coercion.
+- [Validator reference](validators.md) documents all schema builders including strings, numbers, booleans, dates, objects, arrays, records, tuples, unions, and modifiers.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { coerce } from ".";
+import { coerce, val } from ".";
 
 describe("coerce", () => {
   it("coerces integer strings and rejects unsafe integers", () => {
@@ -69,5 +69,62 @@ describe("coerce", () => {
         received: "object",
       },
     });
+  });
+
+  it("coerces dates from Date, timestamp, and ISO strings", () => {
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    expect(coerce.date(now)).toEqual({ ok: true, value: now });
+    expect(coerce.date(now.getTime())).toEqual({ ok: true, value: now });
+    expect(coerce.date("2026-01-01")).toEqual({ ok: true, value: new Date("2026-01-01") });
+    expect(coerce.date("Jan 1, 2026")).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_format",
+        message: 'Cannot coerce "Jan 1, 2026" to Date',
+        path: [],
+        expected: "valid date string",
+        received: "Jan 1, 2026",
+      },
+    });
+
+    expect(coerce.date("not-a-date")).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_format",
+        message: 'Cannot coerce "not-a-date" to Date',
+        path: [],
+        expected: "valid date string",
+        received: "not-a-date",
+      },
+    });
+
+    expect(coerce.date("")).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_format",
+        message: "Cannot coerce empty string to Date",
+        path: [],
+        expected: "non-empty date string",
+        received: '""',
+      },
+    });
+  });
+
+  it("provides validator schema factories via val.coerce", () => {
+    const intValidator = val.coerce.int();
+    expect(intValidator.validate("42")).toEqual({ ok: true, value: 42 });
+
+    const numValidator = val.coerce.number();
+    expect(numValidator.validate("3.14")).toEqual({ ok: true, value: 3.14 });
+
+    const boolValidator = val.coerce.bool();
+    expect(boolValidator.validate("yes")).toEqual({ ok: true, value: true });
+
+    const strValidator = val.coerce.string();
+    expect(strValidator.validate(99)).toEqual({ ok: true, value: "99" });
+
+    const dateValidator = val.coerce.date();
+    const d = new Date("2026-01-01T00:00:00.000Z");
+    expect(dateValidator.validate("2026-01-01T00:00:00.000Z")).toEqual({ ok: true, value: d });
   });
 });

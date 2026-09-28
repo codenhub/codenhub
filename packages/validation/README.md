@@ -12,16 +12,26 @@ pnpm add @codenhub/validation
 
 ## Usage
 
-Validators and coercers return discriminated results instead of throwing for invalid input.
+Define declarative schemas and validate unknown boundary data returning discriminated results without throwing:
 
 ```ts
-import { coerce, val } from "@codenhub/validation";
+import { val, type Infer } from "@codenhub/validation";
 
-const coerced = coerce.int("3000", { path: ["port"] });
-const port = coerced.ok ? val.number(coerced.value).port() : coerced;
+const userSchema = val.object({
+  name: val.string().min(2),
+  email: val.string().email(),
+  role: val.enum(["admin", "user"]).default("user"),
+  age: val.number().int().min(18).optional(),
+});
 
-if (!port.ok) {
-  console.error(port.error.code, port.error.path);
+export type User = Infer<typeof userSchema>;
+
+const result = userSchema.validate(data);
+
+if (result.ok) {
+  console.log("Valid user:", result.value);
+} else {
+  console.error("Validation failed:", result.error.message, result.error.issues);
 }
 ```
 
@@ -40,6 +50,7 @@ if (!port.ok) {
 ## Notes
 
 - `includeInput` defaults to `false`; enable it only when retaining input is safe.
+- Object and array validation defaults to `abortEarly: false`, aggregating all field and element errors into `error.issues`.
 - URL and email validators intentionally accept public host shapes only.
 
 ## License
