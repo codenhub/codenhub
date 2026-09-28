@@ -42,7 +42,7 @@ const walk = (dir: string): string[] =>
 
 /** Splits `SKILL.md` into its raw frontmatter and its body. */
 const split = (content: string) => {
-  const match = content.match(/^---\r?\n([\s\S]+?)\r?\n---\r?\n?/);
+  const match = content.match(/^\uFEFF?---\r?\n([\s\S]+?)\r?\n---\r?\n?/);
   return { frontmatter: match?.[1] ?? "", body: match ? content.slice(match[0].length) : content };
 };
 
@@ -118,10 +118,22 @@ describe("skill catalog", () => {
       expect(fs.readdirSync(skill.path).filter((entry) => !layout.has(entry))).toEqual([]);
     });
 
-    it("should reference only files that exist, with forward slashes", () => {
+    // The installer copies one skill directory, so a reference must name a file inside it.
+    it("should reference only files inside the skill, with forward slashes", () => {
       const targets = references(body);
       expect(targets.filter((target) => target.includes("\\"))).toEqual([]);
-      expect(targets.filter((target) => !fs.existsSync(path.join(skill.path, target)))).toEqual([]);
+      const root = path.resolve(skill.path);
+      const outside = targets.filter((target) => {
+        const resolved = path.resolve(root, target);
+        const relative = path.relative(root, resolved);
+        return (
+          relative === ".." ||
+          relative.startsWith(`..${path.sep}`) ||
+          path.isAbsolute(relative) ||
+          !fs.statSync(resolved, { throwIfNoEntry: false })?.isFile()
+        );
+      });
+      expect(outside).toEqual([]);
     });
 
     it("should load every reference file from SKILL.md", () => {
