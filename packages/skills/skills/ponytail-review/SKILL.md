@@ -7,11 +7,11 @@ description: Reviews code for over-engineering, finding what to delete, inline, 
 
 Hunt unnecessary complexity and list it. The best outcome of a review is a shorter codebase. Lists findings and applies nothing.
 
-Pick the scope from the request:
+Pick the scope from the request, taking the first that matches:
 
-- **Diff:** a diff, branch, or pull request is in play. The default.
-- **Audit:** the whole codebase or a directory, when no diff is in play or the user asks for an audit.
-- **Ledger:** the user asks about deferred work, shortcuts, skipped features, TODOs, or debt.
+1. **Ledger:** the user asks about deferred work, shortcuts, skipped features, TODOs, or debt, with or without a diff.
+2. **Diff:** a diff, branch, or pull request is in play.
+3. **Audit:** the whole codebase or a directory, when the user asks for an audit or no diff is in play.
 
 ## Tags
 

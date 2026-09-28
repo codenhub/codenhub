@@ -67,11 +67,11 @@ For workflow, template, example, and script patterns, read [references/patterns.
 
 ## Evaluate To The Risk
 
-| Change                                                                           | Minimum evidence                                                                                                                                            |
-| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| New skill, or a behavioral change: triggers, rules, workflow order, gates        | Run at least three realistic scenarios without the change and record the failures. Rerun with it: each targeted failure is gone and nothing else got worse. |
-| Discipline skill: a rule agents are tempted to skip under pressure               | The above, plus pressure scenarios. Counter each rationalization you observe, quoted verbatim.                                                              |
-| Editorial change: wording, formatting, or links with no intended behavior change | The hard rules, then a re-read of the diff confirming no rule, trigger, or order changed. When unsure, treat the change as behavioral.                      |
+| Change                                                                           | Minimum evidence                                                                                                                                                                                                                           |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| New skill, or a behavioral change: triggers, rules, workflow order, gates        | Run at least three realistic scenarios without the change and record each outcome. Rerun with it: every failure the change targets is gone, and scenarios that already passed, such as one where the skill should not trigger, still pass. |
+| Discipline skill: a rule agents are tempted to skip under pressure               | The above, plus pressure scenarios. Counter each rationalization you observe, quoted verbatim.                                                                                                                                             |
+| Editorial change: wording, formatting, or links with no intended behavior change | The hard rules, then a re-read of the diff confirming no rule, trigger, or order changed. When unsure, treat the change as behavioral.                                                                                                     |
 
 Run scenarios in a fresh context that holds only the skill and the task, such as a subagent or a new session. Read [references/evaluation.md](references/evaluation.md) to design and run them.
 
