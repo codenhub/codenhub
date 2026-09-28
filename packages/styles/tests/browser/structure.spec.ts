@@ -195,6 +195,24 @@ test.describe("shadow layers", () => {
     expect(await read(page, "flat", "box-shadow")).toMatch(/0px 0px 0px 0px[^,]*$/);
   });
 
+  test("the second layer mixes toward its own base colour", async ({ page }) => {
+    await load(
+      page,
+      `<div class="c-shared"><button data-testid="shared" class="btn ghost">b</button></div>
+       <div class="c-own"><button data-testid="own" class="btn ghost">b</button></div>
+       <span data-testid="white" style="color: color-mix(in oklab, red 0%, rgb(255 255 255))">w</span>
+       <span data-testid="black" style="color: color-mix(in oklab, red 0%, rgb(0 0 0))">k</span>`,
+      `.c-shared, .c-own { --elevation-color: rgb(0 0 0); --ui-shadow-2-y: 2px; --ui-shadow-2-ink: 0%; }
+       .c-own { --ui-shadow-2-color: rgb(255 255 255); }`,
+    );
+
+    const secondLayer = async (testId: string) =>
+      (await read(page, testId, "box-shadow")).split(/,(?![^(]*\))/)[1]!.trim();
+
+    expect(await secondLayer("shared"), "the depth colour by default").toContain(await read(page, "black", "color"));
+    expect(await secondLayer("own"), "its own base when named").toContain(await read(page, "white", "color"));
+  });
+
   test(".flat keeps the halo, and a field takes it", async ({ page }) => {
     await load(
       page,

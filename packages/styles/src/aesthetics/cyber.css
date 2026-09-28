@@ -90,6 +90,7 @@
     --ui-shadow-2-spread: initial;
     --ui-shadow-2-ink: initial;
     --ui-shadow-2-inset: initial;
+    --ui-shadow-2-color: initial;
 
     /* The glow holds still under the pointer and under a press; the press is the
        base scale, restated because a region nested inside another aesthetic must
