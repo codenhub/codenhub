@@ -780,6 +780,23 @@ test("an aesthetic names a component only with a recorded reason", async () => {
   expect(problems).toEqual([]);
 });
 
+/* Sketch writes its rotation onto components, so it has to skip a region of
+   another aesthetic nested inside it or overrule that aesthetic's corners. Every
+   list of aesthetics it names is that exclusion, and a list missing one is how a
+   new aesthetic would silently take sketch's outlines. */
+test("sketch excludes every other aesthetic from its rotation", async () => {
+  const source = withoutComments(await read("src/aesthetics/sketch.css"));
+  const others = (registry.aesthetics ?? []).map((aesthetic) => aesthetic.class).filter((name) => name !== "sketch");
+  const lists = [...source.matchAll(/:is\(([^()]*)\)/g)]
+    .map(([, list]) => list!.split(",").map((selector) => selector.trim().replace(/^\./, "")))
+    .filter((names) => names.some((name) => others.includes(name)));
+
+  expect(lists.length).toBeGreaterThan(0);
+  for (const names of lists) {
+    expect(names.toSorted()).toEqual(others.toSorted());
+  }
+});
+
 /* A solo class is the aesthetic painted onto one element the package does not
    style, so it has to work with nothing else in scope. `--ui-*` and
    `--elevation-color` belong to whichever aesthetic an ancestor carries -- a

@@ -1863,6 +1863,31 @@ test.describe("aesthetics", () => {
       expect(new Set(radii).size).toBe(3);
     });
 
+    test("rotates a sketch region nested inside another aesthetic, and skips one nested inside it", async ({
+      page,
+    }) => {
+      await page.goto(BUTTONS_URL);
+
+      const radii = await page.evaluate(() => {
+        const host = document.querySelector('[data-testid="preview-root"]')!;
+        const outer = document.createElement("div");
+        const buttons =
+          '<button class="btn">One</button><button class="btn">Two</button><button class="btn">Three</button>';
+
+        outer.innerHTML = `<div class="glass"><div class="sketch">${buttons}</div></div><div class="sketch"><div class="glass">${buttons}</div></div>`;
+        host.append(outer);
+        const read = (selector: string) =>
+          Array.from(outer.querySelectorAll(selector), (element) => getComputedStyle(element).borderRadius);
+        const values = { inside: read(".glass > .sketch > .btn"), around: read(".sketch > .glass > .btn") };
+
+        outer.remove();
+        return values;
+      });
+
+      expect(new Set(radii.inside).size, "sketch inside glass still rotates").toBe(3);
+      expect(new Set(radii.around).size, "glass inside sketch keeps one corner").toBe(1);
+    });
+
     test("draws sharp uneven corners on surfaces, solid ink, and a small offset shadow", async ({ page }) => {
       await page.goto(withAesthetic(SURFACES_URL, "sketch"));
 
