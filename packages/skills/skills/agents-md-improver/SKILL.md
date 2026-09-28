@@ -1,6 +1,6 @@
 ---
 name: agents-md-improver
-description: Audit and improve AGENTS.md files in repositories. Use when the user asks to check, audit, update, improve, or fix AGENTS.md files. Evaluate the target file against a quality rubric, output a report, then make targeted updates after approval.
+description: Audits and improves AGENTS.md files in repositories. Use when the user asks to check, audit, update, improve, or fix AGENTS.md files.
 metadata:
   short-description: Audit and improve AGENTS.md files
 ---
@@ -11,11 +11,6 @@ Audit, evaluate, and improve `AGENTS.md` files across a codebase so future agent
 
 This skill can update `AGENTS.md` files. After presenting a quality report and getting user approval, it makes targeted improvements.
 
-## Tool Compatibility
-
-- Keep instructions tool-agnostic and avoid provider-specific wording.
-- When behavior differs across tools, resolve conflicts in this order: OpenCode > Claude Code > Codex CLI > Gemini CLI.
-
 ## Workflow
 
 ### Phase 1: Discovery
@@ -24,19 +19,17 @@ Determine the target file before auditing anything:
 
 1. If the user explicitly names a file, use that file as the primary target.
 2. Otherwise, search for `AGENTS.md` files and default to the project root `AGENTS.md` when it exists.
-3. Only inspect related instruction files such as `AGENTS_LONG.md` when the user asks for them or they are necessary to explain the target file.
-
-Use the host environment's file search capability instead of assuming shell commands like `find` are available.
+3. Only inspect related instruction files when the user asks for them or they are necessary to explain the target file.
 
 **File Types & Locations:**
 
-| Type             | Location                    | Purpose                                  |
-| ---------------- | --------------------------- | ---------------------------------------- |
-| Explicit target  | User-provided path          | Highest-priority file to audit           |
-| Project root     | `./AGENTS.md`               | Primary shared project instructions      |
-| Package-specific | `./packages/*/AGENTS.md`    | Module-level guidance in monorepos       |
-| Subdirectory     | Any nested location         | Feature or domain-specific instructions  |
-| Related guides   | `AGENTS_LONG.md` or similar | Supplemental context only when requested |
+| Type             | Location                 | Purpose                                  |
+| ---------------- | ------------------------ | ---------------------------------------- |
+| Explicit target  | User-provided path       | Highest-priority file to audit           |
+| Project root     | `./AGENTS.md`            | Primary shared project instructions      |
+| Package-specific | `./packages/*/AGENTS.md` | Module-level guidance in monorepos       |
+| Subdirectory     | Any nested location      | Feature or domain-specific instructions  |
+| Related guides   | Other instruction files  | Supplemental context only when requested |
 
 ### Phase 2: Quality Assessment
 
@@ -44,14 +37,14 @@ For each target `AGENTS.md` file, evaluate against the quality criteria. See [re
 
 **Quick Assessment Checklist:**
 
-| Criterion                         | Weight | Check                                                           |
+| Criterion                         | Points | Check                                                           |
 | --------------------------------- | ------ | --------------------------------------------------------------- |
-| Commands and workflows documented | High   | Are build, test, lint, and common operations present?           |
-| Architecture clarity              | High   | Can the agent understand the codebase structure and boundaries? |
-| Non-obvious patterns              | Medium | Are gotchas, quirks, and exceptions documented?                 |
-| Conciseness                       | Medium | Is the file dense and useful instead of verbose?                |
-| Currency                          | High   | Does it reflect the current codebase state?                     |
-| Actionability                     | High   | Are instructions concrete and executable?                       |
+| Commands and workflows documented | 20     | Are build, test, lint, and common operations present?           |
+| Architecture clarity              | 20     | Can the agent understand the codebase structure and boundaries? |
+| Non-obvious patterns              | 15     | Are gotchas, quirks, and exceptions documented?                 |
+| Conciseness                       | 15     | Is the file dense and useful instead of verbose?                |
+| Currency                          | 15     | Does it reflect the current codebase state?                     |
+| Actionability                     | 15     | Are instructions concrete and executable?                       |
 
 **Quality Scores:**
 
@@ -103,6 +96,8 @@ Format:
 
 After outputting the quality report, ask the user for confirmation before updating anything.
 
+See [references/update-guidelines.md](references/update-guidelines.md) for examples of what to add and leave out, and the checklist to validate each proposed change.
+
 **Update Guidelines (Critical):**
 
 1. Propose targeted additions only. Focus on genuinely useful information:
@@ -143,7 +138,7 @@ sessions to get started quickly.
 
 ### Phase 5: Apply Updates
 
-After user approval, apply changes using the host environment's editing capability. Preserve the existing content structure unless restructuring is part of the approved improvement.
+After user approval, apply the changes. Preserve the existing content structure unless restructuring is part of the approved improvement.
 
 ## Templates
 
@@ -168,27 +163,6 @@ When presenting recommendations, remind users:
 - Document project-specific patterns and gotchas, not generic engineering advice.
 - Separate shared project instructions from personal preferences when the host workflow supports it.
 - Revisit `AGENTS.md` after important workflow or architecture changes so it stays current.
-
-## What Makes a Great AGENTS.md
-
-**Key principles:**
-
-- Concise and human-readable
-- Actionable commands that can be copy-pasted
-- Project-specific patterns, not generic advice
-- Non-obvious gotchas and warnings
-- Current guidance that matches the repository as it exists today
-
-**Recommended sections** (use only what is relevant):
-
-- Commands (build, test, dev, lint)
-- Architecture (directory structure)
-- Key Files (entry points, config)
-- Code Style (project conventions)
-- Environment (required vars, setup)
-- Testing (commands, patterns)
-- Gotchas (quirks, common mistakes)
-- Workflow (when to do what)
 
 ## Failure Modes To Handle
 

@@ -1,13 +1,13 @@
 ---
 name: subagent-specialist
-description: Specialist workflow for planning, dispatching, reviewing, and integrating delegated workers. Use for parallelizable work, independent implementation tasks, multiple unrelated bug investigations, or quality-focused implementer + spec-review + code-review workflows.
+description: Coordinates work delegated to subagents or other workers, from planning through integration. Use for parallelizable work, independent implementation tasks, several unrelated bug investigations, or delegated work that needs review before it is integrated.
 ---
 
 # Subagent Specialist
 
 ## Overview
 
-Use fresh subagents as isolated workers while the main agent stays responsible for decomposition, context curation, coordination, and integration. This skill merges two patterns into one operating guide: structured per-task execution with review gates, and parallel dispatch for independent domains.
+Use fresh subagents as isolated workers while the main agent stays responsible for decomposition, context curation, coordination, and integration. Two patterns apply: structured per-task execution with review gates, and parallel dispatch for independent domains.
 
 ## Core Principles
 
@@ -18,20 +18,14 @@ Use fresh subagents as isolated workers while the main agent stays responsible f
 - Review actual artifacts, not just the subagent's report.
 - Preserve the controller's context window for orchestration work.
 
-## Tool Compatibility
-
-- Keep instructions tool-agnostic and avoid provider-specific wording.
-- When behavior differs across tools, resolve conflicts in this order: OpenCode > Claude Code > Codex CLI > Gemini CLI.
-
 ## Delegation Lifecycle
 
-- Use the host environment's delegation mechanism to start a fresh worker when isolated execution is helpful.
-- Prefer isolated, task-local context over copying the full session unless the task genuinely depends on broader context.
-- Reuse the same worker for follow-up work only when it already holds the right local context and reuse reduces setup cost.
+- Start a fresh worker when isolated execution helps, and give it task-local context rather than the full session unless the task depends on it.
+- Reuse a worker for follow-up work only when it already holds the right context.
 - Wait for worker results only when the next critical-path step depends on them.
-- End or discard workers that are no longer useful, according to the host environment's workflow.
-- Respect the host environment's delegation policy. If the environment only allows delegated workers after explicit user permission, do not bypass that rule.
-- Adapt to the host's actual capabilities. Do not assume support for background workers, message passing, context forking, or explicit worker shutdown unless the environment provides them.
+- Stop workers that are no longer useful.
+- When delegation needs the user's permission, ask; never work around it.
+- Use only the delegation features actually available, such as background workers, messaging, or context forking.
 
 ## Choose the Pattern
 
@@ -67,7 +61,7 @@ Do local exploration first instead of dispatching immediately when:
 
 - Give the full task text directly.
 - Include architectural context, constraints, working directory, and expected report format.
-- Tell the implementer to ask questions before coding if anything is unclear.
+- Tell the implementer to report `NEEDS_CONTEXT` with its questions instead of guessing when anything is unclear.
 - Prefer reusing the same implementer for follow-up fixes if the review loop stays on the same task.
 
 For the prompt structure, read [references/implementer-prompt.md](references/implementer-prompt.md).
@@ -79,7 +73,7 @@ Implementers should report one of four statuses:
 - `DONE`: Proceed to spec compliance review.
 - `DONE_WITH_CONCERNS`: Read the concerns before review. Resolve correctness or scope doubts before moving on.
 - `NEEDS_CONTEXT`: Provide the missing information and re-dispatch.
-- `BLOCKED`: Change something real before retrying. Add context, break up the task, choose a stronger execution profile, or escalate to the user.
+- `BLOCKED`: Change something real before retrying. Add context, break up the task, use a stronger model, or escalate to the user.
 
 Never ignore a subagent that says it is stuck. If it reported `BLOCKED`, the setup, context, or task shape needs to change.
 
@@ -162,13 +156,15 @@ If the domains turn out not to be independent, stop treating them as parallel wo
 
 Use parallel dispatch at the top level and the structured review loop inside each workstream when the work is large enough to justify it. A typical example is three unrelated bug clusters investigated in parallel, where each accepted fix still goes through spec review and code quality review before final integration.
 
-## Execution Profile Selection
+## Model Selection
 
-- Use a lightweight execution profile for mechanical, well-specified tasks touching 1 or 2 files.
-- Use a standard execution profile for debugging, integration work, or multi-file implementation.
-- Use the strongest available execution profile for architecture, task decomposition, and critical reviews.
+When workers can run on different models:
 
-Signals that you should increase execution depth:
+- Use a fast, inexpensive model for mechanical, well-specified tasks touching 1 or 2 files.
+- Use a standard model for debugging, integration work, or multi-file implementation.
+- Use the strongest available model for architecture, task decomposition, and critical reviews.
+
+Signals that a task needs a stronger model:
 
 - ambiguous requirements
 - many interacting files
@@ -185,36 +181,14 @@ Signals that you should increase execution depth:
 - Prefer raw artifacts over your diagnosis when asking for validation or review.
 - Do not leak the intended answer into reviewer prompts.
 
-## Advantages and Costs
-
-Advantages:
-
-- fresh context per task keeps subagents focused
-- the controller keeps the big picture instead of drowning in implementation detail
-- questions surface early, before the subagent builds the wrong thing
-- review gates catch under-building, over-building, and maintainability problems sooner
-- parallel investigations can collapse multi-hour debugging into one coordination pass
-
-Costs:
-
-- more setup work from the controller
-- more subagent invocations
-- more review iterations
-- more integration discipline required when multiple workstreams return together
-
-The cost is usually worth paying when the alternative is broad context pollution, slow sequential debugging, or late discovery of quality problems.
-
 ## Red Flags
 
-- Do not start implementation on `main` or `master` without explicit user consent.
-- Do not skip spec compliance review.
-- Do not run code quality review before spec compliance passes.
-- Do not move to the next task while review issues are still open.
-- Do not tell a subagent to "fix everything."
-- Do not dispatch multiple coding subagents against the same write scope unless the integration plan is explicit.
-- Do not ignore a subagent that reports `BLOCKED`.
-- Do not replace actual review with implementer self-review.
-- Do not trust an implementer or reviewer claim without checking the artifacts they produced.
+Stop and correct course on any of these:
+
+- Skipping spec compliance review, or running code quality review before it passes.
+- Telling a subagent to "fix everything" instead of naming the scope.
+- Dispatching several coding subagents against the same write scope without an explicit integration plan.
+- Accepting an implementer or reviewer claim without checking the artifacts they produced.
 
 ## Reference Templates
 

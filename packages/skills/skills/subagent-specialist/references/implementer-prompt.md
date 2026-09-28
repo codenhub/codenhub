@@ -20,13 +20,7 @@ You are implementing Task [N]: [task name]
 - If a commit is explicitly requested, make it. Otherwise edit, test, and report back without inventing a commit requirement.
 
 ## Before You Begin
-If you have questions about:
-- the requirements or acceptance criteria
-- the approach or implementation strategy
-- dependencies or assumptions
-- anything unclear in the task description
-
-Ask them before you start coding. Raise concerns early instead of guessing.
+If anything is unclear, such as the requirements, acceptance criteria, approach, dependencies, or assumptions, stop before coding and report `NEEDS_CONTEXT` with your questions. Do not guess.
 
 ## Your Job
 Once the task is clear:

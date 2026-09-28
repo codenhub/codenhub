@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ponytail Review"
+  short_description: "Find over-engineering and deferred work"
+  default_prompt: "Use $ponytail-review to review a diff or the codebase for over-engineering, one tagged line per finding with what replaces it, or to ledger TODO shortcuts and Skipped commit trailers; list findings without applying them."

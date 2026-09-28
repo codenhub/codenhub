@@ -1,6 +1,6 @@
 ---
 name: test-driven-development
-description: Use when an agent must do feature work, bug fixes, refactors, or behavior changes with fail-first TDD.
+description: Enforces test-first development on code changes. Use when implementing a feature, fixing a bug, refactoring, or otherwise changing behavior in code.
 metadata:
   short-description: Enforce test-first development
 ---
@@ -22,30 +22,19 @@ Apply this workflow for:
 - behavior changes
 - refactors that can affect behavior
 
-Possible exceptions (only with explicit user confirmation in this conversation):
+Exceptions need the user's explicit approval for that exact change in this conversation. Never approve one yourself; urgency is not approval.
 
 - throwaway prototypes
 - generated code
-- strictly non-executable configuration edits (comments, whitespace, key ordering, or descriptive metadata that no runtime/build/deploy tooling reads)
+- edits no tool reads: comments, whitespace, key order, or descriptive text
 
-Any configuration change that can affect runtime behavior (flags, permissions, routing, dependency resolution, build output, or environment loading) requires tests.
+Anything a runtime, build, or deploy reads, such as flags, permissions, routes, dependency pins, or environment keys, is behavior and needs a test. When a change looks like an exception, ask once. Without a yes, or when unsure whether tooling reads it, run full TDD.
 
-Do not self-approve exception paths.
+## Removing Code
 
-When a change appears to qualify for the config-only exception and explicit confirmation is missing, ask once for explicit confirmation for this exact change. If confirmation is still missing, run full TDD.
+Removing code or a feature needs no new test: delete the tests that covered it, and the remaining tests, build, and type checks passing are the proof. Never add a test asserting that a removed name, file, option, or route no longer exists; it passes forever and records history, not behavior.
 
-If there is any uncertainty about runtime impact, treat the change as behavior changing and run tests.
-
-Exception authorization must be explicit for this exact change in the conversation. Generic urgency language is not approval to skip TDD.
-
-Config-only exception checklist (all must be true):
-
-- change is limited to comments, formatting, key ordering, or descriptive text
-- no runtime/build/deploy-consumed key or value changed
-- no flags, permissions, routes, dependency pins, or environment keys changed
-- the diff itself clearly proves the above
-
-If any checklist item is false or uncertain, do not use the exception path.
+A test that output leaves something out is different when it states a contract, such as a response that must never include a password hash or a log line that must omit a token. Those follow the normal cycle.
 
 ## The Iron Law
 
@@ -126,7 +115,7 @@ Confirm:
 - existing tests remain green, or only baseline failures with matching test IDs and error signatures remain
 - no new warnings or runtime errors
 
-For baseline handling and flaky failure triage, use `verification-baselines.md`.
+For baseline handling and flaky failure triage, use [references/verification-baselines.md](references/verification-baselines.md).
 
 ### 5) REFACTOR - Improve Design Safely
 
@@ -191,15 +180,15 @@ Then run the normal RED-GREEN-REFACTOR cycle. Never ship a bug fix without a rep
 
 ## Testing Anti-Patterns
 
-When adding or changing tests, especially with mocks, review `testing-anti-patterns.md`.
+When adding or changing tests, especially with mocks, review [references/testing-anti-patterns.md](references/testing-anti-patterns.md).
 
-When baseline failures or flaky tests appear during verification, review `verification-baselines.md`.
+When baseline failures or flaky tests appear during verification, review [references/verification-baselines.md](references/verification-baselines.md).
 
 ## Verification Checklist
 
 Before marking work complete:
 
-- [ ] Every behavior change has a test
+- [ ] Every added or changed behavior has a test
 - [ ] Each new test was observed failing first
 - [ ] Failures happened for the expected reason
 - [ ] Implementation was minimal for each GREEN step
@@ -208,10 +197,3 @@ Before marking work complete:
 - [ ] Edge cases and error paths were covered
 
 If any box is unchecked, the workflow is incomplete.
-
-## Bottom Line
-
-```text
-Test first. Fail first. Minimal pass. Refactor safely.
-No failing test first means no TDD.
-```

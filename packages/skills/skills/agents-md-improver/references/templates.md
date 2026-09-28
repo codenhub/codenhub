@@ -1,5 +1,15 @@
 # AGENTS.md Templates
 
+## Contents
+
+- Key Principles
+- Recommended Sections: one example per section
+- Template: Project Root (Minimal)
+- Template: Project Root (Comprehensive)
+- Template: Package or Module
+- Template: Monorepo Root
+- Update Principles
+
 ## Key Principles
 
 - **Concise**: Dense, human-readable content; one line per concept when possible

@@ -2,6 +2,14 @@
 
 Load this reference when writing tests, adding mocks, or considering test-only helpers in production code.
 
+## Contents
+
+- Overview
+- Iron Rules
+- Anti-Patterns 1-5: mock behavior, test-only methods, blind mocking, incomplete mocks, tests last
+- When Mocks Become Too Complex
+- Quick Diagnostic
+
 ## Overview
 
 Tests should verify behavior that matters to users and calling code. Mocks are tools for isolation, not the target of assertions.
@@ -151,10 +159,3 @@ If any answer is "yes", revisit your test design:
 - Are your mocked payloads incomplete vs real schemas?
 - Is mock setup larger than the behavior under test?
 - Were tests added only after implementation finished?
-
-## Bottom Line
-
-```text
-Use mocks to isolate boundaries, not to fake confidence.
-Behavior-first tests + strict TDD prevent most test anti-patterns.
-```

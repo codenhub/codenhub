@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ponytail"
+  short_description: "Build the simplest solution that works"
+  default_prompt: "Use $ponytail to solve the task with the least code that works: understand the problem first, then prefer skipping speculative needs, reusing what exists, and the standard library or platform over new code or dependencies, and record what was skipped or deferred with TODO comments and Skipped commit trailers."

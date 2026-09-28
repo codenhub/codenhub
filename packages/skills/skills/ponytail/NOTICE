@@ -1,13 +1,13 @@
-subagent-specialist
-Adapted from: https://github.com/obra/superpowers
-Original copyright: Copyright (c) 2025 Jesse Vincent
+ponytail
+Adapted from: https://github.com/DietrichGebert/ponytail
+Original copyright: Copyright (c) 2026 DietrichGebert
 Original license: MIT
-License text: https://github.com/obra/superpowers/blob/main/LICENSE
-Changes: Adapted skill instructions and prompts for the @codenhub/skills package format and conventions.
+License text: https://github.com/DietrichGebert/ponytail/blob/main/LICENSE
+Changes: Adapted for the @codenhub/skills package format; removed harness-specific commands and configuration, and replaced the branded code marker with standard TODO comments.
 
 MIT License
 
-Copyright (c) 2025 Jesse Vincent
+Copyright (c) 2026 DietrichGebert
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
