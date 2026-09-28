@@ -100,4 +100,57 @@ describe("TupleValidator", () => {
     const tupleData: Inferred = ["test", 123];
     expect(tupleData[0]).toBe("test");
   });
+
+  it("supports trailing rest elements with .rest()", () => {
+    const base = val.tuple([val.string(), val.number()]);
+    const withRest = base.rest(val.boolean());
+
+    expect(withRest.validate(["hello", 42])).toEqual({
+      ok: true,
+      value: ["hello", 42],
+    });
+    expect(withRest.validate(["hello", 42, true, false, true])).toEqual({
+      ok: true,
+      value: ["hello", 42, true, false, true],
+    });
+
+    const tooShort = withRest.validate(["hello"]) as ValidationErr;
+    expect(tooShort.ok).toBe(false);
+    expect(tooShort.error.code).toBe("too_small");
+
+    const badRest = withRest.validate(["hello", 42, true, "not a bool"]) as ValidationErr;
+    expect(badRest.ok).toBe(false);
+    expect(badRest.error.path).toEqual([3]);
+    expect(badRest.error.code).toBe("invalid_type");
+
+    expect(withRest.restElement).toBeDefined();
+  });
+
+  it("is 100% immutable when attaching .rest()", () => {
+    const base = val.tuple([val.string()]);
+    const withRest = base.rest(val.number());
+
+    expect(base.validate(["a", 1]).ok).toBe(false);
+    expect(withRest.validate(["a", 1]).ok).toBe(true);
+  });
+
+  it("supports asynchronous validation with async items and rest elements", async () => {
+    const schema = val
+      .tuple([val.string().refineAsync(async (s) => s.length > 2, "Too short")])
+      .rest(val.number().refineAsync(async (n) => n > 0, "Must be positive"));
+
+    const valid = await schema.validateAsync(["abc", 1, 2]);
+    expect(valid).toEqual({
+      ok: true,
+      value: ["abc", 1, 2],
+    });
+
+    const invalidItem = (await schema.validateAsync(["a", 1])) as ValidationErr;
+    expect(invalidItem.ok).toBe(false);
+    expect(invalidItem.error.path).toEqual([0]);
+
+    const invalidRest = (await schema.validateAsync(["abc", -1])) as ValidationErr;
+    expect(invalidRest.ok).toBe(false);
+    expect(invalidRest.error.path).toEqual([1]);
+  });
 });

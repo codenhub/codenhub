@@ -1,81 +1,84 @@
 import { describe, expect, it } from "vitest";
 
-import { val } from ".";
+import { type ValidationErr, val } from ".";
 
-describe("object validators", () => {
-  it("accepts plain objects and null-prototype objects", () => {
+describe("object and array combinators", () => {
+  it("accepts plain objects and null-prototype objects in object schema", () => {
     const plain = { email: "user@example.com" };
     const nullPrototype = Object.create(null) as Record<string, unknown>;
     nullPrototype.email = "user@example.com";
 
-    expect(val.object(plain).plain()).toEqual({ ok: true, value: plain });
-    expect(val.object(nullPrototype).plain()).toEqual({ ok: true, value: nullPrototype });
+    const schema = val.object({ email: val.string() });
+    expect(schema.validate(plain)).toEqual({ ok: true, value: { email: "user@example.com" } });
+    expect(schema.validate(nullPrototype)).toEqual({ ok: true, value: { email: "user@example.com" } });
   });
 
-  it("rejects arrays as non-plain objects", () => {
-    expect(val.object([], { path: ["user"] }).plain()).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_type",
-        message: "Expected object, got array",
-        path: ["user"],
-        expected: "plain object",
-        received: "array",
-      },
+  it("validates arrays of objects with nested path tracking", () => {
+    const userListSchema = val.array(
+      val.object({
+        id: val.number(),
+        name: val.string().min(2),
+      }),
+    );
+
+    const validList = [
+      { id: 1, name: "Alice" },
+      { id: 2, name: "Bob" },
+    ];
+    expect(userListSchema.validate(validList)).toEqual({
+      ok: true,
+      value: validList,
     });
+
+    const invalidList = [
+      { id: 1, name: "Alice" },
+      { id: 2, name: "B" },
+    ];
+    const res = userListSchema.validate(invalidList) as ValidationErr;
+    expect(res.ok).toBe(false);
+    expect(res.error.path).toEqual([1, "name"]);
+    expect(res.error.code).toBe("too_small");
   });
 
-  it("validates required own keys", () => {
-    expect(val.object({ email: undefined }).hasKeys(["email"])).toEqual({ ok: true, value: { email: undefined } });
-    expect(val.object({}, { path: ["user"] }).hasKeys(["email"])).toEqual({
-      ok: false,
-      error: {
-        code: "missing_key",
-        message: "Missing required key: email",
-        path: ["user", "email"],
-        expected: "required key",
-        received: "missing",
-      },
+  it("validates objects with nested arrays and length constraints", () => {
+    const postSchema = val.object({
+      title: val.string(),
+      tags: val.array(val.string()).min(1).max(3),
     });
-  });
-});
 
-describe("array validators", () => {
-  it("validates array lengths", () => {
-    expect(val.array<string>(["a", "b"]).minLength(2)).toEqual({ ok: true, value: ["a", "b"] });
-    expect(val.array<string>(["a", "b"]).maxLength(2)).toEqual({ ok: true, value: ["a", "b"] });
-    expect(val.array<string>(["a"]).notEmpty()).toEqual({ ok: true, value: ["a"] });
-  });
+    expect(
+      postSchema.validate({
+        title: "Hello World",
+        tags: ["ts", "validation"],
+      }),
+    ).toEqual({
+      ok: true,
+      value: {
+        title: "Hello World",
+        tags: ["ts", "validation"],
+      },
+    });
 
-  it("rejects invalid array length limits", () => {
-    expect(val.array([]).minLength(-1)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Minimum length must be a finite non-negative number",
-        path: [],
-      },
-    });
-    expect(val.array([]).maxLength(Number.POSITIVE_INFINITY)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Maximum length must be a finite non-negative number",
-        path: [],
-      },
-    });
+    const emptyTags = postSchema.validate({
+      title: "Hello World",
+      tags: [],
+    }) as ValidationErr;
+    expect(emptyTags.ok).toBe(false);
+    expect(emptyTags.error.path).toEqual(["tags"]);
+    expect(emptyTags.error.code).toBe("too_small");
   });
 
-  it("rejects non-array input for all array checks", () => {
-    expect(val.array("items", { path: ["items"] }).notEmpty()).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_type",
-        message: "Expected array, got items",
-        path: ["items"],
-        expected: "array",
-        received: "items",
-      },
-    });
+  it("rejects non-array inputs for array schemas", () => {
+    const schema = val.array(val.string());
+    const res = schema.validate("not an array") as ValidationErr;
+    expect(res.ok).toBe(false);
+    expect(res.error.code).toBe("invalid_type");
+  });
+
+  it("rejects non-object inputs for object schemas", () => {
+    const schema = val.object({ id: val.number() });
+    const res = schema.validate([1, 2, 3]) as ValidationErr;
+    expect(res.ok).toBe(false);
+    expect(res.error.code).toBe("invalid_type");
   });
 });

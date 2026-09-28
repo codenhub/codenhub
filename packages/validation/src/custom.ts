@@ -1,11 +1,5 @@
 import { BaseValidator, type ValidationContext } from "./core";
-import {
-  normalizeError,
-  parseResult,
-  type ValidationIssue,
-  type ValidationOptions,
-  type ValidationResult,
-} from "./result";
+import { parseResult, type ValidationIssue, type ValidationResult } from "./result";
 
 /**
  * Signature for a custom validator callback function.
@@ -16,13 +10,20 @@ import {
 export type CustomValidatorFn<TOutput, TInput = unknown> = (
   input: TInput,
   ctx: ValidationContext,
-) => ValidationResult<TOutput> | TOutput | boolean | string | void;
+) =>
+  | ValidationResult<TOutput>
+  | TOutput
+  | boolean
+  | string
+  | void
+  | Promise<ValidationResult<TOutput> | TOutput | boolean | string | void>;
 
 /**
  * Schema validator executing arbitrary custom validation functions.
  *
  * Supports boolean returns, string error messages, ValidationResult objects,
- * thrown errors, and context-based issue registration.
+ * thrown errors, and context-based issue registration. Both synchronous and asynchronous
+ * validation functions are supported.
  *
  * @typeParam TOutput - The validated output type.
  * @typeParam TInput - The accepted input type.
@@ -37,50 +38,61 @@ export class CustomValidator<TOutput, TInput = unknown> extends BaseValidator<TO
     super();
   }
 
-  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<TOutput> {
-    try {
-      const res = this.fn(input as TInput, ctx);
+  protected override isAsync(): boolean {
+    return this.fn.constructor?.name === "AsyncFunction";
+  }
 
-      if (typeof res === "boolean") {
-        if (res) {
-          return ctx.ok(input as unknown as TOutput);
-        }
-        return ctx.fail({
-          code: "custom",
-          message: "Custom validation failed",
-          path: ctx.path,
-          input: ctx.options.includeInput ? input : undefined,
-        });
-      }
-
-      if (typeof res === "string") {
-        return ctx.fail({
-          code: "custom",
-          message: res,
-          path: ctx.path,
-          input: ctx.options.includeInput ? input : undefined,
-        });
-      }
-
-      if (res !== null && typeof res === "object" && "ok" in res) {
-        const parsed = parseResult<TOutput>(res);
-        if (!parsed.ok) {
-          return ctx.fail(parsed.error);
-        }
-        return ctx.ok(parsed.value);
-      }
-
-      if (res === undefined) {
-        if ("issues" in ctx && Array.isArray((ctx as unknown as { issues: unknown[] }).issues)) {
-          const issuesList = (ctx as unknown as { issues: ValidationIssue[] }).issues;
-          if (issuesList.length > 0 && issuesList[0] !== undefined) {
-            return ctx.fail(issuesList[0]);
-          }
-        }
+  private handleSyncResult(res: unknown, input: unknown, ctx: ValidationContext): ValidationResult<TOutput> {
+    if (typeof res === "boolean") {
+      if (res) {
         return ctx.ok(input as unknown as TOutput);
       }
+      return ctx.fail({
+        code: "custom",
+        message: "Custom validation failed",
+        path: ctx.path,
+        input: ctx.options.includeInput ? input : undefined,
+      });
+    }
 
-      return ctx.ok(res as TOutput);
+    if (typeof res === "string") {
+      return ctx.fail({
+        code: "custom",
+        message: res,
+        path: ctx.path,
+        input: ctx.options.includeInput ? input : undefined,
+      });
+    }
+
+    if (res !== null && typeof res === "object" && "ok" in res) {
+      const parsed = parseResult<TOutput>(res);
+      if (!parsed.ok) {
+        const errorPath = parsed.error.path && parsed.error.path.length > 0 ? parsed.error.path : ctx.path;
+        return ctx.fail({
+          ...parsed.error,
+          path: errorPath,
+        });
+      }
+      return ctx.ok(parsed.value);
+    }
+
+    if (res === undefined) {
+      if ("issues" in ctx && Array.isArray((ctx as unknown as { issues: unknown[] }).issues)) {
+        const issuesList = (ctx as unknown as { issues: ValidationIssue[] }).issues;
+        if (issuesList.length > 0 && issuesList[0] !== undefined) {
+          return ctx.fail(issuesList[0]);
+        }
+      }
+      return ctx.ok(input as unknown as TOutput);
+    }
+
+    return ctx.ok(res as TOutput);
+  }
+
+  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<TOutput> {
+    let res: unknown;
+    try {
+      res = this.fn(input as TInput, ctx);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       return ctx.fail({
@@ -90,25 +102,37 @@ export class CustomValidator<TOutput, TInput = unknown> extends BaseValidator<TO
         input: ctx.options.includeInput ? input : undefined,
       });
     }
-  }
-}
 
-/** Legacy custom runner implementation for 0.0.1 compatibility. */
-function legacyCustom<T>(
-  value: unknown,
-  validator: (value: unknown) => unknown,
-  options: ValidationOptions = {},
-): ValidationResult<T> {
-  try {
-    const result = parseResult<T>(validator(value));
-
-    if (result.ok) {
-      return result;
+    if (
+      res instanceof Promise ||
+      (typeof res === "object" && res !== null && typeof (res as Promise<unknown>).then === "function")
+    ) {
+      return ctx.fail({
+        code: "custom",
+        message: "Async custom validator requires validateAsync()",
+        path: ctx.path,
+        input: ctx.options.includeInput ? input : undefined,
+      });
     }
 
-    return { ok: false, error: normalizeError(result.error, options) };
-  } catch (error) {
-    return { ok: false, error: normalizeError(error, options) };
+    return this.handleSyncResult(res, input, ctx);
+  }
+
+  protected override async _validateAsync(input: unknown, ctx: ValidationContext): Promise<ValidationResult<TOutput>> {
+    let res: unknown;
+    try {
+      res = await this.fn(input as TInput, ctx);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      return ctx.fail({
+        code: "custom",
+        message,
+        path: ctx.path,
+        input: ctx.options.includeInput ? input : undefined,
+      });
+    }
+
+    return this.handleSyncResult(res, input, ctx);
   }
 }
 
@@ -117,42 +141,11 @@ function legacyCustom<T>(
  *
  * @typeParam TOutput - Output type produced by the custom validator.
  * @typeParam TInput - Accepted input type.
- * @param validator - Function performing the custom validation logic.
+ * @param fn - Function performing the custom validation logic.
  * @returns A new CustomValidator schema instance.
  */
 export function custom<TOutput, TInput = unknown>(
-  validator: (input: TInput, ctx: ValidationContext) => unknown,
-): CustomValidator<TOutput, TInput>;
-/**
- * Runs a custom validator on an input value immediately (legacy runner).
- *
- * @typeParam T - Output type of the validation result.
- * @param value - The input value to validate.
- * @param validator - The validation callback function.
- * @param options - Optional validation options.
- * @returns A ValidationResult indicating success or failure.
- */
-export function custom<T>(
-  value: unknown,
-  validator: (value: unknown) => unknown,
-  options?: ValidationOptions,
-): ValidationResult<T>;
-/**
- * Overloaded custom validator factory or legacy immediate evaluator.
- *
- * @param arg0 - Validator function or target value to validate.
- * @param arg1 - Validation function or options.
- * @param arg2 - Optional validation options.
- * @returns A CustomValidator instance or ValidationResult.
- */
-export function custom(
-  arg0: unknown,
-  arg1?: unknown,
-  arg2?: ValidationOptions,
-): CustomValidator<unknown, unknown> | ValidationResult<unknown> {
-  if (typeof arg0 === "function" && typeof arg1 !== "function") {
-    return new CustomValidator(arg0 as CustomValidatorFn<unknown, unknown>);
-  }
-
-  return legacyCustom(arg0, arg1 as (value: unknown) => unknown, arg2);
+  fn: CustomValidatorFn<TOutput, TInput>,
+): CustomValidator<TOutput, TInput> {
+  return new CustomValidator(fn);
 }

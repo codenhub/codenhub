@@ -17,6 +17,12 @@ export class PipedValidator<TOutput, TInput = unknown> extends BaseValidator<TOu
     super();
   }
 
+  protected override isAsync(): boolean {
+    return this.validators.some(
+      (v) => v instanceof BaseValidator && (v as unknown as { isAsync(): boolean }).isAsync(),
+    );
+  }
+
   protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<TOutput> {
     let current: unknown = input;
 
@@ -39,6 +45,34 @@ export class PipedValidator<TOutput, TInput = unknown> extends BaseValidator<TOu
 
       current = res.value;
     }
+
+    return ctx.ok(current as TOutput);
+  }
+
+  protected override async _validateAsync(input: unknown, ctx: ValidationContext): Promise<ValidationResult<TOutput>> {
+    let current: unknown = input;
+
+    /* oxlint-disable no-await-in-loop */
+    for (const validator of this.validators) {
+      const res = await (validator as Validator<unknown, unknown>).validateAsync(current, {
+        ...ctx.options,
+        path: ctx.path,
+      });
+
+      if (!res.ok) {
+        if (res.error.issues && res.error.issues.length > 0) {
+          for (const iss of res.error.issues) {
+            ctx.addIssue(iss);
+          }
+        } else {
+          ctx.addIssue(res.error);
+        }
+        return res as ValidationResult<TOutput>;
+      }
+
+      current = res.value;
+    }
+    /* oxlint-enable no-await-in-loop */
 
     return ctx.ok(current as TOutput);
   }

@@ -7,10 +7,10 @@ type DateCheck = (value: Date, ctx: ValidationContext) => ValidationIssue | unde
  * Validates Date instances against validity and chronological boundaries.
  */
 export class DateValidator extends BaseValidator<Date, unknown> {
-  private readonly checks: DateCheck[] = [];
+  protected readonly checks: DateCheck[] = [];
 
   protected clone(): DateValidator {
-    const copy = new DateValidator();
+    const copy = new (this.constructor as new () => DateValidator)();
     copy.checks.push(...this.checks);
     return copy;
   }

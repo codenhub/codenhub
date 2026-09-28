@@ -17,6 +17,13 @@ export class LiteralValidator<T extends LiteralValue> extends BaseValidator<T, u
     super();
   }
 
+  /**
+   * Returns the expected literal value.
+   */
+  get value(): T {
+    return this.expectedValue;
+  }
+
   protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<T> {
     if (Object.is(input, this.expectedValue)) {
       return ctx.ok(input as T);

@@ -1,5 +1,9 @@
+import { BooleanValidator } from "./boolean";
 import { BaseValidator, type ValidationContext } from "./core";
+import { DateValidator } from "./date";
+import { NumberValidator } from "./number";
 import { fail, ok, type ValidationOptions, type ValidationResult } from "./result";
+import { StringValidator } from "./string";
 
 const DECIMAL_INTEGER_PATTERN = /^[+-]?\d+$/;
 const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+\.?\d*|\.\d+)$/;
@@ -269,7 +273,7 @@ const stringify = (value: unknown, options: ValidationOptions): ValidationResult
 };
 
 /**
- * Schema validator that coerces raw input to a target type before producing results.
+ * Generic schema validator that coerces raw input to a target type using a custom coercion function.
  *
  * @typeParam T - The coerced output type.
  */
@@ -298,31 +302,121 @@ export class CoerceValidator<T> extends BaseValidator<T, unknown> {
 }
 
 /**
+ * Schema validator that coerces input to a string before running StringValidator constraints.
+ */
+export class CoercedStringValidator extends StringValidator {
+  protected override clone(): CoercedStringValidator {
+    const copy = new CoercedStringValidator();
+    copy.steps.push(...this.steps);
+    return copy;
+  }
+
+  protected override _validate(input: unknown, ctx: ValidationContext): ValidationResult<string> {
+    const coerced = coerce.string(input, { ...ctx.options, path: ctx.path });
+    if (!coerced.ok) {
+      ctx.addIssue(coerced.error);
+      return coerced;
+    }
+    return super._validate(coerced.value, ctx);
+  }
+}
+
+/**
+ * Schema validator that coerces input to a number before running NumberValidator constraints.
+ */
+export class CoercedNumberValidator extends NumberValidator {
+  constructor(
+    protected readonly coerceFn: (
+      value: unknown,
+      options?: ValidationOptions,
+    ) => ValidationResult<number> = coerce.number,
+  ) {
+    super();
+  }
+
+  protected override clone(): CoercedNumberValidator {
+    const copy = new CoercedNumberValidator(this.coerceFn);
+    copy.steps.push(...this.steps);
+    copy.allowNonFinite = this.allowNonFinite;
+    return copy;
+  }
+
+  protected override _validate(input: unknown, ctx: ValidationContext): ValidationResult<number> {
+    const coerced = this.coerceFn(input, { ...ctx.options, path: ctx.path });
+    if (!coerced.ok) {
+      ctx.addIssue(coerced.error);
+      return coerced;
+    }
+    return super._validate(coerced.value, ctx);
+  }
+}
+
+/**
+ * Schema validator that coerces input to a boolean before running BooleanValidator constraints.
+ */
+export class CoercedBooleanValidator extends BooleanValidator {
+  protected override clone(): CoercedBooleanValidator {
+    const copy = new CoercedBooleanValidator();
+    copy.checks.push(...this.checks);
+    return copy;
+  }
+
+  protected override _validate(input: unknown, ctx: ValidationContext): ValidationResult<boolean> {
+    const coerced = coerce.bool(input, { ...ctx.options, path: ctx.path });
+    if (!coerced.ok) {
+      ctx.addIssue(coerced.error);
+      return coerced;
+    }
+    return super._validate(coerced.value, ctx);
+  }
+}
+
+/**
+ * Schema validator that coerces input to a Date instance before running DateValidator constraints.
+ */
+export class CoercedDateValidator extends DateValidator {
+  protected override clone(): CoercedDateValidator {
+    const copy = new CoercedDateValidator();
+    copy.checks.push(...this.checks);
+    return copy;
+  }
+
+  protected override _validate(input: unknown, ctx: ValidationContext): ValidationResult<Date> {
+    const coerced = coerce.date(input, { ...ctx.options, path: ctx.path });
+    if (!coerced.ok) {
+      ctx.addIssue(coerced.error);
+      return coerced;
+    }
+    return super._validate(coerced.value, ctx);
+  }
+}
+
+/**
  * Factory collection of coercion-based schema validators.
  */
 export interface ValCoerce {
-  /** Creates a validator that coerces input to a safe integer. */
-  int(): CoerceValidator<number>;
-  /** Creates a validator that coerces input to a finite number. */
-  number(): CoerceValidator<number>;
-  /** Creates a validator that coerces input to a boolean. */
-  bool(): CoerceValidator<boolean>;
+  /** Creates a validator that coerces input to a safe integer and runs NumberValidator checks. */
+  int(): NumberValidator;
+  /** Creates a validator that coerces input to a finite number and runs NumberValidator checks. */
+  number(): NumberValidator;
+  /** Creates a validator that coerces input to a boolean and runs BooleanValidator checks. */
+  bool(): BooleanValidator;
   /** Creates a validator that coerces input to a boolean (alias for bool). */
-  boolean(): CoerceValidator<boolean>;
-  /** Creates a validator that coerces input to a string. */
-  string(): CoerceValidator<string>;
-  /** Creates a validator that coerces input to a Date instance. */
-  date(): CoerceValidator<Date>;
+  boolean(): BooleanValidator;
+  /** Creates a validator that coerces input to a string and runs StringValidator checks. */
+  string(): StringValidator;
+  /** Creates a validator that coerces input to a Date instance and runs DateValidator checks. */
+  date(): DateValidator;
 }
 
 /**
  * Registry of schema validator factories that coerce input before validation.
  */
 export const valCoerce: ValCoerce = {
-  int: () => new CoerceValidator<number>(coerce.int, "int"),
-  number: () => new CoerceValidator<number>(coerce.number, "number"),
-  bool: () => new CoerceValidator<boolean>(coerce.bool, "bool"),
-  boolean: () => new CoerceValidator<boolean>(coerce.bool, "boolean"),
-  string: () => new CoerceValidator<string>(coerce.string, "string"),
-  date: () => new CoerceValidator<Date>(coerce.date, "date"),
+  int: () => new CoercedNumberValidator(coerce.int).int(),
+  number: () => new CoercedNumberValidator(coerce.number),
+  bool: () => new CoercedBooleanValidator(),
+  boolean: () => new CoercedBooleanValidator(),
+  string: () => new CoercedStringValidator(),
+  date: () => new CoercedDateValidator(),
 };

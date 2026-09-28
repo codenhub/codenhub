@@ -99,4 +99,19 @@ describe("UnionValidator", () => {
 
     expect(schema.variants).toBe(variants);
   });
+
+  it("supports asynchronous validation across variants with validateAsync()", async () => {
+    const asyncVariant1 = val.string().refineAsync(async (s) => s.startsWith("A-"), "Must start with A-");
+    const asyncVariant2 = val.number().refineAsync(async (n) => n > 100, "Must be > 100");
+    const schema = val.union([asyncVariant1, asyncVariant2]);
+
+    const validStr = await schema.validateAsync("A-123");
+    expect(validStr).toEqual({ ok: true, value: "A-123" });
+
+    const validNum = await schema.validateAsync(200);
+    expect(validNum).toEqual({ ok: true, value: 200 });
+
+    const invalid = await schema.validateAsync("B-123");
+    expect(invalid.ok).toBe(false);
+  });
 });
