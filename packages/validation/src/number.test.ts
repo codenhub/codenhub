@@ -1,311 +1,109 @@
 import { describe, expect, it } from "vitest";
 
-import { type ValidationErr, val } from ".";
+import { val } from "./index";
+import { codesOf, issuesOf, messagesOf, valueOf } from "./test-utils";
 
-describe("number validator constraints", () => {
-  it("validates sign-related constraints", () => {
-    expect(val.number().positive().validate(1)).toEqual({ ok: true, value: 1 });
-    expect(val.number().negative().validate(-1)).toEqual({ ok: true, value: -1 });
-    expect(val.number().nonNegative().validate(0)).toEqual({ ok: true, value: 0 });
-    expect(val.number().nonPositive().validate(0)).toEqual({ ok: true, value: 0 });
-    expect(
-      val
-        .number()
-        .nonZero()
-        .validate(0, { path: ["amount"] }),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Must not be zero",
-        path: ["amount"],
-        expected: "non-zero number",
-        received: "0",
-      },
-    });
+const accepts = (schema: { validate(input: unknown): { ok: boolean } }, ...inputs: unknown[]) =>
+  inputs.map((input) => schema.validate(input).ok);
+
+describe("number", () => {
+  it("accepts finite numbers, including zero, negatives and decimals", () => {
+    expect(accepts(val.number(), 0, -0, -1.5, 42, Number.MAX_VALUE)).toEqual([true, true, true, true, true]);
   });
 
-  it("validates integer constraints", () => {
-    expect(val.number().int().validate(10)).toEqual({ ok: true, value: 10 });
-    expect(val.number().safeInt().validate(Number.MAX_SAFE_INTEGER)).toEqual({
-      ok: true,
-      value: Number.MAX_SAFE_INTEGER,
-    });
-    expect(
-      val
-        .number()
-        .int()
-        .validate(10.5, { path: ["count"] }),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Must be an integer",
-        path: ["count"],
-        expected: "integer",
-        received: "10.5",
-      },
-    });
+  it("rejects NaN and the infinities, naming what was received", () => {
+    expect(messagesOf(val.number().validate(Number.NaN))).toEqual(["Expected number, received nan"]);
+    expect(messagesOf(val.number().validate(Infinity))).toEqual(["Expected number, received infinity"]);
+    expect(messagesOf(val.number().validate(-Infinity))).toEqual(["Expected number, received infinity"]);
   });
 
-  it("validates finite numbers before method-specific checks", () => {
-    expect(
-      val
-        .number()
-        .positive()
-        .validate(Infinity, { path: ["size"] }),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Must be a finite number",
-        path: ["size"],
-        expected: "finite number",
-        received: "Infinity",
-      },
-    });
+  it("rejects numeric strings, bigints and other types", () => {
+    expect(accepts(val.number(), "1", 1n, true, null, undefined, [], {})).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ]);
   });
 
-  it("validates ranges and invalid range configuration", () => {
-    expect(val.number().range({ min: 1, max: 10 }).validate(5)).toEqual({ ok: true, value: 5 });
-    expect(
-      val
-        .number()
-        .range({ min: 1 })
-        .validate(0, { path: ["count"] }),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "too_small",
-        message: "Must be at least 1",
-        path: ["count"],
-        expected: "at least 1",
-        received: "0",
-      },
-    });
-    expect(val.number().range({ min: 10, max: 1 }).validate(1)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Range minimum cannot be greater than maximum",
-        path: [],
-      },
-    });
-    expect(val.number().range({ min: Number.NaN }).validate(1)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Range minimum must be a finite number",
-        path: [],
-      },
-    });
-    expect(val.number().range({ max: Number.NaN }).validate(1)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Range maximum must be a finite number",
-        path: [],
-      },
-    });
-  });
-
-  it("validates finite and port helpers", () => {
-    expect(val.number().finite().validate(1)).toEqual({ ok: true, value: 1 });
-    expect(val.number().port().validate(65535)).toEqual({ ok: true, value: 65535 });
-    expect(
-      val
-        .number()
-        .port()
-        .validate(65536, { path: ["port"] }),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Must be a valid port number (1-65535)",
-        path: ["port"],
-        expected: "integer from 1 to 65535",
-        received: "65536",
-      },
-    });
+  it("uses a custom message for the type failure", () => {
+    expect(messagesOf(val.number("a number").validate("x"))).toEqual(["a number"]);
   });
 });
 
-describe("NumberValidator core API", () => {
-  it("validates basic number type and rejects NaN and non-numbers", () => {
-    const schema = val.number();
-    expect(schema.validate(42)).toEqual({ ok: true, value: 42 });
-    expect(schema.validate("42")).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_type",
-        message: "Expected number, got 42",
-        path: [],
-        expected: "number",
-        received: "42",
-      },
-    });
-    expect(schema.validate(Number.NaN)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_type",
-        message: "Expected number, got NaN",
-        path: [],
-        expected: "number",
-        received: "NaN",
-      },
-    });
-    expect(schema.is(42)).toBe(true);
-    expect(schema.is("42")).toBe(false);
+describe("bounds", () => {
+  it("min and max are inclusive, gt and lt are exclusive", () => {
+    expect(accepts(val.number().min(2), 1, 2, 3)).toEqual([false, true, true]);
+    expect(accepts(val.number().max(2), 1, 2, 3)).toEqual([true, true, false]);
+    expect(accepts(val.number().gt(2), 2, 3)).toEqual([false, true]);
+    expect(accepts(val.number().lt(2), 1, 2)).toEqual([true, false]);
   });
 
-  it("chains gt, gte, lt, lte, min, max with custom messages", () => {
-    const schema = val.number().gt(5, "Above 5").lt(10, "Under 10");
-    expect(schema.validate(7)).toEqual({ ok: true, value: 7 });
-    expect(schema.validate(5)).toEqual({
-      ok: false,
-      error: {
-        code: "too_small",
-        message: "Above 5",
-        path: [],
-        expected: "greater than 5",
-        received: "5",
-      },
+  it("reports too_small and too_big with the bound in params", () => {
+    expect(issuesOf(val.number().min(2).validate(1))[0]).toMatchObject({
+      code: "too_small",
+      params: { minimum: 2, inclusive: true, type: "number" },
+      message: "Must be at least 2",
     });
-    expect(schema.validate(10)).toEqual({
-      ok: false,
-      error: {
-        code: "too_big",
-        message: "Under 10",
-        path: [],
-        expected: "less than 10",
-        received: "10",
-      },
-    });
-
-    const inclusiveSchema = val.number().min(0, "Non-negative").max(100, "Max 100");
-    expect(inclusiveSchema.validate(0)).toEqual({ ok: true, value: 0 });
-    expect(inclusiveSchema.validate(100)).toEqual({ ok: true, value: 100 });
-    expect(inclusiveSchema.validate(-1)).toMatchObject({
-      ok: false,
-      error: { code: "too_small", message: "Non-negative" },
-    });
-    expect(inclusiveSchema.validate(101)).toMatchObject({
-      ok: false,
-      error: { code: "too_big", message: "Max 100" },
+    expect(issuesOf(val.number().lt(2).validate(2))[0]).toMatchObject({
+      code: "too_big",
+      params: { maximum: 2, inclusive: false },
+      message: "Must be less than 2",
     });
   });
 
-  it("validates multipleOf, port, and integer checks", () => {
-    const stepSchema = val.number().multipleOf(5, "Multiple of 5");
-    expect(stepSchema.validate(25)).toEqual({ ok: true, value: 25 });
-    expect(stepSchema.validate(24)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Multiple of 5",
-        path: [],
-        expected: "multiple of 5",
-        received: "24",
-      },
-    });
-
-    const portSchema = val.number().port("Invalid port");
-    expect(portSchema.validate(3000)).toEqual({ ok: true, value: 3000 });
-    expect(portSchema.validate(70000)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Invalid port",
-        path: [],
-        expected: "integer from 1 to 65535",
-        received: "70000",
-      },
-    });
+  it("positive, negative, nonNegative and nonPositive", () => {
+    expect(accepts(val.number().positive(), -1, 0, 1)).toEqual([false, false, true]);
+    expect(accepts(val.number().negative(), -1, 0, 1)).toEqual([true, false, false]);
+    expect(accepts(val.number().nonNegative(), -1, 0, 1)).toEqual([false, true, true]);
+    expect(accepts(val.number().nonPositive(), -1, 0, 1)).toEqual([true, true, false]);
   });
 
-  it("accumulates multiple issues when abortEarly is false", () => {
-    const schema = val.number().positive("Must be > 0").int("Must be integer");
-    const result = schema.validate(-3.5, { abortEarly: false });
-
-    expect(result.ok).toBe(false);
-    const error = (result as ValidationErr).error;
-    expect(error.issues).toHaveLength(2);
-    expect(error.issues?.[0].message).toBe("Must be > 0");
-    expect(error.issues?.[1].message).toBe("Must be integer");
-  });
-
-  it("supports chaining modifiers optional, default, refine", () => {
-    const schema = val.number().int().default(100);
-    expect(schema.validate(undefined)).toEqual({ ok: true, value: 100 });
-    expect(schema.validate(50)).toEqual({ ok: true, value: 50 });
-  });
-
-  it("does not mutate receiver when chaining constraints", () => {
-    const base = val.number().gt(0);
-    const bounded = base.lt(10);
-
-    expect(base.validate(20).ok).toBe(true);
-    expect(bounded.validate(20).ok).toBe(false);
+  it("reports every violated bound", () => {
+    expect(codesOf(val.number().min(10).int().validate(1.5))).toEqual(["too_small", "invalid_value"]);
   });
 });
 
-describe("NumberValidator Phase 2 clamp()", () => {
-  it("clamps numbers above the maximum boundary", () => {
+describe("integers and steps", () => {
+  it("int rejects fractions", () => {
+    expect(accepts(val.number().int(), 1, -3, 1.5)).toEqual([true, true, false]);
+  });
+
+  it("safeInt rejects integers a double cannot represent exactly", () => {
+    expect(accepts(val.number().safeInt(), 1, 2 ** 53 - 1, 2 ** 53)).toEqual([true, true, false]);
+  });
+
+  it("multipleOf tolerates floating-point error", () => {
+    expect(accepts(val.number().multipleOf(0.1), 0.3, 0.7, 0.35)).toEqual([true, true, false]);
+    expect(accepts(val.number().multipleOf(5), 10, -15, 12)).toEqual([true, true, false]);
+  });
+
+  it("multipleOf and clamp reject impossible arguments when the schema is built", () => {
+    expect(() => val.number().multipleOf(0)).toThrow(RangeError);
+    expect(() => val.number().multipleOf(-1)).toThrow(RangeError);
+    expect(() => val.number().clamp(5, 1)).toThrow(RangeError);
+  });
+
+  it("clamp moves the value into range instead of rejecting it", () => {
     const schema = val.number().clamp(0, 10);
-    expect(schema.validate(15)).toEqual({ ok: true, value: 10 });
+    expect([-5, 5, 50].map((input) => valueOf(schema.validate(input)))).toEqual([0, 5, 10]);
+  });
+});
+
+describe("bigint", () => {
+  it("accepts bigints only", () => {
+    expect(accepts(val.bigint(), 1n, 0n, -5n)).toEqual([true, true, true]);
+    expect(messagesOf(val.bigint().validate(1))).toEqual(["Expected bigint, received number"]);
   });
 
-  it("clamps numbers below the minimum boundary", () => {
-    const schema = val.number().clamp(0, 10);
-    expect(schema.validate(-5)).toEqual({ ok: true, value: 0 });
-  });
-
-  it("preserves numbers within boundaries unchanged", () => {
-    const schema = val.number().clamp(0, 10);
-    expect(schema.validate(7)).toEqual({ ok: true, value: 7 });
-    expect(schema.validate(0)).toEqual({ ok: true, value: 0 });
-    expect(schema.validate(10)).toEqual({ ok: true, value: 10 });
-  });
-
-  it("supports negative clamp ranges", () => {
-    const schema = val.number().clamp(-20, -10);
-    expect(schema.validate(-5)).toEqual({ ok: true, value: -10 });
-    expect(schema.validate(-25)).toEqual({ ok: true, value: -20 });
-    expect(schema.validate(-15)).toEqual({ ok: true, value: -15 });
-  });
-
-  it("rejects invalid clamp configurations", () => {
-    const invalidBounds = val.number().clamp(10, 0);
-    expect(invalidBounds.validate(5)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Clamp bounds must be finite numbers and min <= max",
-        path: [],
-      },
-    });
-
-    const nanBounds = val.number().clamp(Number.NaN, 10);
-    expect(nanBounds.validate(5)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Clamp bounds must be finite numbers and min <= max",
-        path: [],
-      },
-    });
-  });
-
-  it("chains with subsequent validators using clamped value", () => {
-    const schema = val.number().clamp(0, 10).max(10);
-    expect(schema.validate(100)).toEqual({ ok: true, value: 10 });
-  });
-
-  it("does not mutate receiver when calling clamp()", () => {
-    const base = val.number();
-    const clamped = base.clamp(0, 5);
-
-    expect(base.validate(10)).toEqual({ ok: true, value: 10 });
-    expect(clamped.validate(10)).toEqual({ ok: true, value: 5 });
+  it("supports bounds", () => {
+    expect(accepts(val.bigint().min(2n), 1n, 2n)).toEqual([false, true]);
+    expect(accepts(val.bigint().max(2n), 2n, 3n)).toEqual([true, false]);
+    expect(accepts(val.bigint().positive(), 0n, 1n)).toEqual([false, true]);
+    expect(accepts(val.bigint().negative(), -1n, 0n)).toEqual([true, false]);
+    expect(messagesOf(val.bigint().min(2n).validate(1n))).toEqual(["Must be at least 2"]);
   });
 });

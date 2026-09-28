@@ -1,270 +1,112 @@
-import { BaseValidator, type ValidationContext, type Validator } from "./core";
-import { describeReceived, type ValidationIssue, type ValidationResult } from "./result";
+import { chain, collect, type MaybePromise } from "./async";
+import { execute, Validator, type AnyValidator, type Infer } from "./core";
+import { childContext, fail, failWith, invalidType, pass, type Outcome, type ParseContext } from "./internal";
+import { type Message, type ValidationIssue } from "./issue";
 
 /**
- * Infers the TypeScript tuple type produced by validating an ordered list of schemas.
+ * Infers the tuple type a tuple validator produces.
  *
- * @typeParam T - Tuple or array of item validators.
+ * @typeParam TItems - Validators of the fixed positions.
+ * @typeParam TRest - Type of the items after the fixed positions, or `never` when there are none.
  */
-export type InferTuple<T extends readonly Validator<unknown>[]> = {
-  [K in keyof T]: T[K] extends Validator<infer O, unknown> ? O : never;
-};
+export type InferTuple<TItems extends readonly AnyValidator[], TRest = never> = [TRest] extends [never]
+  ? { -readonly [K in keyof TItems]: Infer<TItems[K]> }
+  : [...{ -readonly [K in keyof TItems]: Infer<TItems[K]> }, ...TRest[]];
 
 /**
- * Infers the TypeScript tuple type produced by validating an ordered list of schemas with optional rest elements.
+ * Validator for arrays with a fixed sequence of typed positions, created by {@link tuple}.
  *
- * @typeParam TItems - Positional tuple item validators.
- * @typeParam TRest - Element type of trailing rest items.
+ * @typeParam TItems - Validators of the fixed positions.
+ * @typeParam TRest - Type of the items after the fixed positions, or `never` when there are none.
  */
-export type InferTupleWithRest<TItems extends readonly Validator<unknown>[], TRest = never> = [TRest] extends [never]
-  ? InferTuple<TItems>
-  : [...InferTuple<TItems>, ...TRest[]];
-
-/**
- * Schema validator for fixed-length heterogeneous tuples and tuples with trailing rest elements.
- *
- * Enforces that input is an array of the required length, with each element
- * satisfying its corresponding index schema or trailing rest schema.
- *
- * @typeParam TItems - Array of item validators corresponding to tuple positions.
- * @typeParam TRest - Trailing rest element type if `.rest()` was attached.
- */
-export class TupleValidator<TItems extends readonly Validator<unknown>[], TRest = never> extends BaseValidator<
-  InferTupleWithRest<TItems, TRest>,
-  unknown
+export class TupleValidator<TItems extends readonly AnyValidator[], TRest = never> extends Validator<
+  InferTuple<TItems, TRest>
 > {
   /**
-   * Constructs a TupleValidator with an array of positional item schemas and an optional rest validator.
+   * Creates a tuple validator.
    *
-   * @param _items - Positional validators defining the tuple structure.
-   * @param _rest - Optional validator applied to all elements beyond the positional items.
+   * @param items - Validator of each position.
+   * @param restValidator - Validator of any items after the listed positions. Extra items are rejected when omitted.
+   * @param message - Message when the input is not an array.
    */
   constructor(
-    protected readonly _items: TItems,
-    protected readonly _rest?: Validator<TRest>,
+    readonly items: TItems,
+    readonly restValidator?: Validator<TRest>,
+    private readonly message?: Message,
   ) {
     super();
   }
 
   /**
-   * Returns the positional tuple item schemas.
-   */
-  get items(): TItems {
-    return this._items;
-  }
-
-  /**
-   * Returns the trailing rest validator schema if one was configured.
-   */
-  get restElement(): Validator<TRest> | undefined {
-    return this._rest;
-  }
-
-  /**
-   * Returns a new TupleValidator accepting variable trailing elements conforming to the given validator.
+   * Accepts any number of extra items after the listed positions, each satisfying a validator.
+   * Rules added with `refine` or `check` are not kept, so call it before them.
    *
-   * @typeParam TRestNew - Type of trailing rest elements.
-   * @param restValidator - Validator applied to every element after the fixed tuple positions.
-   * @returns A new immutable TupleValidator supporting trailing rest elements.
+   * @typeParam TNext - Type of the extra items.
+   * @param validator - Validator every extra item must satisfy.
+   * @returns A validator that accepts the extra items.
    */
-  rest<TRestNew>(restValidator: Validator<TRestNew>): TupleValidator<TItems, TRestNew> {
-    return new TupleValidator(this._items, restValidator);
+  rest<TNext>(validator: Validator<TNext>): TupleValidator<TItems, TNext> {
+    return new TupleValidator(this.items, validator, this.message);
   }
 
-  protected override isAsync(): boolean {
-    const itemsAsync = this._items.some(
-      (v) => v instanceof BaseValidator && (v as unknown as { isAsync(): boolean }).isAsync(),
+  protected evaluate(input: unknown, ctx: ParseContext): MaybePromise<Outcome<InferTuple<TItems, TRest>>> {
+    if (!Array.isArray(input)) {
+      return invalidType(ctx, "array", input, this.message);
+    }
+
+    const { length } = this.items;
+    const hasRest = this.restValidator !== undefined;
+    if (input.length < length || (!hasRest && input.length > length)) {
+      const isShort = input.length < length;
+      return fail(ctx, {
+        code: isShort ? "too_small" : "too_big",
+        message: `Expected ${hasRest ? "at least " : ""}${length} ${length === 1 ? "item" : "items"}, received ${input.length}`,
+        params: { [isShort ? "minimum" : "maximum"]: length, type: "array" },
+        input,
+      });
+    }
+
+    return chain(
+      collect(
+        input.length,
+        (index) => {
+          const validator = index < length ? this.items[index] : this.restValidator;
+          return execute(validator as AnyValidator, input[index], childContext(ctx, index));
+        },
+        ctx.options.abortEarly === true ? (outcome) => !outcome.ok : undefined,
+      ),
+      (outcomes) => {
+        const issues: ValidationIssue[] = [];
+        const output: unknown[] = [];
+        for (const outcome of outcomes) {
+          if (outcome.ok) {
+            output.push(outcome.value);
+          } else {
+            issues.push(...outcome.issues);
+          }
+        }
+        return issues.length > 0 ? failWith(issues) : pass(output as InferTuple<TItems, TRest>);
+      },
     );
-    const restAsync =
-      this._rest instanceof BaseValidator && (this._rest as unknown as { isAsync(): boolean }).isAsync();
-    return itemsAsync || restAsync;
-  }
-
-  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<InferTupleWithRest<TItems, TRest>> {
-    if (!Array.isArray(input)) {
-      return ctx.fail({
-        code: "invalid_type",
-        message: `Expected array, got ${describeReceived(input)}`,
-        expected: "tuple",
-        received: describeReceived(input),
-        input: ctx.options.includeInput ? input : undefined,
-      });
-    }
-
-    if (this._rest === undefined) {
-      if (input.length !== this._items.length) {
-        const issue: ValidationIssue = {
-          code: "invalid_value",
-          message: `Expected tuple of length ${this._items.length}, got ${input.length}`,
-          path: ctx.path,
-          expected: `${this._items.length} items`,
-          received: `${input.length} items`,
-          input: ctx.options.includeInput ? input : undefined,
-        };
-        ctx.addIssue(issue);
-        return ctx.fail(issue);
-      }
-    } else {
-      if (input.length < this._items.length) {
-        const issue: ValidationIssue = {
-          code: "too_small",
-          message: `Expected at least ${this._items.length} items, got ${input.length}`,
-          path: ctx.path,
-          expected: `at least ${this._items.length} items`,
-          received: `${input.length} items`,
-          input: ctx.options.includeInput ? input : undefined,
-        };
-        ctx.addIssue(issue);
-        return ctx.fail(issue);
-      }
-    }
-
-    const localIssues: ValidationIssue[] = [];
-    const output: unknown[] = [];
-
-    for (let i = 0; i < input.length; i++) {
-      const childValidator: Validator<unknown> =
-        i < this._items.length ? (this._items[i] as Validator<unknown>) : (this._rest as Validator<unknown>);
-      const childPath = [...ctx.path, i];
-      const res = childValidator.validate(input[i], {
-        ...ctx.options,
-        path: childPath,
-      });
-
-      if (!res.ok) {
-        if (res.error.issues && res.error.issues.length > 0) {
-          for (const iss of res.error.issues) {
-            localIssues.push(iss);
-            ctx.addIssue(iss);
-          }
-        } else {
-          localIssues.push(res.error);
-          ctx.addIssue(res.error);
-        }
-
-        if (ctx.options.abortEarly) {
-          return ctx.fail(localIssues[0]);
-        }
-      } else {
-        output.push(res.value);
-      }
-    }
-
-    if (localIssues.length > 0) {
-      if (localIssues.length === 1) {
-        return ctx.fail(localIssues[0]);
-      }
-      return ctx.fail({
-        code: localIssues[0]?.code ?? "invalid_value",
-        message: localIssues[0]?.message ?? "Tuple validation failed",
-        path: localIssues[0]?.path ?? ctx.path,
-        issues: localIssues,
-      });
-    }
-
-    return ctx.ok(output as InferTupleWithRest<TItems, TRest>);
-  }
-
-  protected override async _validateAsync(
-    input: unknown,
-    ctx: ValidationContext,
-  ): Promise<ValidationResult<InferTupleWithRest<TItems, TRest>>> {
-    if (!Array.isArray(input)) {
-      return ctx.fail({
-        code: "invalid_type",
-        message: `Expected array, got ${describeReceived(input)}`,
-        expected: "tuple",
-        received: describeReceived(input),
-        input: ctx.options.includeInput ? input : undefined,
-      });
-    }
-
-    if (this._rest === undefined) {
-      if (input.length !== this._items.length) {
-        const issue: ValidationIssue = {
-          code: "invalid_value",
-          message: `Expected tuple of length ${this._items.length}, got ${input.length}`,
-          path: ctx.path,
-          expected: `${this._items.length} items`,
-          received: `${input.length} items`,
-          input: ctx.options.includeInput ? input : undefined,
-        };
-        ctx.addIssue(issue);
-        return ctx.fail(issue);
-      }
-    } else {
-      if (input.length < this._items.length) {
-        const issue: ValidationIssue = {
-          code: "too_small",
-          message: `Expected at least ${this._items.length} items, got ${input.length}`,
-          path: ctx.path,
-          expected: `at least ${this._items.length} items`,
-          received: `${input.length} items`,
-          input: ctx.options.includeInput ? input : undefined,
-        };
-        ctx.addIssue(issue);
-        return ctx.fail(issue);
-      }
-    }
-
-    const localIssues: ValidationIssue[] = [];
-    const output: unknown[] = [];
-
-    /* oxlint-disable no-await-in-loop */
-    for (let i = 0; i < input.length; i++) {
-      const childValidator: Validator<unknown> =
-        i < this._items.length ? (this._items[i] as Validator<unknown>) : (this._rest as Validator<unknown>);
-      const childPath = [...ctx.path, i];
-      const res = await childValidator.validateAsync(input[i], {
-        ...ctx.options,
-        path: childPath,
-      });
-
-      if (!res.ok) {
-        if (res.error.issues && res.error.issues.length > 0) {
-          for (const iss of res.error.issues) {
-            localIssues.push(iss);
-            ctx.addIssue(iss);
-          }
-        } else {
-          localIssues.push(res.error);
-          ctx.addIssue(res.error);
-        }
-
-        if (ctx.options.abortEarly) {
-          return ctx.fail(localIssues[0]);
-        }
-      } else {
-        output.push(res.value);
-      }
-    }
-    /* oxlint-enable no-await-in-loop */
-
-    if (localIssues.length > 0) {
-      if (localIssues.length === 1) {
-        return ctx.fail(localIssues[0]);
-      }
-      return ctx.fail({
-        code: localIssues[0]?.code ?? "invalid_value",
-        message: localIssues[0]?.message ?? "Tuple validation failed",
-        path: localIssues[0]?.path ?? ctx.path,
-        issues: localIssues,
-      });
-    }
-
-    return ctx.ok(output as InferTupleWithRest<TItems, TRest>);
   }
 }
 
 /**
- * Creates a schema validator for fixed-length positional tuples.
+ * Creates a validator for arrays with a fixed sequence of typed positions.
  *
- * @typeParam TItems - Array of positional item validators.
- * @param items - Array of validators for each position in the tuple.
- * @returns A new TupleValidator instance.
+ * @example
+ * ```ts
+ * const point = val.tuple([val.number(), val.number()]);
+ * ```
+ *
+ * @typeParam TItems - Validators of the fixed positions.
+ * @param items - Validator of each position.
+ * @param message - Message when the input is not an array.
+ * @returns A tuple validator.
  */
-export function tuple<TItems extends readonly [Validator<unknown>, ...Validator<unknown>[]]>(
+export function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]]>(
   items: TItems,
+  message?: Message,
 ): TupleValidator<TItems> {
-  return new TupleValidator(items);
+  return new TupleValidator(items, undefined, message);
 }

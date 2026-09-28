@@ -1,937 +1,466 @@
-import { BaseValidator, markAsyncRequired, type ValidationContext, type Validator } from "./core";
-import { describeReceived, type ValidationIssue, type ValidationResult } from "./result";
+import { coerceToString } from "./coercion";
+import { Validator } from "./core";
+import {
+  assertSize,
+  constraint,
+  invalidCoercion,
+  invalidType,
+  pass,
+  type Outcome,
+  type ParseContext,
+} from "./internal";
+import { type Message } from "./issue";
 
-const PUBLIC_HOST_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i;
+const PUBLIC_HOST_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,}|xn--[a-z0-9-]{1,59})$/i;
+const HOSTNAME_PATTERN =
+  /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i;
 const EMAIL_LOCAL_PATTERN = /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*$/i;
 const EMAIL_LOCAL_MAX_LENGTH = 64;
 const EMAIL_MAX_LENGTH = 254;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 const CUID2_PATTERN = /^[a-z][a-z0-9]{23,31}$/;
+const ULID_PATTERN = /^[0-7][0-9A-HJKMNP-TV-Z]{25}$/i;
+const NANOID_PATTERN = /^[A-Za-z0-9_-]{21}$/;
+const HEX_PATTERN = /^[0-9a-f]+$/i;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const IPV4_PATTERN =
   /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/;
 const IPV6_PATTERN =
   /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/i;
 
-const isValidLengthLimit = (value: number): boolean => Number.isFinite(value) && value >= 0;
-
-/** Step execution function used within {@link StringValidator}. */
-export type StringStep = (value: string, ctx: ValidationContext) => { nextValue: string; issue?: ValidationIssue };
-
-/**
- * Options for configuring IP address validation.
- */
-export interface IpOptions {
-  /** Optional IP protocol version constraint: "v4" or "v6". When omitted, both are accepted. */
-  version?: "v4" | "v6";
-}
-
-/**
- * Options for configuring ISO 8601 datetime validation.
- */
-export interface DatetimeOptions {
-  /** Whether to allow timezone offsets (e.g. `+02:00` or `-05:00`). Defaults to false (UTC `Z` only). */
-  offset?: boolean;
+/** Options of {@link StringValidator.email}. */
+export interface EmailOptions {
   /**
-   * Expected exact fractional second precision length.
-   * If `0`, fractional seconds are disallowed. If undefined, fractional seconds are optional.
+   * Accepts `+` in the local part, as in `me+tag@example.com`.
+   *
+   * @defaultValue true
    */
-  precision?: number;
+  allowPlus?: boolean;
+  /** Failure message. */
+  message?: Message;
 }
 
-const buildDatetimeRegex = (options?: DatetimeOptions): RegExp => {
-  let frac: string;
-  if (options?.precision !== undefined) {
-    frac = options.precision === 0 ? "" : `\\.\\d{${options.precision}}`;
-  } else {
-    frac = "(?:\\.\\d+)?";
+/** Options of {@link StringValidator.url}. */
+export interface UrlOptions {
+  /**
+   * Accepted protocols, without the colon.
+   *
+   * @defaultValue ["http", "https"]
+   */
+  protocols?: readonly string[];
+  /**
+   * Accepts hosts that are not public domain names: `localhost`, single-label hosts and IP addresses.
+   *
+   * @defaultValue false
+   */
+  allowLocal?: boolean;
+  /** Failure message. */
+  message?: Message;
+}
+
+/** Options of {@link StringValidator.ip}. */
+export interface IpOptions {
+  /** Restricts the address family. Both are accepted when omitted. */
+  version?: "v4" | "v6";
+  /** Failure message. */
+  message?: Message;
+}
+
+/** Options of {@link StringValidator.datetime}. */
+export interface DatetimeOptions {
+  /**
+   * Accepts a UTC offset such as `+02:00` instead of only `Z`.
+   *
+   * @defaultValue false
+   */
+  offset?: boolean;
+  /** Exact number of fractional-second digits. `0` forbids them; they are optional and unbounded when omitted. */
+  precision?: number;
+  /** Failure message. */
+  message?: Message;
+}
+
+const buildDatetimePattern = ({ offset, precision }: DatetimeOptions): RegExp => {
+  const fraction = precision === undefined ? "(?:\\.\\d+)?" : precision === 0 ? "" : `\\.\\d{${precision}}`;
+  const zone = offset === true ? "(?:Z|[+-]\\d{2}:\\d{2})" : "Z";
+  return new RegExp(`^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d${fraction}${zone}$`);
+};
+
+/** Tests whether `YYYY-MM-DD` names a day that exists, rejecting `2026-02-30`. */
+const isCalendarDate = (text: string): boolean => {
+  const [year, month, day] = text.split("-").map(Number) as [number, number, number];
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+};
+
+const isEmail = (text: string, allowPlus: boolean): boolean => {
+  const [local, host, extra] = text.split("@");
+  return (
+    extra === undefined &&
+    local !== undefined &&
+    host !== undefined &&
+    text.length <= EMAIL_MAX_LENGTH &&
+    local.length <= EMAIL_LOCAL_MAX_LENGTH &&
+    EMAIL_LOCAL_PATTERN.test(local) &&
+    PUBLIC_HOST_PATTERN.test(host) &&
+    (allowPlus || !local.includes("+"))
+  );
+};
+
+const isUrl = (text: string, { protocols = ["http", "https"], allowLocal = false }: UrlOptions): boolean => {
+  if (!URL.canParse(text)) {
+    return false;
   }
-  const tz = options?.offset ? "(?:Z|[+-]\\d{2}:\\d{2})" : "Z";
-  return new RegExp(
-    `^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d${frac}${tz}$`,
+  const url = new URL(text);
+  return (
+    protocols.includes(url.protocol.slice(0, -1)) &&
+    url.username === "" &&
+    url.password === "" &&
+    (allowLocal || PUBLIC_HOST_PATTERN.test(url.hostname))
   );
 };
 
 /**
- * Validates and transforms string inputs with chained constraints.
- */
-export class StringValidator extends BaseValidator<string, unknown> {
-  protected readonly steps: StringStep[] = [];
-
-  protected clone(): StringValidator {
-    const copy = new (this.constructor as new () => StringValidator)();
-    copy.steps.push(...this.steps);
-    return copy;
-  }
-
-  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<string> {
-    if (typeof input !== "string") {
-      return ctx.fail({
-        code: "invalid_type",
-        message: `Expected string, got ${describeReceived(input)}`,
-        expected: "string",
-        received: describeReceived(input),
-        input,
-      });
-    }
-
-    let current = input;
-    const localIssues: ValidationIssue[] = [];
-
-    for (const step of this.steps) {
-      const result = step(current, ctx);
-      current = result.nextValue;
-
-      if (result.issue !== undefined) {
-        localIssues.push(result.issue);
-        ctx.addIssue(result.issue);
-        if (ctx.options.abortEarly) {
-          return ctx.fail(result.issue);
-        }
-      }
-    }
-
-    if (localIssues.length > 0) {
-      const firstIssue = localIssues[0];
-      if (localIssues.length === 1 && firstIssue) {
-        return ctx.fail(firstIssue);
-      }
-      return ctx.fail({
-        code: firstIssue?.code ?? "invalid_value",
-        message: firstIssue?.message ?? "String validation failed",
-        path: ctx.path,
-        issues: localIssues,
-      });
-    }
-
-    return ctx.ok(current);
-  }
-
-  /**
-   * Enforces a minimum character length.
-   *
-   * @param length - Minimum required characters (finite non-negative number).
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  min(length: number, message?: string): this {
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      if (!isValidLengthLimit(length)) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_value",
-            message: "Minimum length must be a finite non-negative number",
-            path: ctx.path,
-          },
-        };
-      }
-      if (val.length < length) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "too_small",
-            message: message ?? `Must be at least ${length} characters`,
-            path: ctx.path,
-            expected: `at least ${length} characters`,
-            received: `${val.length} characters`,
-            input: val,
-          },
-        };
-      }
-      return { nextValue: val };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Backward-compatible alias for {@link min}.
-   *
-   * @param length - Minimum required characters.
-   * @param messageOrOptions - Custom error message string or legacy options containing `{ trim?: boolean }`.
-   * @param message - Optional custom message when options are passed as the second argument.
-   * @returns This validator instance for method chaining.
-   */
-  minLength(length: number, messageOrOptions?: string | { trim?: boolean }, message?: string): this {
-    const msg = typeof messageOrOptions === "string" ? messageOrOptions : message;
-    if (typeof messageOrOptions === "object" && messageOrOptions?.trim) {
-      return this.trim().min(length, msg) as this;
-    }
-    return this.min(length, msg);
-  }
-
-  /**
-   * Enforces a maximum character length.
-   *
-   * @param length - Maximum allowed characters (finite non-negative number).
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  max(length: number, message?: string): this {
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      if (!isValidLengthLimit(length)) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_value",
-            message: "Maximum length must be a finite non-negative number",
-            path: ctx.path,
-          },
-        };
-      }
-      if (val.length > length) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "too_big",
-            message: message ?? `Must be at most ${length} characters`,
-            path: ctx.path,
-            expected: `at most ${length} characters`,
-            received: `${val.length} characters`,
-            input: val,
-          },
-        };
-      }
-      return { nextValue: val };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Backward-compatible alias for {@link max}.
-   *
-   * @param length - Maximum allowed characters.
-   * @param messageOrOptions - Custom error message string or legacy options containing `{ trim?: boolean }`.
-   * @param message - Optional custom message when options are passed as the second argument.
-   * @returns This validator instance for method chaining.
-   */
-  maxLength(length: number, messageOrOptions?: string | { trim?: boolean }, message?: string): this {
-    const msg = typeof messageOrOptions === "string" ? messageOrOptions : message;
-    if (typeof messageOrOptions === "object" && messageOrOptions?.trim) {
-      return this.trim().max(length, msg) as this;
-    }
-    return this.max(length, msg);
-  }
-
-  /**
-   * Enforces an exact character length.
-   *
-   * @param length - Exact required length.
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  length(length: number, message?: string): this {
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      if (!isValidLengthLimit(length)) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_value",
-            message: "Length limit must be a finite non-negative number",
-            path: ctx.path,
-          },
-        };
-      }
-      if (val.length !== length) {
-        return {
-          nextValue: val,
-          issue: {
-            code: val.length < length ? "too_small" : "too_big",
-            message: message ?? `Must be exactly ${length} characters`,
-            path: ctx.path,
-            expected: `exactly ${length} characters`,
-            received: `${val.length} characters`,
-            input: val,
-          },
-        };
-      }
-      return { nextValue: val };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Enforces that the string contains at least one character.
-   *
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  nonEmpty(message?: string): this {
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      if (val.length === 0) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "too_small",
-            message: message ?? "Value cannot be empty",
-            path: ctx.path,
-            expected: "non-empty string",
-            received: "empty string",
-            input: val,
-          },
-        };
-      }
-      return { nextValue: val };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Backward-compatible alias for {@link nonEmpty}.
-   *
-   * By default trims whitespace before checking unless `trim: false` is provided.
-   *
-   * @param messageOrOptions - Custom error message string or legacy options containing `{ trim?: boolean }`.
-   * @param message - Optional custom message when options are passed as the second argument.
-   * @returns This validator instance for method chaining.
-   */
-  notEmpty(messageOrOptions?: string | { trim?: boolean }, message?: string): this {
-    const isOptions = typeof messageOrOptions === "object" && messageOrOptions !== null;
-    const trim = isOptions ? (messageOrOptions.trim ?? true) : true;
-    const msg = typeof messageOrOptions === "string" ? messageOrOptions : message;
-    if (trim) {
-      return this.trim().nonEmpty(msg) as this;
-    }
-    return this.nonEmpty(msg);
-  }
-
-  /**
-   * Validates that the input represents a valid email address, lowercasing the domain.
-   *
-   * @param options - Configuration options, e.g. allowing or disallowing '+' sub-addressing.
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  email(options?: { allowPlus?: boolean }, message?: string): this {
-    const allowPlus = options?.allowPlus ?? true;
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      const trimmed = val.trim();
-      const [local, host, extra] = trimmed.split("@");
-      if (extra !== undefined || local === undefined || host === undefined) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_format",
-            message: message ?? "Invalid email address",
-            path: ctx.path,
-            expected: "email address",
-            received: val,
-            input: val,
-          },
-        };
-      }
-
-      if (
-        trimmed.length > EMAIL_MAX_LENGTH ||
-        local.length > EMAIL_LOCAL_MAX_LENGTH ||
-        !PUBLIC_HOST_PATTERN.test(host) ||
-        !EMAIL_LOCAL_PATTERN.test(local) ||
-        (!allowPlus && local.includes("+"))
-      ) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_format",
-            message: message ?? "Invalid email address",
-            path: ctx.path,
-            expected: "email address",
-            received: val,
-            input: val,
-          },
-        };
-      }
-
-      return { nextValue: `${local}@${host.toLowerCase()}` };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Validates that the input is a valid public HTTP or HTTPS URL, normalizing the protocol.
-   *
-   * @param options - Configuration options, e.g. enforcing HTTPS protocol.
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  url(options?: { forceHttps?: boolean }, message?: string): this {
-    const forceHttps = options?.forceHttps ?? false;
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      let input = val.trim();
-      if (!/^https?:\/\//i.test(input)) {
-        input = "https://" + input;
-      }
-
-      try {
-        const parsed = new URL(input);
-        if (!PUBLIC_HOST_PATTERN.test(parsed.hostname) || parsed.username.length > 0 || parsed.password.length > 0) {
-          return {
-            nextValue: val,
-            issue: {
-              code: "invalid_format",
-              message: message ?? "Invalid URL",
-              path: ctx.path,
-              expected: "public URL",
-              received: val,
-              input: val,
-            },
-          };
-        }
-
-        if (forceHttps && parsed.protocol !== "https:") {
-          return {
-            nextValue: val,
-            issue: {
-              code: "invalid_format",
-              message: message ?? "Invalid URL",
-              path: ctx.path,
-              expected: "HTTPS URL",
-              received: val,
-              input: val,
-            },
-          };
-        }
-
-        return { nextValue: parsed.href };
-      } catch {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_format",
-            message: message ?? "Invalid URL",
-            path: ctx.path,
-            expected: "URL",
-            received: val,
-            input: val,
-          },
-        };
-      }
-    });
-    return copy as this;
-  }
-
-  /**
-   * Validates that the string is a valid RFC 9562 UUID.
-   *
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  uuid(message?: string): this {
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      if (!UUID_PATTERN.test(val)) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_format",
-            message: message ?? "Invalid UUID",
-            path: ctx.path,
-            expected: "UUID",
-            received: val,
-            input: val,
-          },
-        };
-      }
-      return { nextValue: val };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Validates that the string matches an IPv4 or IPv6 network address.
-   *
-   * @param options - Configuration specifying whether to accept IPv4, IPv6, or both.
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  ip(options?: IpOptions, message?: string): this {
-    const version = options?.version;
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      let isValid = false;
-      if (version === "v4") {
-        isValid = IPV4_PATTERN.test(val);
-      } else if (version === "v6") {
-        isValid = IPV6_PATTERN.test(val);
-      } else {
-        isValid = IPV4_PATTERN.test(val) || IPV6_PATTERN.test(val);
-      }
-
-      if (!isValid) {
-        const expected = version === "v4" ? "IPv4 address" : version === "v6" ? "IPv6 address" : "IP address";
-        const defaultMsg =
-          version === "v4" ? "Invalid IPv4 address" : version === "v6" ? "Invalid IPv6 address" : "Invalid IP address";
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_format",
-            message: message ?? defaultMsg,
-            path: ctx.path,
-            expected,
-            received: val,
-            input: val,
-          },
-        };
-      }
-      return { nextValue: val };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Validates that the string is an ISO 8601 formatted datetime string.
-   *
-   * @param options - Optional precision and timezone offset constraints.
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  datetime(options?: DatetimeOptions, message?: string): this {
-    const regex = buildDatetimeRegex(options);
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      let isValid = regex.test(val);
-      if (isValid) {
-        const [datePart] = val.split("T");
-        if (datePart) {
-          const [y, m, d] = datePart.split("-").map(Number);
-          if (y !== undefined && m !== undefined && d !== undefined) {
-            const dateObj = new Date(Date.UTC(y, m - 1, d));
-            if (dateObj.getUTCFullYear() !== y || dateObj.getUTCMonth() !== m - 1 || dateObj.getUTCDate() !== d) {
-              isValid = false;
-            }
-          }
-        }
-      }
-
-      if (!isValid || Number.isNaN(new Date(val).getTime())) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_format",
-            message: message ?? "Invalid datetime format",
-            path: ctx.path,
-            expected: options?.offset ? "ISO 8601 datetime with offset" : "ISO 8601 datetime",
-            received: val,
-            input: val,
-          },
-        };
-      }
-      return { nextValue: val };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Validates that the string is formatted in standard Base64 encoding.
-   *
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  base64(message?: string): this {
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      if (!BASE64_PATTERN.test(val)) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_format",
-            message: message ?? "Invalid base64 string",
-            path: ctx.path,
-            expected: "base64",
-            received: val,
-            input: val,
-          },
-        };
-      }
-      return { nextValue: val };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Validates that the string matches the CUID2 identifier format.
-   *
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  cuid2(message?: string): this {
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      if (!CUID2_PATTERN.test(val)) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_format",
-            message: message ?? "Invalid cuid2",
-            path: ctx.path,
-            expected: "cuid2",
-            received: val,
-            input: val,
-          },
-        };
-      }
-      return { nextValue: val };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Validates that the string is valid JSON without additional schema validation.
-   *
-   * @param message - Optional custom failure message for JSON parsing errors.
-   * @returns A validator schema producing the parsed JSON data.
-   */
-  json(message?: string): Validator<unknown, unknown>;
-  json(schema: undefined, message?: string): Validator<unknown, unknown>;
-  /**
-   * Validates that the string is valid JSON and validates the parsed JSON against a schema.
-   *
-   * @typeParam T - Inferred output type of the parsed JSON data.
-   * @param schema - Validator schema to enforce on the parsed JSON data.
-   * @param message - Optional custom failure message for JSON parsing errors.
-   * @returns A validator schema producing the parsed JSON data.
-   */
-  json<T>(schema: Validator<T>, message?: string): Validator<T, unknown>;
-  json<T = unknown>(schemaOrMessage?: Validator<T> | string, message?: string): Validator<T, unknown> {
-    const isValidator =
-      schemaOrMessage !== null && typeof schemaOrMessage === "object" && "validate" in schemaOrMessage;
-    const schema = isValidator ? (schemaOrMessage as Validator<T>) : undefined;
-    const msg = typeof schemaOrMessage === "string" ? schemaOrMessage : message;
-    return new JsonValidator<T>(this.clone(), schema, msg);
-  }
-
-  /**
-   * Validates that the string matches a regular expression pattern.
-   *
-   * @param pattern - Regular expression to test against.
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  regex(pattern: RegExp, message?: string): this {
-    const safePattern = new RegExp(pattern.source, pattern.flags);
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      safePattern.lastIndex = 0;
-      if (!safePattern.test(val)) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_format",
-            message: message ?? "Value does not match the required format",
-            path: ctx.path,
-            expected: pattern.toString(),
-            received: val,
-            input: val,
-          },
-        };
-      }
-      return { nextValue: val };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Alias for {@link regex}.
-   *
-   * @param pattern - Regular expression to test against.
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  matches(pattern: RegExp, message?: string): this {
-    return this.regex(pattern, message);
-  }
-
-  /**
-   * Validates that the string begins with a specified prefix.
-   *
-   * @param prefix - The substring that must appear at the start.
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  startsWith(prefix: string, message?: string): this {
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      if (!val.startsWith(prefix)) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_format",
-            message: message ?? `Must start with "${prefix}"`,
-            path: ctx.path,
-            expected: `string starting with "${prefix}"`,
-            received: val,
-            input: val,
-          },
-        };
-      }
-      return { nextValue: val };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Validates that the string ends with a specified suffix.
-   *
-   * @param suffix - The substring that must appear at the end.
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  endsWith(suffix: string, message?: string): this {
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      if (!val.endsWith(suffix)) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_format",
-            message: message ?? `Must end with "${suffix}"`,
-            path: ctx.path,
-            expected: `string ending with "${suffix}"`,
-            received: val,
-            input: val,
-          },
-        };
-      }
-      return { nextValue: val };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Validates that the string includes a required substring.
-   *
-   * @param search - The substring that must be present.
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  includes(search: string, message?: string): this {
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      if (!val.includes(search)) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_format",
-            message: message ?? `Must include "${search}"`,
-            path: ctx.path,
-            expected: `string containing "${search}"`,
-            received: val,
-            input: val,
-          },
-        };
-      }
-      return { nextValue: val };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Validates a file extension against an allow list and extracts the normalized extension.
-   *
-   * @param allowed - List of allowed file extensions (with or without leading dots).
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
-   */
-  fileType(allowed: string[], message?: string): this {
-    const normalized = allowed
-      .map((entry) => entry.toLowerCase().replace(/^\./, ""))
-      .filter((entry) => entry.length > 0);
-
-    const copy = this.clone();
-    copy.steps.push((val, ctx) => {
-      if (normalized.length === 0) {
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_value",
-            message: "Allowed file types cannot be empty",
-            path: ctx.path,
-            expected: "file type list",
-          },
-        };
-      }
-
-      const dotIndex = val.lastIndexOf(".");
-      const ext = dotIndex > 0 && dotIndex < val.length - 1 ? val.slice(dotIndex + 1).toLowerCase() : undefined;
-
-      if (ext === undefined || !normalized.includes(ext)) {
-        const received = ext ?? "missing";
-        return {
-          nextValue: val,
-          issue: {
-            code: "invalid_format",
-            message: message ?? `File type "${received}" not allowed. Allowed: ${normalized.join(", ")}`,
-            path: ctx.path,
-            expected: normalized.join(", "),
-            received,
-            input: val,
-          },
-        };
-      }
-
-      return { nextValue: ext };
-    });
-    return copy as this;
-  }
-
-  /**
-   * Trims whitespace from both ends of the string.
-   *
-   * @returns This validator instance for method chaining.
-   */
-  trim(): this {
-    const copy = this.clone();
-    copy.steps.push((val) => ({ nextValue: val.trim() }));
-    return copy as this;
-  }
-
-  /**
-   * Converts the string to lowercase.
-   *
-   * @returns This validator instance for method chaining.
-   */
-  toLowerCase(): this {
-    const copy = this.clone();
-    copy.steps.push((val) => ({ nextValue: val.toLowerCase() }));
-    return copy as this;
-  }
-
-  /**
-   * Converts the string to uppercase.
-   *
-   * @returns This validator instance for method chaining.
-   */
-  toUpperCase(): this {
-    const copy = this.clone();
-    copy.steps.push((val) => ({ nextValue: val.toUpperCase() }));
-    return copy as this;
-  }
-}
-
-/**
- * Schema validator that parses input strings as JSON and optionally executes a schema against the parsed result.
+ * Validator for strings, created by {@link string}.
  *
- * @typeParam TOutput - Output type after JSON parsing and schema validation.
+ * Rules never change the value, except {@link StringValidator.trim},
+ * {@link StringValidator.toLowerCase} and {@link StringValidator.toUpperCase}, which are
+ * transforms and apply to the rules that follow them.
  */
-export class JsonValidator<TOutput = unknown> extends BaseValidator<TOutput, unknown> {
+export class StringValidator extends Validator<string> {
+  /**
+   * Creates a string validator.
+   *
+   * @param message - Message when the input is not a string.
+   * @param isCoerced - Converts numbers, bigints and booleans to strings instead of rejecting them.
+   */
   constructor(
-    private readonly stringValidator: StringValidator,
-    private readonly schema?: Validator<TOutput>,
-    private readonly message?: string,
+    private readonly message?: Message,
+    private readonly isCoerced = false,
   ) {
     super();
   }
 
-  protected override isAsync(): boolean {
-    return this.schema instanceof BaseValidator && (this.schema as unknown as { isAsync(): boolean }).isAsync();
+  protected evaluate(input: unknown, ctx: ParseContext): Outcome<string> {
+    if (this.isCoerced) {
+      const converted = coerceToString(input);
+      return converted === undefined ? invalidCoercion(ctx, "string", input, this.message) : pass(converted);
+    }
+    return typeof input === "string" ? pass(input) : invalidType(ctx, "string", input, this.message);
   }
 
-  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<TOutput> {
-    const strRes = this.stringValidator["_validate"](input, ctx);
-    if (!strRes.ok) {
-      return strRes as unknown as ValidationResult<TOutput>;
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(strRes.value);
-    } catch {
-      return ctx.fail({
-        code: "invalid_format",
-        message: this.message ?? "Invalid JSON",
-        path: ctx.path,
-        expected: "JSON string",
-        received: strRes.value,
-        input: strRes.value,
-      });
-    }
-
-    if (this.schema) {
-      if (this.isAsync()) {
-        return ctx.fail(
-          markAsyncRequired({
-            code: "custom" as const,
-            message: "Async schema requires validateAsync()",
-            path: ctx.path,
-            input: parsed,
-          }),
-        );
-      }
-      const schemaRes = this.schema.validate(parsed as unknown as Parameters<typeof this.schema.validate>[0], {
-        ...ctx.options,
-        path: ctx.path,
-      });
-      if (!schemaRes.ok) {
-        if (schemaRes.error.issues && schemaRes.error.issues.length > 0) {
-          for (const iss of schemaRes.error.issues) {
-            ctx.addIssue(iss);
-          }
-        } else {
-          ctx.addIssue(schemaRes.error);
-        }
-        return schemaRes;
-      }
-      return schemaRes;
-    }
-
-    return ctx.ok(parsed as TOutput);
+  private format(name: string, test: (value: string) => boolean, message: Message | undefined, fallback: string): this {
+    return this.addStep(
+      constraint(test, { code: "invalid_format", message: message ?? fallback, params: { format: name } }),
+    );
   }
 
-  protected override async _validateAsync(input: unknown, ctx: ValidationContext): Promise<ValidationResult<TOutput>> {
-    const strRes = await this.stringValidator["_validateAsync"](input, ctx);
-    if (!strRes.ok) {
-      return strRes as unknown as ValidationResult<TOutput>;
-    }
+  /**
+   * Requires at least `length` characters (UTF-16 code units, as `String.length` counts them).
+   *
+   * @param length - Minimum length, a non-negative integer.
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   * @throws {RangeError} When `length` is not a non-negative integer.
+   */
+  min(length: number, message?: Message): this {
+    assertSize("Minimum length", length);
+    return this.addStep(
+      constraint((value) => value.length >= length, {
+        code: "too_small",
+        message: message ?? `Must be at least ${length} characters`,
+        params: { minimum: length, type: "string" },
+      }),
+    );
+  }
 
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(strRes.value);
-    } catch {
-      return ctx.fail({
-        code: "invalid_format",
-        message: this.message ?? "Invalid JSON",
-        path: ctx.path,
-        expected: "JSON string",
-        received: strRes.value,
-        input: strRes.value,
-      });
-    }
+  /**
+   * Allows at most `length` characters.
+   *
+   * @param length - Maximum length, a non-negative integer.
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   * @throws {RangeError} When `length` is not a non-negative integer.
+   */
+  max(length: number, message?: Message): this {
+    assertSize("Maximum length", length);
+    return this.addStep(
+      constraint((value) => value.length <= length, {
+        code: "too_big",
+        message: message ?? `Must be at most ${length} characters`,
+        params: { maximum: length, type: "string" },
+      }),
+    );
+  }
 
-    if (this.schema) {
-      const schemaRes = await this.schema.validateAsync(
-        parsed as unknown as Parameters<typeof this.schema.validateAsync>[0],
-        {
-          ...ctx.options,
-          path: ctx.path,
-        },
-      );
-      if (!schemaRes.ok) {
-        if (schemaRes.error.issues && schemaRes.error.issues.length > 0) {
-          for (const iss of schemaRes.error.issues) {
-            ctx.addIssue(iss);
-          }
-        } else {
-          ctx.addIssue(schemaRes.error);
-        }
-        return schemaRes;
+  /**
+   * Requires exactly `length` characters.
+   *
+   * @param length - Required length, a non-negative integer.
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   * @throws {RangeError} When `length` is not a non-negative integer.
+   */
+  length(length: number, message?: Message): this {
+    assertSize("Length", length);
+    return this.addStep((value, ctx) => {
+      if (value.length !== length) {
+        const isShort = value.length < length;
+        ctx.addIssue({
+          code: isShort ? "too_small" : "too_big",
+          message: message ?? `Must be exactly ${length} characters`,
+          params: { [isShort ? "minimum" : "maximum"]: length, exact: true, type: "string" },
+          input: value,
+        });
       }
-      return schemaRes;
-    }
+    });
+  }
 
-    return ctx.ok(parsed as TOutput);
+  /**
+   * Requires at least one character. Whitespace counts, so trim first to reject blank strings.
+   *
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  nonEmpty(message?: Message): this {
+    return this.addStep(
+      constraint((value) => value.length > 0, {
+        code: "too_small",
+        message: message ?? "Must not be empty",
+        params: { minimum: 1, type: "string" },
+      }),
+    );
+  }
+
+  /**
+   * Requires an email address with a public domain name. The value is not modified.
+   *
+   * @param options - Whether `+` is allowed, and the failure message.
+   * @returns The validator with the rule added.
+   */
+  email(options: EmailOptions = {}): this {
+    return this.format(
+      "email",
+      (value) => isEmail(value, options.allowPlus ?? true),
+      options.message,
+      "Invalid email address",
+    );
+  }
+
+  /**
+   * Requires an absolute URL with an allowed protocol and a public domain name, and without
+   * embedded credentials. The value is not modified.
+   *
+   * @param options - Protocols, whether local hosts are allowed, and the failure message.
+   * @returns The validator with the rule added.
+   */
+  url(options: UrlOptions = {}): this {
+    return this.format("url", (value) => isUrl(value, options), options.message, "Invalid URL");
+  }
+
+  /**
+   * Requires a UUID of version 1 to 8, in hyphenated form.
+   *
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  uuid(message?: Message): this {
+    return this.format("uuid", (value) => UUID_PATTERN.test(value), message, "Invalid UUID");
+  }
+
+  /**
+   * Requires an IPv4 or IPv6 address.
+   *
+   * @param options - Address family, and the failure message.
+   * @returns The validator with the rule added.
+   */
+  ip(options: IpOptions = {}): this {
+    const { version } = options;
+    return this.format(
+      version === undefined ? "ip" : `ip${version}`,
+      (value) => (version !== "v6" && IPV4_PATTERN.test(value)) || (version !== "v4" && IPV6_PATTERN.test(value)),
+      options.message,
+      version === "v4" ? "Invalid IPv4 address" : version === "v6" ? "Invalid IPv6 address" : "Invalid IP address",
+    );
+  }
+
+  /**
+   * Requires an ISO 8601 date and time such as `2026-09-28T14:30:00Z`, on a day that exists.
+   *
+   * @param options - Whether offsets are allowed, fractional precision, and the failure message.
+   * @returns The validator with the rule added.
+   */
+  datetime(options: DatetimeOptions = {}): this {
+    const pattern = buildDatetimePattern(options);
+    return this.format(
+      "datetime",
+      (value) => {
+        const date = pattern.exec(value)?.[1];
+        return date !== undefined && isCalendarDate(date);
+      },
+      options.message,
+      "Invalid datetime",
+    );
+  }
+
+  /**
+   * Requires an ISO 8601 calendar date such as `2026-09-28`, on a day that exists.
+   *
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  date(message?: Message): this {
+    return this.format("date", (value) => DATE_PATTERN.test(value) && isCalendarDate(value), message, "Invalid date");
+  }
+
+  /**
+   * Requires standard base64 with padding.
+   *
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  base64(message?: Message): this {
+    return this.format("base64", (value) => BASE64_PATTERN.test(value), message, "Invalid base64 string");
+  }
+
+  /**
+   * Requires hexadecimal digits of any case.
+   *
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  hex(message?: Message): this {
+    return this.format("hex", (value) => HEX_PATTERN.test(value), message, "Invalid hexadecimal string");
+  }
+
+  /**
+   * Requires a hostname: dot-separated labels of letters, digits and hyphens. Unlike
+   * {@link StringValidator.url}, single-label hosts such as `localhost` are accepted.
+   *
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  hostname(message?: Message): this {
+    return this.format("hostname", (value) => HOSTNAME_PATTERN.test(value), message, "Invalid hostname");
+  }
+
+  /**
+   * Requires a CUID2 identifier.
+   *
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  cuid2(message?: Message): this {
+    return this.format("cuid2", (value) => CUID2_PATTERN.test(value), message, "Invalid cuid2");
+  }
+
+  /**
+   * Requires a ULID, in any case.
+   *
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  ulid(message?: Message): this {
+    return this.format("ulid", (value) => ULID_PATTERN.test(value), message, "Invalid ULID");
+  }
+
+  /**
+   * Requires a Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.
+   *
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  nanoid(message?: Message): this {
+    return this.format("nanoid", (value) => NANOID_PATTERN.test(value), message, "Invalid Nano ID");
+  }
+
+  /**
+   * Requires the string to match a regular expression.
+   *
+   * The `g` and `y` flags are ignored, so the same validator gives the same answer on every call.
+   *
+   * @param pattern - Expression to test against.
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  regex(pattern: RegExp, message?: Message): this {
+    const stateless = new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ""));
+    return this.format("regex", (value) => stateless.test(value), message, `Must match ${pattern}`);
+  }
+
+  /**
+   * Requires the string to start with a prefix.
+   *
+   * @param prefix - Required start.
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  startsWith(prefix: string, message?: Message): this {
+    return this.format("startsWith", (value) => value.startsWith(prefix), message, `Must start with "${prefix}"`);
+  }
+
+  /**
+   * Requires the string to end with a suffix.
+   *
+   * @param suffix - Required end.
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  endsWith(suffix: string, message?: Message): this {
+    return this.format("endsWith", (value) => value.endsWith(suffix), message, `Must end with "${suffix}"`);
+  }
+
+  /**
+   * Requires the string to contain a substring.
+   *
+   * @param search - Required substring.
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
+   */
+  includes(search: string, message?: Message): this {
+    return this.format("includes", (value) => value.includes(search), message, `Must include "${search}"`);
+  }
+
+  /**
+   * Removes leading and trailing whitespace from the value, for the rules that follow and the output.
+   *
+   * @returns The validator with the step added.
+   */
+  trim(): this {
+    return this.addStep((value) => value.trim());
+  }
+
+  /**
+   * Lowercases the value, for the rules that follow and the output.
+   *
+   * @returns The validator with the step added.
+   */
+  toLowerCase(): this {
+    return this.addStep((value) => value.toLowerCase());
+  }
+
+  /**
+   * Uppercases the value, for the rules that follow and the output.
+   *
+   * @returns The validator with the step added.
+   */
+  toUpperCase(): this {
+    return this.addStep((value) => value.toUpperCase());
   }
 }
 
 /**
- * Creates a {@link StringValidator} schema instance.
+ * Creates a validator for strings.
  *
- * @returns A new StringValidator instance.
+ * @example
+ * ```ts
+ * const username = val.string().trim().min(3).max(30);
+ * ```
+ *
+ * @param message - Message when the input is not a string.
+ * @returns A string validator.
  */
-export function string(): StringValidator {
-  return new StringValidator();
+export function string(message?: Message): StringValidator {
+  return new StringValidator(message);
 }

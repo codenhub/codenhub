@@ -1,168 +1,112 @@
-import { BaseValidator, type Infer, type ValidationContext, type Validator } from "./core";
-import { LiteralValidator } from "./literal";
-import { isPlainObject } from "./object";
-import { describeReceived, type ValidationIssue, type ValidationResult } from "./result";
+import { type MaybePromise } from "./async";
+import { execute, Validator, type Infer } from "./core";
+import { fail, invalidType, isPlainObject, type Outcome, type ParseContext } from "./internal";
+import { type Message } from "./issue";
+import { EnumValidator, LiteralValidator, type LiteralValue } from "./literal";
+import { type ObjectValidator, type Shape } from "./object";
+
+/** An object validator usable as a variant: its shape has the discriminator key. */
+type Variant<TKey extends string> = ObjectValidator<
+  Shape & Record<TKey, LiteralValidator<LiteralValue> | EnumValidator<string | number>>
+>;
 
 /**
- * Shape constraint satisfied by any object validator usable as a variant in a discriminated union.
- */
-export type VariantValidator = BaseValidator<unknown> & {
-  readonly shape: Record<string, Validator<unknown>>;
-};
-
-/**
- * Infers the TypeScript union type produced by validating any of the variants in a discriminated union.
+ * Validator for objects that come in several shapes, told apart by the value of one property,
+ * created by {@link discriminatedUnion}.
  *
- * @typeParam TVariants - Array of candidate object variant validators.
- */
-export type InferDiscriminatedUnion<TVariants extends readonly VariantValidator[]> = Infer<TVariants[number]>;
-
-/**
- * Schema validator for discriminated unions of object schemas indexed by a literal discriminator key.
+ * It reads the discriminator, picks the one variant it names, and validates against that variant
+ * only, so its issues describe the variant the input meant instead of every variant it did not.
  *
- * Provides fast O(1) variant lookup using the discriminator property value. If the discriminator
- * property is missing or invalid, an issue is reported specifically at that property path.
- *
- * @typeParam TDiscriminator - Property key used as the discriminator.
- * @typeParam TVariants - Array of object variant schemas.
+ * @typeParam TKey - Name of the discriminator property.
+ * @typeParam TVariants - Object validators, one per shape.
  */
 export class DiscriminatedUnionValidator<
-  TDiscriminator extends string,
-  TVariants extends readonly VariantValidator[],
-> extends BaseValidator<InferDiscriminatedUnion<TVariants>, unknown> {
-  private readonly variantMap = new Map<unknown, VariantValidator>();
+  TKey extends string,
+  TVariants extends readonly [Variant<TKey>, ...Variant<TKey>[]],
+> extends Validator<Infer<TVariants[number]>> {
+  private readonly byTag = new Map<unknown, Variant<TKey>>();
 
   /**
-   * Constructs a DiscriminatedUnionValidator indexing the given variants by their discriminator value.
+   * Creates a discriminated union.
    *
-   * @param discriminatorKey - Name of the property that identifies the variant.
-   * @param _variants - Array of candidate object schemas.
-   * @throws Error if any variant does not define a literal validator on the discriminator property.
+   * @param key - Name of the discriminator property.
+   * @param variants - Object validators whose `key` property is a `val.literal()` or `val.enum()`.
+   * @param message - Message when the discriminator matches no variant.
+   * @throws {TypeError} When a variant does not declare `key` as a literal or enum, or two variants share a value.
    */
   constructor(
-    readonly discriminatorKey: TDiscriminator,
-    protected readonly _variants: TVariants,
+    readonly key: TKey,
+    readonly variants: TVariants,
+    private readonly message?: Message,
   ) {
     super();
-
-    for (const variant of _variants) {
-      const discValidator = variant.shape[discriminatorKey];
-      if (!(discValidator instanceof LiteralValidator)) {
-        throw new Error(
-          `Discriminated union variant does not define a literal validator for discriminator key "${discriminatorKey}"`,
-        );
+    for (const variant of variants) {
+      const discriminator = (variant.shape as Shape)[key];
+      const tags =
+        discriminator instanceof LiteralValidator
+          ? [discriminator.value]
+          : discriminator instanceof EnumValidator
+            ? discriminator.values
+            : undefined;
+      if (tags === undefined) {
+        throw new TypeError(`Every variant must declare "${key}" with val.literal() or val.enum()`);
       }
-      if (this.variantMap.has(discValidator.value)) {
-        throw new Error(
-          `Duplicate discriminator value ${JSON.stringify(discValidator.value)} across variants for key "${discriminatorKey}"`,
-        );
+      for (const tag of tags) {
+        if (this.byTag.has(tag)) {
+          throw new TypeError(`Two variants accept the same "${key}" value: ${String(tag)}`);
+        }
+        this.byTag.set(tag, variant);
       }
-      this.variantMap.set(discValidator.value, variant);
     }
   }
 
-  /**
-   * Returns the array of candidate object variants.
-   */
-  get variants(): TVariants {
-    return this._variants;
+  /** The discriminator values the union accepts. */
+  get tags(): readonly unknown[] {
+    return [...this.byTag.keys()];
   }
 
-  protected override isAsync(): boolean {
-    return this._variants.some((v) => (v as unknown as { isAsync?(): boolean }).isAsync?.() ?? false);
-  }
-
-  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<InferDiscriminatedUnion<TVariants>> {
+  protected evaluate(input: unknown, ctx: ParseContext): MaybePromise<Outcome<Infer<TVariants[number]>>> {
     if (!isPlainObject(input)) {
-      return ctx.fail({
-        code: "invalid_type",
-        message: `Expected object, got ${describeReceived(input)}`,
-        expected: "plain object",
-        received: describeReceived(input),
-        input: ctx.options.includeInput ? input : undefined,
+      return invalidType(ctx, "object", input, this.message);
+    }
+    const variant = Object.hasOwn(input, this.key) ? this.byTag.get(input[this.key]) : undefined;
+    if (variant === undefined) {
+      return fail(ctx, {
+        code: "invalid_union",
+        message:
+          this.message ??
+          `Invalid "${this.key}": expected one of ${this.tags.map((tag) => JSON.stringify(tag)).join(", ")}`,
+        path: [this.key],
+        params: { discriminator: this.key, options: this.tags },
+        input: Object.hasOwn(input, this.key) ? input[this.key] : undefined,
       });
     }
-
-    const discValue = (input as Record<string, unknown>)[this.discriminatorKey];
-    const variant = this.variantMap.get(discValue);
-
-    if (variant === undefined) {
-      const allowed = Array.from(this.variantMap.keys())
-        .map((k) => (typeof k === "string" ? `"${k}"` : String(k)))
-        .join(", ");
-
-      const issue: ValidationIssue = {
-        code: "invalid_value",
-        message: `Invalid discriminator value for "${this.discriminatorKey}": expected one of [${allowed}], got ${describeReceived(discValue)}`,
-        path: [...ctx.path, this.discriminatorKey],
-        expected: `one of [${allowed}]`,
-        received: describeReceived(discValue),
-        input: ctx.options.includeInput ? discValue : undefined,
-      };
-      ctx.addIssue(issue);
-      return ctx.fail(issue);
-    }
-
-    return variant.validate(input, {
-      ...ctx.options,
-      path: ctx.path,
-    }) as ValidationResult<InferDiscriminatedUnion<TVariants>>;
-  }
-
-  protected override async _validateAsync(
-    input: unknown,
-    ctx: ValidationContext,
-  ): Promise<ValidationResult<InferDiscriminatedUnion<TVariants>>> {
-    if (!isPlainObject(input)) {
-      return ctx.fail({
-        code: "invalid_type",
-        message: `Expected object, got ${describeReceived(input)}`,
-        expected: "plain object",
-        received: describeReceived(input),
-        input: ctx.options.includeInput ? input : undefined,
-      });
-    }
-
-    const discValue = (input as Record<string, unknown>)[this.discriminatorKey];
-    const variant = this.variantMap.get(discValue);
-
-    if (variant === undefined) {
-      const allowed = Array.from(this.variantMap.keys())
-        .map((k) => (typeof k === "string" ? `"${k}"` : String(k)))
-        .join(", ");
-
-      const issue: ValidationIssue = {
-        code: "invalid_value",
-        message: `Invalid discriminator value for "${this.discriminatorKey}": expected one of [${allowed}], got ${describeReceived(discValue)}`,
-        path: [...ctx.path, this.discriminatorKey],
-        expected: `one of [${allowed}]`,
-        received: describeReceived(discValue),
-        input: ctx.options.includeInput ? discValue : undefined,
-      };
-      ctx.addIssue(issue);
-      return ctx.fail(issue);
-    }
-
-    const res = await variant.validateAsync(input, {
-      ...ctx.options,
-      path: ctx.path,
-    });
-    return res as ValidationResult<InferDiscriminatedUnion<TVariants>>;
+    return execute(variant, input, ctx) as MaybePromise<Outcome<Infer<TVariants[number]>>>;
   }
 }
 
 /**
- * Creates a schema validator for discriminated unions of object schemas indexed by a literal discriminator key.
+ * Creates a validator for objects that come in several shapes, told apart by one property.
  *
- * @typeParam TDiscriminator - Property name holding the variant discriminator.
- * @typeParam TVariants - Array of object variant schemas with literal discriminator values.
- * @param discriminatorKey - Name of the property that determines which variant schema to evaluate.
- * @param variants - Array of candidate object schemas.
- * @returns A new DiscriminatedUnionValidator instance.
+ * @example
+ * ```ts
+ * const event = val.discriminatedUnion("type", [
+ *   val.object({ type: val.literal("click"), x: val.number(), y: val.number() }),
+ *   val.object({ type: val.literal("key"), key: val.string() }),
+ * ]);
+ * ```
+ *
+ * @typeParam TKey - Name of the discriminator property.
+ * @typeParam TVariants - Object validators, one per shape.
+ * @param key - Name of the discriminator property.
+ * @param variants - Object validators whose `key` property is a `val.literal()` or `val.enum()`, with no value shared between variants.
+ * @param message - Message when the discriminator matches no variant.
+ * @returns A discriminated union validator.
+ * @throws {TypeError} When a variant does not declare `key` as a literal or enum, or two variants share a value.
  */
 export function discriminatedUnion<
-  TDiscriminator extends string,
-  TVariants extends readonly [VariantValidator, ...VariantValidator[]],
->(discriminatorKey: TDiscriminator, variants: TVariants): DiscriminatedUnionValidator<TDiscriminator, TVariants> {
-  return new DiscriminatedUnionValidator(discriminatorKey, variants);
+  const TKey extends string,
+  const TVariants extends readonly [Variant<TKey>, ...Variant<TKey>[]],
+>(key: TKey, variants: TVariants, message?: Message): DiscriminatedUnionValidator<TKey, TVariants> {
+  return new DiscriminatedUnionValidator(key, variants, message);
 }

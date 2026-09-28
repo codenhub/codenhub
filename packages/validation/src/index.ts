@@ -1,276 +1,142 @@
-export { type AnyValidator, type UnknownValidator } from "./any";
+import { array } from "./array";
+import { bigint, BigintValidator } from "./bigint";
+import { boolean, BooleanValidator } from "./boolean";
+import { intersection, union } from "./core";
+import { date, DateValidator } from "./date";
+import { discriminatedUnion } from "./discriminated-union";
+import { json } from "./json";
+import { lazy } from "./lazy";
+import { enumOf, literal, nativeEnum } from "./literal";
+import { map } from "./map";
+import { number, NumberValidator } from "./number";
+import { object } from "./object";
+import { custom, instanceOf, never, nullValidator, undefinedValidator, unknown } from "./primitives";
+import { record } from "./record";
+import { set } from "./set";
+import { string, StringValidator } from "./string";
+import { tuple } from "./tuple";
+
 export { ArrayValidator } from "./array";
+export { BigintValidator } from "./bigint";
 export { BooleanValidator } from "./boolean";
 export {
-  coerce,
-  CoerceValidator,
-  CoercedBooleanValidator,
-  CoercedDateValidator,
-  CoercedNumberValidator,
-  CoercedStringValidator,
-  type ValCoerce,
-} from "./coerce";
-export { BaseValidator, type Infer, type InferInput, type ValidationContext, type Validator } from "./core";
-export { custom, CustomValidator, type CustomValidatorFn } from "./custom";
+  IntersectionValidator,
+  NEVER,
+  NullableValidator,
+  OptionalValidator,
+  UnionValidator,
+  Validator,
+  type AnyValidator,
+  type CheckFn,
+  type Infer,
+  type RefineOptions,
+} from "./core";
 export { DateValidator } from "./date";
-export { DiscriminatedUnionValidator, type InferDiscriminatedUnion } from "./discriminated-union";
-export { InstanceofValidator, type Constructor } from "./instanceof";
-export { deepMerge, IntersectionValidator } from "./intersection";
-export { LazyValidator } from "./lazy";
-export { type EnumValidator, type LiteralValidator, type LiteralValue } from "./literal";
-export { MapValidator } from "./map";
-export { type EnumLike, NativeEnumValidator } from "./native-enum";
-export { NumberValidator, type NumberStep } from "./number";
-export { isPlainObject, ObjectValidator, type DeepPartial, type InferObject, type PlainObject } from "./object";
-export { pipe, PipedValidator } from "./pipe";
-export { NeverValidator, NullValidator, UndefinedValidator, VoidValidator } from "./primitives";
-export { RecordValidator } from "./record";
+export { DiscriminatedUnionValidator } from "./discriminated-union";
 export {
-  describeReceived,
-  err,
-  fail,
-  flatten,
-  type FlattenedErrors,
   formatPath,
-  normalizeError,
-  ok,
-  parseResult,
   ValidationError,
+  type CheckContext,
+  type FlattenedErrors,
+  type IssueDetails,
+  type IssueInput,
+  type Message,
   type ValidationErr,
-  type ValidationErrorCode,
-  type ValidationErrorInput,
-  type ValidationErrorOptions,
   type ValidationIssue,
+  type ValidationIssueCode,
   type ValidationOk,
   type ValidationOptions,
   type ValidationPathSegment,
   type ValidationResult,
-} from "./result";
+} from "./issue";
+export { LazyValidator } from "./lazy";
+export { EnumValidator, LiteralValidator, type EnumLike, type LiteralValue } from "./literal";
+export { MapValidator } from "./map";
+export { NumberValidator } from "./number";
+export { ObjectValidator, type InferObject, type Shape } from "./object";
+export { InstanceOfValidator, NeverValidator, UnknownValidator, type Constructor } from "./primitives";
+export { RecordValidator, type InferRecord } from "./record";
 export { SetValidator } from "./set";
 export { type StandardSchemaV1 } from "./standard-schema";
-export { type DatetimeOptions, type IpOptions, JsonValidator, type StringStep, StringValidator } from "./string";
-export { TupleValidator, type InferTuple, type InferTupleWithRest } from "./tuple";
-export { UnionValidator } from "./union";
+export { StringValidator, type DatetimeOptions, type EmailOptions, type IpOptions, type UrlOptions } from "./string";
+export { TupleValidator, type InferTuple } from "./tuple";
 
-import { any, unknownValidator } from "./any";
-import { array } from "./array";
-import { boolean } from "./boolean";
-import { valCoerce } from "./coerce";
-import { type Validator } from "./core";
-import { custom } from "./custom";
-import { date } from "./date";
-import { discriminatedUnion } from "./discriminated-union";
-import { instanceOf } from "./instanceof";
-import { intersection } from "./intersection";
-import { lazy } from "./lazy";
-import { enumValidator, literal } from "./literal";
-import { map } from "./map";
-import { nativeEnum } from "./native-enum";
-import { number } from "./number";
-import { object } from "./object";
-import { pipe } from "./pipe";
-import { neverValidator, nullValidator, undefinedValidator, voidValidator } from "./primitives";
-import { record } from "./record";
-import { type ValidationOptions, type ValidationResult } from "./result";
-import { set } from "./set";
-import { string } from "./string";
-import { tuple } from "./tuple";
-import { union } from "./union";
+/** Validators that convert their input to the target type before validating it, for values that arrive as text. */
+const coerce = {
+  /** Accepts strings, numbers, bigints and booleans, and outputs them as strings. */
+  string: (message?: Parameters<typeof string>[0]): StringValidator => new StringValidator(message, true),
+  /** Accepts numbers and decimal strings such as `"42"` or `" 3.5 "`, and outputs a number. */
+  number: (message?: Parameters<typeof number>[0]): NumberValidator => new NumberValidator(message, true),
+  /** Accepts booleans, and the words true/false, yes/no, on/off and 1/0 in any case, and outputs a boolean. */
+  boolean: (message?: Parameters<typeof boolean>[0]): BooleanValidator => new BooleanValidator(message, true),
+  /** Accepts bigints, integer numbers and integer strings, and outputs a bigint. */
+  bigint: (message?: Parameters<typeof bigint>[0]): BigintValidator => new BigintValidator(message, true),
+  /** Accepts dates, timestamps and ISO 8601 strings, and outputs a valid Date. */
+  date: (message?: Parameters<typeof date>[0]): DateValidator => new DateValidator(message, true),
+};
 
 /**
- * Validates arbitrary input data against a schema validator synchronously.
+ * Entry point holding every validator factory.
  *
- * @typeParam T - Output type inferred from the validator schema.
- * @param data - Raw data to validate.
- * @param validator - Validator schema instance.
- * @param options - Optional validation configuration.
- * @returns A discriminated ValidationResult.
- */
-export function validate<T>(data: unknown, validator: Validator<T>, options?: ValidationOptions): ValidationResult<T> {
-  return (validator as Validator<T, unknown>).validate(data, options);
-}
-
-/**
- * Validates arbitrary input data against a schema validator asynchronously.
+ * @example
+ * ```ts
+ * import { val, type Infer } from "@codenhub/validation";
  *
- * @typeParam T - Output type inferred from the validator schema.
- * @param data - Raw data to validate.
- * @param validator - Validator schema instance.
- * @param options - Optional validation configuration.
- * @returns Promise resolving to a discriminated ValidationResult.
+ * const user = val.object({ name: val.string().min(2), age: val.number().int().optional() });
+ * type User = Infer<typeof user>;
+ * ```
  */
-export function validateAsync<T>(
-  data: unknown,
-  validator: Validator<T>,
-  options?: ValidationOptions,
-): Promise<ValidationResult<T>> {
-  return (validator as Validator<T, unknown>).validateAsync(data, options);
-}
-
-/**
- * Validates arbitrary input data against a schema validator synchronously, returning the validated
- * value or throwing a {@link ValidationError} if invalid.
- *
- * @typeParam T - Output type inferred from the validator schema.
- * @param data - Raw data to validate.
- * @param validator - Validator schema instance.
- * @param options - Optional validation configuration.
- * @returns The validated output value.
- * @throws {@link ValidationError} when validation fails.
- */
-export function parse<T>(data: unknown, validator: Validator<T>, options?: ValidationOptions): T {
-  return (validator as Validator<T, unknown>).parse(data, options);
-}
-
-/**
- * Validates arbitrary input data against a schema validator asynchronously, returning the validated
- * value or throwing a {@link ValidationError} if invalid.
- *
- * @typeParam T - Output type inferred from the validator schema.
- * @param data - Raw data to validate.
- * @param validator - Validator schema instance.
- * @param options - Optional validation configuration.
- * @returns Promise resolving to the validated output value.
- * @throws {@link ValidationError} when validation fails.
- */
-export function parseAsync<T>(data: unknown, validator: Validator<T>, options?: ValidationOptions): Promise<T> {
-  return (validator as Validator<T, unknown>).parseAsync(data, options);
-}
-
-/**
- * Type guard asserting that unknown input conforms to a validator schema.
- *
- * @typeParam T - Inferred output type.
- * @param data - Raw data to test.
- * @param validator - Validator schema instance.
- * @returns `true` if input is valid; otherwise `false`.
- */
-export function is<T>(data: unknown, validator: Validator<T>): data is T {
-  return validator.is(data);
-}
-
-/**
- * Asserts that arbitrary input data conforms to a validator schema, throwing a
- * {@link ValidationError} if invalid.
- *
- * @typeParam T - Output type asserted by the validator schema.
- * @param data - Raw data to validate.
- * @param validator - Validator schema instance.
- * @param options - Optional validation configuration.
- * @throws {@link ValidationError} when validation fails.
- */
-export function assert<T>(data: unknown, validator: Validator<T>, options?: ValidationOptions): asserts data is T {
-  (validator as Validator<T, unknown>).parse(data, options);
-}
-
-/**
- * Registry of schema validator factories exposed by `val`.
- */
-export interface ValidationFactories {
-  /** Creates validators for string inputs. */
-  string: typeof string;
-  /** Creates validators for numeric inputs. */
-  number: typeof number;
-  /** Creates validators for boolean inputs. */
-  boolean: typeof boolean;
-  /** Creates validators for Date instances. */
-  date: typeof date;
-  /** Creates validators for exact literal values. */
-  literal: typeof literal;
-  /** Creates validators for allowed enum values. */
-  enum: typeof enumValidator;
-  /** Creates validators accepting any input. */
-  any: typeof any;
-  /** Creates validators accepting any unknown input. */
-  unknown: typeof unknownValidator;
-  /** Creates validators for plain objects. */
-  object: typeof object;
-  /** Creates validators for arrays. */
-  array: typeof array;
-  /** Creates validators for dictionary/record objects. */
-  record: typeof record;
-  /** Creates validators for fixed-length positional tuples. */
-  tuple: typeof tuple;
-  /** Creates validators for unions matching any allowed variant. */
-  union: typeof union;
-  /** Creates validators for discriminated unions indexed by a property key. */
-  discriminatedUnion: typeof discriminatedUnion;
-  /** Creates deferred validators enabling recursive data structures. */
-  lazy: typeof lazy;
-  /** Creates intersection validators requiring both schemas to succeed. */
-  intersection: typeof intersection;
-  /** Creates validators matching TypeScript runtime enums or `as const` object maps. */
-  nativeEnum: typeof nativeEnum;
-  /** Creates validators checking `instanceof` constraints. */
-  instanceof: typeof instanceOf;
-  /** Alias for {@link ValidationFactories.instanceof}. */
-  instanceOf: typeof instanceOf;
-  /** Creates validators for JavaScript Set instances. */
-  set: typeof set;
-  /** Creates validators for JavaScript Map instances. */
-  map: typeof map;
-  /** Creates validators strictly matching `null`. */
-  null: typeof nullValidator;
-  /** Creates validators strictly matching `undefined`. */
-  undefined: typeof undefinedValidator;
-  /** Creates validators matching `void` (accepts `undefined`). */
-  void: typeof voidValidator;
-  /** Creates validators representing `never` that unconditionally fail. */
-  never: typeof neverValidator;
-  /** Creates custom validators from user-provided functions. */
-  custom: typeof custom;
-  /** Composes multiple validators into a pipeline. */
-  pipe: typeof pipe;
-  /** Collection of coercing validator factories. */
-  coerce: typeof valCoerce;
-  /** Validates arbitrary input data against a schema validator synchronously. */
-  validate: typeof validate;
-  /** Validates arbitrary input data against a schema validator asynchronously. */
-  validateAsync: typeof validateAsync;
-  /** Validates arbitrary input data and returns the output value, throwing ValidationError if invalid. */
-  parse: typeof parse;
-  /** Validates arbitrary input data asynchronously and returns the output value, throwing ValidationError if invalid. */
-  parseAsync: typeof parseAsync;
-  /** Type guard asserting that unknown input conforms to a validator schema. */
-  is: typeof is;
-  /** Asserts that unknown input conforms to a validator schema, throwing ValidationError if invalid. */
-  assert: typeof assert;
-}
-
-/** Primary entrypoint exposing all schema validator factories. */
-export const val: ValidationFactories = {
+export const val = {
+  /** Strings, with rules such as `min`, `email`, `url` and `regex`. */
   string,
+  /** Finite numbers, with rules such as `int`, `min` and `positive`. */
   number,
+  /** Bigints. */
+  bigint,
+  /** Booleans. */
   boolean,
+  /** Valid `Date` instances. */
   date,
+  /** Exactly one value. */
   literal,
-  enum: enumValidator,
-  any,
-  unknown: unknownValidator,
-  object,
-  array,
-  record,
-  tuple,
-  union,
-  discriminatedUnion,
-  lazy,
-  intersection,
+  /** One of a list of strings or numbers. */
+  enum: enumOf,
+  /** The values of a TypeScript `enum` or an `as const` object. */
   nativeEnum,
-  instanceof: instanceOf,
-  instanceOf,
-  set,
-  map,
+  /** Any value, unchecked. */
+  unknown,
+  /** No value at all. */
+  never,
+  /** Only `null`. */
   null: nullValidator,
+  /** Only `undefined`. */
   undefined: undefinedValidator,
-  void: voidValidator,
-  never: neverValidator,
+  /** Plain objects with a shape. */
+  object,
+  /** Arrays whose items share a validator. */
+  array,
+  /** Arrays with a fixed sequence of typed positions. */
+  tuple,
+  /** Objects used as dictionaries. */
+  record,
+  /** `Set` instances. */
+  set,
+  /** `Map` instances. */
+  map,
+  /** Any of several validators. */
+  union,
+  /** Objects of several shapes told apart by one property. */
+  discriminatedUnion,
+  /** Both of two validators. */
+  intersection,
+  /** A validator built on first use, so schemas can refer to themselves. */
+  lazy,
+  /** Instances of a class. */
+  instanceOf,
+  /** A predicate turned into a validator. */
   custom,
-  pipe,
-  coerce: valCoerce,
-  validate,
-  validateAsync,
-  parse,
-  parseAsync,
-  is,
-  assert,
+  /** Strings holding JSON, outputting the parsed value. */
+  json,
+  /** Validators that convert text input, such as environment variables and form values, before validating it. */
+  coerce,
 };

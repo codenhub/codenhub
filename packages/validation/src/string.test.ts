@@ -1,603 +1,288 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { type Infer, type ValidationErr, val } from ".";
+import { val } from "./index";
+import { codesOf, issuesOf, messagesOf, valueOf } from "./test-utils";
 
-describe("string validator constraints", () => {
-  it("normalizes valid email addresses", () => {
-    expect(val.string().email().validate(" User+tag@Example.COM ")).toEqual({
-      ok: true,
-      value: "User+tag@example.com",
-    });
+const accepts = (schema: { validate(input: unknown): { ok: boolean } }, ...inputs: unknown[]) =>
+  inputs.map((input) => schema.validate(input).ok);
+
+describe("string", () => {
+  it("accepts strings and rejects everything else, naming the received type", () => {
+    expect(valueOf(val.string().validate("a"))).toBe("a");
+    expect(messagesOf(val.string().validate(1))).toEqual(["Expected string, received number"]);
+    expect(messagesOf(val.string().validate(null))).toEqual(["Expected string, received null"]);
+    expect(codesOf(val.string().validate(undefined))).toEqual(["invalid_type"]);
   });
 
-  it("rejects plus addressing when disabled", () => {
-    expect(
-      val
-        .string()
-        .email({ allowPlus: false })
-        .validate("user+tag@example.com", { path: ["email"] }),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_format",
-        message: "Invalid email address",
-        path: ["email"],
-        expected: "email address",
-        received: "user+tag@example.com",
-      },
-    });
+  it("uses a custom message for the type failure", () => {
+    expect(messagesOf(val.string("text please").validate(1))).toEqual(["text please"]);
   });
 
-  it("normalizes URLs and rejects credentials", () => {
-    expect(val.string().url().validate("example.com/docs")).toEqual({
-      ok: true,
-      value: "https://example.com/docs",
-    });
-    expect(
-      val
-        .string()
-        .url()
-        .validate("https://user@example.com", { path: ["url"] }),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_format",
-        message: "Invalid URL",
-        path: ["url"],
-        expected: "public URL",
-        received: "https://user@example.com",
-      },
-    });
-  });
-
-  it("rejects non-HTTPS URLs when required", () => {
-    expect(
-      val
-        .string()
-        .url({ forceHttps: true })
-        .validate("http://example.com", { path: ["url"] }),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_format",
-        message: "Invalid URL",
-        path: ["url"],
-        expected: "HTTPS URL",
-        received: "http://example.com",
-      },
-    });
-  });
-
-  it("validates file extensions against normalized allow lists", () => {
-    expect(val.string().fileType([".jpg", "png"]).validate("avatar.PNG")).toEqual({ ok: true, value: "png" });
-    expect(
-      val
-        .string()
-        .fileType(["jpg", "png"])
-        .validate("avatar.gif", { path: ["avatar"] }),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_format",
-        message: 'File type "gif" not allowed. Allowed: jpg, png',
-        path: ["avatar"],
-        expected: "jpg, png",
-        received: "gif",
-      },
-    });
-  });
-
-  it("rejects extensionless file names", () => {
-    expect(
-      val
-        .string()
-        .fileType(["png"])
-        .validate("png", { path: ["avatar"] }),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_format",
-        message: 'File type "missing" not allowed. Allowed: png',
-        path: ["avatar"],
-        expected: "png",
-        received: "missing",
-      },
-    });
-  });
-
-  it("rejects empty file type allow lists", () => {
-    expect(val.string().fileType(["", "."]).validate("avatar.png")).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Allowed file types cannot be empty",
-        path: [],
-        expected: "file type list",
-      },
-    });
-  });
-
-  it("validates trimmed and untrimmed string lengths", () => {
-    expect(val.string().minLength(3, { trim: true }).validate("  abc  ")).toEqual({ ok: true, value: "abc" });
-    expect(val.string().maxLength(3, { trim: true }).validate("  abc  ")).toEqual({ ok: true, value: "abc" });
-    expect(
-      val
-        .string()
-        .maxLength(3)
-        .validate("  abc  ", { path: ["name"] }),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "too_big",
-        message: "Must be at most 3 characters",
-        path: ["name"],
-        expected: "at most 3 characters",
-        received: "7 characters",
-      },
-    });
-  });
-
-  it("rejects invalid length limits", () => {
-    expect(val.string().minLength(Number.NaN).validate("abc")).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Minimum length must be a finite non-negative number",
-        path: [],
-      },
-    });
-    expect(val.string().maxLength(-1).validate("abc")).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Maximum length must be a finite non-negative number",
-        path: [],
-      },
-    });
-  });
-
-  it("validates empty strings and regular expression matches", () => {
-    expect(val.string().notEmpty().validate("  ")).toEqual({
-      ok: false,
-      error: {
-        code: "too_small",
-        message: "Value cannot be empty",
-        path: [],
-        expected: "non-empty string",
-        received: "empty string",
-      },
-    });
-    expect(
-      val
-        .string()
-        .matches(/^abc-\d+$/)
-        .validate("abc-123"),
-    ).toEqual({ ok: true, value: "abc-123" });
-    expect(
-      val
-        .string()
-        .matches(/^usr_/, "Invalid user id")
-        .validate("abc", { path: ["code"] }),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_format",
-        message: "Invalid user id",
-        path: ["code"],
-        expected: "/^usr_/",
-        received: "abc",
-      },
-    });
+  it("never puts the received value into a message", () => {
+    expect(messagesOf(val.number().validate("hunter2")).join()).not.toContain("hunter2");
   });
 });
 
-describe("StringValidator core API", () => {
-  it("validates basic string type", () => {
-    const schema = val.string();
-    expect(schema.validate("hello")).toEqual({ ok: true, value: "hello" });
-    expect(schema.validate(123)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_type",
-        message: "Expected string, got 123",
-        path: [],
-        expected: "string",
-        received: "123",
-      },
-    });
-    expect(schema.is("hello")).toBe(true);
-    expect(schema.is(null)).toBe(false);
+describe("length rules", () => {
+  it("min and max are inclusive", () => {
+    expect(accepts(val.string().min(2), "a", "ab", "abc")).toEqual([false, true, true]);
+    expect(accepts(val.string().max(2), "a", "ab", "abc")).toEqual([true, true, false]);
   });
 
-  it("chains min, max, length, and nonEmpty with custom messages", () => {
-    const schema = val.string().min(3, "Too short").max(5, "Too long");
-    expect(schema.validate("abcd")).toEqual({ ok: true, value: "abcd" });
-    expect(schema.validate("ab")).toEqual({
-      ok: false,
-      error: {
-        code: "too_small",
-        message: "Too short",
-        path: [],
-        expected: "at least 3 characters",
-        received: "2 characters",
-      },
-    });
-    expect(schema.validate("abcdef")).toEqual({
-      ok: false,
-      error: {
-        code: "too_big",
-        message: "Too long",
-        path: [],
-        expected: "at most 5 characters",
-        received: "6 characters",
-      },
-    });
-
-    const exactSchema = val.string().length(4, "Must be 4 chars");
-    expect(exactSchema.validate("four")).toEqual({ ok: true, value: "four" });
-    expect(exactSchema.validate("three")).toEqual({
-      ok: false,
-      error: {
-        code: "too_big",
-        message: "Must be 4 chars",
-        path: [],
-        expected: "exactly 4 characters",
-        received: "5 characters",
-      },
-    });
-
-    const nonEmptySchema = val.string().nonEmpty("Required string");
-    expect(nonEmptySchema.validate("")).toEqual({
-      ok: false,
-      error: {
-        code: "too_small",
-        message: "Required string",
-        path: [],
-        expected: "non-empty string",
-        received: "empty string",
-      },
-    });
+  it("length is exact and reports which side failed", () => {
+    const schema = val.string().length(3);
+    expect(codesOf(schema.validate("ab"))).toEqual(["too_small"]);
+    expect(codesOf(schema.validate("abcd"))).toEqual(["too_big"]);
+    expect(schema.validate("abc").ok).toBe(true);
   });
 
-  it("validates UUIDs", () => {
-    const schema = val.string().uuid("Invalid UUID v4");
-    expect(schema.validate("123e4567-e89b-12d3-a456-426614174000")).toEqual({
-      ok: true,
-      value: "123e4567-e89b-12d3-a456-426614174000",
-    });
-    expect(schema.validate("not-a-uuid")).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_format",
-        message: "Invalid UUID v4",
-        path: [],
-        expected: "UUID",
-        received: "not-a-uuid",
-      },
-    });
+  it("nonEmpty rejects the empty string but not whitespace", () => {
+    expect(accepts(val.string().nonEmpty(), "", " ", "a")).toEqual([false, true, true]);
   });
 
-  it("validates startsWith, endsWith, and includes", () => {
-    const schema = val.string().startsWith("pre_").endsWith("_post").includes("mid");
-    expect(schema.validate("pre_mid_post")).toEqual({ ok: true, value: "pre_mid_post" });
-
-    expect(schema.validate("bad_mid_post")).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_format",
-        message: 'Must start with "pre_"',
-        path: [],
-        expected: 'string starting with "pre_"',
-        received: "bad_mid_post",
-      },
-    });
-    expect(schema.validate("pre_mid_bad")).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_format",
-        message: 'Must end with "_post"',
-        path: [],
-        expected: 'string ending with "_post"',
-        received: "pre_mid_bad",
-      },
-    });
-    expect(schema.validate("pre__post")).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_format",
-        message: 'Must include "mid"',
-        path: [],
-        expected: 'string containing "mid"',
-        received: "pre__post",
-      },
-    });
+  it("carries the limit in params so messages can be built from it", () => {
+    expect(issuesOf(val.string().min(3).validate("a"))[0]?.params).toEqual({ minimum: 3, type: "string" });
   });
 
-  it("transforms case and trims whitespace", () => {
-    const trimmedUpper = val.string().trim().toUpperCase();
-    expect(trimmedUpper.validate("  hello world  ")).toEqual({
-      ok: true,
-      value: "HELLO WORLD",
-    });
-
-    const lower = val.string().toLowerCase();
-    expect(lower.validate("ABC")).toEqual({ ok: true, value: "abc" });
+  it("accepts a message function that reads params", () => {
+    const schema = val.string().min(3, ({ params }) => `at least ${params?.minimum}`);
+    expect(messagesOf(schema.validate("a"))).toEqual(["at least 3"]);
   });
 
-  it("accumulates multiple issues when abortEarly is false", () => {
-    const schema = val.string().min(5, "At least 5").startsWith("abc", "Must start with abc");
-    const result = schema.validate("xy", { abortEarly: false });
+  it("rejects an invalid limit when the schema is built, not when input arrives", () => {
+    expect(() => val.string().min(-1)).toThrow(RangeError);
+    expect(() => val.string().max(1.5)).toThrow(RangeError);
+    expect(() => val.string().length(Number.NaN)).toThrow(RangeError);
+  });
+});
 
-    expect(result.ok).toBe(false);
-    const error = (result as ValidationErr).error;
-    expect(error.issues).toHaveLength(2);
-    expect(error.issues?.[0].message).toBe("At least 5");
-    expect(error.issues?.[1].message).toBe("Must start with abc");
+describe("email", () => {
+  const email = val.string().email();
+
+  it("accepts ordinary addresses and leaves them unchanged", () => {
+    expect(valueOf(email.validate("Me.Name+tag@Example.COM"))).toBe("Me.Name+tag@Example.COM");
   });
 
-  it("aborts at first issue when abortEarly is true", () => {
-    const schema = val.string().min(5, "At least 5").startsWith("abc", "Must start with abc");
-    const result = schema.validate("xy", { abortEarly: true });
-
-    expect(result.ok).toBe(false);
-    const error = (result as ValidationErr).error;
-    expect(error.message).toBe("At least 5");
-    expect(error.issues).toBeUndefined();
+  it("rejects malformed addresses", () => {
+    expect(
+      accepts(
+        email,
+        "plain",
+        "@example.com",
+        "a@",
+        "a@@example.com",
+        "a b@example.com",
+        "a@localhost",
+        "a@example",
+        " a@example.com",
+      ),
+    ).toEqual([false, false, false, false, false, false, false, false]);
   });
 
-  it("supports aliases minLength, maxLength, notEmpty", () => {
-    const schema = val.string().minLength(3).maxLength(6).notEmpty();
-    expect(schema.validate("hello")).toEqual({ ok: true, value: "hello" });
-    expect(schema.validate("hi")).toMatchObject({ ok: false });
-    expect(schema.validate("toolongword")).toMatchObject({ ok: false });
+  it("rejects overlong parts", () => {
+    expect(email.validate(`${"a".repeat(65)}@example.com`).ok).toBe(false);
+    expect(email.validate(`a@${"b".repeat(250)}.com`).ok).toBe(false);
   });
 
-  it("accepts RFC 9562 UUID versions 1 through 8", () => {
+  it("can forbid plus addressing", () => {
+    expect(val.string().email({ allowPlus: false }).validate("a+b@example.com").ok).toBe(false);
+  });
+
+  it("takes a custom message in its options", () => {
+    expect(messagesOf(val.string().email({ message: "bad email" }).validate("x"))).toEqual(["bad email"]);
+  });
+});
+
+describe("url", () => {
+  const url = val.string().url();
+
+  it("accepts absolute http and https URLs with public hosts, unchanged", () => {
+    expect(valueOf(url.validate("https://Example.com/a?b=1#c"))).toBe("https://Example.com/a?b=1#c");
+    expect(url.validate("http://sub.example.co.uk").ok).toBe(true);
+  });
+
+  it("rejects input that is not an absolute URL, without guessing a scheme", () => {
+    expect(accepts(url, "example.com", "//example.com", "not a url", "")).toEqual([false, false, false, false]);
+  });
+
+  it("rejects other protocols, embedded credentials and non-public hosts", () => {
+    expect(
+      accepts(
+        url,
+        "ftp://example.com",
+        "javascript:alert(1)",
+        "https://user:pw@example.com",
+        "http://localhost:3000",
+        "http://127.0.0.1",
+        "http://intranet",
+      ),
+    ).toEqual([false, false, false, false, false, false]);
+  });
+
+  it("accepts local hosts with allowLocal", () => {
+    const local = val.string().url({ allowLocal: true });
+    expect(accepts(local, "http://localhost:3000", "http://127.0.0.1", "http://[::1]:8080")).toEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  it("accepts other protocols when listed", () => {
+    expect(
+      val
+        .string()
+        .url({ protocols: ["ftp"] })
+        .validate("ftp://example.com").ok,
+    ).toBe(true);
+    expect(
+      val
+        .string()
+        .url({ protocols: ["ftp"] })
+        .validate("https://example.com").ok,
+    ).toBe(false);
+  });
+});
+
+describe("identifiers", () => {
+  it("uuid accepts versions 1 to 8 in hyphenated form", () => {
     const schema = val.string().uuid();
-    expect(schema.validate("123e4567-e89b-42d3-a456-426614174000").ok).toBe(true);
-    expect(schema.validate("018f6e2b-2a9c-7000-8000-000000000000").ok).toBe(true);
-    expect(schema.validate("018f6e2b-2a9c-8000-8000-000000000000").ok).toBe(true);
-    expect(schema.validate("018f6e2b-2a9c-9000-8000-000000000000").ok).toBe(false);
+    expect(accepts(schema, "123e4567-e89b-12d3-a456-426614174000", "550e8400-e29b-41d4-a716-446655440000")).toEqual([
+      true,
+      true,
+    ]);
+    expect(
+      accepts(schema, "123e4567e89b12d3a456426614174000", "not-a-uuid", "123e4567-e89b-92d3-a456-426614174000"),
+    ).toEqual([false, false, false]);
   });
 
-  it("resets regex lastIndex across repeated validations with stateful regex", () => {
-    const schema = val.string().regex(/abc/g);
-    expect(schema.validate("abc").ok).toBe(true);
-    expect(schema.validate("abc").ok).toBe(true);
-    expect(schema.validate("abc").ok).toBe(true);
-  });
-
-  it("does not mutate receiver when chaining constraints", () => {
-    const base = val.string().min(3);
-    const extended = base.max(5);
-
-    expect(base.validate("abcdef").ok).toBe(true);
-    expect(extended.validate("abcdef").ok).toBe(false);
+  it("ulid, nanoid and cuid2", () => {
+    expect(
+      accepts(
+        val.string().ulid(),
+        "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+        "01arz3ndektsv4rrffq69g5fav",
+        "01ARZ3NDEKTSV4RRFFQ69G5FAU!",
+      ),
+    ).toEqual([true, true, false]);
+    expect(accepts(val.string().nanoid(), "V1StGXR8_Z5jdHi6B-myT", "short")).toEqual([true, false]);
+    expect(accepts(val.string().cuid2(), "tz4a98xxat96iws9zmbrgj3a", "1bad")).toEqual([true, false]);
   });
 });
 
-describe("StringValidator Phase 2 feature expansion", () => {
-  describe("ip()", () => {
-    it("validates IPv4 addresses by default or when version is v4", () => {
-      const anyIp = val.string().ip();
-      expect(anyIp.validate("192.168.1.1")).toEqual({ ok: true, value: "192.168.1.1" });
-      expect(anyIp.validate("0.0.0.0")).toEqual({ ok: true, value: "0.0.0.0" });
-      expect(anyIp.validate("255.255.255.255")).toEqual({ ok: true, value: "255.255.255.255" });
-
-      const v4Only = val.string().ip({ version: "v4" });
-      expect(v4Only.validate("127.0.0.1")).toEqual({ ok: true, value: "127.0.0.1" });
-      expect(v4Only.validate("256.0.0.1").ok).toBe(false);
-      expect(v4Only.validate("1.2.3").ok).toBe(false);
-      expect(v4Only.validate("01.1.1.1").ok).toBe(false);
-      expect(v4Only.validate("::1").ok).toBe(false);
-    });
-
-    it("validates IPv6 addresses by default or when version is v6", () => {
-      const anyIp = val.string().ip();
-      expect(anyIp.validate("::1")).toEqual({ ok: true, value: "::1" });
-      expect(anyIp.validate("fe80::1")).toEqual({ ok: true, value: "fe80::1" });
-      expect(anyIp.validate("2001:db8::1")).toEqual({ ok: true, value: "2001:db8::1" });
-
-      const v6Only = val.string().ip({ version: "v6" });
-      expect(v6Only.validate("::1")).toEqual({ ok: true, value: "::1" });
-      expect(v6Only.validate("192.168.1.1").ok).toBe(false);
-      expect(v6Only.validate("invalid:ipv6:address").ok).toBe(false);
-    });
-
-    it("supports custom failure message on ip", () => {
-      const customIp = val.string().ip({ version: "v4" }, "Expected valid IPv4");
-      const res = customIp.validate("not-an-ip");
-      expect(res).toEqual({
-        ok: false,
-        error: {
-          code: "invalid_format",
-          message: "Expected valid IPv4",
-          path: [],
-          expected: "IPv4 address",
-          received: "not-an-ip",
-        },
-      });
-    });
+describe("network formats", () => {
+  it("ip accepts both families by default and can be narrowed", () => {
+    expect(accepts(val.string().ip(), "192.168.0.1", "::1", "2001:db8::ff00:42:8329", "256.1.1.1", "nope")).toEqual([
+      true,
+      true,
+      true,
+      false,
+      false,
+    ]);
+    expect(accepts(val.string().ip({ version: "v4" }), "192.168.0.1", "::1")).toEqual([true, false]);
+    expect(accepts(val.string().ip({ version: "v6" }), "192.168.0.1", "::1")).toEqual([false, true]);
+    expect(messagesOf(val.string().ip({ version: "v4" }).validate("x"))).toEqual(["Invalid IPv4 address"]);
   });
 
-  describe("datetime()", () => {
-    it("validates UTC ISO 8601 datetimes", () => {
-      const schema = val.string().datetime();
-      expect(schema.validate("2024-01-01T12:00:00Z")).toEqual({ ok: true, value: "2024-01-01T12:00:00Z" });
-      expect(schema.validate("2024-01-01T12:00:00.000Z")).toEqual({ ok: true, value: "2024-01-01T12:00:00.000Z" });
-      expect(schema.validate("2024-01-01T12:00:00.123456Z")).toEqual({
-        ok: true,
-        value: "2024-01-01T12:00:00.123456Z",
-      });
-      // Non-UTC timezone offset rejected by default
-      expect(schema.validate("2024-01-01T12:00:00+02:00").ok).toBe(false);
-      expect(schema.validate("not-a-datetime").ok).toBe(false);
-    });
+  it("hostname accepts single labels and rejects malformed ones", () => {
+    expect(accepts(val.string().hostname(), "localhost", "a.example.com", "-bad.com", "bad-.com", "a..b", "")).toEqual([
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+});
 
-    it("validates ISO 8601 datetimes with offset when offset is true", () => {
-      const schema = val.string().datetime({ offset: true });
-      expect(schema.validate("2024-01-01T12:00:00Z")).toEqual({ ok: true, value: "2024-01-01T12:00:00Z" });
-      expect(schema.validate("2024-01-01T12:00:00+02:00")).toEqual({ ok: true, value: "2024-01-01T12:00:00+02:00" });
-      expect(schema.validate("2024-01-01T12:00:00-05:00")).toEqual({ ok: true, value: "2024-01-01T12:00:00-05:00" });
-    });
-
-    it("enforces exact precision constraints", () => {
-      const exactPrecision = val.string().datetime({ precision: 3 });
-      expect(exactPrecision.validate("2024-01-01T12:00:00.000Z")).toEqual({
-        ok: true,
-        value: "2024-01-01T12:00:00.000Z",
-      });
-      expect(exactPrecision.validate("2024-01-01T12:00:00Z").ok).toBe(false);
-      expect(exactPrecision.validate("2024-01-01T12:00:00.00Z").ok).toBe(false);
-      expect(exactPrecision.validate("2024-01-01T12:00:00.0000Z").ok).toBe(false);
-
-      const zeroPrecision = val.string().datetime({ precision: 0 });
-      expect(zeroPrecision.validate("2024-01-01T12:00:00Z")).toEqual({ ok: true, value: "2024-01-01T12:00:00Z" });
-      expect(zeroPrecision.validate("2024-01-01T12:00:00.000Z").ok).toBe(false);
-    });
-
-    it("rejects invalid calendar dates like February 30", () => {
-      const schema = val.string().datetime();
-      expect(schema.validate("2024-02-30T12:00:00Z").ok).toBe(false);
-      expect(schema.validate("2023-02-29T12:00:00Z").ok).toBe(false);
-      // Valid leap day
-      expect(schema.validate("2024-02-29T12:00:00Z").ok).toBe(true);
-    });
+describe("dates and times", () => {
+  it("datetime accepts ISO 8601 with Z, and rejects days that do not exist", () => {
+    const schema = val.string().datetime();
+    expect(
+      accepts(
+        schema,
+        "2026-09-28T14:30:00Z",
+        "2026-09-28T14:30:00.123Z",
+        "2026-02-30T00:00:00Z",
+        "2026-09-28T25:00:00Z",
+        "2026-09-28",
+        "2026-09-28T14:30:00+02:00",
+      ),
+    ).toEqual([true, true, false, false, false, false]);
   });
 
-  describe("base64()", () => {
-    it("validates valid base64 strings and rejects invalid formats", () => {
-      const schema = val.string().base64();
-      expect(schema.validate("SGVsbG8gV29ybGQ=")).toEqual({ ok: true, value: "SGVsbG8gV29ybGQ=" });
-      expect(schema.validate("YW55IGNhcm5hbCBwbGVhc3VyZS4=")).toEqual({
-        ok: true,
-        value: "YW55IGNhcm5hbCBwbGVhc3VyZS4=",
-      });
-      expect(schema.validate("not-valid-base64!").ok).toBe(false);
-      expect(schema.validate("===").ok).toBe(false);
-    });
-
-    it("supports custom failure message on base64", () => {
-      const schema = val.string().base64("Must be base64 encoded");
-      expect(schema.validate("bad")).toEqual({
-        ok: false,
-        error: {
-          code: "invalid_format",
-          message: "Must be base64 encoded",
-          path: [],
-          expected: "base64",
-          received: "bad",
-        },
-      });
-    });
+  it("datetime accepts offsets and constrains precision when asked", () => {
+    expect(val.string().datetime({ offset: true }).validate("2026-09-28T14:30:00+02:00").ok).toBe(true);
+    expect(
+      accepts(
+        val.string().datetime({ precision: 3 }),
+        "2026-09-28T14:30:00.123Z",
+        "2026-09-28T14:30:00Z",
+        "2026-09-28T14:30:00.1Z",
+      ),
+    ).toEqual([true, false, false]);
+    expect(accepts(val.string().datetime({ precision: 0 }), "2026-09-28T14:30:00Z", "2026-09-28T14:30:00.1Z")).toEqual([
+      true,
+      false,
+    ]);
   });
 
-  describe("cuid2()", () => {
-    it("validates cuid2 format", () => {
-      const schema = val.string().cuid2();
-      // Valid 24-character cuid2 starting with lowercase letter
-      expect(schema.validate("tz4a98xxat96iws9zmbrgj3a")).toEqual({
-        ok: true,
-        value: "tz4a98xxat96iws9zmbrgj3a",
-      });
+  it("date accepts calendar dates that exist", () => {
+    expect(accepts(val.string().date(), "2026-09-28", "2024-02-29", "2026-02-29", "2026-13-01", "26-09-28")).toEqual([
+      true,
+      true,
+      false,
+      false,
+      false,
+    ]);
+  });
+});
 
-      // Starts with digit
-      expect(schema.validate("1z4a98xxat96iws9zmbrgj3a").ok).toBe(false);
-      // Too short (< 24)
-      expect(schema.validate("shortcuid").ok).toBe(false);
-      // Uppercase characters
-      expect(schema.validate("TZ4A98XXAT96IWS9ZMBRGJ3A").ok).toBe(false);
-    });
-
-    it("supports custom failure message on cuid2", () => {
-      const schema = val.string().cuid2("Must be valid cuid2");
-      expect(schema.validate("invalid")).toEqual({
-        ok: false,
-        error: {
-          code: "invalid_format",
-          message: "Must be valid cuid2",
-          path: [],
-          expected: "cuid2",
-          received: "invalid",
-        },
-      });
-    });
+describe("encodings", () => {
+  it("base64 requires correct padding", () => {
+    expect(accepts(val.string().base64(), "aGVsbG8=", "aGVsbG8", "!!!!")).toEqual([true, false, false]);
   });
 
-  describe("json()", () => {
-    it("parses valid JSON without schema", () => {
-      const schema = val.string().json();
-      expect(schema.validate('{"name":"Alice","age":30}')).toEqual({
-        ok: true,
-        value: { name: "Alice", age: 30 },
-      });
-      expect(schema.validate("42")).toEqual({ ok: true, value: 42 });
-      expect(schema.validate('"simple string"')).toEqual({ ok: true, value: "simple string" });
-      expect(schema.validate("[1, 2, 3]")).toEqual({ ok: true, value: [1, 2, 3] });
-    });
+  it("hex accepts digits of any case", () => {
+    expect(accepts(val.string().hex(), "deadBEEF01", "xyz", "")).toEqual([true, false, false]);
+  });
+});
 
-    it("rejects invalid JSON syntax", () => {
-      const schema = val.string().json(undefined, "Bad JSON format");
-      expect(schema.validate("{bad json")).toEqual({
-        ok: false,
-        error: {
-          code: "invalid_format",
-          message: "Bad JSON format",
-          path: [],
-          expected: "JSON string",
-          received: "{bad json",
-        },
-      });
-    });
+describe("text rules", () => {
+  it("regex tests the pattern and ignores stateful flags", () => {
+    const schema = val.string().regex(/^a/g);
+    expect(accepts(schema, "abc", "abc", "abc", "xbc")).toEqual([true, true, true, false]);
+    expect(messagesOf(val.string().regex(/^a/, "starts with a").validate("b"))).toEqual(["starts with a"]);
+  });
 
-    it("validates parsed JSON against an inner schema", () => {
-      const userSchema = val.object({
-        name: val.string().min(1),
-        score: val.number().min(0),
-      });
-      const schema = val.string().json(userSchema);
+  it("startsWith, endsWith and includes", () => {
+    expect(accepts(val.string().startsWith("ab"), "abc", "cab")).toEqual([true, false]);
+    expect(accepts(val.string().endsWith("bc"), "abc", "bca")).toEqual([true, false]);
+    expect(accepts(val.string().includes("b"), "abc", "xyz")).toEqual([true, false]);
+  });
+});
 
-      expect(schema.validate('{"name":"Bob","score":100}')).toEqual({
-        ok: true,
-        value: { name: "Bob", score: 100 },
-      });
+describe("transforms", () => {
+  it("trim, toLowerCase and toUpperCase change the output", () => {
+    expect(valueOf(val.string().trim().validate("  a  "))).toBe("a");
+    expect(valueOf(val.string().toLowerCase().validate("AbC"))).toBe("abc");
+    expect(valueOf(val.string().toUpperCase().validate("AbC"))).toBe("ABC");
+  });
 
-      const invalidInner = schema.validate('{"name":"","score":-5}');
-      expect(invalidInner.ok).toBe(false);
-    });
+  it("apply to the rules that come after them, in order", () => {
+    expect(val.string().trim().min(3).validate("  ab  ").ok).toBe(false);
+    expect(val.string().min(3).trim().validate("  ab  ").ok).toBe(true);
+    expect(
+      val
+        .string()
+        .toLowerCase()
+        .regex(/^[a-z]+$/)
+        .validate("ABC").ok,
+    ).toBe(true);
+  });
 
-    it("supports asynchronous schemas with validateAsync", async () => {
-      const asyncSchema = val.string().refineAsync(async (val) => val === "allowed");
-      const jsonSchema = val.string().json(asyncSchema);
-
-      await expect(jsonSchema.validateAsync('"allowed"')).resolves.toEqual({
-        ok: true,
-        value: "allowed",
-      });
-      await expect(jsonSchema.validateAsync('"denied"')).resolves.toMatchObject({
-        ok: false,
-      });
-
-      // Synchronous validate on async schema returns error
-      const syncRes = jsonSchema.validate('"allowed"');
-      expect(syncRes.ok).toBe(false);
-      expect((syncRes as ValidationErr).error.message).toContain("validateAsync()");
-    });
-
-    it("chains string constraints before parsing JSON", () => {
-      const schema = val.string().startsWith("{").json();
-      expect(schema.validate('{"a":1}')).toEqual({ ok: true, value: { a: 1 } });
-      expect(schema.validate("[1, 2]").ok).toBe(false);
-    });
-
-    it("preserves generic output type T with inner schema and returns unknown without schema", () => {
-      const untyped = val.string().json();
-      type UntypedOut = Infer<typeof untyped>;
-      expectTypeOf<UntypedOut>().toEqualTypeOf<unknown>();
-
-      const typed = val.string().json(val.number());
-      type TypedOut = Infer<typeof typed>;
-      expectTypeOf<TypedOut>().toEqualTypeOf<number>();
-    });
+  it("rules never modify the value", () => {
+    expect(valueOf(val.string().email().min(1).regex(/@/).validate("A@B.co"))).toBe("A@B.co");
   });
 });

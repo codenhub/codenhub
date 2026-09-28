@@ -1,97 +1,63 @@
 import { describe, expect, it } from "vitest";
 
-import { type ValidationErr, val } from ".";
+import { val } from "./index";
+import { codesOf, messagesOf, valueOf } from "./test-utils";
 
-describe("Primitive Validators", () => {
-  describe("val.null()", () => {
-    const schema = val.null();
-
-    it("accepts null", () => {
-      expect(schema.validate(null)).toEqual({ ok: true, value: null });
-    });
-
-    it("rejects non-null values", () => {
-      const res = schema.validate(undefined) as ValidationErr;
-      expect(res.ok).toBe(false);
-      expect(res.error.code).toBe("invalid_type");
-      expect(res.error.expected).toBe("null");
-      expect(schema.validate(0).ok).toBe(false);
-      expect(schema.validate("").ok).toBe(false);
-    });
-
-    it("supports custom failure message", () => {
-      const custom = val.null("Must be strictly null");
-      const res = custom.validate(false) as ValidationErr;
-      expect(res.ok).toBe(false);
-      expect(res.error.message).toBe("Must be strictly null");
-    });
+describe("null, undefined, unknown and never", () => {
+  it("null and undefined accept only themselves", () => {
+    expect(val.null().validate(null).ok).toBe(true);
+    expect(val.null().validate(undefined).ok).toBe(false);
+    expect(val.undefined().validate(undefined).ok).toBe(true);
+    expect(val.undefined().validate(null).ok).toBe(false);
   });
 
-  describe("val.undefined()", () => {
-    const schema = val.undefined();
-
-    it("accepts undefined", () => {
-      expect(schema.validate(undefined)).toEqual({ ok: true, value: undefined });
-    });
-
-    it("rejects non-undefined values", () => {
-      const res = schema.validate(null) as ValidationErr;
-      expect(res.ok).toBe(false);
-      expect(res.error.code).toBe("invalid_type");
-      expect(res.error.expected).toBe("undefined");
-      expect(schema.validate(0).ok).toBe(false);
-    });
-
-    it("supports custom failure message", () => {
-      const custom = val.undefined("Must be undefined");
-      const res = custom.validate("val") as ValidationErr;
-      expect(res.ok).toBe(false);
-      expect(res.error.message).toBe("Must be undefined");
-    });
+  it("unknown accepts everything untouched", () => {
+    const value = { a: 1 };
+    expect(valueOf(val.unknown().validate(value))).toBe(value);
+    expect(val.unknown().validate(undefined).ok).toBe(true);
   });
 
-  describe("val.void()", () => {
-    const schema = val.void();
+  it("never rejects everything", () => {
+    expect(val.never().validate(1).ok).toBe(false);
+    expect(val.never().validate(undefined).ok).toBe(false);
+    expect(messagesOf(val.never("forbidden").validate(1))).toEqual(["forbidden"]);
+  });
+});
 
-    it("accepts undefined as void", () => {
-      expect(schema.validate(undefined)).toEqual({ ok: true, value: undefined });
-    });
+describe("instanceOf", () => {
+  class Animal {}
+  class Dog extends Animal {}
 
-    it("rejects non-undefined values", () => {
-      const res = schema.validate(null) as ValidationErr;
-      expect(res.ok).toBe(false);
-      expect(res.error.code).toBe("invalid_type");
-      expect(res.error.expected).toBe("void");
-    });
-
-    it("supports custom failure message", () => {
-      const custom = val.void("Must be void");
-      const res = custom.validate(123) as ValidationErr;
-      expect(res.ok).toBe(false);
-      expect(res.error.message).toBe("Must be void");
-    });
+  it("accepts instances, including subclasses", () => {
+    expect(val.instanceOf(Animal).validate(new Dog()).ok).toBe(true);
+    expect(val.instanceOf(Dog).validate(new Animal()).ok).toBe(false);
+    expect(val.instanceOf(Date).validate(new Date()).ok).toBe(true);
   });
 
-  describe("val.never()", () => {
-    const schema = val.never();
+  it("names the class in the message", () => {
+    expect(messagesOf(val.instanceOf(Dog).validate({}))).toEqual(["Expected instance of Dog, received object"]);
+  });
+});
 
-    it("unconditionally rejects any value", () => {
-      expect(schema.validate(null).ok).toBe(false);
-      expect(schema.validate(undefined).ok).toBe(false);
-      expect(schema.validate(123).ok).toBe(false);
-      expect(schema.validate("string").ok).toBe(false);
-      expect(schema.validate({}).ok).toBe(false);
+describe("custom", () => {
+  it("turns a predicate into a validator", () => {
+    const even = val.custom<number>((input) => typeof input === "number" && input % 2 === 0, "not even");
+    expect(even.validate(2).ok).toBe(true);
+    expect(messagesOf(even.validate(3))).toEqual(["not even"]);
+    expect(even.validate("2").ok).toBe(false);
+  });
 
-      const res = schema.validate("hello") as ValidationErr;
-      expect(res.error.code).toBe("custom");
-      expect(res.error.expected).toBe("never");
+  it("supports async predicates and issue options", async () => {
+    const schema = val.custom<string>(async (input) => input === "ok", { message: "nope", code: "not_ok" });
+    expect((await schema.validateAsync("ok")).ok).toBe(true);
+    expect(codesOf(await schema.validateAsync("x"))).toEqual(["not_ok"]);
+  });
+
+  it("composes like any validator", () => {
+    const schema = val.object({
+      id: val.custom<string>((input) => typeof input === "string" && input.startsWith("id_")),
     });
-
-    it("supports custom failure message", () => {
-      const custom = val.never("Never allowed");
-      const res = custom.validate(123) as ValidationErr;
-      expect(res.ok).toBe(false);
-      expect(res.error.message).toBe("Never allowed");
-    });
+    expect(schema.validate({ id: "id_1" }).ok).toBe(true);
+    expect(schema.validate({ id: "x" }).ok).toBe(false);
   });
 });

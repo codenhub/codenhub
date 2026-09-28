@@ -1,149 +1,137 @@
-import { BaseValidator, type ValidationContext } from "./core";
-import { describeReceived, type ValidationResult } from "./result";
+import { Validator, type RefineOptions } from "./core";
+import { fail, invalidType, pass, type Outcome, type ParseContext } from "./internal";
+import { type Message } from "./issue";
+import { LiteralValidator } from "./literal";
 
-/**
- * Schema validator matching strictly `null`.
- */
-export class NullValidator extends BaseValidator<null, unknown> {
+/** Constructor an {@link instanceOf} validator can check against, including abstract classes. */
+export type Constructor<T = unknown> = abstract new (...args: never[]) => T;
+
+/** Validator that accepts any value, created by {@link unknown}. */
+export class UnknownValidator extends Validator<unknown> {
+  protected evaluate(input: unknown): Outcome<unknown> {
+    return pass(input);
+  }
+}
+
+/** Validator that rejects every value, created by {@link never}. */
+export class NeverValidator extends Validator<never> {
   /**
-   * Constructs a NullValidator.
+   * Creates a validator that always fails.
    *
-   * @param customMessage - Optional custom failure message.
+   * @param message - Message of the failure.
    */
-  constructor(private readonly customMessage?: string) {
+  constructor(private readonly message?: Message) {
     super();
   }
 
-  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<null> {
-    if (input === null) {
-      return ctx.ok(null);
-    }
-    return ctx.fail({
-      code: "invalid_type",
-      message: this.customMessage ?? `Expected null, got ${describeReceived(input)}`,
-      expected: "null",
-      received: describeReceived(input),
-      input: ctx.options.includeInput ? input : undefined,
-    });
+  protected evaluate(input: unknown, ctx: ParseContext): Outcome<never> {
+    return fail(ctx, { code: "invalid_type", message: this.message ?? "No value is allowed", input });
   }
 }
 
 /**
- * Schema validator matching strictly `undefined`.
+ * Validator that accepts instances of a class, created by {@link instanceOf}.
+ *
+ * @typeParam T - Instance type.
  */
-export class UndefinedValidator extends BaseValidator<undefined, unknown> {
+export class InstanceOfValidator<T> extends Validator<T> {
   /**
-   * Constructs an UndefinedValidator.
+   * Creates an instance validator.
    *
-   * @param customMessage - Optional custom failure message.
+   * @param target - Class the value must be an instance of.
+   * @param message - Message of the failure.
    */
-  constructor(private readonly customMessage?: string) {
+  constructor(
+    readonly target: Constructor<T>,
+    private readonly message?: Message,
+  ) {
     super();
   }
 
-  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<undefined> {
-    if (input === undefined) {
-      return ctx.ok(undefined);
-    }
-    return ctx.fail({
-      code: "invalid_type",
-      message: this.customMessage ?? `Expected undefined, got ${describeReceived(input)}`,
-      expected: "undefined",
-      received: describeReceived(input),
-      input: ctx.options.includeInput ? input : undefined,
-    });
+  protected evaluate(input: unknown, ctx: ParseContext): Outcome<T> {
+    return input instanceof this.target
+      ? pass(input as T)
+      : invalidType(ctx, `instance of ${this.target.name}`, input, this.message);
   }
 }
 
 /**
- * Schema validator matching `void` (accepts `undefined`).
- */
-export class VoidValidator extends BaseValidator<void, unknown> {
-  /**
-   * Constructs a VoidValidator.
-   *
-   * @param customMessage - Optional custom failure message.
-   */
-  constructor(private readonly customMessage?: string) {
-    super();
-  }
-
-  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<void> {
-    if (input === undefined) {
-      return ctx.ok(undefined);
-    }
-    return ctx.fail({
-      code: "invalid_type",
-      message: this.customMessage ?? `Expected void, got ${describeReceived(input)}`,
-      expected: "void",
-      received: describeReceived(input),
-      input: ctx.options.includeInput ? input : undefined,
-    });
-  }
-}
-
-/**
- * Schema validator representing the `never` type, which unconditionally rejects any input.
- */
-export class NeverValidator extends BaseValidator<never, unknown> {
-  /**
-   * Constructs a NeverValidator.
-   *
-   * @param customMessage - Optional custom failure message.
-   */
-  constructor(private readonly customMessage?: string) {
-    super();
-  }
-
-  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<never> {
-    return ctx.fail({
-      code: "custom",
-      message: this.customMessage ?? `Expected never, got ${describeReceived(input)}`,
-      expected: "never",
-      received: describeReceived(input),
-      input: ctx.options.includeInput ? input : undefined,
-    });
-  }
-}
-
-/**
- * Creates a schema validator matching strictly `null`.
+ * Creates a validator that accepts any value.
  *
- * @param message - Optional custom failure message.
- * @returns A new NullValidator instance.
+ * @returns A validator whose output is `unknown`.
  */
-export function nullValidator(message?: string): NullValidator {
-  return new NullValidator(message);
+export function unknown(): UnknownValidator {
+  return new UnknownValidator();
 }
 
 /**
- * Creates a schema validator matching strictly `undefined`.
+ * Creates a validator that accepts only `null`.
  *
- * @param message - Optional custom failure message.
- * @returns A new UndefinedValidator instance.
+ * @param message - Message of the failure.
+ * @returns A validator whose output is `null`.
  */
-export function undefinedValidator(message?: string): UndefinedValidator {
-  return new UndefinedValidator(message);
+export function nullValidator(message?: Message): LiteralValidator<null> {
+  return new LiteralValidator(null, message);
 }
 
 /**
- * Creates a schema validator matching `void` (accepts `undefined`).
+ * Creates a validator that accepts only `undefined`.
  *
- * @param message - Optional custom failure message.
- * @returns A new VoidValidator instance.
+ * @param message - Message of the failure.
+ * @returns A validator whose output is `undefined`.
  */
-export function voidValidator(message?: string): VoidValidator {
-  return new VoidValidator(message);
+export function undefinedValidator(message?: Message): LiteralValidator<undefined> {
+  return new LiteralValidator(undefined, message);
 }
 
 /**
- * Creates a schema validator representing `never` that unconditionally fails.
+ * Creates a validator that rejects every value.
  *
- * @param message - Optional custom failure message.
- * @returns A new NeverValidator instance.
+ * Useful to forbid a property, or as the branch of a union that must never match.
+ *
+ * @param message - Message of the failure.
+ * @returns A validator whose output is `never`.
  */
-export function neverValidator(message?: string): NeverValidator {
+export function never(message?: Message): NeverValidator {
   return new NeverValidator(message);
 }
 
-export { nullValidator as null, undefinedValidator as undefined, voidValidator as void, neverValidator as never };
+/**
+ * Creates a validator that accepts instances of a class.
+ *
+ * @example
+ * ```ts
+ * const file = val.instanceOf(File);
+ * ```
+ *
+ * @typeParam T - Instance type.
+ * @param target - Class the value must be an instance of.
+ * @param message - Message of the failure.
+ * @returns A validator whose output is the instance type.
+ */
+export function instanceOf<T>(target: Constructor<T>, message?: Message): InstanceOfValidator<T> {
+  return new InstanceOfValidator(target, message);
+}
+
+/**
+ * Creates a validator from a predicate, for a type none of the built-in validators describe.
+ *
+ * The type parameter is a claim: the predicate must only return `true` for values of type `T`.
+ * Prefer a type guard so the compiler checks it.
+ *
+ * @example
+ * ```ts
+ * const slug = val.custom<Slug>((input): input is Slug => typeof input === "string" && /^[a-z-]+$/.test(input), "Not a slug");
+ * ```
+ *
+ * @typeParam T - Type the predicate accepts.
+ * @param predicate - Returns `true` when the input is a `T`. May be async, and an exception it throws propagates.
+ * @param messageOrOptions - Failure message, or options to set the message, `code`, `path` and `params` of the issue.
+ * @returns A validator whose output is `T`.
+ */
+export function custom<T>(
+  predicate: (input: unknown) => boolean | Promise<boolean>,
+  messageOrOptions?: Message | RefineOptions,
+): Validator<T> {
+  return new UnknownValidator().refine(predicate, messageOrOptions) as unknown as Validator<T>;
+}

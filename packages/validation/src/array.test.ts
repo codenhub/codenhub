@@ -1,240 +1,65 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { type ValidationErr, val } from ".";
+import { val, type Infer } from "./index";
+import { codesOf, messagesOf, pathsOf, valueOf } from "./test-utils";
 
-describe("ArrayValidator", () => {
-  it("validates valid array without element schema", () => {
-    const schema = val.array();
-    expect(schema.validate([1, "a", true])).toEqual({
-      ok: true,
-      value: [1, "a", true],
-    });
+describe("array", () => {
+  const numbers = val.array(val.number());
+
+  it("validates every item and returns a new array", () => {
+    const input = [1, 2, 3];
+    const output = valueOf(numbers.validate(input));
+    expect(output).toEqual(input);
+    expect(output).not.toBe(input);
+    expectTypeOf<Infer<typeof numbers>>().toEqualTypeOf<number[]>();
   });
 
-  it("validates valid array with element schema", () => {
-    const schema = val.array(val.number().min(0));
-    expect(schema.validate([1, 2, 3])).toEqual({
-      ok: true,
-      value: [1, 2, 3],
-    });
+  it("rejects non-arrays", () => {
+    expect(messagesOf(numbers.validate("x"))).toEqual(["Expected array, received string"]);
+    expect(numbers.validate({ length: 0 }).ok).toBe(false);
   });
 
-  it("rejects non-array inputs", () => {
-    const schema = val.array(val.string());
-    expect(schema.validate("not an array")).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_type",
-        message: "Expected array, got not an array",
-        path: [],
-        expected: "array",
-        received: "not an array",
-      },
-    });
+  it("locates each bad item by index and reports them all", () => {
+    expect(pathsOf(numbers.validate([1, "a", 3, "b"]))).toEqual([[1], [3]]);
+    expect(pathsOf(numbers.validate([1, "a", 3, "b"], { abortEarly: true }))).toEqual([[1]]);
   });
 
-  it("tracks deep element indices in failure paths", () => {
-    const schema = val.object({
-      items: val.array(
-        val.object({
-          price: val.number().min(0),
-        }),
-      ),
-    });
-
-    const result = schema.validate({
-      items: [{ price: 10 }, { price: 20 }, { price: -5 }],
-    });
-
-    expect(result).toEqual({
-      ok: false,
-      error: {
-        code: "too_small",
-        message: "Must be at least 0",
-        path: ["items", 2, "price"],
-        expected: "at least 0",
-        received: "-5",
-      },
-    });
+  it("checks size", () => {
+    expect([[], [1], [1, 2]].map((input) => numbers.min(1).validate(input).ok)).toEqual([false, true, true]);
+    expect([[1], [1, 2], [1, 2, 3]].map((input) => numbers.max(2).validate(input).ok)).toEqual([true, true, false]);
+    expect(codesOf(numbers.length(2).validate([1]))).toEqual(["too_small"]);
+    expect(codesOf(numbers.length(2).validate([1, 2, 3]))).toEqual(["too_big"]);
+    expect(numbers.nonEmpty().validate([]).ok).toBe(false);
+    expect(messagesOf(numbers.min(2).validate([1]))).toEqual(["Must contain at least 2 items"]);
+    expect(messagesOf(numbers.min(1).validate([]))).toEqual(["Must contain at least 1 item"]);
   });
 
-  it("enforces min, max, and length constraints", () => {
-    const minSchema = val.array(val.number()).min(2);
-    expect(minSchema.validate([1])).toEqual({
-      ok: false,
-      error: {
-        code: "too_small",
-        message: "Must contain at least 2 items",
-        path: [],
-        expected: "at least 2 items",
-        received: "1 items",
-      },
-    });
-    expect(minSchema.validate([1, 2])).toEqual({
-      ok: true,
-      value: [1, 2],
-    });
-
-    const maxSchema = val.array(val.number()).max(2);
-    expect(maxSchema.validate([1, 2, 3])).toEqual({
-      ok: false,
-      error: {
-        code: "too_big",
-        message: "Must contain at most 2 items",
-        path: [],
-        expected: "at most 2 items",
-        received: "3 items",
-      },
-    });
-
-    const exactSchema = val.array(val.number()).length(2);
-    expect(exactSchema.validate([1])).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Must contain exactly 2 items",
-        path: [],
-        expected: "2 items",
-        received: "1 items",
-      },
-    });
-    expect(exactSchema.validate([1, 2])).toEqual({
-      ok: true,
-      value: [1, 2],
-    });
+  it("rejects an invalid size when the schema is built", () => {
+    expect(() => numbers.min(-1)).toThrow(RangeError);
+    expect(() => numbers.length(1.5)).toThrow(RangeError);
   });
 
-  it("enforces nonEmpty constraint", () => {
-    const schema = val.array().nonEmpty();
-    expect(schema.validate([])).toEqual({
-      ok: false,
-      error: {
-        code: "too_small",
-        message: "Array cannot be empty",
-        path: [],
-        expected: "non-empty array",
-        received: "empty array",
-      },
-    });
-    expect(schema.validate([1])).toEqual({
-      ok: true,
-      value: [1],
-    });
+  it("unique flags each repeat at its index", () => {
+    expect(pathsOf(val.array(val.string()).unique().validate(["a", "b", "a", "b", "a"]))).toEqual([[2], [3], [4]]);
+    expect(val.array(val.string()).unique().validate(["a", "b"]).ok).toBe(true);
   });
 
-  it("supports aliases minLength, maxLength, and notEmpty", () => {
-    const schema = val.array().minLength(2).maxLength(4).notEmpty();
-    expect(schema.validate([1, 2, 3])).toEqual({
-      ok: true,
-      value: [1, 2, 3],
-    });
-    expect(schema.validate([1])).toMatchObject({
-      ok: false,
-      error: { code: "too_small" },
-    });
+  it("unique compares objects by a key selector, and by identity without one", () => {
+    const users = val.array(val.object({ id: val.number() }));
+    expect(pathsOf(users.unique((user) => user.id).validate([{ id: 1 }, { id: 2 }, { id: 1 }]))).toEqual([[2]]);
+    expect(users.unique().validate([{ id: 1 }, { id: 1 }]).ok).toBe(true);
   });
 
-  it("provides .element getter", () => {
-    const elementSchema = val.string();
-    const schema = val.array(elementSchema);
-    expect(schema.element).toBe(elementSchema);
+  it("runs unique on the output, after items are transformed", () => {
+    const schema = val.array(val.string().toLowerCase()).unique();
+    expect(pathsOf(schema.validate(["A", "a"]))).toEqual([[1]]);
   });
 
-  it("accumulates multiple element issues when abortEarly is false", () => {
-    const schema = val.array(val.number().min(0));
-    const result = schema.validate([-1, 10, -3]);
-
-    expect(result.ok).toBe(false);
-    const err = (result as ValidationErr).error;
-    expect(err.issues).toHaveLength(2);
-    expect(err.issues?.[0]?.path).toEqual([0]);
-    expect(err.issues?.[1]?.path).toEqual([2]);
+  it("accepts any item with unknown", () => {
+    expect(val.array(val.unknown()).validate([1, "a", null]).ok).toBe(true);
   });
 
-  it("stops at first element issue when abortEarly is true", () => {
-    const schema = val.array(val.number().min(0));
-    const result = schema.validate([-1, 10, -3], { abortEarly: true });
-
-    expect(result.ok).toBe(false);
-    const err = (result as ValidationErr).error;
-    expect(err.path).toEqual([0]);
-    expect(err.issues).toBeUndefined();
-  });
-
-  it("is 100% immutable across constraint methods", () => {
-    const base = val.array();
-    const min2 = base.min(2);
-    const max2 = min2.max(4);
-
-    expect(base.validate([]).ok).toBe(true);
-    expect(min2.validate([]).ok).toBe(false);
-    expect(min2.validate([1, 2, 3, 4, 5]).ok).toBe(true);
-    expect(max2.validate([1, 2, 3, 4, 5]).ok).toBe(false);
-  });
-
-  it("enforces uniqueness of primitive values with .unique()", () => {
-    const schema = val.array().unique();
-
-    expect(schema.validate([1, 2, 3])).toEqual({
-      ok: true,
-      value: [1, 2, 3],
-    });
-
-    const duplicate = schema.validate([1, 2, 1]) as ValidationErr;
-    expect(duplicate.ok).toBe(false);
-    expect(duplicate.error.code).toBe("invalid_value");
-    expect(duplicate.error.path).toEqual([2]);
-  });
-
-  it("enforces uniqueness with custom keySelector", () => {
-    const schema = val.array(val.object({ id: val.number() })).unique((item) => item.id, "ID must be unique");
-
-    expect(schema.validate([{ id: 1 }, { id: 2 }])).toEqual({
-      ok: true,
-      value: [{ id: 1 }, { id: 2 }],
-    });
-
-    const duplicate = schema.validate([{ id: 1 }, { id: 1 }]) as ValidationErr;
-    expect(duplicate.ok).toBe(false);
-    expect(duplicate.error.message).toBe("ID must be unique");
-    expect(duplicate.error.path).toEqual([1]);
-  });
-
-  it("supports asynchronous validation of array items with validateAsync()", async () => {
-    const schema = val.array(val.string().refineAsync(async (s) => s.length > 2, "Must have length > 2"));
-
-    const valid = await schema.validateAsync(["abc", "def"]);
-    expect(valid).toEqual({
-      ok: true,
-      value: ["abc", "def"],
-    });
-
-    const invalid = (await schema.validateAsync(["abc", "no"])) as ValidationErr;
-    expect(invalid.ok).toBe(false);
-    expect(invalid.error.path).toEqual([1]);
-    expect(invalid.error.message).toBe("Must have length > 2");
-  });
-
-  it("runs uniqueness checks after element validation using validated output", () => {
-    const schema = val.array(val.string().trim()).unique();
-
-    // Input has distinct strings before trimming, but identical after trimming
-    const res = schema.validate(["hello", "hello "]) as ValidationErr;
-    expect(res.ok).toBe(false);
-    expect(res.error.code).toBe("invalid_value");
-    expect(res.error.path).toEqual([1]);
-  });
-
-  it("does not run uniqueness checks when element validation fails", () => {
-    let selectorCalled = false;
-    const schema = val.array(val.object({ id: val.number() })).unique((item) => {
-      selectorCalled = true;
-      return item.id;
-    });
-
-    // Element fails schema validation
-    const res = schema.validate([{ id: "not-a-number" }]);
-    expect(res.ok).toBe(false);
-    expect(selectorCalled).toBe(false);
+  it("uses a custom message for the type failure", () => {
+    expect(messagesOf(val.array(val.number(), "a list").validate(1))).toEqual(["a list"]);
   });
 });
