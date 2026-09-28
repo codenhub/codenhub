@@ -133,13 +133,10 @@ test.describe("forms", () => {
     expect(isTransparent(styles.inheritedBorderColor)).toBe(false);
   });
 
-  /* `none` is only valid as an entire `box-shadow` value. Composing a focus ring
-     as `<ring>, var(--ui-shadow, none)` makes the whole declaration invalid, so
-     the ring silently disappears. Asserted on a real focus because that is the
-     only state where the composed list applies. */
   /* The browser paints the open list over the select's own background, and a
      ghost select has none, so the options carry an opaque ground of their own
-     that their text reads on, in both themes. */
+     that their text reads on, in both themes, at the 4.5:1 WCAG 1.4.3 asks of
+     normal text. */
   test("paints a select's options on an opaque ground their text reads on", async ({ page }) => {
     await page.goto(FORMS_URL);
 
@@ -161,10 +158,14 @@ test.describe("forms", () => {
       }, theme);
 
       expect(readSrgb(option.background).alpha, `${theme} ground`).toBe(1);
-      expect(getColorDistance(option.background, option.color), `${theme} text on ground`).toBeGreaterThan(150);
+      expect(getContrastRatio(option.color, option.background), `${theme} text on ground`).toBeGreaterThanOrEqual(4.5);
     }
   });
 
+  /* `none` is only valid as an entire `box-shadow` value. Composing a focus ring
+     as `<ring>, var(--ui-shadow, none)` makes the whole declaration invalid, so
+     the ring silently disappears. Asserted on a real focus because that is the
+     only state where the composed list applies. */
   test("keeps a focus ring on text controls", async ({ page }) => {
     await page.goto(FORMS_URL);
 
