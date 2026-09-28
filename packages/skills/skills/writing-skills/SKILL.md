@@ -56,7 +56,7 @@ description: Enforces test-first development on code changes. Use when implement
 - **Assume a capable agent.** Add only what it lacks: project-specific steps, non-obvious constraints, judgment it gets wrong. Cut explanations of general concepts.
 - **Write imperatives with one term per concept.** Give a default and its exception instead of a menu: "Use X. For Y, use Z."
 - **Match freedom to fragility.** Heuristics for judgment calls; exact commands or a script for steps that break under variation.
-- **Make rules unconditional.** A rule that applies only when a label, prefix, keyword, or mode name is present gets skipped whenever that marker is missing. State where the rule applies and list its exceptions.
+- **Tie rules to situations, not markers.** A rule that applies only when a label, prefix, keyword, or mode name is present gets skipped whenever that marker is missing. State the situation where the rule applies, such as the files or task it covers, and list its exceptions.
 - **Keep the skill out of its output.** Code, comments, commits, and documents a skill produces follow the project's conventions and never name the skill. They name the agent or model only where those conventions require it, such as a co-author trailer.
 - **Stay tool-agnostic.** Describe capabilities ("run the tests", "delegate to a subagent when available"), not one harness's tool names or slash commands. A skill built to drive one tool server, such as a specific MCP server, names that server and its tools exactly.
 - **Steer format with examples.** Examples steer format and tone more reliably than description. Make them mirror real use, and vary them enough that the agent does not copy an unintended pattern.
