@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { pipe, val } from ".";
+import { custom, ok, pipe, val, ValidationError } from ".";
 
 describe("pipe", () => {
   it("pipes coercion output into validator schema", () => {
@@ -61,5 +61,64 @@ describe("pipe", () => {
         received: "-10",
       },
     });
+  });
+
+  it("executes async pipeline sequentially with validateAsync", async () => {
+    const executedSteps: string[] = [];
+
+    const asyncStep1 = custom<string, string>(async (input) => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      executedSteps.push("step1");
+      return ok(input.trim());
+    });
+
+    const asyncStep2 = custom<string, string>(async (input) => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      executedSteps.push("step2");
+      return ok(input.toUpperCase());
+    });
+
+    const pipeline = pipe(val.string(), asyncStep1, asyncStep2);
+
+    const result = await pipeline.validateAsync("  hello  ");
+    expect(result).toEqual({
+      ok: true,
+      value: "HELLO",
+    });
+    expect(executedSteps).toEqual(["step1", "step2"]);
+  });
+
+  it("aborts async pipeline at the first failing validator", async () => {
+    const executedSteps: string[] = [];
+
+    const step1 = custom<string, string>(async () => {
+      executedSteps.push("step1");
+      return "bad_format";
+    });
+
+    const step2 = val.string().email();
+
+    const step3 = custom<string, string>(async (input) => {
+      executedSteps.push("step3");
+      return input;
+    });
+
+    const pipeline = pipe(step1, step2, step3);
+
+    const result = await pipeline.validateAsync("initial");
+    expect(result.ok).toBe(false);
+    expect(executedSteps).toEqual(["step1"]);
+  });
+
+  it("supports parseAsync on piped validators", async () => {
+    const asyncCoerce = custom<number, string>(async (input) => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return Number(input);
+    });
+
+    const pipeline = pipe(val.string(), asyncCoerce, val.number().positive());
+
+    await expect(pipeline.parseAsync("42")).resolves.toBe(42);
+    await expect(pipeline.parseAsync("-5")).rejects.toThrow(ValidationError);
   });
 });

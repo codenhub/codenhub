@@ -160,4 +160,81 @@ describe("ArrayValidator", () => {
     expect(err.path).toEqual([0]);
     expect(err.issues).toBeUndefined();
   });
+
+  it("is 100% immutable across constraint methods", () => {
+    const base = val.array();
+    const min2 = base.min(2);
+    const max2 = min2.max(4);
+
+    expect(base.validate([]).ok).toBe(true);
+    expect(min2.validate([]).ok).toBe(false);
+    expect(min2.validate([1, 2, 3, 4, 5]).ok).toBe(true);
+    expect(max2.validate([1, 2, 3, 4, 5]).ok).toBe(false);
+  });
+
+  it("enforces uniqueness of primitive values with .unique()", () => {
+    const schema = val.array().unique();
+
+    expect(schema.validate([1, 2, 3])).toEqual({
+      ok: true,
+      value: [1, 2, 3],
+    });
+
+    const duplicate = schema.validate([1, 2, 1]) as ValidationErr;
+    expect(duplicate.ok).toBe(false);
+    expect(duplicate.error.code).toBe("invalid_value");
+    expect(duplicate.error.path).toEqual([2]);
+  });
+
+  it("enforces uniqueness with custom keySelector", () => {
+    const schema = val.array(val.object({ id: val.number() })).unique((item) => item.id, "ID must be unique");
+
+    expect(schema.validate([{ id: 1 }, { id: 2 }])).toEqual({
+      ok: true,
+      value: [{ id: 1 }, { id: 2 }],
+    });
+
+    const duplicate = schema.validate([{ id: 1 }, { id: 1 }]) as ValidationErr;
+    expect(duplicate.ok).toBe(false);
+    expect(duplicate.error.message).toBe("ID must be unique");
+    expect(duplicate.error.path).toEqual([1]);
+  });
+
+  it("supports asynchronous validation of array items with validateAsync()", async () => {
+    const schema = val.array(val.string().refineAsync(async (s) => s.length > 2, "Must have length > 2"));
+
+    const valid = await schema.validateAsync(["abc", "def"]);
+    expect(valid).toEqual({
+      ok: true,
+      value: ["abc", "def"],
+    });
+
+    const invalid = (await schema.validateAsync(["abc", "no"])) as ValidationErr;
+    expect(invalid.ok).toBe(false);
+    expect(invalid.error.path).toEqual([1]);
+    expect(invalid.error.message).toBe("Must have length > 2");
+  });
+
+  it("runs uniqueness checks after element validation using validated output", () => {
+    const schema = val.array(val.string().trim()).unique();
+
+    // Input has distinct strings before trimming, but identical after trimming
+    const res = schema.validate(["hello", "hello "]) as ValidationErr;
+    expect(res.ok).toBe(false);
+    expect(res.error.code).toBe("invalid_value");
+    expect(res.error.path).toEqual([1]);
+  });
+
+  it("does not run uniqueness checks when element validation fails", () => {
+    let selectorCalled = false;
+    const schema = val.array(val.object({ id: val.number() })).unique((item) => {
+      selectorCalled = true;
+      return item.id;
+    });
+
+    // Element fails schema validation
+    const res = schema.validate([{ id: "not-a-number" }]);
+    expect(res.ok).toBe(false);
+    expect(selectorCalled).toBe(false);
+  });
 });

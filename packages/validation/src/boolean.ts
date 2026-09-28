@@ -7,10 +7,10 @@ type BooleanCheck = (value: boolean, ctx: ValidationContext) => ValidationIssue 
  * Validates boolean inputs against boolean-specific constraints.
  */
 export class BooleanValidator extends BaseValidator<boolean, unknown> {
-  private readonly checks: BooleanCheck[] = [];
+  protected readonly checks: BooleanCheck[] = [];
 
   protected clone(): BooleanValidator {
-    const copy = new BooleanValidator();
+    const copy = new (this.constructor as new () => BooleanValidator)();
     copy.checks.push(...this.checks);
     return copy;
   }

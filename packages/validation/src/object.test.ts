@@ -355,17 +355,109 @@ describe("ObjectValidator", () => {
     expect(Object.prototype.hasOwnProperty.call(optRes.value, "toString")).toBe(false);
   });
 
-  it("distinguishes val.object(), val.object(undefined), and val.object({})", () => {
-    const emptySchema = val.object();
-    expect(emptySchema.validate({ extra: 123 })).toEqual({ ok: true, value: {} });
+  it("creates empty ObjectValidator with val.object(), val.object({}), or val.object(undefined)", () => {
+    const o1 = val.object();
+    expect(o1.validate({ extra: 123 })).toEqual({ ok: true, value: {} });
 
-    const explicitUndefined = val.object(undefined).plain() as ValidationErr;
-    expect(explicitUndefined.ok).toBe(false);
-    expect(explicitUndefined.error.code).toBe("invalid_type");
+    const o2 = val.object({});
+    expect(o2.validate({ extra: 123 })).toEqual({ ok: true, value: {} });
 
-    const legacyEmpty = val.object({});
-    expect(legacyEmpty.plain()).toEqual({ ok: true, value: {} });
-    expect(legacyEmpty.hasKeys(["missing"]).ok).toBe(false);
+    const o3 = val.object(undefined);
+    expect(o3.validate({ extra: 123 })).toEqual({ ok: true, value: {} });
+  });
+
+  it("is 100% immutable across strict(), passthrough(), and strip()", () => {
+    const base = val.object({ name: val.string() });
+    const strictObj = base.strict();
+    const passObj = strictObj.passthrough();
+    const stripObj = passObj.strip();
+
+    const data = { name: "Alice", extra: "extra" };
+
+    // base is strip mode
+    expect(base.validate(data)).toEqual({ ok: true, value: { name: "Alice" } });
+    // strictObj rejects extra
+    expect(strictObj.validate(data).ok).toBe(false);
+    // passObj preserves extra
+    expect(passObj.validate(data)).toEqual({ ok: true, value: { name: "Alice", extra: "extra" } });
+    // stripObj strips extra
+    expect(stripObj.validate(data)).toEqual({ ok: true, value: { name: "Alice" } });
+  });
+
+  it("merges two ObjectValidators with .merge()", () => {
+    const user = val.object({ name: val.string(), age: val.number() });
+    const employee = val.object({ role: val.string(), age: val.number().min(18) });
+
+    const merged = user.merge(employee);
+    expect(merged.validate({ name: "Bob", role: "Dev", age: 25 })).toEqual({
+      ok: true,
+      value: { name: "Bob", role: "Dev", age: 25 },
+    });
+
+    const underage = merged.validate({ name: "Bob", role: "Dev", age: 16 }) as ValidationErr;
+    expect(underage.ok).toBe(false);
+    expect(underage.error.path).toEqual(["age"]);
+  });
+
+  it("makes nested properties recursively optional with .deepPartial()", () => {
+    const schema = val
+      .object({
+        title: val.string(),
+        author: val.object({
+          name: val.string(),
+          address: val.object({
+            city: val.string(),
+            zip: val.string(),
+          }),
+        }),
+      })
+      .deepPartial();
+
+    expect(schema.validate({})).toEqual({ ok: true, value: {} });
+    expect(schema.validate({ author: {} })).toEqual({ ok: true, value: { author: {} } });
+    expect(schema.validate({ author: { address: { city: "London" } } })).toEqual({
+      ok: true,
+      value: { author: { address: { city: "London" } } },
+    });
+
+    const invalid = schema.validate({ author: { address: { city: 123 } } }) as ValidationErr;
+    expect(invalid.ok).toBe(false);
+    expect(invalid.error.path).toEqual(["author", "address", "city"]);
+  });
+
+  it("extracts shape keys validator with .keyof()", () => {
+    const schema = val.object({
+      id: val.number(),
+      name: val.string(),
+      active: val.boolean(),
+    });
+
+    const keyValidator = schema.keyof();
+    expect(keyValidator.validate("id")).toEqual({ ok: true, value: "id" });
+    expect(keyValidator.validate("name")).toEqual({ ok: true, value: "name" });
+    expect(keyValidator.validate("active")).toEqual({ ok: true, value: "active" });
+
+    const invalid = keyValidator.validate("other") as ValidationErr;
+    expect(invalid.ok).toBe(false);
+    expect(invalid.error.code).toBe("invalid_value");
+  });
+
+  it("supports asynchronous validation of object fields with validateAsync()", async () => {
+    const schema = val.object({
+      username: val.string().refineAsync(async (u) => u !== "admin", "Username 'admin' is reserved"),
+      email: val.string(),
+    });
+
+    const valid = await schema.validateAsync({ username: "alice", email: "alice@example.com" });
+    expect(valid).toEqual({
+      ok: true,
+      value: { username: "alice", email: "alice@example.com" },
+    });
+
+    const invalid = (await schema.validateAsync({ username: "admin", email: "admin@example.com" })) as ValidationErr;
+    expect(invalid.ok).toBe(false);
+    expect(invalid.error.path).toEqual(["username"]);
+    expect(invalid.error.message).toBe("Username 'admin' is reserved");
   });
 
   it("prevents prototype pollution when input contains own __proto__ key", () => {

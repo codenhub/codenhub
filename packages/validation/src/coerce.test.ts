@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { coerce, val } from ".";
 
-describe("coerce", () => {
+describe("standalone coerce helpers", () => {
   it("coerces integer strings and rejects unsafe integers", () => {
     expect(coerce.int(" +42 ")).toEqual({ ok: true, value: 42 });
     expect(coerce.int("9007199254740992", { path: ["id"] })).toEqual({
@@ -109,22 +109,115 @@ describe("coerce", () => {
       },
     });
   });
+});
 
-  it("provides validator schema factories via val.coerce", () => {
-    const intValidator = val.coerce.int();
-    expect(intValidator.validate("42")).toEqual({ ok: true, value: 42 });
+describe("val.coerce chainable schema validators", () => {
+  it("coerces and validates strings with chained StringValidator methods", () => {
+    const schema = val.coerce.string().trim().email();
+    expect(schema.validate("   user@example.com   ")).toEqual({
+      ok: true,
+      value: "user@example.com",
+    });
 
-    const numValidator = val.coerce.number();
-    expect(numValidator.validate("3.14")).toEqual({ ok: true, value: 3.14 });
+    const numCoerced = val.coerce.string().minLength(3);
+    expect(numCoerced.validate(12345)).toEqual({ ok: true, value: "12345" });
+    expect(numCoerced.validate(12).ok).toBe(false);
 
-    const boolValidator = val.coerce.bool();
-    expect(boolValidator.validate("yes")).toEqual({ ok: true, value: true });
+    expect(val.coerce.string().validate(null)).toMatchObject({ ok: false });
+  });
 
-    const strValidator = val.coerce.string();
-    expect(strValidator.validate(99)).toEqual({ ok: true, value: "99" });
+  it("coerces and validates numbers with chained NumberValidator methods", () => {
+    const schema = val.coerce.number().min(5).max(10);
+    expect(schema.validate("7")).toEqual({ ok: true, value: 7 });
+    expect(schema.validate("10")).toEqual({ ok: true, value: 10 });
 
-    const dateValidator = val.coerce.date();
-    const d = new Date("2026-01-01T00:00:00.000Z");
-    expect(dateValidator.validate("2026-01-01T00:00:00.000Z")).toEqual({ ok: true, value: d });
+    const tooSmall = schema.validate("3");
+    expect(tooSmall).toEqual({
+      ok: false,
+      error: {
+        code: "too_small",
+        message: "Must be at least 5",
+        path: [],
+        expected: "at least 5",
+        received: "3",
+      },
+    });
+
+    expect(schema.validate("abc")).toMatchObject({
+      ok: false,
+      error: { code: "invalid_format" },
+    });
+  });
+
+  it("coerces numbers and clamps them with clamp()", () => {
+    const schema = val.coerce.number().clamp(0, 10);
+    expect(schema.validate("15")).toEqual({ ok: true, value: 10 });
+    expect(schema.validate("-5")).toEqual({ ok: true, value: 0 });
+    expect(schema.validate("7")).toEqual({ ok: true, value: 7 });
+  });
+
+  it("coerces integers with val.coerce.int() and chains constraints", () => {
+    const schema = val.coerce.int().min(1).max(10);
+    expect(schema.validate("5")).toEqual({ ok: true, value: 5 });
+    expect(schema.validate("10")).toEqual({ ok: true, value: 10 });
+
+    // Non-integer strings fail coercion
+    expect(schema.validate("3.14")).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_format",
+        message: 'Cannot coerce "3.14" to integer',
+        path: [],
+        expected: "integer string",
+        received: "3.14",
+      },
+    });
+
+    expect(schema.validate("0")).toMatchObject({
+      ok: false,
+      error: { code: "too_small" },
+    });
+  });
+
+  it("coerces booleans with val.coerce.bool() and val.coerce.boolean()", () => {
+    const boolTrue = val.coerce.bool().true();
+    expect(boolTrue.validate("yes")).toEqual({ ok: true, value: true });
+    expect(boolTrue.validate("on")).toEqual({ ok: true, value: true });
+    expect(boolTrue.validate("1")).toEqual({ ok: true, value: true });
+    expect(boolTrue.validate("off").ok).toBe(false);
+
+    const booleanFalse = val.coerce.boolean().false();
+    expect(booleanFalse.validate("no")).toEqual({ ok: true, value: false });
+    expect(booleanFalse.validate("0")).toEqual({ ok: true, value: false });
+    expect(booleanFalse.validate("off")).toEqual({ ok: true, value: false });
+    expect(booleanFalse.validate("yes").ok).toBe(false);
+  });
+
+  it("coerces dates with val.coerce.date() and chains constraints", () => {
+    const minBound = new Date("2025-01-01T00:00:00.000Z");
+    const schema = val.coerce.date().min(minBound);
+
+    const validResult = schema.validate("2026-06-01T00:00:00.000Z");
+    expect(validResult.ok).toBe(true);
+    expect((validResult as { value: Date }).value).toEqual(new Date("2026-06-01T00:00:00.000Z"));
+
+    const tooEarly = schema.validate("2024-01-01T00:00:00.000Z");
+    expect(tooEarly.ok).toBe(false);
+    expect(tooEarly).toMatchObject({
+      error: { code: "too_small" },
+    });
+
+    expect(schema.validate("invalid-date-string").ok).toBe(false);
+  });
+
+  it("maintains immutability when chaining coerced validators", () => {
+    const base = val.coerce.number();
+    const minOnly = base.min(5);
+    const clamped = base.clamp(0, 10);
+
+    expect(base.validate("100")).toEqual({ ok: true, value: 100 });
+    expect(minOnly.validate("100")).toEqual({ ok: true, value: 100 });
+    expect(minOnly.validate("2").ok).toBe(false);
+    expect(clamped.validate("100")).toEqual({ ok: true, value: 10 });
   });
 });

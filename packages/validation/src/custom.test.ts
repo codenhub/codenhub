@@ -1,62 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { custom, err, ok, val } from ".";
+import { custom, err, ok, type ValidationErr, val, ValidationError } from ".";
 
-describe("custom", () => {
-  it("returns successful parsed custom validator results", () => {
-    expect(custom<string>("usr_123", (value) => ok(value))).toEqual({ ok: true, value: "usr_123" });
-  });
-
-  it("normalizes returned validation failures with the caller path", () => {
-    expect(
-      custom("bad", () => err({ code: "invalid_format", message: "Invalid user id" }), { path: ["userId"] }),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_format",
-        message: "Invalid user id",
-        path: ["userId"],
-      },
-    });
-  });
-
-  it("normalizes thrown strings and errors", () => {
-    expect(
-      custom(
-        "bad",
-        () => {
-          throw "Invalid user id";
-        },
-        { path: ["userId"] },
-      ),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "custom",
-        message: "Invalid user id",
-        path: ["userId"],
-      },
-    });
-
-    expect(
-      custom(
-        "bad",
-        () => {
-          throw new Error("Unexpected validation failure");
-        },
-        { path: ["userId"] },
-      ),
-    ).toEqual({
-      ok: false,
-      error: {
-        code: "custom",
-        message: "Unexpected validation failure",
-        path: ["userId"],
-      },
-    });
-  });
-
-  it("creates a CustomValidator schema when passed a validator function", () => {
+describe("custom validator", () => {
+  it("creates a CustomValidator schema and validates boolean predicates", () => {
     const isEven = val.custom<number, number>((input) => {
       if (typeof input !== "number") {
         return "Must be a number";
@@ -83,6 +30,51 @@ describe("custom", () => {
     });
   });
 
+  it("handles ValidationResult return values from custom functions", () => {
+    const schema = custom<string, string>((input) => {
+      if (input.startsWith("usr_")) {
+        return ok(input);
+      }
+      return err({ code: "invalid_format", message: "Invalid user id" });
+    });
+
+    expect(schema.validate("usr_123")).toEqual({ ok: true, value: "usr_123" });
+    expect(schema.validate("bad", { path: ["userId"] })).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_format",
+        message: "Invalid user id",
+        path: ["userId"],
+      },
+    });
+  });
+
+  it("handles thrown strings and errors inside custom validators", () => {
+    const stringThrower = custom(() => {
+      throw "Invalid user id";
+    });
+    expect(stringThrower.validate("bad", { path: ["userId"] })).toEqual({
+      ok: false,
+      error: {
+        code: "custom",
+        message: "Invalid user id",
+        path: ["userId"],
+      },
+    });
+
+    const errorThrower = custom(() => {
+      throw new Error("Unexpected validation failure");
+    });
+    expect(errorThrower.validate("bad", { path: ["userId"] })).toEqual({
+      ok: false,
+      error: {
+        code: "custom",
+        message: "Unexpected validation failure",
+        path: ["userId"],
+      },
+    });
+  });
+
   it("supports context-based issue registration in CustomValidator", () => {
     const customSchema = custom((input, ctx) => {
       if (input === "invalid") {
@@ -103,5 +95,95 @@ describe("custom", () => {
         path: [],
       },
     });
+  });
+
+  it("supports value transformations in custom validators", () => {
+    const uppercaseSchema = custom<string, string>((input) => ok(String(input).toUpperCase()));
+    expect(uppercaseSchema.validate("hello")).toEqual({ ok: true, value: "HELLO" });
+  });
+
+  it("supports asynchronous custom validator functions via validateAsync", async () => {
+    const asyncValidator = custom<string, string>(async (input) => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      if (input === "valid") {
+        return true;
+      }
+      if (input === "error_result") {
+        return err({ code: "invalid_value", message: "Async check rejected" });
+      }
+      return "Async validation failed";
+    });
+
+    await expect(asyncValidator.validateAsync("valid")).resolves.toEqual({
+      ok: true,
+      value: "valid",
+    });
+
+    await expect(asyncValidator.validateAsync("error_result")).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "invalid_value",
+        message: "Async check rejected",
+      },
+    });
+
+    await expect(asyncValidator.validateAsync("invalid")).resolves.toMatchObject({
+      ok: false,
+      error: {
+        code: "custom",
+        message: "Async validation failed",
+      },
+    });
+
+    await expect(asyncValidator.parseAsync("valid")).resolves.toBe("valid");
+    await expect(asyncValidator.parseAsync("invalid")).rejects.toThrow(ValidationError);
+  });
+
+  it("fails synchronous validate() when custom validator returns a promise", () => {
+    const asyncValidator = custom(async (input) => input === "valid");
+
+    const syncResult = asyncValidator.validate("valid");
+    expect(syncResult).toEqual({
+      ok: false,
+      error: {
+        code: "custom",
+        message: "Async custom validator requires validateAsync()",
+        path: [],
+      },
+    });
+  });
+
+  it("catches thrown errors in async custom validators", async () => {
+    const failingAsync = custom(async () => {
+      throw new Error("Async explosion");
+    });
+
+    const result = await failingAsync.validateAsync("anything", { path: ["data"] });
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "custom",
+        message: "Async explosion",
+        path: ["data"],
+      },
+    });
+  });
+
+  it("does not fail with shared context issues when custom callback adds no issues", () => {
+    const customField = custom((_val) => {
+      // Returns void/undefined without adding any issues to context
+    });
+
+    const schema = val.object({
+      failing: val.string().min(10),
+      customField,
+    });
+
+    const result = schema.validate({ failing: "short", customField: "valid" }, { abortEarly: false });
+    expect(result.ok).toBe(false);
+    const err = (result as ValidationErr).error;
+    // Exactly one issue occurred at 'failing', not at 'customField'
+    expect(err.path).toEqual(["failing"]);
+    expect(err.issues).toBeUndefined();
   });
 });

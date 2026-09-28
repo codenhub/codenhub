@@ -4,7 +4,7 @@ title: Overview
 
 # Validate Application Inputs
 
-`@codenhub/validation` provides declarative data and structure validation, primitive coercion helpers, and deep customization without runtime dependencies. It allows defining typed schemas for unknown request parameters, API payloads, form submissions, or environment variables and validating them with discriminated results.
+`@codenhub/validation` provides declarative data and structure validation, primitive coercion helpers, and deep customization without runtime dependencies. Version 0.1.0 is built from scratch as a pure declarative schema builder with zero legacy baggage. It allows defining typed schemas for unknown request parameters, API payloads, form submissions, or environment variables and validating them with discriminated results or throwing parsers.
 
 ## Setup
 
@@ -45,7 +45,67 @@ if (result.ok) {
 }
 ```
 
-Validators never throw for ordinary validation failures; they return a `ValidationResult<T>` that discriminates on `ok: true | false`.
+## Validation Modes
+
+Schemas can be evaluated across multiple execution workflows depending on whether application boundaries prefer safe result types, thrown exceptions, assertions, or async resolution:
+
+### Discriminated Results
+
+The default execution mode returns a `ValidationResult<T>` that discriminates on `ok: true | false`:
+
+```ts
+const res = schema.validate(input);
+if (res.ok) {
+  handleSuccess(res.value);
+} else {
+  handleFailure(res.error);
+}
+```
+
+### Throwing Parsers
+
+When exceptions are preferred at application boundaries (e.g. RPC handlers or controllers), use `.parse()`:
+
+```ts
+import { parse } from "@codenhub/validation";
+
+try {
+  const user = schema.parse(input);
+  // or standalone: parse(input, schema);
+} catch (error) {
+  // Throws ValidationError with .issues and .flatten()
+}
+```
+
+### Asynchronous Validation
+
+Schemas with asynchronous refinements, transforms, or checks evaluate via `.validateAsync()` or `.parseAsync()`:
+
+```ts
+import { parseAsync, validateAsync } from "@codenhub/validation";
+
+const res = await schema.validateAsync(input);
+const value = await schema.parseAsync(input);
+```
+
+### Type Guards and Assertions
+
+Validate input type conformance without creating full error trees using `.is()`, `val.is()`, or assertion functions:
+
+```ts
+import { assert, is } from "@codenhub/validation";
+
+if (schema.is(input)) {
+  // input is narrowed to schema output type
+}
+
+assert(input, schema);
+// input is asserted as schema output type in current scope or throws ValidationError
+```
+
+## Standard Schema v1
+
+All schemas implement the [Standard Schema v1](https://standardschema.dev/) specification via the `~standard` property. This enables direct interoperability with modern forms and libraries (such as TanStack Form or React Hook Form) without external adapters.
 
 ## Requirements
 

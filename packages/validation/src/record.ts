@@ -39,6 +39,15 @@ export class RecordValidator<TVal, TKey extends string = string> extends BaseVal
     return this.keyValidator;
   }
 
+  protected override isAsync(): boolean {
+    const valAsync =
+      this.valueValidator instanceof BaseValidator &&
+      (this.valueValidator as unknown as { isAsync(): boolean }).isAsync();
+    const keyAsync =
+      this.keyValidator instanceof BaseValidator && (this.keyValidator as unknown as { isAsync(): boolean }).isAsync();
+    return valAsync || keyAsync;
+  }
+
   protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<Record<TKey, TVal>> {
     if (!isPlainObject(input)) {
       return ctx.fail({
@@ -46,7 +55,7 @@ export class RecordValidator<TVal, TKey extends string = string> extends BaseVal
         message: `Expected object, got ${describeReceived(input)}`,
         expected: "plain object",
         received: describeReceived(input),
-        input,
+        input: ctx.options.includeInput ? input : undefined,
       });
     }
 
@@ -109,6 +118,97 @@ export class RecordValidator<TVal, TKey extends string = string> extends BaseVal
         });
       }
     }
+
+    if (localIssues.length > 0) {
+      if (localIssues.length === 1) {
+        return ctx.fail(localIssues[0]);
+      }
+      return ctx.fail({
+        code: localIssues[0]?.code ?? "invalid_value",
+        message: localIssues[0]?.message ?? "Record validation failed",
+        path: localIssues[0]?.path ?? ctx.path,
+        issues: localIssues,
+      });
+    }
+
+    return ctx.ok(output);
+  }
+
+  protected override async _validateAsync(
+    input: unknown,
+    ctx: ValidationContext,
+  ): Promise<ValidationResult<Record<TKey, TVal>>> {
+    if (!isPlainObject(input)) {
+      return ctx.fail({
+        code: "invalid_type",
+        message: `Expected object, got ${describeReceived(input)}`,
+        expected: "plain object",
+        received: describeReceived(input),
+        input: ctx.options.includeInput ? input : undefined,
+      });
+    }
+
+    const localIssues: ValidationIssue[] = [];
+    const output = {} as Record<TKey, TVal>;
+
+    /* oxlint-disable no-await-in-loop */
+    for (const [rawKey, rawVal] of Object.entries(input)) {
+      let finalKey = rawKey as TKey;
+
+      if (this.keyValidator !== undefined) {
+        const keyRes = await this.keyValidator.validateAsync(rawKey as unknown as TKey, {
+          ...ctx.options,
+          path: [...ctx.path, rawKey],
+        });
+
+        if (!keyRes.ok) {
+          if (keyRes.error.issues && keyRes.error.issues.length > 0) {
+            for (const iss of keyRes.error.issues) {
+              localIssues.push(iss);
+              ctx.addIssue(iss);
+            }
+          } else {
+            localIssues.push(keyRes.error);
+            ctx.addIssue(keyRes.error);
+          }
+
+          if (ctx.options.abortEarly) {
+            return ctx.fail(localIssues[0]);
+          }
+        } else {
+          finalKey = keyRes.value;
+        }
+      }
+
+      const valRes = await this.valueValidator.validateAsync(rawVal as unknown as TVal, {
+        ...ctx.options,
+        path: [...ctx.path, rawKey],
+      });
+
+      if (!valRes.ok) {
+        if (valRes.error.issues && valRes.error.issues.length > 0) {
+          for (const iss of valRes.error.issues) {
+            localIssues.push(iss);
+            ctx.addIssue(iss);
+          }
+        } else {
+          localIssues.push(valRes.error);
+          ctx.addIssue(valRes.error);
+        }
+
+        if (ctx.options.abortEarly) {
+          return ctx.fail(localIssues[0]);
+        }
+      } else {
+        Object.defineProperty(output, finalKey, {
+          value: valRes.value,
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
+      }
+    }
+    /* oxlint-enable no-await-in-loop */
 
     if (localIssues.length > 0) {
       if (localIssues.length === 1) {

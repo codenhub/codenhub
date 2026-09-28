@@ -2,13 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import { type ValidationErr, val } from ".";
 
-describe("number validators", () => {
+describe("number validator constraints", () => {
   it("validates sign-related constraints", () => {
-    expect(val.number(1).positive()).toEqual({ ok: true, value: 1 });
-    expect(val.number(-1).negative()).toEqual({ ok: true, value: -1 });
-    expect(val.number(0).nonNegative()).toEqual({ ok: true, value: 0 });
-    expect(val.number(0).nonPositive()).toEqual({ ok: true, value: 0 });
-    expect(val.number(0, { path: ["amount"] }).nonZero()).toEqual({
+    expect(val.number().positive().validate(1)).toEqual({ ok: true, value: 1 });
+    expect(val.number().negative().validate(-1)).toEqual({ ok: true, value: -1 });
+    expect(val.number().nonNegative().validate(0)).toEqual({ ok: true, value: 0 });
+    expect(val.number().nonPositive().validate(0)).toEqual({ ok: true, value: 0 });
+    expect(
+      val
+        .number()
+        .nonZero()
+        .validate(0, { path: ["amount"] }),
+    ).toEqual({
       ok: false,
       error: {
         code: "invalid_value",
@@ -21,9 +26,17 @@ describe("number validators", () => {
   });
 
   it("validates integer constraints", () => {
-    expect(val.number(10).int()).toEqual({ ok: true, value: 10 });
-    expect(val.number(Number.MAX_SAFE_INTEGER).safeInt()).toEqual({ ok: true, value: Number.MAX_SAFE_INTEGER });
-    expect(val.number(10.5, { path: ["count"] }).int()).toEqual({
+    expect(val.number().int().validate(10)).toEqual({ ok: true, value: 10 });
+    expect(val.number().safeInt().validate(Number.MAX_SAFE_INTEGER)).toEqual({
+      ok: true,
+      value: Number.MAX_SAFE_INTEGER,
+    });
+    expect(
+      val
+        .number()
+        .int()
+        .validate(10.5, { path: ["count"] }),
+    ).toEqual({
       ok: false,
       error: {
         code: "invalid_value",
@@ -36,7 +49,12 @@ describe("number validators", () => {
   });
 
   it("validates finite numbers before method-specific checks", () => {
-    expect(val.number(Infinity, { path: ["size"] }).positive()).toEqual({
+    expect(
+      val
+        .number()
+        .positive()
+        .validate(Infinity, { path: ["size"] }),
+    ).toEqual({
       ok: false,
       error: {
         code: "invalid_value",
@@ -49,8 +67,13 @@ describe("number validators", () => {
   });
 
   it("validates ranges and invalid range configuration", () => {
-    expect(val.number(5).range({ min: 1, max: 10 })).toEqual({ ok: true, value: 5 });
-    expect(val.number(0, { path: ["count"] }).range({ min: 1 })).toEqual({
+    expect(val.number().range({ min: 1, max: 10 }).validate(5)).toEqual({ ok: true, value: 5 });
+    expect(
+      val
+        .number()
+        .range({ min: 1 })
+        .validate(0, { path: ["count"] }),
+    ).toEqual({
       ok: false,
       error: {
         code: "too_small",
@@ -60,7 +83,7 @@ describe("number validators", () => {
         received: "0",
       },
     });
-    expect(val.number(1).range({ min: 10, max: 1 })).toEqual({
+    expect(val.number().range({ min: 10, max: 1 }).validate(1)).toEqual({
       ok: false,
       error: {
         code: "invalid_value",
@@ -68,7 +91,7 @@ describe("number validators", () => {
         path: [],
       },
     });
-    expect(val.number(1).range({ min: Number.NaN })).toEqual({
+    expect(val.number().range({ min: Number.NaN }).validate(1)).toEqual({
       ok: false,
       error: {
         code: "invalid_value",
@@ -76,7 +99,7 @@ describe("number validators", () => {
         path: [],
       },
     });
-    expect(val.number(1).range({ max: Number.NaN })).toEqual({
+    expect(val.number().range({ max: Number.NaN }).validate(1)).toEqual({
       ok: false,
       error: {
         code: "invalid_value",
@@ -87,9 +110,14 @@ describe("number validators", () => {
   });
 
   it("validates finite and port helpers", () => {
-    expect(val.number(1).finite()).toEqual({ ok: true, value: 1 });
-    expect(val.number(65535).port()).toEqual({ ok: true, value: 65535 });
-    expect(val.number(65536, { path: ["port"] }).port()).toEqual({
+    expect(val.number().finite().validate(1)).toEqual({ ok: true, value: 1 });
+    expect(val.number().port().validate(65535)).toEqual({ ok: true, value: 65535 });
+    expect(
+      val
+        .number()
+        .port()
+        .validate(65536, { path: ["port"] }),
+    ).toEqual({
       ok: false,
       error: {
         code: "invalid_value",
@@ -102,7 +130,7 @@ describe("number validators", () => {
   });
 });
 
-describe("NumberValidator (0.1.0 schema API)", () => {
+describe("NumberValidator core API", () => {
   it("validates basic number type and rejects NaN and non-numbers", () => {
     const schema = val.number();
     expect(schema.validate(42)).toEqual({ ok: true, value: 42 });
@@ -218,5 +246,66 @@ describe("NumberValidator (0.1.0 schema API)", () => {
 
     expect(base.validate(20).ok).toBe(true);
     expect(bounded.validate(20).ok).toBe(false);
+  });
+});
+
+describe("NumberValidator Phase 2 clamp()", () => {
+  it("clamps numbers above the maximum boundary", () => {
+    const schema = val.number().clamp(0, 10);
+    expect(schema.validate(15)).toEqual({ ok: true, value: 10 });
+  });
+
+  it("clamps numbers below the minimum boundary", () => {
+    const schema = val.number().clamp(0, 10);
+    expect(schema.validate(-5)).toEqual({ ok: true, value: 0 });
+  });
+
+  it("preserves numbers within boundaries unchanged", () => {
+    const schema = val.number().clamp(0, 10);
+    expect(schema.validate(7)).toEqual({ ok: true, value: 7 });
+    expect(schema.validate(0)).toEqual({ ok: true, value: 0 });
+    expect(schema.validate(10)).toEqual({ ok: true, value: 10 });
+  });
+
+  it("supports negative clamp ranges", () => {
+    const schema = val.number().clamp(-20, -10);
+    expect(schema.validate(-5)).toEqual({ ok: true, value: -10 });
+    expect(schema.validate(-25)).toEqual({ ok: true, value: -20 });
+    expect(schema.validate(-15)).toEqual({ ok: true, value: -15 });
+  });
+
+  it("rejects invalid clamp configurations", () => {
+    const invalidBounds = val.number().clamp(10, 0);
+    expect(invalidBounds.validate(5)).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_value",
+        message: "Clamp bounds must be finite numbers and min <= max",
+        path: [],
+      },
+    });
+
+    const nanBounds = val.number().clamp(Number.NaN, 10);
+    expect(nanBounds.validate(5)).toEqual({
+      ok: false,
+      error: {
+        code: "invalid_value",
+        message: "Clamp bounds must be finite numbers and min <= max",
+        path: [],
+      },
+    });
+  });
+
+  it("chains with subsequent validators using clamped value", () => {
+    const schema = val.number().clamp(0, 10).max(10);
+    expect(schema.validate(100)).toEqual({ ok: true, value: 10 });
+  });
+
+  it("does not mutate receiver when calling clamp()", () => {
+    const base = val.number();
+    const clamped = base.clamp(0, 5);
+
+    expect(base.validate(10)).toEqual({ ok: true, value: 10 });
+    expect(clamped.validate(10)).toEqual({ ok: true, value: 5 });
   });
 });

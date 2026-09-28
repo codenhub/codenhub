@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/validation",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": false,
   "description": "Zero-dependency validation and primitive coercion helpers for TypeScript apps.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/validation",
