@@ -1,4 +1,4 @@
-import { failWith, invalidType, pass, toIssue } from "../core/result";
+import { assertBounds, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { ValidationIssue, Validator } from "../core/types";
 
 /** Constraints and clean-up for {@link number}. Every option is optional. */
@@ -23,7 +23,11 @@ export interface NumberOptions {
    * @defaultValue false
    */
   safeInt?: boolean;
-  /** Requires a multiple of this positive number, tolerating floating-point error so `0.3` is a multiple of `0.1`. */
+  /**
+   * Requires a multiple of this positive number, compared as the decimals both are written as, so `0.3`
+   * is a multiple of `0.1` at any size. A value computed in floating point, such as `0.1 + 0.2`, is
+   * compared as the number it actually is, `0.30000000000000004`.
+   */
   multipleOf?: number;
   /**
    * Requires a value other than zero.
@@ -44,9 +48,26 @@ const outOfRange = (side: "min" | "max", bound: number, isInclusive: boolean): V
 const invalidValue = (format: string): ValidationIssue =>
   toIssue({ code: "invalid_value", params: { type: "number", format } });
 
+/** A number's shortest text as whole digits and a power of ten: 0.35 is 35 and -2, 1e-7 is 1 and -7. */
+const toDecimal = (value: number): { digits: bigint; exponent: number } => {
+  const [mantissa = "0", exponent = "0"] = value.toExponential().split("e");
+  const [whole = "0", fraction = ""] = mantissa.split(".");
+  return { digits: BigInt(whole + fraction), exponent: Number(exponent) - fraction.length };
+};
+
 const isMultipleOf = (value: number, step: number): boolean => {
-  const quotient = value / step;
-  return Math.abs(quotient - Math.round(quotient)) <= Number.EPSILON * Math.max(1, Math.abs(quotient));
+  // `%` is exact, so whole numbers of any size are compared as they are.
+  if (Number.isInteger(value) && Number.isInteger(step)) {
+    return value % step === 0;
+  }
+  // Otherwise both are read as the decimals they are written as, scaled to whole numbers with the same
+  // power of ten, so 0.3 is a multiple of 0.1 and 1e16 is not one of 0.3, at any size.
+  const left = toDecimal(value);
+  const right = toDecimal(step);
+  const exponent = Math.min(left.exponent, right.exponent);
+  const scale = (decimal: { digits: bigint; exponent: number }): bigint =>
+    decimal.digits * 10n ** BigInt(decimal.exponent - exponent);
+  return scale(left) % scale(right) === 0n;
 };
 
 /**
@@ -65,14 +86,25 @@ const isMultipleOf = (value: number, step: number): boolean => {
  *
  * @param options - Constraints and clean-up to apply.
  * @returns A validator that produces a number.
- * @throws {RangeError} When `multipleOf` is not a positive finite number, or `clamp` has a `NaN` bound or a
- * minimum above its maximum.
+ * @throws {RangeError} When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`,
+ * no number can satisfy the bounds together, `multipleOf` is not a
+ * positive finite number, or `clamp` has a `NaN` bound or a minimum above its maximum.
  */
 export function number(options: NumberOptions = {}): Validator<number> {
   const { min, max, gt, lt, int, safeInt, multipleOf, nonZero, clamp } = options;
   if (multipleOf !== undefined && (!Number.isFinite(multipleOf) || multipleOf <= 0)) {
     throw new RangeError(`multipleOf must be a positive finite number, received ${multipleOf}`);
   }
+  for (const [name, bound] of Object.entries({ min, max, gt, lt })) {
+    if (Number.isNaN(bound)) {
+      throw new RangeError(`${name} must be a number, received NaN`);
+    }
+    // Only finite numbers pass, so a lower bound of Infinity or an upper one of -Infinity shuts out all.
+    if (bound === (name === "min" || name === "gt" ? Infinity : -Infinity)) {
+      throw new RangeError(`No finite number can satisfy ${name} ${bound}`);
+    }
+  }
+  assertBounds(options);
   if (clamp !== undefined) {
     if (Number.isNaN(clamp.min) || Number.isNaN(clamp.max)) {
       throw new RangeError("clamp bounds must be numbers, received NaN");

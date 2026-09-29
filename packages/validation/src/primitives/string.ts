@@ -1,4 +1,4 @@
-import { assertSize, failWith, invalidType, pass, toIssue } from "../core/result";
+import { assertOrder, assertSize, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { ValidationIssue, Validator } from "../core/types";
 
 /** Constraints and clean-up for {@link string}. Every option is optional. */
@@ -69,7 +69,7 @@ const invalidFormat = (format: string, extra: Record<string, unknown> = {}): Val
  *
  * @param options - Constraints and clean-up to apply.
  * @returns A validator that produces a string.
- * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer.
+ * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
  * @throws {TypeError} When both `lowercase` and `uppercase` are set.
  */
 export function string(options: StringOptions = {}): Validator<string> {
@@ -83,6 +83,9 @@ export function string(options: StringOptions = {}): Validator<string> {
       assertSize(name, size);
     }
   }
+  assertOrder("min", min, "max", max);
+  assertOrder("min", min, "length", length);
+  assertOrder("length", length, "max", max);
   if (lowercase === true && uppercase === true) {
     throw new TypeError("string() cannot lowercase and uppercase at once");
   }

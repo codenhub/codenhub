@@ -80,6 +80,12 @@ describe("discriminatedUnion", () => {
     expect(JSON.stringify(issuesOf(event({ type: "hunter2" })))).not.toContain("hunter2");
   });
 
+  it("should give each failure its own list of tags", () => {
+    const reported = issuesOf(event({ type: "nope" }))[0]?.params?.options as string[];
+    reported.push("nope");
+    expect(issuesOf(event({ type: "nope" }))[0]?.params?.options).toEqual(["click", "key"]);
+  });
+
   it("should be asynchronous when a variant is, and answer at once for a bad tag", async () => {
     const asynchronous = discriminatedUnion("kind", { user: object({ name: isFree }), guest: object({}) });
     expect(isPending(asynchronous({ kind: "nope" }))).toBe(false);

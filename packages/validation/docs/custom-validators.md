@@ -79,18 +79,22 @@ const workEmail: Validator<string> = (input) => {
 };
 ```
 
-For a single extra rule, `refine` does this for you, and `transform` changes the value. A `transform` cannot reject, so a conversion that can fail, such as parsing a date, is a validator of your own placed after the wrapped one with `pipe`:
+For a single extra rule, `refine` does this for you, and `transform` changes the value. A `transform` cannot reject, so a conversion that can fail, such as turning a day into a `Date`, is a validator of your own placed after the wrapped one with `pipe`:
 
 ```ts
-import { fail, pass, pipe, string, type Validator } from "@codenhub/validation";
+import { fail, isoDate, pass, pipe, type Validator } from "@codenhub/validation";
 
-const parseDate: Validator<Date> = (input) => {
-  const date = new Date(String(input));
+// isoDate has already checked the text is a day such as 2026-09-28, so this reads it as UTC midnight
+// the same way on every runtime. `new Date(text)` on free-form text would not.
+const startOfDay: Validator<Date> = (input) => {
+  const date = new Date(`${String(input)}T00:00:00Z`);
   return Number.isNaN(date.getTime()) ? fail({ code: "invalid_date" }) : pass(date);
 };
 
-const birthday = pipe(string({ trim: true }), parseDate);
+const birthday = pipe(isoDate(), startOfDay);
 ```
+
+For dates in general, [`coerceDate`](coercion.md) already does this conversion.
 
 ## Adding a rule with `refine`
 

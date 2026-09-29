@@ -78,6 +78,14 @@ describe("formatPath", () => {
   it("should be empty for the root", () => {
     expect(formatPath([])).toBe("");
   });
+
+  it("should quote a key that dot notation would misread, so different paths never share a name", () => {
+    expect(formatPath(["a.b"])).toBe('["a.b"]');
+    expect(formatPath(["a", "b"])).toBe("a.b");
+    expect(formatPath(["list", "[0]"])).toBe('list["[0]"]');
+    expect(formatPath(["x", ""])).toBe('x[""]');
+    expect(formatPath(["first-name", "0"])).toBe("first-name.0");
+  });
 });
 
 describe("formatIssue", () => {
@@ -193,6 +201,16 @@ describe("formatIssue", () => {
     expect(formatIssue(issue({ code: "invalid_union" }))).toBe("Does not match any of the allowed types");
   });
 
+  it("should word never and a missing or unknown tag without calling them types", () => {
+    expect(formatIssue(issue({ code: "invalid_type", params: { expected: "never", received: "number" } }))).toBe(
+      "Not allowed",
+    );
+    expect(formatIssue(issue({ code: "invalid_union", params: { discriminator: "type", options: ["a", "b"] } }))).toBe(
+      'Expected type to be one of "a", "b"',
+    );
+    expect(formatIssue(issue({ code: "invalid_key", params: { issues: [] } }))).toBe("Invalid key");
+  });
+
   it("should name an unknown format by its own name", () => {
     expect(formatIssue(issue({ code: "invalid_format", params: { format: "phone" } }))).toBe("Invalid phone");
   });
@@ -232,6 +250,16 @@ describe("flatten", () => {
   it("should use the message map", () => {
     const failure = fail({ path: ["a"], code: "custom" }).error;
     expect(flatten(failure, { custom: "Oops" }).fieldErrors).toEqual({ a: ["Oops"] });
+  });
+
+  it("should keep a dotted key apart from the nested path it looks like", () => {
+    const { fieldErrors } = flatten({
+      issues: [
+        { code: "x", path: ["a.b"] },
+        { code: "y", path: ["a", "b"] },
+      ],
+    });
+    expect(Object.keys(fieldErrors)).toEqual(['["a.b"]', "a.b"]);
   });
 
   it("should not let a field named like an Object.prototype member collide", () => {

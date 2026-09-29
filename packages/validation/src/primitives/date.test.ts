@@ -13,7 +13,7 @@ describe("date", () => {
 
   it("should reject an invalid Date, timestamps and date strings", () => {
     expect(accepts(date(), new Date("nope"), 1_700_000_000_000, "2026-09-28", null, {})).toEqual(Array(5).fill(false));
-    expect(issuesOf(date()(new Date("nope")))[0]?.params).toEqual({ expected: "valid date", received: "date" });
+    expect(issuesOf(date()(new Date("nope")))[0]?.params).toEqual({ expected: "valid date", received: "invalid date" });
   });
 
   it("should treat min and max as inclusive", () => {
@@ -35,8 +35,20 @@ describe("date", () => {
     expect(codesOf(date({ max: day("2026-01-01") })(day("2027-01-01")))).toEqual(["too_big"]);
   });
 
+  it("should read its bounds once, so changing them later or through an issue has no effect", () => {
+    const min = day("2026-01-01");
+    const validator = date({ min });
+    min.setUTCFullYear(2000);
+    expect(validator(day("2025-01-01")).ok).toBe(false);
+    const reported = issuesOf(validator(day("2025-01-01")))[0]?.params?.minimum as Date;
+    reported.setUTCFullYear(2000);
+    expect(issuesOf(validator(day("2025-01-01")))[0]?.params?.minimum).toEqual(day("2026-01-01"));
+  });
+
   it("should reject an invalid bound when the validator is created", () => {
     expect(() => date({ min: new Date("nope") })).toThrow(RangeError);
     expect(() => date({ max: new Date("nope") })).toThrow(RangeError);
+    expect(() => date({ min: day("2027-01-01"), max: day("2026-01-01") })).toThrow(RangeError);
+    expect(() => date({ min: day("2026-01-01"), max: day("2026-01-01") })).not.toThrow();
   });
 });

@@ -44,6 +44,17 @@ describe("string", () => {
         expect(() => string(options)).toThrow(RangeError);
       }
     });
+
+    it("should reject limits no string can satisfy when the validator is created", () => {
+      for (const options of [
+        { min: 3, max: 2 },
+        { min: 3, length: 2 },
+        { max: 2, length: 3 },
+      ]) {
+        expect(() => string(options)).toThrow(RangeError);
+      }
+      expect(() => string({ min: 2, max: 2, length: 2 })).not.toThrow();
+    });
   });
 
   describe("pattern and substring rules", () => {

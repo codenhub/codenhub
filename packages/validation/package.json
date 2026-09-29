@@ -41,10 +41,14 @@
     "typecheck": "tsc -b"
   },
   "devDependencies": {
+    "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "codenhub": {
     "docs": {

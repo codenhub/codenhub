@@ -14,12 +14,14 @@ const COMPILE_TIMEOUT = 60_000;
 
 describe("built declarations", () => {
   it(
-    "type-check for a consumer, with strict settings and no lib check",
+    "type-check for a consumer, with the strictest settings and the library checked",
     () => {
       expect(existsSync(declarations), "run `pnpm build validation` first: this test reads dist/").toBe(true);
 
       const program = ts.createProgram([fixture], {
         strict: true,
+        noUncheckedIndexedAccess: true,
+        exactOptionalPropertyTypes: true,
         noEmit: true,
         skipLibCheck: false,
         target: ts.ScriptTarget.ES2022,

@@ -957,6 +957,9 @@ importers:
 
   packages/validation:
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.1.1
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.10(vitest@4.1.10)

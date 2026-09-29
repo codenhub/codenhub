@@ -64,6 +64,8 @@ describe("coerceDate", () => {
       received: "string",
       coerced: true,
     });
+    // A timestamp past the range a Date can hold is a number that could not be converted.
+    expect(issuesOf(validator(9e15))[0]?.params).toEqual({ expected: "valid date", received: "number", coerced: true });
   });
 
   it("should apply the bounds of date to the converted value", () => {

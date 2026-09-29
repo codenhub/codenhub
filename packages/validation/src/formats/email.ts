@@ -1,10 +1,6 @@
 import type { Validator } from "../core/types";
-import { PUBLIC_HOST_PATTERN } from "./patterns";
+import { isEmailAddress } from "./email-address";
 import { textFormat } from "./text-format";
-
-const EMAIL_LOCAL_PATTERN = /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*$/i;
-const EMAIL_LOCAL_MAX_LENGTH = 64;
-const EMAIL_MAX_LENGTH = 254;
 
 /** Options for {@link email}. */
 export interface EmailOptions {
@@ -15,20 +11,6 @@ export interface EmailOptions {
    */
   allowPlus?: boolean;
 }
-
-const isEmail = (text: string, allowPlus: boolean): boolean => {
-  const [local, host, extra] = text.split("@");
-  return (
-    extra === undefined &&
-    local !== undefined &&
-    host !== undefined &&
-    text.length <= EMAIL_MAX_LENGTH &&
-    local.length <= EMAIL_LOCAL_MAX_LENGTH &&
-    EMAIL_LOCAL_PATTERN.test(local) &&
-    PUBLIC_HOST_PATTERN.test(host) &&
-    (allowPlus || !local.includes("+"))
-  );
-};
 
 /**
  * Creates a validator for email addresses with a public domain name. The value is not modified, so
@@ -45,5 +27,5 @@ const isEmail = (text: string, allowPlus: boolean): boolean => {
  */
 export function email(options: EmailOptions = {}): Validator<string> {
   const allowPlus = options.allowPlus ?? true;
-  return textFormat("email", (text) => isEmail(text, allowPlus));
+  return textFormat("email", (text) => isEmailAddress(text, allowPlus, false));
 }

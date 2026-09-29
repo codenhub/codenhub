@@ -48,7 +48,7 @@ Options are applied in a fixed order that the docs state: clean-up (`trim`, `low
 
 Invalid input is a normal outcome, so it is a return value: `{ ok: true, value }` or `{ ok: false, error: { issues } }`. The shape matches the `Result<T>` used elsewhere in the repository on purpose, and is defined locally so the package depends on nothing. `docs/specs/errors.md` asks packages without an error dependency to return a package-local result, and asks that throwing and returning not be mixed for the same failure, which is why there is no `parse` or `assert`.
 
-Two things do throw, and both are programmer errors: an invalid option when a validator is created (`string({ min: -1 })` is a `RangeError`, `string({ lowercase: true, uppercase: true })` is a `TypeError`), and a callback the consumer wrote that throws, which propagates as the bug it is. Validation never throws for bad input.
+Two things do throw, and both are programmer errors: an invalid option when a validator is created (`string({ min: -1 })` is a `RangeError`, `string({ lowercase: true, uppercase: true })` is a `TypeError`), and a callback the consumer wrote that throws, which propagates as the bug it is. Validation never throws for bad input, with one exception it cannot avoid cheaply: each level of nesting is a level of recursion, so input nested past the stack limit, or cyclic input under a recursive `lazy` validator, throws a `RangeError`. A depth counter would add a parameter or shared state to every composer; the docs tell consumers to cap untrusted input instead.
 
 `is(validator, input)` is the boolean projection, for hooks that need a type guard. Its narrowing is exact only for a validator that does not change the value, and the docs say so.
 
@@ -56,12 +56,12 @@ Two things do throw, and both are programmer errors: an invalid option when a va
 
 An issue is `{ code, path, params?, message? }` and nothing else.
 
-- `code` is an open set of strings. The built-in codes are `invalid_type`, `invalid_value`, `invalid_format`, `too_small`, `too_big`, `unrecognized_key` and `invalid_union`; a custom validator adds its own, such as `username_taken`, and callers branch on them.
+- `code` is an open set of strings. The built-in codes are `invalid_type`, `invalid_value`, `invalid_format`, `too_small`, `too_big`, `unrecognized_key`, `invalid_key` and `invalid_union`; a custom validator adds its own, such as `username_taken`, and callers branch on them.
 - `path` is absolute: from the root of what was validated down to the offending value. A validator reports an issue at its own location (an empty path, or a path relative to its value), and each composer prefixes the segment it descended through with `nestIssues`. Nothing else edits paths, which is what keeps them predictable.
 - `params` holds the facts behind the failure (`{ minimum: 3, type: "string" }`, `{ expected: "string", received: "number" }`), enough to build a message and to branch on.
 - `message` is optional and never set by a built-in validator. A custom validator can set it when it wants fixed text.
 
-**Issues never contain the input.** No `input` field exists, and `params` carries type names and constraint values, never the value under test. This is a privacy invariant, not a default: inputs are passwords and tokens, and an issue is something callers log. Any new rule must keep it, and the unit tests check it per validator.
+**Issues never contain an input value.** No `input` field exists, and `params` carries type names and constraint values, never the value under test. Keys are the exception by necessity: a path is made of the input's keys, and `unrecognized_key` names the key in `params.key` as well. This is a privacy invariant, not a default: inputs are passwords and tokens, and an issue is something callers log. Any new rule must keep it, and the unit tests check it per validator.
 
 ### Messages are on demand, and the English is separate
 
@@ -144,7 +144,7 @@ The conversions are narrow on purpose, because a conversion that guesses turns a
 
 ## Standard Schema
 
-A validator is a function and not a schema object, so Standard Schema v1 support is an adapter: `standard(validator, messages?)` returns a new function that calls the validator and carries a `~standard` property, and leaves the validator you gave untouched. The standard requires a `message` on every issue, and the adapter supplies it with `formatIssue` and a message map it requires as an argument, so the cost of messages is paid only by whoever asks for interop. Input type and output type are `unknown` and the validator's `Infer`, since validators take `unknown`.
+A validator is a function and not a schema object, so Standard Schema v1 support is an adapter: `standard(validator, messages)` returns a new function that calls the validator and carries a `~standard` property, and leaves the validator you gave untouched. The standard requires a `message` on every issue, and the adapter supplies it with `formatIssue` and a message map it requires as an argument, so the cost of messages is paid only by whoever asks for interop. Input type and output type are `unknown` and the validator's `Infer`, since validators take `unknown`.
 
 `~standard.validate` is synchronous for a synchronous validator and returns a promise for an asynchronous one, through `chain`. The interface types are vendored in `src/interop/standard-schema.ts` so the package needs no dependency for them.
 
