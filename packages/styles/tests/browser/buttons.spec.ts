@@ -621,3 +621,34 @@ test("stands a default button as tall as a text field at any line width", async 
 
   expect(heights).toEqual([40, 40, 40, 40]);
 });
+
+/* An icon button follows the size step like a labelled one: `.sm` is the
+   32px step, the default the 40px control height, `.lg` the 48px one -- and
+   stays square at each. `.sm` used to leave it at 40px. */
+test("sizes an icon button with the size step and keeps it square", async ({ page }) => {
+  await page.goto(BUTTONS_URL);
+
+  const sizes = await page.evaluate(() => {
+    const host = document.createElement("div");
+    host.style.cssText = "display: flex; align-items: flex-start; gap: 0.5rem; font-size: 16px; line-height: 1.5";
+    host.innerHTML =
+      '<button class="btn icon sm" aria-label="Add">+</button>' +
+      '<button class="btn icon" aria-label="Add">+</button>' +
+      '<button class="btn icon lg" aria-label="Add">+</button>';
+    document.body.append(host);
+    const result = [...host.children].map((element) => {
+      const { height, width } = element.getBoundingClientRect();
+
+      return [width, height];
+    });
+    host.remove();
+
+    return result;
+  });
+
+  expect(sizes).toEqual([
+    [32, 32],
+    [40, 40],
+    [48, 48],
+  ]);
+});
