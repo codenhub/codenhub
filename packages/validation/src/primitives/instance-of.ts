@@ -20,5 +20,6 @@ export type Constructor<T = unknown> = abstract new (...args: never[]) => T;
  * @returns A validator that produces the instance.
  */
 export function instanceOf<T>(target: Constructor<T>): Validator<T> {
-  return (input) => (input instanceof target ? pass(input as T) : invalidType(`instance of ${target.name}`, input));
+  return (input) =>
+    input instanceof target ? pass(input as T) : invalidType(`instance of ${target.name || "anonymous class"}`, input);
 }

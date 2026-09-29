@@ -13,7 +13,7 @@ export interface EmailOptions {
 }
 
 /**
- * Creates a validator for email addresses with a public domain name. The value is not modified, so
+ * Creates a validator for email addresses with a public domain name, which may be internationalized (`ada@münchen.de`). The local part must be ASCII: addresses with letters beyond it (RFC 6531) are rejected. The value is not modified, so
  * trim and lowercase it first with `pipe` when the input may need it.
  *
  * @example

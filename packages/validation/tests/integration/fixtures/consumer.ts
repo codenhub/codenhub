@@ -139,6 +139,10 @@ export const tags = array(string(), { max: 5, unique: true });
 export const tagList: Infer<typeof tags> = ["a", "b"];
 // @ts-expect-error items must be strings
 export const badTagList: Infer<typeof tags> = [1];
+// The callback of `unique` is typed by the item, with no annotation.
+export const users = array(object({ id: number() }), { unique: (user) => user.id });
+// @ts-expect-error the item has no `name`
+export const badUsers = array(object({ id: number() }), { unique: (user) => user.name });
 export const point = tuple([number(), number()]);
 export const pointValue: Infer<typeof point> = [1, 2];
 // @ts-expect-error a tuple has a fixed length
@@ -198,7 +202,10 @@ interface Category {
   name: string;
   children: Category[];
 }
-export const category: Validator<Category> = object({ name: string(), children: array(lazy(() => category)) });
+export const category: Validator<Category> = object({
+  name: string(),
+  children: array(lazy(() => category, { maxDepth: 64 })),
+});
 
 // Coercing validators produce the strict validator's type, and take its options.
 export const port = coerceNumber({ int: true, min: 1, max: 65535 });

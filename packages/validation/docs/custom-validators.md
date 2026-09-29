@@ -33,7 +33,7 @@ const pairs = object({ count: even });
 
 ### Reporting failures
 
-`fail` takes one or more issues. Each can set:
+`fail` takes one or more issues, and throws a `TypeError` for none, since a failure with no issue says nothing. Each can set:
 
 | Field     | Meaning                                                                                                                                    |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -153,7 +153,7 @@ const existingUser: AsyncValidator<User> = async (input) => {
 Things to know about asynchronous validation:
 
 - **Always `await` the result of an `AsyncValidator`.** It may be a promise, or a plain result when the validator could answer without waiting, for instance `optional(existingUser)` given `undefined`. `await` handles both.
-- **Independent properties run their rules concurrently.** In `signup` above, the username lookup and the email check start together.
+- **Independent properties and items run their rules concurrently.** In `signup` above, the username lookup and the email check start together, and so does the rule of every item of an array, with no limit. Give the array a `max` before validating a list you did not write, so it cannot start thousands of lookups at once.
 - **Issues stay in a fixed order.** They follow the order of the shape, not the order in which the promises finished.
 - **`is` needs a synchronous validator.** It throws a `TypeError` for one that turns out to return a promise.
 - **A rejected promise is a bug, not invalid input.** If your callback throws or rejects, the exception propagates. Report invalid input with `fail`.

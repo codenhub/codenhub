@@ -5,7 +5,7 @@ import { hostname } from "./hostname";
 
 describe("hostname", () => {
   it("should accept valid values and leave them unchanged", () => {
-    const valid = ["localhost", "a.example.com", "a-b.example.com", "EXAMPLE.com"];
+    const valid = ["localhost", "a.example.com", "a-b.example.com", "EXAMPLE.com", "3com.com", "example.123x", "1a"];
     expect(accepts(hostname(), ...valid)).toEqual(valid.map(() => true));
     expect(valueOf(hostname()(valid[0]))).toBe(valid[0]);
   });
@@ -18,6 +18,10 @@ describe("hostname", () => {
       "",
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com",
       "a b.com",
+      "999.999.999.999",
+      "1.2.3.4",
+      "123",
+      "example.123",
     ];
     expect(accepts(hostname(), ...invalid)).toEqual(invalid.map(() => false));
   });

@@ -96,6 +96,28 @@ describe("url", () => {
     expect(accepts(ftp, "ftp://example.com", "https://example.com")).toEqual([true, false]);
   });
 
+  it("should match protocols in any letter case", () => {
+    expect(accepts(url({ protocols: ["HTTPS", "Ftp"] }), "https://example.com", "ftp://example.com")).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  it("should refuse a protocol that is not a scheme name, which would otherwise match nothing", () => {
+    for (const protocol of ["https:", "https://", "", "1http", "ht tp"]) {
+      expect(() => url({ protocols: [protocol] })).toThrow(TypeError);
+    }
+  });
+
+  it("should accept any IP address with allowLocal, public or not, and does not check ranges", () => {
+    expect(accepts(url(), "http://8.8.8.8/", "http://169.254.169.254/")).toEqual([false, false]);
+    expect(accepts(url({ allowLocal: true }), "http://8.8.8.8/", "http://169.254.169.254/", "http://[::1]/")).toEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+
   it("should copy the protocol list, so changing it later has no effect", () => {
     const protocols = ["https"];
     const validator = url({ protocols });

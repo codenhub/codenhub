@@ -12,6 +12,48 @@ describe("email", () => {
     expect(accepts(email(), "a@mail.example.co.uk", "a@example.xn--p1ai")).toEqual([true, true]);
   });
 
+  it("should accept an internationalized domain and leave the address as written", () => {
+    expect(valueOf(email()("ada@münchen.de"))).toBe("ada@münchen.de");
+    expect(accepts(email(), "ada@例え.jp", "ada@bücher.example.co.uk", "ada@xn--mnchen-3ya.de")).toEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  it("should accept a domain written with combining marks, as the URL parser reads it", () => {
+    expect(accepts(email(), "ada@münchen.de", "ada@münchen.de")).toEqual([true, true]);
+  });
+
+  it("should measure the address as it is delivered, where an internationalized host is longer", () => {
+    const label = Array.from({ length: 26 }, (_, index) => String.fromCodePoint(0x4e00 + index * 7)).join("");
+    const host = `${label}.${label}.${label}.${label}.com`;
+    const address = `${"a".repeat(64)}@${host}`;
+    expect(address.length).toBeLessThan(254);
+    expect(email()(address).ok).toBe(false);
+    expect(email()(`a@${host}`).ok).toBe(true);
+  });
+
+  it("should reject a non-ASCII local part", () => {
+    expect(accepts(email(), "ü@example.com", "用户@example.com")).toEqual([false, false]);
+  });
+
+  it("should reject an internationalized host that is not a public domain name or not a host at all", () => {
+    expect(
+      accepts(
+        email(),
+        "a@münchen",
+        "a@münchen.test",
+        "a@münchen.de/x",
+        "a@münchen.de:80",
+        "a@m%C3%BCnchen.de",
+        "a@münchen.de?x",
+        "a@münch en.de",
+        `a@${"ü".repeat(60)}.${"ü".repeat(60)}.${"ü".repeat(60)}.com`,
+      ),
+    ).toEqual(Array(8).fill(false));
+  });
+
   it("should reject malformed addresses", () => {
     expect(
       accepts(

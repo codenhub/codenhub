@@ -19,7 +19,8 @@ import type { Validator } from "../core/types";
 export function oneOf<const T extends readonly (string | number)[]>(values: T): Validator<T[number]> {
   const options = [...values];
   return (input) =>
-    (options as readonly unknown[]).includes(input)
+    // indexOf compares with ===, as documented, where includes would also match NaN.
+    (options as readonly unknown[]).indexOf(input) !== -1
       ? pass(input as T[number])
       : // A copy per failure, so changing an issue's list cannot change what the validator accepts.
         failIssue("invalid_value", { options: [...options] });

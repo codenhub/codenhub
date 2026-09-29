@@ -3,6 +3,9 @@ import type { Validator } from "../core/types";
 import { isCalendarDate } from "./calendar";
 import { textFormat } from "./text-format";
 
+/** Nanoseconds, the finest a timestamp is written in; more digits would build a pattern nobody meant. */
+const MAX_PRECISION = 9;
+
 /** Options for {@link datetime}. */
 export interface DatetimeOptions {
   /**
@@ -11,7 +14,7 @@ export interface DatetimeOptions {
    * @defaultValue false
    */
   offset?: boolean;
-  /** Exact number of fractional-second digits, a non-negative integer. `0` forbids them; they are optional and unbounded when omitted. */
+  /** Exact number of fractional-second digits, an integer from 0 to 9. `0` forbids them; they are optional and unbounded when omitted. */
   precision?: number;
 }
 
@@ -28,11 +31,14 @@ export interface DatetimeOptions {
  *
  * @param options - Whether offsets are allowed, and the fractional-second precision.
  * @returns A validator that produces the text as a string.
- * @throws {RangeError} When `precision` is not a non-negative integer.
+ * @throws {RangeError} When `precision` is not an integer from 0 to 9.
  */
 export function datetime({ offset, precision }: DatetimeOptions = {}): Validator<string> {
   if (precision !== undefined) {
     assertSize("Datetime precision", precision);
+    if (precision > MAX_PRECISION) {
+      throw new RangeError(`Datetime precision is at most ${MAX_PRECISION} digits, received ${precision}`);
+    }
   }
   const fraction = precision === undefined ? "(?:\\.\\d+)?" : precision === 0 ? "" : `\\.\\d{${precision}}`;
   const zone = offset === true ? "(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)" : "Z";

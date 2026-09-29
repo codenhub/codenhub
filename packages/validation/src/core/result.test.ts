@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { assertSize, describeType, fail, failIssue, invalidType, nestIssues, pass, toIssue } from "./result";
+import { assertSize, collectNested, describeType, fail, failIssue, invalidType, pass, toIssue } from "./result";
+import type { ValidationIssue } from "./types";
 
 describe("pass", () => {
   it("should wrap the value in a successful result", () => {
@@ -16,6 +17,10 @@ describe("pass", () => {
 describe("fail", () => {
   it("should default to code custom at the value's own location", () => {
     expect(fail({})).toEqual({ ok: false, error: { issues: [{ code: "custom", path: [] }] } });
+  });
+
+  it("should refuse to build a failure with no issue", () => {
+    expect(() => (fail as () => unknown)()).toThrow(TypeError);
   });
 
   it("should keep the code, path, params and message it is given", () => {
@@ -38,12 +43,23 @@ describe("fail", () => {
   });
 });
 
-describe("nestIssues", () => {
-  it("should put the segment in front of every path without changing the originals", () => {
+describe("collectNested", () => {
+  it("should add every issue with the segment in front of its path, without changing the originals", () => {
     const original = toIssue({ code: "x", path: ["b"] });
-    const [nested] = nestIssues([original], "a");
-    expect(nested?.path).toEqual(["a", "b"]);
+    const target: ValidationIssue[] = [];
+    collectNested(target, [original], "a");
+    expect(target[0]?.path).toEqual(["a", "b"]);
     expect(original.path).toEqual(["b"]);
+  });
+
+  it("should take more issues than can be spread as arguments", () => {
+    const target: ValidationIssue[] = [];
+    collectNested(
+      target,
+      Array.from({ length: 500_000 }, () => toIssue({ code: "x" })),
+      "a",
+    );
+    expect(target).toHaveLength(500_000);
   });
 });
 

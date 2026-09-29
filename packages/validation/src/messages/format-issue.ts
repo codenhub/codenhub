@@ -87,7 +87,9 @@ export interface FlattenedErrors {
 
 /**
  * Groups the messages of a failure for display: issues at the root go to `formErrors`, the rest are
- * keyed by their {@link formatPath} notation in `fieldErrors`.
+ * keyed by their {@link formatPath} notation in `fieldErrors`, an object with no prototype so that a field
+ * named like an `Object.prototype` member cannot collide with it. Test for a field with `in` or
+ * `Object.hasOwn`, since it has no `hasOwnProperty`.
  *
  * @param failure - The `error` of a failed result.
  * @param messages - Text for the codes it names, as for {@link formatIssue}.

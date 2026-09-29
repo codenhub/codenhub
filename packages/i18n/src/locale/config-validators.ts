@@ -5,7 +5,6 @@ import {
   formatPath,
   object,
   optional,
-  pipe,
   refine,
   string,
   unknown,
@@ -28,16 +27,13 @@ const CONFIG_MESSAGES: Messages = {
 };
 
 /** A locale identifier: a non-blank string that, trimmed, is a conservative ASCII identifier. Produces the trimmed one. */
-const localeIdentifier = pipe(
-  string({ trim: true, min: 1 }),
-  refine(string(), isValidLocaleIdentifier, {
-    code: "invalid_format",
-    message: "Must be an ASCII locale identifier with alphanumeric, hyphen-separated subtags",
-  }),
-);
+const localeIdentifier = refine(string({ trim: true, min: 1 }), isValidLocaleIdentifier, {
+  code: "invalid_format",
+  message: "Must be an ASCII locale identifier with alphanumeric, hyphen-separated subtags",
+});
 
 /** Trimmed, non-empty, case-insensitively unique locale identifiers. */
-const localeList = array(localeIdentifier, { min: 1, unique: (locale: string) => locale.toLowerCase() });
+const localeList = array(localeIdentifier, { min: 1, unique: (locale) => locale.toLowerCase() });
 
 /** A function-valued option. Validators have no leaf for functions, so this is one. */
 const callback = refine(unknown(), (value) => typeof value === "function", {

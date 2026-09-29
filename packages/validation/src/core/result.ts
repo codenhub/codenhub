@@ -1,4 +1,3 @@
-import { isPlainObject } from "./objects";
 import type {
   ValidationErr,
   ValidationFailure,
@@ -49,8 +48,13 @@ export function pass<T>(value: T): ValidationOk<T> {
  *
  * @param issues - What went wrong. Each defaults to code `"custom"` and to the value's own location.
  * @returns A failed result holding every issue, in order.
+ * @throws {TypeError} When called without an issue, which the types already forbid.
  */
 export function fail(...issues: [IssueInput, ...IssueInput[]]): ValidationErr {
+  if (issues.length === 0) {
+    // The types forbid it, but a failure with no issue says nothing and breaks `issues[0]`.
+    throw new TypeError("fail() needs at least one issue");
+  }
   return failWith(issues.map(toIssue));
 }
 
@@ -76,11 +80,31 @@ export function toIssue({ code = "custom", path = ROOT_PATH, params, message }: 
 export const failIssue = (code: ValidationIssueCode, params?: Readonly<Record<string, unknown>>): ValidationErr =>
   failWith([toIssue(params === undefined ? { code } : { code, params })]);
 
-/** Moves issues one level down, for a parent reporting what its child found under `segment`. */
-export const nestIssues = (
+/**
+ * Adds the issues a child found to its parent's list, one level down under `segment`. It pushes one
+ * by one because spreading a long list into `push` passes each as an argument, which overflows the
+ * stack past about 120,000 issues and would turn bad input into an exception.
+ */
+export function collectNested(
+  target: ValidationIssue[],
   issues: readonly ValidationIssue[],
   segment: ValidationPathSegment,
-): readonly ValidationIssue[] => issues.map((issue) => ({ ...issue, path: [segment, ...issue.path] }));
+): void {
+  for (const issue of issues) {
+    target.push({ ...issue, path: [segment, ...issue.path] });
+  }
+}
+
+/**
+ * The issue for an entry whose key, once its validator has changed it, is one an earlier entry already
+ * has. Reported as a bad key, since keeping both would silently drop one of the values.
+ */
+export const repeatedKey = (segment: ValidationPathSegment): ValidationIssue =>
+  toIssue({
+    code: "invalid_key",
+    path: [segment],
+    params: { issues: [toIssue({ code: "invalid_value", params: { unique: true } })] },
+  });
 
 /** Names the runtime type of a value for messages without echoing the value. */
 export function describeType(value: unknown): string {
@@ -103,22 +127,17 @@ export function describeType(value: unknown): string {
 
 /** Names an object by its kind, or by its class for an instance, reading its prototype. */
 function describeObject(value: object): string {
-  if (Array.isArray(value)) {
-    return "array";
+  // The tag names the kind in any realm, which `instanceof` cannot. Only a name is at stake here, so a
+  // value that fakes its tag is named wrongly at worst, where the validators that accept a kind check it.
+  const kind = Object.prototype.toString.call(value).slice(8, -1);
+  if (kind === "Date") {
+    return Number.isNaN((value as Date).getTime()) ? "invalid date" : "date";
   }
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? "invalid date" : "date";
+  if (kind === "Array" || kind === "Map" || kind === "Set") {
+    return kind.toLowerCase();
   }
-  if (value instanceof Map) {
-    return "map";
-  }
-  if (value instanceof Set) {
-    return "set";
-  }
-  if (isPlainObject(value)) {
-    return "object";
-  }
-  return (Object.getPrototypeOf(value) as { constructor?: { name?: string } }).constructor?.name || "object";
+  const name = (Object.getPrototypeOf(value) as { constructor?: { name?: string } } | null)?.constructor?.name;
+  return name === undefined || name === "" || name === "Object" ? "object" : name;
 }
 
 /** Fails because the input is not the type a validator accepts, naming both types and never the value. */

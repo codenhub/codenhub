@@ -1,5 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
-import { failWith, invalidType, nestIssues, pass, toIssue } from "../core/result";
+import { entriesOf, sizeOfMap } from "../core/objects";
+import { collectNested, failWith, invalidType, pass, repeatedKey, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
@@ -10,7 +11,8 @@ import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
  * A wrong size is reported at once, without validating the entries. An issue's path ends at the
  * entry's key when it is a string or a number, and at its position in iteration order otherwise. A
  * key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key
- * validator found.
+ * validator found. A key that the key validator changes must stay distinct: an entry that arrives at a
+ * key already taken is reported as `invalid_key`, so no value is silently replaced.
  * The output is a new `Map`. It is synchronous when both validators are, and asynchronous otherwise.
  *
  * @example
@@ -34,14 +36,15 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
 ): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>> {
   assertSizeOptions(options);
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
-    if (!(input instanceof Map)) {
+    const size = sizeOfMap(input);
+    if (size === undefined) {
       return invalidType("map", input);
     }
-    const oversize = sizeIssues(input.size, "map", options);
+    const oversize = sizeIssues(size, "map", options);
     if (oversize.length > 0) {
       return failWith(oversize);
     }
-    const entries = [...(input as Map<unknown, unknown>)];
+    const entries = entriesOf(input);
     const segments = entries.map(([name], index) =>
       typeof name === "string" || typeof name === "number" ? name : index,
     );
@@ -58,10 +61,14 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
           issues.push(toIssue({ code: "invalid_key", path: [segment], params: { issues: keyResult.error.issues } }));
         }
         if (!valueResult.ok) {
-          issues.push(...nestIssues(valueResult.error.issues, segment));
+          collectNested(issues, valueResult.error.issues, segment);
         }
         if (keyResult.ok && valueResult.ok) {
-          output.set(keyResult.value, valueResult.value);
+          if (output.has(keyResult.value)) {
+            issues.push(repeatedKey(segment));
+          } else {
+            output.set(keyResult.value, valueResult.value);
+          }
         }
       });
       return issues.length > 0 ? failWith(issues) : pass(output);

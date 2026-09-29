@@ -39,4 +39,9 @@ describe("oneOf", () => {
   it("should accept nothing for an empty list", () => {
     expect(oneOf([])("x").ok).toBe(false);
   });
+
+  it("should compare with ===, so NaN matches nothing and -0 matches 0", () => {
+    expect(oneOf([Number.NaN])(Number.NaN).ok).toBe(false);
+    expect(oneOf([0])(-0).ok).toBe(true);
+  });
 });

@@ -11,18 +11,22 @@ import { textFormat } from "./text-format";
 // oxlint-disable-next-line no-control-regex
 const UNPARSED_CHARACTER_PATTERN = /[\u0000-\u0020\u007f\\]/;
 
+/** A URL scheme as RFC 3986 writes it, without its colon. */
+const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*$/i;
+
 /** Options for {@link url}. */
 export interface UrlOptions {
   /**
-   * Accepted protocols, without the colon. Of the schemes without a host, `mailto`, `tel` and `urn`
+   * Accepted protocols, without the colon, in any letter case. Of the schemes without a host, `mailto`, `tel` and `urn`
    * are accepted, each checked by its own rules; any other is always rejected.
    *
    * @defaultValue ["http", "https"]
    */
   protocols?: readonly string[];
   /**
-   * Accepts hosts that are not public domain names: `localhost`, single-label hosts, IP addresses, and
-   * special-use names such as `app.localhost`, `db.internal` or `printer.local`.
+   * Accepts hosts that are not public domain names: `localhost`, single-label hosts, every IP address,
+   * public ones included and with no check of ranges, and special-use names such as `app.localhost`,
+   * `db.internal` or `printer.local`. It means "any host", not "only private ones".
    *
    * @defaultValue false
    */
@@ -48,9 +52,15 @@ export interface UrlOptions {
  *
  * @param options - Accepted protocols, and whether local hosts are allowed.
  * @returns A validator that produces the URL as a string.
+ * @throws {TypeError} When a protocol is not a scheme name, for instance `"https:"` with its colon.
  */
 export function url(options: UrlOptions = {}): Validator<string> {
-  const protocols = [...(options.protocols ?? ["http", "https"])];
+  const protocols = (options.protocols ?? ["http", "https"]).map((protocol) => {
+    if (!SCHEME_PATTERN.test(protocol)) {
+      throw new TypeError(`Protocols are scheme names without the colon, such as "https", received "${protocol}"`);
+    }
+    return protocol.toLowerCase();
+  });
   const allowLocal = options.allowLocal ?? false;
   return textFormat("url", (text) => {
     if (UNPARSED_CHARACTER_PATTERN.test(text) || !URL.canParse(text)) {

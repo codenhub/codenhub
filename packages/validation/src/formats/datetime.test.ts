@@ -74,6 +74,11 @@ describe("datetime", () => {
     }
   });
 
+  it("should reject a precision beyond nanoseconds when the validator is created", () => {
+    expect(() => datetime({ precision: 10 })).toThrow(RangeError);
+    expect(datetime({ precision: 9 })("2026-09-28T14:30:00.123456789Z").ok).toBe(true);
+  });
+
   it("should report invalid_type for a non-string and invalid_format for a bad one", () => {
     expect(codesOf(datetime()(1))).toEqual(["invalid_type"]);
     expect(issuesOf(datetime()("x"))[0]?.params).toEqual({ format: "datetime" });
