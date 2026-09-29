@@ -1,8 +1,7 @@
 /* Neobrutalism: thick ink outline, a hard unblurred offset shadow, and a press
    that moves the element into its own shadow. Material tokens only, no component
    named -- the ink reaches everything through the intent reset, the shadow is
-   colourless geometry each component colours against its own intent. Load after
-   the base stylesheet; source order decides against the zero-specificity reset. */
+   colourless geometry each component colours against its own intent. */
 
 /* The layer map, stated before anything uses a layer -- see `theme.css`. The
    aesthetic's token class sits in `components`, below every utility, so a
@@ -37,6 +36,10 @@
        is the whole look, so this aesthetic asks for the intent instead of the
        neutral depth colour every other shadow uses. */
     --ui-shadow-ink: 100%;
+    /* The ink replaces the depth colour whole, so this one is inert here; it is
+       restated so a region nested inside chunky tile or cyber does not inherit
+       their black or transparent depth. */
+    --elevation-color: light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55));
     --ui-shadow-x: var(--_neo-offset);
     --ui-shadow-y: var(--_neo-offset);
     --ui-shadow-blur: 0px;
@@ -57,9 +60,13 @@
     --ui-active-transform: none;
     --ui-active-translate-x: var(--_neo-offset);
     --ui-active-translate-y: var(--_neo-offset);
+    --ui-hover-transform: none;
 
     /* Nothing here clips or blurs, and an aesthetic nested inside another has to
-       say so rather than inherit it. */
+       say so rather than inherit it. Nothing clips, so the global focus outline
+       shows and no inset focus layer is wanted: cleared so a region nested
+       inside pixel does not inherit pixel's. */
+    --ui-focus-inset: initial;
     --ui-clip: none;
     --ui-clip-tight: none;
     /* Round corners, said explicitly, and the pill and chip corners cleared back

@@ -1,6 +1,6 @@
 /* Sketch: uneven elliptical corners, a solid ink edge, and a small hard shadow.
    The handwriting face is consumer-supplied, so this file has no font asset or
-   network side effect. Load after the base stylesheet. */
+   network side effect. */
 
 /* The layer map, stated before anything uses a layer -- see `theme.css`. The
    aesthetic's token class sits in `components`, below every utility, so a

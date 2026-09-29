@@ -18,7 +18,7 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Current Focus
 
-**`0.5.0` is a local, unreleased draft**: `@codenhub/styles@0.4.0` remains the current npm version. Its scope is the foundation changes and the sketch aesthetic with its rounded variant, all implemented; the [0.5.0 changelog](../changelog/0.5.0.md) describes that scope.
+**`0.5.0` is released**: the foundation changes and the sketch aesthetic with its rounded variant, described in the [0.5.0 changelog](../changelog/0.5.0.md). Nothing further is committed to a version yet.
 
 The foundation was built for structure, not for a look. Any new material part must still pass [What enters the material contract](./model.md#what-enters-the-material-contract), independently of the aesthetic that would use it. An aesthetic the foundation cannot express without breaking that rule needs a separate decision before implementation.
 
@@ -44,7 +44,7 @@ Two measurements shaped the material tokens and outlive the change that needed t
 
 ## Versioning
 
-`0.4.0` is the current published release. `0.5.0` remains untagged and unreleased until it is verified and released. Release authorization and tagging follow `docs/specs/packages-lifecycle.md`.
+`0.5.0` is the current published release. Release authorization and tagging follow `docs/specs/packages-lifecycle.md`.
 
 The stress-test pass's fixes, across all three screens, land as one minor (`0.2.0`) rather than a run of patches: several change default token values (`--progress-surface`, `--color-border`) that affect every consumer already using `.progress` or `.card.soft.edged`, not just new ones, which is a real behavior change and not patch-level even pre-1.0.
 
