@@ -104,7 +104,7 @@ The package is `sideEffects: false`, every module is side-effect free at load, a
 - One validator per module; a module imports only `core/` helpers and other validators it truly composes.
 - No shared mutable state, no module-level registries, no `Object.assign`-style attachment of properties to functions at load.
 - Options are read once when a validator is created, not per call, and defaults are resolved there.
-- Default English wording lives in `messages/` and is reachable only through `formatIssue`.
+- The English wording lives in `messages/english-messages.ts` and is reachable only through the `englishMessages` export, so `formatIssue` itself carries none of it.
 
 `tests/integration/bundle-size.test.ts` bundles small consumer-shaped modules against the built `dist/` and asserts a gzip ceiling for each: one leaf validator, an object of a few fields, messages alone, and everything. A budget that fails means something made every validator heavier. Budgets sit about 20% above what each scenario measures; raising one is a deliberate change explained in the commit that does it.
 
@@ -155,4 +155,4 @@ A validator is a function and not a schema object, so Standard Schema v1 support
 3. Report every failing constraint, not the first.
 4. Tests beside it: accepted values, rejected values, edge cases, the exact issue shape, and that no issue contains the input.
 5. Add it to the size budgets if it adds a scenario a consumer would plausibly bundle alone.
-6. Document it in `docs/validators.md`, and the message for its issue shape in `messages/default-messages.ts`.
+6. Document it in `docs/validators.md`, and the wording for its issue shape in `messages/english-messages.ts`.

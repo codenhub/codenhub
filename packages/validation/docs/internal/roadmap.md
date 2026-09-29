@@ -33,12 +33,12 @@ Everything below exists, works in synchronous and asynchronous form where it com
 - **Coercion** (done). Variants of `string`, `number`, `boolean`, `bigint` and `date` that convert text input such as `"42"` or `"yes"` first, for query strings, environment variables and form fields, taking the same options as their strict versions.
 - **Results and guards.** `pass`, `fail` and the result types (done), `is` (done), `Infer` (done).
 - **Messages** (done). `formatIssue`, `flatten`, `formatPath`, `englishMessages` as a separate import with wording for every issue a built-in validator can report, and message maps of your own for rewording and localization.
-- **Interop** (done). `standard(validator)`, the Standard Schema v1 adapter.
+- **Interop** (done). `standard(validator, messages)`, the Standard Schema v1 adapter.
 - **Nothing dropped by accident.** Every capability of the previous, unreleased design either exists in the new form or is listed under "Not Planned" with the reason. The changelog carries the mapping for anyone coming from 0.0.1.
 
 ### Quality
 
-- **Tests.** Every exported function has tests for accepted values, rejected values, edge cases, the exact issue shape and the invariant that no issue contains the input. Coverage stays above the repository target of 80%; it is 99% at the foundation.
+- **Tests.** Every exported function has tests for accepted values, rejected values, edge cases, the exact issue shape and the invariant that no issue contains the input. Coverage stays above the repository target of 80%; it is about 99.7%.
 - **Consumer types.** The built declarations compile for a consumer under strict settings, and a fixture pins the types that must not compile.
 - **Size budgets.** Each validator family has a bundle scenario with a gzip ceiling, and there is a scenario for the whole package. A single leaf validator stays near 1 kB gzipped, and the whole package stays a small multiple of that.
 - **Determinism.** No validator depends on time, locale, randomness or state left by an earlier call, so the same input gives the same answer.

@@ -1032,59 +1032,68 @@ The coercing validators accept text that holds a value, convert it, and then app
 
 # 0.1.0
 
-0.0.1 validated a value the moment you called `val.string(value).min(3)`. 0.1.0 is a rewrite around one idea: a validator is a function that takes any input and returns a result, and every validator is its own import. A package or app that needs an email check bundles an email check and nothing else. Nothing from 0.0.1 carries over unchanged; the table below maps old calls to new ones.
+0.0.1 validated a value the moment you called `val.string(value).minLength(3)`. 0.1.0 is a rewrite around one idea: a validator is a function that takes any input and returns a result, and every validator is its own import. A package or app that needs an email check bundles an email check and nothing else. Nothing from 0.0.1 carries over unchanged; the [migration table](#migrating-from-001) maps each 0.0.1 call to its replacement.
 
 ## Added
 
 - Validators as plain functions, created by calling a factory and then called with the value: `email()(input)`, `number({ int: true, min: 0 })(input)`. Any function with that shape is a validator, so your own need no helper.
 - Leaves: `string`, `number`, `bigint`, `boolean`, `date`, `literal`, `oneOf`, `nativeEnum`, `unknown`, `never` and `instanceOf`. `null` and `undefined` are `literal(null)` and `literal(undefined)`.
 - String formats, each its own validator: `email`, `url`, `uuid`, `ip`, `datetime`, `isoDate`, `hostname`, `hex`, `base64`, `ulid`, `nanoid` and `cuid2`.
-- `object`, with `unknownKeys` of `"strip"`, `"strict"` or `"passthrough"`, and `partial` to make every property of a shape optional.
 - Collections: `array` (with `min`, `max`, `length` and `unique`), `tuple` (with `rest`), `record`, `set` and `map`.
-- Combinators: `optional`, `nullable`, `nullish`, `withDefault`, `fallback`, `pipe`, `transform` and `refine`, including rules and conversions that return a promise.
+- Combinators: `object`, with `unknownKeys` of `"strip"`, `"strict"` or `"passthrough"`, and `partial` to make every property of a shape optional; `optional`, `nullable`, `nullish`, `withDefault`, `fallback`, `pipe`, `transform` and `refine`, including rules and conversions that return a promise.
 - Choosing and merging: `union`, `discriminatedUnion`, which takes a record of validators keyed by tag, and `intersection`. `lazy` for recursive data and `json` for text holding JSON.
-- Results that are plain data: `{ ok: true, value }` or `{ ok: false, error: { issues } }`, built with `pass` and `fail`. Bad input never throws.
-- Issues with a stable `code`, a `path` to the offending value and `params` describing the failure. Issues never contain the input.
-- `formatIssue`, `flatten` and `formatPath` to turn issues into text and group them by field for forms. Text comes from a message map you pass, `englishMessages` for the built-in English or one of your own to reword or localize it, so a program that words its own issues does not bundle the English.
 - Coercing validators for text input: `coerceString`, `coerceNumber`, `coerceBoolean`, `coerceBigint` and `coerceDate`, taking the options of their strict counterparts.
-- `standard(validator, messages)`, which exposes a validator as a Standard Schema v1, with the message map for the text the specification requires.
+- Results that are plain data: `{ ok: true, value }` or `{ ok: false, error: { issues } }`, built with `pass` and `fail`. Bad input never throws.
+- Issues with a stable `code`, a `path` to the offending value and `params` describing the failure. New codes are `unrecognized_key` and `invalid_union`.
+- `formatIssue`, `flatten` and `formatPath` to turn issues into text and group them by field for forms. Text comes from a message map you pass, `englishMessages` for the built-in English or one of your own to reword or localize it, so a program that words its own issues does not bundle the English.
+- `standard(validator, messages)`, which exposes a validator as a Standard Schema v1.
 - `is`, a type guard for synchronous validators, and `Infer` to read the type a validator produces.
 - Asynchronous validation tracked in the types: a validator holding a rule that returns a promise is an `AsyncValidator`, and so is everything that contains it, so the compiler makes you `await` it.
+- Types for object shapes, collections and results, so validators can be annotated and reused: `Validator`, `AsyncValidator`, `InferShape`, `InferTuple`, `InferRecord` and the rest listed in the [reference](docs/validators.md#types).
 
 ## Changed
 
-- **Breaking.** Validators are created first and called later. `val.string(x).email()` is `email()(x)`, and constraints are options: `string({ trim: true, min: 3 })`.
-- **Breaking.** There is no `val` namespace. Everything is a named import, so a bundler removes what you do not use.
-- **Breaking.** A failed result holds `error.issues`, a list of every issue found, including for a single failure, and `error` is plain data and not an `Error`. There is no `ValidationError` to catch and no `parse` that throws.
-- **Breaking.** Issues carry `params` for the facts behind a failure and no `expected` or `received` strings. Messages name types (`Expected number, received string`) and never echo the input.
-- **Breaking.** Rules never rewrite the value. `email()` does not lowercase the domain. `trim`, `lowercase`, `uppercase` and `clamp` are the options that change a value, and they run before the constraints.
-- **Breaking.** `email()` accepts public host names only, and its `allowPlus` option is the only one it takes; message text is chosen where you show it, not per validator.
-- **Breaking.** Invalid options, such as `string({ min: -1 })`, throw a `RangeError` when the validator is created instead of failing every validation.
-- **Breaking.** `coerceNumber` rejects booleans, empty strings, `"0x10"` and exponents, and coercion failures are `invalid_type` and never repeat the input.
-- **Breaking.** Exceptions thrown by your own callbacks propagate instead of becoming validation failures.
+- **Breaking.** Validators are created first and called later, and every one is a named import. The `val` and `coerce` namespaces are gone: `val.string(x).minLength(3)` is `string({ min: 3 })(x)`.
+- **Breaking.** A failed result holds `error.issues`, a list of every issue found, including for a single failure, where 0.0.1 held one error with optional child issues. `error` is plain data and not an `Error`.
+- **Breaking.** An issue has `code`, `path`, and `params` for the facts behind a failure. It has no `message`, `input`, `expected` or `received`: the expected and received types are in `params`, and text comes from `formatIssue`. Issues never contain the input, and the `includeInput` and `path` options are gone; objects and collections produce paths themselves.
+- **Breaking.** Rules never rewrite the value. `email()` no longer trims the input or lowercases the host, `url()` no longer adds `https://` or normalizes, and `notEmpty` no longer trims by default. `trim`, `lowercase`, `uppercase` and `clamp` are the options that change a value, and they run before the constraints, so a trimmed string is what the constraints see.
+- **Breaking.** `url()` requires a scheme, accepts `http` and `https` unless `protocols` says otherwise, and rejects embedded credentials and non-public hosts; `allowLocal: true` accepts `localhost`, single-label hosts and IP addresses. `email()` and `url()` still accept public host names only.
+- **Breaking.** A missing property is `invalid_type` at the property's path, with `received: "undefined"`, where 0.0.1 reported `missing_key`. `NaN` and the infinities are `invalid_type` for numbers, where infinities were `invalid_value`.
+- **Breaking.** Invalid options, such as `string({ min: -1 })`, throw a `RangeError` when the validator is created, where 0.0.1 returned an `invalid_value` failure on every call.
+- **Breaking.** Coercion failures are `invalid_type` with `coerced: true` in `params`, where 0.0.1 used `invalid_format`, and they never repeat the input.
+- **Breaking.** Exceptions thrown by your own callbacks propagate, where 0.0.1's `custom` turned a thrown value into a failure. A callback that throws is a bug, and invalid input is a `fail(...)` result.
 
 ## Removed
 
-- The immediate-evaluation calls `val.string(value)`, `val.number(value)`, `val.object(value)`, `val.array(value)`, `custom(value, fn)` and the standalone `coerce.*` functions. The table below covers the ones that have a replacement in this release.
-- `ok`, `err`, `parseResult`, and the `ValidationErrorInput` and `ValidationErrorOptions` types. Build results with `pass` and `fail`.
-- `range({ min, max })`, `port()`, `finite()`, `minLength`, `maxLength` and `notEmpty`, and the `extend`, `pick`, `omit` and `required` object methods: a shape is a plain object, so spread and destructure it, and use `partial(shape)` for optional properties. Use the options of `number` and `string`; `number()` always rejects `NaN` and the infinities.
+- `val`, `coerce`, `custom`, `ok`, `err` and `parseResult`, and the types `ValidationError`, `ValidationErrorCode`, `ValidationErrorInput`, `ValidationErrorOptions`, `ValidationOptions`, `StringValidators`, `NumberValidators`, `ObjectValidators`, `ArrayValidators` and `PlainObject`. `ValidationOk`, `ValidationErr`, `ValidationResult`, `ValidationIssue` and `ValidationPathSegment` remain, with new shapes. Build results with `pass` and `fail`.
+- The string, number, array and object methods of 0.0.1 as methods: `range`, `port`, `finite`, `positive` and its siblings, `minLength`, `maxLength`, `notEmpty`, `matches`, `plain`, `fileType` and `hasKeys`. The migration table shows each replacement. `fileType` and `hasKeys` have no dedicated validator and are one `refine`.
 
 ## Migrating from 0.0.1
 
-| 0.0.1                                        | 0.1.0                                          |
-| -------------------------------------------- | ---------------------------------------------- |
-| `val.string(x).email()`                      | `email()(x)`                                   |
-| `val.string(x).minLength(3, { trim: true })` | `string({ trim: true, min: 3 })(x)`            |
-| `val.string(x).notEmpty()`                   | `string({ trim: true, min: 1 })(x)`            |
-| `val.string(x).matches(re, message)`         | `string({ pattern: re })(x)`                   |
-| `val.number(x).range({ min: 1, max: 9 })`    | `number({ min: 1, max: 9 })(x)`                |
-| `val.number(x).port()`                       | `number({ int: true, min: 1, max: 65535 })(x)` |
-| `val.string(x).url({ forceHttps: true })`    | `url({ protocols: ["https"] })(x)`             |
-| `val.array<T>(x).minLength(1)`               | `array(item, { min: 1 })(x)`                   |
-| `val.object(x).plain()`                      | `record(string(), unknown())(x)`               |
-| `coerce.int(x)`                              | `coerceNumber({ int: true })(x)`               |
-| `coerce.number(x)`, `coerce.string(x)`       | `coerceNumber()(x)`, `coerceString()(x)`       |
-| `coerce.bool(x)`                             | `coerceBoolean()(x)`                           |
+Every call changed. The table maps each 0.0.1 call to its replacement. Where `x` is the value being checked, a 0.1.0 call reads `validator(options)(x)`: create the validator, then call it.
+
+| 0.0.1                                             | 0.1.0                                                                                                                 |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `val.string(x).email()`                           | `email()(x)`                                                                                                          |
+| `val.string(x).url({ forceHttps: true })`         | `url({ protocols: ["https"] })(x)`                                                                                    |
+| `val.string(x).minLength(3, { trim: true })`      | `string({ trim: true, min: 3 })(x)`                                                                                   |
+| `val.string(x).maxLength(30)`                     | `string({ max: 30 })(x)`                                                                                              |
+| `val.string(x).notEmpty()`                        | `string({ trim: true, min: 1 })(x)`                                                                                   |
+| `val.string(x).matches(re, message)`              | `string({ pattern: re })(x)`, with the message chosen where you show it                                               |
+| `val.string(x).fileType(["png", "jpg"])`          | `refine(string({ lowercase: true }), (name) => ["png", "jpg"].includes(name.split(".").pop() ?? ""))(x)`              |
+| `val.number(x).range({ min: 1, max: 9 })`         | `number({ min: 1, max: 9 })(x)`                                                                                       |
+| `val.number(x).port()`                            | `number({ int: true, min: 1, max: 65535 })(x)`                                                                        |
+| `val.number(x).positive()`, `.negative()`         | `number({ gt: 0 })(x)`, `number({ lt: 0 })(x)`                                                                        |
+| `val.number(x).nonNegative()`, `.nonPositive()`   | `number({ min: 0 })(x)`, `number({ max: 0 })(x)`                                                                      |
+| `val.number(x).nonZero()`, `.int()`, `.safeInt()` | `number({ nonZero: true })(x)`, `number({ int: true })(x)`, `number({ safeInt: true })(x)`                            |
+| `val.number(x).finite()`                          | `number()(x)`, which always rejects `NaN` and the infinities                                                          |
+| `val.array<T>(x).minLength(1)`, `.maxLength(5)`   | `array(item, { min: 1 })(x)`, `array(item, { max: 5 })(x)`                                                            |
+| `val.object(x).plain()`                           | `record(string(), unknown())(x)`                                                                                      |
+| `val.object(x).hasKeys(["id"])`                   | `refine(record(string(), unknown()), (data) => Object.hasOwn(data, "id"), { code: "missing_key", path: ["id"] })(x)`  |
+| `custom(x, fn, { path })`                         | a validator function returning `pass(value)` or `fail({ message, path })`, or `refine(unknown(), check, { path })(x)` |
+| `coerce.int(x)`                                   | `coerceNumber({ int: true })(x)`                                                                                      |
+| `coerce.number(x)`, `coerce.string(x)`            | `coerceNumber()(x)`, `coerceString()(x)`                                                                              |
+| `coerce.bool(x)`                                  | `coerceBoolean()(x)`                                                                                                  |
 
 Reading a result also changed. Where 0.0.1 returned `{ ok, value }` or `{ ok, error }` with a single failure, 0.1.0 returns every issue in `result.error.issues`:
 
