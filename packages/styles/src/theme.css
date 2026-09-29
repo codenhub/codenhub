@@ -254,8 +254,11 @@
    where `light-dark()` would still honor it; that is out of contract, since
    those three spellings are the only supported way to force a theme.
 
-   Each arm is independent, so an explicit selector still wins at any depth even
-   inside a subtree the other arm would match. */
+   Each arm is independent, so an explicit selector wins over the OS preference
+   at any depth. It does not win over an explicit selector of the opposite
+   theme further up: `.dark *` matches every descendant of a `.dark` element,
+   including one inside a nested `.light`, so a `dark:` utility still fires
+   there although its tokens are light. `setup.md#dark-variant` documents it. */
 @custom-variant dark {
   &:where(.dark, .dark *, .theme-dark, .theme-dark *, [data-theme="dark"], [data-theme="dark"] *) {
     @slot;
