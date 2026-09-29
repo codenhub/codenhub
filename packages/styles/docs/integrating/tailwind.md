@@ -15,20 +15,20 @@ A project that already runs Tailwind CSS v4 can process this package's source in
 ## Import the source entrypoint
 
 ```css
-@import "tailwindcss";
 @import "@codenhub/styles/tw";
 
 @source "./src";
 ```
 
-Tailwind CSS v4 scans your project automatically — most projects need nothing beyond the two imports above. `@source` paths resolve relative to the CSS file that declares them, not your project root, so `./src` here means "the `src/` next to this stylesheet"; adjust it to match where your own global stylesheet actually lives. Add `@source` only for markup Tailwind's automatic scan won't reach on its own: a path excluded by default (`.gitignore`d, or inside `node_modules` — an external component library, for instance) or, in a monorepo, one outside this file's own directory tree. Point it at your app's markup, not at this package — `/tw` already ships every class definition it publishes, so scanning it too only slows the build without adding classes.
+`/tw` imports Tailwind itself, so it replaces your own `@import "tailwindcss"` rather than joining it: with both, Tailwind's Preflight is emitted twice. Every other `/tw/*` entrypoint expects your import to come first; see [Using a focused entrypoint](#using-a-focused-entrypoint).
+
+Tailwind CSS v4 scans your project automatically — most projects need nothing beyond the import above. `@source` paths resolve relative to the CSS file that declares them, not your project root, so `./src` here means "the `src/` next to this stylesheet"; adjust it to match where your own global stylesheet actually lives. Add `@source` only for markup Tailwind's automatic scan won't reach on its own: a path excluded by default (`.gitignore`d, or inside `node_modules` — an external component library, for instance) or, in a monorepo, one outside this file's own directory tree. Point it at your app's markup, not at this package — `/tw` already ships every class definition it publishes, so scanning it too only slows the build without adding classes.
 
 ## Add aesthetics
 
 Add an aesthetic from the source entrypoint the same way as the compiled one, after the base import:
 
 ```css
-@import "tailwindcss";
 @import "@codenhub/styles/tw";
 @import "@codenhub/styles/tw/aesthetics";
 
@@ -38,6 +38,14 @@ Add an aesthetic from the source entrypoint the same way as the compiled one, af
 ## Using a focused entrypoint
 
 Import a focused `/tw/*` entrypoint instead of the combined one — such as `/tw/button` or `/tw/form` — when a build only needs one component family; see the full [import path table](../setup.md#import-paths) for what each one composes.
+
+Unlike `/tw`, the focused entrypoints and `/tw/native` do not import Tailwind, so keep your own import first:
+
+```css
+@import "tailwindcss";
+@import "@codenhub/styles/tw/button";
+@import "@codenhub/styles/tw/loader";
+```
 
 ## Troubleshooting
 
@@ -50,7 +58,7 @@ Import a focused `/tw/*` entrypoint instead of the combined one — such as `/tw
 **Duplicate token and reset rules**
 
 - **What happened:** the built stylesheet is larger than expected, and browser devtools show the same custom properties or reset rules defined twice.
-- **Why:** importing both a compiled entrypoint (`@codenhub/styles`) and a `/tw` entrypoint (`@codenhub/styles/tw`) in the same build compiles the same tokens and reset from two independent sources; Tailwind's build has no way to know they describe the same package.
-- **Fix:** pick one path per project — `/tw` entrypoints for a project running Tailwind CSS v4, compiled entrypoints everywhere else.
+- **Why:** one of two things. Importing both a compiled entrypoint (`@codenhub/styles`) and a `/tw` entrypoint (`@codenhub/styles/tw`) in the same build compiles the same tokens and reset from two independent sources; Tailwind's build has no way to know they describe the same package. Or your stylesheet imports `tailwindcss` beside `/tw`, which already imports it, so Preflight is emitted twice.
+- **Fix:** pick one path per project — `/tw` entrypoints for a project running Tailwind CSS v4, compiled entrypoints everywhere else — and drop your own `@import "tailwindcss"` when you import `/tw`.
 
 Tailwind CSS 4 or newer is required for every `/tw` entrypoint.

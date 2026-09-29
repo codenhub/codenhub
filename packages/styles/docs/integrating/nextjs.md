@@ -43,7 +43,7 @@ export default function App({ Component, pageProps }: AppProps) {
 }
 ```
 
-Running Tailwind CSS v4? `@import "@codenhub/styles/tw"` is a CSS directive, so it belongs in a CSS file, not a bare import in `layout.tsx`/`_app.tsx` — add it (with `@import "tailwindcss"` and, if needed, `@source`) to your global CSS file, and import that file from the same root file shown above instead. See [Tailwind CSS v4](./tailwind.md).
+Running Tailwind CSS v4? `@import "@codenhub/styles/tw"` is a CSS directive, so it belongs in a CSS file, not a bare import in `layout.tsx`/`_app.tsx` — add it (with `@source` if needed; `/tw` imports Tailwind itself, so leave out your own `@import "tailwindcss"`) to your global CSS file, and import that file from the same root file shown above instead. See [Tailwind CSS v4](./tailwind.md).
 
 ## Force a theme
 

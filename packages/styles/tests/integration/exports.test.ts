@@ -550,9 +550,11 @@ test("aggregate exports emit each public rule expansion once", async () => {
   }
 });
 
-/* Compiles the given package exports the way a Tailwind consumer does: their
-   own `@import "tailwindcss"` first, then each export in order. */
-const compileAsConsumer = async (exportNames: readonly string[], candidates?: string) => {
+/* Compiles the given package exports the way a Tailwind consumer does, as the
+   Tailwind guide tells them to: their own `@import "tailwindcss"` first, then
+   each export in order -- except with `./tw`, which imports Tailwind itself
+   and replaces that line. */
+const compileAsConsumer = async (exportNames: readonly string[], candidates?: string, { minify = true } = {}) => {
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), "codenhub-styles-export-"));
   const inputPath = path.join(temporaryRoot, "input.css");
   const outputPath = path.join(temporaryRoot, "output.css");
@@ -569,21 +571,37 @@ const compileAsConsumer = async (exportNames: readonly string[], candidates?: st
 `
     : "";
 
+  const tailwindImport = exportNames.includes("./tw")
+    ? ""
+    : `@import "${tailwindCssUrl}";
+`;
+
   try {
-    await writeFile(
-      inputPath,
-      `@import "${tailwindCssUrl}";
-${imports.join("")}${candidateSource}`,
+    await writeFile(inputPath, `${tailwindImport}${imports.join("")}${candidateSource}`);
+    await executeFile(
+      process.execPath,
+      [tailwindCliPath, "-i", inputPath, "-o", outputPath, ...(minify ? ["--minify"] : [])],
+      {
+        cwd: packageRoot,
+      },
     );
-    await executeFile(process.execPath, [tailwindCliPath, "-i", inputPath, "-o", outputPath, "--minify"], {
-      cwd: packageRoot,
-    });
 
     return await readFile(outputPath, "utf8");
   } finally {
     await rm(temporaryRoot, { force: true, recursive: true });
   }
 };
+
+/* `./tw` is the one source entry that imports Tailwind, so the guide has a
+   consumer import it alone. Preflight's border reset is the marker: two copies
+   means Tailwind was imported twice. Unminified, because the minifier merges
+   the duplicate rules and hides it, which a consumer's development build does
+   not. */
+test("./tw brings Tailwind's Preflight exactly once", async () => {
+  const output = await compileAsConsumer(["./tw"], "btn", { minify: false });
+
+  expect(output.match(/::file-selector-button \{\s*box-sizing: border-box;/g) ?? []).toHaveLength(1);
+});
 
 /* Every `--color-*` a stylesheet reads that it never declares. Tailwind marks
    each `@theme` value a `@reference`d file reaches as reference-only, the last
