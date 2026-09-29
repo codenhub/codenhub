@@ -71,6 +71,43 @@ export const describe = (input: unknown) => { const result = check(input); retur
     budget: 340,
   },
   {
+    name: "array",
+    source: `import { array, string } from "DIST"; export const check = array(string(), { max: 5 });`,
+    budget: 1750,
+  },
+  {
+    name: "set",
+    source: `import { number, set } from "DIST"; export const check = set(number());`,
+    budget: 1650,
+  },
+  {
+    name: "map",
+    source: `import { map, number, string } from "DIST"; export const check = map(string(), number());`,
+    budget: 2200,
+  },
+  {
+    name: "tuple",
+    source: `import { number, tuple } from "DIST"; export const check = tuple([number(), number()]);`,
+    budget: 1480,
+  },
+  {
+    name: "record",
+    source: `import { number, record, string } from "DIST"; export const check = record(string(), number());`,
+    budget: 2050,
+  },
+  {
+    name: "union",
+    source: `import { literal, union } from "DIST"; export const check = union([literal("a"), literal("b")]);`,
+    budget: 480,
+  },
+  {
+    name: "discriminatedUnion",
+    source: `import { discriminatedUnion, object, string } from "DIST";
+export const check = discriminatedUnion("type", { a: object({ a: string() }), b: object({ b: string() }) });`,
+    budget: 1780,
+  },
+  { name: "json", source: `import { json } from "DIST"; export const check = json();`, budget: 620 },
+  {
     name: "messages only",
     source: `import { formatIssue } from "DIST"; export const describe = formatIssue;`,
     budget: 1180,
@@ -78,7 +115,7 @@ export const describe = (input: unknown) => { const result = check(input); retur
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 5400,
+    budget: 6950,
   },
 ];
 

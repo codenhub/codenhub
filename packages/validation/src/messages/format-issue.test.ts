@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import { array } from "../composition/array";
+import { json } from "../composition/json";
+import { map } from "../composition/map";
+import { set } from "../composition/set";
+import { tuple } from "../composition/tuple";
+import { union } from "../composition/union";
 import { fail } from "../core/result";
-import type { ValidationIssue } from "../core/types";
+import type { ValidationIssue, ValidationResult } from "../core/types";
 import { email } from "../formats/email";
 import { ip } from "../formats/ip";
 import { url } from "../formats/url";
@@ -105,6 +111,30 @@ describe("formatIssue", () => {
     expect(formatIssue(issuesOf(literal(null)(1))[0] as ValidationIssue)).toBe("Expected null");
     expect(formatIssue(issuesOf(oneOf(["a", "b"])("x"))[0] as ValidationIssue)).toBe('Expected one of "a", "b"');
     expect(formatIssue(issuesOf(oneOf([1, 2])(3))[0] as ValidationIssue)).toBe("Expected one of 1, 2");
+  });
+
+  it("should word collection sizes as a count of items, singular for one", () => {
+    const messageOf = (result: ValidationResult<unknown>): string[] =>
+      issuesOf(result).map((found) => formatIssue(found));
+
+    expect(messageOf(array(string(), { min: 2 })(["a"]))).toEqual(["Must contain at least 2 items"]);
+    expect(messageOf(array(string(), { min: 1 })([]))).toEqual(["Must contain at least 1 item"]);
+    expect(messageOf(array(string(), { max: 1 })(["a", "b"]))).toEqual(["Must contain at most 1 item"]);
+    expect(messageOf(array(string(), { length: 2 })(["a"]))).toEqual(["Must contain exactly 2 items"]);
+    expect(messageOf(tuple([string(), string()])(["a"]))).toEqual(["Must contain exactly 2 items"]);
+    expect(messageOf(tuple([string()], { rest: string() })([]))).toEqual(["Must contain at least 1 item"]);
+    expect(messageOf(set(string(), { max: 0 })(new Set(["a"])))).toEqual(["Must contain at most 0 items"]);
+    expect(messageOf(map(string(), string(), { min: 1 })(new Map()))).toEqual(["Must contain at least 1 item"]);
+  });
+
+  it("should describe duplicates, unions and JSON", () => {
+    expect(formatIssue(issuesOf(array(string(), { unique: true })(["a", "a"]))[0] as ValidationIssue)).toBe(
+      "Must be unique",
+    );
+    expect(formatIssue(issuesOf(union([string()])(1))[0] as ValidationIssue)).toBe(
+      "Does not match any of the allowed types",
+    );
+    expect(formatIssue(issuesOf(json()("{"))[0] as ValidationIssue)).toBe("Invalid JSON");
   });
 
   it("should describe unrecognized keys, coercion failures and unions", () => {

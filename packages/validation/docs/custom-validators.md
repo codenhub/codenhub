@@ -79,7 +79,18 @@ const workEmail: Validator<string> = (input) => {
 };
 ```
 
-For a single extra rule, `refine` does this for you.
+For a single extra rule, `refine` does this for you, and `transform` changes the value. A `transform` cannot reject, so a conversion that can fail, such as parsing a date, is a validator of your own placed after the wrapped one with `pipe`:
+
+```ts
+import { fail, pass, pipe, string, type Validator } from "@codenhub/validation";
+
+const parseDate: Validator<Date> = (input) => {
+  const date = new Date(String(input));
+  return Number.isNaN(date.getTime()) ? fail({ code: "invalid_date" }) : pass(date);
+};
+
+const birthday = pipe(string({ trim: true }), parseDate);
+```
 
 ## Adding a rule with `refine`
 

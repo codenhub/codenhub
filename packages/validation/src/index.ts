@@ -1,7 +1,24 @@
+export { array, type ArrayOptions } from "./composition/array";
+export { discriminatedUnion, type InferDiscriminated, type Variants } from "./composition/discriminated-union";
+export { fallback } from "./composition/fallback";
+export { intersection } from "./composition/intersection";
+export { json } from "./composition/json";
+export { lazy } from "./composition/lazy";
+export { map } from "./composition/map";
+export { nullable } from "./composition/nullable";
+export { nullish } from "./composition/nullish";
 export { object, type InferShape, type ObjectOptions, type Shape } from "./composition/object";
 export { optional } from "./composition/optional";
+export { partial, type PartialShape } from "./composition/partial";
 export { pipe } from "./composition/pipe";
+export { record, type InferRecord } from "./composition/record";
 export { refine, type RefineIssue } from "./composition/refine";
+export { set } from "./composition/set";
+export { type SizeOptions } from "./composition/size";
+export { transform } from "./composition/transform";
+export { tuple, type InferTuple, type TupleOptions } from "./composition/tuple";
+export { union } from "./composition/union";
+export { withDefault } from "./composition/with-default";
 export { is } from "./core/is";
 export { fail, pass, type IssueInput } from "./core/result";
 export type {

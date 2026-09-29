@@ -15,9 +15,11 @@ const FORMAT_NAMES: Readonly<Record<string, string>> = {
   cuid2: "cuid2",
   ulid: "ULID",
   nanoid: "Nano ID",
+  json: "JSON",
 };
 
 const UNITS: Readonly<Record<string, string>> = { string: "characters" };
+const COLLECTIONS: ReadonlySet<string> = new Set(["array", "set", "map"]);
 
 /** Reads a parameter as text, so a missing or unusual one degrades to a readable message and not a crash. */
 const param = (issue: ValidationIssue, name: string): string => String(issue.params?.[name]);
@@ -33,6 +35,10 @@ const describeLimit = ({ code, params }: ValidationIssue): string => {
   const type = String(params?.type);
   if (limit instanceof Date) {
     return `Must be on or ${isMin ? "after" : "before"} ${limit.toISOString()}`;
+  }
+  if (COLLECTIONS.has(type)) {
+    const wording = params?.exact === true ? "exactly" : isMin ? "at least" : "at most";
+    return `Must contain ${wording} ${bound} ${limit === 1 ? "item" : "items"}`;
   }
   if (params?.exact === true) {
     return `Must be exactly ${bound} ${UNITS[type] ?? "items"}`;
@@ -97,7 +103,7 @@ export function defaultMessage(issue: ValidationIssue): string {
     case "invalid_format":
       return describeFormat(issue);
     case "invalid_value":
-      return describeValue(issue);
+      return issue.params?.unique === true ? "Must be unique" : describeValue(issue);
     case "unrecognized_key":
       return `Unrecognized key "${param(issue, "key")}"`;
     case "invalid_union":

@@ -215,24 +215,89 @@ The `unknownKeys` option decides what happens to input properties the shape does
 | `"strict"`      | Reject each with an `unrecognized_key` issue at the key's path, and `params: { key }`. |
 | `"passthrough"` | Copy them to the output unchanged and unchecked.                                       |
 
-A shape is an ordinary object, so it can be reused with ordinary JavaScript: spread one into another to extend it, and leave keys out with destructuring.
+See [Reusing shapes](#reusing-shapes) for extending, omitting and making properties optional.
+
+## Collections
+
+Every collection validator takes the validator for its items, checks them all, and reports each issue with a path that leads through the item's position. A wrong size is reported at once, without validating the items, so a huge input is never worked through only to be rejected.
+
+The size options `min`, `max` and `length` are non-negative integers, and each throws a `RangeError` when created with anything else. `min` and `max` are inclusive. A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"` or `"map"`, and `exact: true` is added for `length`.
+
+### `array`
+
+`array(element, options?)` accepts arrays whose every item passes `element` and produces a new array of what it produced. It takes `min`, `max` and `length`, and `unique`:
+
+- `unique: true` rejects repeats, comparing the validated items the way a `Set` does. Each repeat is reported at its own index as `invalid_value` with `{ unique: true }`, and the first occurrence is kept.
+- `unique: (item) => key` compares the key the function returns, so `unique: (user) => user.id` makes ids unique.
+
+Repeats are checked only once every item is valid. A sparse array's holes are validated as `undefined`.
 
 ```ts
-import { email, number, object, string } from "@codenhub/validation";
+import { array, string } from "@codenhub/validation";
 
-const base = { name: string(), email: email() };
-const withAge = object({ ...base, age: number() });
+const tags = array(string({ trim: true, min: 1 }), { max: 5, unique: true });
+
+tags(["a", "b"]); // ok
+tags(["a", "a"]); // fails: invalid_value at path [1]
 ```
+
+### `tuple`
+
+`tuple(items, options?)` accepts arrays of fixed length in which each position has its own validator, and produces a tuple type. Without `rest` the array must be exactly as long as `items`, and a wrong length fails with `too_small` and `{ minimum, type: "array", exact: true }`, or `too_big` and `{ maximum, type: "array", exact: true }`. With `rest` the array must still have at least as many items as `items`, and only `too_small` is possible, without `exact`. The `rest` option is a validator for every position after the fixed ones, which lets the array be longer.
+
+```ts
+import { number, string, tuple } from "@codenhub/validation";
+
+const point = tuple([number(), number()]); // [number, number]
+const call = tuple([string()], { rest: number() }); // [string, ...number[]]
+```
+
+### `record`
+
+`record(key, value)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to, whether the key or its value failed, and a bad key still has its value checked. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype.
+
+### `set` and `map`
+
+`set(element, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string or a number and its position otherwise. Both take `min`, `max` and `length`.
 
 ## Combining validators
 
-### `optional`
+### `optional`, `nullable` and `nullish`
 
-`optional(validator)` accepts `undefined`, passes it through, and gives every other value to `validator`. `null` and the empty string are not absent, and go to `validator`. Inside an `object`, the property becomes optional in the inferred type.
+- `optional(validator)` accepts `undefined`.
+- `nullable(validator)` accepts `null`.
+- `nullish(validator)` accepts both.
+
+The accepted value is passed through, and every other value goes to `validator`, so `null` and the empty string are not treated as absent by `optional`. Inside an `object`, a property whose validator can produce `undefined` becomes optional in the inferred type, and is left out of the output when absent from the input.
+
+### `withDefault`
+
+`withDefault(validator, value)` replaces `undefined` with a default, and gives every other value to `validator`, so an invalid value is still rejected and only a missing one is replaced. The default is trusted and is not validated. A function is called every time to produce the default, so pass one for an array or object, which would otherwise be shared by every result. Inside an `object`, the property is then always present in the output type.
+
+```ts
+import { array, oneOf, string, withDefault } from "@codenhub/validation";
+
+const role = withDefault(oneOf(["admin", "user"]), "user");
+const tags = withDefault(array(string()), () => []);
+```
+
+### `fallback`
+
+`fallback(validator, value)` replaces a value that fails `validator` with a fallback, so the result never fails. The fallback is trusted and is not validated, and a function receives the issues that were found, which is the place to log them. This turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
 
 ### `pipe`
 
 `pipe(a, b, ...)` runs validators in order, giving each the value the previous one produced, and produces what the last produces. The first failure stops it, because a later step has nothing valid to work on. Use it to clean a value before checking a format, or to check one rule after another.
+
+### `transform`
+
+`transform(validator, convert)` changes the value a validator produced into another, such as text into a `Date`. `convert` runs only when `validator` succeeded and cannot reject the value: to fail, write a validator that returns `fail(...)` and put it after this one with `pipe`. A `convert` that returns a promise makes the result asynchronous. A `convert` that throws is a bug and propagates.
+
+```ts
+import { pipe, string, transform } from "@codenhub/validation";
+
+const length = transform(string(), (text) => text.length);
+```
 
 ### `refine`
 
@@ -245,6 +310,80 @@ const signup = refine(object({ password: string({ min: 8 }), confirm: string() }
 ```
 
 A `check` that returns a promise makes the result asynchronous; see [Custom validators](custom-validators.md#asynchronous-rules).
+
+## Choosing between validators
+
+### `union`
+
+`union(options)` accepts a value that passes any one of several validators and produces what the first one that accepts it produced, so put the more specific options first. A value that none accepts fails with one `invalid_union` issue at the value's own location, and `params.issues` lists, for each option in order, the issues it found. Those paths are relative to the value the union received.
+
+```ts
+import { number, string, union } from "@codenhub/validation";
+
+const id = union([string({ min: 1 }), number({ int: true })]);
+```
+
+### `discriminatedUnion`
+
+`discriminatedUnion(key, variants)` is for objects that share a tag property and differ in the rest, such as events with a `type`. It takes the name of the tag property and a record with a validator for each tag value. The input's tag chooses the variant, the variant validates the whole input, and a failure reports that variant's own issues instead of a list of everything that did not match.
+
+```ts
+import { discriminatedUnion, number, object, string, type Infer } from "@codenhub/validation";
+
+const event = discriminatedUnion("type", {
+  click: object({ x: number(), y: number() }),
+  key: object({ key: string({ min: 1 }) }),
+});
+
+type Event = Infer<typeof event>;
+// { type: "click"; x: number; y: number } | { type: "key"; key: string }
+
+event({ type: "key", key: "a" }); // { ok: true, value: { type: "key", key: "a" } }
+```
+
+A variant does not list the tag property itself: the tag is added back to the output, so the result is a proper tagged union and checking `event.type` narrows the type. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. Each variant must produce an object.
+
+### `intersection`
+
+`intersection(left, right)` accepts a value only when it passes both validators, reports the issues of both together, and produces the two outputs merged. Plain objects are merged key by key, recursively, and for anything else the right validator's output wins.
+
+## Recursive data and JSON
+
+### `lazy`
+
+`lazy(getter)` looks up another validator the first time it runs, so a validator can refer to itself. TypeScript cannot infer a type that refers to itself, so annotate the variable with the type it produces:
+
+```ts
+import { array, lazy, object, string, type Validator } from "@codenhub/validation";
+
+interface Category {
+  name: string;
+  children: Category[];
+}
+
+const category: Validator<Category> = object({
+  name: string(),
+  children: array(lazy(() => category)),
+});
+```
+
+### `json`
+
+`json(validator?)` accepts text that holds JSON, parses it, and then gives the parsed value to `validator` when there is one. A non-string fails with `invalid_type`, and text that is not JSON fails with `invalid_format` and `{ format: "json" }`. Without a validator the result is `unknown`. Paths of issues from `validator` are relative to the parsed value.
+
+## Reusing shapes
+
+A shape is an ordinary object, so it is reused with ordinary JavaScript: spread one into another to extend it, and leave keys out with destructuring. `partial(shape)` returns a new shape with every property wrapped in `optional`, for an update where any field may be left out. The original shape is unchanged, so the required version is still there to use.
+
+```ts
+import { email, number, object, partial, string } from "@codenhub/validation";
+
+const user = { name: string({ min: 2 }), email: email() };
+
+const create = object(user);
+const update = object(partial(user)); // every property optional
+const withAge = object({ ...user, age: number() });
+```
 
 ## Working with results
 
@@ -262,4 +401,4 @@ A `check` that returns a promise makes the result asynchronous; see [Custom vali
 
 ### Types
 
-`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `RefineIssue`, `LiteralValue`, `EnumLike`, `Constructor`, `Messages` and `FlattenedErrors` are exported for annotating your own code. Each is documented in the source, and the ones you meet in everyday use are explained in [Custom validators](custom-validators.md) and [Issues and messages](errors.md).
+`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `ArrayOptions`, `TupleOptions`, `SizeOptions`, `RefineIssue`, `InferTuple`, `InferRecord`, `InferDiscriminated`, `Variants`, `PartialShape`, `LiteralValue`, `EnumLike`, `Constructor`, `Messages` and `FlattenedErrors` are exported for annotating your own code. Each is documented in the source, and the ones you meet in everyday use are explained in [Custom validators](custom-validators.md) and [Issues and messages](errors.md).

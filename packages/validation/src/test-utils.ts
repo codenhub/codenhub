@@ -1,4 +1,4 @@
-import type { ValidationIssue, ValidationResult } from "./core/types";
+import type { AsyncValidator, ValidationIssue, ValidationResult } from "./core/types";
 
 /** The issues of a failed result, or an empty list for a successful one. */
 export const issuesOf = (result: ValidationResult<unknown>): readonly ValidationIssue[] =>
@@ -18,3 +18,14 @@ export const valueOf = <T>(result: ValidationResult<T>): T => {
   }
   return result.value;
 };
+
+/** An asynchronous validator that accepts strings not equal to `taken`, failing others with code `taken`. */
+export const isFree: AsyncValidator<string> = async (input) => {
+  await new Promise((resolve) => setTimeout(resolve, 1));
+  return input === "taken"
+    ? { ok: false, error: { issues: [{ code: "taken", path: [] }] } }
+    : { ok: true, value: input as string };
+};
+
+/** Tests whether a validator's result is still pending, that is a promise rather than a plain result. */
+export const isPending = (value: unknown): boolean => typeof value === "object" && value !== null && "then" in value;

@@ -85,6 +85,16 @@ Results keep the order of the children, never the order in which promises settle
 
 `is` accepts only `Validator<T>`, and throws a `TypeError` naming the fix if a validator turns out to return a promise anyway (the type system prevents this unless the type was cast away). It abandons that promise so a later rejection is not reported as unhandled.
 
+## What a function cannot do
+
+A validator is opaque: a combinator can call it and read its result, and nothing else. Three things the previous, class-based design did follow from that, and are done differently here:
+
+- **Tagged unions take a record.** `discriminatedUnion(key, { click: object(...), key: object(...) })` reads the tag from the input and routes by it, because a variant cannot be asked which tag it accepts. The tag is added back to the output so the type is a proper tagged union, and the variants do not repeat it.
+- **Shapes are plain objects.** Extending is spread and omitting is destructuring. `partial(shape)` wraps each property in `optional` and returns a new shape. There is no `required`, since it would have to unwrap `optional`.
+- **Recursion names its own type.** `lazy` looks a validator up on first use, and the variable that holds a recursive validator carries an explicit type annotation, because TypeScript cannot infer a type that refers to itself.
+
+Structure is checked before content. A collection whose size is wrong fails at once without validating its items, and a tagged union with a missing tag fails without running any variant, so hostile input is rejected before it is worked through. Every other check still reports every problem it can find.
+
 ## Tree-shaking is a contract
 
 The package is `sideEffects: false`, every module is side-effect free at load, and nothing registers itself anywhere. To keep it that way:

@@ -3,25 +3,40 @@
  * package sees it. Every `@ts-expect-error` line must fail to compile, and everything else must not.
  */
 import {
+  array,
   bigint,
   date,
   datetime,
+  discriminatedUnion,
   email,
   fail,
+  fallback,
   flatten,
   formatIssue,
+  intersection,
   is,
+  json,
+  lazy,
   literal,
+  map,
   nativeEnum,
+  nullable,
   number,
   object,
   oneOf,
   optional,
+  partial,
   pass,
   pipe,
+  record,
   refine,
+  set,
   string,
+  transform,
+  tuple,
+  union,
   url,
+  withDefault,
   type AsyncValidator,
   type Infer,
   type Validator,
@@ -107,3 +122,69 @@ export const big = bigint({ min: 0n });
 export const bigValue: Infer<typeof big> = 1n;
 // @ts-expect-error a bigint validator produces bigint, not number
 export const badBig: Infer<typeof big> = 1;
+
+// Collections keep their item types.
+export const tags = array(string(), { max: 5, unique: true });
+export const tagList: Infer<typeof tags> = ["a", "b"];
+// @ts-expect-error items must be strings
+export const badTagList: Infer<typeof tags> = [1];
+export const point = tuple([number(), number()]);
+export const pointValue: Infer<typeof point> = [1, 2];
+// @ts-expect-error a tuple has a fixed length
+export const badPoint: Infer<typeof point> = [1, 2, 3];
+export const call = tuple([string()], { rest: number() });
+export const callValue: Infer<typeof call> = ["sum", 1, 2, 3];
+export const scores = record(string(), number());
+export const scoreValue: Infer<typeof scores> = { ada: 1 };
+export const perDay = record(oneOf(["mon", "tue"]), number());
+export const perDayValue: Infer<typeof perDay> = { mon: 1 };
+export const stock = map(string(), number());
+export const stockValue: Infer<typeof stock> = new Map([["apples", 1]]);
+export const ids = set(number());
+export const idsValue: Infer<typeof ids> = new Set([1]);
+
+// Wrappers change the output type, and object properties follow.
+export const settings = object({
+  role: withDefault(oneOf(["admin", "user"]), "user"),
+  nickname: nullable(string()),
+  page: fallback(number(), 1),
+  note: optional(string()),
+});
+export const settingsValue: Infer<typeof settings> = { role: "admin", nickname: null, page: 2 };
+// @ts-expect-error role is always present in the output, because it has a default
+export const missingRole: Infer<typeof settings> = { nickname: null, page: 2 };
+export const length = transform(string(), (text) => text.length);
+export const lengthValue: Infer<typeof length> = 3;
+export const loaded = transform(string(), async (id) => ({ id }));
+// @ts-expect-error a transform that returns a promise is asynchronous
+export const notSyncLoaded: Validator<{ id: string }> = loaded;
+export const updates = object(partial({ name: string(), email: email() }));
+export const updateValue: Infer<typeof updates> = {};
+
+// Unions produce unions, and a tagged union narrows on its tag.
+export const idOrName = union([number({ int: true }), string()]);
+export const idOrNameValue: Infer<typeof idOrName> = "a";
+// @ts-expect-error booleans are not in the union
+export const badIdOrName: Infer<typeof idOrName> = true;
+export const event = discriminatedUnion("type", {
+  click: object({ x: number(), y: number() }),
+  key: object({ key: string() }),
+});
+export const eventValue: Infer<typeof event> = { type: "key", key: "a" };
+// @ts-expect-error "scroll" is not a variant
+export const badEvent: Infer<typeof event> = { type: "scroll" };
+export const clickX: number | undefined = (() => {
+  const result = event(raw);
+  return result.ok && result.value.type === "click" ? result.value.x : undefined;
+})();
+export const both = intersection(object({ name: string() }), object({ age: number() }));
+export const bothValue: Infer<typeof both> = { name: "Ada", age: 36 };
+export const settingsFromText = json(object({ theme: oneOf(["light", "dark"]) }));
+export const settingsFromTextValue: Infer<typeof settingsFromText> = { theme: "dark" };
+
+// A recursive validator names its own type.
+interface Category {
+  name: string;
+  children: Category[];
+}
+export const category: Validator<Category> = object({ name: string(), children: array(lazy(() => category)) });
