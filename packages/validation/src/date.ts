@@ -3,6 +3,13 @@ import { Validator } from "./core";
 import { constraint, invalidCoercion, invalidType, pass, type Outcome, type ParseContext } from "./internal";
 import { type Message } from "./issue";
 
+/** Rejects an invalid bound, since it is a mistake in the schema and not in the input. */
+const assertValidDate = (name: string, bound: Date): void => {
+  if (Number.isNaN(bound.getTime())) {
+    throw new RangeError(`${name} must be a valid Date`);
+  }
+};
+
 /** Validator for valid `Date` instances, created by {@link date}. */
 export class DateValidator extends Validator<Date> {
   /**
@@ -21,11 +28,11 @@ export class DateValidator extends Validator<Date> {
   protected evaluate(input: unknown, ctx: ParseContext): Outcome<Date> {
     if (this.isCoerced) {
       const converted = coerceToDate(input);
-      return converted === undefined ? invalidCoercion(ctx, "date", input, this.message) : pass(converted);
+      return converted === undefined ? invalidCoercion(ctx, "valid date", input, this.message) : pass(converted);
     }
     return input instanceof Date && !Number.isNaN(input.getTime())
       ? pass(input)
-      : invalidType(ctx, "date", input, this.message);
+      : invalidType(ctx, "valid date", input, this.message);
   }
 
   /**
@@ -36,6 +43,7 @@ export class DateValidator extends Validator<Date> {
    * @returns The validator with the rule added.
    */
   min(bound: Date, message?: Message): this {
+    assertValidDate("Minimum date", bound);
     return this.addStep(
       constraint((value) => value.getTime() >= bound.getTime(), {
         code: "too_small",
@@ -53,6 +61,7 @@ export class DateValidator extends Validator<Date> {
    * @returns The validator with the rule added.
    */
   max(bound: Date, message?: Message): this {
+    assertValidDate("Maximum date", bound);
     return this.addStep(
       constraint((value) => value.getTime() <= bound.getTime(), {
         code: "too_big",

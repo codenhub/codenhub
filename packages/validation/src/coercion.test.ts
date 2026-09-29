@@ -138,6 +138,8 @@ describe("coerce.date", () => {
 
   it("rejects a date that does not exist", () => {
     expect(schema.validate("2026-13-45").ok).toBe(false);
+    expect(schema.validate("2026-02-30").ok).toBe(false);
+    expect(schema.validate("2026-04-31T00:00:00Z").ok).toBe(false);
   });
 
   it("still applies date rules", () => {

@@ -154,7 +154,7 @@ export abstract class Validator<TOutput> {
   /**
    * Standard Schema v1 interface, so the validator works with libraries that accept any schema.
    *
-   * @returns Metadata and a `validate` function that returns a promise only when the schema is async.
+   * @returns Metadata and a `validate` function that returns a promise only when the validation reaches an async callback.
    */
   get "~standard"(): StandardSchemaV1.Props<unknown, TOutput> {
     return {
@@ -529,8 +529,6 @@ export class UnionValidator<TOptions extends readonly [AnyValidator, ...AnyValid
   }
 }
 
-const UNSAFE_MERGE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
-
 /** Merges two validated outputs: plain objects deeply, anything else takes the right-hand value. */
 function merge(left: unknown, right: unknown): unknown {
   if (!isPlainObject(left) || !isPlainObject(right)) {
@@ -539,9 +537,8 @@ function merge(left: unknown, right: unknown): unknown {
   const merged: Record<string, unknown> = {};
   for (const source of [left, right]) {
     for (const [key, value] of Object.entries(source)) {
-      if (!UNSAFE_MERGE_KEYS.has(key)) {
-        setOwn(merged, key, Object.hasOwn(merged, key) ? merge(merged[key], value) : value);
-      }
+      // setOwn defines an own data property, so no key can write to the prototype.
+      setOwn(merged, key, Object.hasOwn(merged, key) ? merge(merged[key], value) : value);
     }
   }
   return merged;

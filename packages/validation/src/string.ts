@@ -1,4 +1,4 @@
-import { coerceToString } from "./coercion";
+import { coerceToString, isCalendarDate } from "./coercion";
 import { Validator } from "./core";
 import {
   assertSize,
@@ -82,16 +82,12 @@ export interface DatetimeOptions {
 }
 
 const buildDatetimePattern = ({ offset, precision }: DatetimeOptions): RegExp => {
+  if (precision !== undefined) {
+    assertSize("Datetime precision", precision);
+  }
   const fraction = precision === undefined ? "(?:\\.\\d+)?" : precision === 0 ? "" : `\\.\\d{${precision}}`;
   const zone = offset === true ? "(?:Z|[+-]\\d{2}:\\d{2})" : "Z";
   return new RegExp(`^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d${fraction}${zone}$`);
-};
-
-/** Tests whether `YYYY-MM-DD` names a day that exists, rejecting `2026-02-30`. */
-const isCalendarDate = (text: string): boolean => {
-  const [year, month, day] = text.split("-").map(Number) as [number, number, number];
-  const date = new Date(Date.UTC(year, month - 1, day));
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 };
 
 const isEmail = (text: string, allowPlus: boolean): boolean => {

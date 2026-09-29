@@ -89,6 +89,8 @@ describe("integers and steps", () => {
     expect(() => val.number().multipleOf(0)).toThrow(RangeError);
     expect(() => val.number().multipleOf(-1)).toThrow(RangeError);
     expect(() => val.number().clamp(5, 1)).toThrow(RangeError);
+    expect(() => val.number().clamp(Number.NaN, 10)).toThrow(RangeError);
+    expect(() => val.number().clamp(0, Number.NaN)).toThrow(RangeError);
   });
 
   it("clamp moves the value into range instead of rejecting it", () => {

@@ -36,7 +36,11 @@ export type InferObject<TShape extends Shape> = Simplify<
 
 type Partialized<TShape extends Shape> = { [K in keyof TShape]: OptionalValidator<Infer<TShape[K]>> };
 type Requirement<TShape extends Shape, TKey extends keyof TShape> = {
-  [K in keyof TShape]: K extends TKey ? Validator<Exclude<Infer<TShape[K]>, undefined>> : TShape[K];
+  [K in keyof TShape]: K extends TKey
+    ? TShape[K] extends OptionalValidator<infer TInner>
+      ? Validator<TInner>
+      : TShape[K]
+    : TShape[K];
 };
 
 /** How a validator treats input properties its shape does not list. */

@@ -151,6 +151,12 @@ describe("shape operations", () => {
     expectTypeOf<Infer<typeof some>>().toEqualTypeOf<{ a: string; b?: number | undefined; c?: boolean | undefined }>();
   });
 
+  it("required leaves a union that merely accepts undefined alone, in the type too", () => {
+    const schema = val.object({ a: val.union([val.string(), val.undefined()]) }).required();
+    expect(schema.validate({}).ok).toBe(true);
+    expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<{ a?: string | undefined }>();
+  });
+
   it("required leaves properties that are not optional alone", () => {
     expect(base.required().validate({ a: "", b: 1, c: true }).ok).toBe(true);
   });

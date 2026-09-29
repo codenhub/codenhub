@@ -193,9 +193,12 @@ export class NumberValidator extends Validator<number> {
    * @param min - Lower end of the range.
    * @param max - Upper end of the range.
    * @returns The validator with the step added.
-   * @throws {RangeError} When `min` is greater than `max`.
+   * @throws {RangeError} When either bound is `NaN`, or `min` is greater than `max`.
    */
   clamp(min: number, max: number): this {
+    if (Number.isNaN(min) || Number.isNaN(max)) {
+      throw new RangeError("Clamp bounds must be numbers, received NaN");
+    }
     if (min > max) {
       throw new RangeError(`Clamp minimum ${min} is greater than maximum ${max}`);
     }

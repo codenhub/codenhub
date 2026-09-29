@@ -9,6 +9,13 @@ const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?
 const TRUE_WORDS = new Set(["true", "1", "yes", "on"]);
 const FALSE_WORDS = new Set(["false", "0", "no", "off"]);
 
+/** Tests whether `YYYY-MM-DD` names a day that exists, rejecting `2026-02-30`. */
+export const isCalendarDate = (text: string): boolean => {
+  const [year, month, day] = text.split("-").map(Number) as [number, number, number];
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+};
+
 const isTextLike = (input: unknown): input is string | number | bigint | boolean =>
   ["string", "number", "bigint", "boolean"].includes(typeof input);
 
@@ -62,8 +69,11 @@ export function coerceToDate(input: unknown): Date | undefined {
     converted = input;
   } else if (typeof input === "number" && Number.isFinite(input)) {
     converted = new Date(input);
-  } else if (typeof input === "string" && ISO_DATE_PATTERN.test(input.trim())) {
-    converted = new Date(input.trim());
+  } else if (typeof input === "string") {
+    const text = input.trim();
+    if (ISO_DATE_PATTERN.test(text) && isCalendarDate(text.slice(0, 10))) {
+      converted = new Date(text);
+    }
   }
   return converted !== undefined && !Number.isNaN(converted.getTime()) ? converted : undefined;
 }

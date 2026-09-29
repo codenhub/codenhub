@@ -8,7 +8,7 @@ export type LiteralValue = string | number | boolean | bigint | symbol | null | 
 /** Enum-like object: a TypeScript `enum`, or an `as const` object of strings and numbers. */
 export type EnumLike = Record<string, string | number>;
 
-const formatValue = (value: LiteralValue): string =>
+export const formatValue = (value: LiteralValue): string =>
   typeof value === "string" ? JSON.stringify(value) : typeof value === "bigint" ? `${value}n` : String(value);
 
 /**

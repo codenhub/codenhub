@@ -31,6 +31,14 @@ describe("discriminatedUnion", () => {
     expect(pathsOf(event.validate({}))).toEqual([["type"]]);
   });
 
+  it("names bigint tags in the message instead of throwing", () => {
+    const schema = val.discriminatedUnion("id", [
+      val.object({ id: val.literal(1n) }),
+      val.object({ id: val.literal(2n) }),
+    ]);
+    expect(messagesOf(schema.validate({ id: 3n }))).toEqual(['Invalid "id": expected one of 1n, 2n']);
+  });
+
   it("does not read the discriminator from the prototype", () => {
     expect(event.validate(Object.create({ type: "key" })).ok).toBe(false);
   });

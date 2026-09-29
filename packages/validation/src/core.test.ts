@@ -370,8 +370,13 @@ describe("and and intersection", () => {
 
     const loose = val.intersection(val.object({}).passthrough(), val.object({}).passthrough());
     const merged = valueOf(loose.validate(JSON.parse('{"__proto__":{"polluted":true}}')));
-    expect(Object.hasOwn(merged, "__proto__")).toBe(false);
+    expect(Object.getPrototypeOf(merged)).toBe(Object.prototype);
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+
+  it("keeps fields named constructor and prototype as data", () => {
+    const schema = val.intersection(val.object({ constructor: val.string() }), val.object({ prototype: val.number() }));
+    expect(valueOf(schema.validate({ constructor: "a", prototype: 1 }))).toEqual({ constructor: "a", prototype: 1 });
   });
 
   it("takes the right-hand output for non-objects", () => {

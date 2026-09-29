@@ -2,7 +2,7 @@ import { type MaybePromise } from "./async";
 import { execute, Validator, type Infer } from "./core";
 import { fail, invalidType, isPlainObject, type Outcome, type ParseContext } from "./internal";
 import { type Message } from "./issue";
-import { EnumValidator, LiteralValidator, type LiteralValue } from "./literal";
+import { EnumValidator, formatValue, LiteralValidator, type LiteralValue } from "./literal";
 import { type ObjectValidator, type Shape } from "./object";
 
 /** An object validator usable as a variant: its shape has the discriminator key. */
@@ -75,7 +75,7 @@ export class DiscriminatedUnionValidator<
         code: "invalid_union",
         message:
           this.message ??
-          `Invalid "${this.key}": expected one of ${this.tags.map((tag) => JSON.stringify(tag)).join(", ")}`,
+          `Invalid "${this.key}": expected one of ${this.tags.map((tag) => formatValue(tag as LiteralValue)).join(", ")}`,
         path: [this.key],
         params: { discriminator: this.key, options: this.tags },
         input: Object.hasOwn(input, this.key) ? input[this.key] : undefined,

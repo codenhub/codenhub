@@ -6,9 +6,14 @@ import { codesOf, messagesOf } from "./test-utils";
 describe("date", () => {
   it("accepts valid Date instances and rejects Invalid Date, strings and timestamps", () => {
     expect(val.date().validate(new Date(0)).ok).toBe(true);
-    expect(messagesOf(val.date().validate(new Date("nope")))).toEqual(["Expected date, received date"]);
+    expect(messagesOf(val.date().validate(new Date("nope")))).toEqual(["Expected valid date, received date"]);
     expect(val.date().validate("2026-01-01").ok).toBe(false);
     expect(val.date().validate(0).ok).toBe(false);
+  });
+
+  it("rejects an invalid bound when the schema is built", () => {
+    expect(() => val.date().min(new Date("x"), "custom")).toThrow(RangeError);
+    expect(() => val.date().max(new Date("x"))).toThrow(RangeError);
   });
 
   it("min and max are inclusive", () => {

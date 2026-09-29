@@ -19,7 +19,8 @@ describe("string", () => {
   });
 
   it("never puts the received value into a message", () => {
-    expect(messagesOf(val.number().validate("hunter2")).join()).not.toContain("hunter2");
+    expect(messagesOf(val.string().email().validate("hunter2")).join()).not.toContain("hunter2");
+    expect(messagesOf(val.string().min(20).validate("hunter2")).join()).not.toContain("hunter2");
   });
 });
 
@@ -226,6 +227,12 @@ describe("dates and times", () => {
       true,
       false,
     ]);
+  });
+
+  it("datetime rejects a precision that is not a non-negative integer when the schema is built", () => {
+    for (const precision of [-1, 1.5, Number.NaN]) {
+      expect(() => val.string().datetime({ precision })).toThrow(RangeError);
+    }
   });
 
   it("date accepts calendar dates that exist", () => {
