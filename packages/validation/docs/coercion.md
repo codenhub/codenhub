@@ -23,7 +23,7 @@ There is one for each type that commonly arrives as text. Each takes exactly the
 
 | Validator                | Produces | Accepts                                                                                                                     | Strict version |
 | ------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| `coerceString(options?)` | string   | Strings, numbers, bigints and booleans, converted to their string form.                                                     | `string`       |
+| `coerceString(options?)` | string   | Strings, finite numbers, bigints and booleans, converted to their string form.                                              | `string`       |
 | `coerceNumber(options?)` | number   | Numbers, and strings holding a decimal number such as `"42"`, `" 3.5 "`, `"-1"`, `".5"`.                                    | `number`       |
 | `coerceBoolean()`        | boolean  | Booleans, the numbers `1` and `0`, and the words `true`, `false`, `yes`, `no`, `on`, `off`, `1` and `0` in any letter case. | `boolean`      |
 | `coerceBigint(options?)` | bigint   | Bigints, safe integers, and strings holding a decimal integer.                                                              | `bigint`       |
@@ -35,6 +35,7 @@ Surrounding whitespace is ignored in the text each accepts.
 
 Coercion is deliberately narrow, because a conversion that guesses turns a bug into a plausible-looking value. These fail, with the reason in the issue:
 
+- **Strings:** `NaN` and `Infinity`, which a failed numeric conversion upstream leaves behind, and `null`, objects and arrays.
 - **Numbers:** empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and `"NaN"`, and booleans, `null`, objects and arrays. `Number(true)` is `1` and `Number("")` is `0`; reading a flag or a missing value as a count is how bugs hide.
 - **Booleans:** every other word. A typo such as `"ture"` is an error, not `false`.
 - **Bigints:** fractions, numbers beyond `Number.MAX_SAFE_INTEGER`, which have already lost precision, and any other text.

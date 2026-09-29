@@ -20,6 +20,15 @@ describe("coerceString", () => {
     expect(issuesOf(coerceString()(null))[0]?.params).toEqual({ expected: "string", received: "null", coerced: true });
   });
 
+  it("should reject NaN and Infinity, which a failed numeric conversion leaves behind", () => {
+    expect(accepts(coerceString(), Number.NaN, Infinity, -Infinity)).toEqual(Array(3).fill(false));
+    expect(issuesOf(coerceString()(Number.NaN))[0]?.params).toEqual({
+      expected: "string",
+      received: "nan",
+      coerced: true,
+    });
+  });
+
   it("should apply the constraints and clean-up of string to the converted text", () => {
     expect(coerceString({ min: 3 })(12).ok).toBe(false);
     expect(coerceString({ min: 2 })(12).ok).toBe(true);

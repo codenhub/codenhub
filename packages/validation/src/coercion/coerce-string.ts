@@ -3,11 +3,11 @@ import type { Validator } from "../core/types";
 import { string, type StringOptions } from "../primitives/string";
 
 /**
- * Creates a validator for text that also accepts numbers, bigints and booleans, converting them to
+ * Creates a validator for text that also accepts finite numbers, bigints and booleans, converting them to
  * their string form, then applies the same constraints as {@link string}.
  *
  * @remarks
- * `null`, `undefined`, objects, arrays, functions and symbols are not converted: guessing what an
+ * `NaN` and `Infinity`, `null`, `undefined`, objects, arrays, functions and symbols are not converted: guessing what an
  * object should look like as text would hide bugs. A value that cannot be converted fails with
  * `invalid_type` and `coerced: true` in `params`.
  *
@@ -25,7 +25,10 @@ import { string, type StringOptions } from "../primitives/string";
 export function coerceString(options: StringOptions = {}): Validator<string> {
   const strict = string(options);
   return (input) =>
-    typeof input === "string" || typeof input === "number" || typeof input === "bigint" || typeof input === "boolean"
+    typeof input === "string" ||
+    (typeof input === "number" && Number.isFinite(input)) ||
+    typeof input === "bigint" ||
+    typeof input === "boolean"
       ? strict(String(input))
       : invalidCoercion("string", input);
 }
