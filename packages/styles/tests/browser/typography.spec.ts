@@ -599,3 +599,40 @@ test("gives a wrapped table's halo room without moving the table", async ({ page
   expect(read.cyber.top).toBeCloseTo(read.plain.top, 1);
   expect(read.cyber.width).toBeCloseTo(read.plain.width, 1);
 });
+
+/* Pixel caps the border at zero because its frame is an inset ring, and a
+   table's rules read that capped width: under pixel the line under the head
+   and above the foot, and every `.ruled` row, drew nothing. A rule is not a
+   frame, so it reads the width the aesthetic states. */
+test("draws a table's rules under an aesthetic that caps its border", async ({ page }) => {
+  await page.goto(`${TYPOGRAPHY_URL}&aesthetic=pixel`);
+
+  const read = await page.evaluate(() => {
+    const host = document.createElement("div");
+
+    host.className = "pixel";
+    host.innerHTML =
+      '<table class="data-table ruled"><thead><tr><th>H</th></tr></thead>' +
+      "<tbody><tr><td>a</td></tr><tr><td>b</td></tr></tbody><tfoot><tr><td>f</td></tr></tfoot></table>";
+    document.body.append(host);
+
+    const width = (selector: string, side: "Top" | "Bottom") =>
+      getComputedStyle(host.querySelector(selector)!)[`border${side}Width`];
+    const result = {
+      frame: getComputedStyle(host.querySelector("table")!).borderTopWidth,
+      head: width("thead th", "Bottom"),
+      row: width("tbody tr:first-child td", "Bottom"),
+      foot: width("tfoot td", "Top"),
+    };
+
+    host.remove();
+
+    return result;
+  });
+
+  /* The frame stays the ring's; the rules are the aesthetic's line. */
+  expect(read.frame).toBe("0px");
+  expect(read.head).toBe("2px");
+  expect(read.row).toBe("2px");
+  expect(read.foot).toBe("2px");
+});

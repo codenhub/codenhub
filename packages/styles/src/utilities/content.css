@@ -280,20 +280,27 @@
   }
 
   /* Every cell carries the hairline; what varies is whether it is painted. The
-     width tracks the aesthetic's own line weight (`--_width`, the same token
-     `box` uses for the table's outer frame) rather than a fixed `1px`, so a
-     row rule reads as the same material as the boundary around it instead of
+     width tracks the aesthetic's own line weight rather than a fixed `1px`, so
+     a row rule reads as the same material as the boundary around it instead of
      as a leftover default under an aesthetic whose whole point is thickness --
      `.chunky-tile`'s 2px frame used to sit over a 1px row rule, which read as
      unstyled rather than as a deliberate, quieter line. It still survives a
      fill that would otherwise paint over it, because color and width are
-     independent here: `.ruleless` zeroes the color, not this. */
+     independent here: `.ruleless` zeroes the color, not this.
+
+     The width as the aesthetic states it, not `box`'s `--_width`: that one is
+     capped by `--ui-border-max`, which `.pixel` sets to zero because its frame
+     is an inset ring a clip cannot cut. A rule is not a frame and nothing clips
+     a table, so under pixel the capped width drew no rule at all -- no line
+     under the head or above the foot, and `.ruled` changed nothing. A divider
+     reads the same uncapped width for the same reason. */
+  --_table-rule-width: var(--ui-border-width, var(--border-width));
   & th,
   & td {
     @apply px-4 py-3 align-top;
 
     border-bottom-style: var(--ui-rule-style, var(--ui-line-style, solid));
-    border-bottom-width: var(--_width);
+    border-bottom-width: var(--_table-rule-width);
     border-color: var(--table-rule);
   }
 
@@ -312,7 +319,7 @@
 
   & tfoot tr:first-child > * {
     border-top-style: var(--ui-rule-style, var(--ui-line-style, solid));
-    border-top-width: var(--_width);
+    border-top-width: var(--_table-rule-width);
     border-top-color: var(--table-boundary);
   }
 
