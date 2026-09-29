@@ -126,7 +126,7 @@ if (!result.ok) {
 }
 ```
 
-It takes the same message map as `formatIssue`, and without one every message is "Invalid value". Field keys use the notation of `formatPath`.
+It takes the same message map as `formatIssue`, and without one every message is "Invalid value". Field keys use the notation of `formatPath`. `fieldErrors` has no prototype, so a field named `constructor` or `toString` cannot be mistaken for an inherited member and `fieldErrors["toString"]` is `undefined` when there is no such field. The price is that it has no methods: ask with `"name" in fieldErrors` or `Object.hasOwn(fieldErrors, "name")`, not `fieldErrors.hasOwnProperty("name")`.
 
 ## Reading the result
 

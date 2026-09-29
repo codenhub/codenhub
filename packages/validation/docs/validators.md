@@ -133,20 +133,20 @@ A format is a validator for a string of a particular shape. Each accepts a strin
 
 A non-string fails with `invalid_type` and `{ expected: "string", received }`. A string that does not match fails with `invalid_format` and `{ format }`, and `format` names it as the table shows.
 
-| Validator    | Accepts                                                                                   | `format`                     |
-| ------------ | ----------------------------------------------------------------------------------------- | ---------------------------- |
-| `email()`    | An email address with a public domain name.                                               | `"email"`                    |
-| `url()`      | An absolute URL with an allowed protocol and a public host.                               | `"url"`                      |
-| `uuid()`     | A UUID of version 1 to 8, or the nil or max UUID, hyphenated, in any case.                | `"uuid"`                     |
-| `ip()`       | An IPv4 or IPv6 address.                                                                  | `"ip"`, `"ipv4"` or `"ipv6"` |
-| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists.               | `"datetime"`                 |
-| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.                     | `"date"`                     |
-| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens, the last not all digits. | `"hostname"`                 |
-| `hex()`      | One or more hexadecimal digits of any case.                                               | `"hex"`                      |
-| `base64()`   | Standard base64 with correct padding. The empty string is base64 of no bytes.             | `"base64"`                   |
-| `ulid()`     | A ULID, in any case.                                                                      | `"ulid"`                     |
-| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.                            | `"nanoid"`                   |
-| `cuid2()`    | A CUID2 identifier.                                                                       | `"cuid2"`                    |
+| Validator    | Accepts                                                                                                | `format`                     |
+| ------------ | ------------------------------------------------------------------------------------------------------ | ---------------------------- |
+| `email()`    | An email address with a public domain name.                                                            | `"email"`                    |
+| `url()`      | An absolute URL with an allowed protocol and a public host.                                            | `"url"`                      |
+| `uuid()`     | A UUID of version 1 to 8, or the nil or max UUID, hyphenated, in any case.                             | `"uuid"`                     |
+| `ip()`       | An IPv4 or IPv6 address.                                                                               | `"ip"`, `"ipv4"` or `"ipv6"` |
+| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists.                            | `"datetime"`                 |
+| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.                                  | `"date"`                     |
+| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens, the last not all digits.              | `"hostname"`                 |
+| `hex()`      | One or more hexadecimal digits of any case.                                                            | `"hex"`                      |
+| `base64()`   | Standard base64 with correct padding, as an encoder writes it. The empty string is base64 of no bytes. | `"base64"`                   |
+| `ulid()`     | A ULID, in any case.                                                                                   | `"ulid"`                     |
+| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.                                         | `"nanoid"`                   |
+| `cuid2()`    | A CUID2 identifier.                                                                                    | `"cuid2"`                    |
 
 `isoDate()` produces a string. To get a `Date`, use `date()` on a `Date` you built yourself.
 
@@ -205,7 +205,7 @@ IPv4 is four decimal parts from 0 to 255 without leading zeros, which some parse
 
 ### `datetime`
 
-`datetime(options?)` requires the `T` separator, a time, and `Z`, and rejects days that do not exist, so `2026-02-30T00:00:00Z` fails. The options are `offset`, default `false`, which accepts a UTC offset such as `+02:00` instead of only `Z`, and `precision`, a non-negative integer, which requires exactly that many fractional-second digits (`0` forbids them; without it they are optional). A `precision` that is not a non-negative integer throws a `RangeError` when the validator is created.
+`datetime(options?)` requires the `T` separator, a time, and `Z`, and rejects days that do not exist, so `2026-02-30T00:00:00Z` fails. The options are `offset`, default `false`, which accepts a UTC offset such as `+02:00` instead of only `Z`, and `precision`, an integer from 0 to 9, which requires exactly that many fractional-second digits (`0` forbids them; without it they are optional). A `precision` outside that throws a `RangeError` when the validator is created. Leap seconds (`23:59:60`) are rejected.
 
 ## Objects
 
@@ -273,11 +273,11 @@ const call = tuple([string()], { rest: number() }); // [string, ...number[]]
 
 ### `record`
 
-`record(key, value)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it is not mistaken for a problem with the value, and a bad key still has its value checked. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype.
+`record(key, value)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it is not mistaken for a problem with the value, and a bad key still has its value checked. A key that the key validator changes, such as by lowercasing, must stay distinct: `{ A: 1, a: 2 }` under `string({ lowercase: true })` reports the second as `invalid_key` with `{ unique: true }` rather than dropping a value. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype.
 
 ### `set` and `map`
 
-`set(element, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string or a number and its position otherwise. A map key that fails is reported as `invalid_key`, as for `record`. Both take `min`, `max` and `length`.
+`set(element, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string or a number and its position otherwise. A map key that fails is reported as `invalid_key`, as for `record`, and so is one that another entry has already taken once the key validator has changed it. Both take `min`, `max` and `length`.
 
 ## Combining validators
 

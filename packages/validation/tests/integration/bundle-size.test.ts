@@ -94,7 +94,7 @@ export const describe = (input: unknown) => { const result = check(input); retur
   {
     name: "record",
     source: `import { number, record, string } from "DIST"; export const check = record(string(), number());`,
-    budget: 2160,
+    budget: 2220,
   },
   {
     name: "union",
@@ -128,7 +128,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
     source: `import { coerceBigint } from "DIST"; export const check = coerceBigint();`,
     budget: 930,
   },
-  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1170 },
+  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1220 },
   {
     name: "standard",
     source: `import { englishMessages, number, standard } from "DIST"; export const check = standard(number(), englishMessages);`,
@@ -147,7 +147,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 8000,
+    budget: 8160,
   },
 ];
 

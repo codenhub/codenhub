@@ -27,7 +27,7 @@ There is one for each type that commonly arrives as text. Each takes exactly the
 | `coerceNumber(options?)` | number   | Numbers, and strings holding a decimal number such as `"42"`, `" 3.5 "`, `"-1"`, `".5"`.                                    | `number`       |
 | `coerceBoolean()`        | boolean  | Booleans, the numbers `1` and `0`, and the words `true`, `false`, `yes`, `no`, `on`, `off`, `1` and `0` in any letter case. | `boolean`      |
 | `coerceBigint(options?)` | bigint   | Bigints, safe integers, and strings holding a decimal integer.                                                              | `bigint`       |
-| `coerceDate(options?)`   | `Date`   | `Date`s, finite timestamps in milliseconds, and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`.            | `date`         |
+| `coerceDate(options?)`   | `Date`   | `Date`s, whole timestamps in milliseconds, and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`.             | `date`         |
 
 Surrounding whitespace is ignored in the text each accepts.
 
@@ -42,6 +42,8 @@ Coercion is deliberately narrow, because a conversion that guesses turns a bug i
 - **Dates:** free-form text such as `"yesterday"` or `"09/28/2026"`, whose reading depends on the runtime, and days that do not exist such as `2026-02-30`.
 
 A value that cannot be converted fails with `invalid_type`, and its `params` are `{ expected, received, coerced: true }`. The default message reads "Cannot convert string to number", and the value itself is never in the issue. A value that converts but then breaks a constraint fails with that constraint's own code, as for the strict validator.
+
+A fraction of a second beyond milliseconds is cut, not rounded, the same way on every runtime, and a timestamp with a fraction of a millisecond is rejected rather than cut. Leap seconds (`23:59:60`) are rejected, since a `Date` cannot hold one. The text `"-0"` is read as `0`, and a decimal is read as the nearest double, so `"0.30000000000000004999"` is `0.30000000000000004`.
 
 Date-only strings and date-times without an offset are both read as UTC, so the result does not depend on the timezone of the machine. Include an offset or `Z` in text you produce when the moment is not UTC.
 
