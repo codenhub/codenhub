@@ -102,7 +102,7 @@ The options `min` and `max` are `Date`s, both inclusive, and throw a `RangeError
 
 ## Fixed values
 
-- `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`.
+- `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`. The one exception is `literal(NaN)`, which matches nothing, since `NaN === NaN` is false.
 - `oneOf(values)` accepts any one string or number of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The list is copied when the validator is created.
 - `nativeEnum(enumObject)` accepts any value of a TypeScript `enum`. It ignores the reverse-mapping names TypeScript adds to a numeric enum, so only the numbers are values.
 
@@ -133,20 +133,20 @@ A format is a validator for a string of a particular shape. Each accepts a strin
 
 A non-string fails with `invalid_type` and `{ expected: "string", received }`. A string that does not match fails with `invalid_format` and `{ format }`, and `format` names it as the table shows.
 
-| Validator    | Accepts                                                                     | `format`                     |
-| ------------ | --------------------------------------------------------------------------- | ---------------------------- |
-| `email()`    | An email address with a public domain name.                                 | `"email"`                    |
-| `url()`      | An absolute URL with an allowed protocol and a public host.                 | `"url"`                      |
-| `uuid()`     | A UUID of version 1 to 8, or the nil or max UUID, hyphenated, in any case.  | `"uuid"`                     |
-| `ip()`       | An IPv4 or IPv6 address.                                                    | `"ip"`, `"ipv4"` or `"ipv6"` |
-| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists. | `"datetime"`                 |
-| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.       | `"date"`                     |
-| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens.            | `"hostname"`                 |
-| `hex()`      | One or more hexadecimal digits of any case.                                 | `"hex"`                      |
-| `base64()`   | Standard base64 with correct padding.                                       | `"base64"`                   |
-| `ulid()`     | A ULID, in any case.                                                        | `"ulid"`                     |
-| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.              | `"nanoid"`                   |
-| `cuid2()`    | A CUID2 identifier.                                                         | `"cuid2"`                    |
+| Validator    | Accepts                                                                       | `format`                     |
+| ------------ | ----------------------------------------------------------------------------- | ---------------------------- |
+| `email()`    | An email address with a public domain name.                                   | `"email"`                    |
+| `url()`      | An absolute URL with an allowed protocol and a public host.                   | `"url"`                      |
+| `uuid()`     | A UUID of version 1 to 8, or the nil or max UUID, hyphenated, in any case.    | `"uuid"`                     |
+| `ip()`       | An IPv4 or IPv6 address.                                                      | `"ip"`, `"ipv4"` or `"ipv6"` |
+| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists.   | `"datetime"`                 |
+| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.         | `"date"`                     |
+| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens.              | `"hostname"`                 |
+| `hex()`      | One or more hexadecimal digits of any case.                                   | `"hex"`                      |
+| `base64()`   | Standard base64 with correct padding. The empty string is base64 of no bytes. | `"base64"`                   |
+| `ulid()`     | A ULID, in any case.                                                          | `"ulid"`                     |
+| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.                | `"nanoid"`                   |
+| `cuid2()`    | A CUID2 identifier.                                                           | `"cuid2"`                    |
 
 `isoDate()` produces a string. To get a `Date`, use `date()` on a `Date` you built yourself.
 
@@ -294,7 +294,7 @@ const tags = withDefault(array(string()), () => []);
 `transform(validator, convert)` changes the value a validator produced into another, such as text into a `Date`. `convert` runs only when `validator` succeeded and cannot reject the value: to fail, write a validator that returns `fail(...)` and put it after this one with `pipe`. A `convert` that returns a promise makes the result asynchronous. A `convert` that throws is a bug and propagates.
 
 ```ts
-import { pipe, string, transform } from "@codenhub/validation";
+import { string, transform } from "@codenhub/validation";
 
 const length = transform(string(), (text) => text.length);
 ```
