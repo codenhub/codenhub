@@ -144,7 +144,7 @@ The conversions are narrow on purpose, because a conversion that guesses turns a
 
 ## Standard Schema
 
-A validator is a function and not a schema object, so Standard Schema v1 support is an adapter: `standard(validator, messages?)` returns a new function that calls the validator and carries a `~standard` property, and leaves the validator you gave untouched. The standard requires a `message` on every issue, and the adapter supplies it with `formatIssue` and a message map it requires as an argument, so the cost of messages is paid only by whoever asks for interop. Input type and output type are `unknown` and the validator's `Infer`, since validators take `unknown`.
+A validator is a function and not a schema object, so Standard Schema v1 support is an adapter: `standard(validator, messages)` returns a new function that calls the validator and carries a `~standard` property, and leaves the validator you gave untouched. The standard requires a `message` on every issue, and the adapter supplies it with `formatIssue` and a message map it requires as an argument, so the cost of messages is paid only by whoever asks for interop. Input type and output type are `unknown` and the validator's `Infer`, since validators take `unknown`.
 
 `~standard.validate` is synchronous for a synchronous validator and returns a promise for an asynchronous one, through `chain`. The interface types are vendored in `src/interop/standard-schema.ts` so the package needs no dependency for them.
 

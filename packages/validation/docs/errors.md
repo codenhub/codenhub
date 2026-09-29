@@ -22,7 +22,7 @@ const result = {
 };
 ```
 
-`error.issues` lists every problem the validator found, in a fixed order, and is never empty. Its type says so too, so `result.error.issues[0]` is an issue and not `undefined`, even under `noUncheckedIndexedAccess`. Objects report the issues of their properties in the order the shape lists them, whichever finished first.
+`error.issues` lists every problem the validator found, in a fixed order, and is never empty. Its type says so too, so `result.error.issues[0]` is an issue and not `undefined`, even under `noUncheckedIndexedAccess`. A strict `object` reports its unrecognized keys first, then the issues of its properties in the order the shape lists them, whichever finished first.
 
 ## The issue
 
