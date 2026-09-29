@@ -105,6 +105,8 @@ All three toggles rest at `.soft`. Presentation decides the _unchecked_ plate; c
 
 A checked checkbox and a checked switch cut their mark out of that pinned plate. A checked radio thickens its ring to twice the resting line and takes the intent whole on it, and the dot follows the same pinned plate, so `.radio.soft` and `.radio.solid` render the same filled circle once checked — presentation only changes what the radio looks like before it's picked.
 
+A checkbox whose `indeterminate` property is set -- a group some of whose items are checked -- takes the same pinned plate with a dash for its mark, and keeps the dash while it is also `checked`, as the browser's own checkbox does. The property is set from script (`input.indeterminate = true`); there is no attribute for it.
+
 ## Text controls
 
 Text controls also take intent, which colors the resting border and the focus-visible border, and both [presentation](./composing.md#presentation) axes. `.ghost` fills nothing, `.soft` takes `12%`, and `.solid` takes `20%` — quiet enough that typed text still reads on it, and ordered so the louder name draws the stronger tint. None of them touches the line.

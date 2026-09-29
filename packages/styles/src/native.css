@@ -196,7 +196,8 @@
     transition: none;
   }
 
-  input[type="checkbox"]:checked {
+  input[type="checkbox"]:checked,
+  input[type="checkbox"]:indeterminate {
     background-color: Highlight;
     border-color: Highlight;
 

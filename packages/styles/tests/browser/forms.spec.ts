@@ -1146,4 +1146,36 @@ test.describe("forms", () => {
 
     expect(hint).toEqual({ fontSize: "14px", lineHeight: "20px" });
   });
+
+  /* A mixed checkbox -- some of a group checked -- is a state of its own: the
+     checked plate, so it reads as "on" in part, with a dash for a mark rather
+     than a tick. Indeterminate wins over checked when both are set, as the
+     browser's own checkbox draws it. */
+  test("draws an indeterminate checkbox as the checked plate with a dash", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const styles = await page.evaluate(() => {
+      const host = document.createElement("div");
+      host.innerHTML =
+        '<input type="checkbox" class="checkbox success" checked><input type="checkbox" class="checkbox success"><input type="checkbox" class="checkbox success" checked>';
+      document.body.append(host);
+      const [checked, mixed, both] = [...host.querySelectorAll("input")] as HTMLInputElement[];
+      mixed!.indeterminate = true;
+      both!.indeterminate = true;
+      const read = (element: Element) => ({
+        background: getComputedStyle(element).backgroundColor,
+        mark: getComputedStyle(element, "::after").maskImage || getComputedStyle(element, "::after").webkitMaskImage,
+        opacity: getComputedStyle(element, "::after").opacity,
+      });
+      const result = { both: read(both!), checked: read(checked!), mixed: read(mixed!) };
+      host.remove();
+
+      return result;
+    });
+
+    expect(styles.mixed.background).toBe(styles.checked.background);
+    expect(styles.mixed.opacity).toBe("1");
+    expect(styles.mixed.mark).not.toBe(styles.checked.mark);
+    expect(styles.both.mark).toBe(styles.mixed.mark);
+  });
 });

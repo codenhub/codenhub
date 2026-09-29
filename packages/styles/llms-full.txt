@@ -1252,6 +1252,8 @@ All three toggles rest at `.soft`. Presentation decides the _unchecked_ plate; c
 
 A checked checkbox and a checked switch cut their mark out of that pinned plate. A checked radio thickens its ring to twice the resting line and takes the intent whole on it, and the dot follows the same pinned plate, so `.radio.soft` and `.radio.solid` render the same filled circle once checked — presentation only changes what the radio looks like before it's picked.
 
+A checkbox whose `indeterminate` property is set -- a group some of whose items are checked -- takes the same pinned plate with a dash for its mark, and keeps the dash while it is also `checked`, as the browser's own checkbox does. The property is set from script (`input.indeterminate = true`); there is no attribute for it.
+
 ## Text controls
 
 Text controls also take intent, which colors the resting border and the focus-visible border, and both [presentation](docs/usage/composing.md#presentation) axes. `.ghost` fills nothing, `.soft` takes `12%`, and `.solid` takes `20%` — quiet enough that typed text still reads on it, and ordered so the louder name draws the stronger tint. None of them touches the line.
@@ -2042,6 +2044,7 @@ A liquid-glass modifier, glass that keeps every presentation's fill whole, and a
 - **`.glass-liquid`**, a modifier of `.glass`: continuous corners, a bright rim, a lighter blur, a clearer ground, and a lens that bends what is behind a surface at its edges (Chromium today; Firefox and Safari keep the rim, blur, and ground). Put it beside `.glass` on the region, or on one surface inside a glass region; `.glass-solo.glass-liquid` paints the same pane on an element the package does not style. Without `.glass` in scope it changes the corners and nothing else. See [Aesthetics → Liquid glass](docs/usage/aesthetics.md#liquid-glass).
 - **`.unadorned`** removes the browser's own field decorations -- the date picker button, number spin buttons, and search clear button and magnifier -- on a control or on its `.input-group`, for a field whose adornments you draw yourself. See [Forms → Icons](docs/usage/forms.md#icons).
 - **`[data-state="closed"]` on `.tooltip`** hides the bubble while it is hovered or focused, for an Escape handler, and **`--tooltip-linger`** (300ms) sets how long a bubble stays after the pointer leaves its trigger. See [Tooltips](docs/usage/tooltips.md).
+- **An indeterminate `.checkbox`** (and a native one under `/native`) draws the checked plate with a dash for its mark, and a Highlight plate in forced colors. See [Forms → Toggles](docs/usage/forms.md#toggles).
 - **`--ui-rule-ink`**, the neutral line color of a table's frame and rules, read ahead of `--ui-ink`. Glass sets it so a table's lines read on its plate; every other aesthetic clears it.
 
 ## Changed

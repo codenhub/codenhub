@@ -524,6 +524,23 @@
     @apply opacity-100;
   }
 
+  /* Mixed -- part of a group checked -- takes the checked plate, the same
+     inputs `text-control`'s `:checked` writes, and a dash for its mark. After
+     the checked mark, so a box that is both draws the dash, as the browser's
+     own checkbox does. */
+  &:indeterminate {
+    --ui-fill: 100%;
+    --ui-fg-on-fill: 100%;
+    --_fill-cap: 100%;
+  }
+
+  &:indeterminate::after {
+    @apply opacity-100;
+
+    mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round'><line x1='5' y1='12' x2='19' y2='12'/></svg>");
+    -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round'><line x1='5' y1='12' x2='19' y2='12'/></svg>");
+  }
+
   /* The mark appears without moving under reduced motion, for the entries
      without the reset; see `box.css`. */
   @media (prefers-reduced-motion: reduce) {
@@ -714,6 +731,7 @@
   }
 
   .checkbox:checked,
+  .checkbox:indeterminate,
   .radio:checked,
   .switch:checked {
     background-color: Highlight;

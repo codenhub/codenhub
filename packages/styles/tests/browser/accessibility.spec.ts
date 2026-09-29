@@ -540,3 +540,46 @@ test("draws a switch in system colors in forced colors, checked or not", async (
   expect(colors.offKnob).toBe(colors.canvasText);
   expect(colors.onKnob).toBe(colors.highlightText);
 });
+
+/* A mixed checkbox is "on" in part, and in forced colors it has to say so the
+   way a checked one does: a Highlight plate and a HighlightText mark. */
+test("draws an indeterminate checkbox in system colors in forced colors", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+
+  for (const [stylesUrl, className] of [
+    [COMPONENT_STYLES_URL, "checkbox"],
+    [NATIVE_STYLES_URL, ""],
+  ] as const) {
+    /* One page, one entrypoint at a time: the two loads cannot share it. */
+    // oxlint-disable-next-line no-await-in-loop -- one entrypoint at a time keeps the failure naming it.
+    await page.setContent(
+      `<!doctype html><html><body><input type="checkbox" class="${className}" id="mixed"></body></html>`,
+    );
+    // oxlint-disable-next-line no-await-in-loop -- one entrypoint at a time keeps the failure naming it.
+    await page.addStyleTag({ url: stylesUrl });
+
+    // oxlint-disable-next-line no-await-in-loop -- one entrypoint at a time keeps the failure naming it.
+    const colors = await page.evaluate(() => {
+      const resolve = (color: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = color;
+        document.body.append(probe);
+        const resolved = getComputedStyle(probe).color;
+        probe.remove();
+        return resolved;
+      };
+      const mixed = document.getElementById("mixed") as HTMLInputElement;
+      mixed.indeterminate = true;
+
+      return {
+        background: getComputedStyle(mixed).backgroundColor,
+        highlight: resolve("Highlight"),
+        highlightText: resolve("HighlightText"),
+        mark: getComputedStyle(mixed, "::after").backgroundColor,
+      };
+    });
+
+    expect(colors.background, stylesUrl).toBe(colors.highlight);
+    expect(colors.mark, stylesUrl).toBe(colors.highlightText);
+  }
+});
