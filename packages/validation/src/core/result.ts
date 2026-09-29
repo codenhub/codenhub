@@ -1,5 +1,12 @@
 import { isPlainObject } from "./objects";
-import type { ValidationErr, ValidationIssue, ValidationIssueCode, ValidationOk, ValidationPathSegment } from "./types";
+import type {
+  ValidationErr,
+  ValidationFailure,
+  ValidationIssue,
+  ValidationIssueCode,
+  ValidationOk,
+  ValidationPathSegment,
+} from "./types";
 
 /** Shared by every issue at the root, so reporting one allocates no path. */
 const ROOT_PATH: readonly ValidationPathSegment[] = Object.freeze([]);
@@ -47,8 +54,11 @@ export function fail(...issues: [IssueInput, ...IssueInput[]]): ValidationErr {
   return failWith(issues.map(toIssue));
 }
 
-/** Wraps issues that are already complete into a failed result. */
-export const failWith = (issues: readonly ValidationIssue[]): ValidationErr => ({ ok: false, error: { issues } });
+/** Wraps issues that are already complete into a failed result. Every caller passes at least one. */
+export const failWith = (issues: readonly ValidationIssue[]): ValidationErr => ({
+  ok: false,
+  error: { issues: issues as ValidationFailure["issues"] },
+});
 
 /** Fills in the defaults of an issue written by a validator author. */
 export function toIssue({ code = "custom", path = ROOT_PATH, params, message }: IssueInput): ValidationIssue {

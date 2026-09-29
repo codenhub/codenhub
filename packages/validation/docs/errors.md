@@ -22,7 +22,7 @@ const result = {
 };
 ```
 
-`error.issues` lists every problem the validator found, in a fixed order, and is never empty. Objects report the issues of their properties in the order the shape lists them, whichever finished first.
+`error.issues` lists every problem the validator found, in a fixed order, and is never empty. Its type says so too, so `result.error.issues[0]` is an issue and not `undefined`, even under `noUncheckedIndexedAccess`. Objects report the issues of their properties in the order the shape lists them, whichever finished first.
 
 ## The issue
 
@@ -72,7 +72,7 @@ import { englishMessages, formatIssue, number } from "@codenhub/validation";
 
 const result = number({ min: 18 })(15);
 if (!result.ok) {
-  formatIssue(result.error.issues[0]!, englishMessages); // "Must be at least 18"
+  formatIssue(result.error.issues[0], englishMessages); // "Must be at least 18"
 }
 ```
 

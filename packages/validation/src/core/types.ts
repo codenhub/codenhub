@@ -38,8 +38,11 @@ export interface ValidationIssue {
 
 /** Everything a failed validation found. */
 export interface ValidationFailure {
-  /** Every issue found, in the order the validator encountered them. Never empty. */
-  readonly issues: readonly ValidationIssue[];
+  /**
+   * Every issue found, in the order the validator encountered them. Never empty, and typed so, so
+   * `issues[0]` is an issue even under `noUncheckedIndexedAccess`.
+   */
+  readonly issues: readonly [ValidationIssue, ...ValidationIssue[]];
 }
 
 /** Successful validation, carrying the validated value. */
