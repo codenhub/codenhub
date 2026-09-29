@@ -6,24 +6,24 @@ order: 6
 
 # Forms
 
-| Class or Selector                                                     | Purpose                                                                               |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `.field`                                                              | Vertical field wrapper.                                                               |
-| `.label`                                                              | Form label text.                                                                      |
-| `.hint`                                                               | Secondary helper text.                                                                |
-| `.hint.destructive`                                                   | Helper text with destructive intent.                                                  |
-| `.surface`                                                            | Shared public container composition utility.                                          |
-| `.text-control`                                                       | Shared public text-control composition utility.                                       |
-| `.ipt`                                                                | Input control styling.                                                                |
-| `.input-group`                                                        | Wrapper that owns the field box so a control can carry an icon or affix.              |
-| `.unadorned`                                                          | Removes the browser's own field decorations, on the control or on its `.input-group`. |
-| `.textarea`                                                           | Textarea control styling.                                                             |
-| `.select`                                                             | Select control styling.                                                               |
-| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                                      |
-| `input[type="radio"].radio`                                           | Custom radio control styling.                                                         |
-| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                                        |
-| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                                                   |
-| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                                                     |
+| Class or Selector                                                     | Purpose                                                                                                        |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `.field`                                                              | Vertical field wrapper.                                                                                        |
+| `.label`                                                              | Form label text.                                                                                               |
+| `.hint`                                                               | Secondary helper text.                                                                                         |
+| `.hint.destructive`                                                   | Helper text with destructive intent.                                                                           |
+| `.surface`                                                            | Shared public container composition utility.                                                                   |
+| `.text-control`                                                       | Shared public text-control composition utility.                                                                |
+| `.ipt`                                                                | Input control styling.                                                                                         |
+| `.input-group`                                                        | Wrapper that owns the field box so a control can carry an icon or affix.                                       |
+| `.unadorned`                                                          | Removes the browser's own field decorations, on the control or on its `.input-group`.                          |
+| `.textarea`                                                           | Textarea control styling.                                                                                      |
+| `.select`                                                             | Select control styling. With `multiple` or a `size` above 1 it is a list box: no chevron, as tall as its rows. |
+| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                                                               |
+| `input[type="radio"].radio`                                           | Custom radio control styling.                                                                                  |
+| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                                                                 |
+| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                                                                            |
+| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                                                                              |
 
 ## Icons
 

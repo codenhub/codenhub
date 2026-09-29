@@ -1178,4 +1178,44 @@ test.describe("forms", () => {
     expect(styles.mixed.mark).not.toBe(styles.checked.mark);
     expect(styles.both.mark).toBe(styles.mixed.mark);
   });
+
+  /* A select showing several rows is a list box, not a drop-down: it draws no
+     chevron, grows to its rows, and gives back the room kept for the chevron.
+     A one-row select keeps all three. */
+  test("draws a multi-row select as a list box", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const styles = await page.evaluate(() => {
+      const options = "<option>One</option><option>Two</option><option>Three</option><option>Four</option>";
+      const host = document.createElement("div");
+      host.innerHTML = [
+        `<select class="select">${options}</select>`,
+        `<select class="select" multiple>${options}</select>`,
+        `<select class="select" size="4">${options}</select>`,
+        `<select class="select" size="1">${options}</select>`,
+      ].join("");
+      document.body.append(host);
+      const result = [...host.querySelectorAll("select")].map((select) => {
+        const style = getComputedStyle(select);
+
+        return {
+          chevron: style.backgroundImage !== "none",
+          height: select.getBoundingClientRect().height,
+          symmetric: style.paddingLeft === style.paddingRight,
+        };
+      });
+      host.remove();
+
+      return result;
+    });
+    const [single, multiple, sized, sizedOne] = styles;
+
+    expect(single).toEqual({ chevron: true, height: 40, symmetric: false });
+    expect(sizedOne).toEqual(single);
+    for (const listBox of [multiple!, sized!]) {
+      expect(listBox.chevron).toBe(false);
+      expect(listBox.symmetric).toBe(true);
+      expect(listBox.height).toBeGreaterThan(40);
+    }
+  });
 });

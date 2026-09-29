@@ -365,6 +365,15 @@
     background-color: var(--color-background);
     color: var(--color-text);
   }
+
+  /* Several rows showing is a list box, not a drop-down: no chevron, the height
+     of its rows, and the chevron's room given back. `--control-height` stays
+     the floor. */
+  &:is([multiple], [size]:not([size="1"])) {
+    height: auto;
+    padding-inline: 0.75rem;
+    background-image: none;
+  }
 }
 
 /* A wrapper that owns the field box so a control can carry adornments beside it
