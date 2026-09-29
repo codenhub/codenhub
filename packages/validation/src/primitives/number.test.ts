@@ -56,8 +56,13 @@ describe("number", () => {
       expect(accepts(number({ nonZero: true }), 0, -0, 1, -1)).toEqual([false, false, true, true]);
     });
 
-    it("should tolerate floating-point error in multipleOf", () => {
-      expect(accepts(number({ multipleOf: 0.1 }), 0.3, 0.35)).toEqual([true, false]);
+    it("should compare multipleOf as the decimals the numbers are written as", () => {
+      expect(accepts(number({ multipleOf: 0.1 }), 0.3, 0.35, 1.1, -0.7)).toEqual([true, false, true, true]);
+      expect(accepts(number({ multipleOf: 0.3 }), 0.9, 1e16, 3e14 + 0.3)).toEqual([true, false, true]);
+      expect(accepts(number({ multipleOf: 1e-7 }), 3e-7, 3.5e-7)).toEqual([true, false]);
+      expect(number({ multipleOf: 0.5 })(5e-324).ok).toBe(false);
+      // A value computed in floating point is not the decimal it looks like.
+      expect(number({ multipleOf: 0.1 })(0.1 + 0.2).ok).toBe(false);
       expect(accepts(number({ multipleOf: 5 }), 10, 0, -15, 7)).toEqual([true, true, true, false]);
       expect(issuesOf(number({ multipleOf: 5 })(7))[0]?.params).toEqual({ multipleOf: 5 });
     });
