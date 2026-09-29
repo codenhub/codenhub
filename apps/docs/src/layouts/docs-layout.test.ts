@@ -75,7 +75,7 @@ describe("documentation chrome", () => {
   });
 
   it("omits the section strip for a package that has only guides", async () => {
-    const html = await readOutput("validation/index.html");
+    const html = await readOutput("store/index.html");
 
     expect(html).not.toContain("package-tab");
   });

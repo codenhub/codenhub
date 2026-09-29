@@ -15,14 +15,22 @@ export interface GitTreeInvocation {
 }
 
 /** Runs a git command and returns its outcome. Injected by tests. */
-export type GitTreeRunner = (invocation: GitTreeInvocation) => Promise<{ isSuccess: boolean; stdout: string }>;
+export type GitTreeRunner = (
+  invocation: GitTreeInvocation,
+) => Promise<{ isSuccess: boolean; stdout: string; output?: string }>;
 
 const runGit: GitTreeRunner = async ({ args, cwd, env }) => {
   const outcome = await execute(
     { args, command: "git", cwd, env: env === undefined ? undefined : { ...process.env, ...env } },
     { stdio: "pipe" },
   );
-  return { isSuccess: outcome.isSuccess, stdout: outcome.stdout ?? "" };
+  return { isSuccess: outcome.isSuccess, stdout: outcome.stdout ?? "", output: outcome.output };
+};
+
+/** Appends what git printed to a failure message, so a build log names the cause and not only the step. */
+const withGitOutput = (message: string, output: string | undefined): string => {
+  const detail = output?.trim();
+  return detail === undefined || detail === "" ? message : `${message}\n${detail}`;
 };
 
 /** Which tree to write out, and where. */
@@ -62,7 +70,7 @@ export async function materializeTreeAtRef(
   const { cwd, destination, ref, treePath } = options;
   const commit = await git({ args: ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], cwd });
   if (!commit.isSuccess) {
-    throw new Error(`Could not read ${ref} in ${cwd}.`);
+    throw new Error(withGitOutput(`Could not read ${ref} in ${cwd}.`, commit.output));
   }
   const treeish = `${ref}:${treePath}`;
   const objectType = await git({ args: ["cat-file", "-t", treeish], cwd });
@@ -78,14 +86,14 @@ export async function materializeTreeAtRef(
     const env = { GIT_INDEX_FILE: path.join(indexDirectory, "index") };
     const staged = await git({ args: ["read-tree", treeish], cwd, env });
     if (!staged.isSuccess) {
-      throw new Error(`Could not stage ${treeish} in ${cwd}.`);
+      throw new Error(withGitOutput(`Could not stage ${treeish} in ${cwd}.`, staged.output));
     }
     // `--prefix` is a string prefix, not a directory argument, so the trailing
     // separator is what places files inside `destination` rather than beside it.
     const prefix = `${destination.replaceAll("\\", "/").replace(/\/$/, "")}/`;
     const written = await git({ args: ["checkout-index", "--all", "--force", `--prefix=${prefix}`], cwd, env });
     if (!written.isSuccess) {
-      throw new Error(`Could not write ${treeish} to ${destination}.`);
+      throw new Error(withGitOutput(`Could not write ${treeish} to ${destination}.`, written.output));
     }
     return true;
   } finally {

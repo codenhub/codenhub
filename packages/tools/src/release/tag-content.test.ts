@@ -9,10 +9,10 @@ const OPTIONS = {
   treePath: "packages/error",
 };
 
-function createGit(outcomes: Record<string, { isSuccess: boolean; stdout?: string }>) {
+function createGit(outcomes: Record<string, { isSuccess: boolean; stdout?: string; output?: string }>) {
   return vi.fn<GitTreeRunner>(async ({ args }: GitTreeInvocation) => {
     const outcome = outcomes[args[0] ?? ""] ?? { isSuccess: true };
-    return { isSuccess: outcome.isSuccess, stdout: outcome.stdout ?? "" };
+    return { isSuccess: outcome.isSuccess, stdout: outcome.stdout ?? "", output: outcome.output };
   });
 }
 
@@ -74,5 +74,16 @@ describe("materializeTreeAtRef", () => {
     });
 
     await expect(materializeTreeAtRef(OPTIONS, git)).rejects.toThrow("Could not write");
+  });
+
+  it("puts what git printed in the error, so a failed build names the cause", async () => {
+    const git = createGit({
+      "cat-file": { isSuccess: true, stdout: "tree\n" },
+      "checkout-index": { isSuccess: false, output: "error: unable to create file a/b: No space left on device\n" },
+    });
+
+    await expect(materializeTreeAtRef(OPTIONS, git)).rejects.toThrow(
+      "Could not write @codenhub/error@0.3.0:packages/error to /snapshot/packages/error.\nerror: unable to create file a/b: No space left on device",
+    );
   });
 });
