@@ -41,10 +41,15 @@ export function refine<T>(
   check: (value: T) => boolean | PromiseLike<boolean>,
   issue: RefineIssue = {},
 ): AnyValidator<T> {
-  const { path, ...rest } = typeof issue === "string" ? { message: issue } : issue;
-  // The path is copied and frozen once, and every rejection builds its own issue around it, so no
-  // result shares anything a caller could change with the next one.
-  const reported: IssueInput = path === undefined ? rest : { ...rest, path: Object.freeze([...path]) };
+  const { path, params, ...rest } = typeof issue === "string" ? { message: issue } : issue;
+  // The path and params are copied and frozen once, and every rejection builds its own issue around
+  // them, so neither the caller nor a result can change what a later rejection reports. The freeze is
+  // shallow: an object nested in params is the caller's own.
+  const reported: IssueInput = {
+    ...rest,
+    ...(path !== undefined && { path: Object.freeze([...path]) }),
+    ...(params !== undefined && { params: Object.freeze({ ...params }) }),
+  };
   return (input) =>
     chain(validator(input), (result): Maybe<ValidationResult<T>> => {
       if (!result.ok) {

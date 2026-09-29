@@ -76,6 +76,17 @@ describe("refine", () => {
     expect(issuesOf(rejectAll("a"))).toEqual([{ code: "no", path: ["field"] }]);
   });
 
+  it("should copy the params it is given, so neither the caller nor a result can change later rejections", () => {
+    const params = { field: "a" };
+    const rejectAll = refine(string(), () => false, { code: "no", params });
+    params.field = "changed";
+    const reported = issuesOf(rejectAll("a"))[0]?.params as Record<string, unknown>;
+    expect(() => {
+      reported.field = "z";
+    }).toThrow(TypeError);
+    expect(issuesOf(rejectAll("a"))[0]?.params).toEqual({ field: "a" });
+  });
+
   it("should let exceptions thrown by a check propagate, as bugs and not invalid input", () => {
     const broken = refine(string(), () => {
       throw new Error("bug");
