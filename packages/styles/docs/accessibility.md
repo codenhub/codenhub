@@ -71,16 +71,16 @@ Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`,
 
 Use semantic HTML and behavior appropriate for the component.
 
-| UI                | Required outside CSS                                                                                            |
-| ----------------- | --------------------------------------------------------------------------------------------------------------- |
-| Buttons           | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.            |
-| Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships.                      |
-| Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                            |
-| Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                 |
-| Tooltips          | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`.       |
-| Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                          |
-| Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.       |
-| Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package. |
+| UI                | Required outside CSS                                                                                                                                                          |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Buttons           | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.                                                                          |
+| Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships. Keep hints and errors outside the `<label>`, and give a `.switch` `role="switch"`. |
+| Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                                                                                          |
+| Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                                                                               |
+| Tooltips          | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`.                                                                     |
+| Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                                                                                        |
+| Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.                                                                     |
+| Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package.                                                               |
 
 ## State attribute guidance
 

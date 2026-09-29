@@ -1178,23 +1178,23 @@ The package ships no icon for text inputs. Icons for `.input-group` are the cons
 `.input-group` is the wrapper for a control that carries one. It owns the field box — border, radius, fill, focus ring, invalid and disabled state — and the control inside it goes flush, so the boundary is drawn once. Any icon element works, placed before the control for a leading icon or after it for a trailing one: an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons`.
 
 ```html
-<label class="field">
-  <span class="label">Email</span>
+<div class="field">
+  <label class="label" for="contact-email">Email</label>
   <div class="input-group">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true">
       <rect width="20" height="16" x="2" y="4" rx="2" />
       <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
     </svg>
-    <input class="ipt" type="email" />
+    <input class="ipt" type="email" id="contact-email" />
   </div>
-</label>
-<label class="field">
-  <span class="label">Search</span>
+</div>
+<div class="field">
+  <label class="label" for="site-search">Search</label>
   <div class="input-group">
-    <input class="ipt" type="search" />
+    <input class="ipt" type="search" id="site-search" />
     <i class="ic-search" aria-hidden="true"></i>
   </div>
-</label>
+</div>
 ```
 
 The group reads intent and both [presentation](docs/usage/composing.md#presentation) axes the same way a lone `.ipt` does — `.input-group.soft.edgeless` is the sunk variant, `.input-group.primary` colors the boundary — and follows whichever [aesthetic](docs/usage/aesthetics.md) is in scope. `aria-invalid` or `disabled` on the control inside propagates to the group; so does either on the group itself. Focus is shown with `:focus-within`, so unlike a lone field the ring also appears on a mouse click.
@@ -1268,11 +1268,11 @@ The boundary is the edge axis's, and it splits the same way. A container's `.edg
 ## Example
 
 ```html
-<label class="field">
-  <span class="label">Email</span>
-  <input class="ipt" type="email" aria-invalid="true" aria-describedby="email-error" />
+<div class="field">
+  <label class="label" for="email">Email</label>
+  <input class="ipt" type="email" id="email" aria-invalid="true" aria-describedby="email-error" />
   <span class="hint destructive" id="email-error">Enter a valid email.</span>
-</label>
+</div>
 <label style="display: flex; gap: 0.5rem; align-items: center">
   <input type="checkbox" class="checkbox success" />
   <span>Accept terms</span>
@@ -1282,12 +1282,12 @@ The boundary is the edge axis's, and it splits the same way. A container's `.edg
   <span>Standard plan</span>
 </label>
 <label style="display: flex; gap: 0.5rem; align-items: center">
-  <input type="checkbox" class="switch destructive" />
+  <input type="checkbox" class="switch destructive" role="switch" />
   <span>Enable</span>
 </label>
 ```
 
-Use labels, `type`, validation logic, `aria-describedby`, and error message relationships; see [Accessibility](docs/accessibility.md).
+Keep a hint or error message outside the `<label>` and point `aria-describedby` at it, so it is announced as a description rather than read as part of the field's name. Give a `.switch` `role="switch"`. Use labels, `type`, validation logic, `aria-describedby`, and error message relationships; see [Accessibility](docs/accessibility.md).
 
 <!-- Source: docs/usage/feedback.md -->
 
@@ -1939,16 +1939,16 @@ Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`,
 
 Use semantic HTML and behavior appropriate for the component.
 
-| UI                | Required outside CSS                                                                                            |
-| ----------------- | --------------------------------------------------------------------------------------------------------------- |
-| Buttons           | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.            |
-| Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships.                      |
-| Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                            |
-| Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                 |
-| Tooltips          | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`.       |
-| Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                          |
-| Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.       |
-| Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package. |
+| UI                | Required outside CSS                                                                                                                                                          |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Buttons           | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.                                                                          |
+| Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships. Keep hints and errors outside the `<label>`, and give a `.switch` `role="switch"`. |
+| Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                                                                                          |
+| Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                                                                               |
+| Tooltips          | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`.                                                                     |
+| Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                                                                                        |
+| Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.                                                                     |
+| Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package.                                                               |
 
 ## State attribute guidance
 
