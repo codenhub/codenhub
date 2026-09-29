@@ -457,19 +457,19 @@ test.describe("feedback", () => {
 
   /* The plate runs under the border, so a line blended toward the plate painted
      it a second time over itself. Invisible on an opaque plate; on a translucent
-     one -- a neutral fill, capped at 20%, or any fill `--ui-bg-alpha` thins -- it
-     drew a ring 1.54:1 against the plate in light. Measured as painted: the
-     border band composited over the plate over the page must be the plate. */
+     one -- any fill `--ui-bg-alpha` thins, and a neutral fill capped at 20%
+     until the cap came to rest on the page background -- it drew a ring 1.54:1
+     against the plate in light. Measured as painted: the border band
+     composited over the plate over the page must be the plate. */
   test("paints a filled edge as one coat of its own translucent plate", async ({ page }) => {
     await page.goto(FEEDBACK_URL);
 
     const bands = await page.evaluate(() => {
       const pageColor = getComputedStyle(document.body).backgroundColor;
       const cases: [string, string, string, string][] = [
-        ["neutral solid edged badge", "span", "badge solid edged", ""],
-        ["neutral solid edged button", "button", "btn solid edged", ""],
         ["thinned solid edged success badge", "span", "badge solid edged success", "--ui-bg-alpha: 0.8"],
-        ["neutral solid quote", "blockquote", "quote solid", ""],
+        ["thinned solid edged success button", "button", "btn solid edged success", "--ui-bg-alpha: 0.8"],
+        ["thinned solid success quote", "blockquote", "quote solid success", "--ui-bg-alpha: 0.8"],
       ];
 
       return cases.map(([label, tag, className, style]) => {

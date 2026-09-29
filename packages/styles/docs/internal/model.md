@@ -131,6 +131,17 @@ The bubble has since come off that ramp altogether, and the row above is kept be
 
 The bound the old form was reaching for still holds. Uncapped, a neutral `.solid` prints near-white on light grey and loses its label; the ramp answers that case with 0%, which is what it wanted. And `--ui-fg-on-fill` stays the ceiling rather than becoming the result, so the presentation token still decides — derived from the fill alone it would be declared and unread, which is the failure `--ui-border` already had.
 
+### A capped fill rests on the page
+
+The cap stops the ink, not the plate. A neutral `.solid` fills to 20% of the page's ink, and until the plate had a ground of its own that 20% sat over nothing: on a plain page it read as the light grey plate it is meant to be, and over anything else -- glass's backdrop, an image, a filled card around it -- it showed what was behind it, and a `.solid` read as a tint. So wherever the intent's cap stops the fill short, `box` paints it over the page background:
+
+```
+plate  = 100% when the intent's cap stopped the fill, else 0%
+ground = color-mix(--color-background plate, the component's own ground)
+```
+
+It is a step rather than a ramp, because the two percentages cannot be divided in every engine yet, and a fill the cap stopped is one the presentation asked to be full. The component's own cap is measured out first, so what it reinterprets stays a tint: a text control's 20% `.solid` wash and a neutral `.card.soft`'s 0% are the same at every intent. A toggle lifts the intent cap, so its plate never takes this ground. `.quote` composes its own fill and takes the same step. The generated palette follows: neutral `.solid` is ground-independent like every other `.solid`.
+
 ### Hover is derived, never declared
 
 ```

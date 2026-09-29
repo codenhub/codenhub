@@ -6,6 +6,7 @@ import {
   getColorDistance,
   getContrastRatio,
   isTransparent,
+  readSrgb,
   type ButtonIntentToken,
 } from "./test-utils";
 
@@ -177,7 +178,7 @@ test.describe("buttons", () => {
       return {
         background: styles.backgroundColor,
         cap,
-        expectedFill: resolveColor(`color-mix(in oklab, var(--color-text) ${cap}, transparent)`),
+        expectedFill: resolveColor(`color-mix(in oklab, var(--color-text) ${cap}, var(--color-background))`),
         expectedText: resolveColor("var(--color-text-strong)"),
         foreground: styles.color,
         page: getComputedStyle(document.body).backgroundColor,
@@ -185,12 +186,14 @@ test.describe("buttons", () => {
     });
 
     expect(Number.parseFloat(values.cap)).toBeLessThan(100);
+    /* The cap stops the ink, not the plate: the fill rests on the page
+       background, so a `.solid` with no intent is opaque over a backdrop, an
+       image, or a filled container the way every other `.solid` is. */
     expectSameColor(values.background, values.expectedFill, "no-intent button background");
+    expect(readSrgb(values.background).alpha, "no-intent button plate").toBe(1);
     expectSameColor(values.foreground, values.expectedText, "no-intent button text");
 
-    /* A quieter plate is only worth having if the label still reads on it. The
-       fill is translucent, so the ratio is measured against what the button
-       actually shows: the fill composited over the page behind it. */
+    /* A quieter plate is only worth having if the label still reads on it. */
     const plate = flattenColor(values.background, values.page);
     expect(getContrastRatio(values.foreground, plate), "no-intent button label").toBeGreaterThanOrEqual(4.5);
   });

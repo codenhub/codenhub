@@ -44,7 +44,7 @@ Every `intent x presentation` cell (7 intents, `solid`/`soft`/`ghost`) gets its 
 
 Ground does not need its own free-standing dimension the way the earlier draft of this document assumed, because re-deriving `box`'s formula shows most of the cross collapses on its own:
 
-- **`.solid` is ground-independent entirely.** At 100% fill, `--_bg`'s `color-mix()` contributes 0% of whatever ground it is mixed with, so `bg`, `edge`, and their hover values are the same regardless of ground. One set of `.solid` values covers every ground.
+- **`.solid` is ground-independent entirely.** At 100% fill, `--_bg`'s `color-mix()` contributes 0% of whatever ground it is mixed with, so `bg`, `edge`, and their hover values are the same regardless of ground. One set of `.solid` values covers every ground. Neutral's capped `.solid` included: its 20% rests on the page background rather than on the ground ([model](./model.md#a-capped-fill-rests-on-the-page)).
 - **`fg` is always ground-independent**, for every presentation -- `--_fg`'s composition ([`box.css#L70`](../../src/box.css#L70)) never references `--_d-ground` at all.
 - **Only `.soft` and `.ghost`'s `bg` actually varies by ground.** The published ground-qualified edge names remain for compatibility, but their values are equal across grounds since the edge fades toward `transparent` rather than the ground-mixed plate.
 

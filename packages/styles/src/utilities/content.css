@@ -389,7 +389,15 @@
      `--ui-bg-alpha` thins it. */
   --quote-capped: min(var(--ui-fill, var(--_d-fill)), var(--intent-fill-max, 100%));
   --quote-fill: calc(var(--quote-capped) * var(--ui-bg-alpha, 1));
-  --quote-bg: color-mix(in oklab, var(--intent-color) var(--quote-fill), transparent);
+  /* `box`'s `--_plate`: a fill the intent's cap stopped short rests on the page
+     background, so a neutral `.solid` quotation is a plate rather than a tint
+     of whatever is behind it. */
+  --quote-plate: clamp(0%, calc((var(--ui-fill, var(--_d-fill)) - var(--quote-capped)) * 1000), 100%);
+  --quote-bg: color-mix(
+    in oklab,
+    var(--intent-color) var(--quote-fill),
+    color-mix(in oklab, var(--color-background) var(--quote-plate), transparent)
+  );
   /* The same edge blend `box` draws, in the same order and for the same reason:
      the blend is the line's colour, and how much line there is comes after it.
      Written the other way round -- how much line, then blend the fill into it --

@@ -150,7 +150,7 @@ export const getColorDistance = (left: string, right: string) => {
 
 export const isTransparent = (color: string) => readSrgb(color).alpha === 0;
 
-/* An intent that caps its fill paints a translucent background, so what a reader
+/* A partial fill paints a translucent background, so what a reader
    sees is the fill composited over whatever is behind it. Measuring contrast
    against the declared colour instead reports the ratio of a colour against
    itself -- 1.00 -- for a neutral component that is in fact perfectly legible.

@@ -107,7 +107,7 @@ test("applies intent classes to classless native elements", async ({ page }) => 
       keyboardText: getComputedStyle(host.querySelector("kbd")!).color,
       plainButtonBg: getComputedStyle(host.querySelector("button:not(.destructive)")!).backgroundColor,
       neutralFill: resolveColor(
-        `color-mix(in oklab, var(--color-text) ${getComputedStyle(host.querySelector("button:not(.destructive)")!).getPropertyValue("--intent-fill-max").trim()}, transparent)`,
+        `color-mix(in oklab, var(--color-text) ${getComputedStyle(host.querySelector("button:not(.destructive)")!).getPropertyValue("--intent-fill-max").trim()}, var(--color-background))`,
       ),
       tokenDestructive: resolveToken("destructive"),
       /* At the fraction a text control rests its line at, not the whole tone: a
