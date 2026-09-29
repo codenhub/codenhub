@@ -46,6 +46,7 @@ describe("parseArguments", () => {
   it("shouldRejectBaseWithoutARef", () => {
     expect(() => parseArguments(["test", "--base="])).toThrow("Invalid value for --base");
     expect(() => parseArguments(["test", "--base"])).toThrow("Invalid value for --base");
+    expect(() => parseArguments(["test", "--base= "])).toThrow("Invalid value for --base");
   });
 
   it("shouldReadTimeoutInSeconds", () => {

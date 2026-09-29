@@ -137,7 +137,7 @@ function applyFlag(options: CliOptions, name: string, value: string | undefined)
     case "base": {
       // An empty ref would reach git as "", fail there, and quietly narrow the
       // run to working-tree changes, which reads as a run that found little to do.
-      if (value === undefined || value === "") {
+      if (value === undefined || value.trim() === "") {
         throw new Error("Invalid value for --base: expected a git ref, as --base=origin/main.");
       }
       options.baseRef = value;
