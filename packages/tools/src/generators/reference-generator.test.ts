@@ -135,7 +135,9 @@ async function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
 }
 
 describe("analyzeReference", () => {
-  it("documents a package with exactly one entrypoint", async () => {
+  // A real TypeDoc run: a few seconds alone, past the five-second default when
+  // it shares the machine with the rest of the suite.
+  it("documents a package with exactly one entrypoint", { timeout: 30_000 }, async () => {
     const workspacePackage = await createSingleEntrypointFixture();
 
     const { model, files } = await analyzeReference(workspacePackage, { prose: true });

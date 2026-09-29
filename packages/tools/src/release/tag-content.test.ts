@@ -136,6 +136,10 @@ describe("materializeTreeAtRef with real git", () => {
 
   mkdirSync(repository);
   git("init", "--quiet");
+  // The same line-ending rule the real repository commits. Without it the
+  // machine's own setting applies, and Git for Windows' system-wide
+  // `core.autocrlf=true` would write every file back with CRLF endings.
+  writeFileSync(path.join(repository, ".gitattributes"), "* text=auto eol=lf\n");
   for (const sibling of siblings) {
     mkdirSync(path.join(repository, sibling, "docs"), { recursive: true });
     writeFileSync(path.join(repository, sibling, "docs", "index.md"), `# ${sibling}\n`);
@@ -145,24 +149,31 @@ describe("materializeTreeAtRef with real git", () => {
 
   afterAll(() => rmSync(root, { force: true, recursive: true }));
 
-  it("writes sibling trees that share a parent directory when they are materialized at once", async () => {
-    const targets = Array.from({ length: 10 }, (_, round) => siblings.map((sibling) => ({ round, sibling }))).flat();
+  // Sixty trees against real git is several hundred git processes, which takes
+  // over Vitest's default five seconds on Windows. The count is the point of the
+  // test, so the budget is raised rather than the load lowered.
+  it(
+    "writes sibling trees that share a parent directory when they are materialized at once",
+    { timeout: 30_000 },
+    async () => {
+      const targets = Array.from({ length: 10 }, (_, round) => siblings.map((sibling) => ({ round, sibling }))).flat();
 
-    const results = await Promise.all(
-      targets.map(({ round, sibling }) =>
-        materializeTreeAtRef({
-          cwd: repository,
-          destination: path.join(root, `snapshot-${round}`, sibling),
-          ref: "HEAD",
-          treePath: sibling,
-        }),
-      ),
-    );
+      const results = await Promise.all(
+        targets.map(({ round, sibling }) =>
+          materializeTreeAtRef({
+            cwd: repository,
+            destination: path.join(root, `snapshot-${round}`, sibling),
+            ref: "HEAD",
+            treePath: sibling,
+          }),
+        ),
+      );
 
-    expect(results).toEqual(targets.map(() => true));
-    for (const { round, sibling } of targets) {
-      const file = path.join(root, `snapshot-${round}`, sibling, "docs", "index.md");
-      expect(readFileSync(file, "utf8")).toBe(`# ${sibling}\n`);
-    }
-  });
+      expect(results).toEqual(targets.map(() => true));
+      for (const { round, sibling } of targets) {
+        const file = path.join(root, `snapshot-${round}`, sibling, "docs", "index.md");
+        expect(readFileSync(file, "utf8")).toBe(`# ${sibling}\n`);
+      }
+    },
+  );
 });

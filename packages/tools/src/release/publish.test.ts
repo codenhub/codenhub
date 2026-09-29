@@ -1,7 +1,11 @@
+import { access, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
+import type { CommandOutcome, CommandSpec } from "../process/execute.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
-import { distTagForVersion, parseReleaseTag, resolveTagTarget } from "./publish.ts";
+import { createPublishRunner, distTagForVersion, parseReleaseTag, resolveTagTarget } from "./publish.ts";
 
 function createPackage(name: string, version = "1.0.0", isPrivate = false): WorkspacePackage {
   const unscopedName = name.slice(name.lastIndexOf("/") + 1);
@@ -80,5 +84,96 @@ describe("distTagForVersion", () => {
     expect(distTagForVersion("1.0.0-alpha")).toBe("next");
     expect(distTagForVersion("1.0.0-0")).toBe("next");
     expect(distTagForVersion("1.0.0-beta.1+build.5")).toBe("next");
+  });
+});
+
+describe("createPublishRunner", () => {
+  function createRecorder(options: { failing?: string; tarballs?: number } = {}) {
+    const calls: CommandSpec[] = [];
+    let destination = "";
+    const run = async (spec: CommandSpec): Promise<CommandOutcome> => {
+      calls.push(spec);
+      const [subcommand] = spec.args;
+      if (subcommand === "pack") {
+        destination = spec.args[2] as string;
+        await Promise.all(
+          Array.from({ length: options.tarballs ?? 1 }, (_, index) =>
+            writeFile(join(destination, `package-${index}.tgz`), ""),
+          ),
+        );
+      }
+      const isSuccess = subcommand !== options.failing;
+      return { didTimeOut: false, durationMs: 0, isSuccess, output: `${spec.command} ${subcommand}` };
+    };
+    return { calls, destination: () => destination, run };
+  }
+
+  const withPrepublish = (version = "1.0.0"): WorkspacePackage => ({
+    ...createPackage("@codenhub/error", version),
+    scripts: { prepublishOnly: "pnpm build && pnpm typecheck" },
+  });
+
+  it("runs prepublishOnly, packs with pnpm, and publishes the packed tarball with npm", async () => {
+    const recorder = createRecorder();
+
+    const outcome = await createPublishRunner(recorder.run)(withPrepublish());
+
+    expect(outcome.isSuccess).toBe(true);
+    expect(recorder.calls.map(({ args, command }) => [command, args[0]])).toEqual([
+      ["pnpm", "run"],
+      ["pnpm", "pack"],
+      ["npm", "publish"],
+    ]);
+    expect(recorder.calls[0]?.args).toEqual(["run", "prepublishOnly"]);
+    expect(recorder.calls[2]?.args).toEqual([
+      "publish",
+      join(recorder.destination(), "package-0.tgz"),
+      "--access",
+      "public",
+    ]);
+  });
+
+  it("publishes a pre-release tarball under next", async () => {
+    const recorder = createRecorder();
+
+    await createPublishRunner(recorder.run)(withPrepublish("1.0.0-beta.1"));
+
+    expect(recorder.calls.at(-1)?.args.slice(-2)).toEqual(["--tag", "next"]);
+  });
+
+  it("skips prepublishOnly when the package defines none", async () => {
+    const recorder = createRecorder();
+
+    await createPublishRunner(recorder.run)(createPackage("@codenhub/error"));
+
+    expect(recorder.calls.map(({ args }) => args[0])).toEqual(["pack", "publish"]);
+  });
+
+  it("publishes nothing when prepublishOnly fails", async () => {
+    const recorder = createRecorder({ failing: "run" });
+
+    const outcome = await createPublishRunner(recorder.run)(withPrepublish());
+
+    expect(outcome).toEqual({ isSuccess: false, output: "pnpm run" });
+    expect(recorder.calls).toHaveLength(1);
+  });
+
+  it("publishes nothing when the pack does not leave exactly one tarball", async () => {
+    const recorder = createRecorder({ tarballs: 2 });
+
+    const outcome = await createPublishRunner(recorder.run)(withPrepublish());
+
+    expect(outcome.isSuccess).toBe(false);
+    expect(outcome.output).toContain("Expected one tarball");
+    expect(recorder.calls.map(({ args }) => args[0])).toEqual(["run", "pack"]);
+  });
+
+  it("removes the packed tarball whether or not the publish succeeds", async () => {
+    const recorder = createRecorder({ failing: "publish" });
+
+    const outcome = await createPublishRunner(recorder.run)(withPrepublish());
+
+    expect(outcome.isSuccess).toBe(false);
+    await expect(access(recorder.destination())).rejects.toThrow(/ENOENT/);
   });
 });

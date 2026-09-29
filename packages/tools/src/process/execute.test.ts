@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { execute, formatCommand, resolveInvocation } from "./execute.ts";
+import { execute, formatCommand, listDescendants, resolveInvocation } from "./execute.ts";
 
 const isWindows = process.platform === "win32";
 
@@ -81,6 +81,23 @@ describe("execute", () => {
     expect(outcome.isSuccess).toBe(false);
   });
 
+  it("shouldKillWhatAShellStartedWhenItTimesOut", { timeout: 20_000 }, async () => {
+    // The shell cannot hand its process over to the last command, because a
+    // second one follows it, so the sleeping child holds the output pipes.
+    const outcome = await execute(
+      {
+        args: [],
+        command: `"${process.execPath}" -e "setTimeout(() => {}, 30000)" && echo done`,
+        cwd: process.cwd(),
+        shell: true,
+      },
+      { stdio: "pipe", timeoutMs: 200 },
+    );
+
+    expect(outcome.didTimeOut).toBe(true);
+    expect(outcome.durationMs).toBeLessThan(15_000);
+  });
+
   it("shouldPreservePercentDelimitedArguments", async () => {
     const outcome = await execute(
       {
@@ -159,5 +176,20 @@ describe("shell invocations", () => {
     );
 
     expect(outcome.output).toContain("present");
+  });
+});
+
+describe("listDescendants", () => {
+  it("shouldCollectEveryGenerationBelowTheRoot", () => {
+    const table = ["  1     0", " 10     1", " 11    10", " 12    11", " 13    10", " 20     1", " 99    98", ""].join(
+      "\n",
+    );
+
+    expect(listDescendants(10, table).sort((a, b) => a - b)).toEqual([11, 12, 13]);
+  });
+
+  it("shouldReturnNothingForALeafOrAnUnreadableTable", () => {
+    expect(listDescendants(12, " 12 11\n")).toEqual([]);
+    expect(listDescendants(10, "PID PPID\ngarbage")).toEqual([]);
   });
 });

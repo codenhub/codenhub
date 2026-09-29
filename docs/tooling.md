@@ -133,13 +133,15 @@ Diagnostics name the file they came from, so a batch that fails is reported agai
 
 Unrecognized flags and everything after a bare `--` are forwarded to the underlying tool, so `hub test error --reporter=verbose` reaches Vitest unchanged.
 
+The flags above always belong to `hub`, even where the underlying tool has one of the same name. `hub test error --changed` narrows the selection rather than asking Vitest for its own `--changed`, and `--bail=3` sets `hub`'s bail with the count ignored. `-v` and `-V` print the tooling version. A tool's flag that shares a name with one of these reaches the tool only after `--`, as `hub test error -- --bail=3`.
+
 ## Reporting
 
 A run reports what failed. Child output is captured rather than streamed, and a package that passed prints nothing beyond its place in the closing count; a package that failed prints its whole output under its own heading. A green workspace run is a handful of lines, which is what makes the one red package in it findable.
 
 `--verbose` reports what passed as well, which is the way to read output a successful command produced. It streams that output live only when one command holds the terminal; several packages running at once would interleave into a transcript nobody can read, so their output is captured and printed as each one finishes. Repository-wide tools are the exception to the rule above: `lint`, `format`, and `cloc` repeat whatever they wrote, pass or fail, because a linter reports warnings and still exits zero, and keying their output off the exit code would drop the findings the run existed to surface.
 
-Package runs are killed when they exceed `--timeout`. This is what keeps one hanging browser-test worker from blocking a whole workspace run. Interactive `dev`, `debug`, `preview`, and watch commands stream through one attached terminal and have no timeout.
+Package runs are killed when they exceed `--timeout`, together with every process they started: a script runs under a shell, and it is the shell's children that hold the output open, so killing the shell alone would leave the run waiting on them. On Windows `taskkill` ends the tree; elsewhere the tree is read from one `ps` snapshot taken just before the kill, so a process started after that instant is not in it and can outlive the run. This is what keeps one hanging browser-test worker from blocking a whole workspace run. Interactive `dev`, `debug`, `preview`, and watch commands stream through one attached terminal and have no timeout.
 
 ## Repository-wide tools
 
@@ -302,6 +304,8 @@ It names its target one of two ways. `--from-tag=<tag>` reads a release tag of t
 A tag whose version npm already has is answered with success and nothing else: no verification, no preflight, no publish. That is what the tag of a manually published first release looks like when it reaches the workflow, and failing it would only stop the rest of the workflow from recording a release that already happened. A selector naming an already-published version is still refused, by the `version` precondition below.
 
 It then runs `verify` for those packages, runs the same preflight `hub release` reports plus one precondition of its own, and only publishes when every precondition is `ready`. The extra one is `tag`: the release tag `<package name>@<version>` must exist and name the commit being published, because every version on npm must have one (`docs/specs/packages-lifecycle.md`, "Who publishes"). In the workflow the tag is what was checked out, so it passes by construction; on a maintainer's machine it means tagging before publishing, and the command prints the `git push` for the tag once the version is on npm. That last part is where it differs from the report: an unresolved precondition blocks a publish even though it only warns in `hub release`. A report may leave a question open for a person to answer; a publish cannot, because by the time anyone reads the answer the version is on the registry for good.
+
+A package is published in three steps: its `prepublishOnly` script, then `pnpm pack`, then `npm publish` on the tarball that produced. Neither tool can do the whole job. `npm publish` on a directory ships the manifest as written, and a `workspace:*` or `catalog:` range reaching the registry verbatim makes the version impossible to install; `pnpm pack` rewrites those ranges to the versions they resolve to, and packs the same files `npm pack` would. pnpm cannot do the OIDC exchange trusted publishing depends on, so npm still does the publish. A tarball publish runs none of the package's lifecycle scripts, which is why `prepublishOnly` is run explicitly first.
 
 A normal release publishes under npm's `latest` dist-tag. A pre-release version — one with a `-beta.1`, `-rc.0`, or similar suffix — publishes under `next` instead, because `npm publish` would otherwise move `latest` to it and make it the version `npm install` resolves. The tag is derived from the version alone, so nothing extra is passed on the command line.
 

@@ -39,6 +39,16 @@ describe("parseArguments", () => {
     expect(parseArguments(["test", "--changed"]).options.baseRef).toBe("main");
   });
 
+  it("shouldReadBaseRef", () => {
+    expect(parseArguments(["test", "--changed", "--base=develop"]).options.baseRef).toBe("develop");
+  });
+
+  it("shouldRejectBaseWithoutARef", () => {
+    expect(() => parseArguments(["test", "--base="])).toThrow("Invalid value for --base");
+    expect(() => parseArguments(["test", "--base"])).toThrow("Invalid value for --base");
+    expect(() => parseArguments(["test", "--base= "])).toThrow("Invalid value for --base");
+  });
+
   it("shouldReadTimeoutInSeconds", () => {
     expect(parseArguments(["test", "--timeout=30"]).options.timeoutMs).toBe(30_000);
   });
