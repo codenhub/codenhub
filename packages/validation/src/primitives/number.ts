@@ -45,6 +45,11 @@ const invalidValue = (format: string): ValidationIssue =>
   toIssue({ code: "invalid_value", params: { type: "number", format } });
 
 const isMultipleOf = (value: number, step: number): boolean => {
+  // `%` is exact, so whole numbers need no tolerance, and the tolerance below grows with the quotient
+  // until it would accept anything.
+  if (Number.isInteger(value) && Number.isInteger(step)) {
+    return value % step === 0;
+  }
   const quotient = value / step;
   return Math.abs(quotient - Math.round(quotient)) <= Number.EPSILON * Math.max(1, Math.abs(quotient));
 };

@@ -62,6 +62,11 @@ describe("number", () => {
       expect(issuesOf(number({ multipleOf: 5 })(7))[0]?.params).toEqual({ multipleOf: 5 });
     });
 
+    it("should check multipleOf exactly for whole numbers, however large", () => {
+      expect(accepts(number({ multipleOf: 3 }), 8e15 + 2, 9e15, 3e15 + 1)).toEqual([false, true, false]);
+      expect(number({ multipleOf: 10 })(Number.MAX_SAFE_INTEGER).ok).toBe(false);
+    });
+
     it("should reject a step that is not a positive finite number when the validator is created", () => {
       for (const multipleOf of [0, -1, Number.NaN, Infinity]) {
         expect(() => number({ multipleOf })).toThrow(RangeError);
