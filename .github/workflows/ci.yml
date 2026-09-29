@@ -164,6 +164,14 @@ jobs:
       - name: Check generated files
         run: pnpm generate --dry-run
 
-      # A dry run must write nothing; this fails if it ever does.
+      # A dry run must write nothing; this fails if it ever does. `git diff`
+      # alone misses a file the run created, so untracked files are checked too.
       - name: Assert the working tree is unchanged
-        run: git diff --exit-code
+        run: |
+          git diff --exit-code
+          untracked="$(git status --porcelain --untracked-files=all)"
+          if [ -n "$untracked" ]; then
+            echo "$untracked"
+            echo "::error::The dry run left files in the working tree."
+            exit 1
+          fi
