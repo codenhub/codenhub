@@ -1,0 +1,51 @@
+import type { Validator } from "../core/types";
+import { PUBLIC_HOST_PATTERN } from "./patterns";
+import { textFormat } from "./text-format";
+
+/** Options for {@link url}. */
+export interface UrlOptions {
+  /**
+   * Accepted protocols, without the colon.
+   *
+   * @defaultValue ["http", "https"]
+   */
+  protocols?: readonly string[];
+  /**
+   * Accepts hosts that are not public domain names: `localhost`, single-label hosts and IP addresses.
+   *
+   * @defaultValue false
+   */
+  allowLocal?: boolean;
+}
+
+/**
+ * Creates a validator for absolute URLs with an allowed protocol and a public domain name, and
+ * without embedded credentials. The value is not modified, and no scheme is guessed for input that
+ * lacks one.
+ *
+ * @example
+ * ```ts
+ * url()("https://example.com/a?b=1"); // { ok: true, value: "https://example.com/a?b=1" }
+ * url()("http://localhost:3000"); // { ok: false, ... }
+ * url({ allowLocal: true })("http://localhost:3000"); // { ok: true, ... }
+ * ```
+ *
+ * @param options - Accepted protocols, and whether local hosts are allowed.
+ * @returns A validator that produces the URL as a string.
+ */
+export function url(options: UrlOptions = {}): Validator<string> {
+  const protocols = [...(options.protocols ?? ["http", "https"])];
+  const allowLocal = options.allowLocal ?? false;
+  return textFormat("url", (text) => {
+    if (!URL.canParse(text)) {
+      return false;
+    }
+    const parsed = new URL(text);
+    return (
+      protocols.includes(parsed.protocol.slice(0, -1)) &&
+      parsed.username === "" &&
+      parsed.password === "" &&
+      (allowLocal || PUBLIC_HOST_PATTERN.test(parsed.hostname))
+    );
+  });
+}

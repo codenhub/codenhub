@@ -260,3 +260,179 @@ describe("type-only imports", () => {
     expect(await runRuleForCodes(workspacePackage)).toEqual(["dependencies/undeclared"]);
   });
 });
+
+describe("inlined dependencies", () => {
+  const inlined = {
+    codenhub: { bundled: ["left-pad"] },
+    devDependencies: { "left-pad": "1.3.0" },
+    exports: { ".": "./dist/index.js" },
+  };
+  const source = { "src/index.ts": `import { a } from "left-pad";\nexport const b = a;` };
+
+  it("accepts published code that imports a bundled dev dependency", async () => {
+    const workspacePackage = await createPackage("@fixture/example", inlined, source);
+
+    expect(await runRule(workspacePackage)).toEqual([]);
+  });
+
+  it("still requires published code to import only what a consumer receives, for names not bundled", async () => {
+    const workspacePackage = await createPackage(
+      "@fixture/example",
+      { ...inlined, devDependencies: { "left-pad": "1.3.0", "right-pad": "1.0.0" } },
+      { "src/index.ts": `import { a } from "left-pad";\nimport { b } from "right-pad";` },
+    );
+
+    expect(await runRule(workspacePackage)).toEqual([
+      {
+        code: "dependencies/runtime-declaration",
+        location: "package.json",
+        message: `"right-pad" is imported by published code and must be a dependency or a peerDependency.`,
+        severity: "error",
+      },
+    ]);
+  });
+
+  it("reports a bundled name that a consumer would install", async () => {
+    const workspacePackage = await createPackage(
+      "@fixture/example",
+      { ...inlined, dependencies: { "left-pad": "1.3.0" }, devDependencies: undefined },
+      source,
+    );
+
+    expect(await runRule(workspacePackage)).toEqual([
+      {
+        code: "dependencies/bundled-not-dev",
+        location: "package.json",
+        message: `"left-pad" is listed in "codenhub.bundled" but is not a devDependency, so a consumer would install it.`,
+        severity: "error",
+      },
+    ]);
+  });
+
+  it("reports a bundled name that is declared nowhere", async () => {
+    const workspacePackage = await createPackage(
+      "@fixture/example",
+      { codenhub: { bundled: ["left-pad"] }, exports: { ".": "./dist/index.js" } },
+      source,
+    );
+
+    expect(await runRuleForCodes(workspacePackage)).toEqual([
+      "dependencies/bundled-not-dev",
+      "dependencies/undeclared",
+    ]);
+  });
+
+  it("reports a bundled field that is not an array of package names", async () => {
+    const malformed = ["left-pad", [1], [""], { "left-pad": true }];
+    const found = await Promise.all(
+      malformed.map(async (bundled) =>
+        runRuleForCodes(
+          await createPackage(
+            "@fixture/example",
+            { devDependencies: { "left-pad": "1.3.0" }, codenhub: { bundled } },
+            { "src/index.ts": `export const a = "left-pad";` },
+          ),
+        ),
+      ),
+    );
+
+    expect(found).toEqual(malformed.map(() => ["dependencies/bundled-invalid"]));
+  });
+
+  it("warns about a bundled name that no source file imports", async () => {
+    const workspacePackage = await createPackage("@fixture/example", inlined, {
+      "src/index.ts": `export const a = "left-pad";`,
+    });
+
+    expect(await runRule(workspacePackage)).toEqual([
+      {
+        code: "dependencies/bundled-unused",
+        location: "package.json",
+        message: `"left-pad" is listed in "codenhub.bundled" but no source file imports it.`,
+        severity: "warning",
+      },
+    ]);
+  });
+
+  it("reports built JavaScript or declarations that still name a bundled package", async () => {
+    const leakedJs = await createPackage("@fixture/example", inlined, {
+      ...source,
+      "dist/index.js": `import { a } from "left-pad";\nexport const b = a;`,
+    });
+    const leakedTypes = await createPackage("@fixture/example", inlined, {
+      ...source,
+      "dist/index.d.ts": `import type { Pad } from "left-pad";\nexport declare const b: Pad;`,
+      "dist/index.js": `export const b = 1;`,
+    });
+    const leakedDeep = await createPackage("@fixture/example", inlined, {
+      ...source,
+      "dist/lib/inner.d.mts": `export * from "left-pad/sub";`,
+    });
+
+    expect(await runRule(leakedJs)).toEqual([
+      {
+        code: "dependencies/bundled-leaked",
+        location: "dist/index.js",
+        message: `"left-pad" is listed in "codenhub.bundled" but the built output still names it, so a consumer would be missing it.`,
+        severity: "error",
+      },
+    ]);
+    expect((await runRule(leakedTypes)).map(({ code, location }) => [code, location])).toEqual([
+      ["dependencies/bundled-leaked", "dist/index.d.ts"],
+    ]);
+    expect((await runRule(leakedDeep)).map(({ code, location }) => [code, location])).toEqual([
+      ["dependencies/bundled-leaked", "dist/lib/inner.d.mts"],
+    ]);
+  });
+
+  it("accepts built output that inlined the package", async () => {
+    const workspacePackage = await createPackage("@fixture/example", inlined, {
+      ...source,
+      "dist/index.d.ts": `declare const b: number;\nexport { b };`,
+      "dist/index.js": `const a = 1;\nexport const b = a;`,
+    });
+
+    expect(await runRule(workspacePackage)).toEqual([]);
+  });
+
+  it("does not read an example in a doc comment as an import", async () => {
+    const workspacePackage = await createPackage("@fixture/example", inlined, {
+      ...source,
+      "dist/index.js": [
+        "/**",
+        " * @example",
+        ' * import { a } from "left-pad";',
+        " */",
+        '// import { a } from "left-pad";',
+        "export const b = 1;",
+      ].join("\n"),
+    });
+
+    expect(await runRule(workspacePackage)).toEqual([]);
+  });
+
+  it("skips the leak check when nothing is built", async () => {
+    const workspacePackage = await createPackage("@fixture/example", inlined, source);
+
+    expect(await runRule(workspacePackage)).toEqual([]);
+  });
+
+  it("leaves a private package's staleness and output alone, and still checks its list is well formed", async () => {
+    const stale = await createPackage(
+      "@fixture/example",
+      { ...inlined, private: true },
+      {
+        "src/index.ts": `export const a = "left-pad";`,
+        "dist/index.js": `import { a } from "left-pad";`,
+      },
+    );
+    const malformed = await createPackage(
+      "@fixture/example",
+      { private: true, devDependencies: { "left-pad": "1.3.0" }, codenhub: { bundled: "left-pad" } },
+      { "src/index.ts": `export const a = "left-pad";` },
+    );
+
+    expect(await runRuleForCodes(stale)).toEqual([]);
+    expect(await runRuleForCodes(malformed)).toEqual(["dependencies/bundled-invalid"]);
+  });
+});

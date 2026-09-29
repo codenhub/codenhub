@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-23
+last_updated: 2026-09-29
 scope: Public workspace packages.
 ---
 
@@ -115,9 +115,26 @@ One question decides the field: **does a consumer who installs this package need
 
 `hub check` decides the "reachable from a published entry point" part mechanically. It resolves each `exports`, `main`, `module`, and `bin` target back to its source file, follows the relative imports from there, and requires every external package it arrives at to be a `dependency` or a `peerDependency`. A file that no entry point reaches — a test helper living beside the source, for instance — is not published, whatever directory it sits in.
 
+### Inlined dependencies
+
+A package MAY inline a dependency into its own build output instead of asking every consumer to install it. That is how a package depends on a small library without passing that library's version to its consumers, and without their bundles carrying anything the package does not use. The package declares the library in `devDependencies` and lists its name in `codenhub.bundled` in `package.json`:
+
+```json
+{
+  "devDependencies": { "@codenhub/validation": "workspace:*" },
+  "codenhub": { "bundled": ["@codenhub/validation"] }
+}
+```
+
+`codenhub.bundled` is an array of package names, and every name MUST be a `devDependencies` entry. A listed name is exempt from the rule above that published code imports only `dependencies` and `peerDependencies`, because a consumer receives the library's code inside the package. The list is a promise about the build, so it comes with three requirements:
+
+- The build MUST inline both the library's JavaScript and its types. Neither the built JavaScript nor the built declarations may name it, or a consumer's install is missing it. `hub check` reads the built output when `dist/` exists and reports a listed name that is still there.
+- A listed name MUST be imported by the package's source. A name nothing imports is a stale entry.
+- A library that is loaded lazily, or that must stay a single copy across the consumer's tree because it holds global state or identity, such as a framework, is a `dependency` or a `peerDependency`, not an inlined one.
+
 Three cases the check cannot settle, which reviewers MUST watch for:
 
-- **Type-only imports.** The check ignores them for the runtime question, because a build erases them. It cannot see the other half: an erased import still reaches a consumer when the emitted `.d.ts` refers to the package. If a published type names a package, that package is a `dependency` or a `peerDependency` even though no JavaScript imports it.
+- **Type-only imports.** The check ignores them for the runtime question, because a build erases them. It cannot see the other half: an erased import still reaches a consumer when the emitted `.d.ts` refers to the package. If a published type names a package, that package is a `dependency` or a `peerDependency` even though no JavaScript imports it. A package listed in `codenhub.bundled` is the exception, and its declarations are checked as described above.
 - **Dependencies selected by configuration.** A tool named by an option rather than by an import — a test environment, a coverage provider — is invisible to import analysis. The check treats a name appearing anywhere in the package as used and never reports it, which is the safe direction.
 - **Dynamic and computed specifiers.** A specifier assembled from a variable names no package the check can read. Declare whatever such code loads.
 

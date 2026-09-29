@@ -1,0 +1,96 @@
+import { describe, expect, it } from "vitest";
+
+import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
+import { number } from "./number";
+
+describe("number", () => {
+  it("should accept finite numbers, including zero and negatives", () => {
+    expect(accepts(number(), 0, -0, 1.5, -3, Number.MAX_VALUE)).toEqual(Array(5).fill(true));
+  });
+
+  it("should reject NaN, the infinities and every other type, naming what was received", () => {
+    expect(accepts(number(), Number.NaN, Infinity, -Infinity, "1", null, undefined, 1n, [])).toEqual(
+      Array(8).fill(false),
+    );
+    expect(issuesOf(number()(Number.NaN))[0]?.params).toEqual({ expected: "number", received: "nan" });
+    expect(issuesOf(number()(Infinity))[0]?.params).toEqual({ expected: "number", received: "infinity" });
+  });
+
+  describe("bounds", () => {
+    it("should treat min and max as inclusive and gt and lt as exclusive", () => {
+      expect(accepts(number({ min: 1 }), 0, 1, 2)).toEqual([false, true, true]);
+      expect(accepts(number({ max: 1 }), 0, 1, 2)).toEqual([true, true, false]);
+      expect(accepts(number({ gt: 1 }), 0, 1, 2)).toEqual([false, false, true]);
+      expect(accepts(number({ lt: 1 }), 0, 1, 2)).toEqual([true, false, false]);
+    });
+
+    it("should say in params which bound failed and whether it is inclusive", () => {
+      expect(issuesOf(number({ min: 1 })(0))[0]).toEqual({
+        code: "too_small",
+        path: [],
+        params: { minimum: 1, inclusive: true, type: "number" },
+      });
+      expect(issuesOf(number({ lt: 1 })(1))[0]).toEqual({
+        code: "too_big",
+        path: [],
+        params: { maximum: 1, inclusive: false, type: "number" },
+      });
+    });
+
+    it("should express positive, negative and their non- variants with the bounds", () => {
+      expect(accepts(number({ gt: 0 }), -1, 0, 1)).toEqual([false, false, true]);
+      expect(accepts(number({ min: 0 }), -1, 0, 1)).toEqual([false, true, true]);
+      expect(accepts(number({ lt: 0 }), -1, 0, 1)).toEqual([true, false, false]);
+      expect(accepts(number({ max: 0 }), -1, 0, 1)).toEqual([true, true, false]);
+    });
+  });
+
+  describe("integers, zero and multiples", () => {
+    it("should require whole numbers with int, and exactly representable ones with safeInt", () => {
+      expect(accepts(number({ int: true }), 1, 1.5, 2 ** 60)).toEqual([true, false, true]);
+      expect(accepts(number({ safeInt: true }), 1, 1.5, 2 ** 60)).toEqual([true, false, false]);
+      expect(issuesOf(number({ int: true })(1.5))[0]?.params).toEqual({ type: "number", format: "int" });
+    });
+
+    it("should reject zero with nonZero, negative zero included", () => {
+      expect(accepts(number({ nonZero: true }), 0, -0, 1, -1)).toEqual([false, false, true, true]);
+    });
+
+    it("should tolerate floating-point error in multipleOf", () => {
+      expect(accepts(number({ multipleOf: 0.1 }), 0.3, 0.35)).toEqual([true, false]);
+      expect(accepts(number({ multipleOf: 5 }), 10, 0, -15, 7)).toEqual([true, true, true, false]);
+      expect(issuesOf(number({ multipleOf: 5 })(7))[0]?.params).toEqual({ multipleOf: 5 });
+    });
+
+    it("should reject a step that is not a positive finite number when the validator is created", () => {
+      for (const multipleOf of [0, -1, Number.NaN, Infinity]) {
+        expect(() => number({ multipleOf })).toThrow(RangeError);
+      }
+    });
+  });
+
+  describe("clamp", () => {
+    it("should move the value into the range instead of rejecting it", () => {
+      const clamped = number({ clamp: { min: 0, max: 10 } });
+      expect([-5, 5, 50].map((input) => valueOf(clamped(input)))).toEqual([0, 5, 10]);
+    });
+
+    it("should run before the constraints, so they see the clamped number", () => {
+      expect(number({ clamp: { min: 0, max: 10 }, max: 10 })(50).ok).toBe(true);
+      expect(number({ clamp: { min: 0, max: 10 }, min: 11 })(5).ok).toBe(false);
+    });
+
+    it("should still reject non-numbers", () => {
+      expect(number({ clamp: { min: 0, max: 10 } })("5").ok).toBe(false);
+    });
+
+    it("should reject NaN bounds and an inverted range when the validator is created", () => {
+      expect(() => number({ clamp: { min: Number.NaN, max: 1 } })).toThrow(RangeError);
+      expect(() => number({ clamp: { min: 2, max: 1 } })).toThrow(RangeError);
+    });
+  });
+
+  it("should report every constraint that fails", () => {
+    expect(codesOf(number({ min: 10, int: true, nonZero: true })(0.5))).toEqual(["too_small", "invalid_value"]);
+  });
+});

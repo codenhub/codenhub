@@ -52,6 +52,7 @@
   },
   "devDependencies": {
     "@codenhub/error": "workspace:*",
+    "@codenhub/validation": "workspace:*",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
@@ -68,6 +69,9 @@
     "docs": {
       "label": "i18n",
       "status": "active"
-    }
+    },
+    "bundled": [
+      "@codenhub/validation"
+    ]
   }
 }

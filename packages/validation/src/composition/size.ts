@@ -1,0 +1,46 @@
+import { assertSize, toIssue } from "../core/result";
+import type { ValidationIssue } from "../core/types";
+
+/** Size constraints shared by arrays, sets and maps. Every option is optional. */
+export interface SizeOptions {
+  /** Requires at least this many items. A non-negative integer. */
+  min?: number;
+  /** Allows at most this many items. A non-negative integer. */
+  max?: number;
+  /** Requires exactly this many items. A non-negative integer. */
+  length?: number;
+}
+
+/** Rejects a size option that is not a non-negative integer, since it is a mistake in the schema and not in the input. */
+export function assertSizeOptions({ min, max, length }: SizeOptions): void {
+  for (const [name, size] of [
+    ["Minimum size", min],
+    ["Maximum size", max],
+    ["Size", length],
+  ] as const) {
+    if (size !== undefined) {
+      assertSize(name, size);
+    }
+  }
+}
+
+/** The issues for a collection whose size breaks a constraint, empty when it satisfies them all. */
+export function sizeIssues(size: number, type: string, { min, max, length }: SizeOptions): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  if (min !== undefined && size < min) {
+    issues.push(toIssue({ code: "too_small", params: { minimum: min, type } }));
+  }
+  if (max !== undefined && size > max) {
+    issues.push(toIssue({ code: "too_big", params: { maximum: max, type } }));
+  }
+  if (length !== undefined && size !== length) {
+    issues.push(
+      toIssue(
+        size < length
+          ? { code: "too_small", params: { minimum: length, exact: true, type } }
+          : { code: "too_big", params: { maximum: length, exact: true, type } },
+      ),
+    );
+  }
+  return issues;
+}
