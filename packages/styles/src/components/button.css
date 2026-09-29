@@ -17,6 +17,11 @@
   @apply box box-hover box-active relative inline-flex w-fit cursor-pointer items-center justify-center gap-2 px-4 py-2 whitespace-nowrap no-underline select-none;
 
   min-height: var(--control-height);
+  /* The vertical padding gives back the line `box` draws, so a default button
+     is exactly `--control-height` tall like `.ipt` beside it, under any
+     aesthetic's line width. At the default 16px/1.5 text the label and the
+     padding fill it; the size and padding modifiers set their own. */
+  padding-block: calc(0.5rem - var(--_width));
   /* The surrounding font, not the user agent's smaller button one, on every
      entry: `/components` carries no reset to say so, and a `.btn` link and a
      `.btn` button have to print the same label. `.sm` and `.lg` set their own
