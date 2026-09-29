@@ -8,7 +8,12 @@
    Zero wherever no halo is drawn. The cost, under a halo: the wrapper reaches
    that far past its parent, which shows only where the parent is flush with the
    viewport. Vertical margins still add up to the same gap when they collapse
-   with a sibling's, since the negative one is paid back by the padding. */
+   with a sibling's, since the negative one is paid back by the padding.
+
+   It reads the halo from its own scope, so an aesthetic class on the table
+   alone gives it nothing to make room for: the class belongs on the wrapper or
+   an ancestor, as `content-and-layout.md` says. A parent cannot read a child's
+   tokens, and reaching down with `:has()` would name an aesthetic here. */
 @utility table-wrap {
   @apply overflow-x-auto;
 
