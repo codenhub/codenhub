@@ -301,6 +301,9 @@ importers:
       '@codenhub/error':
         specifier: workspace:*
         version: link:../error
+      '@codenhub/validation':
+        specifier: workspace:*
+        version: link:../validation
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.61.1
