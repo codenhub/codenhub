@@ -45,13 +45,13 @@ A table draws three kinds of line, and `.ruled` and `.ruleless` move all of them
 
 ```html
 <table class="data-table">
-  Head and foot boundaries only
+  <!-- Head and foot boundaries only -->
 </table>
 <table class="data-table ruled">
-  Every row separated
+  <!-- Every row separated -->
 </table>
 <table class="data-table ruleless">
-  No lines inside the table at all
+  <!-- No lines inside the table at all -->
 </table>
 ```
 
@@ -62,7 +62,7 @@ The boundaries under a head and above a foot separate the parts of a table from 
 ```html
 <section style="--ui-rule: 100%">
   <table class="data-table">
-    Ruled by the region
+    <!-- Ruled by the region -->
   </table>
 </section>
 ```
@@ -90,10 +90,10 @@ This is the one place intent cascades, because a table's rows are parts of the t
 
 ```html
 <table class="data-table success soft edged">
-  ...
+  <!-- ... -->
 </table>
-<table class="data-table">
-  A ghost table: rules and type, no header plate
+<table class="data-table ghost">
+  <!-- A ghost table: rules and type, no header plate -->
 </table>
 <kbd class="kbd primary solid">Ctrl</kbd>
 <kbd class="kbd primary soft edged">Shift</kbd>

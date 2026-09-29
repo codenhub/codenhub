@@ -171,7 +171,7 @@ Compiled entrypoints are ready-to-import CSS and require only tooling that can r
 | Import path                      | Composition and effects                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@codenhub/styles`               | Compiled complete surface: Tailwind base/theme output, tokens, typography, utilities, components, and reset. Applies global reset, root theme, and focus rules.                                                                                                                                                                                                                                                                                                                                                            |
-| `@codenhub/styles/theme`         | Compiled Tailwind theme variables, Codenhub tokens, and the presentation classes. Sets root theme properties and system/explicit theme selectors; no reset or component classes.                                                                                                                                                                                                                                                                                                                                           |
+| `@codenhub/styles/theme`         | Compiled Tailwind theme variables, Codenhub tokens, and the intent, presentation, elevation, and corner-pattern classes. Sets root theme properties and system/explicit theme selectors; no reset or component classes.                                                                                                                                                                                                                                                                                                    |
 | `@codenhub/styles/palette`       | Generated, self-contained `--palette-*` custom properties: every intent/presentation cell's fill, text, and edge color, plus the flat `border`/`surface`/`text` neutral tokens, pre-composed to a flat value. For a consumer that cannot take this package as a build-time dependency (an optional peer, for example) but wants to look consistent with it. Not a replacement for the components themselves when Tailwind is available -- see [Customizing → Generated palette](docs/usage/customizing.md#generated-palette). |
 | `@codenhub/styles/components`    | Compiled theme tokens, typography utilities, and every component class. Includes static reduced-motion loader masks; no reset, layout/content utilities, or native mappings.                                                                                                                                                                                                                                                                                                                                               |
 | `@codenhub/styles/native`        | Compiled complete surface plus classless mappings for headings, text, content elements, form controls, and buttons. Applies the reset and broad element selectors.                                                                                                                                                                                                                                                                                                                                                         |
@@ -524,15 +524,15 @@ Every row is an override point: set it on `:root` to retheme globally, or on any
 
 Intent classes set these seven slots; components read them. Because every supporting component reads the same seven names, an intent works on every component that supports intent, and a custom intent needs no component changes.
 
-| Token               | Purpose                                                                               |
-| ------------------- | ------------------------------------------------------------------------------------- |
-| `--intent-color`    | The intent's base color. What a fill is made of.                                      |
-| `--intent-contrast` | Readable color on top of a filled `--intent-color`.                                   |
-| `--intent-hover`    | The intent's hovered base color.                                                      |
-| `--intent-strong`   | The intent printed on a page. Text, icon, or border wherever the fill is not full.    |
-| `--intent-subtle`   | Low-emphasis tone. Tinted surfaces and tracks. Neutral resolves to `--color-surface`. |
-| `--intent-border`   | Line color. Resolves to `--color-border` when no intent is set.                       |
-| `--intent-fill-max` | How far a fill of this intent is allowed to go. `100%` for every intent but neutral.  |
+| Token               | Purpose                                                                                                                                                                                                                                |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--intent-color`    | The intent's base color. What a fill is made of.                                                                                                                                                                                       |
+| `--intent-contrast` | Readable color on top of a filled `--intent-color`.                                                                                                                                                                                    |
+| `--intent-hover`    | The intent's hovered base color.                                                                                                                                                                                                       |
+| `--intent-strong`   | The intent printed on a page. Text, icon, or border wherever the fill is not full.                                                                                                                                                     |
+| `--intent-subtle`   | Low-emphasis tone. Tinted surfaces and tracks. Neutral resolves to `--color-surface`.                                                                                                                                                  |
+| `--intent-border`   | Line color. With no intent it resolves to the aesthetic's `--ui-ink`, then `--color-border`; text controls and toggles read `--ui-control-ink`, then `--ui-ink`, then `--color-control-border`, and tables read `--ui-rule-ink` first. |
+| `--intent-fill-max` | How far a fill of this intent is allowed to go. `100%` for every intent but neutral.                                                                                                                                                   |
 
 `--intent-color` and `--intent-strong` are two ends of the same family and not interchangeable. The base is a ground, chosen to be filled with; the strong tone is chosen to be read against a page. A `.soft` or `.ghost` component prints the strong one, which is why an unfilled warning reads in amber-800 rather than the amber-600 its solid sibling is filled with.
 
@@ -595,9 +595,9 @@ The four `--elevation-*` values below are raw shadows for elements you style you
 | `--focus-ring`             | Focus-visible ring color.                                                                                                                   |
 | `--focus-ring-offset`      | Focus-visible outline offset. Unset: the negative of the focused element's line width, so the ring lands on the edge under every aesthetic. |
 | `--focus-ring-width`       | Focus-visible outline/ring width.                                                                                                           |
-| `--motion-duration-fast`   | Fast transition for buttons and input interactions (`120ms`).                                                                               |
-| `--motion-duration-normal` | Normal transition for layout and modals (`200ms`).                                                                                          |
-| `--motion-duration-slow`   | Slow animation for skeleton loaders and progress bars (`400ms`).                                                                            |
+| `--motion-duration-fast`   | Fast transition for a table row's hover (`120ms`).                                                                                          |
+| `--motion-duration-normal` | Every component's colour, border, shadow, and press transitions, toggle marks, and the tooltip bubble (`200ms`).                            |
+| `--motion-duration-slow`   | Progress value changes, and the base of the skeleton and progress shimmer cycle (`400ms`).                                                  |
 | `--motion-ease`            | Default easing curve.                                                                                                                       |
 | `--z-popover`              | Popover/tooltip z-index.                                                                                                                    |
 | `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint.                                                                                                 |
@@ -1124,7 +1124,7 @@ Size and shape classes:
 | `.p-xs`                                                                | Tightest padding modifier (`px-2 py-0.5`; icon `p-0.5`). Also drops the `--control-height` minimum so a chip-sized button fits a table cell or a dense toolbar; every other size and padding class keeps that floor for a labeled button. |
 | `.p-sm`                                                                | Compact padding modifier (`px-2.5 py-1`; icon `p-1`).                                                                                                                                                                                     |
 | `.p-lg`                                                                | Spacious padding modifier (`px-6 py-3`; icon `p-3`).                                                                                                                                                                                      |
-| `.icon`                                                                | Square icon button, sized to its own padding rather than to `--control-height`. Use an accessible name in HTML.                                                                                                                           |
+| `.icon`                                                                | Square icon button, at least `--control-height` on each side. With `.p-xs`, `.p-sm`, or `.p-lg` it drops that floor and sizes to its own padding. Use an accessible name in HTML.                                                         |
 | `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                                                                                                                                                                                         |
 
 Examples:
@@ -1320,7 +1320,7 @@ Activity indicator modifier classes compose with `.loader`:
 | `.bars-wave`           | Three vertical bars scaling in a wave.  |
 | `.pulse-ring`          | Two concentric rings pulsing outward.   |
 
-These variants retain their embedded SVG animations normally. Under `prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding static mask. This fallback is part of focused loader, button, and components imports; it does not depend on the global reset. See [Accessibility](docs/accessibility.md).
+These variants retain their embedded SVG animations normally. Under `prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding static mask. This fallback ships wherever the loader does -- the complete, native, and `/components` entrypoints, `/tw/components`, and `/tw/loader` -- and does not depend on the global reset. `/tw/button` does not include the loader; pair it with `/tw/loader`. See [Accessibility](docs/accessibility.md).
 
 Loader size modifiers:
 
@@ -1330,7 +1330,7 @@ Loader size modifiers:
 | `.sm`    | Small (`1.25rem`).   |
 | `.lg`    | Large (`2.25rem`).   |
 
-Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, they use the text palette, except `.loader`, which keeps `currentColor` so it matches whatever content surrounds it.
+Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, alerts and badges use the text palette, while the indicators -- `.loader`, `.skeleton`, and `.progress` -- take `currentColor`, so they match whatever content surrounds them.
 
 Skeletons, loaders, and dividers are indicators: they read intent but ignore fill and edge [presentation](docs/usage/composing.md#presentation). `.progress` is not one of them — its track reads both, `.soft.edgeless` by default; only the moving value fill stays intent-colored at full strength regardless of presentation. `.solid` is unsupported on the track, and `.ghost.edgeless` renders but is discouraged, since neither leaves the track a visible frame. See [Composing → Component axis reference](docs/usage/composing.md#component-axis-reference) for the full table.
 
@@ -1478,13 +1478,13 @@ A table draws three kinds of line, and `.ruled` and `.ruleless` move all of them
 
 ```html
 <table class="data-table">
-  Head and foot boundaries only
+  <!-- Head and foot boundaries only -->
 </table>
 <table class="data-table ruled">
-  Every row separated
+  <!-- Every row separated -->
 </table>
 <table class="data-table ruleless">
-  No lines inside the table at all
+  <!-- No lines inside the table at all -->
 </table>
 ```
 
@@ -1495,7 +1495,7 @@ The boundaries under a head and above a foot separate the parts of a table from 
 ```html
 <section style="--ui-rule: 100%">
   <table class="data-table">
-    Ruled by the region
+    <!-- Ruled by the region -->
   </table>
 </section>
 ```
@@ -1523,10 +1523,10 @@ This is the one place intent cascades, because a table's rows are parts of the t
 
 ```html
 <table class="data-table success soft edged">
-  ...
+  <!-- ... -->
 </table>
-<table class="data-table">
-  A ghost table: rules and type, no header plate
+<table class="data-table ghost">
+  <!-- A ghost table: rules and type, no header plate -->
 </table>
 <kbd class="kbd primary solid">Ctrl</kbd>
 <kbd class="kbd primary soft edged">Shift</kbd>
@@ -1885,7 +1885,7 @@ This package provides CSS hooks for accessible states. It does not provide seman
 | Form control focus | `.ipt`, `.textarea`, and `.select` draw the global focus ring and move their line to the intent color.                                                                                                                                                                                                                          |
 | Invalid controls   | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                                                                                                                                                                                                                                |
 | Disabled controls  | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported.                                                                                                                                                                                                       |
-| Open state         | `[data-state="open"]` styles supported surfaces and tooltips.                                                                                                                                                                                                                                                                   |
+| Open state         | `[data-state="open"]` on `.tooltip` shows its bubble without hover or focus. No other component reads it.                                                                                                                                                                                                                       |
 | Native `<dialog>`  | `dialog:not([open])` and a centered `dialog[open]` are restored in author origin, so `.card` composed onto a `<dialog>` (the closest primitive the package ships) does not render open on load or lose its centering to another rule. Focus trapping, escape handling, and inert-background behavior stay outside this package. |
 
 ### Visually hidden content

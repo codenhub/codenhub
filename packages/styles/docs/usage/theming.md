@@ -72,15 +72,15 @@ Every row is an override point: set it on `:root` to retheme globally, or on any
 
 Intent classes set these seven slots; components read them. Because every supporting component reads the same seven names, an intent works on every component that supports intent, and a custom intent needs no component changes.
 
-| Token               | Purpose                                                                               |
-| ------------------- | ------------------------------------------------------------------------------------- |
-| `--intent-color`    | The intent's base color. What a fill is made of.                                      |
-| `--intent-contrast` | Readable color on top of a filled `--intent-color`.                                   |
-| `--intent-hover`    | The intent's hovered base color.                                                      |
-| `--intent-strong`   | The intent printed on a page. Text, icon, or border wherever the fill is not full.    |
-| `--intent-subtle`   | Low-emphasis tone. Tinted surfaces and tracks. Neutral resolves to `--color-surface`. |
-| `--intent-border`   | Line color. Resolves to `--color-border` when no intent is set.                       |
-| `--intent-fill-max` | How far a fill of this intent is allowed to go. `100%` for every intent but neutral.  |
+| Token               | Purpose                                                                                                                                                                                                                                |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--intent-color`    | The intent's base color. What a fill is made of.                                                                                                                                                                                       |
+| `--intent-contrast` | Readable color on top of a filled `--intent-color`.                                                                                                                                                                                    |
+| `--intent-hover`    | The intent's hovered base color.                                                                                                                                                                                                       |
+| `--intent-strong`   | The intent printed on a page. Text, icon, or border wherever the fill is not full.                                                                                                                                                     |
+| `--intent-subtle`   | Low-emphasis tone. Tinted surfaces and tracks. Neutral resolves to `--color-surface`.                                                                                                                                                  |
+| `--intent-border`   | Line color. With no intent it resolves to the aesthetic's `--ui-ink`, then `--color-border`; text controls and toggles read `--ui-control-ink`, then `--ui-ink`, then `--color-control-border`, and tables read `--ui-rule-ink` first. |
+| `--intent-fill-max` | How far a fill of this intent is allowed to go. `100%` for every intent but neutral.                                                                                                                                                   |
 
 `--intent-color` and `--intent-strong` are two ends of the same family and not interchangeable. The base is a ground, chosen to be filled with; the strong tone is chosen to be read against a page. A `.soft` or `.ghost` component prints the strong one, which is why an unfilled warning reads in amber-800 rather than the amber-600 its solid sibling is filled with.
 
@@ -143,9 +143,9 @@ The four `--elevation-*` values below are raw shadows for elements you style you
 | `--focus-ring`             | Focus-visible ring color.                                                                                                                   |
 | `--focus-ring-offset`      | Focus-visible outline offset. Unset: the negative of the focused element's line width, so the ring lands on the edge under every aesthetic. |
 | `--focus-ring-width`       | Focus-visible outline/ring width.                                                                                                           |
-| `--motion-duration-fast`   | Fast transition for buttons and input interactions (`120ms`).                                                                               |
-| `--motion-duration-normal` | Normal transition for layout and modals (`200ms`).                                                                                          |
-| `--motion-duration-slow`   | Slow animation for skeleton loaders and progress bars (`400ms`).                                                                            |
+| `--motion-duration-fast`   | Fast transition for a table row's hover (`120ms`).                                                                                          |
+| `--motion-duration-normal` | Every component's colour, border, shadow, and press transitions, toggle marks, and the tooltip bubble (`200ms`).                            |
+| `--motion-duration-slow`   | Progress value changes, and the base of the skeleton and progress shimmer cycle (`400ms`).                                                  |
 | `--motion-ease`            | Default easing curve.                                                                                                                       |
 | `--z-popover`              | Popover/tooltip z-index.                                                                                                                    |
 | `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint.                                                                                                 |
