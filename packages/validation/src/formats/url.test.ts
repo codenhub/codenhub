@@ -166,6 +166,12 @@ describe("url without a host", () => {
     expect(accepts(mailto, ...invalid)).toEqual(invalid.map(() => false));
   });
 
+  it("should check a mailto with any number of recipients without throwing", () => {
+    const recipients = Array.from({ length: 200_000 }, () => "ada@example.com").join(",");
+    expect(mailto(`mailto:?to=${recipients}`).ok).toBe(true);
+    expect(mailto(`mailto:?to=${recipients},nope`).ok).toBe(false);
+  });
+
   it("should accept a local mailto host only with allowLocal", () => {
     const local = url({ protocols: ["mailto"], allowLocal: true });
     expect(accepts(local, "mailto:ada@localhost", "mailto:ada@intranet", "mailto:nope")).toEqual([true, true, false]);
