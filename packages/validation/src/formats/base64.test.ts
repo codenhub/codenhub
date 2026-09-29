@@ -15,6 +15,10 @@ describe("base64", () => {
     expect(accepts(base64(), ...invalid)).toEqual(invalid.map(() => false));
   });
 
+  it("should reject text whose last character carries bits beyond the last byte", () => {
+    expect(accepts(base64(), "QQ==", "QUI=", "QR==", "QUJ=", "aGVsbG9=")).toEqual([true, true, false, false, false]);
+  });
+
   it("should report invalid_type for a non-string and invalid_format, naming the format, for a bad string", () => {
     expect(codesOf(base64()(42))).toEqual(["invalid_type"]);
     expect(issuesOf(base64()("!!"))).toEqual([{ code: "invalid_format", path: [], params: { format: "base64" } }]);

@@ -89,7 +89,7 @@ describe("array", () => {
     });
 
     it("should compare by the key a function returns", () => {
-      const users = array(object({ id: number() }), { unique: (user: { id: number }) => user.id });
+      const users = array(object({ id: number() }), { unique: (user) => user.id });
       expect(users([{ id: 1 }, { id: 2 }]).ok).toBe(true);
       expect(users([{ id: 1 }, { id: 1 }]).ok).toBe(false);
       expect(array(object({ id: number() }), { unique: true })([{ id: 1 }, { id: 1 }]).ok).toBe(true);

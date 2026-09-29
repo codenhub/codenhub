@@ -72,4 +72,17 @@ describe("coerceDate", () => {
     expect(codesOf(coerceDate({ min: new Date("2026-01-01") })("2025-01-01"))).toEqual(["too_small"]);
     expect(() => coerceDate({ min: new Date("nope") })).toThrow(RangeError);
   });
+
+  it("should accept whole timestamps only, since a Date would cut a fraction of a millisecond", () => {
+    expect(accepts(validator, 1, -1, 1.5, 0.9)).toEqual([true, true, false, false]);
+  });
+
+  it("should cut a fraction of a second to milliseconds the same way on every runtime", () => {
+    expect(valueOf(validator("2026-09-28T14:30:00.123456789Z")).toISOString()).toBe("2026-09-28T14:30:00.123Z");
+    expect(valueOf(validator("2026-09-28T14:30:00.999999Z")).toISOString()).toBe("2026-09-28T14:30:00.999Z");
+    expect(valueOf(validator("2026-09-28T14:30:00.05Z")).toISOString()).toBe("2026-09-28T14:30:00.050Z");
+    expect(valueOf(validator("2026-09-28T14:30:00.1234567890123456789012345Z")).toISOString()).toBe(
+      "2026-09-28T14:30:00.123Z",
+    );
+  });
 });

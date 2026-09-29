@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
-import { isPlainObject, setOwn } from "../core/objects";
-import { failWith, invalidType, nestIssues, pass, toIssue } from "../core/result";
+import { invalidObject, isPlainObject, setOwn } from "../core/objects";
+import { collectNested, failWith, pass, repeatedKey, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 
 /**
@@ -24,7 +24,10 @@ export type InferRecord<TKey extends string, TValue> = string extends TKey
  * key validator found, so it cannot be mistaken for a problem with the value; the value is still
  * checked. Only own enumerable properties are read. The output is
  * a new object and the input is never modified. A key such as `__proto__` from parsed JSON is
- * kept as data and never writes to a prototype. It is synchronous when both validators are, and
+ * kept as data and never writes to a prototype. A key that the `key` validator changes, such as by
+ * lowercasing, must stay distinct: a second entry that arrives at a key already taken is reported as
+ * `invalid_key` with `{ issues: [{ code: "invalid_value", params: { unique: true } }] }` instead of
+ * silently replacing the first. It is synchronous when both validators are, and
  * asynchronous otherwise.
  *
  * @example
@@ -46,7 +49,7 @@ export function record<TKey extends AnyValidator<string>, TValue extends AnyVali
 ): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>> {
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
-      return invalidType("object", input);
+      return invalidObject(input);
     }
     const names = Object.keys(input);
     const entries = names.map((name) =>
@@ -62,10 +65,14 @@ export function record<TKey extends AnyValidator<string>, TValue extends AnyVali
           issues.push(toIssue({ code: "invalid_key", path: [name], params: { issues: keyResult.error.issues } }));
         }
         if (!valueResult.ok) {
-          issues.push(...nestIssues(valueResult.error.issues, name));
+          collectNested(issues, valueResult.error.issues, name);
         }
         if (keyResult.ok && valueResult.ok) {
-          setOwn(output, keyResult.value as string, valueResult.value);
+          if (Object.hasOwn(output, keyResult.value as string)) {
+            issues.push(repeatedKey(name));
+          } else {
+            setOwn(output, keyResult.value as string, valueResult.value);
+          }
         }
       });
       return issues.length > 0 ? failWith(issues) : pass(output);

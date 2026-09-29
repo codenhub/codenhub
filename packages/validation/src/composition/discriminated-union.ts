@@ -1,6 +1,6 @@
 import { chain, type Maybe } from "../core/async";
-import { isPlainObject, setOwn } from "../core/objects";
-import { failWith, invalidType, nestIssues, pass, toIssue } from "../core/result";
+import { invalidObject, isPlainObject, setOwn } from "../core/objects";
+import { failWith, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
 
 type Simplify<T> = { [K in keyof T]: T[K] } & {};
@@ -59,13 +59,13 @@ export function discriminatedUnion<const TKey extends string, const TVariants ex
 
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
-      return invalidType("object", input);
+      return invalidObject(input);
     }
     const tag = Object.hasOwn(input, key) ? input[key] : undefined;
     if (typeof tag !== "string" || !Object.hasOwn(variants, tag)) {
-      return failWith(
-        nestIssues([toIssue({ code: "invalid_union", params: { discriminator: key, options: [...tags] } })], key),
-      );
+      return failWith([
+        toIssue({ code: "invalid_union", path: [key], params: { discriminator: key, options: [...tags] } }),
+      ]);
     }
     const rest = {};
     for (const name of Object.keys(input)) {

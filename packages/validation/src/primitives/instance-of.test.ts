@@ -36,4 +36,11 @@ describe("instanceOf", () => {
   it("should name the class and the received type", () => {
     expect(issuesOf(instanceOf(Dog)("rex"))[0]?.params).toEqual({ expected: "instance of Dog", received: "string" });
   });
+
+  it("should name a class that has no name", () => {
+    expect(issuesOf(instanceOf(class {})("rex"))[0]?.params).toEqual({
+      expected: "instance of anonymous class",
+      received: "string",
+    });
+  });
 });

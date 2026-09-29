@@ -38,6 +38,9 @@ const describeLimit = ({ code, params }: ValidationIssue): string => {
   if (limit instanceof Date) {
     return `Must be on or ${isMin ? "after" : "before"} ${limit.toISOString()}`;
   }
+  if (type === "depth") {
+    return `Must be nested at most ${bound} levels deep`;
+  }
   if (COLLECTIONS.has(type)) {
     const wording = params?.exact === true ? "exactly" : isMin ? "at least" : "at most";
     return `Must contain ${wording} ${bound} ${limit === 1 ? "item" : "items"}`;
