@@ -16,8 +16,14 @@ import {
 import { resolveConfiguredLocale } from "./configured-locale";
 import { isValidLocaleIdentifier } from "./identifier";
 
-/** Wording for the one issue a locale list can produce that the built-in text words too generally. */
-const LOCALE_MESSAGES: Messages = {
+/**
+ * The wording for the issues a locale configuration can produce that the validators do not word
+ * themselves. It is written out here, and not taken from the package's English wording, so the build
+ * carries only these few lines.
+ */
+const CONFIG_MESSAGES: Messages = {
+  invalid_type: (issue) => `Expected ${String(issue.params?.expected)}, received ${String(issue.params?.received)}`,
+  too_small: (issue) => (issue.params?.type === "array" ? "Must contain at least 1 item" : "Must not be empty"),
   invalid_value: (issue) => (issue.params?.unique === true ? "Must be unique, ignoring letter case" : "Invalid value"),
 };
 
@@ -104,5 +110,5 @@ export function assertConfig<T>(validator: Validator<T>, input: unknown, subject
     throw new TypeError(subject);
   }
   const where = issue.path.length > 0 ? `${formatPath(issue.path)}: ` : "";
-  throw new TypeError(`${subject}: ${where}${formatIssue(issue, LOCALE_MESSAGES)}`);
+  throw new TypeError(`${subject}: ${where}${formatIssue(issue, CONFIG_MESSAGES)}`);
 }

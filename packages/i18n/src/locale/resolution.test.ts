@@ -54,7 +54,7 @@ describe("validateI18nConfig", () => {
       createConfig({ locales: ["en-US", 1 as unknown as string] }),
       "locales[1]: Expected string, received number",
     ],
-    ["empty locale identifier", createConfig({ locales: ["en-US", " "] }), "locales[1]: Must be at least 1 character"],
+    ["empty locale identifier", createConfig({ locales: ["en-US", " "] }), "locales[1]: Must not be empty"],
     [
       "unsafe locale identifier",
       createConfig({ locales: ["en-US", "../admin"] }),
