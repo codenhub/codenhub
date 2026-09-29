@@ -36,6 +36,9 @@ const outOfRange = (side: "min" | "max", bound: bigint, isInclusive: boolean): V
 export function bigint(options: BigintOptions = {}): Validator<bigint> {
   const { min, max, gt, lt } = options;
   assertBounds(options);
+  if (gt !== undefined && lt !== undefined && lt - gt <= 1n) {
+    throw new RangeError(`No bigint lies between gt ${gt} and lt ${lt}`);
+  }
   return (input) => {
     if (typeof input !== "bigint") {
       return invalidType("bigint", input);

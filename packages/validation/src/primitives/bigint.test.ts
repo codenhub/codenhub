@@ -33,6 +33,11 @@ describe("bigint", () => {
     expect(() => bigint({ min: 1n, max: 1n })).not.toThrow();
   });
 
+  it("should reject exclusive bounds with no whole number between them", () => {
+    expect(() => bigint({ gt: 1n, lt: 2n })).toThrow(RangeError);
+    expect(bigint({ gt: 1n, lt: 3n })(2n).ok).toBe(true);
+  });
+
   it("should compare beyond the safe integer range exactly", () => {
     expect(bigint({ max: 2n ** 64n })(2n ** 64n + 1n).ok).toBe(false);
   });
