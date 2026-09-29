@@ -65,7 +65,9 @@ test("gives every loader fixture a unique ID matching its variant", async ({ pag
    real element with a real `id` -- see docs/usage/tooltips.md. This asserts
    the fixture actually wires that association: each trigger's
    `aria-describedby` has to resolve to the real `.tooltip-bubble` element
-   carrying the message. */
+   carrying the message. The trigger is a real `<button>`, which is focusable
+   and takes its `aria-label` as a name in every screen reader; a `<span>` with
+   `tabindex` and no role is not reliably announced. */
 test("makes tooltip examples keyboard-focusable and describes them with a real bubble element", async ({ page }) => {
   await page.goto(FEEDBACK_URL);
 
@@ -80,13 +82,15 @@ test("makes tooltip examples keyboard-focusable and describes them with a real b
         accessibleName: tooltip.getAttribute("aria-label"),
         bubbleText: bubble?.textContent?.trim() ?? null,
         isBubble: bubble?.classList.contains("tooltip-bubble") ?? false,
-        tabIndex: tooltip.getAttribute("tabindex"),
+        tagName: tooltip.tagName,
+        type: tooltip.getAttribute("type"),
       };
     }),
   );
 
   for (const attributes of tooltipAttributes) {
-    expect(attributes.tabIndex).toBe("0");
+    expect(attributes.tagName).toBe("BUTTON");
+    expect(attributes.type).toBe("button");
     expect(attributes.isBubble).toBe(true);
     expect(attributes.accessibleName).toBe(attributes.bubbleText);
   }

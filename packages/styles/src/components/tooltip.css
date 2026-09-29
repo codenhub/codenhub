@@ -162,9 +162,11 @@
    a plate alone leaves three of eight intents indistinguishable;
    `--intent-border` is the slot that differs.
 
-   `clip-path: none` stays because this is a circular fixed identity, not a
-   shape a container's aesthetic reaches, the same way `.radio` keeps its own
-   circle instead of taking `.pixel`'s stepped silhouette. */
+   Its corner is the aesthetic's, through the pill corner and then the control
+   corner: round by default, a diamond under `.cyber`, square under
+   `.neobrutalism` and `.pixel`, whose corner is zero. Only the silhouette
+   clip is refused -- `clip-path: none`, as `.radio` has it -- because
+   `.pixel`'s stepped polygon would bite a 20px chip rather than shape it. */
 @utility tooltip-icon {
   @apply box inline-flex size-5 cursor-default items-center justify-center text-sm font-bold;
 
@@ -174,6 +176,12 @@
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
 
+  /* The trigger is best a real `<button>`, which is a `.btn` under `/native`
+     and carries the user agent's padding under `/components`; either would
+     stretch the chip past its own size. */
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
   border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
   clip-path: none;
 }

@@ -112,7 +112,7 @@ Use ARIA or data attributes when native attributes are not available for the ele
 ```html
 <a class="btn secondary" aria-disabled="true">Unavailable</a>
 <span class="tooltip" data-state="open">
-  <span class="tooltip-icon" tabindex="0" aria-label="More details" aria-describedby="more-details-bubble">?</span>
+  <button type="button" class="tooltip-icon" aria-label="More details" aria-describedby="more-details-bubble">?</button>
   <span class="tooltip-bubble" role="tooltip" id="more-details-bubble">More details</span>
 </span>
 ```

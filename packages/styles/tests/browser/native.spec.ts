@@ -220,3 +220,26 @@ test("sizes component labels like the text around them without the reset", async
 
   expect(sizes).toEqual(["16px", "16px", "16px", "16px", "16px"]);
 });
+
+/* The tooltip trigger is a real `<button>` in the docs, and a bare `button`
+   is a `.btn` under `/native` and carries the user agent's padding under
+   `/components`. Either would stretch the 20px chip, so it sets its own. */
+test("keeps a tooltip-icon button at its own size on every entry", async ({ page }) => {
+  const measure = () =>
+    page.evaluate(() => {
+      const host = document.createElement("div");
+      host.innerHTML = '<button type="button" class="tooltip-icon" aria-label="More details">?</button>';
+      document.body.append(host);
+      const { width, height } = host.firstElementChild!.getBoundingClientRect();
+      host.remove();
+
+      return { height, width };
+    });
+
+  await page.goto(NATIVE_URL);
+  expect(await measure(), "under /native").toEqual({ height: 20, width: 20 });
+
+  await page.setContent("<!doctype html><html><body></body></html>");
+  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-components.css" });
+  expect(await measure(), "under /components").toEqual({ height: 20, width: 20 });
+});
