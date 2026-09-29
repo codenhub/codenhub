@@ -149,6 +149,5 @@ The four `--elevation-*` values below are raw shadows for elements you style you
 | `--motion-ease`            | Default easing curve.                                                                                                                       |
 | `--z-popover`              | Popover/tooltip z-index.                                                                                                                    |
 | `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint.                                                                                                 |
-| `--breakpoint-2xl`         | Extended large Tailwind responsive breakpoint.                                                                                              |
 
 Next: [Customizing](./customizing.md) covers presentation and material tokens — how much of an intent shows, and what a component is made of.

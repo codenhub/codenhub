@@ -603,6 +603,16 @@ test("./tw brings Tailwind's Preflight exactly once", async () => {
   expect(output.match(/::file-selector-button \{\s*box-sizing: border-box;/g) ?? []).toHaveLength(1);
 });
 
+/* `/tw` shares one Tailwind build with the consumer's own utilities, so a
+   breakpoint it redefined moved every `2xl:` class in their app. It adds `xs`
+   and leaves Tailwind's own steps alone. */
+test("./tw adds an xs breakpoint and keeps Tailwind's 2xl", async () => {
+  const output = await compileAsConsumer(["./tw"], "xs:flex 2xl:flex");
+
+  expect(output).toMatch(/@media \(min-width:30rem\)\{\.xs\\:flex\{display:flex\}\}/);
+  expect(output).toMatch(/@media \(min-width:96rem\)\{\.\\32 xl\\:flex\{display:flex\}\}/);
+});
+
 /* Every `--color-*` a stylesheet reads that it never declares. Tailwind marks
    each `@theme` value a `@reference`d file reaches as reference-only, the last
    write winning, and drops those from the output. A shared file that imported
