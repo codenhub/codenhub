@@ -62,7 +62,7 @@ export function discriminatedUnion<const TKey extends string, const TVariants ex
     const tag = Object.hasOwn(input, key) ? input[key] : undefined;
     if (typeof tag !== "string" || !Object.hasOwn(variants, tag)) {
       return failWith(
-        nestIssues([toIssue({ code: "invalid_union", params: { discriminator: key, options: tags } })], key),
+        nestIssues([toIssue({ code: "invalid_union", params: { discriminator: key, options: [...tags] } })], key),
       );
     }
     const rest = {};

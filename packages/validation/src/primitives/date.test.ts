@@ -35,6 +35,16 @@ describe("date", () => {
     expect(codesOf(date({ max: day("2026-01-01") })(day("2027-01-01")))).toEqual(["too_big"]);
   });
 
+  it("should read its bounds once, so changing them later or through an issue has no effect", () => {
+    const min = day("2026-01-01");
+    const validator = date({ min });
+    min.setUTCFullYear(2000);
+    expect(validator(day("2025-01-01")).ok).toBe(false);
+    const reported = issuesOf(validator(day("2025-01-01")))[0]?.params?.minimum as Date;
+    reported.setUTCFullYear(2000);
+    expect(issuesOf(validator(day("2025-01-01")))[0]?.params?.minimum).toEqual(day("2026-01-01"));
+  });
+
   it("should reject an invalid bound when the validator is created", () => {
     expect(() => date({ min: new Date("nope") })).toThrow(RangeError);
     expect(() => date({ max: new Date("nope") })).toThrow(RangeError);
