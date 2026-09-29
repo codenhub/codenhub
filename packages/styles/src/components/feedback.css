@@ -201,13 +201,5 @@
   &.indeterminate::after {
     width: 33%;
     animation: anim-progress-indeterminate 1.5s infinite ease-in-out;
-    /* No logical form exists for transform-origin, so the inline-start edge
-       is named directly and mirrored under :dir(rtl) to match the
-       inset-inline-start positioning above. */
-    transform-origin: left;
-
-    :dir(rtl) & {
-      transform-origin: right;
-    }
   }
 }
