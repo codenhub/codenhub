@@ -698,7 +698,7 @@ The options, all optional:
 | `multipleOf` | A multiple of this positive number, tolerating floating-point error, so `0.3` is a multiple of `0.1`.                |
 | `nonZero`    | Anything but zero.                                                                                                   |
 
-Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, non-negative is `min: 0`, negative is `lt: 0` and non-positive is `max: 0`. A `NaN` bound, or bounds no number can satisfy together such as `{ min: 5, max: 2 }` or `{ gt: 1, lt: 1 }`, throws a `RangeError` rather than being ignored. `clamp` throws one for a `NaN` bound or a minimum above its maximum, and `multipleOf` throws one unless it is a positive finite number. For whole numbers `multipleOf` is exact at any size.
+Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, non-negative is `min: 0`, negative is `lt: 0` and non-positive is `max: 0`. A `NaN` bound, or bounds no finite number can satisfy such as `{ min: 5, max: 2 }`, `{ gt: 1, lt: 1 }` or `{ min: Infinity }`, throws a `RangeError` rather than being ignored. `clamp` throws one for a `NaN` bound or a minimum above its maximum, and `multipleOf` throws one unless it is a positive finite number. For whole numbers `multipleOf` is exact at any size.
 
 | Failure                       | `code`          | `params`                                                      |
 | ----------------------------- | --------------- | ------------------------------------------------------------- |

@@ -115,6 +115,13 @@ describe("number", () => {
     expect(() => number({ gt: 0, lt: 1 })).not.toThrow();
   });
 
+  it("should reject an infinite bound that shuts out every finite number, and keep the ones that do not", () => {
+    for (const options of [{ min: Infinity }, { gt: Infinity }, { max: -Infinity }, { lt: -Infinity }]) {
+      expect(() => number(options)).toThrow(RangeError);
+    }
+    expect(() => number({ min: -Infinity, gt: -Infinity, max: Infinity, lt: Infinity })).not.toThrow();
+  });
+
   it("should report every constraint that fails", () => {
     expect(codesOf(number({ min: 10, int: true, nonZero: true })(0.5))).toEqual(["too_small", "invalid_value"]);
   });
