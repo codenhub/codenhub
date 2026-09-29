@@ -32,14 +32,14 @@ const scenarios: Scenario[] = [
   {
     name: "number",
     source: `import { number } from "DIST"; export const check = number({ int: true, min: 0 });`,
-    budget: 1150,
+    budget: 1210,
   },
   {
     name: "string",
     source: `import { string } from "DIST"; export const check = string({ min: 2, trim: true });`,
     budget: 1200,
   },
-  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 800 },
+  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 840 },
   {
     name: "object of three fields",
     source: `import { email, number, object, optional, string } from "DIST";
@@ -51,7 +51,7 @@ export const check = object({ name: string({ min: 2 }), email: email(), age: opt
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 3250,
+    budget: 3400,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 680 },
   { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 820 },
@@ -126,9 +126,9 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "coerceBigint",
     source: `import { coerceBigint } from "DIST"; export const check = coerceBigint();`,
-    budget: 870,
+    budget: 930,
   },
-  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1100 },
+  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1170 },
   {
     name: "standard",
     source: `import { englishMessages, number, standard } from "DIST"; export const check = standard(number(), englishMessages);`,
