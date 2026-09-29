@@ -370,6 +370,8 @@ Because a variant never sees the tag, a strict `object` works as a variant. The 
 
 `intersection(left, right)` accepts a value only when it passes both validators, reports the issues of both together, and produces the two outputs merged. Plain objects are merged key by key, recursively, and for anything else the right validator's output wins.
 
+Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` can never pass together: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
+
 ## Recursive data and JSON
 
 ### `lazy`
