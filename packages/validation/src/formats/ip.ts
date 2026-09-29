@@ -71,9 +71,13 @@ export interface IpOptions {
  *
  * @param options - Restricts the address family.
  * @returns A validator that produces the address as a string.
+ * @throws {TypeError} When `version` is given and is not `"v4"` or `"v6"`.
  */
 export function ip(options: IpOptions = {}): Validator<string> {
   const { version } = options;
+  if (version !== undefined && version !== "v4" && version !== "v6") {
+    throw new TypeError(`version must be "v4" or "v6", received "${String(version)}"`);
+  }
   return textFormat(
     version === undefined ? "ip" : `ip${version}`,
     (text) => (version !== "v6" && IPV4_PATTERN.test(text)) || (version !== "v4" && isIpv6(text)),

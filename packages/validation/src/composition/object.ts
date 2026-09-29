@@ -55,6 +55,7 @@ export interface ObjectOptions {
  * @param shape - Validator of each property.
  * @param options - How to treat properties the shape does not list.
  * @returns A validator that produces an object.
+ * @throws {TypeError} When `unknownKeys` is not `"strip"`, `"strict"` or `"passthrough"`.
  */
 export function object<TShape extends Shape>(
   shape: TShape,
@@ -62,6 +63,9 @@ export function object<TShape extends Shape>(
 ): Composed<TShape[keyof TShape], InferShape<TShape>> {
   const keys = Object.keys(shape);
   const unknownKeys = options.unknownKeys ?? "strip";
+  if (unknownKeys !== "strip" && unknownKeys !== "strict" && unknownKeys !== "passthrough") {
+    throw new TypeError(`unknownKeys must be "strip", "strict" or "passthrough", received "${String(unknownKeys)}"`);
+  }
 
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {

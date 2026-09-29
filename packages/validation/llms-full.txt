@@ -827,7 +827,7 @@ url({ protocols: ["urn"] })("urn:isbn:0451450523"); // ok
 
 ### `ip`
 
-`ip(options?)` takes `version`, `"v4"` or `"v6"`, to accept one address family only. Without it both are accepted. The `format` in the issue is `"ipv4"` or `"ipv6"` when a version is given, and `"ip"` otherwise.
+`ip(options?)` takes `version`, `"v4"` or `"v6"`, to accept one address family only. Without it both are accepted, and any other value throws a `TypeError` when the validator is created. The `format` in the issue is `"ipv4"` or `"ipv6"` when a version is given, and `"ip"` otherwise.
 
 IPv4 is four decimal parts from 0 to 255 without leading zeros, which some parsers read as octal. IPv6 is written as RFC 4291 allows: eight groups of one to four hex digits, one run of zero groups shortened to `::`, and an IPv4 address in place of the last two groups, as in `::ffff:192.0.2.1`, whose parts follow the IPv4 rule. A zone such as `%eth0` is accepted only after a link-local address (`fe80::/10`), the one place it means something.
 
@@ -861,6 +861,8 @@ The `unknownKeys` option decides what happens to input properties the shape does
 | `"strip"`       | Drop them from the output. This is the default.                                        |
 | `"strict"`      | Reject each with an `unrecognized_key` issue at the key's path, and `params: { key }`. |
 | `"passthrough"` | Copy them to the output unchanged and unchecked.                                       |
+
+Any other `unknownKeys` value, such as a misspelled `"Strict"`, throws a `TypeError` when the validator is created, instead of falling back to `"strip"`.
 
 See [Reusing shapes](#reusing-shapes) for extending, omitting and making properties optional.
 

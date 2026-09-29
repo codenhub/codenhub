@@ -69,6 +69,11 @@ describe("object", () => {
       expect(valueOf(user(input))).toEqual({ name: "Ada" });
     });
 
+    it("should reject an unknown mode when the validator is created, rather than strip", () => {
+      expect(() => object({}, { unknownKeys: "Strict" as "strict" })).toThrow(TypeError);
+      expect(() => object({}, { unknownKeys: undefined })).not.toThrow();
+    });
+
     it("should reject them in strict mode, one issue per key at the key's path", () => {
       const strict = object({ name: string() }, { unknownKeys: "strict" });
       expect(issuesOf(strict(input))).toEqual([

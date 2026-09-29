@@ -44,18 +44,18 @@ const scenarios: Scenario[] = [
     name: "object of three fields",
     source: `import { email, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });`,
-    budget: 2760,
+    budget: 2800,
   },
   {
     name: "object of three fields with messages",
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 3760,
+    budget: 3800,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 680 },
   { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 1540 },
-  { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 940 },
+  { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 1000 },
   {
     name: "datetime",
     source: `import { datetime } from "DIST"; export const check = datetime({ offset: true });`,
@@ -147,7 +147,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 8260,
+    budget: 8320,
   },
 ];
 

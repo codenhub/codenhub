@@ -27,6 +27,11 @@ describe("ip", () => {
     expect(accepts(ip({ version: "v6" }), "192.168.0.1", "::1")).toEqual([false, true]);
   });
 
+  it("should reject an unknown version when the validator is created, rather than accept both families", () => {
+    expect(() => ip({ version: "v5" as "v4" })).toThrow(TypeError);
+    expect(() => ip({ version: undefined })).not.toThrow();
+  });
+
   it("should name the format after the family in the issue", () => {
     expect(issuesOf(ip()("x"))[0]?.params).toEqual({ format: "ip" });
     expect(issuesOf(ip({ version: "v4" })("x"))[0]?.params).toEqual({ format: "ipv4" });
