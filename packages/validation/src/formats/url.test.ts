@@ -30,6 +30,29 @@ describe("url", () => {
     expect(url({ allowLocal: true })(" http://localhost").ok).toBe(false);
   });
 
+  it("should reject an authority the URL parser would rewrite: extra slashes, an empty userinfo, an escaped host", () => {
+    const rewritten = [
+      "http:///example.com",
+      "https:////example.com/a",
+      "https://@example.com",
+      "https://:@example.com",
+      "https://%65xample.com",
+      "https://ex%61mple.com/",
+    ];
+    expect(accepts(url(), ...rewritten)).toEqual(rewritten.map(() => false));
+    expect(accepts(url({ allowLocal: true }), "http:///localhost", "http://@localhost")).toEqual([false, false]);
+    expect(accepts(url(), "https://example.com/%41?b=%20#%2F", "https://example.com/@a")).toEqual([true, true]);
+  });
+
+  it("should reject a host longer than the 253 characters a domain name can have", () => {
+    const labels = (count: number): string => Array.from({ length: count }, () => "a".repeat(61)).join(".");
+    const longest = `${labels(4)}.abcde`;
+    expect(longest).toHaveLength(253);
+    expect(url()(`https://${longest}/`).ok).toBe(true);
+    expect(url()(`https://${longest}f/`).ok).toBe(false);
+    expect(url({ allowLocal: true })(`https://${labels(20)}/`).ok).toBe(false);
+  });
+
   it("should reject a host written without both slashes, which resolves as a path against a same-scheme base", () => {
     expect(accepts(url(), "https:example.com", "https:/example.com", "HTTP:example.com/a")).toEqual([
       false,

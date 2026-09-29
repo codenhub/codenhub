@@ -24,7 +24,8 @@ export const isPublicHost = (host: string): boolean =>
 const UNICODE_HOST_PATTERN = /^[\p{L}\p{M}\p{N}.-]+$/u;
 /** Any character past ASCII. */
 const NON_ASCII_PATTERN = /[\u0080-\uffff]/;
-const HOST_MAX_LENGTH = 253;
+/** The longest a domain name can be, in its ASCII form. */
+export const HOST_MAX_LENGTH = 253;
 
 /**
  * The ASCII form of a host that may be internationalized, as the URL parser writes it, so `münchen.de`
