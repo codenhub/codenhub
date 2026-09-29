@@ -65,6 +65,12 @@
     --intent-border: var(--ui-control-ink, var(--ui-ink, var(--color-control-border)));
   }
 
+  /* A bare table's lines take the rule line, as `.data-table`'s do in
+     `intent.css`. */
+  :where(table) {
+    --intent-border: var(--ui-rule-ink, var(--ui-ink, var(--color-border)));
+  }
+
   :where(hr) {
     --intent-color: currentColor;
     --intent-border: currentColor;

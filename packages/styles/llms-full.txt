@@ -657,6 +657,7 @@ Components read each with a fallback, so leaving them unset produces the default
 | `--ui-border-max`         | Ceiling on computed edge width.                                                                                                                      | `100px`                                   |
 | `--ui-ink`                | Neutral line color when no intent is set.                                                                                                            | `--color-border`                          |
 | `--ui-control-ink`        | Neutral line color of fields, selects, checkboxes, radios, and switches when no intent is set.                                                       | `--ui-ink`, then `--color-control-border` |
+| `--ui-rule-ink`           | Neutral line color of a table's frame and rules when no intent is set.                                                                               | `--ui-ink`, then `--color-border`         |
 | `--ui-rule`               | Lines inside a table. Unset draws the head and foot boundaries only; `0%` draws none; `100%` rules every row.                                        | unset                                     |
 | `--ui-shadow-x`           | Shadow horizontal offset.                                                                                                                            | `0px`                                     |
 | `--ui-shadow-y`           | Shadow vertical offset.                                                                                                                              | `0px`                                     |
@@ -675,9 +676,9 @@ Components read each with a fallback, so leaving them unset produces the default
 | `--ui-shadow-edge`        | Declared, even empty, when the shadow is the element's edge rather than its depth. Read for presence.                                                | Unset                                     |
 | `--ui-elevation`          | Unitless multiplier over shadow geometry.                                                                                                            | `1`                                       |
 | `--ui-surface-shadow`     | Complete multi-layer shadow accepted by surfaces only.                                                                                               | Unset                                     |
-| `--ui-surface-ground`     | Ground a surface sits on.                                                                                                                            | `--color-background`                      |
+| `--ui-surface-ground`     | Ground a surface, or a default or `.soft` table, sits on.                                                                                            | `--color-background`                      |
 | `--ui-bg-alpha`           | Multiplier over every fill, `.solid` included. No shipped aesthetic sets it.                                                                         | `1`                                       |
-| `--ui-backdrop`           | Backdrop filter accepted by surfaces only.                                                                                                           | `none`                                    |
+| `--ui-backdrop`           | Backdrop filter accepted by surfaces, and by a default or `.soft` table, only.                                                                       | `none`                                    |
 | `--ui-surface-image`      | A painted layer over a surface's plate: any `background-image` value. Surfaces only.                                                                 | `none`                                    |
 | `--ui-hover-transform`    | Transform while an interactive element is hovered.                                                                                                   | `none`                                    |
 | `--ui-clip`               | Structural component silhouette.                                                                                                                     | `none`                                    |
@@ -789,7 +790,7 @@ Every aesthetic's knobs reach the same way: each knob is _read_ with its default
 
 Knobs and material tokens reach in opposite directions, and telling them apart matters. A knob resolves once at the aesthetic's own class and inherits down already-resolved, so it reaches the aesthetic **from above**: setting it on the element or any ancestor works, but setting it on a _descendant_ of the aesthetic class changes nothing — the value has already been read. `--ui-radius` and the other material tokens above are read fresh by each component as it draws, so they reach **at or below** the element carrying them, which is how you round one card differently from its neighbours without touching the knob at all.
 
-Shipped aesthetics set the shared material tokens above. Every shipped aesthetic sets `--ui-ink` for its neutral line. `.glass` and `.chunky-tile` also set `--ui-control-ink`, so their controls keep a heavier line than their surfaces; the others clear it and their controls take `--ui-ink`. Intent classes still override the intent slots on each component.
+Shipped aesthetics set the shared material tokens above. Every shipped aesthetic sets `--ui-ink` for its neutral line. `.glass` and `.chunky-tile` also set `--ui-control-ink`, so their controls keep a heavier line than their surfaces; the others clear it and their controls take `--ui-ink`. `.glass` sets `--ui-rule-ink` too, so a table's lines read on its plate; the others clear it. Intent classes still override the intent slots on each component.
 
 The same knobs tune each aesthetic's [solo class](docs/usage/aesthetics.md#solo-classes), which reads them on its own element.
 
@@ -905,9 +906,10 @@ The shadow is cast in the component's own intent, so a success button throws a g
 
 - Every surface in a glass region is glass, a neutral `.card.soft`, `.panel`, and `.alert` included.
 - The glass is the ground, not the fill. A presentation keeps its whole fill, so a `.solid` button, a checked toggle, and a `.solid` card or table are opaque; the default, `.soft`, and `.ghost` panes are the frosted ones.
-- The blur applies to `.card`, `.panel`, `.alert`, and the tooltip bubble only. Controls stay solid and sit on the glass: a blur under every control of a dense cluster costs a composited layer apiece and reads as noise. Controls still take the aesthetic's radius, border, and shadow.
+- The blur applies to `.card`, `.panel`, `.alert`, the tooltip bubble, and a default or `.soft` `.data-table` only. Controls stay solid and sit on the glass: a blur under every control of a dense cluster costs a composited layer apiece and reads as noise. Controls still take the aesthetic's radius, border, and shadow.
 - Under `prefers-reduced-transparency: reduce`, glass surfaces drop the blur and become opaque.
-- Controls draw their line in the page's ink at 55% rather than the white hairline, which would erase an unchecked checkbox on a light page. It is `--ui-control-ink`; set it on the region to choose another.
+- Text controls and toggles draw their line in the page's ink at 55% rather than the white hairline, which would erase an unchecked checkbox on a light page. It is `--ui-control-ink`; set it on the region to choose another.
+- A table's frame and rules draw the page's ink at 20%, because the hairline vanishes on the table's plate. It is `--ui-rule-ink`.
 
 ## Pixel
 

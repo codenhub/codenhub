@@ -117,6 +117,7 @@
     /* The control ink glass and chunky tile name, cleared so a region nested
        inside either draws its controls in this aesthetic's own ink. */
     --ui-control-ink: initial;
+    --ui-rule-ink: initial;
 
     /* Chunky tile's heavier label, cleared so a region nested inside it keeps
        the button's and the badge's own label. */

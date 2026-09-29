@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "./fixtures";
-import { expectSameColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
+import { expectSameColor, flattenColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
 
 /* An aesthetic is a cascading class the playground puts on the preview root, so
    these read the ordinary component fixtures under a chosen aesthetic rather
@@ -630,6 +630,44 @@ test.describe("aesthetics", () => {
       const [[, soft]] = await read(BUTTONS_URL, ["btn-soft-edged-primary"]);
 
       expect(readSrgb(soft!["background-color"]!).alpha, "soft button keeps its whole tint").toBeCloseTo(0.12, 2);
+    });
+
+    /* A table is a pane of content, and next to frosted cards an opaque one read
+       as a slab -- while its `.solid` form, thinned, showed more of the backdrop
+       than its default one did. Its lines are drawn on the plate rather than at
+       its edge against the backdrop, so they take glass's rule ink: the pane
+       hairline vanished there, and `.ruled` rendered as the default. */
+    test("frosts a table and keeps its rules visible", async ({ page, browserName }) => {
+      await allowTransparency(page, browserName);
+      await page.goto(withAesthetic(TYPOGRAPHY_URL, "glass"));
+
+      const table = await readStyles(page, "data-table-default-none", BACKDROP_PROPERTIES);
+
+      expect(readBackdrop(table), "table backdrop").toContain("blur(14px)");
+      expect(readSrgb(table["background-color"]!).alpha, "table alpha").toBeLessThan(1);
+
+      const rules = await page.evaluate(() => {
+        const read = (testId: string) => {
+          const cell = document.querySelector(`[data-testid="${testId}"] tbody tr:first-child > td`)!;
+          const rule = getComputedStyle(cell).borderBottomColor;
+          const plate = getComputedStyle(cell.closest("table")!).backgroundColor;
+          return { plate, rule };
+        };
+        const probe = document.createElement("span");
+        probe.style.color = "var(--color-background)";
+        document.body.append(probe);
+        const page = getComputedStyle(probe).color;
+        probe.remove();
+
+        return { page, ruled: read("data-table-ruled"), ruleless: read("data-table-ruleless") };
+      });
+      const painted = (color: string, plate: string) => flattenColor(color, flattenColor(plate, rules.page));
+
+      expect(
+        getColorDistance(painted(rules.ruled.rule, rules.ruled.plate), flattenColor(rules.ruled.plate, rules.page)),
+        "a ruled table's rule reads on its plate",
+      ).toBeGreaterThan(20);
+      expect(isTransparent(rules.ruleless.rule), "a ruleless table draws none").toBe(true);
     });
 
     /* `.neutral` beat the control line's zero-specificity selector, so writing the

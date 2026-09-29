@@ -40,6 +40,11 @@
        on a field's 60% resting line, in light. See
        docs/internal/model.md#presentation. */
     --ui-control-ink: light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55));
+    /* Nor is a line drawn on a plate: the hairline vanished on a table's light
+       plate, and its default, `.ruled`, and `.ruleless` forms rendered as one.
+       A table's frame and rules take the theme's ink at a fifth, translucent
+       for the same reason the control line is. */
+    --ui-rule-ink: light-dark(rgb(0 0 0 / 0.2), rgb(255 255 255 / 0.2));
 
     /* The glass is the ground, not the fill. `0.8` here thinned every fill in
        the region -- a `.solid` button, a checked toggle, a `.solid` card -- so

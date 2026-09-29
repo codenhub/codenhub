@@ -92,9 +92,20 @@
      that gets soft by doing nothing. */
   &:not(.solid, .ghost) {
     --table-fill: 0%;
-    --table-head-plate: var(--color-foreground);
+    --table-head-plate: var(--table-ground-plate);
     --_fill-cap: 0%;
-    --_d-ground: var(--color-foreground);
+    --_d-ground: var(--table-ground-plate);
+
+    /* A table is a pane of content, so under an aesthetic whose surfaces are
+       glass it is glass too: the plate is the aesthetic's surface ground when
+       one is named, and the blur behind it is the one surfaces take. Head and
+       body share the plate, as they do on the page. Only this arm reads them:
+       a `.solid` table is opaque, like every `.solid`, and a `.ghost` one is
+       boundaries and type with nothing behind them to blur. */
+    --table-ground-plate: var(--ui-surface-ground, var(--color-foreground));
+
+    -webkit-backdrop-filter: var(--ui-backdrop, none);
+    backdrop-filter: var(--ui-backdrop, none);
   }
 
   /* How much rule there is between body rows, and none unless asked for. Ruling

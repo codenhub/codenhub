@@ -182,6 +182,17 @@
   --intent-border: var(--ui-control-ink, var(--ui-ink, var(--color-control-border)));
 }
 
+/* A table's lines -- its frame, its head rule, its row rules -- are drawn on a
+   plate, not at a pane's edge against whatever is behind it, so an aesthetic
+   whose neutral line is a highlight names a rule line of its own:
+   `.glass`'s white hairline vanished on the table's light plate, and the
+   default, `.ruled`, and `.ruleless` tables rendered as one. Neutral only, and
+   `.neutral` included, the way the control line above is. */
+:where(.data-table),
+.data-table.neutral {
+  --intent-border: var(--ui-rule-ink, var(--ui-ink, var(--color-border)));
+}
+
 /* The bubble a tooltip draws is the one plate in the package that is chosen
    rather than composed, so it resolves the no-intent case onto its own pair
    instead of onto the shared neutral. Composed, it was 20% of the page's
