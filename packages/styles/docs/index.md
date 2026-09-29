@@ -26,6 +26,15 @@ The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source 
 - No shipped font binaries. `.pixel`, `.chunky-tile`, `.cyber`, and `.sketch` accept a consumer-supplied font and fall back to a system stack when none is given.
 - No compatibility layer for removed tokens or classes. Breaking changes are documented, not silently aliased.
 
+## Trade-offs
+
+Known costs of the design, stated so they can be weighed before adopting it:
+
+- **Class names are short and unprefixed.** `.primary`, `.success`, `.dark`, `.light`, `.label`, `.field`, `.hint`, `.section`, `.stack`, `.flat`, and `.ghost` are global names, so another stylesheet on the same page that uses them collides with this one. The package sits in cascade layers, so your own unlayered CSS wins a collision, but a third-party library's styles for the same name still meet the package's.
+- **The complete stylesheets are large before compression.** Minified, `@codenhub/styles` is about 183 KB, `/native` about 251 KB, and `/components` about 145 KB; served compressed they are about 15 KB, 18 KB, and 12 KB with gzip. The repetition that compression removes is the composition every component carries. Import the narrowest entrypoint that covers a page; see [Setup → Import paths](./setup.md#import-paths).
+- **`--color-foreground` is a surface tone, not a text colour.** It is the plate a step off the page that a quiet card or panel rests on. The text colour is `--color-text`.
+- **The success, warning, destructive, and info hover tones are fixed values.** `--color-success-hover` and its three siblings are precomputed rather than mixed from their base colour, because mixing them live crashed WebKit. Overriding `--color-success` alone leaves its hover on the old hue, so retheme the whole family; see [Theming → Color tokens](./usage/theming.md#color-tokens).
+
 ## Next steps
 
 - [Setup](./setup.md): Install the package, choose an entrypoint, and render a first component.
