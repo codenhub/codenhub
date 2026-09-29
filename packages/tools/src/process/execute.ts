@@ -6,6 +6,8 @@ const CMD_ESCAPE = /[\s"&()<>^|%]/g;
 const WINDOWS_COMMAND_QUOTING_REQUIRED = /[\s"&()<>^|%]/;
 const WINDOWS_INVOCATION_VARIABLE = "CODENHUB_INVOCATION";
 const FORCE_KILL_GRACE_MS = 5000;
+const PROCESS_TABLE_TIMEOUT_MS = 2000;
+const PROCESS_TABLE_MAX_BYTES = 16 * 1024 * 1024;
 
 /** A resolved child process invocation. */
 export interface CommandSpec {
@@ -235,7 +237,13 @@ function killProcessTree(processId: number, kill: (signal: NodeJS.Signals) => vo
   // children are re-parented and no longer traceable to it. A child spawned in
   // its own process group would be simpler to kill, but would also stop
   // receiving the terminal's Ctrl+C, so an interrupted run would leave it behind.
-  const snapshot = spawnSync("ps", ["-A", "-o", "pid=,ppid="], { encoding: "utf8" });
+  // Bounded because it runs synchronously: a `ps` that stalled would stall every
+  // other run with it. A failed or truncated snapshot falls back to the root alone.
+  const snapshot = spawnSync("ps", ["-A", "-o", "pid=,ppid="], {
+    encoding: "utf8",
+    maxBuffer: PROCESS_TABLE_MAX_BYTES,
+    timeout: PROCESS_TABLE_TIMEOUT_MS,
+  });
   const descendants = snapshot.status === 0 ? listDescendants(processId, snapshot.stdout) : [];
   kill("SIGTERM");
   signalAll(descendants, "SIGTERM");
