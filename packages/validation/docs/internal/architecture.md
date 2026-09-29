@@ -120,6 +120,20 @@ The package has no dependencies, and it must never depend on another workspace p
 
 Packages inside this repository that validate are meant to take it as a `devDependency` and have their build inline the validators they use, so a published package ships only that code and its own consumers never see this package or its version. `docs/specs/packages-lifecycle.md` requires anything reachable from a published entry point to be a `dependency` or a `peerDependency`, so `hub check` accepts a declared exception: a `codenhub.bundled` list in `package.json` naming devDependencies that the build inlines, described in that spec. Listing a name is a promise about the build, and `hub check` fails when the built JavaScript or declarations still name it. The rule is owned by the tooling, not by this package.
 
+## What adopting costs
+
+The claim that a consumer pays only for what it uses was measured on a real workspace package that validates its own configuration. It took the package as a bundled devDependency and replaced about 80 lines of hand-written checks with eight validators (`array`, `boolean`, `object`, `optional`, `pipe`, `refine`, `string`, `unknown`) and `formatIssue` and `formatPath`. Minified and gzipped, across every entry point and chunk, it went from 5.6 kB to 8.3 kB: +2.7 kB, about +48%. The hand-written checks were about 0.5 kB.
+
+The claim held in the sense that matters for correctness: the built output contained none of the validators the package did not use, no coercion code and no Standard Schema adapter, and `hub check` found no leak. It did not hold in the sense of being small for a package that only checks a few options. Where the bytes went:
+
+- **The validators, about 1.9 kB**, of which about 0.6 kB is the core every validator shares: reporting the received type, building issues, and the sync-until-async plumbing. `string` alone is close to 1 kB because its options are all in one function, so a consumer that uses `min` still carries `pattern`, `startsWith` and the rest.
+- **The built-in English wording, about 1.0 kB.** `formatIssue` carries the wording for every issue a built-in can report, and it cannot be shaken per code, so a consumer that words its own issues still bundles it.
+- **The consumer's own glue, about 0.3 kB.**
+
+Two consequences follow. First, hand-written checks are cheaper in bytes for a handful of options, and the package earns its place through consistency and shared behavior rather than size, so "lightweight" holds per validator and not for a package that validates little. Second, inlining copies the shared core into every package that inlines it: an application that installs several such packages carries one copy per package, where a regular dependency would be deduplicated by the application's bundler. Inlining buys isolation from this package's version, and that is worth revisiting once the API is 1.0.
+
+Gaps the migration exposed, none of them needed by the 0.1.0 release conditions: there is no leaf for function-valued options, which are common in configuration, so the consumer wrote one with `refine`; a validator cannot carry a fixed message of its own, so per-field wording goes through `refine`'s issue or a message map keyed by code; and a message that needs the offending value or a sibling name cannot be built by a validator.
+
 ## Coercion
 
 A coercing validator is a strict validator behind a converter: `coerceNumber(options)` builds `number(options)` once, converts the input, and hands the converted value to it. So the strict validator owns every constraint and every option check, and the coercing one adds only the conversion. Each is its own module and its own export, so a consumer that never coerces does not bundle the conversion code, which is why coercion is not an option on the strict validators.

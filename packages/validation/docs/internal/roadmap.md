@@ -55,9 +55,9 @@ Everything below exists, works in synchronous and asynchronous form where it com
 
 `hub check` accepts a declared `codenhub.bundled` list of devDependencies that a package's build inlines, and fails when the built output still names one. `docs/specs/packages-lifecycle.md` and `docs/tooling.md` describe it. A package can take this one as a devDependency without an exception per package.
 
-### Adoption proof
+### Adoption proof (done)
 
-The claim that a package pays only for what it uses is proved once, on a real workspace package, before the release. One package that validates values with hand-written checks inlines this package as a devDependency instead. Its published bundle contains only the validators it uses, its size is recorded, `hub check` passes, and its tests still pass. Which package is chosen when the validators it needs exist; the choice, and the migration of any other package, is made and paid for by that package's own release, and is not tracked here.
+One workspace package that validated its configuration with hand-written checks now inlines this package as a devDependency instead. Its published bundle contains only the validators it uses, `hub check` passes, and its tests pass. The cost was measured and is recorded in [architecture.md](architecture.md), where the result is more nuanced than the claim: the package tree-shakes correctly, and a consumer that validates little still pays about 2.7 kB gzipped.
 
 ### Release
 
@@ -67,9 +67,8 @@ The claim that a package pays only for what it uses is proved once, on a real wo
 
 Each step ends with the tree green (`pnpm verify validation`) and the docs describing exactly what exists.
 
-1. **Foundation, leaves, formats, composition, coercion and interop** (landed). Result, issue and path model, sync-until-async plumbing, `is`, messages, and the first vertical slice: `string`, `number`, `boolean`, `email`, `object`, `optional`, `pipe`, `refine`. With the consumer-types and bundle-size tests, so the shape is proved before the rest is ported. Then the remaining leaves and every format, porting the edge cases the previous design had already found: public-host checks, calendar-date validity, ip and datetime patterns. Then the collections, wrappers, unions, `lazy`, `json` and `partial`, with asynchronous behavior tested for each composer, including that issue order never depends on which promise settles first. Then the five coercing validators and the Standard Schema adapter, and the `codenhub.bundled` support in `hub check`.
-2. **Adoption proof.** One package migrated and measured.
-3. **Close-out.** Public docs and migration table completed, changelog written, generated files refreshed, release cut.
+1. **Foundation, leaves, formats, composition, coercion and interop** (landed). Result, issue and path model, sync-until-async plumbing, `is`, messages, and the first vertical slice: `string`, `number`, `boolean`, `email`, `object`, `optional`, `pipe`, `refine`. With the consumer-types and bundle-size tests, so the shape is proved before the rest is ported. Then the remaining leaves and every format, porting the edge cases the previous design had already found: public-host checks, calendar-date validity, ip and datetime patterns. Then the collections, wrappers, unions, `lazy`, `json` and `partial`, with asynchronous behavior tested for each composer, including that issue order never depends on which promise settles first. Then the five coercing validators and the Standard Schema adapter, and the `codenhub.bundled` support in `hub check`. Then one package adopting the validators, measured.
+2. **Close-out.** Public docs and migration table completed, changelog written, generated files refreshed, release cut.
 
 ## Versioning until 1.0
 
@@ -81,6 +80,15 @@ The plan is that 0.1.0 is the API, and everything after it is a 0.1.x release: f
 - Validators in this package have been used by more than one package and by at least one app or site validating forms or an integration, and what they found is fixed.
 - The public docs have not needed a correction to what an existing validator does.
 - No document under `docs/internal/` is still a `DRAFT`.
+
+## Later / Possible
+
+These came out of measuring an adopter and are not conditions for 0.1.0. Each is additive, so it fits a 0.1.x release, but the first two change what the package costs and are the maintainer's call.
+
+- **Separable built-in wording.** Ship the English wording as a value a consumer imports and passes to `formatIssue`, so a consumer that words its own issues does not bundle about 1.0 kB gzipped it never uses. It changes what `formatIssue(issue)` returns without an argument.
+- **A slimmer shared core.** The reporting of the received type and the issue building are about 0.6 kB gzipped in every consumer, and could be smaller.
+- **A leaf for function-valued options.** A `func()` validator, since callbacks are common in configuration.
+- **A fixed message on a validator.** A way to give one validator its own wording without a code-keyed map.
 
 ## Not Planned
 
