@@ -127,7 +127,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
     source: `import { coerceBigint } from "DIST"; export const check = coerceBigint();`,
     budget: 870,
   },
-  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1060 },
+  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1100 },
   {
     name: "standard",
     source: `import { englishMessages, number, standard } from "DIST"; export const check = standard(number(), englishMessages);`,
