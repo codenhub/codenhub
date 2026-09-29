@@ -1,4 +1,8 @@
-import { execute } from "../process/execute.ts";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { type CommandOutcome, type CommandSpec, execute } from "../process/execute.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import type { ReadinessCheck } from "./readiness.ts";
 
@@ -86,14 +90,34 @@ export function distTagForVersion(version: string): string | undefined {
   return preRelease.length > 0 ? "next" : undefined;
 }
 
-/** Runs `npm publish` for one package. Injected by tests. */
+/** Publishes one package. Injected by tests. */
 export type PublishRunner = (
   workspacePackage: WorkspacePackage,
   timeoutMs?: number,
 ) => Promise<{ isSuccess: boolean; output: string }>;
 
+/** Runs one child process for {@link createPublishRunner}. Injected by tests. */
+export type PublishStepRunner = (spec: CommandSpec, timeoutMs?: number) => Promise<CommandOutcome>;
+
+const PREPUBLISH_SCRIPT = "prepublishOnly";
+const TARBALL_EXTENSION = ".tgz";
+
+const runStep: PublishStepRunner = async (spec, timeoutMs) => execute(spec, { stdio: "pipe", timeoutMs });
+
 /**
- * Publishes one package with npm.
+ * Creates the runner that packs a package with pnpm and publishes the tarball with npm.
+ *
+ * Neither tool can do both halves. `npm publish` on a directory ships the
+ * manifest as written, so a `workspace:*` or `catalog:` range reaches the
+ * registry verbatim and the version cannot be installed; `pnpm pack` replaces
+ * those ranges with the versions they resolve to. pnpm cannot do the OIDC
+ * exchange npm trusted publishing depends on, so npm still does the publish,
+ * handed the tarball pnpm built.
+ *
+ * Publishing a tarball runs none of its lifecycle scripts, so the package's
+ * `prepublishOnly` is run first, the step `npm publish` on a directory would
+ * have run itself. `docs/specs/packages-lifecycle.md` requires it to stay
+ * self-contained for exactly this: it runs outside `hub`'s build ordering.
  *
  * A pre-release version is published under the `next` dist-tag so it does not
  * take `latest` from the current stable release; see {@link distTagForVersion}.
@@ -102,22 +126,54 @@ export type PublishRunner = (
  * generates a provenance attestation on its own, and the flag is rejected
  * outside a supported CI provider — passing it would buy nothing in the
  * workflow and break the same command on a maintainer's machine.
- * @param workspacePackage Package to publish.
- * @param timeoutMs Milliseconds before npm is killed, or `undefined` to wait indefinitely.
- * @returns Whether npm succeeded, with its combined output.
+ * @param run Child process runner, defaulting to {@link execute}.
+ * @returns Runner reporting whether every step succeeded, with their combined output.
  */
-export const runNpmPublish: PublishRunner = async (workspacePackage, timeoutMs) => {
-  const distTag = distTagForVersion(String(workspacePackage.manifest.version));
-  const outcome = await execute(
-    {
-      args: ["publish", "--access", "public", ...(distTag === undefined ? [] : ["--tag", distTag])],
-      command: "npm",
-      cwd: workspacePackage.directory,
-    },
-    { stdio: "pipe", timeoutMs },
-  );
-  return { isSuccess: outcome.isSuccess, output: outcome.output ?? "" };
-};
+export function createPublishRunner(run: PublishStepRunner = runStep): PublishRunner {
+  return async (workspacePackage, timeoutMs) => {
+    const cwd = workspacePackage.directory;
+    const outputs: string[] = [];
+    const step = async (spec: CommandSpec): Promise<boolean> => {
+      const outcome = await run(spec, timeoutMs);
+      outputs.push(outcome.output ?? "");
+      return outcome.isSuccess;
+    };
+    const result = (isSuccess: boolean) => ({ isSuccess, output: outputs.filter((text) => text !== "").join("\n") });
+
+    if (
+      workspacePackage.scripts[PREPUBLISH_SCRIPT] !== undefined &&
+      !(await step({ args: ["run", PREPUBLISH_SCRIPT], command: "pnpm", cwd }))
+    ) {
+      return result(false);
+    }
+
+    const destination = await mkdtemp(join(tmpdir(), "codenhub-publish-"));
+    try {
+      if (!(await step({ args: ["pack", "--pack-destination", destination], command: "pnpm", cwd }))) {
+        return result(false);
+      }
+      const tarballs = (await readdir(destination)).filter((name) => name.endsWith(TARBALL_EXTENSION));
+      if (tarballs.length !== 1) {
+        outputs.push(`Expected one tarball from \`pnpm pack\` in ${destination}, found ${tarballs.length}.`);
+        return result(false);
+      }
+      const distTag = distTagForVersion(String(workspacePackage.manifest.version));
+      const tarball = join(destination, tarballs[0] as string);
+      return result(
+        await step({
+          args: ["publish", tarball, "--access", "public", ...(distTag === undefined ? [] : ["--tag", distTag])],
+          command: "npm",
+          cwd,
+        }),
+      );
+    } finally {
+      await rm(destination, { force: true, recursive: true });
+    }
+  };
+}
+
+/** Publishes one package through {@link createPublishRunner} with real child processes. */
+export const runNpmPublish: PublishRunner = createPublishRunner();
 
 /** Reads the version a registry currently serves for a package. Injected by tests. */
 export type RegistryReader = (workspacePackage: WorkspacePackage, timeoutMs?: number) => Promise<string | undefined>;

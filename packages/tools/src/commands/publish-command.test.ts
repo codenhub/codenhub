@@ -211,7 +211,7 @@ describe("hub publish", () => {
       ["--from-tag=@codenhub/error@1.0.0", "--dry-run"],
     );
 
-    expect(result.output).toContain("would run: npm publish --access public (in");
+    expect(result.output).toContain("would run: pnpm pack, then npm publish <tarball> --access public (in");
     expect(result.published).toEqual([]);
     expect(result.exitCode).toBe(EXIT_SUCCESS);
   });
@@ -222,7 +222,7 @@ describe("hub publish", () => {
       ["--from-tag=@codenhub/error@1.0.0-beta.1", "--dry-run"],
     );
 
-    expect(result.output).toContain("would run: npm publish --access public --tag next (in");
+    expect(result.output).toContain("would run: pnpm pack, then npm publish <tarball> --access public --tag next (in");
     expect(result.exitCode).toBe(EXIT_SUCCESS);
   });
 

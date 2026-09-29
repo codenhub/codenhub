@@ -183,7 +183,7 @@ export function createPublishCommand(resolver?: CommandResolver, options: Publis
         const distTagArgs = distTag === undefined ? "" : ` --tag ${distTag}`;
         if (context.options.isDryRun) {
           context.reporter.info(
-            `  would run: npm publish --access public${distTagArgs} (in ${workspacePackage.location})`,
+            `  would run: pnpm pack, then npm publish <tarball> --access public${distTagArgs} (in ${workspacePackage.location})`,
           );
           return;
         }
