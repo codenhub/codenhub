@@ -943,7 +943,9 @@ An earlier draft generated a `@custom-variant role-action` per role so an aesthe
 
 A treatment neither of Tier 2's two options reaches -- a specular highlight, a scanline, a corner fold that is not a value at all -- sometimes wants a `::before` or `::after` of its own, and CSS caps every element at two. Most components spend neither: `.alert`, `.btn`, `.badge`, `.card`, `.panel`, `.kbd`/`.code`/`.pre`, `.quote`, `.data-table`, `.tooltip-bubble`, `.skeleton`, and the divider all reach an aesthetic through tokens or a real child element (0.2.0 moved the last three off pseudo-elements for exactly this), so both slots sit open for whichever future aesthetic needs one.
 
-Four do not:
+Three cannot host one at all. `.ipt`, `.textarea`, and `.select` are fields on `<input>`, `<textarea>`, and `<select>`, and none of the three generates a `::before` or `::after` in any engine -- measured in Chromium, Firefox, and WebKit, where a checkbox or radio `<input>`, a `<button>`, an `<hr>`, and a `<table>` all do. A treatment that needs a pseudo-element does not reach a field, and says so where it ships; `.input-group` is a `<div>` with both slots open, so a grouped field is reachable through its group.
+
+Four spend theirs:
 
 | Component                        | Spends                                                                                   | Free       |
 | -------------------------------- | ---------------------------------------------------------------------------------------- | ---------- |
