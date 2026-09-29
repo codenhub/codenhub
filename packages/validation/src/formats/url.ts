@@ -15,9 +15,11 @@ const UNPARSED_CHARACTER_PATTERN = /[\u0000-\u0020\u007f\\]/;
  * A scheme, exactly two slashes, then a non-empty authority as the parser keeps it. The parser supplies
  * missing slashes for http and https and skips extra ones, but against a base on the same scheme
  * "https:example.com" is a path. It also drops a userinfo ending in `@`, empty or not, and decodes a
- * `%` escape in the host, so neither can be in a host that is returned as it came.
+ * `%` escape in the host, so neither can be in a host that is returned as it came. The authority is
+ * captured, since the parser also maps it through NFKC, and one that mapping changes is a second
+ * spelling of another host.
  */
-const AUTHORITY_PATTERN = /^[^:]+:\/\/[^/?#@%]+(?:[/?#]|$)/;
+const AUTHORITY_PATTERN = /^[^:]+:\/\/([^/?#@%]+)(?:[/?#]|$)/;
 
 /** A URL scheme as RFC 3986 writes it, without its colon. */
 const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*$/i;
@@ -50,7 +52,8 @@ export interface UrlOptions {
  * Text the URL parser would have to clean up is rejected rather than accepted as written:
  * surrounding or embedded whitespace, control characters such as line breaks, backslashes, a host
  * without both slashes before it, as in `https:example.com`, or with more than two, an `@` before the
- * host even with nothing in front of it, and a percent-escape in the host. A host longer than 253
+ * host even with nothing in front of it, a percent-escape in the host, and a host not in the NFKC form
+ * the parser reads it in, such as one with fullwidth or decomposed letters. A host longer than 253
  * characters is rejected too, with `allowLocal` as well.
  *
  * @example
@@ -84,8 +87,10 @@ export function url(options: UrlOptions = {}): Validator<string> {
     if (parsed.host === "") {
       return isHostlessUrl(scheme, text.slice(parsed.protocol.length), allowLocal);
     }
+    const authority = AUTHORITY_PATTERN.exec(text)?.[1];
     return (
-      AUTHORITY_PATTERN.test(text) &&
+      authority !== undefined &&
+      authority.normalize("NFKC") === authority &&
       parsed.hostname.length <= HOST_MAX_LENGTH &&
       (allowLocal || isPublicHost(parsed.hostname))
     );

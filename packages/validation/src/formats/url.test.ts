@@ -44,6 +44,12 @@ describe("url", () => {
     expect(accepts(url(), "https://example.com/%41?b=%20#%2F", "https://example.com/@a")).toEqual([true, true]);
   });
 
+  it("should reject a host the URL parser would rewrite before reading it, such as fullwidth or decomposed letters", () => {
+    const rewritten = ["https://\uff45xample.com", "https://mu\u0308nchen.de/", "https://\ufb01sh.com"];
+    expect(accepts(url(), ...rewritten)).toEqual([false, false, false]);
+    expect(accepts(url(), "https://m\u00fcnchen.de/", "https://example.com/\uff45")).toEqual([true, true]);
+  });
+
   it("should reject a host longer than the 253 characters a domain name can have", () => {
     const labels = (count: number): string => Array.from({ length: count }, () => "a".repeat(61)).join(".");
     const longest = `${labels(4)}.abcde`;
