@@ -60,7 +60,7 @@ export function formatIssue(issue: ValidationIssue, messages?: Messages): string
   if (issue.message !== undefined) {
     return issue.message;
   }
-  const custom = messages?.[issue.code];
+  const custom = messages !== undefined && Object.hasOwn(messages, issue.code) ? messages[issue.code] : undefined;
   if (custom === undefined) {
     return FALLBACK_MESSAGE;
   }

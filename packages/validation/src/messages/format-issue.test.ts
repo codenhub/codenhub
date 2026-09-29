@@ -221,6 +221,14 @@ describe("flatten", () => {
     });
   });
 
+  it("should not read a code from the prototype of the message map", () => {
+    for (const code of ["toString", "constructor", "hasOwnProperty", "__proto__"]) {
+      expect(formatIssue({ code, path: [] }, {})).toBe("Invalid value");
+      expect(formatIssue({ code, path: [] })).toBe("Invalid value");
+    }
+    expect(formatIssue({ code: "toString", path: [] }, { toString: "Mine" })).toBe("Mine");
+  });
+
   it("should use the message map", () => {
     const failure = fail({ path: ["a"], code: "custom" }).error;
     expect(flatten(failure, { custom: "Oops" }).fieldErrors).toEqual({ a: ["Oops"] });
