@@ -34,7 +34,8 @@ export interface UrlOptions {
  *
  * @remarks
  * Text the URL parser would have to clean up is rejected rather than accepted as written:
- * surrounding or embedded whitespace, control characters such as line breaks, and backslashes.
+ * surrounding or embedded whitespace, control characters such as line breaks, backslashes, and a
+ * host without both slashes before it, as in `https:example.com`.
  *
  * @example
  * ```ts
@@ -56,6 +57,9 @@ export function url(options: UrlOptions = {}): Validator<string> {
     const parsed = new URL(text);
     return (
       protocols.includes(parsed.protocol.slice(0, -1)) &&
+      // The parser supplies missing slashes for http and https, but against a base on the same scheme
+      // "https:example.com" is a path, so a URL with a host must be written with "//" before it.
+      (parsed.host === "" || text.startsWith("//", parsed.protocol.length)) &&
       parsed.username === "" &&
       parsed.password === "" &&
       (allowLocal || isPublicHost(parsed.hostname))

@@ -30,6 +30,16 @@ describe("url", () => {
     expect(url({ allowLocal: true })(" http://localhost").ok).toBe(false);
   });
 
+  it("should reject a host written without both slashes, which resolves as a path against a same-scheme base", () => {
+    expect(accepts(url(), "https:example.com", "https:/example.com", "HTTP:example.com/a")).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    expect(accepts(url(), "https://example.com", "HTTPS://example.com/a")).toEqual([true, true]);
+    expect(accepts(url({ protocols: ["ftp"] }), "ftp:example.com", "ftp://example.com")).toEqual([false, true]);
+  });
+
   it("should reject other protocols, embedded credentials and non-public hosts", () => {
     expect(
       accepts(
