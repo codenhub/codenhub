@@ -33,7 +33,7 @@ const pairs = object({ count: even });
 
 ### Reporting failures
 
-`fail` takes one or more issues. Each can set:
+`fail` takes one or more issues, and throws a `TypeError` for none, since a failure with no issue says nothing. Each can set:
 
 | Field     | Meaning                                                                                                                                    |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |

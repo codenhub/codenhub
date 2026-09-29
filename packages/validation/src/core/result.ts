@@ -48,8 +48,13 @@ export function pass<T>(value: T): ValidationOk<T> {
  *
  * @param issues - What went wrong. Each defaults to code `"custom"` and to the value's own location.
  * @returns A failed result holding every issue, in order.
+ * @throws {TypeError} When called without an issue, which the types already forbid.
  */
 export function fail(...issues: [IssueInput, ...IssueInput[]]): ValidationErr {
+  if (issues.length === 0) {
+    // The types forbid it, but a failure with no issue says nothing and breaks `issues[0]`.
+    throw new TypeError("fail() needs at least one issue");
+  }
   return failWith(issues.map(toIssue));
 }
 

@@ -19,6 +19,10 @@ describe("fail", () => {
     expect(fail({})).toEqual({ ok: false, error: { issues: [{ code: "custom", path: [] }] } });
   });
 
+  it("should refuse to build a failure with no issue", () => {
+    expect(() => (fail as () => unknown)()).toThrow(TypeError);
+  });
+
   it("should keep the code, path, params and message it is given", () => {
     const result = fail({ code: "username_taken", path: ["user", 0], params: { name: "ada" }, message: "Taken" });
     expect(result).toEqual({
