@@ -5,14 +5,20 @@
 }
 
 /* The one component that takes the frame of `box` and not the whole of it. The
-   border, the radius and the clip come from the box; the head tone, the cell
+   border and the plate come from the box, and the corner is a surface's, because
+   a table is a pane of content rather than a control; the head tone, the cell
    rules and the row hover are private tokens, because none of the three axes has
    a vocabulary for the inside of a table.
 
-   Its `overflow: hidden` is what keeps `border-separate` corners inside the
-   radius, and it does not compose with an aesthetic's `clip-path`: where both
-   apply, the clip wins and the corners square off. Recorded in `registry.json`
-   beside the decision. */
+   Nothing here clips the table. Chromium and WebKit lay a `<caption>` out inside
+   the table's own box while painting the plate and the frame around the rows
+   alone, so anything that acts on the whole box -- an `overflow` clip, a
+   `clip-path`, a backdrop filter, a positioned layer -- spans the caption. An
+   `overflow: hidden` rounded the caption's corners instead of the head's: the
+   head cells poked out square above a rounded plate and the caption's first
+   letter was cut. The corner cells take the table's corners instead (below),
+   which every engine draws on the rows. Recorded in `registry.json` beside the
+   decision. */
 @utility data-table {
   @apply box text-body w-full border-separate text-left;
 
@@ -187,16 +193,74 @@
   --table-row-hover: color-mix(in oklab, var(--table-hover-tone) 12%, transparent);
 
   border-spacing: 0;
-  overflow: hidden;
+
+  /* A surface's corner, as `surface` computes it: a table sits beside cards and
+     panels as a pane, and under `.cyber` it took the controls' diagonal while
+     every pane around it cut the other one. */
+  --_corner-surface: calc(var(--ui-corner-surface, var(--radius-surface)) * var(--_scale));
+  border-radius: var(
+    --ui-radius-surface,
+    calc(var(--_corner-surface) * var(--ui-corner-tl, 1)) calc(var(--_corner-surface) * var(--ui-corner-tr, 1))
+      calc(var(--_corner-surface) * var(--ui-corner-br, 1)) calc(var(--_corner-surface) * var(--ui-corner-bl, 1))
+  );
+  /* No silhouette clip either, for the caption's sake: `.pixel`'s stepped clip
+     cut the caption's corners and left the head's square. A pixel table is
+     square, which is the chip answer that aesthetic already gives. */
+  clip-path: none;
+
+  /* The corners pass down to the cells that sit in them. Each section and row
+     inherits the table's four corners -- a radius does not apply to either, but
+     it still computes and inherits -- and each corner cell takes only its own
+     corner, as a longhand, so an elliptical or bevelled corner arrives whole.
+     The first row is the head's when there is one and the first body's when
+     not, and the last row likewise the foot's or the last body's; a caption
+     and a `colgroup` are skipped. A cell spanning rows into a corner is not
+     reached, and a percentage corner resolves against the cell. */
+  & > :is(thead, tbody, tfoot),
+  & > :is(thead, tbody, tfoot) > tr {
+    border-radius: inherit;
+    corner-shape: inherit;
+  }
+
+  & > :is(thead, tbody, tfoot) > tr > * {
+    corner-shape: inherit;
+  }
+
+  & > thead > tr:first-child,
+  &:not(:has(> thead)) > tbody:first-of-type > tr:first-child {
+    & > :first-child {
+      border-start-start-radius: inherit;
+    }
+
+    & > :last-child {
+      border-start-end-radius: inherit;
+    }
+  }
+
+  & > tfoot > tr:last-child,
+  &:not(:has(> tfoot)) > tbody:last-of-type > tr:last-child {
+    & > :first-child {
+      border-end-start-radius: inherit;
+    }
+
+    & > :last-child {
+      border-end-end-radius: inherit;
+    }
+  }
 
   & caption {
     @apply text-label text-text-secondary pb-2 text-left;
   }
 
+  /* The head's plate is painted on its cells rather than on the section, so the
+     corner cells round it: a section's background ignores the cells' corners. */
   & thead,
   & tfoot {
-    background-color: var(--table-head-bg);
     color: var(--table-head-fg);
+  }
+
+  & :is(thead, tfoot) > tr > * {
+    background-color: var(--table-head-bg);
   }
 
   /* Every cell carries the hairline; what varies is whether it is painted. The
@@ -254,11 +318,13 @@
   /* Rows deliberately inherit the table's intent instead of resetting it, so a
      `.data-table.success` tints its own rows. A `<tr class="warning">` still wins,
      because an intent class on the element beats an inherited value. */
-  & tbody tr {
+  & tbody tr > * {
     transition: background-color var(--motion-duration-fast) var(--motion-ease);
   }
 
-  & tbody tr:hover {
+  /* On the cells, for the reason the head's plate is: a hovered last row keeps
+     the table's bottom corners. */
+  & tbody tr:hover > * {
     background-color: var(--table-row-hover);
   }
 

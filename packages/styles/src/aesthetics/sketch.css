@@ -108,7 +108,7 @@
   ) {
     /* The pointed outlines: controls, fields, surfaces, and chips. */
     &:is(.sketch, .sketch *):not(.sketch-rounded, .sketch-rounded *) {
-      &:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table) {
+      &:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble) {
         &:nth-child(4n + 2) {
           --ui-radius: var(--sketch-radius, 18px 240px 15px 255px / 240px 15px 255px 18px);
         }
@@ -140,7 +140,7 @@
         }
       }
 
-      &:is(.card, .panel, .alert) {
+      &:is(.card, .panel, .alert, .data-table) {
         &:nth-child(4n + 2) {
           --ui-radius-surface: var(--sketch-radius-surface, 4px 75px 5px 80px / 75px 3px 80px 4px);
         }
@@ -171,7 +171,7 @@
 
     /* The rounded outlines, in the same four places. */
     &:is(.sketch-rounded, .sketch-rounded *) {
-      &:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table) {
+      &:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble) {
         &:nth-child(4n + 2) {
           --ui-radius: var(--sketch-radius-rounded, 11px 25px 12px 24px / 23px 11px 22px 12px);
         }
@@ -203,7 +203,7 @@
         }
       }
 
-      &:is(.card, .panel, .alert) {
+      &:is(.card, .panel, .alert, .data-table) {
         &:nth-child(4n + 2) {
           --ui-radius-surface: var(--sketch-radius-surface-rounded, 17px 36px 18px 34px / 33px 16px 32px 17px);
         }

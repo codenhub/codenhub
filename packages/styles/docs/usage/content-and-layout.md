@@ -131,6 +131,10 @@ Use `.table-wrap` around `.data-table` when table width may exceed its container
 </div>
 ```
 
+A table takes the surface corner, like a card beside it. Nothing clips it: the four corner cells take the corners, so a `<caption>` sits above the table untouched in every engine. A cell that spans rows down into a bottom corner leaves that corner square.
+
+`.table-wrap` scrolls, and a scroll container clips whatever paints outside it, so an aesthetic's glow or shadow around a wrapped table is cut at the wrapper's edges.
+
 ## Surfaces
 
 | Class          | Purpose                                                                               |

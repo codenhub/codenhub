@@ -35,8 +35,67 @@ test("styles complete quiet tables while preserving table layout", async ({ page
   expect(styles.captionAlign).toBe("left");
   expect(Number.parseFloat(styles.cellPadding)).toBeGreaterThan(0);
   expect(Number(styles.headingWeight)).toBeGreaterThanOrEqual(500);
-  expect(styles.overflow).toBe("hidden");
-  expect(styles.radius).toBe("8px");
+  /* Nothing clips the table: in Chromium and WebKit the table's box holds its
+     caption, so a clip rounded the caption rather than the head. The corner is
+     a surface's, and the corner cells take it. */
+  expect(styles.overflow).toBe("visible");
+  expect(styles.radius).toBe("14px");
+});
+
+/* The corners reach the rows through the corner cells. A clip on the table
+   used to do it, and in Chromium and WebKit the table's box includes its
+   caption, so the clip rounded the caption's corners and left the head's
+   square. Each shape is checked with and without a caption and a foot. */
+test("rounds a table's corners on its corner cells", async ({ page }) => {
+  await page.goto(TYPOGRAPHY_URL);
+
+  const cases = await page.evaluate(() => {
+    const host = document.createElement("div");
+
+    host.innerHTML =
+      '<table class="data-table" data-case="full" style="--ui-radius-surface: 3px 5px 7px 9px"><caption>C</caption>' +
+      "<thead><tr><th>a</th><th>b</th></tr></thead><tbody><tr><td>c</td><td>d</td></tr></tbody>" +
+      "<tfoot><tr><td>e</td><td>f</td></tr></tfoot></table>" +
+      '<table class="data-table" data-case="body" style="--ui-radius-surface: 3px 5px 7px 9px"><caption>C</caption>' +
+      "<tbody><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></tbody></table>";
+    document.body.append(host);
+
+    const corners = (cell: Element) => {
+      const style = getComputedStyle(cell);
+
+      return [
+        style.borderTopLeftRadius,
+        style.borderTopRightRadius,
+        style.borderBottomRightRadius,
+        style.borderBottomLeftRadius,
+      ].join(" ");
+    };
+
+    return [...host.querySelectorAll("table")].map((table) => {
+      const rows = [...table.rows];
+      const first = rows[0]!;
+      const last = rows.at(-1)!;
+
+      return {
+        name: table.dataset.case,
+        topStart: corners(first.cells[0]!),
+        topEnd: corners(first.cells[1]!),
+        bottomEnd: corners(last.cells[1]!),
+        bottomStart: corners(last.cells[0]!),
+        inner: rows.length > 2 ? corners(rows[1]!.cells[0]!) : "0px 0px 0px 0px",
+        overflow: getComputedStyle(table).overflow,
+      };
+    });
+  });
+
+  for (const table of cases) {
+    expect(table.topStart, table.name).toBe("3px 0px 0px 0px");
+    expect(table.topEnd, table.name).toBe("0px 5px 0px 0px");
+    expect(table.bottomEnd, table.name).toBe("0px 0px 7px 0px");
+    expect(table.bottomStart, table.name).toBe("0px 0px 0px 9px");
+    expect(table.inner, table.name).toBe("0px 0px 0px 0px");
+    expect(table.overflow, table.name).toBe("visible");
+  }
 });
 
 test("styles keyboard and quotation content", async ({ page }) => {
@@ -398,16 +457,16 @@ test("reads presentation on key caps and tables", async ({ page }) => {
 
   const styles = await page.evaluate(() => {
     const get = (testId: string) => getComputedStyle(document.querySelector(`[data-testid="${testId}"]`)!);
-    /* The plate is on `thead`, not on the cells inside it. Read off a `th` this
-       reports `rgba(0, 0, 0, 0)` for every table there has ever been, which is a
-       green assertion about nothing. */
-    const head = getComputedStyle(document.querySelector('[data-testid="data-table-success"] thead')!);
+    /* The plate is on the head's cells, so the corner cells can round it. Read
+       off the section this reports `rgba(0, 0, 0, 0)`, which is a green
+       assertion about nothing. */
+    const head = getComputedStyle(document.querySelector('[data-testid="data-table-success"] thead th')!);
     /* Classed `.ghost` on purpose: the component rests at `soft`, so an unclassed
        table draws the plate and `.ghost` is what asks for none. */
     const ghost = document.querySelector('[data-testid="data-table"]')!.cloneNode(true) as HTMLElement;
     ghost.className = "data-table ghost";
     document.body.append(ghost);
-    const ghostHead = getComputedStyle(ghost.querySelector("thead")!);
+    const ghostHead = getComputedStyle(ghost.querySelector("thead th")!);
     const resolve = (value: string) => {
       const probe = document.createElement("span");
 

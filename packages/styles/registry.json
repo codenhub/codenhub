@@ -80,11 +80,11 @@
     "--ui-corner": {
       "readers": ["badge", "box", "checkbox", "code", "kbd", "progress", "skeleton", "switch", "tooltip-icon"]
     },
-    "--ui-corner-surface": { "readers": ["surface"] },
-    "--ui-corner-tl": { "readers": ["box", "skeleton", "surface", "tooltip-bubble"] },
-    "--ui-corner-tr": { "readers": ["box", "skeleton", "surface", "tooltip-bubble"] },
-    "--ui-corner-br": { "readers": ["box", "skeleton", "surface", "tooltip-bubble"] },
-    "--ui-corner-bl": { "readers": ["box", "skeleton", "surface", "tooltip-bubble"] },
+    "--ui-corner-surface": { "readers": ["data-table", "surface"] },
+    "--ui-corner-tl": { "readers": ["box", "data-table", "skeleton", "surface", "tooltip-bubble"] },
+    "--ui-corner-tr": { "readers": ["box", "data-table", "skeleton", "surface", "tooltip-bubble"] },
+    "--ui-corner-br": { "readers": ["box", "data-table", "skeleton", "surface", "tooltip-bubble"] },
+    "--ui-corner-bl": { "readers": ["box", "data-table", "skeleton", "surface", "tooltip-bubble"] },
     "--ui-radius": {
       "readers": [
         "badge",
@@ -99,7 +99,7 @@
         "tooltip-icon"
       ]
     },
-    "--ui-radius-surface": { "readers": ["surface"] },
+    "--ui-radius-surface": { "readers": ["data-table", "surface"] },
     "--ui-line-style": { "readers": ["box", "data-table", "divider", "progress"] },
     "--ui-rule-style": { "readers": ["data-table", "divider"] },
     "--ui-halo-blur": { "readers": ["box"] },
@@ -412,7 +412,7 @@
       "renamedFrom": "table",
       "renameReason": "`.table` is a Tailwind static utility for `display: table`; the package's version replaced it for every consumer.",
       "composition": "frame",
-      "compositionReason": "Takes its border, radius and clip from `box` and paints its head, cell rules and row hover from private tokens, which have no equivalent on the three axes. Its `overflow: hidden` over `border-separate` also does not compose with an aesthetic's `clip-path`.",
+      "compositionReason": "Takes its border and plate from `box` and a surface's corner, since it is a pane of content, and paints its head, cell rules and row hover from private tokens, which have no equivalent on the three axes. Nothing clips it: Chromium and WebKit lay a caption out inside the table's own box, so a clip, a `clip-path`, or an `overflow` rounded the caption rather than the rows. The corner cells take the corners instead, and a pixel table is square.",
       "axes": ["fill", "edge"]
     },
     {

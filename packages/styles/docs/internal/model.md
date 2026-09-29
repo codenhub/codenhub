@@ -668,7 +668,7 @@ Six of them, and the registry says which rather than leaving it to be found by r
 
 The cost is that each reimplements the fill and the edge blend rather than taking them, and every copy has to agree with `box`: the ordering fix that stopped `.edgeless` painting a ring over its own fill had to be made in `box`, then again in `.quote` because the second copy was not where anyone looked, and now a third time in `.progress`. Each registry entry says so, so the next edge change knows how many places it has.
 
-`.data-table` takes the frame -- border, radius, clip -- and paints its head, cell rules and row hover from private tokens, because none of those have an equivalent on the three axes, and because its `overflow: hidden` over `border-separate` does not compose with an aesthetic's `clip-path`.
+`.data-table` takes the frame -- border and plate, with a surface's corner rather than a control's, since it is a pane of content -- and paints its head, cell rules and row hover from private tokens, because none of those have an equivalent on the three axes. Nothing clips it. Chromium and WebKit lay a `<caption>` out inside the table's own box while painting the plate and the frame around the rows alone, so anything acting on the whole box spans the caption: an `overflow: hidden` rounded the caption's corners and left the head's square, and cut the caption's first letter. The corner cells take the table's corners instead -- each section and row inherits them, and each corner cell takes its own as a longhand -- and the head plate and row hover are painted on cells, which those corners round. A cell spanning rows into a corner is not reached. Glass's backdrop and liquid glass's layers still act on the whole box, so under either a caption sits on the pane in those two engines; that is recorded rather than worked around.
 
 Both carry the reason in `registry.json` next to the decision, so a third one has to be argued for in the same place rather than appearing quietly in a stylesheet.
 
@@ -794,7 +794,7 @@ The lens is not a warp. Its displacement map is built inside the filter from the
 - **The two are separate layers so an engine that cannot draw the lens keeps the blur.** A filter list with a reference it cannot use is dropped whole; in one list, the lens would take the blur down with it where it does not render. Whether Firefox and Safari drop the list was not measurable here -- neither engine's test build draws `backdrop-filter` at all -- so the split is the precaution that makes the answer not matter.
 - **The rim and the sheen are on the lens layer**, the topmost, because the surface's own box shadow sits under the layers and would blur with the page.
 - The layers are a selector list glass owns, [R3](#rules-for-aesthetics)'s exception, recorded in the registry: a pseudo-element is not a value a token reaches. Anchoring them writes `position: relative` and `isolation: isolate` on the surface, which no surface writes itself; the tooltip bubble's own `absolute` wins. A region of another aesthetic nested inside, or of plain glass, keeps its own material and takes no layers.
-- Surfaces and the frosted table only, as under glass. The fields cannot host a pseudo-element; see [the budget](#pseudo-element-budget).
+- Surfaces and the frosted table only, as under glass. The fields cannot host a pseudo-element; see [the budget](#pseudo-element-budget). In Chromium and WebKit a table's box holds its caption, so the layers cover the caption as well as the rows.
 - Lighter than glass: `blur(2px) saturate(1.8)`, a 30% ground where glass's is 45%, and corners of 1rem and 1.5rem through glass's own knobs. The lens needs detail left to bend. Reduced transparency drops the blur and the lens and makes the ground opaque; forced colours draw no layer.
 - `.glass-solo.glass-liquid` paints the same pane on a solo element. Its anchor is the one layered declaration a solo class makes, so an element's own `fixed` or `absolute` beats it and a toast keeps its placement.
 
@@ -818,7 +818,7 @@ An 8-bit look built from a stepped silhouette and an inset ring.
 - Corners are one unit or nothing. Chips square rather than step, because one unit off each corner of a 24px badge is a bite rather than a corner.
 - The edge is a one-unit inset ring, the same size as the cut, so the corner is covered and the line does not read as broken there.
 - The ring answers the edge axis, through `--ui-shadow-edge`. It is the border, not depth, so `.edgeless` draws none and a field's own floor keeps one.
-- No radius anywhere. `clip-path` clips a border away, so the border ceiling goes to zero and the ring does the drawing.
+- No radius anywhere. `clip-path` clips a border away, so the border ceiling goes to zero and the ring does the drawing. A table takes no clip, because the clip would span its caption, so it is square.
 - Reads `--font-pixel` and falls back to monospace. The package ships no font binary.
 
 ### `.chunky-tile`
@@ -857,7 +857,7 @@ Uneven elliptical corners, solid ink with dashed accents, and a small hard offse
 - `.sketch-rounded` is a modifier: short rounded corners, bounded in pixels so a wide element keeps straight top and bottom edges, rotated the same way. On the region or on one component.
 - A `.btn.pill` takes a rounded pill bounded to the button's half-height; badges, progress bars, and switches take their chip outline; radios and the tooltip icon stay slightly uneven circles, so a radio is never read as a checkbox.
 - Knobs `--sketch-radius`, `--sketch-radius-surface`, `--sketch-radius-pill`, `--sketch-radius-rounded`, and `--sketch-radius-surface-rounded` are read with fallbacks per [R8](#rules-for-aesthetics); a set knob replaces every step of its rotation. An explicit radius on a component wins over the rotation.
-- The edge is 1px solid through `--ui-line-style`; checkboxes are dashed, and dividers and table rules take `--ui-rule-style: dashed`. Forced colours draws them solid.
+- The edge is 1px solid through `--ui-line-style`; checkboxes are dashed, and dividers and table rules take `--ui-rule-style: dashed`. Forced colours draws them solid. A table rotates with the surfaces.
 - The shadow is a neutral 2px right-and-down offset with no blur or spread, scaled by elevation like every part-based depth cue.
 - Buttons press with `scale(0.97)`, like the plain look; reduced motion turns off that transform.
 - Reads `--font-sketch` and falls back to the platform `cursive` generic family. The package ships no font binary.
