@@ -18,6 +18,17 @@ describe("coerceNumber", () => {
     ).toEqual(Array(11).fill(false));
   });
 
+  it("should reject text holding a whole number too large to read exactly, as coerceBigint does", () => {
+    expect(codesOf(validator("12345678901234567890"))).toEqual(["invalid_type"]);
+    expect(issuesOf(validator("-9007199254740993"))[0]?.params).toEqual({
+      expected: "number",
+      received: "string",
+      coerced: true,
+    });
+    expect(valueOf(validator("9007199254740991"))).toBe(Number.MAX_SAFE_INTEGER);
+    expect(valueOf(validator(1e20))).toBe(1e20);
+  });
+
   it("should reject a long run of digits that does not end as a number in linear time", () => {
     // A pattern with two adjacent digit runs backtracks quadratically: this took seconds before.
     const start = performance.now();

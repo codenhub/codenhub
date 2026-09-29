@@ -11,8 +11,9 @@ const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
  *
  * @remarks
  * Surrounding whitespace is ignored. Empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and
- * `"NaN"` are rejected, and so are booleans, `null`, objects and arrays: `Number(true)` is `1`, and
- * silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with
+ * `"NaN"` are rejected, and so is text holding a whole number beyond `Number.MAX_SAFE_INTEGER`, which
+ * could not be read exactly (use `coerceBigint` for those). So are booleans, `null`, objects and
+ * arrays: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with
  * `invalid_type` and `coerced: true` in `params`.
  *
  * @example
@@ -38,6 +39,10 @@ export function coerceNumber(options: NumberOptions = {}): Validator<number> {
       return invalidCoercion("number", input);
     }
     const converted = Number(input.trim());
-    return Number.isFinite(converted) ? strict(converted) : invalidCoercion("number", input);
+    // A whole number past Number.MAX_SAFE_INTEGER has already lost digits, so reading it would
+    // produce a different number than the text says.
+    return Number.isFinite(converted) && (!Number.isInteger(converted) || Number.isSafeInteger(converted))
+      ? strict(converted)
+      : invalidCoercion("number", input);
   };
 }
