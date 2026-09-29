@@ -2,7 +2,8 @@
    for only the one in use: a cascading class has no static call site, so nothing
    here can be tree-shaken.
 
-   Import after the base stylesheet in either form. */
+   Import before or after the base stylesheet, in either form: every entrypoint
+   states the layer order first, so load order decides nothing. */
 @import "./neobrutalism.css";
 @import "./glass.css";
 @import "./pixel.css";

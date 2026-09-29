@@ -13,7 +13,7 @@ An aesthetic decides what a component is _made of_: its radius, border thickness
 @import "@codenhub/styles/aesthetics";
 ```
 
-Import them after the base stylesheet. `.neobrutalism` and `.pixel` replace the neutral border color, and they do so at zero specificity, so source order is what lets them win.
+Load order does not matter: the aesthetic classes sit in the `components` cascade layer, and every entrypoint declares the layer order before it uses one, so an aesthetic imported before the base stylesheet wins exactly as one imported after it. See [Setup → Cascade layers](../setup.md#cascade-layers).
 
 Like presentation, an aesthetic class cascades to any subtree:
 

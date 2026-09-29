@@ -5,7 +5,7 @@
    every outer shadow, so a clipped chamfer has nothing left to glow, and an
    inset ring cannot follow a diagonal cut the way `.pixel`'s follows its square
    one. `corner-shape` draws the corner itself, and the border, the glow, and the
-   focus outline all follow it. Load after the base stylesheet. */
+   focus outline all follow it. */
 
 /* The layer map, stated before anything uses a layer -- see `theme.css`. The
    aesthetic's token class sits in `components`, below every utility, so a
