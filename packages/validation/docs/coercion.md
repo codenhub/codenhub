@@ -43,7 +43,7 @@ Coercion is deliberately narrow, because a conversion that guesses turns a bug i
 
 A value that cannot be converted fails with `invalid_type`, and its `params` are `{ expected, received, coerced: true }`. The default message reads "Cannot convert string to number", and the value itself is never in the issue. A value that converts but then breaks a constraint fails with that constraint's own code, as for the strict validator.
 
-Date-only strings are read as UTC, and date-times without an offset are read as local time, which is how `new Date` reads them. Include an offset or `Z` in text you produce.
+Date-only strings and date-times without an offset are both read as UTC, so the result does not depend on the timezone of the machine. Include an offset or `Z` in text you produce when the moment is not UTC.
 
 ## Reading a whole environment
 

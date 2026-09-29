@@ -25,6 +25,11 @@ describe("isoDate", () => {
     ).toEqual(Array(8).fill(false));
   });
 
+  it("should accept the years 0 to 99 as the years they are, and still reject a day that does not exist", () => {
+    expect(accepts(isoDate(), "0000-01-01", "0050-06-15", "0099-12-31", "0004-02-29")).toEqual(Array(4).fill(true));
+    expect(accepts(isoDate(), "0050-02-29", "0100-02-29", "0000-13-01")).toEqual(Array(3).fill(false));
+  });
+
   it("should reject a non-string, including a Date", () => {
     expect(codesOf(isoDate()(new Date()))).toEqual(["invalid_type"]);
   });

@@ -49,6 +49,25 @@ describe("datetime", () => {
     ]);
   });
 
+  it("should accept the years 0 to 99", () => {
+    expect(accepts(datetime(), "0099-12-31T00:00:00Z", "0000-01-01T00:00:00Z")).toEqual([true, true]);
+  });
+
+  it("should keep an offset within a day's hours and minutes", () => {
+    const withOffset = datetime({ offset: true });
+    expect(
+      accepts(
+        withOffset,
+        "2026-09-28T14:30:00+02:00",
+        "2026-09-28T14:30:00-23:59",
+        "2026-09-28T14:30:00+99:99",
+        "2026-09-28T14:30:00-25:75",
+        "2026-09-28T14:30:00+02:60",
+        "2026-09-28T14:30:00+24:00",
+      ),
+    ).toEqual([true, true, false, false, false, false]);
+  });
+
   it("should reject a precision that is not a non-negative integer when the validator is created", () => {
     for (const precision of [-1, 1.5, Number.NaN]) {
       expect(() => datetime({ precision })).toThrow(RangeError);

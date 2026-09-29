@@ -3,7 +3,23 @@ import type { Validator } from "../core/types";
 import { isCalendarDate } from "../formats/calendar";
 import { date, type DateOptions } from "../primitives/date";
 
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}(?::?\d{2})?)?)?$/;
+const ISO_PATTERN =
+  /^(\d{4}-\d{2}-\d{2})(?:[T ]((?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?)(Z|[+-](?:[01]\d|2[0-3])(?::?[0-5]\d)?)?)?$/;
+
+/** Reads an ISO 8601 string as an exact moment, or returns undefined when it names none. */
+const readIso = (text: string): Date | undefined => {
+  const match = ISO_PATTERN.exec(text);
+  if (match === null || !isCalendarDate(match[1] as string)) {
+    return undefined;
+  }
+  const [, day, time, zone] = match;
+  if (time === undefined) {
+    return new Date(day as string);
+  }
+  const offset =
+    zone === undefined ? "Z" : zone.length === 3 ? `${zone}:00` : zone.replace(/^([+-]\d{2})(\d{2})$/, "$1:$2");
+  return new Date(`${day}T${time}${offset}`);
+};
 
 /**
  * Creates a validator for dates that also accepts finite timestamps in milliseconds and ISO 8601
@@ -12,9 +28,9 @@ const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?
  *
  * @remarks
  * Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends
- * on the runtime, and so is a date that does not exist such as `2026-02-30`. Date-only strings and
- * strings without an offset are read the way `new Date` reads them, that is as UTC for a date and as
- * local time for a date-time without an offset. A value that cannot be converted fails with
+ * on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`.
+ * A date without a time and a date-time without an offset are both read as UTC, so the result never
+ * depends on the timezone of the machine. A value that cannot be converted fails with
  * `invalid_type` and `coerced: true` in `params`.
  *
  * @example
@@ -39,8 +55,9 @@ export function coerceDate(options: DateOptions = {}): Validator<Date> {
     }
     if (typeof input === "string") {
       const text = input.trim();
-      if (ISO_DATE_PATTERN.test(text) && isCalendarDate(text.slice(0, 10))) {
-        return strict(new Date(text));
+      const parsed = readIso(text);
+      if (parsed !== undefined) {
+        return strict(parsed);
       }
     }
     return invalidCoercion("valid date", input);

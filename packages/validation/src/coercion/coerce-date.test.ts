@@ -16,6 +16,36 @@ describe("coerceDate", () => {
     expect(valueOf(validator(" 2026-09-28 ")).toISOString()).toBe("2026-09-28T00:00:00.000Z");
   });
 
+  it("should read a date-time without an offset as UTC, whatever the machine's timezone", () => {
+    expect(valueOf(validator("2026-09-28T14:30:00")).toISOString()).toBe("2026-09-28T14:30:00.000Z");
+    expect(valueOf(validator("2026-09-28 14:30:00.5")).toISOString()).toBe("2026-09-28T14:30:00.500Z");
+  });
+
+  it("should read the offset forms ISO 8601 allows", () => {
+    for (const text of ["2026-09-28T02:00:00+02", "2026-09-28T02:00:00+0200", "2026-09-28T02:00:00+02:00"]) {
+      expect(valueOf(validator(text)).toISOString()).toBe("2026-09-28T00:00:00.000Z");
+    }
+  });
+
+  it("should reject a time or offset that does not exist as a failed conversion", () => {
+    for (const text of [
+      "2026-09-28T25:00:00Z",
+      "2026-09-28T14:60:00Z",
+      "2026-09-28T14:30:60Z",
+      "2026-09-28T14:30:00+99:99",
+    ]) {
+      expect(issuesOf(validator(text))[0]?.params).toEqual({
+        expected: "valid date",
+        received: "string",
+        coerced: true,
+      });
+    }
+  });
+
+  it("should accept the years 0 to 99", () => {
+    expect(valueOf(validator("0050-06-15")).getUTCFullYear()).toBe(50);
+  });
+
   it("should reject free-form strings, an invalid Date, non-finite timestamps and other types", () => {
     expect(
       accepts(validator, "yesterday", "", "09/28/2026", new Date("x"), Infinity, Number.NaN, null, {}, true),

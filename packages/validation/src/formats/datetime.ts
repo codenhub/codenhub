@@ -35,7 +35,7 @@ export function datetime({ offset, precision }: DatetimeOptions = {}): Validator
     assertSize("Datetime precision", precision);
   }
   const fraction = precision === undefined ? "(?:\\.\\d+)?" : precision === 0 ? "" : `\\.\\d{${precision}}`;
-  const zone = offset === true ? "(?:Z|[+-]\\d{2}:\\d{2})" : "Z";
+  const zone = offset === true ? "(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)" : "Z";
   const pattern = new RegExp(`^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d${fraction}${zone}$`);
   return textFormat("datetime", (text) => {
     const date = pattern.exec(text)?.[1];
