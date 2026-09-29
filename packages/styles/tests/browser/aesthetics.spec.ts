@@ -603,6 +603,35 @@ test.describe("aesthetics", () => {
       expect(buttonBackdrop === "" || buttonBackdrop === "none", "button backdrop").toBe(true);
     });
 
+    /* The glass is the ground a partial fill is painted over, not a thinning of
+       the fill: how much colour a presentation asks for is presentation's
+       question. `--ui-bg-alpha: 0.8` used to answer it here, and every `.solid`
+       in the region -- button, checked toggle, card -- showed the backdrop
+       through it. A neutral `.solid` is opaque too, because the cap that stops
+       its ink rests it on the page background. */
+    test("keeps every presentation's fill whole", async ({ page, browserName }) => {
+      await allowTransparency(page, browserName);
+
+      const read = async (url: string, testIds: readonly string[]) => {
+        await page.goto(withAesthetic(url, "glass"));
+        return readAll(page, testIds, ["background-color"]);
+      };
+      const opaque = [
+        ...(await read(BUTTONS_URL, ["btn-solid-primary", "btn-solid-none", "btn-solid-neutral"])),
+        ...(await read(FORMS_URL, ["checkbox-solid-primary-checked", "switch-soft-edged-success-checked"])),
+        ...(await read(SURFACES_URL, ["card-solid-primary", "card-solid-none", "panel-solid-destructive"])),
+        ...(await read(TYPOGRAPHY_URL, ["data-table-solid-primary", "data-table-solid-none"])),
+      ];
+
+      for (const [testId, styles] of opaque) {
+        expect(readSrgb(styles["background-color"]!).alpha, `${testId} alpha`).toBe(1);
+      }
+
+      const [[, soft]] = await read(BUTTONS_URL, ["btn-soft-edged-primary"]);
+
+      expect(readSrgb(soft!["background-color"]!).alpha, "soft button keeps its whole tint").toBeCloseTo(0.12, 2);
+    });
+
     /* `.neutral` beat the control line's zero-specificity selector, so writing the
        intent out put the pane hairline back on the one boundary it erases. */
     test("draws a neutral control's line in the control ink", async ({ page }) => {

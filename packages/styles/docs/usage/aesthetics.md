@@ -76,6 +76,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 **Exceptions:**
 
 - Every surface in a glass region is glass, a neutral `.card.soft`, `.panel`, and `.alert` included.
+- The glass is the ground, not the fill. A presentation keeps its whole fill, so a `.solid` button, a checked toggle, and a `.solid` card or table are opaque; the default, `.soft`, and `.ghost` panes are the frosted ones.
 - The blur applies to `.card`, `.panel`, `.alert`, and the tooltip bubble only. Controls stay solid and sit on the glass: a blur under every control of a dense cluster costs a composited layer apiece and reads as noise. Controls still take the aesthetic's radius, border, and shadow.
 - Under `prefers-reduced-transparency: reduce`, glass surfaces drop the blur and become opaque.
 - Controls draw their line in the page's ink at 55% rather than the white hairline, which would erase an unchecked checkbox on a light page. It is `--ui-control-ink`; set it on the region to choose another.

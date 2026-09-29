@@ -41,7 +41,12 @@
        docs/internal/model.md#presentation. */
     --ui-control-ink: light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55));
 
-    --ui-bg-alpha: 0.8;
+    /* The glass is the ground, not the fill. `0.8` here thinned every fill in
+       the region -- a `.solid` button, a checked toggle, a `.solid` card -- so
+       how much colour a presentation asked for depended on the aesthetic,
+       which is presentation's question (R1). Translucency lives in
+       `--ui-surface-ground` below, the plate a partial fill is painted over. */
+    --ui-bg-alpha: 1;
     --ui-backdrop: blur(14px) saturate(1.6);
     --ui-surface-image: initial;
 
@@ -117,7 +122,6 @@
      surface rather than a softer blur. */
   @media (prefers-reduced-transparency: reduce) {
     .glass {
-      --ui-bg-alpha: 1;
       --ui-backdrop: none;
       --ui-surface-ground: var(--color-background);
     }
