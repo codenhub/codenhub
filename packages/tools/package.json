@@ -14,7 +14,6 @@
     "./workspace": "./src/workspace/index.ts"
   },
   "scripts": {
-    "build": "esbuild src/cli.ts --bundle --platform=node --target=node24 --format=esm --outfile=dist/cli.js --external:node:*",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
@@ -28,7 +27,6 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
-    "esbuild": "catalog:",
     "prettier": "catalog:",
     "typedoc": "catalog:",
     "typescript": "catalog:",
