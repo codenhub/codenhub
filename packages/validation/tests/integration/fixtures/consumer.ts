@@ -5,6 +5,11 @@
 import {
   array,
   bigint,
+  coerceBigint,
+  coerceBoolean,
+  coerceDate,
+  coerceNumber,
+  coerceString,
   date,
   datetime,
   discriminatedUnion,
@@ -31,6 +36,7 @@ import {
   record,
   refine,
   set,
+  standard,
   string,
   transform,
   tuple,
@@ -39,6 +45,7 @@ import {
   withDefault,
   type AsyncValidator,
   type Infer,
+  type StandardSchemaV1,
   type Validator,
 } from "../../../dist/index";
 
@@ -188,3 +195,27 @@ interface Category {
   children: Category[];
 }
 export const category: Validator<Category> = object({ name: string(), children: array(lazy(() => category)) });
+
+// Coercing validators produce the strict validator's type, and take its options.
+export const port = coerceNumber({ int: true, min: 1, max: 65535 });
+export const portValue: Infer<typeof port> = 8080;
+// @ts-expect-error a coerced number is a number, not text
+export const badPortValue: Infer<typeof port> = "8080";
+export const flag = coerceBoolean();
+export const flagValue: Infer<typeof flag> = true;
+export const label = coerceString({ trim: true });
+export const labelValue: Infer<typeof label> = "a";
+export const counter = coerceBigint({ min: 0n });
+export const counterValue: Infer<typeof counter> = 1n;
+export const when = coerceDate();
+export const whenValue: Infer<typeof when> = new Date();
+export const environment = object({ PORT: port, DEBUG: withDefault(flag, false) });
+export const environmentValue: Infer<typeof environment> = { PORT: 1, DEBUG: false };
+
+// A validator exposed as a Standard Schema keeps its call signature and its types.
+export const exposed = standard(object({ email: email() }));
+export const exposedResult = exposed({ email: "a@example.com" });
+export const asStandard: StandardSchemaV1<unknown, { email: string }> = exposed;
+export const standardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: "a@example.com" };
+// @ts-expect-error the output type is the validator's output
+export const badStandardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: 1 };

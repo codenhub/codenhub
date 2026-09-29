@@ -116,5 +116,7 @@ const isPort = (input: unknown): input is number => is(number({ int: true, min: 
 
 - [Validator reference](validators.md): every validator and combinator, with its options and the issue it reports.
 - [Custom validators](custom-validators.md): write your own, add rules with `refine`, and validate asynchronously.
+- [Coercion](coercion.md): validate text input such as environment variables, query strings and form fields by converting it.
+- [Standard Schema](standard-schema.md): use a validator wherever a library accepts a Standard Schema.
 - [Issues and messages](errors.md): the shape of an issue, the built-in codes, message text, localization and form errors.
 - [Changelog](changelog/index.md): release notes and the migration from 0.0.1.

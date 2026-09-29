@@ -108,6 +108,32 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   },
   { name: "json", source: `import { json } from "DIST"; export const check = json();`, budget: 620 },
   {
+    name: "coerceNumber",
+    source: `import { coerceNumber } from "DIST"; export const check = coerceNumber({ int: true });`,
+    budget: 1280,
+  },
+  {
+    name: "coerceString",
+    source: `import { coerceString } from "DIST"; export const check = coerceString();`,
+    budget: 1270,
+  },
+  {
+    name: "coerceBoolean",
+    source: `import { coerceBoolean } from "DIST"; export const check = coerceBoolean();`,
+    budget: 730,
+  },
+  {
+    name: "coerceBigint",
+    source: `import { coerceBigint } from "DIST"; export const check = coerceBigint();`,
+    budget: 870,
+  },
+  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1060 },
+  {
+    name: "standard",
+    source: `import { number, standard } from "DIST"; export const check = standard(number());`,
+    budget: 2380,
+  },
+  {
     name: "messages only",
     source: `import { formatIssue } from "DIST"; export const describe = formatIssue;`,
     budget: 1180,

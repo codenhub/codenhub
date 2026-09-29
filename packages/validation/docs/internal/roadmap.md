@@ -30,10 +30,10 @@ Everything below exists, works in synchronous and asynchronous form where it com
 - **Collections** (done). `array`, `tuple` (with a rest element), `record`, `set`, `map`, each with the size constraints the type has.
 - **Composition** (done). `object` with unknown-key handling, `optional`, `nullable`, `nullish`, `withDefault`, `fallback`, `transform`, `refine`, `pipe`, `union`, `discriminatedUnion` (a record of validators keyed by tag, since a function cannot be inspected for its tag), `intersection`, `lazy` for recursive data, and `json` for text holding JSON.
 - **Shape reuse** (done). Shapes are plain objects, so extending, picking and omitting are spread and destructuring, and `partial(shape)` makes every property optional. There is no `required`: it would have to unwrap `optional`, and a function cannot be unwrapped, while the original required shape is still in hand.
-- **Coercion.** Variants of `string`, `number`, `boolean`, `bigint` and `date` that convert text input such as `"42"` or `"yes"` first, for query strings, environment variables and form fields, taking the same options as their strict versions.
+- **Coercion** (done). Variants of `string`, `number`, `boolean`, `bigint` and `date` that convert text input such as `"42"` or `"yes"` first, for query strings, environment variables and form fields, taking the same options as their strict versions.
 - **Results and guards.** `pass`, `fail` and the result types (done), `is` (done), `Infer` (done).
 - **Messages.** `formatIssue`, `flatten`, `formatPath` (done), English wording for every built-in issue, and caller-supplied message maps for localization. The wording exists for every issue a built-in validator can report.
-- **Interop.** `standard(validator)`, the Standard Schema v1 adapter.
+- **Interop** (done). `standard(validator)`, the Standard Schema v1 adapter.
 - **Nothing dropped by accident.** Every capability of the previous, unreleased design either exists in the new form or is listed under "Not Planned" with the reason. The changelog carries the mapping for anyone coming from 0.0.1.
 
 ### Quality
@@ -67,11 +67,10 @@ The claim that a package pays only for what it uses is proved once, on a real wo
 
 Each step ends with the tree green (`pnpm verify validation`) and the docs describing exactly what exists.
 
-1. **Foundation, leaves, formats and composition** (landed). Result, issue and path model, sync-until-async plumbing, `is`, messages, and the first vertical slice: `string`, `number`, `boolean`, `email`, `object`, `optional`, `pipe`, `refine`. With the consumer-types and bundle-size tests, so the shape is proved before the rest is ported. Then the remaining leaves and every format, porting the edge cases the previous design had already found: public-host checks, calendar-date validity, ip and datetime patterns. Then the collections, wrappers, unions, `lazy`, `json` and `partial`, with asynchronous behavior tested for each composer, including that issue order never depends on which promise settles first.
-2. **Coercion and interop.** The coercing variants and the Standard Schema adapter.
-3. **Tooling.** `codenhub.bundled` in `hub check`, with the lifecycle and tooling docs.
-4. **Adoption proof.** One package migrated and measured.
-5. **Close-out.** Public docs and migration table completed, changelog written, generated files refreshed, release cut.
+1. **Foundation, leaves, formats, composition, coercion and interop** (landed). Result, issue and path model, sync-until-async plumbing, `is`, messages, and the first vertical slice: `string`, `number`, `boolean`, `email`, `object`, `optional`, `pipe`, `refine`. With the consumer-types and bundle-size tests, so the shape is proved before the rest is ported. Then the remaining leaves and every format, porting the edge cases the previous design had already found: public-host checks, calendar-date validity, ip and datetime patterns. Then the collections, wrappers, unions, `lazy`, `json` and `partial`, with asynchronous behavior tested for each composer, including that issue order never depends on which promise settles first. Then the five coercing validators and the Standard Schema adapter.
+2. **Tooling.** `codenhub.bundled` in `hub check`, with the lifecycle and tooling docs.
+3. **Adoption proof.** One package migrated and measured.
+4. **Close-out.** Public docs and migration table completed, changelog written, generated files refreshed, release cut.
 
 ## Versioning until 1.0
 

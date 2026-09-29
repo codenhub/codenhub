@@ -102,6 +102,10 @@ export function describeType(value: unknown): string {
 export const invalidType = (expected: string, input: unknown): ValidationErr =>
   failIssue("invalid_type", { expected, received: describeType(input) });
 
+/** Fails because coercion could not convert the input, naming both types and never the value. */
+export const invalidCoercion = (expected: string, input: unknown): ValidationErr =>
+  failIssue("invalid_type", { expected, received: describeType(input), coerced: true });
+
 /** Rejects a size limit that is not a non-negative integer, since it is a mistake in the schema and not in the input. */
 export function assertSize(name: string, value: number): void {
   if (!Number.isInteger(value) || value < 0) {

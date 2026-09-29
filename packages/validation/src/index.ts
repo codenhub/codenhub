@@ -1,3 +1,8 @@
+export { coerceBigint } from "./coercion/coerce-bigint";
+export { coerceBoolean } from "./coercion/coerce-boolean";
+export { coerceDate } from "./coercion/coerce-date";
+export { coerceNumber } from "./coercion/coerce-number";
+export { coerceString } from "./coercion/coerce-string";
 export { array, type ArrayOptions } from "./composition/array";
 export { discriminatedUnion, type InferDiscriminated, type Variants } from "./composition/discriminated-union";
 export { fallback } from "./composition/fallback";
@@ -47,6 +52,8 @@ export { nanoid } from "./formats/nanoid";
 export { ulid } from "./formats/ulid";
 export { url, type UrlOptions } from "./formats/url";
 export { uuid } from "./formats/uuid";
+export { standard } from "./interop/standard";
+export { type StandardSchemaV1 } from "./interop/standard-schema";
 export { flatten, formatIssue, formatPath, type FlattenedErrors, type Messages } from "./messages/format-issue";
 export { bigint, type BigintOptions } from "./primitives/bigint";
 export { boolean } from "./primitives/boolean";

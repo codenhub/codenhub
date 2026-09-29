@@ -1,0 +1,50 @@
+---
+title: Standard Schema
+description: Use a validator wherever a library accepts a Standard Schema, such as form libraries, API frameworks and routers.
+---
+
+# Standard Schema
+
+[Standard Schema](https://standardschema.dev/) is a small shared interface that lets libraries accept a validator without depending on the one that made it. Form libraries, API frameworks and routers that support it take any conforming validator, from any library, directly. `standard` makes a validator conforming.
+
+```ts
+import { email, number, object, standard } from "@codenhub/validation";
+
+const signup = standard(object({ email: email(), age: number({ int: true }) }));
+
+signup["~standard"].validate({ email: "nope", age: 1.5 });
+// {
+//   issues: [
+//     { message: "Invalid email address", path: ["email"] },
+//     { message: "Must be an integer", path: ["age"] },
+//   ],
+// }
+```
+
+Pass `signup` to the library that asks for a Standard Schema, and it will call `~standard.validate` itself. You do not call it yourself unless you are writing that library.
+
+## What `standard` returns
+
+A validator that behaves exactly as the one you gave, with the `~standard` property added, so it is still an ordinary validator you can call and compose. The validator you gave is not modified, so the same one can be exposed twice, with different messages for different audiences.
+
+`~standard.validate` returns `{ value }` on success and `{ issues }` on failure, and never both. It returns its result directly for a synchronous validator and a promise for an asynchronous one, which the specification allows. The input type is `unknown` and the output type is what the validator produces, so a library that infers types from a Standard Schema gets them.
+
+The package exports the `StandardSchemaV1` type so you can accept one in your own code.
+
+## Messages
+
+The specification requires a message on every issue, and this is the one place this package builds it, so a program that never uses `standard` never bundles the text. Messages come from [`formatIssue`](errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map you pass as the second argument, then the built-in English wording.
+
+```ts
+import { number, standard } from "@codenhub/validation";
+
+const age = standard(number({ min: 18 }), {
+  too_small: (issue) => `Você precisa ter pelo menos ${String(issue.params?.minimum)} anos`,
+});
+```
+
+Each issue's `path` is the issue's own path, as an array of strings and numbers.
+
+## A note on functions
+
+A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator)["~standard"] }`.

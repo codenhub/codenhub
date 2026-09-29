@@ -56,6 +56,8 @@ Write your own validator by returning `pass(value)` or `fail(...)` from any func
 - [Validator reference](docs/validators.md)
 - [Custom validators](docs/custom-validators.md)
 - [Issues and messages](docs/errors.md)
+- [Coercion](docs/coercion.md)
+- [Standard Schema](docs/standard-schema.md)
 - [Changelog](docs/changelog/index.md)
 
 ## Requirements
@@ -193,8 +195,76 @@ const isPort = (input: unknown): input is number => is(number({ int: true, min: 
 
 - [Validator reference](docs/validators.md): every validator and combinator, with its options and the issue it reports.
 - [Custom validators](docs/custom-validators.md): write your own, add rules with `refine`, and validate asynchronously.
+- [Coercion](docs/coercion.md): validate text input such as environment variables, query strings and form fields by converting it.
+- [Standard Schema](docs/standard-schema.md): use a validator wherever a library accepts a Standard Schema.
 - [Issues and messages](docs/errors.md): the shape of an issue, the built-in codes, message text, localization and form errors.
 - [Changelog](docs/changelog/index.md): release notes and the migration from 0.0.1.
+
+<!-- Source: docs/coercion.md -->
+
+# Coercion
+
+Data that arrives from outside a program is often text even when it means something else: every environment variable, query-string parameter and form field is a string, whether it stands for a port number, a yes-or-no flag or a date. A strict validator such as `number()` rejects `"8080"` because it is a string, which is correct and no help. A coercing validator converts the text first and then validates the result, so one call gives you a typed value or the reasons it could not be one.
+
+```ts
+import { coerceNumber } from "@codenhub/validation";
+
+const port = coerceNumber({ int: true, min: 1, max: 65535 });
+
+port("8080"); // { ok: true, value: 8080 }
+port("0"); // { ok: false, ... }, code "too_small"
+port("eighty"); // { ok: false, ... }, code "invalid_type"
+```
+
+## The validators
+
+There is one for each type that commonly arrives as text. Each takes exactly the options of its strict counterpart, applies them to the converted value, and throws for a bad option when it is created, so `coerceNumber({ multipleOf: 0 })` fails at once just as `number({ multipleOf: 0 })` does.
+
+| Validator                | Produces | Accepts                                                                                                                     | Strict version |
+| ------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `coerceString(options?)` | string   | Strings, numbers, bigints and booleans, converted to their string form.                                                     | `string`       |
+| `coerceNumber(options?)` | number   | Numbers, and strings holding a decimal number such as `"42"`, `" 3.5 "`, `"-1"`, `".5"`.                                    | `number`       |
+| `coerceBoolean()`        | boolean  | Booleans, the numbers `1` and `0`, and the words `true`, `false`, `yes`, `no`, `on`, `off`, `1` and `0` in any letter case. | `boolean`      |
+| `coerceBigint(options?)` | bigint   | Bigints, safe integers, and strings holding a decimal integer.                                                              | `bigint`       |
+| `coerceDate(options?)`   | `Date`   | `Date`s, finite timestamps in milliseconds, and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`.            | `date`         |
+
+Surrounding whitespace is ignored in the text each accepts.
+
+## What is not converted
+
+Coercion is deliberately narrow, because a conversion that guesses turns a bug into a plausible-looking value. These fail, with the reason in the issue:
+
+- **Numbers:** empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and `"NaN"`, and booleans, `null`, objects and arrays. `Number(true)` is `1` and `Number("")` is `0`; reading a flag or a missing value as a count is how bugs hide.
+- **Booleans:** every other word. A typo such as `"ture"` is an error, not `false`.
+- **Bigints:** fractions, numbers beyond `Number.MAX_SAFE_INTEGER`, which have already lost precision, and any other text.
+- **Dates:** free-form text such as `"yesterday"` or `"09/28/2026"`, whose reading depends on the runtime, and days that do not exist such as `2026-02-30`.
+- **Strings:** `null`, `undefined`, objects, arrays, functions and symbols.
+
+A value that cannot be converted fails with `invalid_type`, and its `params` are `{ expected, received, coerced: true }`. The default message reads "Cannot convert string to number", and the value itself is never in the issue. A value that converts but then breaks a constraint fails with that constraint's own code, as for the strict validator.
+
+Date-only strings are read as UTC, and date-times without an offset are read as local time, which is how `new Date` reads them. Include an offset or `Z` in text you produce.
+
+## Reading a whole environment
+
+Combine coercion with `object` and `withDefault` to turn an environment, a query string or a form into typed configuration, and to report every problem in it at once:
+
+```ts
+import { coerceBoolean, coerceNumber, object, string, transform, withDefault } from "@codenhub/validation";
+
+const env = object({
+  PORT: coerceNumber({ int: true, min: 1, max: 65535 }),
+  DEBUG: withDefault(coerceBoolean(), false),
+  RETRIES: withDefault(coerceNumber({ int: true, min: 0 }), 3),
+  ORIGINS: transform(string(), (text) => text.split(",")),
+});
+
+const result = env({ PORT: "8080", ORIGINS: "https://a.example,https://b.example" });
+// { ok: true, value: { PORT: 8080, DEBUG: false, RETRIES: 3, ORIGINS: [...] } }
+```
+
+A missing variable is `undefined`, which `withDefault` replaces and everything else rejects. A value that repeats, as in `?id=1&id=2`, arrives as an array, so validate it with `array(coerceNumber())`.
+
+To clean text before converting it, put a strict validator in front with `pipe`: `pipe(string({ trim: true }), coerceNumber())`. For text that holds JSON, use `json`, which parses it and validates the result.
 
 <!-- Source: docs/custom-validators.md -->
 
@@ -419,7 +489,7 @@ The code set is open: a custom validator reports whatever code it likes. These a
 
 | Code               | Meaning                                                                                           | `params`                                                                                                                                                                                             |
 | ------------------ | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `invalid_type`     | The value is not the type expected.                                                               | `expected`, `received`, both type names.                                                                                                                                                             |
+| `invalid_type`     | The value is not the type expected, or could not be converted to it.                              | `expected` and `received`, both type names, and `coerced: true` when a coercing validator could not convert the value.                                                                               |
 | `invalid_format`   | A string does not have the required format.                                                       | `format`, such as `"email"` or `"regex"`, plus what the rule needs.                                                                                                                                  |
 | `invalid_value`    | The value has the right type but a value that is not allowed.                                     | `expected` for a literal, `options` for a list of values, `unique: true` for a repeat in an array, or `type` plus `format` (`"int"`, `"safeInt"`, `"nonZero"`) or `multipleOf` for a number.         |
 | `too_small`        | Below a minimum: too short, too few items, or too small a number or date.                         | `minimum`, `type`, and `inclusive` or `exact` where they apply.                                                                                                                                      |
@@ -489,6 +559,54 @@ It takes the same message map as `formatIssue`. Field keys use the notation of `
 ## Reading the result
 
 A result is plain data, so it can be logged, sent to a client or stored, and because no issue holds the input, doing so does not leak what was submitted. One caveat: the bounds of a `bigint` validator are bigints in `params`, which `JSON.stringify` cannot serialize, and those of a `date` validator are `Date`s, which it turns into ISO strings. Convert them first if you send issues as JSON.
+
+<!-- Source: docs/standard-schema.md -->
+
+# Standard Schema
+
+[Standard Schema](https://standardschema.dev/) is a small shared interface that lets libraries accept a validator without depending on the one that made it. Form libraries, API frameworks and routers that support it take any conforming validator, from any library, directly. `standard` makes a validator conforming.
+
+```ts
+import { email, number, object, standard } from "@codenhub/validation";
+
+const signup = standard(object({ email: email(), age: number({ int: true }) }));
+
+signup["~standard"].validate({ email: "nope", age: 1.5 });
+// {
+//   issues: [
+//     { message: "Invalid email address", path: ["email"] },
+//     { message: "Must be an integer", path: ["age"] },
+//   ],
+// }
+```
+
+Pass `signup` to the library that asks for a Standard Schema, and it will call `~standard.validate` itself. You do not call it yourself unless you are writing that library.
+
+## What `standard` returns
+
+A validator that behaves exactly as the one you gave, with the `~standard` property added, so it is still an ordinary validator you can call and compose. The validator you gave is not modified, so the same one can be exposed twice, with different messages for different audiences.
+
+`~standard.validate` returns `{ value }` on success and `{ issues }` on failure, and never both. It returns its result directly for a synchronous validator and a promise for an asynchronous one, which the specification allows. The input type is `unknown` and the output type is what the validator produces, so a library that infers types from a Standard Schema gets them.
+
+The package exports the `StandardSchemaV1` type so you can accept one in your own code.
+
+## Messages
+
+The specification requires a message on every issue, and this is the one place this package builds it, so a program that never uses `standard` never bundles the text. Messages come from [`formatIssue`](docs/errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map you pass as the second argument, then the built-in English wording.
+
+```ts
+import { number, standard } from "@codenhub/validation";
+
+const age = standard(number({ min: 18 }), {
+  too_small: (issue) => `Você precisa ter pelo menos ${String(issue.params?.minimum)} anos`,
+});
+```
+
+Each issue's `path` is the issue's own path, as an array of strings and numbers.
+
+## A note on functions
+
+A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator)["~standard"] }`.
 
 <!-- Source: docs/validators.md -->
 
@@ -874,6 +992,14 @@ const update = object(partial(user)); // every property optional
 const withAge = object({ ...user, age: number() });
 ```
 
+## Coercing text input
+
+The coercing validators accept text that holds a value, convert it, and then apply the constraints of their strict counterpart: `coerceString` and `string`, `coerceNumber` and `number`, `coerceBoolean` and `boolean`, `coerceBigint` and `bigint`, `coerceDate` and `date`. They take the same options, and fail with `invalid_type` and `coerced: true` in `params` when the value cannot be converted. [Coercion](docs/coercion.md) lists exactly what each accepts and refuses, and how to read a whole environment or form with them.
+
+## Exposing a validator to other libraries
+
+`standard(validator, messages?)` returns the validator with the `~standard` property that [Standard Schema](docs/standard-schema.md) asks for, so libraries that accept one can take it directly. Its optional `messages` map rewords or localizes the text that specification requires on every issue.
+
 ## Working with results
 
 ### `Infer`
@@ -890,7 +1016,7 @@ const withAge = object({ ...user, age: number() });
 
 ### Types
 
-`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `ArrayOptions`, `TupleOptions`, `SizeOptions`, `RefineIssue`, `InferTuple`, `InferRecord`, `InferDiscriminated`, `Variants`, `PartialShape`, `LiteralValue`, `EnumLike`, `Constructor`, `Messages` and `FlattenedErrors` are exported for annotating your own code. Each is documented in the source, and the ones you meet in everyday use are explained in [Custom validators](docs/custom-validators.md) and [Issues and messages](docs/errors.md).
+`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `ArrayOptions`, `TupleOptions`, `SizeOptions`, `RefineIssue`, `InferTuple`, `InferRecord`, `InferDiscriminated`, `Variants`, `PartialShape`, `LiteralValue`, `EnumLike`, `Constructor`, `Messages`, `FlattenedErrors` and `StandardSchemaV1` are exported for annotating your own code. Each is documented in the source, and the ones you meet in everyday use are explained in [Custom validators](docs/custom-validators.md) and [Issues and messages](docs/errors.md).
 
 <!-- Source: docs/changelog/0.1.0.md -->
 
@@ -910,6 +1036,8 @@ const withAge = object({ ...user, age: number() });
 - Results that are plain data: `{ ok: true, value }` or `{ ok: false, error: { issues } }`, built with `pass` and `fail`. Bad input never throws.
 - Issues with a stable `code`, a `path` to the offending value and `params` describing the failure. Issues never contain the input.
 - `formatIssue`, `flatten` and `formatPath` to turn issues into text and group them by field for forms. English wording is built only when you ask for it, and a message map replaces it to localize.
+- Coercing validators for text input: `coerceString`, `coerceNumber`, `coerceBoolean`, `coerceBigint` and `coerceDate`, taking the options of their strict counterparts.
+- `standard(validator)`, which exposes a validator as a Standard Schema v1, with an optional message map for the text the specification requires.
 - `is`, a type guard for synchronous validators, and `Infer` to read the type a validator produces.
 - Asynchronous validation tracked in the types: a validator holding a rule that returns a promise is an `AsyncValidator`, and so is everything that contains it, so the compiler makes you `await` it.
 
@@ -922,6 +1050,7 @@ const withAge = object({ ...user, age: number() });
 - **Breaking.** Rules never rewrite the value. `email()` does not lowercase the domain. `trim`, `lowercase`, `uppercase` and `clamp` are the options that change a value, and they run before the constraints.
 - **Breaking.** `email()` accepts public host names only, and its `allowPlus` option is the only one it takes; message text is chosen where you show it, not per validator.
 - **Breaking.** Invalid options, such as `string({ min: -1 })`, throw a `RangeError` when the validator is created instead of failing every validation.
+- **Breaking.** `coerceNumber` rejects booleans, empty strings, `"0x10"` and exponents, and coercion failures are `invalid_type` and never repeat the input.
 - **Breaking.** Exceptions thrown by your own callbacks propagate instead of becoming validation failures.
 
 ## Removed
@@ -932,18 +1061,20 @@ const withAge = object({ ...user, age: number() });
 
 ## Migrating from 0.0.1
 
-| 0.0.1                                                 | 0.1.0                                                                                |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `val.string(x).email()`                               | `email()(x)`                                                                         |
-| `val.string(x).minLength(3, { trim: true })`          | `string({ trim: true, min: 3 })(x)`                                                  |
-| `val.string(x).notEmpty()`                            | `string({ trim: true, min: 1 })(x)`                                                  |
-| `val.string(x).matches(re, message)`                  | `string({ pattern: re })(x)`                                                         |
-| `val.number(x).range({ min: 1, max: 9 })`             | `number({ min: 1, max: 9 })(x)`                                                      |
-| `val.number(x).port()`                                | `number({ int: true, min: 1, max: 65535 })(x)`                                       |
-| `val.string(x).url({ forceHttps: true })`             | `url({ protocols: ["https"] })(x)`                                                   |
-| `val.array<T>(x).minLength(1)`                        | `array(item, { min: 1 })(x)`                                                         |
-| `val.object(x).plain()`                               | `record(string(), unknown())(x)`                                                     |
-| `coerce.int(x)`, `coerce.number(x)`, `coerce.bool(x)` | not in this release: convert the text first, for example with `pipe` and `transform` |
+| 0.0.1                                        | 0.1.0                                          |
+| -------------------------------------------- | ---------------------------------------------- |
+| `val.string(x).email()`                      | `email()(x)`                                   |
+| `val.string(x).minLength(3, { trim: true })` | `string({ trim: true, min: 3 })(x)`            |
+| `val.string(x).notEmpty()`                   | `string({ trim: true, min: 1 })(x)`            |
+| `val.string(x).matches(re, message)`         | `string({ pattern: re })(x)`                   |
+| `val.number(x).range({ min: 1, max: 9 })`    | `number({ min: 1, max: 9 })(x)`                |
+| `val.number(x).port()`                       | `number({ int: true, min: 1, max: 65535 })(x)` |
+| `val.string(x).url({ forceHttps: true })`    | `url({ protocols: ["https"] })(x)`             |
+| `val.array<T>(x).minLength(1)`               | `array(item, { min: 1 })(x)`                   |
+| `val.object(x).plain()`                      | `record(string(), unknown())(x)`               |
+| `coerce.int(x)`                              | `coerceNumber({ int: true })(x)`               |
+| `coerce.number(x)`, `coerce.string(x)`       | `coerceNumber()(x)`, `coerceString()(x)`       |
+| `coerce.bool(x)`                             | `coerceBoolean()(x)`                           |
 
 Reading a result also changed. Where 0.0.1 returned `{ ok, value }` or `{ ok, error }` with a single failure, 0.1.0 returns every issue in `result.error.issues`:
 

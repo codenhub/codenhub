@@ -120,9 +120,17 @@ The package has no dependencies, and it must never depend on another workspace p
 
 Packages inside this repository that validate are meant to take it as a `devDependency` and have their build inline the validators they use, so a published package ships only that code and its own consumers never see this package or its version. `docs/specs/packages-lifecycle.md` currently requires anything reachable from a published entry point to be a `dependency` or a `peerDependency`, so `hub check` would reject that. The decision is to teach `hub check` a declared exception, a `codenhub.bundled` list in `package.json` naming devDependencies that the build inlines, and to amend the lifecycle spec in the same change. That change is part of the path to 0.1.0 in [roadmap.md](roadmap.md) and is owned by the tooling, not by this package.
 
+## Coercion
+
+A coercing validator is a strict validator behind a converter: `coerceNumber(options)` builds `number(options)` once, converts the input, and hands the converted value to it. So the strict validator owns every constraint and every option check, and the coercing one adds only the conversion. Each is its own module and its own export, so a consumer that never coerces does not bundle the conversion code, which is why coercion is not an option on the strict validators.
+
+The conversions are narrow on purpose, because a conversion that guesses turns a bug into a plausible value: no booleans as numbers, no empty string as zero, no free-form dates, no typo read as `false`. What cannot be converted fails with `invalid_type` and `coerced: true` in `params`, and never the value.
+
 ## Standard Schema
 
-A validator is a function and not a schema object, so Standard Schema v1 support is an adapter: `standard(validator)` returns the validator with a `~standard` property attached. The standard requires a `message` on every issue, and the adapter supplies it with `formatIssue`, so the cost of messages is paid only by whoever asks for interop. Input type and output type are `unknown` and the validator's `Infer`, since validators take `unknown`.
+A validator is a function and not a schema object, so Standard Schema v1 support is an adapter: `standard(validator, messages?)` returns a new function that calls the validator and carries a `~standard` property, and leaves the validator you gave untouched. The standard requires a `message` on every issue, and the adapter supplies it with `formatIssue`, so the cost of messages is paid only by whoever asks for interop. Input type and output type are `unknown` and the validator's `Infer`, since validators take `unknown`.
+
+`~standard.validate` is synchronous for a synchronous validator and returns a promise for an asynchronous one, through `chain`. The interface types are vendored in `src/interop/standard-schema.ts` so the package needs no dependency for them.
 
 ## Adding a validator
 

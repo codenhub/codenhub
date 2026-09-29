@@ -385,6 +385,14 @@ const update = object(partial(user)); // every property optional
 const withAge = object({ ...user, age: number() });
 ```
 
+## Coercing text input
+
+The coercing validators accept text that holds a value, convert it, and then apply the constraints of their strict counterpart: `coerceString` and `string`, `coerceNumber` and `number`, `coerceBoolean` and `boolean`, `coerceBigint` and `bigint`, `coerceDate` and `date`. They take the same options, and fail with `invalid_type` and `coerced: true` in `params` when the value cannot be converted. [Coercion](coercion.md) lists exactly what each accepts and refuses, and how to read a whole environment or form with them.
+
+## Exposing a validator to other libraries
+
+`standard(validator, messages?)` returns the validator with the `~standard` property that [Standard Schema](standard-schema.md) asks for, so libraries that accept one can take it directly. Its optional `messages` map rewords or localizes the text that specification requires on every issue.
+
 ## Working with results
 
 ### `Infer`
@@ -401,4 +409,4 @@ const withAge = object({ ...user, age: number() });
 
 ### Types
 
-`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `ArrayOptions`, `TupleOptions`, `SizeOptions`, `RefineIssue`, `InferTuple`, `InferRecord`, `InferDiscriminated`, `Variants`, `PartialShape`, `LiteralValue`, `EnumLike`, `Constructor`, `Messages` and `FlattenedErrors` are exported for annotating your own code. Each is documented in the source, and the ones you meet in everyday use are explained in [Custom validators](custom-validators.md) and [Issues and messages](errors.md).
+`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `ArrayOptions`, `TupleOptions`, `SizeOptions`, `RefineIssue`, `InferTuple`, `InferRecord`, `InferDiscriminated`, `Variants`, `PartialShape`, `LiteralValue`, `EnumLike`, `Constructor`, `Messages`, `FlattenedErrors` and `StandardSchemaV1` are exported for annotating your own code. Each is documented in the source, and the ones you meet in everyday use are explained in [Custom validators](custom-validators.md) and [Issues and messages](errors.md).
