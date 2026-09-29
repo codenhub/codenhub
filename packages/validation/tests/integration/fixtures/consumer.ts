@@ -2,62 +2,221 @@
  * Compiled against the built declarations by consumer-types.test.ts, the way an app installing the
  * package sees it. Every `@ts-expect-error` line must fail to compile, and everything else must not.
  */
-import { val, type Infer, type Validator } from "../../../dist/index";
+import {
+  array,
+  bigint,
+  coerceBigint,
+  coerceBoolean,
+  coerceDate,
+  coerceNumber,
+  coerceString,
+  date,
+  datetime,
+  discriminatedUnion,
+  email,
+  englishMessages,
+  fail,
+  fallback,
+  flatten,
+  formatIssue,
+  intersection,
+  is,
+  json,
+  lazy,
+  literal,
+  map,
+  nativeEnum,
+  nullable,
+  number,
+  object,
+  oneOf,
+  optional,
+  partial,
+  pass,
+  pipe,
+  record,
+  refine,
+  set,
+  standard,
+  string,
+  transform,
+  tuple,
+  union,
+  url,
+  withDefault,
+  type AsyncValidator,
+  type Infer,
+  type StandardSchemaV1,
+  type Validator,
+} from "../../../dist/index";
 
-export const userSchema = val.object({
-  name: val.string().min(2),
-  email: val.string().email(),
-  role: val.enum(["admin", "user"]).default("user"),
-  age: val.number().int().min(18).optional(),
+// A schema is the single source of the type. Properties that accept `undefined` become optional.
+export const signup = object({
+  name: pipe(string({ trim: true }), string({ min: 2 })),
+  email: email(),
+  age: optional(number({ int: true, min: 18 })),
 });
-export type User = Infer<typeof userSchema>;
-export const user: User = { name: "Ada", email: "ada@example.com", role: "admin" };
+export type Signup = Infer<typeof signup>;
+export const validSignup: Signup = { name: "Ada", email: "ada@example.com" };
 // @ts-expect-error name must be a string
-export const badUser: User = { name: 1, email: "", role: "user" };
+export const badSignup: Signup = { name: 1, email: "" };
+// @ts-expect-error email is required
+export const missingEmail: Signup = { name: "Ada" };
 
-export const eventSchema = val.discriminatedUnion("type", [
-  val.object({ type: val.literal("click"), coordinates: val.tuple([val.number(), val.number()]) }),
-  val.object({ type: val.literal("key"), key: val.string().min(1) }),
-]);
-export const event: Infer<typeof eventSchema> = { type: "key", key: "a" };
-// @ts-expect-error "scroll" is not a variant
-export const badEvent: Infer<typeof eventSchema> = { type: "scroll" };
+// A synchronous validator returns its result directly, so it can be read without `await`.
+export const syncResult = signup({});
+export const isOk: boolean = syncResult.ok;
+if (syncResult.ok) {
+  const name: string = syncResult.value.name;
+  void name;
+} else {
+  const messages: string[] = syncResult.error.issues.map((issue) => formatIssue(issue, englishMessages));
+  void messages;
+  void flatten(syncResult.error, englishMessages);
+}
 
-export const id = val.union([val.string().uuid(), val.number().int()]);
-export const idValue: Infer<typeof id> = 1;
+// An asynchronous rule makes everything that holds it asynchronous, and the type says so.
+export const username = refine(string(), async (name) => name !== "admin", { code: "username_taken" });
+export const asyncSignup = object({ username, email: email() });
+export const asyncResult: Promise<Awaited<ReturnType<typeof asyncSignup>>> = Promise.resolve(asyncSignup({}));
+// @ts-expect-error an asynchronous validator's result cannot be read as if it were synchronous
+export const notSync: Validator<unknown> = asyncSignup;
+export const stillAsync: AsyncValidator<{ username: string; email: string }> = asyncSignup;
+
+// Guards accept only synchronous validators.
+export const raw: unknown = "text";
+export const narrowed: string = is(string(), raw) ? raw : "";
+// @ts-expect-error a validator that may finish later cannot be used as a synchronous guard
+export const badGuard = is(username, raw);
+
+// Anything shaped like `(input: unknown) => result` is a validator, so custom ones need no helper.
+export const even: Validator<number> = (input) =>
+  typeof input === "number" && input % 2 === 0 ? pass(input) : fail({ code: "not_even" });
+export const evens = object({ count: even });
+export const evenCount: number | undefined = (() => {
+  const result = evens({ count: 2 });
+  return result.ok ? result.value.count : undefined;
+})();
+
+// Literals and lists of values keep their exact types.
+export const role = oneOf(["admin", "user"]);
+export const roleValue: Infer<typeof role> = "admin";
+// @ts-expect-error "guest" is not in the list
+export const badRole: Infer<typeof role> = "guest";
+export const tag = literal("v1");
+export const tagValue: Infer<typeof tag> = "v1";
+// @ts-expect-error only "v1" is accepted
+export const badTag: Infer<typeof tag> = "v2";
+export const nothing = literal(undefined);
+export const nothingValue: Infer<typeof nothing> = undefined;
+
+enum Status {
+  Active = "active",
+  Archived = "archived",
+}
+export const status = nativeEnum(Status);
+export const statusValue: Infer<typeof status> = Status.Active;
+
+// Formats produce strings; date and bigint produce their own types.
+export const site: string | undefined = (() => {
+  const result = url({ allowLocal: true })(raw);
+  return result.ok ? result.value : undefined;
+})();
+export const stamp = datetime();
+export const stampValue: Infer<typeof stamp> = "2026-09-28T14:30:00Z";
+export const day = date({ min: new Date(0) });
+export const dayValue: Infer<typeof day> = new Date();
+export const big = bigint({ min: 0n });
+export const bigValue: Infer<typeof big> = 1n;
+// @ts-expect-error a bigint validator produces bigint, not number
+export const badBig: Infer<typeof big> = 1;
+
+// Collections keep their item types.
+export const tags = array(string(), { max: 5, unique: true });
+export const tagList: Infer<typeof tags> = ["a", "b"];
+// @ts-expect-error items must be strings
+export const badTagList: Infer<typeof tags> = [1];
+export const point = tuple([number(), number()]);
+export const pointValue: Infer<typeof point> = [1, 2];
+// @ts-expect-error a tuple has a fixed length
+export const badPoint: Infer<typeof point> = [1, 2, 3];
+export const call = tuple([string()], { rest: number() });
+export const callValue: Infer<typeof call> = ["sum", 1, 2, 3];
+export const scores = record(string(), number());
+export const scoreValue: Infer<typeof scores> = { ada: 1 };
+export const perDay = record(oneOf(["mon", "tue"]), number());
+export const perDayValue: Infer<typeof perDay> = { mon: 1 };
+export const stock = map(string(), number());
+export const stockValue: Infer<typeof stock> = new Map([["apples", 1]]);
+export const ids = set(number());
+export const idsValue: Infer<typeof ids> = new Set([1]);
+
+// Wrappers change the output type, and object properties follow.
+export const settings = object({
+  role: withDefault(oneOf(["admin", "user"]), "user"),
+  nickname: nullable(string()),
+  page: fallback(number(), 1),
+  note: optional(string()),
+});
+export const settingsValue: Infer<typeof settings> = { role: "admin", nickname: null, page: 2 };
+// @ts-expect-error role is always present in the output, because it has a default
+export const missingRole: Infer<typeof settings> = { nickname: null, page: 2 };
+export const length = transform(string(), (text) => text.length);
+export const lengthValue: Infer<typeof length> = 3;
+export const loaded = transform(string(), async (id) => ({ id }));
+// @ts-expect-error a transform that returns a promise is asynchronous
+export const notSyncLoaded: Validator<{ id: string }> = loaded;
+export const updates = object(partial({ name: string(), email: email() }));
+export const updateValue: Infer<typeof updates> = {};
+
+// Unions produce unions, and a tagged union narrows on its tag.
+export const idOrName = union([number({ int: true }), string()]);
+export const idOrNameValue: Infer<typeof idOrName> = "a";
 // @ts-expect-error booleans are not in the union
-export const badId: Infer<typeof id> = true;
+export const badIdOrName: Infer<typeof idOrName> = true;
+export const event = discriminatedUnion("type", {
+  click: object({ x: number(), y: number() }),
+  key: object({ key: string() }),
+});
+export const eventValue: Infer<typeof event> = { type: "key", key: "a" };
+// @ts-expect-error "scroll" is not a variant
+export const badEvent: Infer<typeof event> = { type: "scroll" };
+export const clickX: number | undefined = (() => {
+  const result = event(raw);
+  return result.ok && result.value.type === "click" ? result.value.x : undefined;
+})();
+export const both = intersection(object({ name: string() }), object({ age: number() }));
+export const bothValue: Infer<typeof both> = { name: "Ada", age: 36 };
+export const settingsFromText = json(object({ theme: oneOf(["light", "dark"]) }));
+export const settingsFromTextValue: Infer<typeof settingsFromText> = { theme: "dark" };
 
-export const port = val.coerce.number().int().min(1).max(65535);
-export const flags = val.record(val.string(), val.coerce.boolean());
-
-export const chained = val
-  .string()
-  .refine((text) => text !== "admin", "reserved")
-  .check((text, ctx) => {
-    if (text.length > 20) {
-      ctx.addIssue({ code: "too_long", message: "too long" });
-    }
-  })
-  .max(30);
-export const extended = val
-  .object({ a: val.string() })
-  .refine(() => true)
-  .extend({ b: val.number() });
-
+// A recursive validator names its own type.
 interface Category {
   name: string;
   children: Category[];
 }
-export const category: Validator<Category> = val.lazy(() =>
-  val.object({ name: val.string(), children: val.array(category) }),
-);
+export const category: Validator<Category> = object({ name: string(), children: array(lazy(() => category)) });
 
-export const merged = val.object({ a: val.string() }).and(val.object({ b: val.number() }));
-export const either = val.string().or(val.number());
-export const parsed: number = val
-  .string()
-  .transform((text) => text.length)
-  .parse("abc");
-// @ts-expect-error min takes a number
-export const badMin = val.string().min("3");
+// Coercing validators produce the strict validator's type, and take its options.
+export const port = coerceNumber({ int: true, min: 1, max: 65535 });
+export const portValue: Infer<typeof port> = 8080;
+// @ts-expect-error a coerced number is a number, not text
+export const badPortValue: Infer<typeof port> = "8080";
+export const flag = coerceBoolean();
+export const flagValue: Infer<typeof flag> = true;
+export const label = coerceString({ trim: true });
+export const labelValue: Infer<typeof label> = "a";
+export const counter = coerceBigint({ min: 0n });
+export const counterValue: Infer<typeof counter> = 1n;
+export const when = coerceDate();
+export const whenValue: Infer<typeof when> = new Date();
+export const environment = object({ PORT: port, DEBUG: withDefault(flag, false) });
+export const environmentValue: Infer<typeof environment> = { PORT: 1, DEBUG: false };
+
+// A validator exposed as a Standard Schema keeps its call signature and its types.
+export const exposed = standard(object({ email: email() }), englishMessages);
+export const exposedResult = exposed({ email: "a@example.com" });
+export const asStandard: StandardSchemaV1<unknown, { email: string }> = exposed;
+export const standardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: "a@example.com" };
+// @ts-expect-error the output type is the validator's output
+export const badStandardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: 1 };

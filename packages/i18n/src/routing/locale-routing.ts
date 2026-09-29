@@ -1,5 +1,5 @@
 import { hasAsciiControlCharacter } from "../core/string-validation";
-import { isValidLocaleIdentifier } from "../locale/identifier";
+import { assertConfig, localeRoutingConfig } from "../locale/config-validators";
 
 const MAX_PATHNAME_LENGTH = 8_192;
 
@@ -75,51 +75,11 @@ export interface LocaleRouting<TLocale extends string> {
 export const createLocaleRouting = <TLocale extends string>(
   config: LocaleRoutingConfig<TLocale>,
 ): LocaleRouting<TLocale> => {
-  const configuredLocales = config.locales;
-  const configuredDefaultLocale = config.defaultLocale;
-  const prefixDefaultLocale = config.prefixDefaultLocale;
-
-  if (!Array.isArray(configuredLocales) || configuredLocales.length === 0) {
-    throw new TypeError("locales must contain at least one locale");
-  }
-
-  if (typeof prefixDefaultLocale !== "boolean") {
-    throw new TypeError("prefixDefaultLocale must be a boolean");
-  }
-
-  const locales = Object.freeze(
-    configuredLocales.map((locale) => {
-      if (typeof locale !== "string" || locale.trim().length === 0) {
-        throw new TypeError("locales must contain non-empty strings");
-      }
-
-      const normalizedLocale = locale.trim();
-
-      if (!isValidLocaleIdentifier(normalizedLocale)) {
-        throw new TypeError("locales must be ASCII locale identifiers with alphanumeric hyphen-separated subtags");
-      }
-
-      return normalizedLocale as TLocale;
-    }),
-  );
-  const localeLookup = new Map<string, TLocale>();
-
-  for (const locale of locales) {
-    const normalizedLocale = locale.toLowerCase();
-    if (localeLookup.has(normalizedLocale)) {
-      throw new TypeError("locales must be unique case-insensitively");
-    }
-    localeLookup.set(normalizedLocale, locale);
-  }
-
-  if (typeof configuredDefaultLocale !== "string") {
-    throw new TypeError("defaultLocale must match a configured locale");
-  }
-
-  const normalizedDefaultLocale = configuredDefaultLocale.trim().toLowerCase();
-  if (!localeLookup.has(normalizedDefaultLocale)) {
-    throw new TypeError("defaultLocale must match a configured locale");
-  }
+  const validated = assertConfig(localeRoutingConfig, config, "Invalid locale routing configuration");
+  const locales = Object.freeze(validated.locales as TLocale[]);
+  const { prefixDefaultLocale } = validated;
+  const localeLookup = new Map<string, TLocale>(locales.map((locale) => [locale.toLowerCase(), locale]));
+  const normalizedDefaultLocale = validated.defaultLocale.trim().toLowerCase();
 
   const findLocale = (value: string, shouldTrim = false): TLocale | undefined => {
     const normalizedValue = (shouldTrim ? value.trim() : value).toLowerCase();

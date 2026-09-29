@@ -42,27 +42,55 @@ describe("validateI18nConfig", () => {
   });
 
   it.each([
-    ["non-object config", null, "configuration must be an object"],
-    ["non-array locales", createConfig({ locales: null as unknown as readonly string[] }), "locales must be an array"],
-    ["empty locales", createConfig({ locales: [] }), "locales must not be empty"],
-    ["non-string locale", createConfig({ locales: ["en-US", 1 as unknown as string] }), "non-empty strings"],
-    ["empty locale identifier", createConfig({ locales: ["en-US", " "] }), "non-empty strings"],
-    ["unsafe locale identifier", createConfig({ locales: ["en-US", "../admin"] }), "ASCII locale identifiers"],
-    ["locale identifier with whitespace", createConfig({ locales: ["en-US", "pt BR"] }), "ASCII locale identifiers"],
-    ["case-insensitive duplicate", createConfig({ locales: ["en-US", "EN-us"] }), "unique"],
-    ["duplicate after trimming", createConfig({ locales: [" en-US ", "EN-us"] }), "unique"],
-    ["unsupported default", createConfig({ defaultLocale: "fr" }), "defaultLocale must match"],
+    ["non-object config", null, "Expected object, received null"],
+    [
+      "non-array locales",
+      createConfig({ locales: null as unknown as readonly string[] }),
+      "locales: Expected array, received null",
+    ],
+    ["empty locales", createConfig({ locales: [] }), "locales: Must contain at least 1 item"],
+    [
+      "non-string locale",
+      createConfig({ locales: ["en-US", 1 as unknown as string] }),
+      "locales[1]: Expected string, received number",
+    ],
+    ["empty locale identifier", createConfig({ locales: ["en-US", " "] }), "locales[1]: Must not be empty"],
+    [
+      "unsafe locale identifier",
+      createConfig({ locales: ["en-US", "../admin"] }),
+      "locales[1]: Must be an ASCII locale identifier",
+    ],
+    [
+      "locale identifier with whitespace",
+      createConfig({ locales: ["en-US", "pt BR"] }),
+      "locales[1]: Must be an ASCII locale identifier",
+    ],
+    [
+      "case-insensitive duplicate",
+      createConfig({ locales: ["en-US", "EN-us"] }),
+      "locales[1]: Must be unique, ignoring letter case",
+    ],
+    [
+      "duplicate after trimming",
+      createConfig({ locales: [" en-US ", "EN-us"] }),
+      "locales[1]: Must be unique, ignoring letter case",
+    ],
+    ["unsupported default", createConfig({ defaultLocale: "fr" }), "defaultLocale: Must match a configured locale"],
     [
       "missing loader",
       createConfig({ loadLocale: undefined as unknown as I18nConfig<string>["loadLocale"] }),
-      "loadLocale must be a function",
+      "loadLocale: Must be a function",
     ],
     [
       "missing direction callback",
       createConfig({ getLocaleDirection: undefined as unknown as I18nConfig<string>["getLocaleDirection"] }),
-      "getLocaleDirection must be a function",
+      "getLocaleDirection: Must be a function",
     ],
-    ["non-boolean silent mode", createConfig({ isSilent: "yes" as unknown as boolean }), "isSilent must be a boolean"],
+    [
+      "non-boolean silent mode",
+      createConfig({ isSilent: "yes" as unknown as boolean }),
+      "isSilent: Expected boolean, received string",
+    ],
   ])("rejects %s", (_name, input, message) => {
     const validate = () => validateI18nConfig(input as I18nConfig<string>);
 

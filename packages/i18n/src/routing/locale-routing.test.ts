@@ -42,6 +42,19 @@ describe("createLocaleRouting", () => {
     }
   });
 
+  it("should name the property and the problem when the configuration is invalid", () => {
+    const create = (overrides: object) => () =>
+      createLocaleRouting({ defaultLocale: "en", locales: ["en", "pt"], prefixDefaultLocale: true, ...overrides });
+
+    expect(create({ locales: [] })).toThrow(
+      "Invalid locale routing configuration: locales: Must contain at least 1 item",
+    );
+    expect(create({ locales: ["en", "EN"] })).toThrow("locales[1]: Must be unique, ignoring letter case");
+    expect(create({ locales: ["en", "../admin"] })).toThrow("locales[1]: Must be an ASCII locale identifier");
+    expect(create({ defaultLocale: "fr" })).toThrow("defaultLocale: Must match a configured locale");
+    expect(create({ prefixDefaultLocale: "yes" })).toThrow("prefixDefaultLocale: Expected boolean, received string");
+  });
+
   it("should apply the default-locale prefix policy when parsing unprefixed paths", () => {
     const requiredPrefix = createLocaleRouting({
       defaultLocale: "en-US",

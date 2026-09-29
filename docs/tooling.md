@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-27
+last_updated: 2026-09-29
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -348,6 +348,7 @@ The same rule reads the package's own files, in two scopes that answer different
 
 - `dependencies/runtime-declaration` walks the import graph from the published entry points, mapping each `exports` target back to its source file. That is the only way to tell code a consumer receives from a test helper that happens to live beside it, so it is what decides whether a dependency belongs in `dependencies` rather than `devDependencies`. Private packages are exempt: nothing installs them, so the field changes nothing.
 - `dependencies/runtime-declaration` ignores type-only imports, which a build erases. It cannot see whether the emitted `.d.ts` still names the package, so that half stays a review responsibility.
+- `dependencies/runtime-declaration` excuses a name listed in `codenhub.bundled`, as `docs/specs/packages-lifecycle.md` describes: a package inlines the library in its build, so the consumer receives its code without installing it. Four findings keep that list honest. `dependencies/bundled-invalid` is reported when `codenhub.bundled` is not an array of package names. `dependencies/bundled-not-dev` is reported for a listed name that is not a `devDependencies` entry, because a name a consumer installs is not inlined. `dependencies/bundled-unused` is a warning for a listed name that no non-test source file imports. `dependencies/bundled-leaked` is reported when the built JavaScript or declarations under `dist/` still name a listed package, which is the failure the whole arrangement exists to prevent. The leak check reads comments-stripped text like the rest of this rule, so an example in a doc comment does not count, and it is skipped when `dist/` does not exist, since `pnpm check` alone does not build. Private packages are exempt from the last two.
 - `dependencies/undeclared` covers every non-test source file and keeps type-only imports, because a package must be installed to type-check against it. Importing something undeclared is a bug wherever it is written — it resolves today only by borrowing another package's installation. Test files are excluded: they quote example imports freely, and a test that imports something missing fails the moment it runs.
 
 `dependencies/unused` runs the other way and is deliberately permissive, because the two mistakes do not cost the same. Reporting a dependency that is quietly needed sends someone chasing a removal that breaks a build; missing an unused one leaves the manifest as it already is. A dependency is reported only when its name appears nowhere in the package at all — no import, no script, no quoted string, no comment — and when no binary it installs is named by a script either. Ambient `@types/*` packages and companions published under a used tool's own scope, such as a coverage provider, are never reported.

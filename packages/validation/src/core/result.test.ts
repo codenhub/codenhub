@@ -1,0 +1,94 @@
+import { describe, expect, it } from "vitest";
+
+import { assertSize, describeType, fail, failIssue, invalidType, nestIssues, pass, toIssue } from "./result";
+
+describe("pass", () => {
+  it("should wrap the value in a successful result", () => {
+    expect(pass(42)).toEqual({ ok: true, value: 42 });
+  });
+
+  it("should keep object identity", () => {
+    const value = { id: 1 };
+    expect(pass(value).value).toBe(value);
+  });
+});
+
+describe("fail", () => {
+  it("should default to code custom at the value's own location", () => {
+    expect(fail({})).toEqual({ ok: false, error: { issues: [{ code: "custom", path: [] }] } });
+  });
+
+  it("should keep the code, path, params and message it is given", () => {
+    const result = fail({ code: "username_taken", path: ["user", 0], params: { name: "ada" }, message: "Taken" });
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        issues: [{ code: "username_taken", path: ["user", 0], params: { name: "ada" }, message: "Taken" }],
+      },
+    });
+  });
+
+  it("should report several issues in the order given", () => {
+    const result = fail({ code: "a" }, { code: "b" });
+    expect(result.error.issues.map((issue) => issue.code)).toEqual(["a", "b"]);
+  });
+
+  it("should not add params or message keys that were not given", () => {
+    expect(Object.keys(toIssue({ code: "x" }))).toEqual(["code", "path"]);
+  });
+});
+
+describe("nestIssues", () => {
+  it("should put the segment in front of every path without changing the originals", () => {
+    const original = toIssue({ code: "x", path: ["b"] });
+    const [nested] = nestIssues([original], "a");
+    expect(nested?.path).toEqual(["a", "b"]);
+    expect(original.path).toEqual(["b"]);
+  });
+});
+
+describe("describeType", () => {
+  it.each([
+    [null, "null"],
+    [[], "array"],
+    [Number.NaN, "nan"],
+    [Number.POSITIVE_INFINITY, "infinity"],
+    [new Date(), "date"],
+    [new Map(), "map"],
+    [new Set(), "set"],
+    [new (class Widget {})(), "Widget"],
+    [{}, "object"],
+    [Object.create(null), "object"],
+    ["text", "string"],
+    [undefined, "undefined"],
+    [1n, "bigint"],
+  ])("should name %s as %s", (value, expected) => {
+    expect(describeType(value)).toBe(expected);
+  });
+});
+
+describe("invalidType", () => {
+  it("should name both types and never echo the value", () => {
+    const result = invalidType("string", "hunter2-as-number-42".length);
+    expect(result.error.issues).toEqual([
+      { code: "invalid_type", path: [], params: { expected: "string", received: "number" } },
+    ]);
+  });
+});
+
+describe("failIssue", () => {
+  it("should omit params when none are given", () => {
+    expect(failIssue("custom").error.issues).toEqual([{ code: "custom", path: [] }]);
+  });
+});
+
+describe("assertSize", () => {
+  it("should accept non-negative integers", () => {
+    expect(() => assertSize("Size", 0)).not.toThrow();
+    expect(() => assertSize("Size", 5)).not.toThrow();
+  });
+
+  it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])("should throw a RangeError for %s", (size) => {
+    expect(() => assertSize("Size", size)).toThrow(RangeError);
+  });
+});

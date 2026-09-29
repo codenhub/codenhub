@@ -1,0 +1,243 @@
+import { describe, expect, it } from "vitest";
+
+import { array } from "../composition/array";
+import { json } from "../composition/json";
+import { map } from "../composition/map";
+import { set } from "../composition/set";
+import { tuple } from "../composition/tuple";
+import { union } from "../composition/union";
+import { fail } from "../core/result";
+import type { ValidationIssue, ValidationResult } from "../core/types";
+import { email } from "../formats/email";
+import { ip } from "../formats/ip";
+import { url } from "../formats/url";
+import { uuid } from "../formats/uuid";
+import { bigint } from "../primitives/bigint";
+import { date } from "../primitives/date";
+import { literal } from "../primitives/literal";
+import { number } from "../primitives/number";
+import { oneOf } from "../primitives/one-of";
+import { string } from "../primitives/string";
+import { issuesOf } from "../test-utils";
+import { englishMessages } from "./english-messages";
+import { flatten, formatIssue as formatWith, formatPath, type Messages } from "./format-issue";
+
+const formatIssue = (issue: ValidationIssue, messages: Messages = englishMessages): string =>
+  formatWith(issue, messages);
+
+const issue = (value: Partial<ValidationIssue> & { code: string }): ValidationIssue => ({ path: [], ...value });
+
+describe("without the English wording", () => {
+  it("should use the issue's own message, an entry for its code, and nothing else", () => {
+    expect(formatWith(issue({ code: "too_small", message: "Fixed" }))).toBe("Fixed");
+    expect(formatWith(issue({ code: "too_small" }), { too_small: "Mine" })).toBe("Mine");
+  });
+
+  it("should say Invalid value when nothing supplies text, never the built-in wording", () => {
+    const [found] = issuesOf(number({ min: 18 })(15));
+    expect(formatWith(found as ValidationIssue)).toBe("Invalid value");
+    expect(formatWith(found as ValidationIssue, {})).toBe("Invalid value");
+    expect(flatten({ issues: [found as ValidationIssue] }).formErrors).toEqual(["Invalid value"]);
+  });
+});
+
+describe("englishMessages", () => {
+  it("should have wording for every code the built-in validators report", () => {
+    for (const code of [
+      "invalid_type",
+      "invalid_value",
+      "invalid_format",
+      "too_small",
+      "too_big",
+      "unrecognized_key",
+      "invalid_union",
+    ]) {
+      expect(englishMessages[code]).toBeDefined();
+    }
+  });
+
+  it("should be combined with a map of your own by spreading, keeping the rest of the wording", () => {
+    const reworded: Messages = { ...englishMessages, too_small: "Too short" };
+    const [small] = issuesOf(string({ min: 3 })("a"));
+    const [type] = issuesOf(string()(1));
+    expect(formatWith(small as ValidationIssue, reworded)).toBe("Too short");
+    expect(formatWith(type as ValidationIssue, reworded)).toBe("Expected string, received number");
+  });
+
+  it("should not have wording for a code a custom validator invents", () => {
+    expect(englishMessages["username_taken"]).toBeUndefined();
+  });
+});
+
+describe("formatPath", () => {
+  it("should join keys with dots and indexes with brackets", () => {
+    expect(formatPath(["user", "addresses", 0, "street"])).toBe("user.addresses[0].street");
+    expect(formatPath([0, "title"])).toBe("[0].title");
+  });
+
+  it("should be empty for the root", () => {
+    expect(formatPath([])).toBe("");
+  });
+});
+
+describe("formatIssue", () => {
+  it("should prefer the issue's own message over everything else", () => {
+    const own = issue({ code: "too_small", message: "Too short!" });
+    expect(formatIssue(own, { too_small: "from map" })).toBe("Too short!");
+  });
+
+  it("should use the message map for the issue's code, as text or as a function", () => {
+    const value = issue({ code: "too_small", params: { minimum: 3, type: "string" } });
+    expect(formatIssue(value, { too_small: "Curto demais" })).toBe("Curto demais");
+    expect(formatIssue(value, { too_small: (found) => `Min ${String(found.params?.minimum)}` })).toBe("Min 3");
+  });
+
+  it("should fall back to the built-in wording when the map has no entry, or an undefined one", () => {
+    expect(formatIssue(issue({ code: "custom" }), { other: "x" })).toBe("Invalid value");
+    expect(formatIssue(issue({ code: "custom" }), { custom: undefined })).toBe("Invalid value");
+  });
+
+  it("should describe the built-in codes the validators report", () => {
+    const messageOf = (result: ReturnType<ReturnType<typeof string>>): string[] =>
+      issuesOf(result).map((found) => formatIssue(found));
+
+    expect(messageOf(string()(1))).toEqual(["Expected string, received number"]);
+    expect(messageOf(string({ min: 3 })("a"))).toEqual(["Must be at least 3 characters"]);
+    expect(messageOf(string({ max: 1 })("ab"))).toEqual(["Must be at most 1 character"]);
+    expect(messageOf(string({ min: 1 })(""))).toEqual(["Must be at least 1 character"]);
+    expect(messageOf(string({ length: 1 })(""))).toEqual(["Must be exactly 1 character"]);
+    expect(messageOf(string({ length: 3 })("ab"))).toEqual(["Must be exactly 3 characters"]);
+    expect(messageOf(string({ pattern: /^a$/ })("b"))).toEqual(["Must match /^a$/"]);
+    expect(messageOf(string({ startsWith: "x" })("b"))).toEqual(['Must start with "x"']);
+    expect(messageOf(string({ endsWith: "x" })("b"))).toEqual(['Must end with "x"']);
+    expect(messageOf(string({ includes: "x" })("b"))).toEqual(['Must include "x"']);
+    expect(messageOf(email()("nope"))).toEqual(["Invalid email address"]);
+  });
+
+  it("should word number limits with their inclusivity", () => {
+    const messages = (result: ReturnType<ReturnType<typeof number>>): string[] =>
+      issuesOf(result).map((found) => formatIssue(found));
+
+    expect(messages(number({ min: 1 })(0))).toEqual(["Must be at least 1"]);
+    expect(messages(number({ gt: 1 })(1))).toEqual(["Must be greater than 1"]);
+    expect(messages(number({ max: 1 })(2))).toEqual(["Must be at most 1"]);
+    expect(messages(number({ lt: 1 })(1))).toEqual(["Must be less than 1"]);
+    expect(messages(number({ int: true })(1.5))).toEqual(["Must be an integer"]);
+    expect(messages(number({ safeInt: true })(2 ** 60))).toEqual(["Must be a safe integer"]);
+    expect(messages(number({ nonZero: true })(0))).toEqual(["Must not be zero"]);
+    expect(messages(number({ multipleOf: 5 })(7))).toEqual(["Must be a multiple of 5"]);
+  });
+
+  it("should describe the formats by their names", () => {
+    const messageOf = (result: ReturnType<ReturnType<typeof email>>): string[] =>
+      issuesOf(result).map((found) => formatIssue(found));
+
+    expect(messageOf(url()("x"))).toEqual(["Invalid URL"]);
+    expect(messageOf(uuid()("x"))).toEqual(["Invalid UUID"]);
+    expect(messageOf(ip({ version: "v4" })("x"))).toEqual(["Invalid IPv4 address"]);
+    expect(messageOf(ip()("x"))).toEqual(["Invalid IP address"]);
+  });
+
+  it("should word bigint and date bounds", () => {
+    const messages = (result: ReturnType<ReturnType<typeof bigint>>): string[] =>
+      issuesOf(result).map((found) => formatIssue(found));
+
+    expect(messages(bigint({ min: 10n })(1n))).toEqual(["Must be at least 10"]);
+    expect(messages(bigint({ lt: 10n })(10n))).toEqual(["Must be less than 10"]);
+    const earliest = new Date("2026-01-01T00:00:00Z");
+    expect(formatIssue(issuesOf(date({ min: earliest })(new Date("2025-01-01")))[0] as ValidationIssue)).toBe(
+      "Must be on or after 2026-01-01T00:00:00.000Z",
+    );
+    expect(formatIssue(issuesOf(date({ max: earliest })(new Date("2027-01-01")))[0] as ValidationIssue)).toBe(
+      "Must be on or before 2026-01-01T00:00:00.000Z",
+    );
+  });
+
+  it("should describe literals and lists of allowed values, writing values as they appear in code", () => {
+    expect(formatIssue(issuesOf(literal("admin")("x"))[0] as ValidationIssue)).toBe('Expected "admin"');
+    expect(formatIssue(issuesOf(literal(1n)(1))[0] as ValidationIssue)).toBe("Expected 1n");
+    expect(formatIssue(issuesOf(literal(null)(1))[0] as ValidationIssue)).toBe("Expected null");
+    expect(formatIssue(issuesOf(oneOf(["a", "b"])("x"))[0] as ValidationIssue)).toBe('Expected one of "a", "b"');
+    expect(formatIssue(issuesOf(oneOf([1, 2])(3))[0] as ValidationIssue)).toBe("Expected one of 1, 2");
+  });
+
+  it("should word collection sizes as a count of items, singular for one", () => {
+    const messageOf = (result: ValidationResult<unknown>): string[] =>
+      issuesOf(result).map((found) => formatIssue(found));
+
+    expect(messageOf(array(string(), { min: 2 })(["a"]))).toEqual(["Must contain at least 2 items"]);
+    expect(messageOf(array(string(), { min: 1 })([]))).toEqual(["Must contain at least 1 item"]);
+    expect(messageOf(array(string(), { max: 1 })(["a", "b"]))).toEqual(["Must contain at most 1 item"]);
+    expect(messageOf(array(string(), { length: 2 })(["a"]))).toEqual(["Must contain exactly 2 items"]);
+    expect(messageOf(tuple([string(), string()])(["a"]))).toEqual(["Must contain exactly 2 items"]);
+    expect(messageOf(tuple([string()], { rest: string() })([]))).toEqual(["Must contain at least 1 item"]);
+    expect(messageOf(set(string(), { max: 0 })(new Set(["a"])))).toEqual(["Must contain at most 0 items"]);
+    expect(messageOf(map(string(), string(), { min: 1 })(new Map()))).toEqual(["Must contain at least 1 item"]);
+  });
+
+  it("should describe duplicates, unions and JSON", () => {
+    expect(formatIssue(issuesOf(array(string(), { unique: true })(["a", "a"]))[0] as ValidationIssue)).toBe(
+      "Must be unique",
+    );
+    expect(formatIssue(issuesOf(union([string()])(1))[0] as ValidationIssue)).toBe(
+      "Does not match any of the allowed types",
+    );
+    expect(formatIssue(issuesOf(json()("{"))[0] as ValidationIssue)).toBe("Invalid JSON");
+  });
+
+  it("should describe unrecognized keys, coercion failures and unions", () => {
+    expect(formatIssue(issue({ code: "unrecognized_key", params: { key: "x" } }))).toBe('Unrecognized key "x"');
+    expect(
+      formatIssue(issue({ code: "invalid_type", params: { expected: "number", received: "string", coerced: true } })),
+    ).toBe("Cannot convert string to number");
+    expect(formatIssue(issue({ code: "invalid_union" }))).toBe("Does not match any of the allowed types");
+  });
+
+  it("should name an unknown format by its own name", () => {
+    expect(formatIssue(issue({ code: "invalid_format", params: { format: "phone" } }))).toBe("Invalid phone");
+  });
+
+  it("should never echo the received value", () => {
+    const secret = "hunter2";
+    const messages = [string({ min: 20 })(secret), email()(secret), number()(secret)].flatMap((result) =>
+      issuesOf(result).map((found) => formatIssue(found)),
+    );
+    expect(messages.join()).not.toContain(secret);
+  });
+});
+
+describe("flatten", () => {
+  it("should put root issues in formErrors and the rest under their path", () => {
+    const failure = fail(
+      { message: "Form is invalid" },
+      { path: ["user", "email"], code: "invalid_format", params: { format: "email" } },
+      { path: ["tags", 0], message: "Too short" },
+      { path: ["user", "email"], message: "Required" },
+    ).error;
+
+    expect(flatten(failure, englishMessages)).toEqual({
+      formErrors: ["Form is invalid"],
+      fieldErrors: { "user.email": ["Invalid email address", "Required"], "tags[0]": ["Too short"] },
+    });
+  });
+
+  it("should not read a code from the prototype of the message map", () => {
+    for (const code of ["toString", "constructor", "hasOwnProperty", "__proto__"]) {
+      expect(formatIssue({ code, path: [] }, {})).toBe("Invalid value");
+      expect(formatIssue({ code, path: [] })).toBe("Invalid value");
+    }
+    expect(formatIssue({ code: "toString", path: [] }, { toString: "Mine" })).toBe("Mine");
+  });
+
+  it("should use the message map", () => {
+    const failure = fail({ path: ["a"], code: "custom" }).error;
+    expect(flatten(failure, { custom: "Oops" }).fieldErrors).toEqual({ a: ["Oops"] });
+  });
+
+  it("should not let a field named like an Object.prototype member collide", () => {
+    const failure = fail({ path: ["constructor"], message: "bad" }, { path: ["__proto__"], message: "worse" }).error;
+    const { fieldErrors } = flatten(failure);
+    expect(fieldErrors.constructor).toEqual(["bad"]);
+    expect(fieldErrors["__proto__"]).toEqual(["worse"]);
+  });
+});

@@ -124,6 +124,64 @@ export function toPackageName(specifier: string): string | undefined {
   return PACKAGE_NAME.test(name) && !BUILT_IN_MODULES.has(name) ? name : undefined;
 }
 
+const BUILT_FILE = /\.(?:[cm]?js|d\.[cm]?ts)$/;
+const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g;
+const LINE_COMMENT = /^[^\S\n]*\/\/.*$/gm;
+
+/**
+ * Removes block comments and comment-only lines.
+ *
+ * A build keeps doc comments, and a doc comment often shows an import in an example. Reading it as an
+ * import would report a package the built code never loads.
+ * @param source File contents.
+ * @returns The source without its comments.
+ */
+export function stripComments(source: string): string {
+  return source.replaceAll(BLOCK_COMMENT, "").replaceAll(LINE_COMMENT, "");
+}
+
+/**
+ * Finds built files that still name packages the build was supposed to inline.
+ *
+ * A package that lists a dependency as bundled promises that neither its built JavaScript nor its
+ * built declarations import it. Nothing else can verify that, because the source imports it either way.
+ * @param workspacePackage Package whose `dist/` is read.
+ * @param names Package names that should not appear in the output.
+ * @returns For each name found, the first built file, relative to the package, that names it.
+ */
+export async function findBuiltImports(
+  workspacePackage: WorkspacePackage,
+  names: ReadonlySet<string>,
+): Promise<Map<string, string>> {
+  const found = new Map<string, string>();
+  if (names.size === 0) {
+    return found;
+  }
+  let entries: string[];
+  try {
+    entries = await readdir(join(workspacePackage.directory, "dist"), { recursive: true });
+  } catch {
+    // Nothing is built, so there is no output to hold a leak.
+    return found;
+  }
+  const files = entries
+    .map((entry) => entry.replaceAll("\\", "/"))
+    .filter((entry) => BUILT_FILE.test(entry) && !entry.includes("node_modules/"))
+    .sort();
+  const sources = await Promise.all(
+    files.map(async (file) => stripComments(await readFile(join(workspacePackage.directory, "dist", file), "utf8"))),
+  );
+  for (const [index, source] of sources.entries()) {
+    for (const specifier of readSpecifiers(source)) {
+      const name = toPackageName(specifier);
+      if (name !== undefined && names.has(name) && !found.has(name)) {
+        found.set(name, `dist/${files[index]}`);
+      }
+    }
+  }
+  return found;
+}
+
 async function isFile(path: string): Promise<boolean> {
   try {
     return (await stat(path)).isFile();
