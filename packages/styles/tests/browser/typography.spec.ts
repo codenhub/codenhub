@@ -554,3 +554,48 @@ test("reads presentation on key caps and tables", async ({ page }) => {
   expect(isTransparent(styles.ghostHeadBackground), "ghost table head").toBe(true);
   expect(getColorDistance(styles.tableHeadBackground, styles.tokenSurface)).toBeGreaterThan(2);
 });
+
+/* A scroll box clips what paints outside it, so cyber's glow was cut flush
+   around a wrapped table. The wrapper makes room for the halo inside itself and
+   hands the same room back outside: the glow fits, and the table does not move. */
+test("gives a wrapped table's halo room without moving the table", async ({ page }) => {
+  await page.goto(TYPOGRAPHY_URL);
+
+  const read = await page.evaluate(() => {
+    const host = document.createElement("div");
+
+    host.style.width = "400px";
+    /* Measured from a marker above each case rather than from the case's own
+       box: the wrapper's negative top margin collapses through an unpadded
+       parent and moves the parent, which is the margin working as intended. */
+    host.innerHTML =
+      '<div data-case="plain"><p data-marker>m</p><div class="table-wrap"><table class="data-table"><tbody><tr><td>a</td></tr></tbody></table></div></div>' +
+      '<div data-case="cyber" class="cyber"><p data-marker>m</p><div class="table-wrap"><table class="data-table"><tbody><tr><td>a</td></tr></tbody></table></div></div>';
+    document.body.append(host);
+
+    const measure = (name: string) => {
+      const box = host.querySelector(`[data-case="${name}"]`)!;
+      const wrap = box.querySelector(".table-wrap")!;
+      const table = box.querySelector("table")!.getBoundingClientRect();
+      const marker = box.querySelector("[data-marker]")!.getBoundingClientRect();
+
+      return {
+        padding: getComputedStyle(wrap).paddingTop,
+        left: table.left - marker.left,
+        top: table.top - marker.bottom,
+        width: table.width,
+      };
+    };
+    const result = { plain: measure("plain"), cyber: measure("cyber") };
+
+    host.remove();
+
+    return result;
+  });
+
+  expect(read.plain.padding).toBe("0px");
+  expect(read.cyber.padding).toBe("8px");
+  expect(read.cyber.left).toBeCloseTo(read.plain.left, 1);
+  expect(read.cyber.top).toBeCloseTo(read.plain.top, 1);
+  expect(read.cyber.width).toBeCloseTo(read.plain.width, 1);
+});

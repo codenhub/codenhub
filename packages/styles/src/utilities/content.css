@@ -1,7 +1,23 @@
 @reference "../box.css";
 
+/* A scroll box clips whatever paints outside it, and `overflow-x` takes the
+   vertical overflow with it, so an aesthetic's halo around the table -- cyber's
+   glow -- was cut flush on every side and its bevelled corners read as broken.
+   The wrapper makes room for the halo inside itself and gives the same room
+   back outside, so the table sits where it did and only the scroll box grows.
+   Zero wherever no halo is drawn. The cost, under a halo: the wrapper reaches
+   that far past its parent, which shows only where the parent is flush with the
+   viewport. Vertical margins still add up to the same gap when they collapse
+   with a sibling's, since the negative one is paid back by the padding. */
 @utility table-wrap {
-  @apply w-full overflow-x-auto;
+  @apply overflow-x-auto;
+
+  --_table-wrap-bleed: calc(var(--ui-halo-blur, 0px) + var(--ui-halo-spread, 0px));
+
+  box-sizing: border-box;
+  width: calc(100% + var(--_table-wrap-bleed) * 2);
+  margin: calc(var(--_table-wrap-bleed) * -1);
+  padding: var(--_table-wrap-bleed);
 }
 
 /* The one component that takes the frame of `box` and not the whole of it. The
