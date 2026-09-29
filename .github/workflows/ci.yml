@@ -74,16 +74,28 @@ jobs:
         if: github.event_name == 'pull_request'
         run: git rev-parse --verify origin/${{ github.base_ref }}
 
-      # Browsers are downloaded once per engine and lockfile rather than on every
-      # run. The key includes the lockfile because that is what pins the Playwright
-      # version the browsers belong to, and the engine because each job installs
-      # only its own. A miss costs the download the cache was meant to save, which
-      # is what the run did before this step existed.
+      # The browsers belong to the `playwright-core` version the lockfile pins, so
+      # that version is the cache key rather than the whole lockfile, which any
+      # unrelated dependency bump would change. An empty result means the
+      # lockfile format moved and the key would stop tracking anything, so it fails.
+      - name: Resolve the Playwright version
+        id: playwright
+        run: |
+          version="$(grep -oE "^  playwright-core@[^:]+" pnpm-lock.yaml | sed "s/^  playwright-core@//" | sort -u | paste -sd, -)"
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # Browsers are downloaded once per engine and Playwright version rather than
+      # on every run. The key includes the engine because each job installs only
+      # its own. A miss costs the download the cache was meant to save, which is
+      # what the run did before this step existed. There are no restore keys: an
+      # older version's browsers would be restored, the new ones installed beside
+      # them, and both saved, so the cache would only ever grow.
       - name: Restore the browser cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ matrix.engine }}-${{ hashFiles('pnpm-lock.yaml') }}
+          key: playwright-${{ runner.os }}-${{ matrix.engine }}-${{ steps.playwright.outputs.version }}
 
       # Only this job's engine is installed; the other two would be downloaded and
       # never launched. `--with-deps` adds the system libraries a headless browser
@@ -142,6 +154,14 @@ jobs:
       - name: Set up the workspace
         uses: ./.github/actions/setup
 
+      # Same resolution as the browser job, so both restore the same cache.
+      - name: Resolve the Playwright version
+        id: playwright
+        run: |
+          version="$(grep -oE "^  playwright-core@[^:]+" pnpm-lock.yaml | sed "s/^  playwright-core@//" | sort -u | paste -sd, -)"
+          test -n "$version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       # `@codenhub/styles`' `styles-palette` generator reads real composed
       # colors from a real headless browser rather than reimplementing
       # `color-mix()` math by hand (see `docs/internal/generated-palette.md`),
@@ -152,7 +172,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-chromium-${{ hashFiles('pnpm-lock.yaml') }}
+          key: playwright-${{ runner.os }}-chromium-${{ steps.playwright.outputs.version }}
 
       - name: Install browsers
         run: pnpm hub browsers --with-deps styles -- chromium
