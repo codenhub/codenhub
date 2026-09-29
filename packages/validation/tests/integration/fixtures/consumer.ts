@@ -139,6 +139,10 @@ export const tags = array(string(), { max: 5, unique: true });
 export const tagList: Infer<typeof tags> = ["a", "b"];
 // @ts-expect-error items must be strings
 export const badTagList: Infer<typeof tags> = [1];
+// The callback of `unique` is typed by the item, with no annotation.
+export const users = array(object({ id: number() }), { unique: (user) => user.id });
+// @ts-expect-error the item has no `name`
+export const badUsers = array(object({ id: number() }), { unique: (user) => user.name });
 export const point = tuple([number(), number()]);
 export const pointValue: Infer<typeof point> = [1, 2];
 // @ts-expect-error a tuple has a fixed length

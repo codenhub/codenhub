@@ -4,14 +4,18 @@ import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/ty
 import { settle } from "./settle";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
-/** Constraints for {@link array}. Every option is optional. */
-export interface ArrayOptions extends SizeOptions {
+/**
+ * Constraints for {@link array}. Every option is optional.
+ *
+ * @typeParam TItem - The type of an item after validation, which `unique` receives.
+ */
+export interface ArrayOptions<TItem = unknown> extends SizeOptions {
   /**
    * Rejects duplicates, reporting each repeat at its own index. `true` compares the validated items
    * themselves; a function compares the value it returns for each item, so `(user) => user.id`
    * makes ids unique. Comparison is SameValueZero, as for a `Set`.
    */
-  unique?: boolean | ((item: never) => unknown);
+  unique?: boolean | ((item: TItem) => unknown);
 }
 
 /**
@@ -39,7 +43,7 @@ export interface ArrayOptions extends SizeOptions {
  */
 export function array<TElement extends AnyValidator>(
   element: TElement,
-  options: ArrayOptions = {},
+  options: ArrayOptions<Infer<TElement>> = {},
 ): Composed<TElement, Infer<TElement>[]> {
   assertSizeOptions(options);
   const { unique } = options;
