@@ -2,11 +2,11 @@
 
 # @codenhub/validation
 
-Zero-dependency schema validation for TypeScript. Describe the data you expect, ask a schema whether some unknown input satisfies it, and get either the typed value or every reason it does not. Ships common validators for strings, numbers, objects, arrays and unions, and is built to be extended: custom checks, transforms, async rules and localizable messages compose with everything else.
+Checks that a value is what you need it to be, and gives you either the typed value or every reason it is not. Each validator is a small function you import on its own, so a package or app ships only the checks it uses. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies.
 
-> **Experimental:** the API is still settling before a 1.0. Breaking changes land in minor releases and are listed in the [changelog](docs/changelog/index.md). What is most likely to move: the shape of `params` on built-in issues, the set of string formats, and object helpers such as `partial` and `required`.
+> **Experimental:** pre-1.0. The API of 0.1.0 is meant to hold for every 0.1.x release; a change that breaks callers, if one proves necessary, ships as 0.2.0 and is listed in the [changelog](docs/changelog/index.md).
 >
-> **Migrating from 0.0.1:** validators are now built first and run later. `val.string(x).min(3)` becomes `val.string().min(3).validate(x)`, and `validate` returns `{ ok, value }` or `{ ok, error }` with every issue instead of the first failure. The 0.0.1 immediate helpers are removed; the [0.1.0 changelog](docs/changelog/0.1.0.md) maps each old call to its replacement.
+> **Migrating from 0.0.1:** 0.1.0 is a rewrite and no call carries over unchanged. The [0.1.0 changelog](docs/changelog/0.1.0.md) maps each old call to its replacement.
 
 ## Installation
 
@@ -16,61 +16,62 @@ pnpm add @codenhub/validation
 
 ## Usage
 
+A validator is a function. Call it with any value and read the result:
+
 ```ts
-import { val, type Infer } from "@codenhub/validation";
+import { email, formatIssue } from "@codenhub/validation";
 
-const user = val.object({
-  name: val.string().trim().min(2),
-  email: val.string().email(),
-  role: val.enum(["admin", "user"]).default("user"),
-  age: val.number().int().min(18).optional(),
-});
-
-type User = Infer<typeof user>;
-
-const result = user.validate(unknownInput);
+const result = email()(input);
 
 if (result.ok) {
-  result.value; // User
+  result.value; // string
 } else {
-  result.error.issues; // every problem, each with a code, a path and a message
+  formatIssue(result.error.issues[0]); // "Invalid email address"
 }
 ```
 
-`validate` never throws for invalid input. Use `parse` when you would rather throw a `ValidationError`, and `validateAsync` or `parseAsync` when a schema has async checks.
-
-Add your own rules to any schema:
+Build objects from validators, and read the type from the validator so there is only one place to change:
 
 ```ts
-const signup = val.object({ password: val.string().min(8), confirm: val.string() }).refine((data) => data.password === data.confirm, { message: "Passwords must match", path: ["confirm"] });
+import { email, number, object, optional, string, type Infer } from "@codenhub/validation";
 
-const username = val.string().refine(async (name) => !(await isTaken(name)), "Username is taken");
+const signup = object({
+  name: string({ trim: true, min: 2 }),
+  email: email(),
+  age: optional(number({ int: true, min: 18 })),
+});
+
+type Signup = Infer<typeof signup>; // { name: string; email: string; age?: number | undefined }
+
+const result = signup(requestBody);
 ```
+
+Invalid input never throws. Every problem is in `result.error.issues`, each with a `code`, a `path` to the offending value and `params` describing the failure. Turn an issue into text with `formatIssue`, or group them by field for a form with `flatten`.
+
+Write your own validator by returning `pass(value)` or `fail(...)` from any function, and add rules to an existing one with `refine`, including rules that need to `await` something.
 
 ## Documentation
 
 - [Documentation overview](docs/index.md)
 - [Validator reference](docs/validators.md)
-- [Customization](docs/customization.md)
-- [Errors and messages](docs/errors.md)
-- [Coercion](docs/coercion.md)
+- [Custom validators](docs/custom-validators.md)
+- [Issues and messages](docs/errors.md)
 - [Changelog](docs/changelog/index.md)
 
 ## Requirements
 
-- Node.js 22 or newer, or a current browser, worker or edge runtime. The code relies on `Object.hasOwn` and `URL.canParse`.
-- ESM-aware package resolution.
-- No runtime dependencies.
+- Node.js 22 or newer, or a current browser, worker or edge runtime. The code relies on `Object.hasOwn`.
+- ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`, so a bundler removes the validators you do not import.
 
 Runtime code does not touch browser or Node.js globals, so it runs in the browser, on the server and in workers.
 
 ## Notes
 
-- Every schema implements [Standard Schema v1](https://standardschema.dev/), so form and API libraries that accept one can take it directly.
-- Validation is synchronous until a `refine`, `check` or `transform` callback returns a promise. The sync methods then throw and tell you to use the async ones, instead of guessing.
-- Issues never contain the input unless you pass `includeInput: true`, and messages name types (`Expected number, received string`) instead of echoing values.
-- Rules never rewrite the value. `trim()`, `toLowerCase()`, `toUpperCase()`, `clamp()`, `transform()` and `default()` are the explicit ways to change it.
-- `email()` and `url()` accept public host names only by default; `url({ allowLocal: true })` opens up `localhost` and IP addresses.
+- A validator returns `{ ok: true, value }` or `{ ok: false, error }`. Bad input is never thrown; a bad option, such as `string({ min: -1 })`, throws when the validator is created.
+- Issues never contain the input, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, and can be replaced to localize it.
+- Rules never rewrite the value unless you ask: `trim`, `lowercase`, `uppercase` and `clamp` are the options that do.
+- Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
+- `email()` accepts public host names only.
 - Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input.
 
 ## License
@@ -79,11 +80,11 @@ Licensed under Apache-2.0.
 
 <!-- Source: docs/index.md -->
 
-# Validate data and shapes
+# Validate values and shapes
 
-`@codenhub/validation` answers one question: does this unknown value look the way I said it should? You describe the expected data as a schema, run a value through it, and get either the value with its TypeScript type or a complete list of what is wrong. It ships the validators most applications need and lets you build any others from small, composable pieces.
+`@codenhub/validation` answers one question: is this value what I said it should be? You hand a value to a validator and get back either that value, typed, or a complete list of what is wrong with it. It works the same for one value, such as an email address or a port number, and for a whole object such as a form or a request body.
 
-Validation matters wherever data crosses a boundary you do not control: a request body, a form, a query string, an environment variable, a file read from disk, a message from another service. TypeScript cannot check those at runtime, so the type you wrote for them is a promise nothing enforces until a schema does.
+This matters wherever data crosses a boundary you do not control: a request, a form, a query string, an environment variable, a file, a message from another service. TypeScript cannot check those at runtime, so the type you wrote for them is a promise nothing enforces until a validator does.
 
 ## Installation
 
@@ -91,695 +92,625 @@ Validation matters wherever data crosses a boundary you do not control: a reques
 pnpm add @codenhub/validation
 ```
 
-The package is ESM only and has no runtime dependencies. All public symbols are imported from `@codenhub/validation`; there are no subpath exports.
+The package is ESM only and has no dependencies. Everything is imported by name from `@codenhub/validation`; there are no subpath exports.
 
-## A first schema
+## A validator is a function
 
-Everything starts from `val`, which holds one factory per kind of data. A schema is built by calling factories and chaining rules onto them:
+Every validator takes any input and returns a result. That is the whole idea, and it has two consequences worth knowing up front.
+
+You create a validator by calling a function, with options if you want them, and then you call the validator with the value:
 
 ```ts
-import { val, type Infer } from "@codenhub/validation";
+import { number, string } from "@codenhub/validation";
 
-const signup = val.object({
-  username: val.string().trim().min(3).max(30),
-  email: val.string().email(),
-  age: val.number().int().min(18).optional(),
-  newsletter: val.boolean().default(false),
-  tags: val.array(val.string()).max(5).default([]),
+const port = number({ int: true, min: 1, max: 65535 });
+
+port(8080); // { ok: true, value: 8080 }
+port(70000); // { ok: false, error: { issues: [...] } }
+
+string({ min: 3 })("ab"); // { ok: false, ... }
+```
+
+The first line of that example runs once, when the module loads, and produces a function you can reuse for every value. When you only need to check a single value once, call both at once: `number({ int: true })(input)`.
+
+Because a validator is only a function, you can write your own with no helper at all, and you can pass any validator wherever another expects one. [Custom validators](docs/custom-validators.md) shows how.
+
+## Reading the result
+
+A result is one of two plain objects, so you branch on `ok`:
+
+```ts
+import { email, formatIssue } from "@codenhub/validation";
+
+const result = email()(input);
+
+if (result.ok) {
+  save(result.value); // typed as string
+} else {
+  for (const issue of result.error.issues) {
+    console.log(issue.path, formatIssue(issue));
+  }
+}
+```
+
+A validator never throws for invalid input, because invalid input is an expected outcome and not a bug. If you would rather stop the program, that is one line: `if (!result.ok) throw new Error(...)`.
+
+`result.value` is not necessarily the input you passed in. It is the value after the validator has run, with any clean-up you asked for applied (`trim`, `lowercase`, `clamp`) and, for an object, unlisted properties dropped. The input is never modified.
+
+When something is wrong, the validator reports every problem it can find and not just the first, so a form can show all its errors at once. Each issue has a stable `code` to branch on, the `path` to the offending value, and `params` describing what was wrong. [Issues and messages](docs/errors.md) has the details.
+
+## Objects
+
+`object` takes a shape, an object whose values are validators, and returns a validator for objects of that shape:
+
+```ts
+import { email, number, object, optional, string, type Infer } from "@codenhub/validation";
+
+const signup = object({
+  username: string({ trim: true, min: 3, max: 30 }),
+  email: email(),
+  age: optional(number({ int: true, min: 18 })),
 });
 
 export type Signup = Infer<typeof signup>;
 ```
 
-`Infer` reads the TypeScript type a schema produces, so the schema is the single source of truth: no separate interface to keep in sync. Here `Signup` has a required `username` and `email`, an optional `age`, and a `newsletter` and `tags` that are always present because they have defaults.
+`Infer` reads the TypeScript type a validator produces, so the validator is the single source of truth and there is no separate interface to keep in sync. Here `Signup` has a required `username` and `email` and an optional `age`.
 
-Schemas are immutable. Every method that adds a rule returns a new schema and leaves the original alone, so a base schema can be shared and extended freely:
+Issue paths lead down to the offending value, so a problem with `email` has the path `["email"]` and one inside a list has segments such as `["addresses", 0, "street"]`.
+
+`object` accepts plain objects only: created by `{}`, `Object.create(null)` or `JSON.parse`. Arrays, class instances, `Map`s and `null` are rejected. Properties the shape does not list are dropped from the output by default; the [validator reference](docs/validators.md#objects) shows how to reject them or keep them.
+
+## Combining validators
+
+A few functions combine validators into new ones:
+
+- `optional(validator)` accepts `undefined` as well.
+- `pipe(a, b, c)` runs validators in order, feeding each the value the previous one produced. This is how you clean a string before checking a format: `pipe(string({ trim: true, lowercase: true }), email())`.
+- `refine(validator, check, issue)` adds a rule the validator cannot express, such as two fields having to match.
+
+## Sync and async
+
+A validator is synchronous unless something it runs is asynchronous. Checking a username against a database is asynchronous; checking its length is not. You do not pick a mode: you write the rule, and the types follow. A validator that contains an async rule is an `AsyncValidator`, its result must be `await`ed, and the compiler stops you from reading it as if it were ready. Everything else stays synchronous and pays nothing. [Custom validators](docs/custom-validators.md#asynchronous-rules) has an example.
+
+## Testing whether a value passes
+
+When you only need a yes or no, or a type guard, use `is`:
 
 ```ts
-const username = val.string().trim().min(3);
-const adminUsername = username.startsWith("admin_");
+import { is, number } from "@codenhub/validation";
+
+const isPort = (input: unknown): input is number => is(number({ int: true, min: 1, max: 65535 }), input);
 ```
 
-## Reading the result
-
-`validate` returns a result you branch on. It never throws for invalid input:
-
-```ts
-const result = signup.validate(requestBody);
-
-if (result.ok) {
-  save(result.value); // typed as Signup
-} else {
-  for (const issue of result.error.issues) {
-    console.log(issue.path, issue.message);
-  }
-}
-```
-
-`result.value` is not the input you passed in. It is a new value after the schema has run: defaults filled in, `trim()` applied, unknown object properties dropped, transforms mapped. The input is never modified.
-
-When something is wrong the schema reports **every** problem it can find, not just the first, each with a stable `code`, the `path` to the offending value, and a human-readable `message`. See [Errors and messages](docs/errors.md) for the full shape.
-
-## Ways to run a schema
-
-| Method                                  | Returns                                         | Use it when                                               |
-| --------------------------------------- | ----------------------------------------------- | --------------------------------------------------------- |
-| `schema.validate(input, options?)`      | `{ ok: true, value }` or `{ ok: false, error }` | You handle failure as a normal outcome.                   |
-| `schema.parse(input, options?)`         | The value, or throws `ValidationError`          | A failure should abort, such as inside a request handler. |
-| `schema.is(input)`                      | `boolean`, narrowing the type                   | You only need a yes or no.                                |
-| `schema.validateAsync(input, options?)` | A promise of the `validate` result              | The schema has async rules.                               |
-| `schema.parseAsync(input, options?)`    | A promise of the value, or rejects              | Same, but throwing.                                       |
-
-`options` is optional and accepts:
-
-- `abortEarly`: stop at the first issue instead of collecting all of them. Default `false`.
-- `includeInput`: keep the invalid value on each issue as `input`. Default `false`. Enable it only when retaining the value is safe: inputs can hold passwords and tokens.
-- `context`: any value you want your own checks to reach, available as `ctx.options.context`. See [Customization](docs/customization.md).
-
-### Sync and async
-
-Validation stays synchronous until one of your callbacks (`refine`, `check`, `transform`) returns a promise, so a plain schema costs nothing extra. If a schema does contain async work, the sync methods `validate`, `parse` and `is` throw an `Error` that tells you to use `validateAsync` or `parseAsync`. They never guess or silently report the input as invalid. `validateAsync` and `parseAsync` work on every schema, sync or not.
-
-Independent properties and array items run their async checks concurrently. Issues are still reported in the order the schema lists them, not the order the promises settle. With `abortEarly`, work runs one step at a time and nothing starts after the first failure.
-
-## Objects
-
-`val.object(shape)` accepts plain objects: created by `{}`, `Object.create(null)` or `JSON.parse`. Arrays, class instances, `Map`s and `null` are rejected.
-
-- Properties not listed in the shape are dropped from the output. Call `.strict()` to reject them with an `unrecognized_key` issue instead, or `.passthrough()` to copy them through unvalidated.
-- Only own properties are read, so inherited values never satisfy a required property.
-- A property whose schema accepts `undefined` (through `.optional()`, `.nullish()` or `val.undefined()`) is optional in the inferred type, and is left out of the output when absent.
-- `.extend()`, `.pick()`, `.omit()`, `.partial()` and `.required()` derive new object schemas from existing ones. They start a fresh schema, so rules added earlier with `refine` or `check` are not carried over; add them after deriving.
-
-## Standard Schema
-
-Every schema implements [Standard Schema v1](https://standardschema.dev/) through its `~standard` property, so libraries that accept any Standard Schema (form libraries, API frameworks, routers) can use it without an adapter. The `validate` function there returns a promise only when the validation in progress reaches a callback that returns one; otherwise it returns the result directly.
+`is` narrows to the type the validator produces, which is exact for a validator that does not change the value. For one that trims or transforms, read `result.value` from calling it instead. `is` accepts synchronous validators only.
 
 ## Next steps
 
-- [Validator reference](docs/validators.md) lists every factory and rule with its failure code.
-- [Customization](docs/customization.md) shows how to write your own rules, transforms, async checks and reusable validators.
-- [Errors and messages](docs/errors.md) explains issues, error codes, `params`, message functions and localization.
-- [Coercion](docs/coercion.md) covers text input such as environment variables and form values.
+- [Validator reference](docs/validators.md): every validator and combinator, with its options and the issue it reports.
+- [Custom validators](docs/custom-validators.md): write your own, add rules with `refine`, and validate asynchronously.
+- [Issues and messages](docs/errors.md): the shape of an issue, the built-in codes, message text, localization and form errors.
+- [Changelog](docs/changelog/index.md): release notes and the migration from 0.0.1.
+
+<!-- Source: docs/custom-validators.md -->
+
+# Custom validators
+
+The built-in validators cover common cases. For everything else you write a validator yourself, and it takes no helper and no registration: a validator is any function that takes an input and returns a result.
+
+## Writing a validator
+
+Return `pass(value)` when the input is acceptable and `fail(...)` when it is not:
+
+```ts
+import { fail, pass, type Validator } from "@codenhub/validation";
+
+const even: Validator<number> = (input) => (typeof input === "number" && input % 2 === 0 ? pass(input) : fail({ code: "not_even" }));
+
+even(4); // { ok: true, value: 4 }
+even(3); // { ok: false, error: { issues: [{ code: "not_even", path: [] }] } }
+```
+
+The parameter is `unknown` because a validator exists to check data you do not trust yet, so check the type before you use it. The `Validator<number>` annotation is optional, but it makes the compiler check your function against the contract and tells `Infer` what the validator produces.
+
+Because a validator is only a function, yours works everywhere a built-in does: inside `object`, `optional` and `pipe`, and as the first argument of `refine`.
+
+```ts
+import { object } from "@codenhub/validation";
+
+// `even` is the validator written above.
+const pairs = object({ count: even });
+```
+
+### Reporting failures
+
+`fail` takes one or more issues. Each can set:
+
+| Field     | Meaning                                                                                                                                    |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `code`    | A stable string callers branch on. Defaults to `"custom"`. Pick your own, such as `"username_taken"`.                                      |
+| `path`    | Where the problem is, relative to the value you were given. Defaults to the value itself. A parent adds its own segments in front.         |
+| `params`  | Facts about the failure, for building a message or for callers to inspect. Never put the input in here: an issue is something callers log. |
+| `message` | Fixed message text. Without it, [`formatIssue`](docs/errors.md#turning-an-issue-into-text) builds text from the `code` and `params`.            |
+
+To report several problems at once, pass several issues:
+
+```ts
+import { fail, pass, type IssueInput, type Validator } from "@codenhub/validation";
+
+const strongPassword: Validator<string> = (input) => {
+  if (typeof input !== "string") {
+    return fail({ code: "invalid_type", params: { expected: "string", received: typeof input } });
+  }
+  const issues: IssueInput[] = [];
+  if (!/\d/.test(input)) {
+    issues.push({ code: "missing_digit" });
+  }
+  if (!/[A-Z]/.test(input)) {
+    issues.push({ code: "missing_uppercase" });
+  }
+  const [first, ...rest] = issues;
+  return first ? fail(first, ...rest) : pass(input);
+};
+```
+
+### Building on an existing validator
+
+To reuse a built-in validator and add to it, call it and look at the result. Return its failure unchanged, or continue with the value it produced:
+
+```ts
+import { email, fail, pass, type Validator } from "@codenhub/validation";
+
+const workEmail: Validator<string> = (input) => {
+  const result = email()(input);
+  if (!result.ok) {
+    return result;
+  }
+  return result.value.endsWith("@example.com") ? pass(result.value) : fail({ code: "not_work_email" });
+};
+```
+
+For a single extra rule, `refine` does this for you.
+
+## Adding a rule with `refine`
+
+`refine(validator, check, issue?)` runs `check` on the value `validator` produced, and only when `validator` succeeded. It returns a validator of the same type.
+
+```ts
+import { refine, string } from "@codenhub/validation";
+
+const notReserved = refine(string({ trim: true }), (name) => name !== "admin", {
+  code: "reserved_name",
+  message: "That name is reserved",
+});
+```
+
+The third argument is the issue reported when `check` returns `false`. A string is shorthand for `{ message }`. Without it the issue has code `custom`.
+
+Use `refine` for rules that involve several fields as well, and point the issue at the field the user should fix with `path`:
+
+```ts
+import { object, refine, string } from "@codenhub/validation";
+
+const signup = refine(object({ password: string({ min: 8 }), confirm: string() }), (data) => data.password === data.confirm, { code: "mismatch", path: ["confirm"] });
+```
+
+`check` only runs when the whole object is valid, so it can rely on `data.password` being a string.
+
+## Asynchronous rules
+
+A rule that needs to wait, such as checking a username against a database, is a function that returns a promise. A `refine` check may return one:
+
+```ts
+import { email, object, refine, string } from "@codenhub/validation";
+
+const username = refine(string({ trim: true, min: 3 }), async (name) => !(await isTaken(name)), {
+  code: "username_taken",
+});
+
+const signup = object({ username, email: email() });
+
+const result = await signup(input);
+```
+
+Nothing else changes. A validator that holds an asynchronous rule becomes an `AsyncValidator`, and so does everything that contains it: `signup` above is one because `username` is. The type tells the compiler the result must be awaited, so reading `signup(input).ok` without `await` is an error you find while writing, not a bug you find in production.
+
+You can also write an asynchronous validator directly:
+
+```ts
+import { fail, pass, type AsyncValidator } from "@codenhub/validation";
+
+const existingUser: AsyncValidator<User> = async (input) => {
+  const user = typeof input === "string" ? await findUser(input) : undefined;
+  return user ? pass(user) : fail({ code: "unknown_user" });
+};
+```
+
+Things to know about asynchronous validation:
+
+- **Always `await` the result of an `AsyncValidator`.** It may be a promise, or a plain result when the validator could answer without waiting, for instance `optional(existingUser)` given `undefined`. `await` handles both.
+- **Independent properties run their rules concurrently.** In `signup` above, the username lookup and the email check start together.
+- **Issues stay in a fixed order.** They follow the order of the shape, not the order in which the promises finished.
+- **`is` needs a synchronous validator.** It throws a `TypeError` for one that turns out to return a promise.
+- **A rejected promise is a bug, not invalid input.** If your callback throws or rejects, the exception propagates. Report invalid input with `fail`.
+
+## What you must not do
+
+- **Do not put the input in an issue.** No `params` value, no `message` built from the input. Issues are logged, and inputs are passwords and tokens.
+- **Do not throw for bad input.** Return `fail`. Throw only for a mistake in how the validator was set up, and do it when it is created, not when it runs.
+- **Do not modify the input.** Return a new value from `pass` when a validator changes it.
+
+## Testing a validator
+
+A validator is a function, so a test calls it and looks at the result:
+
+```ts
+import { expect, it } from "vitest";
+
+// `even` is the validator written above.
+it("rejects odd numbers with the not_even code", () => {
+  const result = even(3);
+  expect(result.ok).toBe(false);
+  expect(!result.ok && result.error.issues[0]?.code).toBe("not_even");
+});
+```
+
+<!-- Source: docs/errors.md -->
+
+# Issues and messages
+
+When a value is not valid, the result says exactly why. This page describes what a failed result holds, the codes the built-in validators report, and how to turn that into text for a person.
+
+## The failed result
+
+```ts
+// What a validator returned for { name: "A", email: "nope" }
+const result = {
+  ok: false,
+  error: {
+    issues: [
+      { code: "too_small", path: ["name"], params: { minimum: 2, type: "string" } },
+      { code: "invalid_format", path: ["email"], params: { format: "email" } },
+    ],
+  },
+};
+```
+
+`error.issues` lists every problem the validator found, in a fixed order, and is never empty. Objects report the issues of their properties in the order the shape lists them, whichever finished first.
+
+## The issue
+
+| Field     | Meaning                                                                                                                                     |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `code`    | A stable string naming the kind of failure. Branch on this, never on message text.                                                          |
+| `path`    | Where the invalid value is, from the root of what you validated. Keys are strings and array indexes are numbers. Empty for the root itself. |
+| `params`  | The facts behind the failure, such as the limit that was crossed. Present when there are any.                                               |
+| `message` | Fixed text, when the validator that reported the issue set one. The built-in validators never do; your own can.                             |
+
+**An issue never contains the input.** There is no field for it, and `params` holds type names and constraint values, never the value under test. Inputs are often passwords or tokens, and issues get logged and shown, so this is a rule and not a default. If you need the value, you already have it.
+
+A path can be formatted for display with `formatPath`:
+
+```ts
+import { formatPath } from "@codenhub/validation";
+
+formatPath(["user", "addresses", 0, "street"]); // "user.addresses[0].street"
+formatPath([0, "title"]); // "[0].title"
+```
+
+## Built-in codes
+
+The code set is open: a custom validator reports whatever code it likes. These are the ones the built-in validators use.
+
+| Code               | Meaning                                                                 | `params`                                                                   |
+| ------------------ | ----------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `invalid_type`     | The value is not the type expected.                                     | `expected`, `received`, both type names.                                   |
+| `invalid_format`   | A string does not have the required format.                             | `format`, such as `"email"` or `"regex"`, plus what the rule needs.        |
+| `invalid_value`    | The value has the right type but a value that is not allowed.           | `type`, plus `format` (`"int"`, `"safeInt"`, `"nonZero"`) or `multipleOf`. |
+| `too_small`        | Below a minimum: too short, or too small a number.                      | `minimum`, `type`, and `inclusive` or `exact` where they apply.            |
+| `too_big`          | Above a maximum.                                                        | `maximum`, `type`, and `inclusive` or `exact` where they apply.            |
+| `unrecognized_key` | An object has a property its shape does not list, in strict mode.       | `key`. The issue's path ends at the key.                                   |
+| `custom`           | The default code of a `refine` check or `fail` call that names no code. | Whatever the reporter set.                                                 |
+
+`received` names types the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `map`, `set`, the class name of an instance, or the `typeof` of anything else.
+
+The validator reference lists the exact code and `params` each validator reports.
+
+## Turning an issue into text
+
+Validators do not build message text when they fail. That keeps them small, and it means text is a choice you make where you show it. `formatIssue` builds it:
+
+```ts
+import { formatIssue, number } from "@codenhub/validation";
+
+const result = number({ min: 18 })(15);
+if (!result.ok) {
+  formatIssue(result.error.issues[0]!); // "Must be at least 18"
+}
+```
+
+The text comes from the first of these that exists:
+
+1. The issue's own `message`.
+2. An entry for its `code` in the message map you pass as the second argument.
+3. The built-in English wording, built from the `code` and `params`.
+
+### Localizing and rewording
+
+Pass a map from code to text to replace the built-in wording for the codes it names. A string is used as it is, and a function receives the issue, so it can use `params`:
+
+```ts
+import { formatIssue, type Messages } from "@codenhub/validation";
+
+const pt: Messages = {
+  invalid_type: (issue) => `Esperado ${String(issue.params?.expected)}`,
+  too_small: (issue) => `Mínimo de ${String(issue.params?.minimum)}`,
+  username_taken: "Este nome de usuário já existe",
+};
+
+formatIssue(issue, pt);
+```
+
+Codes the map does not name keep the English wording, so a partial map is fine while a translation is in progress. A custom validator's own codes belong in the map too.
+
+## Errors for a form
+
+`flatten` groups the messages of a failed result for display: issues at the root go to `formErrors`, and the rest are keyed by their formatted path in `fieldErrors`.
+
+```ts
+import { flatten } from "@codenhub/validation";
+
+const result = signup(input);
+if (!result.ok) {
+  const { formErrors, fieldErrors } = flatten(result.error, pt);
+  fieldErrors["email"]; // ["Invalid email address"]
+  fieldErrors["addresses[0].street"]; // ["Must be at least 3 characters"]
+}
+```
+
+It takes the same message map as `formatIssue`. Field keys use the notation of `formatPath`.
+
+## Reading the result
+
+A result is plain data, so it serializes as it is and can be logged, sent to a client or stored. Because no issue holds the input, doing so does not leak what was submitted.
 
 <!-- Source: docs/validators.md -->
 
 # Validator reference
 
-`val` holds one factory per kind of data. Each returns a validator, and each validator has rules you chain onto it. This page lists all of them. Rules that every validator shares (`optional`, `refine`, `transform` and the rest) come first, since they apply to everything below.
+Every validator here is created by calling a function and is then called with the value to check. Every one returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`, and never throws for invalid input. The code and `params` each failure reports are listed with the validator; [Issues and messages](docs/errors.md) explains what they mean and how to turn them into text.
 
-Conventions used throughout:
-
-- **Failure code** is the `code` of the issue a rule reports. Built-in issues carry the facts behind the failure in `params`, listed in [Errors and messages](docs/errors.md); issues from your own rules may omit it.
-- **Messages.** The last argument of a rule is an optional `message`: a string, or a function that builds one from the issue. A rule that takes options puts `message` inside them instead. Type failures accept a message as the factory's only argument, for example `val.string("Enter some text")`.
-- **Limits are checked when you build the schema.** `val.string().min(-1)` throws a `RangeError` immediately instead of failing every input later.
-- **Rules run in the order you chain them** and all of them report, so `val.string().min(5).email()` can produce two issues for one value.
-
-## Shared by every validator
-
-| Method                        | What it does                                                                                                                                                  |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `optional()`                  | Also accepts `undefined`. The output type gains `undefined`.                                                                                                  |
-| `nullable()`                  | Also accepts `null`.                                                                                                                                          |
-| `nullish()`                   | Also accepts `null` and `undefined`.                                                                                                                          |
-| `default(value)`              | Replaces `undefined` input with `value`, or with the result of calling it when it is a function. The default is used as given and is not validated.           |
-| `catch(fallback)`             | Replaces a failed validation with `fallback`, or with the result of calling it with the discarded issues. Exceptions thrown by your callbacks are not caught. |
-| `refine(predicate, options?)` | A yes-or-no rule. See [Customization](docs/customization.md).                                                                                                      |
-| `check(fn)`                   | A rule that reports its own issues. See [Customization](docs/customization.md).                                                                                    |
-| `transform(fn)`               | Maps the validated value to another value.                                                                                                                    |
-| `pipe(next)`                  | Feeds the output into another validator.                                                                                                                      |
-| `and(other)`                  | The input must satisfy both. Object outputs are merged.                                                                                                       |
-| `or(other)`                   | The input may satisfy either one. Tried in order.                                                                                                             |
-
-`refine` and `check` return the same validator type, so `val.string().refine(...).max(20)` and `val.object(...).refine(...).extend(...)` work. `optional`, `nullable`, `default`, `catch`, `transform`, `pipe`, `and` and `or` wrap the validator: the result is a general validator without the original's type-specific rules, so add those rules first.
+Options are read once, when the validator is created. An option that makes no sense, such as a negative length, throws a `RangeError` or `TypeError` at that point, because it is a mistake in your code and not in the input.
 
 ## Strings
 
-`val.string(message?)` accepts strings and nothing else. Failure code of a wrong type: `invalid_type`.
+`string(options?)` accepts strings and produces a string. Anything else fails with `invalid_type`, naming the type it received.
 
-| Rule                                                       | Accepts                                                                                                                                                                                                                                      | Failure code          |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `min(length)`                                              | At least `length` characters (UTF-16 code units, as `String.length` counts them).                                                                                                                                                            | `too_small`           |
-| `max(length)`                                              | At most `length` characters.                                                                                                                                                                                                                 | `too_big`             |
-| `length(length)`                                           | Exactly `length` characters.                                                                                                                                                                                                                 | `too_small`/`too_big` |
-| `nonEmpty()`                                               | At least one character. Whitespace counts; `trim()` first to reject blank strings.                                                                                                                                                           | `too_small`           |
-| `email({ allowPlus?, message? })`                          | An address with a public domain name, at most 254 characters, local part at most 64. `allowPlus` defaults to `true`.                                                                                                                         | `invalid_format`      |
-| `url({ protocols?, allowLocal?, message? })`               | An absolute URL. `protocols` defaults to `["http", "https"]`. Credentials in the URL are rejected. The host must be a public domain name unless `allowLocal` is `true`, which also accepts `localhost`, single-label hosts and IP addresses. | `invalid_format`      |
-| `uuid()`                                                   | A hyphenated UUID of version 1 to 8.                                                                                                                                                                                                         | `invalid_format`      |
-| `ulid()`                                                   | A ULID, in any case.                                                                                                                                                                                                                         | `invalid_format`      |
-| `nanoid()`                                                 | A default Nano ID: 21 characters of `A-Za-z0-9_-`.                                                                                                                                                                                           | `invalid_format`      |
-| `cuid2()`                                                  | A CUID2.                                                                                                                                                                                                                                     | `invalid_format`      |
-| `ip({ version?, message? })`                               | An IPv4 or IPv6 address. `version: "v4"` or `"v6"` narrows it.                                                                                                                                                                               | `invalid_format`      |
-| `hostname()`                                               | Dot-separated labels of letters, digits and hyphens. Single labels such as `localhost` are accepted.                                                                                                                                         | `invalid_format`      |
-| `datetime({ offset?, precision?, message? })`              | An ISO 8601 date and time such as `2026-09-28T14:30:00Z`, on a day that exists. `offset: true` allows `+02:00`; `precision` fixes the digits of fractional seconds (`0` forbids them).                                                       | `invalid_format`      |
-| `date()`                                                   | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.                                                                                                                                                                        | `invalid_format`      |
-| `base64()`                                                 | Standard base64 with padding.                                                                                                                                                                                                                | `invalid_format`      |
-| `hex()`                                                    | Hexadecimal digits of any case.                                                                                                                                                                                                              | `invalid_format`      |
-| `regex(pattern)`                                           | A match of `pattern`. The `g` and `y` flags are ignored so the answer does not depend on earlier calls.                                                                                                                                      | `invalid_format`      |
-| `startsWith(prefix)`, `endsWith(suffix)`, `includes(text)` | The string starts with, ends with or contains the text.                                                                                                                                                                                      | `invalid_format`      |
-| `trim()`, `toLowerCase()`, `toUpperCase()`                 | Not rules: they change the value, for the rules after them and for the output.                                                                                                                                                               | none                  |
+```ts
+import { string } from "@codenhub/validation";
 
-The format rules validate; they never rewrite. `val.string().email().validate("Ada@Example.COM")` returns the value exactly as given. To normalize, say so: `val.string().trim().toLowerCase().email()`.
+const username = string({ trim: true, min: 3, max: 30 });
 
-## Numbers and bigints
+username("  ada  "); // { ok: true, value: "ada" }
+username("ab"); // { ok: false, ... }, code "too_small"
+```
 
-`val.number(message?)` accepts finite numbers. `NaN`, `Infinity` and `-Infinity` are always rejected, and numeric strings are not converted (see [Coercion](docs/coercion.md) for that).
+The options, all optional:
 
-| Rule                                                         | Accepts                                                                                | Failure code           |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------- | ---------------------- |
-| `min(n)`, `max(n)`                                           | At least, or at most, `n`.                                                             | `too_small`, `too_big` |
-| `gt(n)`, `lt(n)`                                             | Strictly greater than, or less than, `n`.                                              | `too_small`, `too_big` |
-| `positive()`, `negative()`, `nonNegative()`, `nonPositive()` | Above, below, at or above, at or below zero.                                           | `too_small`, `too_big` |
-| `nonZero()`                                                  | Any value except zero.                                                                 | `invalid_value`        |
-| `int()`                                                      | A whole number.                                                                        | `invalid_value`        |
-| `safeInt()`                                                  | A whole number a double represents exactly (within `Number.MAX_SAFE_INTEGER`).         | `invalid_value`        |
-| `multipleOf(step)`                                           | A multiple of `step`, tolerating floating-point error so `0.3` is a multiple of `0.1`. | `invalid_value`        |
-| `clamp(min, max)`                                            | Not a rule: moves the value into the range instead of rejecting it.                    | none                   |
+| Option       | Meaning                                                                                                                       |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `trim`       | Remove leading and trailing whitespace before the constraints run, and from the output.                                       |
+| `lowercase`  | Lowercase the string before the constraints run, and in the output. Cannot be combined with `uppercase`.                      |
+| `uppercase`  | Uppercase the string before the constraints run, and in the output. Cannot be combined with `lowercase`.                      |
+| `min`        | At least this many characters. Counted in UTF-16 code units, as `String.length` counts them, so an emoji can count as two.    |
+| `max`        | At most this many characters.                                                                                                 |
+| `length`     | Exactly this many characters.                                                                                                 |
+| `pattern`    | Must match this regular expression. The `g` and `y` flags are ignored, so the same validator gives the same answer each time. |
+| `startsWith` | Must start with this text.                                                                                                    |
+| `endsWith`   | Must end with this text.                                                                                                      |
+| `includes`   | Must contain this text.                                                                                                       |
 
-`val.bigint(message?)` accepts bigints and supports `min(n)`, `max(n)`, `positive()` and `negative()` with bigint arguments.
+Clean-up (`trim`, `lowercase`, `uppercase`) always happens first, and every constraint is then checked against the cleaned string, so `string({ trim: true, min: 1 })` rejects a string of spaces. Every constraint that fails reports its own issue.
 
-## Booleans and dates
+| Failure                                      | `code`           | `params`                                                      |
+| -------------------------------------------- | ---------------- | ------------------------------------------------------------- |
+| Not a string                                 | `invalid_type`   | `{ expected: "string", received }`                            |
+| Shorter than `min`                           | `too_small`      | `{ minimum, type: "string" }`                                 |
+| Longer than `max`                            | `too_big`        | `{ maximum, type: "string" }`                                 |
+| Shorter than `length`                        | `too_small`      | `{ minimum, exact: true, type: "string" }`                    |
+| Longer than `length`                         | `too_big`        | `{ maximum, exact: true, type: "string" }`                    |
+| Does not match `pattern`                     | `invalid_format` | `{ format: "regex", pattern }`                                |
+| Wrong `startsWith`, `endsWith` or `includes` | `invalid_format` | `{ format: "startsWith" \| "endsWith" \| "includes", value }` |
 
-`val.boolean(message?)` accepts `true` and `false`. `.true()` and `.false()` pin the value, which is how you require a checkbox to be ticked: `val.boolean().true("You must accept the terms")`.
+## Numbers
 
-`val.date(message?)` accepts `Date` instances that are valid; `Invalid Date` is rejected. `min(date)` and `max(date)` are inclusive (`too_small`, `too_big`). Timestamps and date strings are not converted; see [Coercion](docs/coercion.md).
+`number(options?)` accepts finite numbers and produces a number. `NaN`, the infinities and every other type fail with `invalid_type`.
 
-## Fixed values
+```ts
+import { number } from "@codenhub/validation";
 
-| Factory                            | Accepts                                                                                                               |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `val.literal(value, message?)`     | Exactly `value`, compared with `===`: a string, number, boolean, bigint, symbol, `null` or `undefined`.               |
-| `val.enum(values, message?)`       | One of a list of strings or numbers. Pass a literal array (`["a", "b"]`) and the type is the union of its members.    |
-| `val.nativeEnum(object, message?)` | The values of a TypeScript `enum` or an `as const` object. Reverse-mapped names of numeric enums are not accepted.    |
-| `val.null()`, `val.undefined()`    | Only `null`, or only `undefined`.                                                                                     |
-| `val.unknown()`                    | Anything, unchecked. Use it for a value you do not care about, or before a `check` or `transform` does the real work. |
-| `val.never(message?)`              | Nothing: every value fails. Forbids a property, or marks a union branch that must never match.                        |
-| `val.instanceOf(Class, message?)`  | Instances of a class, subclasses included.                                                                            |
+const age = number({ int: true, min: 0, max: 130 });
 
-Failure code: `invalid_value` for literals and enums, `invalid_type` for `instanceOf`, `never` and the type check of every other validator.
+age(42); // { ok: true, value: 42 }
+age(1.5); // { ok: false, ... }, code "invalid_value"
+```
+
+The options, all optional:
+
+| Option       | Meaning                                                                                                              |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `clamp`      | `{ min, max }`. Move the value into the range instead of rejecting it, before the constraints run and in the output. |
+| `min`, `max` | At least or at most this value, inclusive.                                                                           |
+| `gt`, `lt`   | Strictly greater than or less than this value.                                                                       |
+| `int`        | A whole number.                                                                                                      |
+| `safeInt`    | A whole number a double can represent exactly, that is within `Number.MAX_SAFE_INTEGER`.                             |
+| `multipleOf` | A multiple of this positive number, tolerating floating-point error, so `0.3` is a multiple of `0.1`.                |
+| `nonZero`    | Anything but zero.                                                                                                   |
+
+Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, non-negative is `min: 0`, negative is `lt: 0` and non-positive is `max: 0`. `clamp` throws a `RangeError` for a `NaN` bound or a minimum above its maximum, and `multipleOf` throws one unless it is a positive finite number.
+
+| Failure                       | `code`          | `params`                                                      |
+| ----------------------------- | --------------- | ------------------------------------------------------------- |
+| Not a finite number           | `invalid_type`  | `{ expected: "number", received }`                            |
+| Below `min` or `gt`           | `too_small`     | `{ minimum, inclusive, type: "number" }`                      |
+| Above `max` or `lt`           | `too_big`       | `{ maximum, inclusive, type: "number" }`                      |
+| `int`, `safeInt` or `nonZero` | `invalid_value` | `{ type: "number", format: "int" \| "safeInt" \| "nonZero" }` |
+| `multipleOf`                  | `invalid_value` | `{ multipleOf }`                                              |
+
+## Booleans
+
+`boolean()` accepts `true` and `false` and produces a boolean. Truthy and falsy values, and text such as `"true"`, fail with `invalid_type` and `{ expected: "boolean", received }`.
+
+## Email addresses
+
+`email(options?)` accepts a string that is an email address with a public domain name and produces it unchanged. It does not trim or lowercase, so clean the input first with `pipe` when it may need it:
+
+```ts
+import { email, pipe, string } from "@codenhub/validation";
+
+const address = pipe(string({ trim: true, lowercase: true }), email());
+
+address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
+```
+
+The one option is `allowPlus`, default `true`, which controls whether `+` is accepted in the part before the `@`, as in `ada+news@example.com`.
+
+The local part is limited to 64 characters and the whole address to 254. Hosts that are not public domain names, such as `localhost`, single-label hosts and IP addresses, are rejected.
+
+| Failure      | `code`           | `params`                           |
+| ------------ | ---------------- | ---------------------------------- |
+| Not a string | `invalid_type`   | `{ expected: "string", received }` |
+| Not an email | `invalid_format` | `{ format: "email" }`              |
 
 ## Objects
 
-`val.object(shape, message?)` validates each property against the validator listed for it. Notes on what it accepts are in the [overview](docs/index.md#objects).
+`object(shape, options?)` takes a shape, an object whose values are validators, and produces an object with the same keys and the output of each validator.
 
-| Method                     | What it does                                                                                                                   |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `strict()`                 | Rejects properties not in the shape, one `unrecognized_key` issue each.                                                        |
-| `passthrough()`            | Copies properties not in the shape to the output, unvalidated.                                                                 |
-| `strip()`                  | Drops them. This is the default.                                                                                               |
-| `extend(shape)`            | Adds properties, replacing any with the same name. Pass another object's `.shape` to merge two objects.                        |
-| `pick(keys)`, `omit(keys)` | Keeps only, or removes, the listed properties.                                                                                 |
-| `partial()`                | Makes every property optional.                                                                                                 |
-| `required(keys?)`          | Undoes `.optional()` on the listed properties, or all of them. A property that was not wrapped by `.optional()` is left alone. |
-| `keyof()`                  | An enum validator of the property names.                                                                                       |
-| `shape`                    | The property validators, for building other schemas from this one.                                                             |
+```ts
+import { number, object, optional, string } from "@codenhub/validation";
 
-`strict`, `passthrough` and `strip` keep rules added with `refine` and `check`. The methods that change the shape do not, because the output type changes with the shape; add rules after deriving.
+const user = object({ name: string(), age: optional(number()) });
 
-## Collections
+user({ name: "Ada" }); // { ok: true, value: { name: "Ada" } }
+user({ age: "x" }); // two issues: ["name"] and ["age"]
+```
 
-| Factory                            | Accepts                                                                                                                                             |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `val.array(item, message?)`        | Arrays whose items all satisfy `item`. Rules: `min(n)`, `max(n)`, `length(n)`, `nonEmpty()`, `unique(by?)`. Use `val.unknown()` to accept any item. |
-| `val.tuple([a, b, ...], message?)` | Arrays with one validator per position and exactly that length. `.rest(validator)` accepts extra items of one type after them.                      |
-| `val.record(key, value, message?)` | Plain objects used as dictionaries, where every key satisfies `key` and every value satisfies `value`. Use `val.string()` for any key.              |
-| `val.set(item, message?)`          | `Set` instances whose values satisfy `item`. Rules: `min(n)`, `max(n)`, `nonEmpty()`.                                                               |
-| `val.map(key, value, message?)`    | `Map` instances. Rules: `min(n)`, `max(n)`, `nonEmpty()`.                                                                                           |
+- Only plain objects are accepted. Arrays, class instances, `Map`s, `Date`s and `null` fail with `invalid_type` and `{ expected: "object", received }`.
+- Only own properties are read, so a value inherited through the prototype never satisfies a required property.
+- Every property is validated, even after an earlier one failed, and each issue's path leads down to it.
+- A property whose validator accepts `undefined`, such as one wrapped in `optional`, is optional in the inferred type, and is left out of the output when absent from the input.
+- The output is a new object and the input is never modified.
 
-Size rules report `too_small` or `too_big`. `unique()` reports `invalid_value` at the index of each repeated item, and compares items with `Map` semantics: objects match only by identity, so pass a key function to compare by content, as in `.unique((user) => user.id)`. It runs on the output, after items were transformed.
+The `unknownKeys` option decides what happens to input properties the shape does not list:
 
-Where an issue is located:
+| `unknownKeys`   | Effect                                                                                 |
+| --------------- | -------------------------------------------------------------------------------------- |
+| `"strip"`       | Drop them from the output. This is the default.                                        |
+| `"strict"`      | Reject each with an `unrecognized_key` issue at the key's path, and `params: { key }`. |
+| `"passthrough"` | Copy them to the output unchanged and unchecked.                                       |
 
-- **Arrays and tuples:** the item's index, `[2]`.
-- **Sets:** the position of the value in iteration order.
-- **Records:** the key. An issue on the key itself sits at the same place as one on the value.
-- **Maps:** the key when it is a string or a number, and the position in iteration order otherwise. Issues on the key are located at the same entry as issues on the value.
+A shape is an ordinary object, so it can be reused with ordinary JavaScript: spread one into another to extend it, and leave keys out with destructuring.
 
-A record keyed by a union of literals, such as `val.record(val.enum(["admin", "user"]), val.number())`, infers `Partial<Record<...>>` because the validator does not require every key to be present.
+```ts
+import { email, number, object, string } from "@codenhub/validation";
+
+const base = { name: string(), email: email() };
+const withAge = object({ ...base, age: number() });
+```
 
 ## Combining validators
 
-| Factory                                           | Accepts                                                                                                                                                                                                                                                                                                                                                                 |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `val.union([a, b, ...], message?)` or `a.or(b)`   | Input that satisfies any of them, tried in order, first match wins. When none matches, one `invalid_union` issue carries each variant's issues in `params.issues`.                                                                                                                                                                                                      |
-| `val.discriminatedUnion(key, variants, message?)` | Objects of several shapes told apart by one property. Reads the discriminator, picks the one variant it names and validates only against it, so issues describe the shape the input meant. Each variant must declare `key` with `val.literal()` or `val.enum()`, and no value may be claimed twice: both are checked when you build the schema and throw a `TypeError`. |
-| `val.intersection(a, b)` or `a.and(b)`            | Input that satisfies both. All issues from both are reported. Plain-object outputs are merged deeply; for anything else the right-hand output wins.                                                                                                                                                                                                                     |
-| `val.lazy(() => schema)`                          | A schema built on first use, so it can refer to itself. Annotate the variable with `Validator<T>`: TypeScript cannot infer a type that mentions itself.                                                                                                                                                                                                                 |
+### `optional`
 
-Prefer `discriminatedUnion` over `union` for objects that share a tag: its errors say what is wrong with the variant you meant, instead of listing every variant's complaints.
+`optional(validator)` accepts `undefined`, passes it through, and gives every other value to `validator`. `null` and the empty string are not absent, and go to `validator`. Inside an `object`, the property becomes optional in the inferred type.
 
-```ts
-interface Category {
-  name: string;
-  children: Category[];
-}
+### `pipe`
 
-const category: Validator<Category> = val.lazy(() => val.object({ name: val.string(), children: val.array(category) }));
-```
+`pipe(a, b, ...)` runs validators in order, giving each the value the previous one produced, and produces what the last produces. The first failure stops it, because a later step has nothing valid to work on. Use it to clean a value before checking a format, or to check one rule after another.
 
-## Other factories
+### `refine`
 
-| Factory                              | What it does                                                                                                                              |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `val.json(schema?, message?)`        | Accepts a string holding JSON and outputs the parsed value, validated against `schema` when given. Invalid JSON reports `invalid_format`. |
-| `val.custom<T>(predicate, options?)` | A predicate turned into a validator for a type none of the built-ins describe. See [Customization](docs/customization.md).                     |
-| `val.coerce.*`                       | Validators that convert text input first. See [Coercion](docs/coercion.md).                                                                    |
-
-<!-- Source: docs/customization.md -->
-
-# Customization
-
-The built-in validators cover the common cases. Everything beyond them is built from a handful of pieces that combine with each other and with every built-in: `refine`, `check`, `transform`, `pipe`, `custom`, and the ability to make any of them async. This page shows what each one is for and how to pick.
-
-## Choosing a tool
-
-| You want to...                                                            | Use                                       |
-| ------------------------------------------------------------------------- | ----------------------------------------- |
-| Reject values that fail a yes-or-no test                                  | `refine(predicate, message)`              |
-| Report several issues, point at nested fields, or use your own error code | `check((value, ctx) => ...)`              |
-| Turn the value into something else                                        | `transform((value) => ...)`               |
-| Run one validator on the output of another                                | `a.pipe(b)`                               |
-| Validate a type none of the built-ins describe                            | `val.custom<T>(predicate)`                |
-| Compare two properties of the same object                                 | `refine` or `check` on the object         |
-| Call a database or an API                                                 | any of the above with an `async` function |
-
-## refine: a yes-or-no rule
-
-`refine` takes a predicate. If it returns `false`, the value is rejected with the message you give.
+`refine(validator, check, issue?)` adds a rule that `validator` cannot express. It runs only when `validator` succeeded, and receives the value `validator` produced. `check` returns `true` for an acceptable value. The optional `issue` says how a rejection is reported: a string is the message, and an object can set a `code`, `path`, `params` and `message`. Without it the issue has code `custom`.
 
 ```ts
-const evenNumber = val.number().refine((n) => n % 2 === 0, "Must be even");
+import { object, refine, string } from "@codenhub/validation";
+
+const signup = refine(object({ password: string({ min: 8 }), confirm: string() }), (data) => data.password === data.confirm, { code: "mismatch", path: ["confirm"], message: "Passwords must match" });
 ```
 
-The second argument is a message string, a [message function](docs/errors.md#changing-the-wording), or an options object that also sets the `path`, `code` and `params` of the issue:
+A `check` that returns a promise makes the result asynchronous; see [Custom validators](docs/custom-validators.md#asynchronous-rules).
 
-```ts
-const signup = val.object({ password: val.string().min(8), confirm: val.string() }).refine((data) => data.password === data.confirm, {
-  message: "Passwords must match",
-  path: ["confirm"],
-  code: "password_mismatch",
-});
-```
+## Working with results
 
-`path` is relative to the value being refined: on an object, `["confirm"]` points at its `confirm` property. Without one, the issue points at the value itself.
+### `Infer`
 
-A refinement runs only when the value already has the right structure. On the object above, if `password` is missing the schema reports that and does not run the comparison, so your predicate can rely on `data.password` being a string.
+`Infer<typeof validator>` is the type a validator produces. It reads the output of either a synchronous or an asynchronous validator.
 
-## check: full control over issues
+### `is`
 
-`check` receives the value and a context. It reports problems with `ctx.addIssue` and returns nothing. Use it when one rule can find several problems, when a problem belongs to a nested path, or when you want your own error code.
+`is(validator, input)` returns whether `input` passes, and narrows it to the validator's output type. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise. The narrowing is exact for a validator that does not change the value; for one that trims, clamps or transforms, read `result.value` from calling the validator.
 
-```ts
-const order = val.object({ items: val.array(val.object({ sku: val.string(), qty: val.number().int() })) }).check((order, ctx) => {
-  const seen = new Set<string>();
-  order.items.forEach((item, index) => {
-    if (seen.has(item.sku)) {
-      ctx.addIssue({
-        code: "duplicate_sku",
-        message: `SKU ${item.sku} appears twice`,
-        path: ["items", index, "sku"],
-      });
-    }
-    seen.add(item.sku);
-  });
-});
-```
+### `pass` and `fail`
 
-`ctx.addIssue` accepts `code` (defaults to `"custom"`), `message` (a string or a message function), `path` (relative to the checked value), `params`, and `input`, which is kept only with `includeInput`. Reporting any issue makes the validation fail, and reporting several reports them all.
+`pass(value)` and `fail(...issues)` build results, and are what a validator you write returns. See [Custom validators](docs/custom-validators.md).
 
-The context also carries `ctx.path`, the full location of the value being checked, and `ctx.options`, the options of the running call.
+### Types
 
-## transform: change the value
-
-`transform` maps the validated value to another, and the output type follows:
-
-```ts
-const csv = val.string().transform((text) => text.split(",").map((part) => part.trim()));
-type Csv = Infer<typeof csv>; // string[]
-```
-
-It runs after everything before it has passed, so its input is already valid. To reject a value from inside a transform, report an issue and return `NEVER`, which stands in for a value you cannot produce:
-
-```ts
-import { NEVER } from "@codenhub/validation";
-
-const percent = val.string().transform((text, ctx) => {
-  const parsed = Number.parseFloat(text);
-  if (Number.isNaN(parsed)) {
-    ctx.addIssue({ code: "invalid_format", message: "Not a number" });
-    return NEVER;
-  }
-  return parsed / 100;
-});
-```
-
-To validate what a transform produced, follow it with `pipe`.
-
-## pipe: validate the output again
-
-`a.pipe(b)` runs `a`, then runs `b` on `a`'s output. It is how a transform gets rules of its own:
-
-```ts
-const age = val
-  .string()
-  .transform((text) => Number(text))
-  .pipe(val.number().int().min(0));
-```
-
-If `a` fails, `b` does not run.
-
-## custom: a validator from a predicate
-
-`val.custom<T>(predicate, options?)` builds a validator for a type the built-ins do not describe. The type argument is a claim: the predicate must only return `true` for values that really are a `T`. A type guard lets the compiler check that claim:
-
-```ts
-type Slug = string & { readonly __brand: "slug" };
-
-const isSlug = (input: unknown): input is Slug => typeof input === "string" && /^[a-z0-9-]+$/.test(input);
-
-const slug = val.custom<Slug>(isSlug, "Use lowercase letters, digits and hyphens");
-```
-
-The result composes like any validator: inside objects, arrays, unions, with `.optional()`.
-
-## Async rules
-
-Any callback can be `async`, or return a promise:
-
-```ts
-const username = val
-  .string()
-  .min(3)
-  .refine(async (name) => !(await db.users.exists(name)), "Username is taken");
-
-const result = await username.validateAsync(input);
-```
-
-A schema that contains async work must be run with `validateAsync` or `parseAsync`. The sync methods (`validate`, `parse`, `is`) throw an `Error` when they reach it, so a forgotten `await` is a loud mistake instead of a silent pass. Async callbacks only run once the value has the right structure, so an async check never sees a wrong type. Rules of the same validator all run and report together, so do not rely on an earlier rule having passed to keep an expensive lookup from running.
-
-Async checks inside one object or array run concurrently. Issue order is still the order of the schema, not of completion. With `abortEarly` they run one at a time and stop at the first failure.
-
-## Reusable rules
-
-Rules are functions, so a rule you use twice is a function you name. A `check` function does not have to be written inline:
-
-```ts
-import { type CheckFn } from "@codenhub/validation";
-
-const noWhitespace: CheckFn<string> = (value, ctx) => {
-  if (/\s/.test(value)) {
-    ctx.addIssue({ code: "whitespace", message: "Must not contain whitespace" });
-  }
-};
-
-const handle = val.string().min(3).check(noWhitespace);
-const tag = val.string().max(20).check(noWhitespace);
-```
-
-For a reusable rule with arguments, return the function:
-
-```ts
-const oneOf =
-  (allowed: readonly string[]): CheckFn<string> =>
-  (value, ctx) => {
-    if (!allowed.includes(value)) {
-      ctx.addIssue({ code: "not_allowed", message: "Not an allowed value", params: { allowed } });
-    }
-  };
-```
-
-To reuse a whole schema fragment, keep it in a constant and compose it: `val.object({ id: uuid })`, `.extend(timestamps.shape)`, `.and(auditFields)`.
-
-## Passing data to checks
-
-Checks often need something that is not in the input: the current user, a database handle, a locale. Pass it as `context` and read it back in the check:
-
-```ts
-const schema = val.string().check(async (name, ctx) => {
-  const { db } = ctx.options.context as { db: Db };
-  if (await db.users.exists(name)) {
-    ctx.addIssue({ code: "username_taken", message: "Username is taken" });
-  }
-});
-
-await schema.validateAsync(input, { context: { db } });
-```
-
-`context` is typed `unknown`, so narrow it where you read it, as above.
-
-## Cross-field rules and where issues appear
-
-Put a rule on the object that owns all the fields it needs. Whether you use `refine` with a `path` or `check` with `ctx.addIssue`, point the issue at the field the person should fix, not at the object, so a form can show the message next to it. Issues whose path is empty are "form errors" in [`flatten()`](docs/errors.md#showing-errors-next-to-form-fields).
-
-## Exceptions are bugs
-
-An exception thrown inside your callback is not treated as invalid input: it propagates out of `validate` like any other bug, and `catch()` does not swallow it. If a callback can fail for reasons that are the input's fault, report that with `ctx.addIssue` or a `false` return, and let real bugs surface.
-
-<!-- Source: docs/errors.md -->
-
-# Errors and messages
-
-When a value is invalid, the package tells you everything it found, in a shape you can branch on, display, or translate. This page covers that shape and how to change the wording.
-
-## Issues
-
-An issue describes one problem:
-
-```ts
-interface ValidationIssue {
-  code: string; // stable category, safe to branch on
-  message: string; // human-readable, meant for people
-  path: (string | number)[]; // where the value sits, from the root of the input
-  params?: Record<string, unknown>; // the facts behind the failure
-  input?: unknown; // the invalid value, only with includeInput: true
-}
-```
-
-`path` is the route from the root of the input to the offending value: `["user", "emails", 1]` means `input.user.emails[1]`. An empty path is the root itself. `formatPath` turns a path into text such as `user.emails[1]`.
-
-Branch on `code` and `params`, never on `message`. Messages are for humans and can be reworded, localized, or replaced by you.
-
-## ValidationError
-
-A failed `validate` puts a `ValidationError` in `result.error`, and `parse` throws it. It is a normal `Error` with one extra field, `issues`, holding every issue found, in the order the schema encountered them. It is never empty.
-
-Its `message` is the message of the single issue, prefixed with the path when there is one (`email: Invalid email address`), or a list when there are several:
-
-```text
-2 validation issues:
-- email: Invalid email address
-- age: Must be at least 18
-```
-
-## Codes
-
-| Code               | Meaning                                                                   | Typical `params`                                                                  |
-| ------------------ | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `invalid_type`     | The value is not the type expected, or coercion could not convert it.     | `{ expected: "string", received: "number" }`, plus `coerced: true` for coercion.  |
-| `invalid_value`    | The type is right and the value is not allowed: an enum, an integer rule. | `{ options: [...] }` for enums, `{ expected }` for literals, `{ format: "int" }`. |
-| `invalid_format`   | A string does not have the required format.                               | `{ format: "email" }`, and the name of the format for every string format.        |
-| `too_small`        | Below a minimum: a length, a size, a number, a date.                      | `{ minimum, inclusive?, type, exact? }`                                           |
-| `too_big`          | Above a maximum.                                                          | `{ maximum, inclusive?, type, exact? }`                                           |
-| `unrecognized_key` | A `strict()` object received a property its shape does not list.          | `{ key }`                                                                         |
-| `invalid_union`    | No variant of a union matched, or a discriminator matched none.           | `{ issues }` for `union`, `{ discriminator, options }` for `discriminatedUnion`.  |
-| `custom`           | Reported by a `refine`, `check` or `transform` without a code of its own. | whatever you set                                                                  |
-
-`type` in `too_small` and `too_big` names what was measured: `"string"`, `"number"`, `"bigint"`, `"date"`, `"array"`, `"set"` or `"map"`. `exact: true` marks a `length()` rule, where the value can be too small or too big.
-
-The list is a set of suggestions, not a closed enum. Any string is a valid code, so your own checks can report `username_taken` or `password_too_common`, and consumers can branch on them like the built-in ones.
-
-## Input values stay out of errors
-
-Errors often end up in logs, error trackers and API responses, and the invalid value is frequently a password or a token. So the package never puts the input into an issue by default, and its built-in messages name types instead of echoing values: `Expected number, received string`, never `Expected number, received hunter2`.
-
-Pass `includeInput: true` to keep the value as `issue.input` while debugging or when you know it is safe:
-
-```ts
-schema.validate(body, { includeInput: true });
-```
-
-Your own messages are yours to write, but the same care applies: do not interpolate the input into a message you return from a check.
-
-## Changing the wording
-
-Every rule accepts an optional `message`, either a string or a function.
-
-```ts
-val.string().min(3, "Too short");
-val.string().min(3, ({ params }) => `Use at least ${params?.minimum} characters`);
-val.string("Enter some text").email({ message: "That does not look like an email" });
-```
-
-A message function receives the details of the issue, everything except the message itself: `code`, `path`, `params` and, with `includeInput`, `input`. Because built-in issues put their facts in `params`, a function can build any wording from them, including in another language.
-
-### Localizing
-
-There is no built-in translation table on purpose: a table would have to ship every language. Instead, a function that maps issue details to a translated string plugs straight in wherever a message goes. Write it once:
-
-```ts
-import { type IssueDetails } from "@codenhub/validation";
-
-const pt = (details: IssueDetails): string => {
-  switch (details.code) {
-    case "too_small":
-      return `Mínimo de ${details.params?.minimum}`;
-    case "invalid_format":
-      return `Formato inválido (${details.params?.format})`;
-    default:
-      return "Valor inválido";
-  }
-};
-
-val.string().min(3, pt).email({ message: pt });
-```
-
-To translate messages you did not set, convert issues after validation, when you present them:
-
-```ts
-const errors = result.error.issues.map((issue) => translate(issue.code, issue.params));
-```
-
-## Showing errors next to form fields
-
-`error.flatten()` groups messages the way a form needs them:
-
-```ts
-const { formErrors, fieldErrors } = result.error.flatten();
-// formErrors: messages of issues at the root, which belong to no field
-// fieldErrors: { "email": ["Invalid email address"], "tags[1]": ["Must not be empty"] }
-```
-
-Field keys use the same notation as `formatPath`. The `fieldErrors` object has no prototype, so a field named `constructor` or `toString` cannot collide with anything inherited.
-
-## Stopping early
-
-By default a schema reports everything it finds, which is what a form wants. For a request handler that will reject the whole request anyway, `abortEarly: true` stops at the first issue and does less work:
-
-```ts
-schema.parse(body, { abortEarly: true });
-```
-
-<!-- Source: docs/coercion.md -->
-
-# Coercion
-
-Values that arrive as text (environment variables, query strings, form fields, CSV columns) are strings even when they mean a number or a switch. `val.number()` rejects `"8080"` on purpose: silently accepting whatever converts is how `"0x10"` and `""` end up as numbers. Coercion is the opt-in for when text is what you expect.
-
-`val.coerce.*` validators convert the input first, then apply every rule of the plain validator, so `val.coerce.number().int().min(1)` works exactly like `val.number().int().min(1)` on the converted value.
-
-```ts
-const env = val.object({
-  PORT: val.coerce.number().int().min(1).max(65535),
-  DEBUG: val.coerce.boolean().default(false),
-  ORIGINS: val.string().transform((text) => text.split(",")),
-});
-
-const config = env.parse(process.env);
-// { PORT: 8080, DEBUG: false, ORIGINS: ["https://a.example", "https://b.example"] }
-```
-
-## What converts
-
-| Validator              | Accepts                                                                                                                   | Notes                                                                                             |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `val.coerce.string()`  | Strings, numbers, bigints and booleans.                                                                                   | `null`, `undefined`, objects, arrays, functions and symbols are rejected.                         |
-| `val.coerce.number()`  | Finite numbers, and strings holding a decimal number, such as `"42"`, `" 3.5 "`, `"-1"`, `".5"`.                          | Empty and blank strings, hex, exponents and `"NaN"` are rejected. Booleans are not numbers.       |
-| `val.coerce.boolean()` | Booleans, and the words `true`/`false`, `yes`/`no`, `on`/`off` and `1`/`0` in any case, and the numbers `1` and `0`.      | Anything else is rejected, so a typo is not read as `false`.                                      |
-| `val.coerce.bigint()`  | Bigints, safe integer numbers, and strings holding a decimal integer.                                                     | Fractions and unsafe integers are rejected.                                                       |
-| `val.coerce.date()`    | `Date` instances, finite timestamps in milliseconds, and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`. | Free-form strings like `"yesterday"` and `"09/28/2026"` are rejected. Invalid dates are rejected. |
-
-Surrounding whitespace is ignored where a string is parsed. Objects and arrays are never converted: `[5]` is not `5`.
-
-## Failures
-
-A value that cannot be converted fails with `invalid_type`, `params: { expected, received, coerced: true }` and a message such as `Cannot convert string to number`. The message names types and does not repeat the input. Rules that run after a successful conversion report their own codes: `"0"` through `val.coerce.number().min(1)` fails with `too_small`, not `invalid_type`.
-
-Each coercing validator accepts a message for the conversion failure, `val.coerce.number("Enter a number")`, like any factory.
-
-## Defaults and optional values
-
-Coercion runs only when there is a value to convert. Missing input follows the usual rules: `.default()` fills in `undefined`, and `.optional()` accepts it.
-
-```ts
-val.coerce.boolean().default(false).parse(undefined); // false
-val.coerce.number().optional().parse(undefined); // undefined
-```
-
-An empty string is a value, not a missing one. `val.coerce.number().validate("")` fails, which is usually what you want for a required form field. To treat empty text as absent, do it explicitly before the schema:
-
-```ts
-const optionalNumber = val
-  .string()
-  .transform((text) => (text.trim() === "" ? undefined : text))
-  .pipe(val.coerce.number().optional());
-```
-
-## JSON strings
-
-`val.json(schema?)` is the same idea for structured data. It accepts a string holding JSON and outputs the parsed value, validated against `schema` when you pass one:
-
-```ts
-const settings = val.json(val.object({ theme: val.enum(["light", "dark"]) }));
-
-settings.parse('{"theme":"dark"}'); // { theme: "dark" }
-settings.validate("{oops"); // fails with invalid_format
-```
-
-Issues inside the parsed value are located from its root, so `theme` above reports at `["theme"]`.
+`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `EmailOptions`, `ObjectOptions`, `RefineIssue`, `Messages` and `FlattenedErrors` are exported for annotating your own code. Each is documented in the source, and the ones you meet in everyday use are explained in [Custom validators](docs/custom-validators.md) and [Issues and messages](docs/errors.md).
 
 <!-- Source: docs/changelog/0.1.0.md -->
 
 # 0.1.0
 
-0.0.1 validated a value the moment you called `val.string(value).min(3)`. 0.1.0 builds a schema first and runs it later: `val.string().min(3).validate(value)`. That one change makes schemas reusable, composable and inferable as types, and it touches every call, so nothing from 0.0.1 carries over unchanged. The tables below map old calls to new ones.
+0.0.1 validated a value the moment you called `val.string(value).min(3)`. 0.1.0 is a rewrite around one idea: a validator is a function that takes any input and returns a result, and every validator is its own import. A package or app that needs an email check bundles an email check and nothing else. Nothing from 0.0.1 carries over unchanged; the table below maps old calls to new ones.
 
 ## Added
 
-- Schemas built from `val`: strings, numbers, bigints, booleans, dates, literals, enums, objects, arrays, tuples, records, sets, maps, unions, discriminated unions, intersections, recursive schemas, instances and JSON strings, all inferring their TypeScript type with `Infer`.
-- `validate`, `parse`, `is`, `validateAsync` and `parseAsync` on every schema, returning a result or throwing a `ValidationError` that carries every issue.
-- `refine`, `check`, `transform`, `pipe`, `and`, `or` and `val.custom` for rules of your own. `refine` and `check` keep the validator's concrete type, so `val.object(...).refine(...).extend(...)` works; `transform`, `pipe`, `and` and `or` wrap it in a general validator, so add type-specific rules first. Any callback may be async.
-- Structured issues: an open set of `code`s, `path`, and `params` with the facts behind each failure. Every rule takes a message that can be a function of those facts, which is how messages are localized.
-- `ValidationOptions.context`, reaching checks and transforms as `ctx.options.context`, and `abortEarly`.
-- Standard Schema v1 support on every schema.
-- `val.coerce.string()`, `number()`, `boolean()`, `bigint()` and `date()` for text input, chaining every rule of the plain validator.
-- String formats `uuid`, `ulid`, `nanoid`, `cuid2`, `ip`, `hostname`, `datetime`, `date`, `base64`, `hex`, and string rules `startsWith`, `endsWith`, `includes`, `regex`, `trim`, `toLowerCase` and `toUpperCase`.
-- Number rules `min`, `max`, `gt`, `lt`, `multipleOf` and `clamp`, and `val.bigint()`.
-- Object shape helpers `extend`, `pick`, `omit`, `partial`, `required` and `keyof`, and unknown-key modes `strict`, `passthrough` and `strip`.
+- Validators as plain functions, created by calling a factory and then called with the value: `email()(input)`, `number({ int: true, min: 0 })(input)`. Any function with that shape is a validator, so your own need no helper.
+- `string`, `number`, `boolean` and `email`, and `object` with `unknownKeys` of `"strip"`, `"strict"` or `"passthrough"`.
+- `optional`, `pipe` and `refine` to combine validators and add rules, including rules that return a promise.
+- Results that are plain data: `{ ok: true, value }` or `{ ok: false, error: { issues } }`, built with `pass` and `fail`. Bad input never throws.
+- Issues with a stable `code`, a `path` to the offending value and `params` describing the failure. Issues never contain the input.
+- `formatIssue`, `flatten` and `formatPath` to turn issues into text and group them by field for forms. English wording is built only when you ask for it, and a message map replaces it to localize.
+- `is`, a type guard for synchronous validators, and `Infer` to read the type a validator produces.
+- Asynchronous validation tracked in the types: a validator holding a rule that returns a promise is an `AsyncValidator`, and so is everything that contains it, so the compiler makes you `await` it.
 
 ## Changed
 
-- **Breaking.** Validators are built first and run with `.validate(input)`. `val.string(value, options)` is now `val.string()`, and its checks are chained before validating:
-
-  | 0.0.1                                        | 0.1.0                                                                |
-  | -------------------------------------------- | -------------------------------------------------------------------- |
-  | `val.string(x).email()`                      | `val.string().email().validate(x)`                                   |
-  | `val.string(x).minLength(3, { trim: true })` | `val.string().trim().min(3).validate(x)`                             |
-  | `val.string(x).notEmpty()`                   | `val.string().trim().nonEmpty().validate(x)`                         |
-  | `val.string(x).matches(re, message)`         | `val.string().regex(re, message).validate(x)`                        |
-  | `val.string(x).url({ forceHttps: true })`    | `val.string().url({ protocols: ["https"] }).validate(x)`             |
-  | `val.number(x).range({ min: 1, max: 9 })`    | `val.number().min(1).max(9).validate(x)`                             |
-  | `val.number(x).port()`                       | `val.number().int().min(1).max(65535).validate(x)`                   |
-  | `val.array<T>(x).minLength(1)`               | `val.array(itemSchema).min(1).validate(x)`                           |
-  | `val.object(x).plain()`                      | `val.record(val.string(), val.unknown()).validate(x)`                |
-  | `custom(x, fn)`                              | `val.custom<T>(predicate).validate(x)`, or `refine` / `transform`    |
-  | `coerce.int(x)`                              | `val.coerce.number().int().validate(x)`                              |
-  | `coerce.number(x)`, `coerce.string(x)`       | `val.coerce.number().validate(x)`, `val.coerce.string().validate(x)` |
-  | `coerce.bool(x)`                             | `val.coerce.boolean().validate(x)`                                   |
-
-- **Breaking.** `ValidationError` is a class, not an interface, and always carries `issues`, a list of every issue, including for a single failure. Read `code` and `path` from the issues.
-- **Breaking.** Issues carry `params` for the facts behind a failure instead of `expected` and `received` strings. Messages name types (`Expected number, received string`) and never echo the input, and `input` appears on an issue only with `includeInput: true`.
-- **Breaking.** Validation is a single pipeline that stays synchronous until a callback returns a promise. `validate`, `parse` and `is` throw an `Error` when they reach async work; use `validateAsync` and `parseAsync`.
-- **Breaking.** Rules never rewrite the value. `email()` does not lowercase the domain, and `url()` does not normalize. Use `trim()`, `toLowerCase()` and `transform()` for changes you want.
-- **Breaking.** `url()` requires a scheme, accepts `http` and `https` unless `protocols` says otherwise, rejects embedded credentials and non-public hosts by default, and accepts `localhost`, single-label hosts and IP addresses with `allowLocal: true`. `email()` and `url()` take their `message` inside their options object.
-- **Breaking.** Invalid size limits, such as `min(-1)`, throw a `RangeError` when the schema is built instead of failing every validation.
-- **Breaking.** `coerce.number` and `coerce.int` are `val.coerce.number()`, which rejects booleans, empty strings, `"0x10"` and exponents, and chains every number rule. Coercion failures are `invalid_type` and do not repeat the input.
+- **Breaking.** Validators are created first and called later. `val.string(x).email()` is `email()(x)`, and constraints are options: `string({ trim: true, min: 3 })`.
+- **Breaking.** There is no `val` namespace. Everything is a named import, so a bundler removes what you do not use.
+- **Breaking.** A failed result holds `error.issues`, a list of every issue found, including for a single failure, and `error` is plain data and not an `Error`. There is no `ValidationError` to catch and no `parse` that throws.
+- **Breaking.** Issues carry `params` for the facts behind a failure and no `expected` or `received` strings. Messages name types (`Expected number, received string`) and never echo the input.
+- **Breaking.** Rules never rewrite the value. `email()` does not lowercase the domain. `trim`, `lowercase`, `uppercase` and `clamp` are the options that change a value, and they run before the constraints.
+- **Breaking.** `email()` accepts public host names only, and its `allowPlus` option is the only one it takes; message text is chosen where you show it, not per validator.
+- **Breaking.** Invalid options, such as `string({ min: -1 })`, throw a `RangeError` when the validator is created instead of failing every validation.
 - **Breaking.** Exceptions thrown by your own callbacks propagate instead of becoming validation failures.
-- The `path` option is gone. Objects, arrays and the other structural validators produce paths themselves.
 
 ## Removed
 
-- The immediate-evaluation calls `val.string(value)`, `val.number(value)`, `val.object(value)`, `val.array(value)`, `custom(value, fn)` and the standalone `coerce.int`, `coerce.number`, `coerce.bool` and `coerce.string` functions. See the table above.
-- `ok`, `err`, `parseResult` and the `ValidationErrorInput` and `ValidationErrorOptions` types. Results are produced by validators only; failures you report yourself go through `ctx.addIssue`.
-- `fileType()`, `object().hasKeys()`, and the `ArrayValidators`, `NumberValidators`, `ObjectValidators` and `StringValidators` result-builder interfaces.
-- `range({ min, max })` and `port()`; chain `min`, `max` and `int` instead. `finite()` is gone because `val.number()` always rejects `NaN` and the infinities.
-- `minLength`, `maxLength` and `notEmpty` on strings and arrays; use `min`, `max` and `nonEmpty`. `matches` is `regex`.
+- The immediate-evaluation calls `val.string(value)`, `val.number(value)`, `val.object(value)`, `val.array(value)`, `custom(value, fn)` and the standalone `coerce.*` functions. The table below covers the ones that have a replacement in this release.
+- `ok`, `err`, `parseResult`, and the `ValidationErrorInput` and `ValidationErrorOptions` types. Build results with `pass` and `fail`.
+- `range({ min, max })`, `port()`, `finite()`, `minLength`, `maxLength` and `notEmpty`. Use the options of `number` and `string`; `number()` always rejects `NaN` and the infinities.
+
+## Migrating from 0.0.1
+
+| 0.0.1                                        | 0.1.0                                          |
+| -------------------------------------------- | ---------------------------------------------- |
+| `val.string(x).email()`                      | `email()(x)`                                   |
+| `val.string(x).minLength(3, { trim: true })` | `string({ trim: true, min: 3 })(x)`            |
+| `val.string(x).notEmpty()`                   | `string({ trim: true, min: 1 })(x)`            |
+| `val.string(x).matches(re, message)`         | `string({ pattern: re })(x)`                   |
+| `val.number(x).range({ min: 1, max: 9 })`    | `number({ min: 1, max: 9 })(x)`                |
+| `val.number(x).port()`                       | `number({ int: true, min: 1, max: 65535 })(x)` |
+
+Reading a result also changed. Where 0.0.1 returned `{ ok, value }` or `{ ok, error }` with a single failure, 0.1.0 returns every issue in `result.error.issues`:
+
+```ts
+import { formatIssue, string } from "@codenhub/validation";
+
+const result = string({ min: 3 })(input);
+
+if (!result.ok) {
+  formatIssue(result.error.issues[0]!); // was: result.error.message
+}
+```

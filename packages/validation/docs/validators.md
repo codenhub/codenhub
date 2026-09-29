@@ -1,166 +1,186 @@
 ---
 title: Validator reference
-description: Every factory on val and every rule on the validators it returns, with failure codes.
-order: 10
+description: Every validator and combinator, with its options, what it produces and the issue it reports.
 ---
 
 # Validator reference
 
-`val` holds one factory per kind of data. Each returns a validator, and each validator has rules you chain onto it. This page lists all of them. Rules that every validator shares (`optional`, `refine`, `transform` and the rest) come first, since they apply to everything below.
+Every validator here is created by calling a function and is then called with the value to check. Every one returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`, and never throws for invalid input. The code and `params` each failure reports are listed with the validator; [Issues and messages](errors.md) explains what they mean and how to turn them into text.
 
-Conventions used throughout:
-
-- **Failure code** is the `code` of the issue a rule reports. Built-in issues carry the facts behind the failure in `params`, listed in [Errors and messages](errors.md); issues from your own rules may omit it.
-- **Messages.** The last argument of a rule is an optional `message`: a string, or a function that builds one from the issue. A rule that takes options puts `message` inside them instead. Type failures accept a message as the factory's only argument, for example `val.string("Enter some text")`.
-- **Limits are checked when you build the schema.** `val.string().min(-1)` throws a `RangeError` immediately instead of failing every input later.
-- **Rules run in the order you chain them** and all of them report, so `val.string().min(5).email()` can produce two issues for one value.
-
-## Shared by every validator
-
-| Method                        | What it does                                                                                                                                                  |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `optional()`                  | Also accepts `undefined`. The output type gains `undefined`.                                                                                                  |
-| `nullable()`                  | Also accepts `null`.                                                                                                                                          |
-| `nullish()`                   | Also accepts `null` and `undefined`.                                                                                                                          |
-| `default(value)`              | Replaces `undefined` input with `value`, or with the result of calling it when it is a function. The default is used as given and is not validated.           |
-| `catch(fallback)`             | Replaces a failed validation with `fallback`, or with the result of calling it with the discarded issues. Exceptions thrown by your callbacks are not caught. |
-| `refine(predicate, options?)` | A yes-or-no rule. See [Customization](customization.md).                                                                                                      |
-| `check(fn)`                   | A rule that reports its own issues. See [Customization](customization.md).                                                                                    |
-| `transform(fn)`               | Maps the validated value to another value.                                                                                                                    |
-| `pipe(next)`                  | Feeds the output into another validator.                                                                                                                      |
-| `and(other)`                  | The input must satisfy both. Object outputs are merged.                                                                                                       |
-| `or(other)`                   | The input may satisfy either one. Tried in order.                                                                                                             |
-
-`refine` and `check` return the same validator type, so `val.string().refine(...).max(20)` and `val.object(...).refine(...).extend(...)` work. `optional`, `nullable`, `default`, `catch`, `transform`, `pipe`, `and` and `or` wrap the validator: the result is a general validator without the original's type-specific rules, so add those rules first.
+Options are read once, when the validator is created. An option that makes no sense, such as a negative length, throws a `RangeError` or `TypeError` at that point, because it is a mistake in your code and not in the input.
 
 ## Strings
 
-`val.string(message?)` accepts strings and nothing else. Failure code of a wrong type: `invalid_type`.
+`string(options?)` accepts strings and produces a string. Anything else fails with `invalid_type`, naming the type it received.
 
-| Rule                                                       | Accepts                                                                                                                                                                                                                                      | Failure code          |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `min(length)`                                              | At least `length` characters (UTF-16 code units, as `String.length` counts them).                                                                                                                                                            | `too_small`           |
-| `max(length)`                                              | At most `length` characters.                                                                                                                                                                                                                 | `too_big`             |
-| `length(length)`                                           | Exactly `length` characters.                                                                                                                                                                                                                 | `too_small`/`too_big` |
-| `nonEmpty()`                                               | At least one character. Whitespace counts; `trim()` first to reject blank strings.                                                                                                                                                           | `too_small`           |
-| `email({ allowPlus?, message? })`                          | An address with a public domain name, at most 254 characters, local part at most 64. `allowPlus` defaults to `true`.                                                                                                                         | `invalid_format`      |
-| `url({ protocols?, allowLocal?, message? })`               | An absolute URL. `protocols` defaults to `["http", "https"]`. Credentials in the URL are rejected. The host must be a public domain name unless `allowLocal` is `true`, which also accepts `localhost`, single-label hosts and IP addresses. | `invalid_format`      |
-| `uuid()`                                                   | A hyphenated UUID of version 1 to 8.                                                                                                                                                                                                         | `invalid_format`      |
-| `ulid()`                                                   | A ULID, in any case.                                                                                                                                                                                                                         | `invalid_format`      |
-| `nanoid()`                                                 | A default Nano ID: 21 characters of `A-Za-z0-9_-`.                                                                                                                                                                                           | `invalid_format`      |
-| `cuid2()`                                                  | A CUID2.                                                                                                                                                                                                                                     | `invalid_format`      |
-| `ip({ version?, message? })`                               | An IPv4 or IPv6 address. `version: "v4"` or `"v6"` narrows it.                                                                                                                                                                               | `invalid_format`      |
-| `hostname()`                                               | Dot-separated labels of letters, digits and hyphens. Single labels such as `localhost` are accepted.                                                                                                                                         | `invalid_format`      |
-| `datetime({ offset?, precision?, message? })`              | An ISO 8601 date and time such as `2026-09-28T14:30:00Z`, on a day that exists. `offset: true` allows `+02:00`; `precision` fixes the digits of fractional seconds (`0` forbids them).                                                       | `invalid_format`      |
-| `date()`                                                   | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.                                                                                                                                                                        | `invalid_format`      |
-| `base64()`                                                 | Standard base64 with padding.                                                                                                                                                                                                                | `invalid_format`      |
-| `hex()`                                                    | Hexadecimal digits of any case.                                                                                                                                                                                                              | `invalid_format`      |
-| `regex(pattern)`                                           | A match of `pattern`. The `g` and `y` flags are ignored so the answer does not depend on earlier calls.                                                                                                                                      | `invalid_format`      |
-| `startsWith(prefix)`, `endsWith(suffix)`, `includes(text)` | The string starts with, ends with or contains the text.                                                                                                                                                                                      | `invalid_format`      |
-| `trim()`, `toLowerCase()`, `toUpperCase()`                 | Not rules: they change the value, for the rules after them and for the output.                                                                                                                                                               | none                  |
+```ts
+import { string } from "@codenhub/validation";
 
-The format rules validate; they never rewrite. `val.string().email().validate("Ada@Example.COM")` returns the value exactly as given. To normalize, say so: `val.string().trim().toLowerCase().email()`.
+const username = string({ trim: true, min: 3, max: 30 });
 
-## Numbers and bigints
+username("  ada  "); // { ok: true, value: "ada" }
+username("ab"); // { ok: false, ... }, code "too_small"
+```
 
-`val.number(message?)` accepts finite numbers. `NaN`, `Infinity` and `-Infinity` are always rejected, and numeric strings are not converted (see [Coercion](coercion.md) for that).
+The options, all optional:
 
-| Rule                                                         | Accepts                                                                                | Failure code           |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------- | ---------------------- |
-| `min(n)`, `max(n)`                                           | At least, or at most, `n`.                                                             | `too_small`, `too_big` |
-| `gt(n)`, `lt(n)`                                             | Strictly greater than, or less than, `n`.                                              | `too_small`, `too_big` |
-| `positive()`, `negative()`, `nonNegative()`, `nonPositive()` | Above, below, at or above, at or below zero.                                           | `too_small`, `too_big` |
-| `nonZero()`                                                  | Any value except zero.                                                                 | `invalid_value`        |
-| `int()`                                                      | A whole number.                                                                        | `invalid_value`        |
-| `safeInt()`                                                  | A whole number a double represents exactly (within `Number.MAX_SAFE_INTEGER`).         | `invalid_value`        |
-| `multipleOf(step)`                                           | A multiple of `step`, tolerating floating-point error so `0.3` is a multiple of `0.1`. | `invalid_value`        |
-| `clamp(min, max)`                                            | Not a rule: moves the value into the range instead of rejecting it.                    | none                   |
+| Option       | Meaning                                                                                                                       |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `trim`       | Remove leading and trailing whitespace before the constraints run, and from the output.                                       |
+| `lowercase`  | Lowercase the string before the constraints run, and in the output. Cannot be combined with `uppercase`.                      |
+| `uppercase`  | Uppercase the string before the constraints run, and in the output. Cannot be combined with `lowercase`.                      |
+| `min`        | At least this many characters. Counted in UTF-16 code units, as `String.length` counts them, so an emoji can count as two.    |
+| `max`        | At most this many characters.                                                                                                 |
+| `length`     | Exactly this many characters.                                                                                                 |
+| `pattern`    | Must match this regular expression. The `g` and `y` flags are ignored, so the same validator gives the same answer each time. |
+| `startsWith` | Must start with this text.                                                                                                    |
+| `endsWith`   | Must end with this text.                                                                                                      |
+| `includes`   | Must contain this text.                                                                                                       |
 
-`val.bigint(message?)` accepts bigints and supports `min(n)`, `max(n)`, `positive()` and `negative()` with bigint arguments.
+Clean-up (`trim`, `lowercase`, `uppercase`) always happens first, and every constraint is then checked against the cleaned string, so `string({ trim: true, min: 1 })` rejects a string of spaces. Every constraint that fails reports its own issue.
 
-## Booleans and dates
+| Failure                                      | `code`           | `params`                                                      |
+| -------------------------------------------- | ---------------- | ------------------------------------------------------------- |
+| Not a string                                 | `invalid_type`   | `{ expected: "string", received }`                            |
+| Shorter than `min`                           | `too_small`      | `{ minimum, type: "string" }`                                 |
+| Longer than `max`                            | `too_big`        | `{ maximum, type: "string" }`                                 |
+| Shorter than `length`                        | `too_small`      | `{ minimum, exact: true, type: "string" }`                    |
+| Longer than `length`                         | `too_big`        | `{ maximum, exact: true, type: "string" }`                    |
+| Does not match `pattern`                     | `invalid_format` | `{ format: "regex", pattern }`                                |
+| Wrong `startsWith`, `endsWith` or `includes` | `invalid_format` | `{ format: "startsWith" \| "endsWith" \| "includes", value }` |
 
-`val.boolean(message?)` accepts `true` and `false`. `.true()` and `.false()` pin the value, which is how you require a checkbox to be ticked: `val.boolean().true("You must accept the terms")`.
+## Numbers
 
-`val.date(message?)` accepts `Date` instances that are valid; `Invalid Date` is rejected. `min(date)` and `max(date)` are inclusive (`too_small`, `too_big`). Timestamps and date strings are not converted; see [Coercion](coercion.md).
+`number(options?)` accepts finite numbers and produces a number. `NaN`, the infinities and every other type fail with `invalid_type`.
 
-## Fixed values
+```ts
+import { number } from "@codenhub/validation";
 
-| Factory                            | Accepts                                                                                                               |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `val.literal(value, message?)`     | Exactly `value`, compared with `===`: a string, number, boolean, bigint, symbol, `null` or `undefined`.               |
-| `val.enum(values, message?)`       | One of a list of strings or numbers. Pass a literal array (`["a", "b"]`) and the type is the union of its members.    |
-| `val.nativeEnum(object, message?)` | The values of a TypeScript `enum` or an `as const` object. Reverse-mapped names of numeric enums are not accepted.    |
-| `val.null()`, `val.undefined()`    | Only `null`, or only `undefined`.                                                                                     |
-| `val.unknown()`                    | Anything, unchecked. Use it for a value you do not care about, or before a `check` or `transform` does the real work. |
-| `val.never(message?)`              | Nothing: every value fails. Forbids a property, or marks a union branch that must never match.                        |
-| `val.instanceOf(Class, message?)`  | Instances of a class, subclasses included.                                                                            |
+const age = number({ int: true, min: 0, max: 130 });
 
-Failure code: `invalid_value` for literals and enums, `invalid_type` for `instanceOf`, `never` and the type check of every other validator.
+age(42); // { ok: true, value: 42 }
+age(1.5); // { ok: false, ... }, code "invalid_value"
+```
+
+The options, all optional:
+
+| Option       | Meaning                                                                                                              |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `clamp`      | `{ min, max }`. Move the value into the range instead of rejecting it, before the constraints run and in the output. |
+| `min`, `max` | At least or at most this value, inclusive.                                                                           |
+| `gt`, `lt`   | Strictly greater than or less than this value.                                                                       |
+| `int`        | A whole number.                                                                                                      |
+| `safeInt`    | A whole number a double can represent exactly, that is within `Number.MAX_SAFE_INTEGER`.                             |
+| `multipleOf` | A multiple of this positive number, tolerating floating-point error, so `0.3` is a multiple of `0.1`.                |
+| `nonZero`    | Anything but zero.                                                                                                   |
+
+Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, non-negative is `min: 0`, negative is `lt: 0` and non-positive is `max: 0`. `clamp` throws a `RangeError` for a `NaN` bound or a minimum above its maximum, and `multipleOf` throws one unless it is a positive finite number.
+
+| Failure                       | `code`          | `params`                                                      |
+| ----------------------------- | --------------- | ------------------------------------------------------------- |
+| Not a finite number           | `invalid_type`  | `{ expected: "number", received }`                            |
+| Below `min` or `gt`           | `too_small`     | `{ minimum, inclusive, type: "number" }`                      |
+| Above `max` or `lt`           | `too_big`       | `{ maximum, inclusive, type: "number" }`                      |
+| `int`, `safeInt` or `nonZero` | `invalid_value` | `{ type: "number", format: "int" \| "safeInt" \| "nonZero" }` |
+| `multipleOf`                  | `invalid_value` | `{ multipleOf }`                                              |
+
+## Booleans
+
+`boolean()` accepts `true` and `false` and produces a boolean. Truthy and falsy values, and text such as `"true"`, fail with `invalid_type` and `{ expected: "boolean", received }`.
+
+## Email addresses
+
+`email(options?)` accepts a string that is an email address with a public domain name and produces it unchanged. It does not trim or lowercase, so clean the input first with `pipe` when it may need it:
+
+```ts
+import { email, pipe, string } from "@codenhub/validation";
+
+const address = pipe(string({ trim: true, lowercase: true }), email());
+
+address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
+```
+
+The one option is `allowPlus`, default `true`, which controls whether `+` is accepted in the part before the `@`, as in `ada+news@example.com`.
+
+The local part is limited to 64 characters and the whole address to 254. Hosts that are not public domain names, such as `localhost`, single-label hosts and IP addresses, are rejected.
+
+| Failure      | `code`           | `params`                           |
+| ------------ | ---------------- | ---------------------------------- |
+| Not a string | `invalid_type`   | `{ expected: "string", received }` |
+| Not an email | `invalid_format` | `{ format: "email" }`              |
 
 ## Objects
 
-`val.object(shape, message?)` validates each property against the validator listed for it. Notes on what it accepts are in the [overview](index.md#objects).
+`object(shape, options?)` takes a shape, an object whose values are validators, and produces an object with the same keys and the output of each validator.
 
-| Method                     | What it does                                                                                                                   |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `strict()`                 | Rejects properties not in the shape, one `unrecognized_key` issue each.                                                        |
-| `passthrough()`            | Copies properties not in the shape to the output, unvalidated.                                                                 |
-| `strip()`                  | Drops them. This is the default.                                                                                               |
-| `extend(shape)`            | Adds properties, replacing any with the same name. Pass another object's `.shape` to merge two objects.                        |
-| `pick(keys)`, `omit(keys)` | Keeps only, or removes, the listed properties.                                                                                 |
-| `partial()`                | Makes every property optional.                                                                                                 |
-| `required(keys?)`          | Undoes `.optional()` on the listed properties, or all of them. A property that was not wrapped by `.optional()` is left alone. |
-| `keyof()`                  | An enum validator of the property names.                                                                                       |
-| `shape`                    | The property validators, for building other schemas from this one.                                                             |
+```ts
+import { number, object, optional, string } from "@codenhub/validation";
 
-`strict`, `passthrough` and `strip` keep rules added with `refine` and `check`. The methods that change the shape do not, because the output type changes with the shape; add rules after deriving.
+const user = object({ name: string(), age: optional(number()) });
 
-## Collections
+user({ name: "Ada" }); // { ok: true, value: { name: "Ada" } }
+user({ age: "x" }); // two issues: ["name"] and ["age"]
+```
 
-| Factory                            | Accepts                                                                                                                                             |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `val.array(item, message?)`        | Arrays whose items all satisfy `item`. Rules: `min(n)`, `max(n)`, `length(n)`, `nonEmpty()`, `unique(by?)`. Use `val.unknown()` to accept any item. |
-| `val.tuple([a, b, ...], message?)` | Arrays with one validator per position and exactly that length. `.rest(validator)` accepts extra items of one type after them.                      |
-| `val.record(key, value, message?)` | Plain objects used as dictionaries, where every key satisfies `key` and every value satisfies `value`. Use `val.string()` for any key.              |
-| `val.set(item, message?)`          | `Set` instances whose values satisfy `item`. Rules: `min(n)`, `max(n)`, `nonEmpty()`.                                                               |
-| `val.map(key, value, message?)`    | `Map` instances. Rules: `min(n)`, `max(n)`, `nonEmpty()`.                                                                                           |
+- Only plain objects are accepted. Arrays, class instances, `Map`s, `Date`s and `null` fail with `invalid_type` and `{ expected: "object", received }`.
+- Only own properties are read, so a value inherited through the prototype never satisfies a required property.
+- Every property is validated, even after an earlier one failed, and each issue's path leads down to it.
+- A property whose validator accepts `undefined`, such as one wrapped in `optional`, is optional in the inferred type, and is left out of the output when absent from the input.
+- The output is a new object and the input is never modified.
 
-Size rules report `too_small` or `too_big`. `unique()` reports `invalid_value` at the index of each repeated item, and compares items with `Map` semantics: objects match only by identity, so pass a key function to compare by content, as in `.unique((user) => user.id)`. It runs on the output, after items were transformed.
+The `unknownKeys` option decides what happens to input properties the shape does not list:
 
-Where an issue is located:
+| `unknownKeys`   | Effect                                                                                 |
+| --------------- | -------------------------------------------------------------------------------------- |
+| `"strip"`       | Drop them from the output. This is the default.                                        |
+| `"strict"`      | Reject each with an `unrecognized_key` issue at the key's path, and `params: { key }`. |
+| `"passthrough"` | Copy them to the output unchanged and unchecked.                                       |
 
-- **Arrays and tuples:** the item's index, `[2]`.
-- **Sets:** the position of the value in iteration order.
-- **Records:** the key. An issue on the key itself sits at the same place as one on the value.
-- **Maps:** the key when it is a string or a number, and the position in iteration order otherwise. Issues on the key are located at the same entry as issues on the value.
+A shape is an ordinary object, so it can be reused with ordinary JavaScript: spread one into another to extend it, and leave keys out with destructuring.
 
-A record keyed by a union of literals, such as `val.record(val.enum(["admin", "user"]), val.number())`, infers `Partial<Record<...>>` because the validator does not require every key to be present.
+```ts
+import { email, number, object, string } from "@codenhub/validation";
+
+const base = { name: string(), email: email() };
+const withAge = object({ ...base, age: number() });
+```
 
 ## Combining validators
 
-| Factory                                           | Accepts                                                                                                                                                                                                                                                                                                                                                                 |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `val.union([a, b, ...], message?)` or `a.or(b)`   | Input that satisfies any of them, tried in order, first match wins. When none matches, one `invalid_union` issue carries each variant's issues in `params.issues`.                                                                                                                                                                                                      |
-| `val.discriminatedUnion(key, variants, message?)` | Objects of several shapes told apart by one property. Reads the discriminator, picks the one variant it names and validates only against it, so issues describe the shape the input meant. Each variant must declare `key` with `val.literal()` or `val.enum()`, and no value may be claimed twice: both are checked when you build the schema and throw a `TypeError`. |
-| `val.intersection(a, b)` or `a.and(b)`            | Input that satisfies both. All issues from both are reported. Plain-object outputs are merged deeply; for anything else the right-hand output wins.                                                                                                                                                                                                                     |
-| `val.lazy(() => schema)`                          | A schema built on first use, so it can refer to itself. Annotate the variable with `Validator<T>`: TypeScript cannot infer a type that mentions itself.                                                                                                                                                                                                                 |
+### `optional`
 
-Prefer `discriminatedUnion` over `union` for objects that share a tag: its errors say what is wrong with the variant you meant, instead of listing every variant's complaints.
+`optional(validator)` accepts `undefined`, passes it through, and gives every other value to `validator`. `null` and the empty string are not absent, and go to `validator`. Inside an `object`, the property becomes optional in the inferred type.
+
+### `pipe`
+
+`pipe(a, b, ...)` runs validators in order, giving each the value the previous one produced, and produces what the last produces. The first failure stops it, because a later step has nothing valid to work on. Use it to clean a value before checking a format, or to check one rule after another.
+
+### `refine`
+
+`refine(validator, check, issue?)` adds a rule that `validator` cannot express. It runs only when `validator` succeeded, and receives the value `validator` produced. `check` returns `true` for an acceptable value. The optional `issue` says how a rejection is reported: a string is the message, and an object can set a `code`, `path`, `params` and `message`. Without it the issue has code `custom`.
 
 ```ts
-interface Category {
-  name: string;
-  children: Category[];
-}
+import { object, refine, string } from "@codenhub/validation";
 
-const category: Validator<Category> = val.lazy(() => val.object({ name: val.string(), children: val.array(category) }));
+const signup = refine(object({ password: string({ min: 8 }), confirm: string() }), (data) => data.password === data.confirm, { code: "mismatch", path: ["confirm"], message: "Passwords must match" });
 ```
 
-## Other factories
+A `check` that returns a promise makes the result asynchronous; see [Custom validators](custom-validators.md#asynchronous-rules).
 
-| Factory                              | What it does                                                                                                                              |
-| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `val.json(schema?, message?)`        | Accepts a string holding JSON and outputs the parsed value, validated against `schema` when given. Invalid JSON reports `invalid_format`. |
-| `val.custom<T>(predicate, options?)` | A predicate turned into a validator for a type none of the built-ins describe. See [Customization](customization.md).                     |
-| `val.coerce.*`                       | Validators that convert text input first. See [Coercion](coercion.md).                                                                    |
+## Working with results
+
+### `Infer`
+
+`Infer<typeof validator>` is the type a validator produces. It reads the output of either a synchronous or an asynchronous validator.
+
+### `is`
+
+`is(validator, input)` returns whether `input` passes, and narrows it to the validator's output type. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise. The narrowing is exact for a validator that does not change the value; for one that trims, clamps or transforms, read `result.value` from calling the validator.
+
+### `pass` and `fail`
+
+`pass(value)` and `fail(...issues)` build results, and are what a validator you write returns. See [Custom validators](custom-validators.md).
+
+### Types
+
+`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `EmailOptions`, `ObjectOptions`, `RefineIssue`, `Messages` and `FlattenedErrors` are exported for annotating your own code. Each is documented in the source, and the ones you meet in everyday use are explained in [Custom validators](custom-validators.md) and [Issues and messages](errors.md).

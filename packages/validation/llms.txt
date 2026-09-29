@@ -1,14 +1,13 @@
 # @codenhub/validation
 
-> Zero-dependency schema validation for TypeScript. Build a schema with `val`, run unknown input through it, and get the typed value or every issue found. Extend it with custom checks, transforms, async rules and localizable messages. The package is experimental.
+> Validation for TypeScript where each validator is a small standalone function, so a package or app ships only the checks it uses. Works for a single value such as an email or a port, and for whole objects such as forms. The package is experimental.
 
-Schemas are immutable and inferred with `Infer`. `validate` returns a result and never throws for invalid input; `parse` throws a `ValidationError`; async rules need `validateAsync` or `parseAsync`. Every schema implements Standard Schema v1. Issues never contain the input unless `includeInput` is set.
+A validator takes any input and returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`; it never throws for invalid input. Create one by calling a factory, then call it with the value: `email()(input)`, `number({ int: true, min: 0 })(input)`. Combine validators with `object`, `optional`, `pipe` and `refine`, read the type with `Infer`, and write your own by returning `pass(value)` or `fail(...)` from any function. Issues carry a code, a path and params, never the input; `formatIssue` and `flatten` turn them into text, and a message map localizes it. A validator with an asynchronous rule is an `AsyncValidator` and must be awaited.
 
 ## Documentation
 
-- [Documentation overview](docs/index.md): Schemas, results, execution modes and objects.
-- [Validator reference](docs/validators.md): Every `val` factory and rule with its failure code.
-- [Customization](docs/customization.md): `refine`, `check`, `transform`, `pipe`, `val.custom`, async rules, context and reusable checks.
-- [Errors and messages](docs/errors.md): Issue shape, codes and `params`, message functions, localization and form errors.
-- [Coercion](docs/coercion.md): `val.coerce.*` and `val.json` for text input such as environment variables.
-- [Changelog](docs/changelog/index.md): Release notes and 0.0.1 migration.
+- [Documentation overview](docs/index.md): The idea, results, objects, combining validators, and sync versus async.
+- [Validator reference](docs/validators.md): Every validator and combinator with its options and the issue it reports.
+- [Custom validators](docs/custom-validators.md): Writing validators, `refine`, asynchronous rules and testing.
+- [Issues and messages](docs/errors.md): The shape of an issue, built-in codes and params, message text, localization and form errors.
+- [Changelog](docs/changelog/index.md): Release notes and the migration from 0.0.1.
