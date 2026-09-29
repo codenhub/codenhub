@@ -65,6 +65,6 @@ const result = env({ PORT: "8080", ORIGINS: "https://a.example,https://b.example
 // { ok: true, value: { PORT: 8080, DEBUG: false, RETRIES: 3, ORIGINS: [...] } }
 ```
 
-A missing variable is `undefined`, which `withDefault` replaces and everything else rejects. A value that repeats, as in `?id=1&id=2`, arrives as an array, so validate it with `array(coerceNumber())`.
+In Node.js, pass a copy of the environment: `env({ ...process.env })`. `process.env` itself is not a plain object, since its prototype is not `Object.prototype`, and `object` rejects it as it rejects a class instance. A missing variable is `undefined`, which `withDefault` replaces and everything else rejects. A value that repeats, as in `?id=1&id=2`, arrives as an array, so validate it with `array(coerceNumber())`.
 
 To clean text before converting it, put a strict validator in front with `pipe`: `pipe(string({ trim: true }), coerceNumber())`. For text that holds JSON, use `json`, which parses it and validates the result.
