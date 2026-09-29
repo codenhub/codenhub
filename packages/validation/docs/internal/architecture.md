@@ -57,7 +57,7 @@ Two things do throw, and both are programmer errors: an invalid option when a va
 An issue is `{ code, path, params?, message? }` and nothing else.
 
 - `code` is an open set of strings. The built-in codes are `invalid_type`, `invalid_value`, `invalid_format`, `too_small`, `too_big`, `unrecognized_key`, `invalid_key` and `invalid_union`; a custom validator adds its own, such as `username_taken`, and callers branch on them.
-- `path` is absolute: from the root of what was validated down to the offending value. A validator reports an issue at its own location (an empty path, or a path relative to its value), and each composer prefixes the segment it descended through with `nestIssues`. Nothing else edits paths, which is what keeps them predictable.
+- `path` is absolute: from the root of what was validated down to the offending value. A validator reports an issue at its own location (an empty path, or a path relative to its value), and each composer prefixes the segment it descended through with `collectNested`. Nothing else edits paths, which is what keeps them predictable.
 - `params` holds the facts behind the failure (`{ minimum: 3, type: "string" }`, `{ expected: "string", received: "number" }`), enough to build a message and to branch on.
 - `message` is optional and never set by a built-in validator. A custom validator can set it when it wants fixed text.
 
@@ -102,7 +102,7 @@ Structure is checked before content. A collection whose size is wrong fails at o
 The package is `sideEffects: false`, every module is side-effect free at load, and nothing registers itself anywhere. To keep it that way:
 
 - One validator per module; a module imports only `core/` helpers and other validators it truly composes.
-- No shared mutable state, no module-level registries, no `Object.assign`-style attachment of properties to functions at load.
+- No shared mutable state, no module-level registries, no `Object.assign`-style attachment of properties to functions at load. The one piece of module-level state is the depth counter of `lazy`, described under [Results, not exceptions](#results-not-exceptions): it is created at load without a side effect and is back at zero whenever no validator is running.
 - Options are read once when a validator is created, not per call, and defaults are resolved there.
 - The English wording lives in `messages/english-messages.ts` and is reachable only through the `englishMessages` export, so `formatIssue` itself carries none of it.
 
