@@ -826,6 +826,7 @@ test.describe("aesthetics", () => {
           [SURFACES_URL, "card-default-none"],
           [SURFACES_URL, "panel-default-none"],
           [FEEDBACK_URL, "alert-default-destructive"],
+          [TYPOGRAPHY_URL, "data-table-default-none"],
         ] as const) {
           await page.goto(withAesthetic(url, LIQUID));
 
@@ -870,6 +871,14 @@ test.describe("aesthetics", () => {
         expect(bubble.bubble.position, "bubble keeps its own placement").toBe("absolute");
         expect(bubble.bubble.before, "bubble takes the layers").toBe('""');
         expect(bubble.button.before, "a control takes no layer").toBe("none");
+
+        /* A `.solid` table is opaque, not frosted, so there is nothing for a
+           layer to blur behind it. */
+        await page.goto(withAesthetic(TYPOGRAPHY_URL, LIQUID));
+
+        const solidTable = await readLayers(page, '[data-testid="data-table-solid-primary"]');
+
+        expect(solidTable.before, "a solid table takes no layer").toBe("none");
       });
 
       test("reaches one surface inside a glass region, and skips a plain glass region nested inside", async ({

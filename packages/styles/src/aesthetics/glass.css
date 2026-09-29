@@ -209,7 +209,8 @@
      blur beneath and the lens with the rim and sheen above it. `isolation`
      keeps them above the surface's own plate, which they then blur with the
      page; `position` anchors them, and a component that positions itself --
-     the tooltip bubble -- keeps its own. Both slots are spent, so a surface
+     the tooltip bubble -- keeps its own. A default or `.soft` table frosts
+     under glass, so it takes the layers too. Both slots are spent, so a surface
      inside a liquid region carries no `::before` or `::after` of the
      consumer's; the fields cannot host one, and controls stay solid as they do
      under glass.
@@ -217,7 +218,14 @@
      A region of another aesthetic nested inside, or of plain glass, keeps its
      own material and takes no layers. This list names the other aesthetics, and
      `registry.test.ts` fails when one is missing. */
-  :is(.glass-liquid, .glass-liquid *):is(.glass, .glass *):is(.card, .panel, .alert, .tooltip-bubble, .surface):not(
+  :is(.glass-liquid, .glass-liquid *):is(.glass, .glass *):is(
+    .card,
+    .panel,
+    .alert,
+    .tooltip-bubble,
+    .surface,
+    .data-table:not(.solid, .ghost)
+  ):not(
     .glass-liquid :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch),
     .glass-liquid :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *,
     .glass-liquid .glass:not(.glass-liquid),

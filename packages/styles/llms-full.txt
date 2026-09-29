@@ -926,7 +926,7 @@ The lens is drawn by an SVG filter in `backdrop-filter`, which Chromium renders 
 
 **Exceptions:**
 
-- It reaches `.card`, `.panel`, `.alert`, and the tooltip bubble. Controls stay solid, as they do under glass.
+- It reaches `.card`, `.panel`, `.alert`, the tooltip bubble, and a default or `.soft` `.data-table`. Controls stay solid, as they do under glass.
 - It draws its blur and lens on each surface's `::before` and `::after`, so a surface inside a liquid region cannot carry a `::before` or `::after` of your own, and each surface becomes a positioned stacking context -- a surface you position yourself keeps your placement.
 - The lens is 8px of erosion blurred over 10px at every size, and its strength is fixed. A filter cannot read a custom property, so neither is a knob. The corners are, through `--glass-radius` and `--glass-radius-surface`, with larger defaults: a continuous corner reads smaller than a round one of the same radius.
 - A region of another aesthetic nested inside a liquid region, or of plain `.glass`, keeps its own material and takes no layers.
