@@ -1,5 +1,5 @@
 import type { Validator } from "../core/types";
-import { PUBLIC_HOST_PATTERN } from "./patterns";
+import { isPublicHost } from "./patterns";
 import { textFormat } from "./text-format";
 
 const EMAIL_LOCAL_PATTERN = /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*$/i;
@@ -25,7 +25,7 @@ const isEmail = (text: string, allowPlus: boolean): boolean => {
     text.length <= EMAIL_MAX_LENGTH &&
     local.length <= EMAIL_LOCAL_MAX_LENGTH &&
     EMAIL_LOCAL_PATTERN.test(local) &&
-    PUBLIC_HOST_PATTERN.test(host) &&
+    isPublicHost(host) &&
     (allowPlus || !local.includes("+"))
   );
 };

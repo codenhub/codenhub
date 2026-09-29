@@ -1,5 +1,5 @@
 import type { Validator } from "../core/types";
-import { PUBLIC_HOST_PATTERN } from "./patterns";
+import { isPublicHost } from "./patterns";
 import { textFormat } from "./text-format";
 
 /**
@@ -19,7 +19,8 @@ export interface UrlOptions {
    */
   protocols?: readonly string[];
   /**
-   * Accepts hosts that are not public domain names: `localhost`, single-label hosts and IP addresses.
+   * Accepts hosts that are not public domain names: `localhost`, single-label hosts, IP addresses, and
+   * special-use names such as `app.localhost`, `db.internal` or `printer.local`.
    *
    * @defaultValue false
    */
@@ -57,7 +58,7 @@ export function url(options: UrlOptions = {}): Validator<string> {
       protocols.includes(parsed.protocol.slice(0, -1)) &&
       parsed.username === "" &&
       parsed.password === "" &&
-      (allowLocal || PUBLIC_HOST_PATTERN.test(parsed.hostname))
+      (allowLocal || isPublicHost(parsed.hostname))
     );
   });
 }

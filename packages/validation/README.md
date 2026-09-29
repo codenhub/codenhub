@@ -71,7 +71,7 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 - Issues never contain the input, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English, which is a separate import so a program that words its own issues does not bundle it, or your own to reword or localize.
 - Rules never rewrite the value unless you ask: `trim`, `lowercase`, `uppercase` and `clamp` are the options that do.
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
-- `email()` accepts public host names only.
+- `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal` and `printer.local`. `url({ allowLocal: true })` accepts them. Neither resolves the name, so a public name can still point at a private address.
 - Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input.
 
 ## License

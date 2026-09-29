@@ -46,6 +46,30 @@ describe("url", () => {
     ).toEqual(Array(8).fill(false));
   });
 
+  it("should reject special-use domain names, which never name a public host", () => {
+    const reserved = [
+      "http://admin.localhost",
+      "http://db.internal",
+      "http://printer.local",
+      "http://site.test",
+      "http://site.example",
+      "http://site.invalid",
+      "http://site.alt",
+      "http://site.onion",
+      "http://router.home.arpa",
+    ];
+    expect(accepts(url(), ...reserved)).toEqual(Array(reserved.length).fill(false));
+    expect(accepts(url({ allowLocal: true }), ...reserved)).toEqual(Array(reserved.length).fill(true));
+  });
+
+  it("should still accept public names that only contain a reserved word", () => {
+    expect(accepts(url(), "https://localhost.com", "https://test.example.com", "https://arpa.net")).toEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+
   it("should accept local hosts only with allowLocal", () => {
     const local = url({ allowLocal: true });
     expect(accepts(local, "http://localhost:3000", "http://127.0.0.1", "http://[::1]:8080", "http://intranet")).toEqual(

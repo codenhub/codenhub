@@ -152,7 +152,7 @@ A non-string fails with `invalid_type` and `{ expected: "string", received }`. A
 
 ### `email`
 
-`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The local part is limited to 64 characters and the whole address to 254. Hosts that are not public domain names, such as `localhost`, single-label hosts and IP addresses, are rejected.
+`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The local part is limited to 64 characters and the whole address to 254. Hosts that are not public domain names are rejected: `localhost`, single-label hosts, IP addresses, and special-use names that never reach a public host, which are those ending in `localhost`, `local`, `internal`, `home.arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
 
 ```ts
 import { email, pipe, string } from "@codenhub/validation";
@@ -166,10 +166,10 @@ address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
 
 `url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The value is returned as it came, so text the URL parser would quietly clean up is rejected instead: surrounding or embedded whitespace, control characters such as line breaks, and backslashes. Trim first with `pipe(string({ trim: true }), url())` when the input may have surrounding spaces. The options are:
 
-| Option       | Meaning                                                                                                              |
-| ------------ | -------------------------------------------------------------------------------------------------------------------- |
-| `protocols`  | Accepted protocols without the colon. Default `["http", "https"]`. The list is copied when the validator is created. |
-| `allowLocal` | Accept `localhost`, single-label hosts and IP addresses, which are rejected by default. Default `false`.             |
+| Option       | Meaning                                                                                                                                                           |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `protocols`  | Accepted protocols without the colon. Default `["http", "https"]`. The list is copied when the validator is created.                                              |
+| `allowLocal` | Accept `localhost`, single-label hosts, IP addresses and special-use names such as `db.internal`, which are rejected by default, as for `email`. Default `false`. |
 
 ```ts
 import { url } from "@codenhub/validation";

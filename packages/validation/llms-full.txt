@@ -73,7 +73,7 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 - Issues never contain the input, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English, which is a separate import so a program that words its own issues does not bundle it, or your own to reword or localize.
 - Rules never rewrite the value unless you ask: `trim`, `lowercase`, `uppercase` and `clamp` are the options that do.
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
-- `email()` accepts public host names only.
+- `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal` and `printer.local`. `url({ allowLocal: true })` accepts them. Neither resolves the name, so a public name can still point at a private address.
 - Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input.
 
 ## License
@@ -766,7 +766,7 @@ A non-string fails with `invalid_type` and `{ expected: "string", received }`. A
 
 ### `email`
 
-`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The local part is limited to 64 characters and the whole address to 254. Hosts that are not public domain names, such as `localhost`, single-label hosts and IP addresses, are rejected.
+`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The local part is limited to 64 characters and the whole address to 254. Hosts that are not public domain names are rejected: `localhost`, single-label hosts, IP addresses, and special-use names that never reach a public host, which are those ending in `localhost`, `local`, `internal`, `home.arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
 
 ```ts
 import { email, pipe, string } from "@codenhub/validation";
@@ -780,10 +780,10 @@ address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
 
 `url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The value is returned as it came, so text the URL parser would quietly clean up is rejected instead: surrounding or embedded whitespace, control characters such as line breaks, and backslashes. Trim first with `pipe(string({ trim: true }), url())` when the input may have surrounding spaces. The options are:
 
-| Option       | Meaning                                                                                                              |
-| ------------ | -------------------------------------------------------------------------------------------------------------------- |
-| `protocols`  | Accepted protocols without the colon. Default `["http", "https"]`. The list is copied when the validator is created. |
-| `allowLocal` | Accept `localhost`, single-label hosts and IP addresses, which are rejected by default. Default `false`.             |
+| Option       | Meaning                                                                                                                                                           |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `protocols`  | Accepted protocols without the colon. Default `["http", "https"]`. The list is copied when the validator is created.                                              |
+| `allowLocal` | Accept `localhost`, single-label hosts, IP addresses and special-use names such as `db.internal`, which are rejected by default, as for `email`. Default `false`. |
 
 ```ts
 import { url } from "@codenhub/validation";
@@ -1058,7 +1058,7 @@ The coercing validators accept text that holds a value, convert it, and then app
 - **Breaking.** A failed result holds `error.issues`, a list of every issue found, including for a single failure, where 0.0.1 held one error with optional child issues. `error` is plain data and not an `Error`.
 - **Breaking.** An issue has `code`, `path`, and `params` for the facts behind a failure. It has no `message`, `input`, `expected` or `received`: the expected and received types are in `params`, and text comes from `formatIssue`. Issues never contain the input, and the `includeInput` and `path` options are gone; objects and collections produce paths themselves.
 - **Breaking.** Rules never rewrite the value. `email()` no longer trims the input or lowercases the host, `url()` no longer adds `https://` or normalizes, and `notEmpty` no longer trims by default. `trim`, `lowercase`, `uppercase` and `clamp` are the options that change a value, and they run before the constraints, so a trimmed string is what the constraints see.
-- **Breaking.** `url()` requires a scheme, accepts `http` and `https` unless `protocols` says otherwise, and rejects embedded credentials and non-public hosts; `allowLocal: true` accepts `localhost`, single-label hosts and IP addresses. `email()` and `url()` still accept public host names only.
+- **Breaking.** `url()` requires a scheme, accepts `http` and `https` unless `protocols` says otherwise, and rejects embedded credentials and non-public hosts; `allowLocal: true` accepts `localhost`, single-label hosts, IP addresses and special-use names such as `db.internal`. `email()` and `url()` still accept public host names only.
 - **Breaking.** A missing property is `invalid_type` at the property's path, with `received: "undefined"`, where 0.0.1 reported `missing_key`. `NaN` and the infinities are `invalid_type` for numbers, where infinities were `invalid_value`.
 - **Breaking.** Invalid options, such as `string({ min: -1 })`, throw a `RangeError` when the validator is created, where 0.0.1 returned an `invalid_value` failure on every call.
 - **Breaking.** Coercion failures are `invalid_type` with `coerced: true` in `params`, where 0.0.1 used `invalid_format`, and they never repeat the input.
