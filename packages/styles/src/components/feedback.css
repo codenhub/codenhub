@@ -67,13 +67,16 @@
 @utility alert-icon {
   @apply inline-flex flex-none items-center justify-center;
 
-  /* `!important`: an icon-set glyph (`@codenhub/icons` among them) carries its
-     own `width`/`height` on a selector this utility cannot outrank -- an
-     attribute selector reads more specific than one class regardless of
-     stylesheet order. Sizing what you drop in is this utility's one job, so it
-     has to win over the glyph's own opinion. */
-  width: 1.25rem !important;
-  height: 1.25rem !important;
+  /* A `@codenhub/icons` glyph sizes itself in an unlayered rule, which no
+     layered rule outranks whatever its specificity, but it reads its size from
+     `--ic-size`, so the size goes there as well as on the box for any other
+     icon. No `!important`: that would shut out the consumer's own resize too.
+     An icon set with another prefix, or one that sizes unlayered with no knob,
+     keeps its own size. */
+  --ic-size: 1.25rem;
+
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 /* A soft, edgeless chip. Small enough that the structural silhouette would be
