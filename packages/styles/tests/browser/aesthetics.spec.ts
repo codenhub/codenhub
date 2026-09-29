@@ -924,7 +924,7 @@ test.describe("aesthetics", () => {
         expect(read.nestedBackdrop, "and keeps its own blur").toContain("blur(14px)");
       });
 
-      test("changes only the corners where glass is not in scope", async ({ page }) => {
+      test("changes only the corners where glass is not in scope", async ({ page, browserName }) => {
         await page.goto(SURFACES_URL);
 
         const read = await page.getByTestId("preview-root").evaluate((root) => {
@@ -959,6 +959,7 @@ test.describe("aesthetics", () => {
         expect(read.liquid.line, "no hairline on the surface").toBe(read.plain.line);
         expect(read.liquid.fieldLine, "a field keeps its line").toBe(read.plain.fieldLine);
         expect(read.liquid.layer, "no layers without glass").toBe("none");
+        expect(read.liquid.shape, "standalone liquid corners").toBe(browserName === "chromium" ? "squircle" : "");
       });
 
       test("drops the blur and the lens under reduced transparency", async ({ page, browserName }) => {
