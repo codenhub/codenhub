@@ -56,4 +56,16 @@ describe("map", () => {
     expect(isPending(result)).toBe(true);
     expect(codesOf(await result)).toEqual(["invalid_key"]);
   });
+
+  it("should report a key that the key validator makes equal to an earlier one, instead of dropping a value", () => {
+    const lowered = map(string({ lowercase: true }), number());
+    const result = lowered(
+      new Map([
+        ["A", 1],
+        ["a", 2],
+      ]),
+    );
+    expect(issuesOf(result).map((issue) => [issue.code, issue.path])).toEqual([["invalid_key", ["a"]]]);
+    expect(valueOf(lowered(new Map([["A", 1]])))).toEqual(new Map([["a", 1]]));
+  });
 });

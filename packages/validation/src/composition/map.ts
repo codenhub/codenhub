@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { isMap } from "../core/objects";
-import { collectNested, failWith, invalidType, pass, toIssue } from "../core/result";
+import { collectNested, failWith, invalidType, pass, repeatedKey, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
@@ -11,7 +11,8 @@ import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
  * A wrong size is reported at once, without validating the entries. An issue's path ends at the
  * entry's key when it is a string or a number, and at its position in iteration order otherwise. A
  * key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key
- * validator found.
+ * validator found. A key that the key validator changes must stay distinct: an entry that arrives at a
+ * key already taken is reported as `invalid_key`, so no value is silently replaced.
  * The output is a new `Map`. It is synchronous when both validators are, and asynchronous otherwise.
  *
  * @example
@@ -62,7 +63,11 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
           collectNested(issues, valueResult.error.issues, segment);
         }
         if (keyResult.ok && valueResult.ok) {
-          output.set(keyResult.value, valueResult.value);
+          if (output.has(keyResult.value)) {
+            issues.push(repeatedKey(segment));
+          } else {
+            output.set(keyResult.value, valueResult.value);
+          }
         }
       });
       return issues.length > 0 ? failWith(issues) : pass(output);

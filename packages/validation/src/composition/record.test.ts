@@ -74,4 +74,17 @@ describe("record", () => {
     expect(codesOf(await result)).toEqual(["invalid_key"]);
     expect(isPending(scores({ a: 1 }))).toBe(false);
   });
+
+  it("should report a key that the key validator makes equal to an earlier one, instead of dropping a value", () => {
+    const lowered = record(string({ lowercase: true }), number());
+    const result = lowered({ A: 1, a: 2 });
+    expect(issuesOf(result)).toEqual([
+      {
+        code: "invalid_key",
+        path: ["a"],
+        params: { issues: [{ code: "invalid_value", path: [], params: { unique: true } }] },
+      },
+    ]);
+    expect(valueOf(lowered({ A: 1, b: 2 }))).toEqual({ a: 1, b: 2 });
+  });
 });

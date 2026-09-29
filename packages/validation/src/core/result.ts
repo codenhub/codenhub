@@ -95,6 +95,17 @@ export function collectNested(
   }
 }
 
+/**
+ * The issue for an entry whose key, once its validator has changed it, is one an earlier entry already
+ * has. Reported as a bad key, since keeping both would silently drop one of the values.
+ */
+export const repeatedKey = (segment: ValidationPathSegment): ValidationIssue =>
+  toIssue({
+    code: "invalid_key",
+    path: [segment],
+    params: { issues: [toIssue({ code: "invalid_value", params: { unique: true } })] },
+  });
+
 /** Names the runtime type of a value for messages without echoing the value. */
 export function describeType(value: unknown): string {
   if (value === null) {
