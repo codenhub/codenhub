@@ -51,7 +51,9 @@ export function coerceDate(options: DateOptions = {}): Validator<Date> {
       return strict(input);
     }
     if (typeof input === "number" && Number.isFinite(input)) {
-      return strict(new Date(input));
+      const converted = new Date(input);
+      // A timestamp past what a Date can hold, about 275,000 years either way, converts to nothing.
+      return Number.isNaN(converted.getTime()) ? invalidCoercion("valid date", input) : strict(converted);
     }
     if (typeof input === "string") {
       const text = input.trim();

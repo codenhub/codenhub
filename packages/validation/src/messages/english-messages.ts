@@ -109,15 +109,22 @@ const describeValue = (issue: ValidationIssue): string => {
  * ```
  */
 export const englishMessages: Messages = {
-  invalid_type: (issue) =>
-    issue.params?.coerced === true
-      ? `Cannot convert ${param(issue, "received")} to ${param(issue, "expected")}`
-      : `Expected ${param(issue, "expected")}, received ${param(issue, "received")}`,
+  invalid_type: (issue) => {
+    if (issue.params?.coerced === true) {
+      return `Cannot convert ${param(issue, "received")} to ${param(issue, "expected")}`;
+    }
+    return issue.params?.expected === "never"
+      ? "Not allowed"
+      : `Expected ${param(issue, "expected")}, received ${param(issue, "received")}`;
+  },
   too_small: describeLimit,
   too_big: describeLimit,
   invalid_format: describeFormat,
   invalid_value: (issue) => (issue.params?.unique === true ? "Must be unique" : describeValue(issue)),
   invalid_key: "Invalid key",
   unrecognized_key: (issue) => `Unrecognized key "${param(issue, "key")}"`,
-  invalid_union: "Does not match any of the allowed types",
+  invalid_union: (issue) =>
+    Array.isArray(issue.params?.options)
+      ? `Expected ${param(issue, "discriminator")} to be one of ${issue.params.options.map(formatValue).join(", ")}`
+      : "Does not match any of the allowed types",
 };
