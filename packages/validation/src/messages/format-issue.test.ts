@@ -193,6 +193,12 @@ describe("formatIssue", () => {
     expect(formatIssue(issuesOf(json()("{"))[0] as ValidationIssue)).toBe("Invalid JSON");
   });
 
+  it("should quote an unrecognized key as a string literal, so quotes and line breaks in it stay inside", () => {
+    expect(formatIssue(issue({ code: "unrecognized_key", params: { key: 'a"b\nc' } }))).toBe(
+      String.raw`Unrecognized key "a\"b\nc"`,
+    );
+  });
+
   it("should describe unrecognized keys, coercion failures and unions", () => {
     expect(formatIssue(issue({ code: "unrecognized_key", params: { key: "x" } }))).toBe('Unrecognized key "x"');
     expect(

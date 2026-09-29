@@ -125,7 +125,8 @@ export const englishMessages: Messages = {
   invalid_format: describeFormat,
   invalid_value: (issue) => (issue.params?.unique === true ? "Must be unique" : describeValue(issue)),
   invalid_key: "Invalid key",
-  unrecognized_key: (issue) => `Unrecognized key "${param(issue, "key")}"`,
+  // Quoted as a literal, since the key is text the sender chose and may hold quotes or line breaks.
+  unrecognized_key: (issue) => `Unrecognized key ${formatValue(issue.params?.key)}`,
   invalid_union: (issue) =>
     Array.isArray(issue.params?.options)
       ? `Expected ${param(issue, "discriminator")} to be one of ${issue.params.options.map(formatValue).join(", ")}`
