@@ -57,7 +57,7 @@ Everything below exists, works in synchronous and asynchronous form where it com
 
 ### Adoption proof (done)
 
-One workspace package that validated its configuration with hand-written checks now inlines this package as a devDependency instead. Its published bundle contains only the validators it uses, `hub check` passes, and its tests pass. The cost was measured and is recorded in [architecture.md](architecture.md), where the result is more nuanced than the claim: the package tree-shakes correctly, and a consumer that validates little still pays about 2.7 kB gzipped.
+One workspace package that validated its configuration with hand-written checks now inlines this package as a devDependency instead. Its published bundle contains only the validators it uses, `hub check` passes, and its tests pass. The cost was measured and is recorded in [architecture.md](architecture.md), where the result is more nuanced than the claim: the package tree-shakes correctly, and a consumer that validates little still pays about 2 kB gzipped.
 
 ### Release
 
