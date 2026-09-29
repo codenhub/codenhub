@@ -66,4 +66,4 @@ The root follows the operating-system `color-scheme` preference until an explici
 
 Setting `color-scheme` yourself on an element also re-themes the tokens below it, because that is the only signal the palette reads. This also themes native UI such as scrollbars and form-control internals to match.
 
-This mechanism works from Chrome 123, Safari 17.5, and Firefox 120; the package overall requires Firefox 121 for `:has()` (see [Setup](./setup.md#requirements)).
+This mechanism works from Chrome 123, Safari 17.5, and Firefox 120; the package overall requires Firefox 128, for `@property` and `:has()` (see [Setup](./setup.md#requirements)).

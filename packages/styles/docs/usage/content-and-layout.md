@@ -14,13 +14,10 @@ Layout helpers use the shared `--layout-gap` token. `.tight` sets it to `0.5rem`
 - `.stack` is a vertical flex stack.
 - `.cluster` is a wrapping horizontal flex row; `.between` adds `space-between` alignment.
 - `.auto-grid` is a responsive auto-fit grid using `--layout-grid-min`.
-- `.tight` and `.loose` set the shared gap to `0.5rem` or `1.5rem` on views, stacks, clusters, and auto-grids.
 - `.section` adds responsive block padding and an inline gutter.
 - `.section-content` centers content at `--container-max`; `.narrow` and `.wide` select the corresponding container tokens.
 - `.divider` is horizontal; `.vertical` makes it self-stretch vertically. It takes intent, but presentation classes do not affect it.
 - `.visually-hidden` hides content visually while keeping it in the accessibility tree, using the standard clip-based recipe. Not named `.sr-only`: on a `/tw` entry the consumer's own Tailwind build already ships a real `.sr-only`, and a same-named utility of this package's own would silently collide with it in the cascade — the same reason `.data-table` is not named `.table`.
-
-The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compatibility aliases.
 
 ## Content
 
@@ -58,7 +55,7 @@ A table draws three kinds of line, and `.ruled` and `.ruleless` move all of them
 </table>
 ```
 
-The boundaries under a head and above a foot separate the parts of a table from each other, so they are drawn by default where the row rules are not. Rules between body rows used to arrive on their own, because the component's published edge default is `edged` and the edge axis wrote the rules along with the boundary — so whether you got them depended on a registry default rather than on anything in your markup.
+The boundaries under a head and above a foot separate the parts of a table from each other, so they are drawn by default where the row rules are not. Rules between body rows are asked for by `.ruled` or `--ui-rule`, never by the edge axis, so whether you get them depends on your markup and not on a default you cannot see.
 
 `--ui-rule` is the token behind both classes, so a container can set the answer for a whole region without classing each table:
 

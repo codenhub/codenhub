@@ -224,6 +224,4 @@ Component classes may define scoped implementation variables such as `--surface-
 
 Consumers should customize broad behavior through color, foundation, motion, elevation, radius, layout, and focus tokens first. The only supported component-scoped input is `--progress-value` on the `.progress` element, because consumers must provide a value such as `64%`.
 
-`--layout-gap` replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens. No compatibility aliases are provided.
-
 Next: [Aesthetics](./aesthetics.md) covers each shipped aesthetic's complete look and its documented exceptions.

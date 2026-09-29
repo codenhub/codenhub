@@ -92,7 +92,7 @@ The strong tone has to stay recognisably its own hue, not just readable. On a da
 
 The foreground is gated by the plate rather than tied to the fill. `--intent-contrast` is the ink for a _full_ fill, so printing it at full strength on a fifth of one puts white on light grey. Contrast ink therefore appears only once the fill is past halfway and reaches full at a full fill; below that a component prints `--intent-strong`, the tone chosen to be read.
 
-That means a capped neutral takes the strong tone whole rather than a fraction of the way toward the page. Tying it to the fill instead cost a neutral `.solid` button four points of contrast and a neutral tooltip nearly ten. A state that lifts the cap on purpose — a checked checkbox is filled with its own intent by definition — reaches a full fill and gets the contrast whole.
+So a capped neutral takes the strong tone whole rather than a fraction of the way toward the page. A state that lifts the cap on purpose — a checked checkbox is filled with its own intent by definition — reaches a full fill and gets the contrast whole.
 
 Set them directly to define an intent this package does not ship. **State every slot**, including `--intent-fill-max`: components reset all seven to the neutral values, so a slot your intent leaves out keeps neutral's — and an intent that omits the cap fills to 20% of its color instead of 100%.
 

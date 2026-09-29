@@ -1,92 +1,72 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-27
-scope: Decision to generate a flat, published output of `@codenhub/styles`' composed colors, for consumers that cannot depend on the Tailwind pipeline that produces them.
+last_updated: 2026-09-29
+scope: The generated, flat `./palette` output of `@codenhub/styles`' composed colors, for consumers that cannot depend on the Tailwind pipeline that produces them.
 ---
 
-# A generated palette for consumers outside the Tailwind pipeline
+# Generated palette
 
-This is the maintained contract for `./palette`, shipped in `0.3.0`. The current generator and output are expected to comply, per the repository root `docs/README.md`'s `IMPLEMENTED` status.
+This is the maintained contract for `./palette`. The generator and its output comply with it, per the repository root `docs/README.md`'s `IMPLEMENTED` status.
 
-This document contains no drop-in code: source and generator own the implementation, while this document owns the durable naming and output rules.
+This document contains no drop-in code: the source and the generator own the implementation, while this document owns the durable naming and output rules.
 
-## The problem
+## Purpose
 
-`box.css`'s composition only exists as a Tailwind `@utility`, built by `intent.css` / `presentation.css` / `box.css` cascading together inside `@codenhub/styles`' own build. There is no artifact stating "here is what `.alert.success` actually renders as" independent of that pipeline. A package that takes `@codenhub/styles` as an _optional_ peer -- `@codenhub/toaster` is the concrete case, `packages/toaster/package.json`'s `peerDependenciesMeta.@codenhub/styles.optional: true` -- cannot depend on the Tailwind build existing, so its only option, if it wants to look consistent with `@codenhub/styles`-composed components, is to read `box.css`'s source and hand-retype the formula under its own variable names.
+`box.css`'s composition only exists as a Tailwind `@utility`, built by `intent.css`, `presentation.css`, and `box.css` cascading together inside `@codenhub/styles`' own build. A package that takes `@codenhub/styles` as an _optional_ peer -- `@codenhub/toaster` is the concrete case (`peerDependenciesMeta.@codenhub/styles.optional: true`) -- cannot depend on that build existing. Without a published artifact stating what `.alert.success` renders as, its only option is to retype `box`'s formula under its own variable names, which loses terms silently: a hand-copied edge blend that mixes toward the plate double-paints a translucent fill, and a hand-picked fallback hue drifts from the theme it imitates.
 
-## Evidence
+`./palette` is that artifact. It is computed by the real composition once, at generation time, so a consumer references a flat value instead of reimplementing `color-mix()` math, and the value is identical to what the package renders. See [Model](./model.md#fill-how-much-of-the-intent-color-fills-the-box) for the composition it follows.
 
-Two independently verifiable divergences exist today in `@codenhub/toaster`'s hand-forked copy, found by comparing it against `box.css`. `@codenhub/toaster` is cited here only as an example of the failure mode this gap produces; this document does not propose changing that package.
+## What is generated
 
-**Fallback palette drift.** Every toaster severity resolves through a three-link chain: consumer override, then `@codenhub/styles`' theme token, then a hardcoded hex meant to render identically to what that theme token resolves to. Converting `@codenhub/styles`' actual OKLCH theme values (Tailwind v4's palette) to sRGB and comparing against toaster's hardcoded fallbacks:
+`scripts/generate-palette.mjs` compiles the package's own `src/index.css` through the Tailwind CLI, renders real `box`-composed probe elements for every combination in Chromium, and reads their computed styles, so the published value is the browser's own answer rather than a re-derivation of the formula. Presentation percentages and intents come from `registry.json`. `pnpm generate` writes `src/palette.css`, which is compiled to `dist/palette.css`; `--dry-run` reports drift without writing.
 
-| Severity             | toaster's hardcoded fallback | `@codenhub/styles`' real value | Divergence                                        |
-| -------------------- | ---------------------------- | ------------------------------ | ------------------------------------------------- |
-| success color        | `#047857`                    | emerald-700 &rarr; `#007a55`   | Tailwind v3 vs v4 palette rounding, same hue      |
-| destructive color    | `#be123c`                    | rose-700 &rarr; `#c70036`      | same as above                                     |
-| info color           | `#4338ca`                    | indigo-600 &rarr; `#4f39f6`    | a full step darker; matches indigo-700, not -600  |
-| warning color        | `#a16207`                    | amber-600 &rarr; `#e17100`     | different hue family entirely (yellow, not amber) |
-| warning contrast ink | `#ffffff`                    | neutral-950 &rarr; `#0a0a0a`   | inverted direction                                |
+Every `intent x presentation` cell (7 intents, `solid`/`soft`/`ghost`) gets its `bg`, `fg`, and `edge` at rest, plus `bg` and `edge` again at hover. `fg` never changes on hover, since `box-hover` only redefines background, edge, shadow, and transform.
 
-The last row matters most. [`theme.css`](../../src/theme.css#L122-L127) records why warning is the one intent whose contrast ink is not the page color: white on amber-600 measures 3.07:1, so the package moved the ink dark instead of the hue. That reasoning lives only as a comment in `@codenhub/styles`; nothing pins it to toaster's independently hardcoded pair. Today the fallback (`#a16207` + white) happens to clear WCAG AA by a narrow margin (roughly 4.9:1) only because the wrong hue and the wrong ink direction partly cancel out. Correcting only the hue to the real amber-600 without also correcting the ink would drop that pairing to roughly 3.2:1 -- a real failure, in exactly the situation `theme.css` already found and fixed once.
+Ground does not need its own free-standing dimension, because most of the cross collapses:
 
-**A missing composition rule.** Copying `box.css`'s formula into another package can silently lose a term. In 0.5.0 the edge blend changed to fade toward `transparent` in the correct order: the plate already runs under the border, so blending toward the plate double-paints a translucent fill. Generated colors must follow the live composition rather than a hand-copied formula. See [Model](./model.md#fill-how-much-of-the-intent-color-fills-the-box).
+- **`.solid` is ground-independent.** At 100% fill, the plate's `color-mix()` contributes 0% of the ground, so `bg`, `edge`, and their hover values are the same on every ground. Neutral's capped `.solid` included: its 20% rests on the page background rather than on the ground ([model](./model.md#a-capped-fill-rests-on-the-page)).
+- **`fg` is ground-independent** for every presentation.
+- **Only `.soft` and `.ghost`'s `bg` varies by ground.** The ground-qualified edge names are published for symmetry, and their values equal the unqualified edge because the edge fades toward `transparent` rather than toward the ground-mixed plate.
 
-Both divergences were introduced by someone who clearly understood `box.css` well -- toaster's own comments accurately narrate `box.css`'s reasoning back at it -- and were still lost in translation. The formula's shape survived being copied; the reasoning behind each of its terms did not.
+The ground set is closed and comes from `registry.json`'s component defaults: `transparent` (`.badge` and `.btn`, the default, no suffix), `--color-background` (`.alert`, through `--ui-surface-ground`, suffix `page`), and `--intent-subtle` (`.pre`, `.code`, `.kbd`, and `.tooltip-bubble`, suffix `subtle`). These are generator inputs, resolved to that token's actual light or dark value at generation time -- the output is always the composited color, never a `var(--color-background)` or `var(--intent-subtle)` reference. `./palette` is self-contained and never needs `./theme` loaded alongside it. A `.ghost` cell's `bg` on the `transparent` ground is `transparent` itself, and on `page` or `subtle` is that ground's resolved color; they are generated for naming consistency with `.soft`.
 
-## The decision
+`.solid` contributes 5 values per intent (`bg`, `fg`, `edge`, `bg-hover`, `edge-hover`); `.soft` and `.ghost` each contribute 13 (`fg` once, plus `bg`/`edge`/`bg-hover`/`edge-hover` on each of the three grounds). That is 31 values per intent, 217 per theme, plus the 3 neutral values below: 220 per theme, 440 declarations.
 
-Add a build step to `@codenhub/styles` that reads `registry.json` (presentation percentages, intent `fillMax`) and `theme.css` (the real intent colors), runs `box.css`'s actual composition once per relevant combination, and emits the result as a flat, generated artifact -- joining the repository's existing `pnpm generate` command surface rather than introducing a new mechanism. A consumer outside the Tailwind pipeline references a flat value instead of reimplementing `color-mix()` math, so there is no formula left to drop a term from, and the value is provably identical to what `@codenhub/styles` itself renders because it was computed by the real formula rather than retyped by a person.
+## Naming
 
-### What gets baked
+`--palette-<intent>-<presentation>-<slot>`, where `<slot>` is `bg`, `fg`, or `edge`, with two extensions layered on only where they apply:
 
-Every `intent x presentation` cell (7 intents, `solid`/`soft`/`ghost`) gets its `bg`, `fg`, and `edge` at rest, plus `bg` and `edge` again at hover -- `fg` never changes on hover, since `box-hover`'s own composition ([`box.css#L197-L212`](../../src/box.css#L197)) only redefines background, edge, shadow, and transform. This is the full cross across slots and states.
-
-Ground does not need its own free-standing dimension the way the earlier draft of this document assumed, because re-deriving `box`'s formula shows most of the cross collapses on its own:
-
-- **`.solid` is ground-independent entirely.** At 100% fill, `--_bg`'s `color-mix()` contributes 0% of whatever ground it is mixed with, so `bg`, `edge`, and their hover values are the same regardless of ground. One set of `.solid` values covers every ground. Neutral's capped `.solid` included: its 20% rests on the page background rather than on the ground ([model](./model.md#a-capped-fill-rests-on-the-page)).
-- **`fg` is always ground-independent**, for every presentation -- `--_fg`'s composition ([`box.css#L70`](../../src/box.css#L70)) never references `--_d-ground` at all.
-- **Only `.soft` and `.ghost`'s `bg` actually varies by ground.** The published ground-qualified edge names remain for compatibility, but their values are equal across grounds since the edge fades toward `transparent` rather than the ground-mixed plate.
-
-The closed, already-established ground set from `registry.json`'s own component defaults decides what each `.soft`/`.ghost` cell composites against at generation time -- not an open set, and not a new one invented for this proposal: `transparent` (`.badge`/`.btn`'s ground, the default, no suffix), `--color-background` (`.alert`'s ground via `--ui-surface-ground`, suffix `page`), and `--intent-subtle` (`.pre`/`.code`/`.kbd`/`.tooltip-bubble`'s ground, suffix `subtle`). These ground token names are generator inputs, resolved to that token's actual light/dark value once, at generation time -- the published output is always the composited color, never a `var(--color-background)`/`var(--intent-subtle)` reference. `./palette` stays self-contained this way; it never needs `./theme` loaded alongside it to resolve anything, which is the whole point of baking rather than composing live. A `.ghost` cell's `bg` on the `transparent` ground is `transparent` itself, and on `page`/`subtle` is that ground's resolved color -- trivial values, but generated for naming consistency with `.soft`'s non-trivial ones rather than special-cased away.
-
-Counted out: `.solid` contributes 5 values per intent (`bg`, `fg`, `edge`, `bg-hover`, `edge-hover`, ground-independent). `.soft` and `.ghost` each contribute 13 (`fg` once, plus `bg`/`edge`/`bg-hover`/`edge-hover` three times each for the three grounds). That is 31 values per intent, 217 total per theme -- a generated file with a few hundred declarations, not a combinatorial explosion, and every one traceable to a real formula rather than invented.
-
-### Verifying the output
-
-"Provably identical" is a claim a test has to check, not something the generator gets to assert about itself. The package already has the right instrument for this: `tests/browser/test-utils.ts`'s `readSrgb`/`getColorDistance`/`expectSameColor` normalize a computed color -- whichever of `rgb()`, `color(srgb ...)`, `oklab()`, or `oklch()` the engine happens to serialize it as -- to 8-bit sRGB and compare by the largest per-channel distance, already tolerating the one-step rounding `color-mix()` introduces at a two-step ceiling. Every generated `bg`/`fg`/`edge` value, rest and hover, light and dark, gets checked against the live, `box`-composed value for the same cell through that exact contract before publication. Reusing it rather than inventing a second comparison rule is the point -- a second rule is one more place for the two to quietly disagree.
-
-### Naming
-
-`--palette-<intent>-<presentation>-<slot>`, with two extensions layered on only where the collapse above says they are needed:
-
-- A ground qualifier (`page` or `subtle`) inserted before the slot, present only on `.soft`/`.ghost`'s `bg` and `edge` -- never on `.solid`, and never on `fg`.
+- A ground qualifier (`page` or `subtle`) inserted before the slot, present only on `.soft` and `.ghost`'s `bg` and `edge` -- never on `.solid`, and never on `fg`.
 - A `-hover` suffix on `bg` and `edge` -- never on `fg`.
 
-Examples: `--palette-success-soft-bg` (transparent ground), `--palette-success-soft-subtle-bg`, `--palette-success-soft-subtle-bg-hover`, `--palette-success-solid-fg`, `--palette-success-ghost-page-edge`. `palette` was checked against the package's existing token namespaces (`--color-*`, `--intent-*`, `--ui-*`) and does not collide with any of them.
+Examples: `--palette-success-soft-bg` (transparent ground), `--palette-success-soft-subtle-bg`, `--palette-success-soft-subtle-bg-hover`, `--palette-success-solid-fg`, `--palette-success-ghost-page-edge`. The `palette` namespace does not collide with `--color-*`, `--intent-*`, or `--ui-*`.
 
-### Flat neutral values
+## Flat neutral values
 
-The same export includes `--palette-border`, `--palette-surface`, and `--palette-text`: pre-resolved light and dark values of `--color-border`, `--color-surface`, and `--color-text`. They are not intent/presentation cells and take no intent, presentation, ground, or hover segment. An optional-peer consumer needs the neutral border, surface, and text colors too; without these values it would have to compile Tailwind's neutral OKLCH ramp and resolve `light-dark()` in a browser just to obtain three constants. Verify each value against its live theme counterpart in both themes, as `tests/browser/palette.spec.ts` does. Additional flat neutral tokens need a concrete consumer rather than speculative expansion.
+`--palette-border`, `--palette-surface`, and `--palette-text` are the pre-resolved light and dark values of `--color-border`, `--color-surface`, and `--color-text`. They are not intent or presentation cells and take no intent, presentation, ground, or hover segment. An optional-peer consumer needs the neutral border, surface, and text colors too; without them it would have to compile Tailwind's neutral OKLCH ramp and resolve `light-dark()` in a browser just to obtain three constants. Additional flat neutral tokens need a concrete consumer rather than speculative expansion.
 
-### Dark mode
+## Dark mode
 
-Class/attribute-scoped, matching the exact selector set `theme.css` itself uses for its explicit-override arm and that toaster's own dialog container already reads: `.dark`, `.theme-dark`, `[data-theme="dark"]`. Light values are the unscoped default; dark values are re-declared under those three selectors. No bare `@media (prefers-color-scheme: dark)` fallback is generated -- a consumer reaching for a standalone fallback palette is already handling its own theme switching (toaster's dialog container does exactly this today), so the OS-only case is left to `@codenhub/styles`' own `light-dark()`-based tokens when that package is actually in use, rather than duplicated here.
+Light values are the unscoped default; dark values are re-declared under `.dark`, `.theme-dark`, and `[data-theme="dark"]`, the selector set `theme.css` uses for its explicit-override arm. No `@media (prefers-color-scheme: dark)` fallback is generated: a consumer reaching for a standalone palette handles its own theme switching, and the OS-only case belongs to `@codenhub/styles`' own `light-dark()` tokens when that package is in use.
 
-### Public surface
+## Verifying the output
 
-This ships as a real, documented, published export, not a `dist/`-only convenience other packages read by unsupported relative-path convention -- an optional-peer consumer needs a stable path to depend on at build time for this to solve the problem it exists to solve. Following the package's existing subpath pattern (`./theme`, `./components`, `./aesthetics/*`, each mapped through `style`/`import`/`default` conditions to a `dist/*.css` file), the CSS output is the primary, committed artifact -- `./palette` is the shape to match. It is versioned under the same semver as the rest of `@codenhub/styles`, since it is derived from the same `registry.json`/`theme.css` source that already gates the package's version decisions (the `0.2.0` precedent in `roadmap.md` for a default-value change applies here too). It needs `exports` coverage, public docs coverage per `docs/specs/packages-documentation.md`, a mention wherever the package's other subpaths are currently introduced to consumers, and a `compiledExportContracts` entry in `tests/integration/exports.test.ts` -- every other CSS export already has one there (a build target plus a handful of regex patterns spot-checking the compiled output), and that test iterates only the explicit map, so a `./palette` export left out of it would ship with no compiled-output assertion at all.
+`tests/browser/palette.spec.ts` checks every generated `bg`, `fg`, and `edge` value -- rest and hover, light and dark -- against the live, `box`-composed value for the same cell, and the three neutral values against their theme counterparts. It compares through `getColorDistance` in `tests/browser/test-utils.ts`, which normalizes a computed color, whichever of `rgb()`, `color(srgb ...)`, `oklab()`, or `oklch()` the engine serializes, to 8-bit sRGB and takes the largest per-channel distance, tolerating the rounding `color-mix()` introduces.
 
-A JSON sidecar for non-CSS consumers was considered and deferred rather than committed to alongside the CSS. `roadmap.md`'s "Not Planned" section keeps the package CSS-only by design; a static JSON data file is not the JS/TS runtime helper that note rules out, but committing to it now, with no concrete non-CSS consumer asking for it, would be scope beyond what this proposal's evidence supports. Add it later if a real need appears -- the generator producing it is a small addition once the CSS side exists, not a reason to hold up the CSS side now.
+## Public surface
+
+`./palette` is a documented, published export, mapped through `style`/`import`/`default` conditions to `dist/palette.css`, and versioned under the same semver as the rest of the package. It has `exports` coverage, public docs coverage in [Customizing](../usage/customizing.md#generated-palette) and [Setup](../setup.md#import-paths), and a `compiledExportContracts` entry in `tests/integration/exports.test.ts`.
+
+A JSON sidecar for non-CSS consumers is not shipped. The package stays CSS-only by design, and adding one waits for a concrete non-CSS consumer.
 
 ## Non-goals
 
-This does not touch the `intent x presentation x aesthetic` axis model, `box.css`'s composition itself, or any currently shipped component's behavior. It does not propose that `@codenhub/toaster`, or any other optional-peer consumer, take a hard dependency on `@codenhub/styles`, adopt Tailwind, or change how it currently degrades without the package installed.
+This does not touch the `intent x presentation x aesthetic` axis model, `box.css`'s composition, or any component's behavior. It does not require `@codenhub/toaster`, or any other optional-peer consumer, to take a hard dependency on `@codenhub/styles`, adopt Tailwind, or change how it degrades without the package installed.
 
 ## References
 
 - [Model](./model.md)
 - [Roadmap](./roadmap.md)
 - `registry.json`, `package.json`
+- `../../scripts/generate-palette.mjs`
 - `../../src/box.css`, `../../src/presentation.css`, `../../src/theme.css`
-- `../../../toaster/src/styles/index.css` -- external example only, not a target of this proposal
