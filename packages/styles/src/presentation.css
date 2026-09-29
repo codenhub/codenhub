@@ -7,21 +7,11 @@
    line at its boundary. Exactly one value from each set applies, so the six
    combinations are the whole vocabulary.
 
-   A fill class never decides an edge and an edge class never decides a fill.
-   `.solid` briefly broke that rule, writing `--ui-border: 0%` alongside its fill
-   so that a filled box could not be ringed in another colour. It bought a real
-   fix -- the edge blend runs the line toward the fill, which lands *on* the fill
-   when the fill is opaque and on a second coat of the same tint when it is not,
-   so every capped intent that drew a line drew a visible ring over its own plate
-   -- at the cost of the one property that makes the six combinations readable:
-   that each half means only what it says. Two axes that are independent in two
-   cases out of three are not axes.
-
-   The ring was a fault in the blend rather than in the class, and it was fixed
-   there: the line fades toward `transparent` as the fill fills in, so a
-   translucent plate shows through its own border as one coat (`box.css`;
-   docs/internal/model.md#presentation). `.solid.edged` and `.solid.edgeless`
-   render one box.
+   A fill class never decides an edge and an edge class never decides a fill, so
+   each half means only what it says. The line fades toward `transparent` as the
+   fill fills in (`box.css`; docs/internal/model.md#presentation), so
+   `.solid.edged` and `.solid.edgeless` render one box without either class
+   deciding the other's question.
 
    Presentation declares only unitless numbers and percentages. A custom
    property's value is resolved on the element that declares it, so anything
@@ -33,8 +23,8 @@
    container set the look for its subtree while any element still opts out.
 
    Hover is derived from these values rather than declared beside them:
-   `min(100%, resting fill + --hover-step)`, always in `--intent-hover`. There is
-   no hover token and no per-presentation branch. */
+   `min(100%, resting fill + --hover-step)`, always in `--intent-hover`. There
+   is no hover token and no per-presentation branch. */
 
 /* Filled with the intent color. Text is the contrast tone. */
 .solid {
@@ -48,11 +38,9 @@
   --ui-fg-on-fill: 0%;
 }
 
-/* No fill at rest; the derived hover gives it one. Text is the intent color.
-
-   Named `.ghost` rather than `.bare` because `.bare` and `.edgeless` both read
-   as "less of something", so an author wanting no border reached for `.bare`
-   first and got no background instead. `.ghost` says fill and only fill.
+/* No fill at rest; the derived hover gives it one. Text is the intent color. It
+   names a fill and only a fill: `.bare` and `.edgeless` both read as "less of
+   something", so an author wanting no border would reach for the wrong one.
 
    A component that rests on a ground rather than on nothing keeps that ground
    here: `.ghost` is zero fill, not zero paint. `.data-table` is the exception
@@ -62,16 +50,14 @@
   --ui-fg-on-fill: 0%;
 }
 
-/* A line in the intent color, at the aesthetic's material width. The width comes
-   from the aesthetic and nothing else: there is no presentation scale on it, so
-   small components need no ceilings to survive a thick one.
+/* A line in the intent color, at the aesthetic's material width. The width
+   comes from the aesthetic and nothing else: there is no presentation scale on
+   it, so small components need no ceilings to survive a thick one.
 
    The edge is the silhouette and nothing else. Rules *inside* a component that
-   has an inside are a separate decision with its own class -- `.data-table.ruled`
-   -- because tying them here made them arrive by implication: a table drew rules
-   only because its published edge default happened to be `edged`, so whether a
-   consumer got them depended on a default they had not read and could not name.
-   Two questions, two switches. */
+   has an inside are a separate decision with their own class --
+   `.data-table.ruled` -- so a consumer's own markup says whether they asked for
+   them. */
 .edged {
   --ui-border: 100%;
 }

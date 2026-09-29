@@ -46,26 +46,20 @@ const PRESENTATIONS = [
    records the same fact as `axes: ["fill"]`, and `tests/browser/axes.spec.ts`
    asserts it in both directions.
 
-   The three text inputs and the switch are no longer on this list. Their edge
-   axis used to be inert -- `text-control` rewrote the composed edge and dropped
-   `--ui-border` out of it -- and now that it composes, their edge rows show a
-   real difference.
+   The three text inputs and the switch are not on this list: their edge axis is
+   live, so their edge rows show a real difference.
 
-   `ghost` is on this list now. It used to be unsupported on all three toggles
-   -- a checked one was a mark on nothing -- and stopped being once `:checked`
-   started pinning the fill to one plate regardless of presentation: a checked
-   `.ghost` toggle now renders the same filled mark every other checked toggle
-   does, so its unchecked silhouette is a real, published look rather than a
-   floored duplicate of `.soft`. */
+   `ghost` is on this list because `:checked` pins the fill to one plate
+   regardless of presentation: a checked `.ghost` toggle renders the same filled
+   mark every other checked toggle does, so its unchecked silhouette is a real,
+   published look rather than a floored duplicate of `.soft`. */
 const FILL_PRESENTATIONS = ["default", "solid", "soft", "ghost"];
 /* The full grid minus the two `ghost` rows, for the components the registry
    marks `.ghost` unsupported on while still reading both axes: a key cap, a
    code chip and a code block rest on a ground, so `.ghost` draws the plate
    anyway and the row teaches that a class does nothing -- and at zero fill the
    plate is `--intent-subtle` alone, which renders four of the eight intents as
-   the same near-page chip. No longer used for the switch, which used to be on
-   this list for the toggle-wide ghost-unsupported reason `FILL_PRESENTATIONS`
-   records above; that reason no longer applies to any toggle. */
+   the same near-page chip. */
 const NO_GHOST_PRESENTATIONS = ["default", "solid", "soft edged", "soft edgeless"];
 /* The full grid minus `.solid`, for `.progress`: a fully-filled track and the
    value fill it carries compose the same color, so the one thing the
@@ -160,9 +154,9 @@ const COMPONENTS = {
     tag: "div",
     layout: "grid",
     text: (intent) => `${title(intent)} alert`,
-    /* No class: the package no longer picks an icon for `.alert`, so this state
-       drops in a real `.alert-icon` child the same way a consumer would --
-       `gap-3` on `.alert` spaces it with nothing to trigger. `@codenhub/icons`
+    /* No class: the package paints no icon for `.alert`, so this state drops in
+       a real `.alert-icon` child the same way a consumer would; `gap-3` on
+       `.alert` spaces it. `@codenhub/icons`
        is already a playground dependency (see `.ic-mail` on the forms fixture),
        so this uses it rather than hand-rolled SVG. One glyph for every intent,
        since the point here is the composition, not a per-intent icon set. */
@@ -271,9 +265,9 @@ const COMPONENTS = {
     attrs: (intent) => ({ role: "img", "aria-label": `${title(intent)} loader` }),
     states: {},
   },
-  /* `.tooltip` is a wrapper around a real trigger and a real `.tooltip-bubble`
-     now, not a single classed host -- see `docs/usage/tooltips.md`. The cell
-     is the wrapper; intent lives on the bubble inside it. */
+  /* `.tooltip` is a wrapper around a real trigger and a real `.tooltip-bubble`,
+     not a single classed host -- see `docs/usage/tooltips.md`. The cell is the
+     wrapper; intent lives on the bubble inside it. */
   tooltip: {
     tag: "span",
     presentations: INTENT_ONLY,
@@ -295,7 +289,7 @@ const buildCell = (key, component, intent, presentation, state) => {
   const stateSpec = state === "rest" ? {} : (component.states[state] ?? {});
   const element = document.createElement(component.tag);
 
-  /* A tooltip's cell is a wrapper around a real trigger and bubble now, not a
+  /* A tooltip's cell is a wrapper around a real trigger and bubble, not a
      single classed element -- intent and presentation belong on the bubble
      markup `component.html` builds, not on the host, so the host takes only
      its own structural class. */
@@ -320,8 +314,8 @@ const buildCell = (key, component, intent, presentation, state) => {
 
   if (stateSpec.html) {
     /* A state can replace the cell's own markup rather than just add an
-       attribute -- `.alert`'s "icon" state needs a real `.alert-icon` child
-       now that the package no longer paints one on its own. */
+       attribute -- `.alert`'s "icon" state needs a real `.alert-icon` child,
+       since the package paints none. */
     element.innerHTML = stateSpec.html(intent);
   } else if (component.html) {
     element.innerHTML = component.html(intent);

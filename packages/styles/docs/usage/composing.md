@@ -92,7 +92,7 @@ The same split governs the edge: a cascaded `.edgeless` is floored and the eleme
 
 A tooltip bubble is filled, over a tinted ground. An intent fills it with that intent's own color: `.tooltip-bubble.primary` is the primary color, black on a light page and white on a dark one, and `.tooltip-bubble.destructive` is a red bubble.
 
-With no intent the bubble is `--color-tooltip`, the one plate in the package chosen per theme rather than derived from an intent. Composed like everything else it was `20%` of the page's ink over the surface tone, which steps _lighter_ than the surface on a dark page and _darker_ on a light one — so the dark bubble read as lifted and the light one as a mid-grey slab two steps darker than every card on the screen. The token states each direction instead: near-white over a light page, a mid grey over a dark one. `--color-tooltip-contrast` is its ink.
+With no intent the bubble is `--color-tooltip`, the one plate in the package chosen per theme rather than derived from an intent: near-white over a light page, a mid grey over a dark one. `--color-tooltip-contrast` is its ink.
 
 Near-white is only 1.04:1 against a light page, so the bubble draws a hairline as well, and floors it: a container's `.solid` or `.edgeless` cannot take the boundary away from a bubble nobody classed, while `.tooltip-bubble.edgeless` still can. The ground keeps the bubble opaque at every fill, so a cascaded presentation leaves it readable over whatever it floats above. It reads the material tokens too, so an [aesthetic](./aesthetics.md) in scope shapes the bubble like any other component. See [Tooltips](./tooltips.md) for the full tooltip reference.
 

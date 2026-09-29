@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-11
+last_updated: 2026-09-29
 scope: `@codenhub/styles` package test strategy.
 ---
 
@@ -38,6 +38,9 @@ packages/styles/
   debug/
     package.json
     vite.config.ts
+  demo/
+    package.json
+    vite.config.ts
   tests/
     browser/
       accessibility.spec.ts
@@ -47,10 +50,15 @@ packages/styles/
       components.spec.ts
       environment.spec.ts
       feedback.spec.ts
+      fixtures.ts
       forms.spec.ts
+      layers.spec.ts
       layout.spec.ts
       native.spec.ts
+      palette.spec.ts
       playground.spec.ts
+      solo.spec.ts
+      structure.spec.ts
       surfaces.spec.ts
       test-utils.ts
       theme.spec.ts
@@ -72,7 +80,7 @@ Variant grids render from the spec in `shared/matrix.js` rather than being spell
 
 Input types are the one axis that is not intent crossed with presentation, so they have their own renderer: `data-fields` crosses every input type with the icon and state variants that type supports, as `field-<type>-<variant>`.
 
-A second kind of page lives alongside the matrices, under its own "Screens" heading on the root index: a screen (`app-shell/`, `form/`, and `settings/`) composes the components into a real, non-trivial layout instead of exhausting one in isolation, so the difference between a component's own registry and a real composition stays visible to a reader. All three were built during the stress-test pass -- now finished, see [Roadmap](./roadmap.md) and the [0.2.0 changelog](../changelog/0.2.0.md) for that record -- and stay on as a standing reference once it wrapped, reading under every aesthetic and both themes the same way the matrices do. A screen follows the matrices' conventions where they still apply (`data-testid` on what a reader or a future spec would address, `.table-wrap` around a `.data-table`, the shared nav and aesthetic/theme controls) and departs from them where a real screen requires it: `app-shell/` skips the `.sect`/`.sect-inn` centered reading column every matrix page uses, because a dense shell reads edge to edge in the real world and a fixed column would hide whether the model holds up at that width; `form/` and `settings/` keep that column, since a form or a settings page is read narrow in the real world too.
+A second kind of page lives alongside the matrices, under its own "Screens" heading on the root index: a screen (`app-shell/`, `form/`, and `settings/`) composes the components into a real, non-trivial layout instead of exhausting one in isolation, so the difference between a component's own registry and a real composition stays visible to a reader. Screens read under every aesthetic and both themes the same way the matrices do. A screen follows the matrices' conventions where they apply (`data-testid` on what a reader or a spec would address, `.table-wrap` around a `.data-table`, the shared nav and aesthetic/theme controls) and departs from them where a real screen requires it: `app-shell/` skips the `.sect`/`.sect-inn` centered reading column every matrix page uses, because a dense shell reads edge to edge in the real world and a fixed column would hide whether the model holds up at that width; `form/` and `settings/` keep that column, since a form or a settings page is read narrow in the real world too.
 
 ## `dev/`
 
@@ -92,7 +100,7 @@ Rendering contracts are asserted primarily through computed styles on the shared
 - Elevation is asserted off the composited `box-shadow` rather than off `--ui-elevation`: the claim is that one unitless number scales the geometry an aesthetic supplies, which is only observable after the multiplication. Both the plain step and the neobrutalist slab are covered, along with the non-inheritance (an unclassed descendant of a raised container takes no depth) and the per-element opt-in (its own elevation class still reaches it regardless of the container around it).
 - Form checks retain direct and inherited fill coverage for unchecked checkbox and radio boundaries, along with focus, forced-color, and reduced-motion behavior.
 - Aesthetic checks retain glass behavior coverage: translucency and blur on cards, panels, alerts, and tooltip bubbles when transparency is allowed; absence of per-control blur; and opaque, unblurred degradation under reduced transparency.
-- Chromium explicitly emulates both `prefers-reduced-transparency` branches. The allowed-transparency behavior also runs in Firefox and WebKit, so syntax and computed values are checked across all supported browser engines.
+- Chromium explicitly emulates both `prefers-reduced-transparency` branches, because it can report `reduce` from the operating system (glass then renders opaque and unblurred while Firefox and WebKit report no preference), so the suite never reads the environment's value. The allowed-transparency behavior also runs in Firefox and WebKit, so syntax and computed values are checked across all supported browser engines.
 - Direct and inherited aesthetic precedence, including glass and pixel tooltip pseudo-elements, is verified through computed styles.
 - `test-utils.ts` provides shared color parsing, comparison, contrast, and Playwright helpers.
 - Retired token and class names (from a rename or removal) are not covered by a standing absence check. `docs/specs/tests.md`'s "No Permanent Absence Checks" rule applies here same as anywhere else in the workspace: verifying a retired name is gone is a migration-time concern for the pull request that performs the rename, not a permanent entry in this suite.

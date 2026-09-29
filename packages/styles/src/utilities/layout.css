@@ -76,10 +76,10 @@
   }
 }
 
-/* An indicator: intent only, and no presentation token at all. A rule is a line,
-   and neither a fill class nor an edge class has anything to say about one -- while
-   reading both used to mean a container's `.ghost.edgeless` made every `<hr>`
-   inside it invisible. The width is the aesthetic's line width, unscaled. */
+/* An indicator: intent only, and no presentation token at all. A rule is a
+   line, and neither a fill class nor an edge class has anything to say about
+   one -- a container's `.ghost.edgeless` must not make every `<hr>` inside it
+   invisible. The width is the aesthetic's line width, unscaled. */
 @utility divider {
   --divider-color: var(--intent-color);
   --divider-width: var(--ui-border-width, var(--border-width));
@@ -106,27 +106,17 @@
   }
 }
 
-/* The gap this closes: `sr-only` is Tailwind's own name and the one a consumer
-   reaches for out of habit, but on the vanilla, ready-to-import entries (`.`,
-   `/native`) there is no Tailwind utility layer to reach -- those compile real
-   CSS from a scan of `src/` alone, which used the class nowhere, so `sr-only`
-   silently did nothing there. It worked fine on a `/tw` entry, where the
-   consumer's own Tailwind build supplies it, and that split made the gap easy
-   to miss: it read as a package decision rather than a hole in one build and
-   not the other.
+/* `.visually-hidden`, the standard clip-based recipe. Tailwind's `sr-only` does
+   nothing on the vanilla entries (`.`, `/native`), which compile real CSS from
+   a scan of `src/` alone with no Tailwind utility layer to reach, so the
+   package publishes its own.
 
-   Not published as `.sr-only` itself. `.table` already did that once --
-   shadowing Tailwind's own `display: table` utility until a consumer needed
-   the one this package ate -- and `registry.test.ts`'s collision check exists
-   because of it (see `data-table`'s `renamedFrom` in `registry.json`). Naming
-   this `sr-only` would trip the same trap from the other direction: on a `/tw`
-   entry a real Tailwind build runs too, and two same-named utilities in the
-   same cascade is exactly the silent collision that test polices.
-   `.visually-hidden` says the same thing under a name nothing else claims,
-   using the standard clip-based recipe. `@source inline("visually-hidden")` in
-   `utilities/index.css` force-emits it on the entries with no scannable markup
-   of their own, the same mechanism that file's inline list already uses for
-   every layout and content utility name in it. */
+   It is not named `.sr-only`: on a `/tw` entry the consumer's own Tailwind
+   build supplies that utility, and two same-named utilities in one cascade
+   collide silently -- the collision `registry.test.ts` polices (see
+   `data-table`'s `renamedFrom` in `registry.json`). `@source
+   inline("visually-hidden")` in `utilities/index.css` force-emits it on the
+   entries with no scannable markup of their own. */
 @utility visually-hidden {
   position: absolute;
   width: 1px;

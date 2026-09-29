@@ -33,12 +33,11 @@
 }
 
 /* Neutral stops its fill short: its colour is the page's ink, so a full fill is
-   a slab and `.neutral.solid` was pixel-for-pixel `.primary.solid`. 20% is
+   a slab and `.neutral.solid` would be pixel-for-pixel `.primary.solid`. 20% is
    chosen against `.soft`'s 12% -- a step past the tint, not a repeat.
    `--intent-contrast` stays the page colour; a `.neutral.solid` badge's ink is
    `box`'s question, answered by the same `--ui-fg-on-fill` cap. Pointing this
-   slot at `--color-text` instead rendered a checked neutral checkbox
-   black-on-black. */
+   slot at `--color-text` renders a checked neutral checkbox black-on-black. */
 .neutral {
   --intent-color: var(--color-text);
   --intent-contrast: var(--color-text-contrast);
@@ -182,12 +181,11 @@
   --intent-border: var(--ui-control-ink, var(--ui-ink, var(--color-control-border)));
 }
 
-/* A table's lines -- its frame, its head rule, its row rules -- are drawn on a
-   plate, not at a pane's edge against whatever is behind it, so an aesthetic
-   whose neutral line is a highlight names a rule line of its own:
-   `.glass`'s white hairline vanished on the table's light plate, and the
-   default, `.ruled`, and `.ruleless` tables rendered as one. Neutral only, and
-   `.neutral` included, the way the control line above is. */
+/* A table's lines -- its frame, head rule, and row rules -- are drawn on a
+   plate, not at a pane's edge against the backdrop, so an aesthetic whose
+   neutral line is a highlight names a rule line of its own: glass's white
+   hairline vanishes on the table's light plate. Neutral only, and `.neutral`
+   included, the way the control line above is. */
 :where(.data-table),
 .data-table.neutral {
   --intent-border: var(--ui-rule-ink, var(--ui-ink, var(--color-border)));
@@ -195,27 +193,19 @@
 
 /* The bubble a tooltip draws is the one plate in the package that is chosen
    rather than composed, so it resolves the no-intent case onto its own pair
-   instead of onto the shared neutral. Composed, it was 20% of the page's
-   ink over `--color-surface`, which lifts off a dark page and sinks into a light
-   one -- see `--color-tooltip` in `theme.css` for the measurements.
+   instead of the shared neutral -- see `--color-tooltip` in `theme.css`.
 
    The cap goes with it. Neutral stops its fill at 20% because its colour is the
-   page's ink and a full fill of that is a slab; `--color-tooltip` is a plate
-   rather than an ink, so a full fill of it is the plate and there is nothing to
-   stop short of.
+   page's ink; `--color-tooltip` is a plate rather than an ink, so a full fill
+   of it is the plate and there is nothing to stop short of. `--intent-subtle`
+   stays the surface token, the tone every other unclassed component sits on.
+   `.tooltip-icon` is a separate element that never fills past `0%`, so the
+   generic neutral reset above is enough for it.
 
-   `--intent-subtle` stays the surface token, the same tone every other
-   unclassed component sits on. `.tooltip-icon`, the trigger badge, is a
-   separate element now and does not read this block at all -- it never fills
-   past `0%`, so the generic neutral reset above it is enough, and it keeps its
-   own resting ground and line independent of whatever intent the bubble shows.
-
-   Two selectors, because `none` and `neutral` have to agree here. `:where()`
-   loses to any intent class, so `.tooltip-bubble.primary` still floods with
-   primary; `.tooltip-bubble.neutral` carries 0-2-0 and beats `.neutral`, so
-   writing the intent out gives the same bubble as writing nothing. Without the
-   second selector the two would differ on a component where they mean the
-   same thing. */
+   Two selectors, so `none` and `neutral` agree. `:where()` loses to any intent
+   class, so `.tooltip-bubble.primary` still floods with primary;
+   `.tooltip-bubble.neutral` carries 0-2-0 and beats `.neutral`, so writing the
+   intent out gives the same bubble as writing nothing. */
 :where(.tooltip-bubble),
 .tooltip-bubble.neutral {
   --intent-color: var(--color-tooltip);

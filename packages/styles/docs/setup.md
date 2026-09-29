@@ -131,6 +131,6 @@ What that means in practice:
 
 - Consumer tooling must resolve package CSS imports.
 - Every shipped stylesheet can be pasted into an HTML `<style>` element, for critical-CSS inlining or a server-rendered head: none contains the `</style` sequence that would end the element early.
-- Chrome 123, Safari 17.5, or Firefox 121 and newer. Color tokens are declared with `light-dark()` and selected by `color-scheme` (Firefox 120), and `.input-group` propagates a nested control's invalid and disabled state with `:has()` (Firefox 121).
+- Chrome 123, Safari 17.5, or Firefox 128 and newer. Color tokens are declared with `light-dark()` and selected by `color-scheme` (Firefox 120), `.input-group` propagates a nested control's invalid and disabled state with `:has()` (Firefox 121), and the elevation multiplier is registered non-inheriting with `@property` (Firefox 128; without it an elevation class would reach the unclassed elements inside it).
 - Tailwind CSS 4 or newer is required only for `/tw` source entrypoints.
 - The package has no JavaScript runtime. Apps must provide semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements; see [Accessibility](./accessibility.md).

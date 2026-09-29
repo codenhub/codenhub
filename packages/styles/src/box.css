@@ -84,32 +84,29 @@
      colour do double duty and prints a soft amber component at 3.1:1.
      `--intent-contrast` keeps its own meaning -- `--_on-fill` reconciles it with
      a capped intent -- rather than being bent so neutral's contrast is the ink,
-     which rendered a checked neutral checkbox black-on-black. */
+     which renders a checked neutral checkbox black-on-black. */
   --_fg: color-mix(in oklab, var(--intent-contrast) var(--_on-fill), var(--intent-strong));
   /* P3: the line fades out as the fill fills in, so a filled box has a seamless
-     edge. It fades toward `transparent`, not toward the plate: the plate already
-     runs under the border (nothing here clips the background to the padding
-     box), so a line blended toward `--_bg` painted the plate a second time over
-     itself. On an opaque plate that is invisible; on a translucent one -- a
-     neutral fill, capped at 20%, or any fill `--ui-bg-alpha` thins -- it drew a
-     ring around the box, 1.54:1 against its own plate in light. Faded toward
-     nothing, the border shows the one coat beneath it.
+     edge. It fades toward `transparent`, not toward the plate: the plate
+     already runs under the border (nothing clips the background to the padding
+     box), so a line blended toward `--_bg` paints the plate a second time over
+     itself -- invisible on an opaque plate, a ring on a translucent one (a
+     neutral fill capped at 20%, or any fill `--ui-bg-alpha` thins). Faded
+     toward nothing, the border shows the one coat beneath it.
 
-     Blend first, amount after (`--_edge-amount` below) -- the other order lands
-     `.edgeless` on the fill colour, which the border box then paints as a second
-     coat: a ring around an element that asked for no edge. See
+     Blend first, amount after (`--_edge-amount` below): the other order lands
+     `.edgeless` on the fill colour, which the border box paints as a second
+     coat -- a ring around an element that asked for no edge. See
      docs/internal/model.md#presentation. */
   --_line: color-mix(in oklab, transparent var(--ui-fill, var(--_d-fill)), var(--intent-border));
   /* How much line there is, as an input rather than a result. A component that
      must keep its line whatever the edge class says raises `--_edge-floor`
      instead of rewriting `--_edge`, and the composition above still runs.
 
-     The distinction is not cosmetic. Rewriting the result drops every term the
-     result was composed from, silently and with nothing to report: that is how
-     `--ui-border` stopped reaching all six text controls, and how `--_d-border`
-     sat declared and unread on each of them for a release. Bounding the input
-     leaves the axis live, so `.edged` and `.edgeless` still mean what they say
-     on a component that happens to floor itself. */
+     Rewriting the result drops every term it was composed from, silently and
+     with nothing to report. Bounding the input leaves the axis live, so
+     `.edged` and `.edgeless` still mean what they say on a component that
+     floors itself. */
   --_edge-amount: max(var(--ui-border, var(--_d-border)), var(--_edge-floor, 0%));
   --_edge: color-mix(in oklab, var(--_line) var(--_edge-amount), transparent);
   --_width: min(var(--ui-border-width, var(--border-width)), var(--ui-border-max, 100px));
@@ -190,14 +187,11 @@
   --_focus-stack: var(--_shadow), inset 0 0 0 var(--ui-focus-inset) var(--focus-ring);
 
   /* Every box sizes itself as `min-height`/`min-width: var(--control-height)`
-     plus its own padding and the border shorthand above, so its geometry is only
-     right under `box-sizing: border-box`. `reset.css` sets that on `*`, but only
-     the `.`, `/native` and `/tw/reset` entrypoints carry the reset -- and the
-     first two pull Tailwind's Preflight, which sets it anyway. `/components` and
-     the granular `/tw/*` component entrypoints ship neither, so a box there
-     inherited the `content-box` default and every sized control came out
-     inflated by its own padding and border. A component's own geometry is not an
-     external reset's job; `box` owns it. */
+     plus its own padding and the border shorthand above, so its geometry is
+     only right under `border-box`. `reset.css` sets that on `*`, but only the
+     `.`, `/native` and `/tw/reset` entrypoints carry the reset; `/components`
+     and the granular `/tw/*` component entrypoints ship neither it nor
+     Preflight, so `box` owns it. */
   box-sizing: border-box;
   background-color: var(--_bg);
   color: var(--_fg);

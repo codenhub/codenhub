@@ -924,6 +924,44 @@ test.describe("aesthetics", () => {
         expect(read.nestedBackdrop, "and keeps its own blur").toContain("blur(14px)");
       });
 
+      test("changes only the corners where glass is not in scope", async ({ page, browserName }) => {
+        await page.goto(SURFACES_URL);
+
+        const read = await page.getByTestId("preview-root").evaluate((root) => {
+          const region = document.createElement("div");
+
+          region.innerHTML =
+            '<div class="card" data-probe="plain"><input class="ipt" /></div>' +
+            '<div class="card glass-liquid" data-probe="liquid"><input class="ipt" /></div>';
+          root.append(region);
+
+          const paint = (probe: string) => {
+            const card = region.querySelector(`[data-probe="${probe}"]`)!;
+            const field = getComputedStyle(card.querySelector(".ipt")!);
+            const styles = getComputedStyle(card);
+
+            return {
+              ground: styles.backgroundColor,
+              line: styles.borderTopColor,
+              fieldLine: field.borderTopColor,
+              layer: getComputedStyle(card, "::before").content,
+              shape: styles.getPropertyValue("corner-shape"),
+            };
+          };
+          const result = { plain: paint("plain"), liquid: paint("liquid") };
+
+          region.remove();
+
+          return result;
+        });
+
+        expect(read.liquid.ground, "no translucent ground").toBe(read.plain.ground);
+        expect(read.liquid.line, "no hairline on the surface").toBe(read.plain.line);
+        expect(read.liquid.fieldLine, "a field keeps its line").toBe(read.plain.fieldLine);
+        expect(read.liquid.layer, "no layers without glass").toBe("none");
+        expect(read.liquid.shape, "standalone liquid corners").toBe(browserName === "chromium" ? "squircle" : "");
+      });
+
       test("drops the blur and the lens under reduced transparency", async ({ page, browserName }) => {
         if (browserName === "chromium") {
           const session = await page.context().newCDPSession(page);

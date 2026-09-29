@@ -3,31 +3,23 @@
    docs/internal/model.md#cascade-layers. */
 
 /* Elevation is a modifier, not an axis: depth is a per-element decision (raised
-   tiles beside a flat panel in one aesthetic), so one unitless number multiplies
-   the aesthetic's shadow geometry where the component composes it. `.flat`
-   removes a part-based slab or blur without a conditional (complete surface
-   shadows like glass remain). See model.md#elevation.
+   tiles beside a flat panel in one aesthetic), so one unitless number
+   multiplies the aesthetic's shadow geometry where the component composes it.
+   `.flat` removes a part-based slab or blur without a conditional (complete
+   surface shadows like glass remain). See model.md#elevation.
 
    `--ui-elevation`, and the plain-page fallback geometry (`--elevation-y`,
    `--elevation-blur`) below, are registered non-inheriting: a class sets them
-   on the element it is written on and nothing else picks them up. They used to
-   be ordinary inherited custom properties, on the reasoning that a container
-   could flatten or lift a whole region in one class and any element inside
-   could opt back out -- but the same mechanism let a `.floating` dialog's
-   ambient ×2 reach its own unclassed "Cancel"/"Remove" buttons, doubling their
-   shadow with nothing in the markup asking for that. Depth is not the same
-   kind of thing as color or material: a button inside a raised card is not
-   itself more raised, it is just resting normally inside an already-raised
-   surface. `--ui-shadow-*` -- what an aesthetic supplies -- is unaffected and
-   still cascades normally; that is a different mechanism (the material tokens
-   in `src/aesthetics/*.css`), and an aesthetic still has to reach every nested
-   component uniformly the way it always did. Registering these three is what
-   scopes the change to the elevation modifier alone.
+   on the element it is written on and nothing else picks them up. Inherited, a
+   `.floating` dialog's ambient x2 would reach its own unclassed buttons and
+   double their shadow with nothing in the markup asking for it. Depth is not
+   the same kind of thing as color or material: a button inside a raised card is
+   not itself more raised. `--ui-shadow-*` -- what an aesthetic supplies -- is a
+   different mechanism and still cascades normally, so an aesthetic reaches
+   every nested component uniformly.
 
    `.flat`/`.raised`/`.floating` name what they do rather than a scale step:
-   bare `sm`/`md`/`lg` would collide with the size modifier, and the
-   `.elevation-*` spellings, which borrowed the raw `--elevation-*` shadows'
-   names for a different mechanism, were removed in `0.5.0`. */
+   bare `sm`/`md`/`lg` would collide with the size modifier. */
 
 /* `syntax: "*"` with no `initial-value` is deliberate: a numeric syntax would
    require one (CSS Properties and Values API), and any initial-value at all
@@ -36,8 +28,8 @@
    1))` in `box.css` needs to fall through to a component's own default. With
    no initial-value and `inherits: false`, an element that does not set the
    property directly computes it as guaranteed-invalid, the same as if it had
-   never been registered at all -- `var()` takes its fallback precisely where
-   inheritance used to hand it an ambient value instead. */
+   never been registered at all -- `var()` takes its fallback where an
+   inherited value would otherwise be handed in. */
 @property --ui-elevation {
   syntax: "*";
   inherits: false;

@@ -3,13 +3,12 @@
 @import "./typography.css";
 
 @layer base {
-  /* The package's own components no longer lean on this: `@utility box` sets
+  /* The package's own components do not lean on this: `@utility box` sets
      `box-sizing: border-box` on itself, so a sized control is right in every
      entrypoint including the reset-less `/components` and granular `/tw/*`
-     ones. What is left for the universal rule is the consumer's own markup --
-     a plain `<div>` laid out beside our components under the full reset -- so
-     it stays part of the opinionated baseline the reset already is, rather
-     than a correctness prop the components need. */
+     ones. The universal rule covers the consumer's own markup -- a plain
+     `<div>` laid out beside our components -- as part of the opinionated
+     baseline. */
   *,
   *::before,
   *::after {

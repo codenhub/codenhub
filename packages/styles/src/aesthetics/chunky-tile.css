@@ -23,16 +23,14 @@
     --_tile-lift: var(--tile-lift, 4px);
     --_tile-radius: var(--tile-radius, 0.75rem);
 
-    /* The tile grey -- also the neutral bar, at the shadow ink below. It was
-       chosen darker than the look's own greys while it was also every control's
-       boundary; controls now take `--ui-control-ink` below, so this is the line
-       of tiles and surfaces. */
+    /* The tile grey -- also the neutral bar, at the shadow ink below. It is the
+       line of tiles and surfaces; controls take `--ui-control-ink` below. */
     --ui-ink: light-dark(var(--color-neutral-400), var(--color-neutral-600));
-    /* Controls take a heavier grey than the tile, drawn at a field's 60% resting
-       line: 600 in light, where the tile's 400 left a field at 1.65:1 against
-       the page (2.87:1 now, a checkbox 8.63:1), and 400 in dark, where the
-       tile's 600 sat too close to the page (3.40:1 now, 8.62:1). See
-       docs/internal/model.md#presentation. */
+    /* Controls take a heavier grey than the tile, drawn at a field's 60%
+       resting line: 600 in light, where the tile's 400 leaves a field at 1.65:1
+       against the page (2.87:1 with 600, a checkbox 8.63:1), and 400 in dark,
+       where the tile's 600 sits too close to the page (3.40:1 with 400,
+       8.62:1). See docs/internal/model.md#presentation. */
     --ui-control-ink: light-dark(var(--color-neutral-600), var(--color-neutral-400));
     --ui-rule-ink: initial;
 
@@ -51,16 +49,16 @@
     --ui-rule-style: initial;
 
     /* What makes the bar a *shade*, not a repeat. `box` mixes the bar
-       `color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink), var(--elevation-color))`,
-       and `--intent-border` is `--intent-color` for the hue intents, so at 100%
-       ink the bar equalled the plate exactly (`.btn.success` #007a55 on #007a55).
-       Lowering the ink alone fails: the shipped `--elevation-color` is nearly
-       transparent, so the mix composites *lighter* than the plate. Naming the
-       depth colour opaque points it at black; 72% is measured (`.btn.success`
-       #007a55 on #004c34, neutral `.card` #fafafa on #888888). On a near-black
-       dark card the bar lands lighter and reads as a rim, as the original does.
-       Every other aesthetic restates the depth colour, so a region nested
-       inside this one does not inherit the black. */
+       `color-mix(in oklab, var(--intent-border) var(--ui-shadow-ink),
+       var(--elevation-color))`, and `--intent-border` is `--intent-color` for
+       the hue intents, so at 100% ink the bar equals the plate exactly
+       (`.btn.success` #007a55 on #007a55). Lowering the ink alone fails: the
+       theme's `--elevation-color` is nearly transparent, so the mix composites
+       *lighter* than the plate. Naming the depth colour opaque points it at
+       black; 72% is measured (`.btn.success` #007a55 on #004c34, neutral
+       `.card` #fafafa on #888888). On a near-black dark card the bar lands
+       lighter and reads as a rim. Every other aesthetic restates the depth
+       colour, so a region nested inside this one does not inherit the black. */
     --elevation-color: rgb(0 0 0);
     --ui-shadow-ink: 72%;
 
@@ -123,26 +121,24 @@
     --ui-surface-image: initial;
     --ui-bg-alpha: 1;
 
-    /* Consumer-supplied, the way `.pixel` reads `--font-pixel`. The package ships no
-       font binary, so the aesthetic has no rounded face to fall back to and takes the
-       page's own stack until one is supplied -- `--font-default`, the token the
-       reset applies to `html`/`body`, so a consumer that themed the page font gets
-       it here too. `--font-sans` is Tailwind's own and the package never sets it. */
+    /* Consumer-supplied, the way `.pixel` reads `--font-pixel`. The package
+       ships no font binary, so the aesthetic takes the page's own stack until
+       one is supplied -- `--font-default`, the token the reset applies to
+       `html`/`body`, so a consumer that themed the page font gets it here too.
+       `--font-sans` is Tailwind's own and the package never sets it. */
     font-family: var(--font-rounded, var(--font-default, ui-sans-serif, system-ui, sans-serif));
 
     /* A heavy, slightly tracked label is what makes an action read as a tile
-       rather than as a button, and a badge beside it takes the same label. Label
-       tokens rather than a selector list naming `.btn`: a selector list either loses to `.btn`'s own
-       weight or beats a consumer's `font-*` utility, depending on where it is
-       layered, and a token does neither. See docs/internal/model.md#cascade-layers.
+       rather than as a button, and a badge beside it takes the same label.
+       Label tokens rather than a selector list naming `.btn`: a selector list
+       either loses to `.btn`'s own weight or beats a consumer's `font-*`
+       utility, depending on where it is layered, and a token does neither. See
+       docs/internal/model.md#cascade-layers.
 
-       Casing is deliberately not here. The chunky-tile look is usually drawn with
-       uppercase labels and an earlier draft set `text-transform`, but how a label
-       is *worded* is the application's decision and an aesthetic silently
-       recasing it takes that away -- along with any acronym, proper noun, or
-       locale whose rules for case are not English's. A consumer who wants
-       shouting buttons writes it in their own stylesheet, where it is theirs to
-       own. */
+       Casing is deliberately not here: how a label is *worded* is the
+       application's decision, and recasing it silently breaks any acronym,
+       proper noun, or locale whose rules for case are not English's. A consumer
+       who wants uppercase buttons writes it in their own stylesheet. */
     --ui-label-weight: 800;
     --ui-label-tracking: 0.04em;
     --ui-label-case: initial;

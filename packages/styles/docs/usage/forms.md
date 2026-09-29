@@ -26,9 +26,7 @@ order: 6
 
 ## Icons
 
-No icon is shipped for text inputs — that's what this section covers. It used to paint one per input type as a `background-image` — a `data:` URI, which cannot read `currentColor` or a custom property, so every glyph shipped a light and a dark copy and a theme selector chose between them. That put icon artwork, and the package's only theme-by-selector branch, inside a CSS-only design system whose glyphs did not fit every aesthetic. Icons for `.input-group` are the consumer's to choose now.
-
-This is separate from the toggle marks below, which stay small, fixed, built-in glyphs. `.alert`'s icon followed the same path since — see [Feedback → Icon](./feedback.md#example) — the package no longer paints one there either.
+The package ships no icon for text inputs. Icons for `.input-group` are the consumer's to choose: artwork painted as a `data:` URI could not read `currentColor` or a custom property, so it could not follow the theme or fit every aesthetic. The toggle marks below are the exception: small, fixed, built-in glyphs. `.alert` likewise takes a consumer-supplied icon; see [Feedback](./feedback.md#example).
 
 `.input-group` is the wrapper for a control that carries one. It owns the field box — border, radius, fill, focus ring, invalid and disabled state — and the control inside it goes flush, so the boundary is drawn once. Any icon element works, placed before the control for a leading icon or after it for a trailing one: an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons`.
 

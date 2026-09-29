@@ -40,16 +40,16 @@ For the Tailwind CSS v4 entrypoint, theme selection, the intent/presentation axe
 
 ## Requirements
 
-| Requirement   | Details                                                                                                        |
-| ------------- | -------------------------------------------------------------------------------------------------------------- |
-| CSS imports   | Consumer tooling must resolve package CSS imports.                                                             |
-| Browsers      | Chrome 123, Safari 17.5, or Firefox 121 and newer (`light-dark()` theming; `:has()` for `.input-group` state). |
-| Tailwind CSS  | Version 4 or newer is required only for `/tw` source entrypoints.                                              |
-| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                |
+| Requirement   | Details                                                                                                                                                  |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                       |
+| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation). |
+| Tailwind CSS  | Version 4 or newer is required only for `/tw` source entrypoints.                                                                                        |
+| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                          |
 
 ## Notes
 
-This package has no JavaScript behavior; no version provides compatibility aliases for a removed class or token. `0.2.0` removes `.btn.loading` (compose a disabled `.btn` with a `.loader` child instead) and `.alert.icon`'s built-in glyph (drop a consumer-supplied icon into `.alert-icon` instead), and `.tooltip` now requires a `.tooltip-bubble` child element rather than a `data-tooltip` attribute. `0.5.0` removes the second names: `.dense`, `.compact`, and `.spacious` (use `.p-xs`, `.p-sm`, and `.p-lg`), `.danger` and `.error` (use `.destructive`, and `.hint.destructive` for `.hint.error`), and `.elevation-none`, `.elevation-sm`, and `.elevation-md` (use `.flat`, `.raised`, and `.floating`). It also renames two material tokens: an aesthetic sets its corner as `--ui-corner` and `--ui-corner-surface` rather than `--ui-radius` and `--ui-radius-surface`, which now take a complete radius as written, and `--ui-button-weight` and `--ui-button-tracking` are `--ui-label-weight` and `--ui-label-tracking`. See the [changelog](./docs/changelog/index.md) for the complete history.
+This package has no JavaScript behavior. It ships no compatibility aliases: a removed class or token is documented in the [changelog](./docs/changelog/index.md), not kept under a second name.
 
 ## License
 
@@ -217,7 +217,7 @@ What that means in practice:
 
 - Consumer tooling must resolve package CSS imports.
 - Every shipped stylesheet can be pasted into an HTML `<style>` element, for critical-CSS inlining or a server-rendered head: none contains the `</style` sequence that would end the element early.
-- Chrome 123, Safari 17.5, or Firefox 121 and newer. Color tokens are declared with `light-dark()` and selected by `color-scheme` (Firefox 120), and `.input-group` propagates a nested control's invalid and disabled state with `:has()` (Firefox 121).
+- Chrome 123, Safari 17.5, or Firefox 128 and newer. Color tokens are declared with `light-dark()` and selected by `color-scheme` (Firefox 120), `.input-group` propagates a nested control's invalid and disabled state with `:has()` (Firefox 121), and the elevation multiplier is registered non-inheriting with `@property` (Firefox 128; without it an elevation class would reach the unclassed elements inside it).
 - Tailwind CSS 4 or newer is required only for `/tw` source entrypoints.
 - The package has no JavaScript runtime. Apps must provide semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements; see [Accessibility](docs/accessibility.md).
 
@@ -285,7 +285,7 @@ The root follows the operating-system `color-scheme` preference until an explici
 
 Setting `color-scheme` yourself on an element also re-themes the tokens below it, because that is the only signal the palette reads. This also themes native UI such as scrollbars and form-control internals to match.
 
-This mechanism works from Chrome 123, Safari 17.5, and Firefox 120; the package overall requires Firefox 121 for `:has()` (see [Setup](docs/setup.md#requirements)).
+This mechanism works from Chrome 123, Safari 17.5, and Firefox 120; the package overall requires Firefox 128, for `@property` and `:has()` (see [Setup](docs/setup.md#requirements)).
 
 <!-- Source: docs/usage/index.md -->
 
@@ -397,7 +397,7 @@ The same split governs the edge: a cascaded `.edgeless` is floored and the eleme
 
 A tooltip bubble is filled, over a tinted ground. An intent fills it with that intent's own color: `.tooltip-bubble.primary` is the primary color, black on a light page and white on a dark one, and `.tooltip-bubble.destructive` is a red bubble.
 
-With no intent the bubble is `--color-tooltip`, the one plate in the package chosen per theme rather than derived from an intent. Composed like everything else it was `20%` of the page's ink over the surface tone, which steps _lighter_ than the surface on a dark page and _darker_ on a light one — so the dark bubble read as lifted and the light one as a mid-grey slab two steps darker than every card on the screen. The token states each direction instead: near-white over a light page, a mid grey over a dark one. `--color-tooltip-contrast` is its ink.
+With no intent the bubble is `--color-tooltip`, the one plate in the package chosen per theme rather than derived from an intent: near-white over a light page, a mid grey over a dark one. `--color-tooltip-contrast` is its ink.
 
 Near-white is only 1.04:1 against a light page, so the bubble draws a hairline as well, and floors it: a container's `.solid` or `.edgeless` cannot take the boundary away from a bubble nobody classed, while `.tooltip-bubble.edgeless` still can. The ground keeps the bubble opaque at every fill, so a cascaded presentation leaves it readable over whatever it floats above. It reads the material tokens too, so an [aesthetic](docs/usage/aesthetics.md) in scope shapes the bubble like any other component. See [Tooltips](docs/usage/tooltips.md) for the full tooltip reference.
 
@@ -544,7 +544,7 @@ The strong tone has to stay recognisably its own hue, not just readable. On a da
 
 The foreground is gated by the plate rather than tied to the fill. `--intent-contrast` is the ink for a _full_ fill, so printing it at full strength on a fifth of one puts white on light grey. Contrast ink therefore appears only once the fill is past halfway and reaches full at a full fill; below that a component prints `--intent-strong`, the tone chosen to be read.
 
-That means a capped neutral takes the strong tone whole rather than a fraction of the way toward the page. Tying it to the fill instead cost a neutral `.solid` button four points of contrast and a neutral tooltip nearly ten. A state that lifts the cap on purpose — a checked checkbox is filled with its own intent by definition — reaches a full fill and gets the contrast whole.
+So a capped neutral takes the strong tone whole rather than a fraction of the way toward the page. A state that lifts the cap on purpose — a checked checkbox is filled with its own intent by definition — reaches a full fill and gets the contrast whole.
 
 Set them directly to define an intent this package does not ship. **State every slot**, including `--intent-fill-max`: components reset all seven to the neutral values, so a slot your intent leaves out keeps neutral's — and an intent that omits the cap fills to 20% of its color instead of 100%.
 
@@ -827,8 +827,6 @@ Component classes may define scoped implementation variables such as `--surface-
 
 Consumers should customize broad behavior through color, foundation, motion, elevation, radius, layout, and focus tokens first. The only supported component-scoped input is `--progress-value` on the `.progress` element, because consumers must provide a value such as `64%`.
 
-`--layout-gap` replaces the removed `--layout-stack-gap` and `--layout-cluster-gap` tokens. No compatibility aliases are provided.
-
 Next: [Aesthetics](docs/usage/aesthetics.md) covers each shipped aesthetic's complete look and its documented exceptions.
 
 <!-- Source: docs/usage/aesthetics.md -->
@@ -949,7 +947,7 @@ The lens is drawn by an SVG filter in `backdrop-filter`, which Chromium renders 
 
 - Corners are one unit or nothing. Chips square instead of stepping — badges, key caps, code, checkboxes, and switches all read `--ui-clip-tight`, which this aesthetic sets to none, because one unit off each corner of a 24px badge is a bite rather than a corner. Tables, progress bars, and skeletons square too, each for its own reason: a table takes no clip, because in Chromium and WebKit its box includes its caption and the clip would cut the caption rather than the rows, and progress and skeleton never read a clip at all — a squaring aesthetic reaches them through `border-radius` alone. `.pre` is the one exception that steps: it carries no clip override, so it inherits the same polygon a button or a card gets, and with no border by default the cut shows with no ring around it.
 - The outline is an inset ring, because a clip removes a real border — and the focus ring, for the same reason, is a second inset layer rather than an outline. Both are the element's own edge rather than a shadow, so the border answers `.edged` and `.edgeless` the way a border does: a `.edgeless` badge and a `.solid` button draw none, a `.edged` card draws one, and a field keeps one whatever a container asks for.
-- The tooltip trigger and `.radio` are hardcoded past the clip rather than reached by it. `.tooltip-icon` forces `clip-path: none` because the docs call it a circular fixed identity, the same reason `.radio` forces it: the circle is the only thing telling it from a checkbox at a glance, and a stepped polygon would square either one.
+- The tooltip trigger and `.radio` are hardcoded past the clip rather than reached by it. `.tooltip-icon` and `.radio` force `clip-path: none`: the circle is the only thing telling a radio from a checkbox at a glance, and a stepped polygon would square either one.
 - `--font-pixel` is yours to supply. The package ships no font binary, so the aesthetic has no network side effect and falls back to the monospace stack.
 - Numeral legibility depends on the face you pick. At UI sizes -- pagination, counters, small badges -- some pixel/bitmap faces render lookalike digits such as `2`/`8` or `3`/`9` closely enough to misread at a glance; this is a property of the font, not something the aesthetic's CSS can correct. Prefer a face with clearly distinct digit shapes wherever small numeric text matters.
 
@@ -1175,9 +1173,7 @@ Use `<button>` for actions or an accessible link for navigation; see [Accessibil
 
 ## Icons
 
-No icon is shipped for text inputs — that's what this section covers. It used to paint one per input type as a `background-image` — a `data:` URI, which cannot read `currentColor` or a custom property, so every glyph shipped a light and a dark copy and a theme selector chose between them. That put icon artwork, and the package's only theme-by-selector branch, inside a CSS-only design system whose glyphs did not fit every aesthetic. Icons for `.input-group` are the consumer's to choose now.
-
-This is separate from the toggle marks below, which stay small, fixed, built-in glyphs. `.alert`'s icon followed the same path since — see [Feedback → Icon](docs/usage/feedback.md#example) — the package no longer paints one there either.
+The package ships no icon for text inputs. Icons for `.input-group` are the consumer's to choose: artwork painted as a `data:` URI could not read `currentColor` or a custom property, so it could not follow the theme or fit every aesthetic. The toggle marks below are the exception: small, fixed, built-in glyphs. `.alert` likewise takes a consumer-supplied icon; see [Feedback](docs/usage/feedback.md#example).
 
 `.input-group` is the wrapper for a control that carries one. It owns the field box — border, radius, fill, focus ring, invalid and disabled state — and the control inside it goes flush, so the boundary is drawn once. Any icon element works, placed before the control for a leading icon or after it for a trailing one: an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons`.
 
@@ -1342,7 +1338,7 @@ Skeletons, loaders, and dividers are indicators: they read intent but ignore fil
 <span class="loader success" aria-hidden="true"></span> <span class="skeleton info"></span>
 ```
 
-The package ships no icon of its own: `.alert` is already `flex`, so an icon dropped in as a child is spaced from the message by its `gap-3` with nothing to trigger. `.alert-icon` only sizes and aligns whatever icon element you provide — an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons` — the same contract [`.input-group`](docs/usage/forms.md#icons) documents.
+The package ships no icon of its own: `.alert` is already `flex`, so an icon dropped in as a child is spaced from the message by its `gap-3`. `.alert-icon` only sizes and aligns whatever icon element you provide — an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons` — the same contract [`.input-group`](docs/usage/forms.md#icons) documents.
 
 Alerts and badges read the shared [presentation](docs/usage/composing.md#presentation) classes. Without one they use a tinted surface, intent-colored text, and a mixed intent border -- except a neutral `.alert` (no named intent), which rests untinted instead, the same no-named-intent carve-out `.card.soft` and `.panel` use: a plain `--color-foreground` plate rather than 12% of near-black ink over the page. A named intent (`.alert.success`, `.alert.destructive`, and so on) keeps its ordinary tint. `.badge` is unaffected either way -- it has no border to fall back on at rest, so untinting it would make a neutral badge disappear rather than read quieter.
 
@@ -1394,11 +1390,11 @@ Add `role="status"` or `role="alert"` to alerts based on announcement urgency, m
 | `[data-state="open"]`                  | Shows the bubble without hover, on `.tooltip`.                           |
 | `.tooltip-bubble.raised` / `.floating` | Adds one or two units of depth. The bubble is flat by default.           |
 
-A tooltip is composition, not a single class: `.tooltip` wraps a trigger element and a `.tooltip-bubble`, and shows the bubble on hover or focus within the wrapper. This replaced a `::after` pseudo-element that carried the message as `content: attr(data-tooltip)` — CSS generated content is not reliably exposed to assistive tech, and cannot be the target of an `aria-describedby`, since that needs a real element with a real `id`. A real bubble can be. Wire the association yourself: give the bubble an `id`, give the trigger `aria-describedby` pointing at it, and put `role="tooltip"` on the bubble.
+A tooltip is composition, not a single class: `.tooltip` wraps a trigger element and a `.tooltip-bubble`, and shows the bubble on hover or focus within the wrapper. The bubble is a real element because CSS generated content is not reliably exposed to assistive tech and cannot be the target of an `aria-describedby`, which needs a real element with a real `id`. Wire the association yourself: give the bubble an `id`, give the trigger `aria-describedby` pointing at it, and put `role="tooltip"` on the bubble.
 
 A tooltip bubble's fill, ground color, and floor behavior are covered in [Composing → Presentation](docs/usage/composing.md#presentation), and its material follows whichever [aesthetic](docs/usage/aesthetics.md) is in scope. Intent, presentation, aesthetic, and elevation classes go on `.tooltip-bubble` — the element that actually paints — not on `.tooltip`, the same rule every component in this package follows: put the class on the element that shows it.
 
-The bubble rests flat. It draws no shadow of its own on a plain page, and zeroes an aesthetic's part-based depth (such as `.neobrutalism`'s slab) the same way `.flat` does elsewhere. Add [`.raised` or `.floating`](docs/usage/composing.md#elevation) to lift it, on the bubble itself — `.tooltip-bubble.floating` is the pre-0.1.0 look. An aesthetic whose shadow is a complete value, like `.glass`, still reaches the bubble as it reaches any surface.
+The bubble rests flat. It draws no shadow of its own on a plain page, and zeroes an aesthetic's part-based depth (such as `.neobrutalism`'s slab) the same way `.flat` does elsewhere. Add [`.raised` or `.floating`](docs/usage/composing.md#elevation) to lift it, on the bubble itself. An aesthetic whose shadow is a complete value, like `.glass`, still reaches the bubble as it reaches any surface.
 
 Intent works on a tooltip bubble the same way it works on a filled component: `.tooltip-bubble.primary` fills the bubble with the primary color, black text on a light page and white on a dark one; `.tooltip-bubble.destructive` is a red bubble with the same logic. With no intent, the bubble uses `--color-tooltip`, a plate chosen per theme rather than derived from an intent; see [Composing → Presentation](docs/usage/composing.md#presentation) for why.
 
@@ -1451,13 +1447,10 @@ Layout helpers use the shared `--layout-gap` token. `.tight` sets it to `0.5rem`
 - `.stack` is a vertical flex stack.
 - `.cluster` is a wrapping horizontal flex row; `.between` adds `space-between` alignment.
 - `.auto-grid` is a responsive auto-fit grid using `--layout-grid-min`.
-- `.tight` and `.loose` set the shared gap to `0.5rem` or `1.5rem` on views, stacks, clusters, and auto-grids.
 - `.section` adds responsive block padding and an inline gutter.
 - `.section-content` centers content at `--container-max`; `.narrow` and `.wide` select the corresponding container tokens.
 - `.divider` is horizontal; `.vertical` makes it self-stretch vertically. It takes intent, but presentation classes do not affect it.
 - `.visually-hidden` hides content visually while keeping it in the accessibility tree, using the standard clip-based recipe. Not named `.sr-only`: on a `/tw` entry the consumer's own Tailwind build already ships a real `.sr-only`, and a same-named utility of this package's own would silently collide with it in the cascade — the same reason `.data-table` is not named `.table`.
-
-The removed `--layout-stack-gap` and `--layout-cluster-gap` tokens have no compatibility aliases.
 
 ## Content
 
@@ -1495,7 +1488,7 @@ A table draws three kinds of line, and `.ruled` and `.ruleless` move all of them
 </table>
 ```
 
-The boundaries under a head and above a foot separate the parts of a table from each other, so they are drawn by default where the row rules are not. Rules between body rows used to arrive on their own, because the component's published edge default is `edged` and the edge axis wrote the rules along with the boundary — so whether you got them depended on a registry default rather than on anything in your markup.
+The boundaries under a head and above a foot separate the parts of a table from each other, so they are drawn by default where the row rules are not. Rules between body rows are asked for by `.ruled` or `--ui-rule`, never by the edge axis, so whether you get them depends on your markup and not on a default you cannot see.
 
 `--ui-rule` is the token behind both classes, so a container can set the answer for a whole region without classing each table:
 
@@ -1903,9 +1896,9 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 | Feature              | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Control boundaries   | Text controls rest at `--_line-rest` of their intent, under 3:1 by choice, so hover and focus have a whole tone to move the line to.                                                                                                                                                                                                                                                                                                                                |
-| Toggle boundaries    | `.checkbox`, `.radio`, and `.switch` draw their line whole, because it is the only thing marking an unchecked box.                                                                                                                                                                                                                                                                                                                                                  |
-| Cascaded `.edgeless` | Floored on every text control: a container cannot erase the line of a field or toggle nobody classed.                                                                                                                                                                                                                                                                                                                                                               |
+| Control boundaries   | Text controls rest at a fraction of their intent's line, under 3:1 by choice, so hover and focus have a whole tone to move the line to.                                                                                                                                                                                                                                                                                                                             |
+| Toggle boundaries    | `.checkbox`, `.radio`, and `.switch` draw their line whole unless a `.switch` carries its own `.edgeless` (below), because the line is the only thing marking an unchecked box.                                                                                                                                                                                                                                                                                     |
+| Cascaded `.edgeless` | Floored on every text control and toggle: a container cannot erase the line of a field or toggle nobody classed.                                                                                                                                                                                                                                                                                                                                                    |
 | Own `.edgeless`      | On the element, `.ipt`, `.textarea`, `.select`, and `.switch` do drop their line and do not meet 1.4.11 at rest, except `.switch.ghost`: `.ghost` already asks for zero fill, so dropping the line too would leave no boundary at all, and `.switch.ghost.edgeless` keeps it up instead.                                                                                                                                                                            |
 | `.checkbox`/`.radio` | Never drop their line, on the element or from a container. `.edgeless` on them is unsupported, not merely discouraged.                                                                                                                                                                                                                                                                                                                                              |
 | Progress track       | By choice, the value carries the reading and the track is a quiet secondary cue. `.progress`'s registered default, `.soft.edgeless`, rests its track at ~1.1-1.3:1 against the page; the value clears 3:1 against that track for every intent but warning in light (~2.7:1) and info in dark (~2.9:1). `.ghost.edged` clears 3:1 for both the track's outline and the value, for every intent, in both themes -- choose it where the track itself must meet 1.4.11. |
@@ -1976,6 +1969,33 @@ Use ARIA or data attributes when native attributes are not available for the ele
 ```
 
 `aria-disabled="true"` communicates disabled state but does not prevent activation. JavaScript or element choice must prevent activation when required.
+
+<!-- Source: docs/changelog/0.6.0.md -->
+
+# 0.6.0
+
+A liquid-glass modifier, glass that keeps every presentation's fill whole, and a round of fixes to tables, controls, and the focus ring.
+
+## Added
+
+- **`.glass-liquid`**, a modifier of `.glass`: continuous corners, a bright rim, a lighter blur, a clearer ground, and a lens that bends what is behind a surface at its edges (Chromium today; Firefox and Safari keep the rim, blur, and ground). Put it beside `.glass` on the region, or on one surface inside a glass region; `.glass-solo.glass-liquid` paints the same pane on an element the package does not style. Without `.glass` in scope it changes the corners and nothing else. See [Aesthetics → Liquid glass](docs/usage/aesthetics.md#liquid-glass).
+- **`--ui-rule-ink`**, the neutral line color of a table's frame and rules, read ahead of `--ui-ink`. Glass sets it so a table's lines read on its plate; every other aesthetic clears it.
+
+## Changed
+
+- **Glass no longer thins fills.** It stopped setting `--ui-bg-alpha: 0.8`, so a `.solid` button, a checked toggle, and a `.solid` card are opaque under glass like everywhere else. Translucency comes from the surface ground alone. Glass buttons also take the base `scale(0.97)` press (it was `none`).
+- **A neutral `.solid` rests on the page background.** Its capped 20% fill was painted over nothing and showed whatever was behind it; it is now an opaque grey. The generated `--palette-neutral-solid-bg` and `-bg-hover` values changed to match, in both themes.
+- **Tables frost under glass and keep their lines.** A default or `.soft` `.data-table` blurs like a surface, its frame and rules read `--ui-rule-ink`, and a bare `<table>` under `/native` reads it too.
+- **A table takes the surface corner and is never clipped.** The four corner cells round instead of an `overflow` clip, so a `<caption>` is untouched in every engine; a cell spanning rows into a bottom corner leaves that corner square. `.table-wrap` makes room for an aesthetic's halo (cyber's glow) inside its scroll box, so put the aesthetic class on the wrapper or an ancestor.
+- **Table rules draw at the aesthetic's line width**, uncapped, so `.chunky-tile`'s 2px frame no longer sits over a 1px row rule and `.pixel` draws them at all.
+- **The focus ring is pulled in by the focused element's line width.** `--focus-ring-offset` is no longer declared at `:root`; its default is computed on the element, so it lands on the edge under every aesthetic. Setting `--focus-ring-offset` yourself still wins, but reading `var(--focus-ring-offset)` in your own CSS now needs a fallback.
+- **Ink aesthetics draw controls in the control border.** Under `.neobrutalism`, `.pixel`, `.cyber`, and `.sketch`, a resting neutral field or toggle uses `--color-control-border` instead of the near-primary ink. A bare native checkbox or radio under `/native` takes the control ink too, and a `.neutral` field under glass takes it like an unclassed one.
+- **Browser floor is Firefox 128.** Non-inheriting elevation relies on `@property`; the documented floor was Firefox 121.
+
+## Fixed
+
+- **A switch's knob sits inside `.pixel`'s inset ring** instead of covering it, so an unchecked and a checked switch no longer read as two halves.
+- **The sketch solo shadow is cast in the depth colour** rather than full ink.
 
 <!-- Source: docs/changelog/0.5.0.md -->
 

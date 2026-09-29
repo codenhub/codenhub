@@ -1,12 +1,11 @@
 /* Glass: translucent surfaces over a blurred backdrop with a hairline highlight
-   edge. It needs something behind it to blur -- on a flat page background it is a
-   translucent panel and nothing more.
+   edge. It needs something behind it to blur -- on a flat page background it is
+   a translucent panel and nothing more.
 
-   Tier 1 only. The scope that used to take a hand-written selector list is now a
-   token: only `surface` resolves `--ui-backdrop`, so blur reaches cards,
-   panels, alerts and tooltips while controls stay solid. An active blur costs a
-   compositing layer apiece, and one under every control of a dense cluster reads
-   as noise. */
+   Tier 1 only: the scope is a token. Only `surface` resolves `--ui-backdrop`,
+   so blur reaches cards, panels, alerts and tooltips while controls stay solid.
+   An active blur costs a compositing layer apiece, and one under every control
+   of a dense cluster reads as noise. */
 
 /* The layer map, stated before anything uses a layer -- see `theme.css`. The
    aesthetic's token class sits in `components`, below every utility, so a
@@ -40,17 +39,18 @@
        on a field's 60% resting line, in light. See
        docs/internal/model.md#presentation. */
     --ui-control-ink: light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55));
-    /* Nor is a line drawn on a plate: the hairline vanished on a table's light
-       plate, and its default, `.ruled`, and `.ruleless` forms rendered as one.
-       A table's frame and rules take the theme's ink at a fifth, translucent
-       for the same reason the control line is. */
+    /* Nor is a line drawn on a plate: the hairline vanishes on a table's light
+       plate, and its default, `.ruled`, and `.ruleless` forms would render as
+       one. A table's frame and rules take the theme's ink at a fifth,
+       translucent for the same reason the control line is. */
     --ui-rule-ink: light-dark(rgb(0 0 0 / 0.2), rgb(255 255 255 / 0.2));
 
-    /* The glass is the ground, not the fill. `0.8` here thinned every fill in
-       the region -- a `.solid` button, a checked toggle, a `.solid` card -- so
-       how much colour a presentation asked for depended on the aesthetic,
-       which is presentation's question (R1). Translucency lives in
-       `--ui-surface-ground` below, the plate a partial fill is painted over. */
+    /* The glass is the ground, not the fill. Thinning fills with
+       `--ui-bg-alpha` would make how much colour a presentation asked for
+       depend on the aesthetic, which is presentation's question (R1): a
+       `.solid` button, a checked toggle, and a `.solid` card stay opaque.
+       Translucency lives in `--ui-surface-ground` below, the plate a partial
+       fill is painted over. */
     --ui-bg-alpha: 1;
     --ui-backdrop: blur(14px) saturate(1.6);
     --ui-surface-image: initial;
@@ -113,9 +113,7 @@
     --ui-hover-transform: none;
     /* The base press, stated because every token here is: the depth in this
        aesthetic is the blur, so a control has no slab to press into, and a pane
-       that gives slightly under the pointer is the one answer a press gets. This
-       read `none` from when the base look had no press, and kept it once the
-       base gained one. */
+       that gives slightly under the pointer is the one answer a press gets. */
     --ui-active-transform: scale(0.97);
     --ui-active-translate-x: initial;
     --ui-active-translate-y: initial;
@@ -147,8 +145,12 @@
      Continuous corners, a bright rim where light catches the pane, a lighter
      blur, and -- in engines that render an SVG filter in `backdrop-filter`,
      Chromium today -- a lens that bends the backdrop at the edges. On the region
-     beside `.glass`, or on one surface inside a glass region. Without `.glass`
-     in scope it changes corners and nothing else.
+     beside `.glass`, or on one surface inside a glass region.
+
+     Only the corners apply on their own. The ink, ground, and blur are glass
+     material, so they are set below only where `.glass` is in scope: a lone
+     `.glass-liquid` would otherwise make every surface translucent with nothing
+     to blur and every field's line a near-invisible hairline.
 
      The corner knobs are glass's own, with larger defaults: a continuous corner
      reads smaller than a round one of the same radius. Where `corner-shape` is
@@ -157,14 +159,7 @@
     --ui-corner: var(--glass-radius, 1rem);
     --ui-corner-surface: var(--glass-radius-surface, 1.5rem);
     --ui-corner-shape: squircle;
-    --ui-ink: light-dark(rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.16));
-    --ui-surface-ground: color-mix(in srgb, var(--color-background) 30%, transparent);
-    --ui-surface-image: initial;
 
-    /* The blur moves off the surface onto a layer behind its content (below).
-       A surface with a backdrop filter of its own is a backdrop root, and a layer
-       inside one sees only the surface, never the page behind it. */
-    --ui-backdrop: none;
     --_glass-liquid-blur: blur(2px) saturate(1.8);
 
     /* The lens is its own layer rather than a second function in the blur's
@@ -177,9 +172,9 @@
        the ramp's slope across x and y as the two displacement channels. Every
        length is absolute, so the band is the same width on a tooltip and on a
        page-wide card; no length is a percentage of the box. The blur is wider
-       than the erosion so the ramp's corners round off -- the other way the
-       square core showed through as loops at every corner. A filter cannot read
-       a custom property, so the band and the strength are fixed, not knobs. */
+       than the erosion so the ramp's corners round off -- otherwise the square
+       core shows through as loops at every corner. A filter cannot read a custom
+       property, so the band and the strength are fixed, not knobs. */
     --_glass-liquid-lens: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='lens' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feFlood flood-color='white'/><feMorphology operator='erode' radius='8'/><feGaussianBlur stdDeviation='10' result='ramp'/><feOffset in='ramp' dx='-3' result='l'/><feOffset in='ramp' dx='3' result='r'/><feComposite in='l' in2='r' operator='arithmetic' k2='2' k3='-2' k4='0.5' result='dx'/><feOffset in='ramp' dy='-3' result='u'/><feOffset in='ramp' dy='3' result='d'/><feComposite in='u' in2='d' operator='arithmetic' k2='2' k3='-2' k4='0.5' result='dy'/><feColorMatrix in='dx' values='0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1' result='x'/><feColorMatrix in='dy' values='0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1'/><feComposite in='x' operator='arithmetic' k2='1' k3='1'/><feDisplacementMap in='SourceGraphic' scale='110' xChannelSelector='R' yChannelSelector='G'/></filter></svg>#lens");
 
     /* The rim: light caught on the top-left edge and, fainter, the bottom-right,
@@ -196,9 +191,26 @@
     );
   }
 
+  /* The glass material the modifier changes, where glass is in scope: on the
+     same element, or on a surface inside a glass region. The blur moves off the
+     surface onto a layer behind its content (below): a surface with a backdrop
+     filter of its own is a backdrop root, and a layer inside one sees only the
+     surface, never the page behind it. */
+  .glass.glass-liquid,
+  .glass .glass-liquid {
+    --ui-ink: light-dark(rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.16));
+    --ui-surface-ground: color-mix(in srgb, var(--color-background) 30%, transparent);
+    --ui-surface-image: initial;
+    --ui-backdrop: none;
+  }
+
   @media (prefers-reduced-transparency: reduce) {
-    .glass-liquid {
+    .glass.glass-liquid,
+    .glass .glass-liquid {
       --ui-surface-ground: var(--color-background);
+    }
+
+    .glass-liquid {
       --_glass-liquid-blur: none;
       --_glass-liquid-lens: none;
     }

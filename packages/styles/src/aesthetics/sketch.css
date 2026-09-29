@@ -287,8 +287,8 @@
      takes the control shape below. */
   border-radius: var(--sketch-radius-surface, 80px 4px 75px 5px / 3px 70px 4px 80px);
   /* The aesthetic's neutral depth cue, not the ink: the class casts its 2px
-     offset in the depth colour, and a solo pane cast in full ink read as a
-     heavier, neobrutalist slab. The depth colour is a literal, for the reason
+     offset in the depth colour, and casting a solo pane in full ink would read
+     as a heavier, neobrutalist slab. The depth colour is a literal, for the reason
      `.glass-solo` gives. */
   box-shadow: 2px 2px 0 0 light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55));
   font-family: var(--font-sketch, cursive);

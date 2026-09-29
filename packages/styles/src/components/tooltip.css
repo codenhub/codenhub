@@ -4,19 +4,18 @@
 @reference "../surface.css";
 
 /* The host is a positioning wrapper and nothing else -- it paints no fill, no
-   edge, no material of its own. The bubble is a real element beside the
-   trigger rather than a pseudo-element attached to it, so intent,
-   presentation, aesthetic, and elevation classes go on `.tooltip-bubble`, the
-   thing actually shown, not on the wrapper -- the same rule every other
-   component in this package follows (theming.md: "Intent does not cascade").
+   edge, no material of its own. The bubble is a real element beside the trigger
+   rather than a pseudo-element, so intent, presentation, aesthetic, and
+   elevation classes go on `.tooltip-bubble`, the thing actually shown, not on
+   the wrapper -- the same rule every other component follows (theming.md:
+   "Intent does not cascade").
 
-   Composing the bubble as a real element fixes a real gap, not just a styling
-   one: `content: attr(data-tooltip)` text is not reliably exposed to
-   assistive tech and cannot be the target of an `aria-describedby`, since that
-   needs a real element with a real `id`. A real bubble can carry
-   `role="tooltip"` and be referenced by the trigger's own `aria-describedby`;
-   wiring that association is the consumer's, this package only styles the
-   bubble. See docs/usage/tooltips.md. */
+   A real element is also what makes the tooltip accessible: `content:
+   attr(data-tooltip)` text is not reliably exposed to assistive tech and cannot
+   be the target of an `aria-describedby`, which needs a real element with a
+   real `id`. A real bubble can carry `role="tooltip"` and be referenced by the
+   trigger's own `aria-describedby`; wiring that association is the consumer's,
+   this package only styles the bubble. See docs/usage/tooltips.md. */
 @utility tooltip {
   --tooltip-gap: 0.5rem;
   --tooltip-top: calc(var(--tooltip-gap) * -1);
@@ -52,11 +51,8 @@
 }
 
 /* The bubble. It is a surface, so an aesthetic that blurs surfaces blurs it
-   too, and it rests on a ground of its own, edged, and flat -- depth is
-   opt-in through its own `.raised`/`.floating`, like any other component, now
-   that it is one. No proxy inheritance is needed to carry elevation across a
-   host-to-pseudo-element gap: there is no gap, `.tooltip-bubble.raised` reads
-   `--ui-elevation` the ordinary way every other component does. See
+   too, and it rests on a ground of its own, edged, and flat -- depth is opt-in
+   through its own `.raised`/`.floating`, like any other component. See
    model.md#elevation. */
 @utility tooltip-bubble {
   @apply surface pointer-events-none absolute z-(--z-popover) w-max max-w-72 px-2.5 py-2 text-sm font-normal whitespace-normal opacity-0 transition-[opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease);
@@ -64,12 +60,11 @@
   /* Filled, over a ground of its own. An intent floods the fill
      (`.tooltip-bubble.primary` is the primary colour); with no intent
      `intent.css` resolves the bubble onto `--color-tooltip` and lifts the
-     neutral cap, a plate stated per theme because the derived version was a
-     mid-grey slab in light and lifted in dark. The ground stays the surface
-     tone, not the plate -- pointed at both, the fill axis went inert and
-     `axes.spec.ts` caught it. An opaque ground is also what keeps a cascaded
-     `.ghost` from leaving the bubble boundaryless. `--ui-surface-ground` is
-     read first so a glass tooltip stays glass. */
+     neutral cap. The ground stays the surface tone, not the plate: pointed at
+     both, the fill axis goes inert (`axes.spec.ts` catches it). An opaque
+     ground is also what keeps a cascaded `.ghost` from leaving the bubble
+     boundaryless. `--ui-surface-ground` is read first so a glass tooltip stays
+     glass. */
   --_d-fill: 100%;
   --_d-fg-on-fill: 100%;
   --_d-border: 100%;
@@ -109,14 +104,13 @@
 
 /* Shown on hover or focus anywhere in the host, or pinned open with
    `data-state="open"`. `:focus-within` rather than the trigger's own
-   `:focus-visible`, the same substitution `.input-group` makes for the
-   identical reason: the bubble is a sibling, not a pseudo-element, of the
-   trigger, so nothing but the shared ancestor can see both at once. The cost
-   is the one `.input-group` already accepts -- the bubble also shows on a
-   mouse click, which the old `:focus-visible`-only version did not.
+   `:focus-visible`, the same substitution `.input-group` makes: the bubble is a
+   sibling of the trigger, so only the shared ancestor can see both at once. The
+   cost is the one `.input-group` accepts -- the bubble also shows on a mouse
+   click.
 
-   In `utilities`, where the bubble's own `@utility` is, winning on
-   specificity -- see the seams note in `form.css`. */
+   In `utilities`, where the bubble's own `@utility` is, winning on specificity
+   -- see the seams note in `form.css`. */
 @layer utilities {
   .tooltip:hover .tooltip-bubble,
   .tooltip:focus-within .tooltip-bubble,
@@ -129,14 +123,11 @@
 /* The trigger badge, for a message with no other element to hang it on. Quiet
    -- ghost, edged, on `--intent-subtle`, a key cap's resting shape -- because
    it marks that there is a message, it is not one. The line earns its keep:
-   `--intent-subtle` is a near-page tint that reads the same across families,
-   so a plate alone left three of eight intents indistinguishable;
+   `--intent-subtle` is a near-page tint that reads the same across families, so
+   a plate alone leaves three of eight intents indistinguishable;
    `--intent-border` is the slot that differs.
 
-   `clip-path: none` used to exist to protect the bubble, a pseudo-element of
-   this same host, from being clipped away along with it under an aesthetic
-   like `.pixel`. The bubble is independent now, so that reason is gone, but
-   the declaration stays: the docs call this a circular fixed identity, not a
+   `clip-path: none` stays because this is a circular fixed identity, not a
    shape a container's aesthetic reaches, the same way `.radio` keeps its own
    circle instead of taking `.pixel`'s stepped silhouette. */
 @utility tooltip-icon {

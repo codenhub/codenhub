@@ -22,14 +22,13 @@
   --_d-border: 100%;
 
   /* The public token first, so an aesthetic (glass's translucent ground) or a
-     consumer names the ground outright; then the component's own quiet
-     default, which `.card.soft`, a neutral `.panel`, and a neutral `.alert`
-     write as a private rather than as the public token. Written as the public
-     token, their own declaration beat glass's inherited one in a glass region,
-     and once the aesthetics are layered below the components it beats glass
-     on the same element too -- `.card.soft.glass` went opaque. Restated
-     `initial` here so a quiet ground cannot inherit into a surface nested
-     inside one, the way `box` restates `--_d-ground`. See
+     consumer names the ground outright; then the component's own quiet default,
+     which `.card.soft`, a neutral `.panel`, and a neutral `.alert` write as a
+     private rather than as the public token. Written as the public token, their
+     own declaration would beat glass's inherited one in a glass region, and
+     beat glass on the same element too (`.card.soft.glass` would go opaque).
+     Restated `initial` here so a quiet ground cannot inherit into a surface
+     nested inside one, the way `box` restates `--_d-ground`. See
      docs/internal/model.md#cascade-layers. */
   --_d-surface-ground: initial;
   --_d-ground: var(--ui-surface-ground, var(--_d-surface-ground, var(--color-background)));
