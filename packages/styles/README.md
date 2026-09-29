@@ -42,7 +42,7 @@ For the Tailwind CSS v4 entrypoint, theme selection, the intent/presentation axe
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                       |
 | Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation). |
-| Tailwind CSS  | Version 4 or newer is required only for `/tw` source entrypoints.                                                                                        |
+| Tailwind CSS  | 4.3.2 or newer, below 5, is required only for `/tw` source entrypoints.                                                                                  |
 | Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                          |
 
 ## Notes

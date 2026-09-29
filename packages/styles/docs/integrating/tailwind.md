@@ -61,4 +61,4 @@ Unlike `/tw`, the focused entrypoints and `/tw/native` do not import Tailwind, s
 - **Why:** one of two things. Importing both a compiled entrypoint (`@codenhub/styles`) and a `/tw` entrypoint (`@codenhub/styles/tw`) in the same build compiles the same tokens and reset from two independent sources; Tailwind's build has no way to know they describe the same package. Or your stylesheet imports `tailwindcss` beside `/tw`, which already imports it, so Preflight is emitted twice.
 - **Fix:** pick one path per project — `/tw` entrypoints for a project running Tailwind CSS v4, compiled entrypoints everywhere else — and drop your own `@import "tailwindcss"` when you import `/tw`.
 
-Tailwind CSS 4 or newer is required for every `/tw` entrypoint.
+Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5: the source uses `@source not` and `@source inline()`, which arrived in 4.1, and it is tested against 4.3.2.

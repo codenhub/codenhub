@@ -44,7 +44,7 @@ For the Tailwind CSS v4 entrypoint, theme selection, the intent/presentation axe
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                       |
 | Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation). |
-| Tailwind CSS  | Version 4 or newer is required only for `/tw` source entrypoints.                                                                                        |
+| Tailwind CSS  | 4.3.2 or newer, below 5, is required only for `/tw` source entrypoints.                                                                                  |
 | Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                          |
 
 ## Notes
@@ -218,7 +218,7 @@ What that means in practice:
 - Consumer tooling must resolve package CSS imports.
 - Every shipped stylesheet can be pasted into an HTML `<style>` element, for critical-CSS inlining or a server-rendered head: none contains the `</style` sequence that would end the element early.
 - Chrome 123, Safari 17.5, or Firefox 128 and newer. Color tokens are declared with `light-dark()` and selected by `color-scheme` (Firefox 120), `.input-group` propagates a nested control's invalid and disabled state with `:has()` (Firefox 121), and the elevation multiplier is registered non-inheriting with `@property` (Firefox 128; without it an elevation class would reach the unclassed elements inside it).
-- Tailwind CSS 4 or newer is required only for `/tw` source entrypoints.
+- Tailwind CSS 4.3.2 or newer, below 5, is required only for `/tw` source entrypoints.
 - The package has no JavaScript runtime. Apps must provide semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements; see [Accessibility](docs/accessibility.md).
 
 <!-- Source: docs/concepts.md -->
@@ -1726,7 +1726,7 @@ Unlike `/tw`, the focused entrypoints and `/tw/native` do not import Tailwind, s
 - **Why:** one of two things. Importing both a compiled entrypoint (`@codenhub/styles`) and a `/tw` entrypoint (`@codenhub/styles/tw`) in the same build compiles the same tokens and reset from two independent sources; Tailwind's build has no way to know they describe the same package. Or your stylesheet imports `tailwindcss` beside `/tw`, which already imports it, so Preflight is emitted twice.
 - **Fix:** pick one path per project — `/tw` entrypoints for a project running Tailwind CSS v4, compiled entrypoints everywhere else — and drop your own `@import "tailwindcss"` when you import `/tw`.
 
-Tailwind CSS 4 or newer is required for every `/tw` entrypoint.
+Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5: the source uses `@source not` and `@source inline()`, which arrived in 4.1, and it is tested against 4.3.2.
 
 <!-- Source: docs/integrating/nextjs.md -->
 
@@ -2018,6 +2018,7 @@ A liquid-glass modifier, glass that keeps every presentation's fill whole, and a
 - **Buttons and fields take the surrounding font on every entrypoint.** `<button>` under `/native`, and every `.btn` and text control under `/components`, used the user agent's smaller control font (13.33px), so the same label printed at three sizes across elements and entrypoints. They inherit the page's font now, as they already did on `.`.
 - **A default `.btn` is `--control-height` tall**, 40px, the same as `.ipt` beside it; it was 42px, and 44px under a 2px aesthetic line. Its vertical padding gives back the line width.
 - **`/tw` keeps Tailwind's `2xl` breakpoint.** It redefined `--breakpoint-2xl` as 90rem, which moved every `2xl:` utility in a consumer's own Tailwind build from 96rem. `--breakpoint-xs` (30rem) is still added. Nothing in the package used the override, so the compiled entrypoints are unchanged.
+- **The Tailwind CSS peer range is `>=4.3.2 <5`.** It claimed `>=4.0.0`, but the `/tw` source needs `@source not` and `@source inline()` (Tailwind 4.1) and is tested against 4.3.2. The peer is still optional, and only `/tw` needs it.
 - **Browser floor is Firefox 128.** Non-inheriting elevation relies on `@property`; the documented floor was Firefox 121.
 
 ## Fixed
