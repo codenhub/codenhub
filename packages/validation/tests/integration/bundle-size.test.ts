@@ -16,7 +16,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  * Budgets sit a little above what each scenario measures, so ordinary changes pass and a regression
  * does not. Raise one only on purpose, and say why in the change.
  */
-const distEntry = fileURLToPath(new URL("../../dist/index.js", import.meta.url));
+// Forward slashes, because the path is pasted into source code, where a Windows backslash is an escape.
+const distEntry = fileURLToPath(new URL("../../dist/index.js", import.meta.url)).replaceAll("\\", "/");
 
 interface Scenario {
   name: string;
@@ -171,7 +172,13 @@ const measure = async ({ name, source }: Scenario): Promise<number> => {
     logLevel: "silent",
   });
   const [file] = readdirSync(outDir).filter((candidate) => candidate.endsWith(".js"));
-  return gzipSync(readFileSync(join(outDir, file as string)), { level: 9 }).length;
+  const output = readFileSync(join(outDir, file as string));
+  // A path the bundler cannot resolve is left as an import, and a bundle of one import line is tiny
+  // enough to pass every budget, so make sure the package was actually inlined.
+  if (/\bfrom\s*["']/.test(output.toString())) {
+    throw new Error(`${name} did not bundle the package: an import was left unresolved`);
+  }
+  return gzipSync(output, { level: 9 }).length;
 };
 
 // Each scenario runs a real build, which is quick alone and slower under load or coverage.
