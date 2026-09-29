@@ -119,14 +119,27 @@ body {
 }
 
 /* Glass has nothing to blur on a flat page, so selecting it paints a backdrop
-   behind the preview. Preview scaffolding, not part of the aesthetic. */
-[data-aesthetic="glass"] {
+   behind the preview. Preview scaffolding, not part of the aesthetic. A word
+   match, so the liquid modifier's class list takes it too. */
+[data-aesthetic~="glass"] {
   background-image:
     radial-gradient(circle at 15% 20%, oklch(70% 0.19 15 / 0.55), transparent 45%),
     radial-gradient(circle at 80% 10%, oklch(70% 0.16 250 / 0.55), transparent 45%),
     radial-gradient(circle at 70% 85%, oklch(78% 0.17 95 / 0.55), transparent 45%),
     radial-gradient(circle at 25% 75%, oklch(72% 0.16 150 / 0.5), transparent 45%);
   background-attachment: fixed;
+}
+
+/* A lens bends detail, and soft gradients have none, so the liquid preview lays
+   a faint grid over them. */
+[data-aesthetic~="glass-liquid"] {
+  background-image:
+    repeating-linear-gradient(90deg, oklch(35% 0 0 / 0.35) 0 1px, transparent 1px 28px),
+    repeating-linear-gradient(0deg, oklch(35% 0 0 / 0.35) 0 1px, transparent 1px 28px),
+    radial-gradient(circle at 15% 20%, oklch(70% 0.19 15 / 0.55), transparent 45%),
+    radial-gradient(circle at 80% 10%, oklch(70% 0.16 250 / 0.55), transparent 45%),
+    radial-gradient(circle at 70% 85%, oklch(78% 0.17 95 / 0.55), transparent 45%),
+    radial-gradient(circle at 25% 75%, oklch(72% 0.16 150 / 0.5), transparent 45%);
 }
 
 .playground-aesthetic {

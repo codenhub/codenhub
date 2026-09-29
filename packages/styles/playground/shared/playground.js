@@ -25,6 +25,7 @@ const AESTHETICS = [
   { label: "Default", value: "" },
   { label: "Neobrutalism", value: "neobrutalism" },
   { label: "Glass", value: "glass" },
+  { label: "Liquid glass", value: "glass glass-liquid" },
   { label: "Pixel", value: "pixel" },
   { label: "Chunky tile", value: "chunky-tile" },
   { label: "Cyber", value: "cyber" },
