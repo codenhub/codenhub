@@ -2,6 +2,14 @@ import type { Validator } from "../core/types";
 import { PUBLIC_HOST_PATTERN } from "./patterns";
 import { textFormat } from "./text-format";
 
+/**
+ * Characters the URL parser strips or rewrites instead of rejecting: control characters, spaces and
+ * backslashes. The value is returned as it came, so text holding them would pass as one URL and be
+ * read as another, or carry a line break into a header.
+ */
+// oxlint-disable-next-line no-control-regex
+const UNPARSED_CHARACTER_PATTERN = /[\u0000-\u0020\u007f\\]/;
+
 /** Options for {@link url}. */
 export interface UrlOptions {
   /**
@@ -23,6 +31,10 @@ export interface UrlOptions {
  * without embedded credentials. The value is not modified, and no scheme is guessed for input that
  * lacks one.
  *
+ * @remarks
+ * Text the URL parser would have to clean up is rejected rather than accepted as written:
+ * surrounding or embedded whitespace, control characters such as line breaks, and backslashes.
+ *
  * @example
  * ```ts
  * url()("https://example.com/a?b=1"); // { ok: true, value: "https://example.com/a?b=1" }
@@ -37,7 +49,7 @@ export function url(options: UrlOptions = {}): Validator<string> {
   const protocols = [...(options.protocols ?? ["http", "https"])];
   const allowLocal = options.allowLocal ?? false;
   return textFormat("url", (text) => {
-    if (!URL.canParse(text)) {
+    if (UNPARSED_CHARACTER_PATTERN.test(text) || !URL.canParse(text)) {
       return false;
     }
     const parsed = new URL(text);

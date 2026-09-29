@@ -164,7 +164,7 @@ address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
 
 ### `url`
 
-`url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The options are:
+`url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The value is returned as it came, so text the URL parser would quietly clean up is rejected instead: surrounding or embedded whitespace, control characters such as line breaks, and backslashes. Trim first with `pipe(string({ trim: true }), url())` when the input may have surrounding spaces. The options are:
 
 | Option       | Meaning                                                                                                              |
 | ------------ | -------------------------------------------------------------------------------------------------------------------- |

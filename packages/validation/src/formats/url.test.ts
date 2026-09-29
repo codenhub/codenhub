@@ -13,6 +13,23 @@ describe("url", () => {
     expect(accepts(url(), "example.com", "//example.com", "not a url", "")).toEqual([false, false, false, false]);
   });
 
+  it("should reject text the URL parser would have to clean up, since the value is returned as it came", () => {
+    expect(
+      accepts(
+        url(),
+        " https://example.com",
+        "https://example.com ",
+        "https://exa\nmple.com",
+        "https://example.com/a\r\nLocation: https://evil.com",
+        "https://example.com/\tx",
+        "https://example.com/a b",
+        "https:\\\\example.com\\path",
+        "https://example.com/\u0000",
+      ),
+    ).toEqual(Array(8).fill(false));
+    expect(url({ allowLocal: true })(" http://localhost").ok).toBe(false);
+  });
+
   it("should reject other protocols, embedded credentials and non-public hosts", () => {
     expect(
       accepts(
