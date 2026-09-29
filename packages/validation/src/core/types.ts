@@ -14,6 +14,7 @@ export type ValidationIssueCode =
   | "too_small"
   | "too_big"
   | "unrecognized_key"
+  | "invalid_key"
   | "invalid_union"
   | "custom"
   | (string & {});

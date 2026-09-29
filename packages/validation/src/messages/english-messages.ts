@@ -117,6 +117,7 @@ export const englishMessages: Messages = {
   too_big: describeLimit,
   invalid_format: describeFormat,
   invalid_value: (issue) => (issue.params?.unique === true ? "Must be unique" : describeValue(issue)),
+  invalid_key: "Invalid key",
   unrecognized_key: (issue) => `Unrecognized key "${param(issue, "key")}"`,
   invalid_union: "Does not match any of the allowed types",
 };

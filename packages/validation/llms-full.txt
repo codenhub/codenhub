@@ -496,6 +496,7 @@ The code set is open: a custom validator reports whatever code it likes. These a
 | `too_small`        | Below a minimum: too short, too few items, or too small a number or date.                         | `minimum`, `type`, and `inclusive` or `exact` where they apply.                                                                                                                                      |
 | `too_big`          | Above a maximum.                                                                                  | `maximum`, `type`, and `inclusive` or `exact` where they apply.                                                                                                                                      |
 | `unrecognized_key` | An object has a property its shape does not list, in strict mode.                                 | `key`. The issue's path ends at the key.                                                                                                                                                             |
+| `invalid_key`      | A key of a `record` or `map` failed its key validator.                                            | `issues`: what the key validator found, with paths relative to the key. The issue's path ends at the key, so it is not mistaken for a problem with the value there.                                  |
 | `invalid_union`    | A value matched none of the options of a `union`, or a tagged union got a missing or unknown tag. | For `union`, `issues`: the issues each option found, in order, with paths relative to the union's value. For `discriminatedUnion`, `discriminator` and `options`, and the issue's path is the tag's. |
 | `custom`           | The default code of a `refine` check or `fail` call that names no code.                           | Whatever the reporter set.                                                                                                                                                                           |
 
@@ -868,11 +869,11 @@ const call = tuple([string()], { rest: number() }); // [string, ...number[]]
 
 ### `record`
 
-`record(key, value)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to, whether the key or its value failed, and a bad key still has its value checked. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype.
+`record(key, value)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it is not mistaken for a problem with the value, and a bad key still has its value checked. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype.
 
 ### `set` and `map`
 
-`set(element, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string or a number and its position otherwise. Both take `min`, `max` and `length`.
+`set(element, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string or a number and its position otherwise. A map key that fails is reported as `invalid_key`, as for `record`. Both take `min`, `max` and `length`.
 
 ## Combining validators
 
@@ -1045,7 +1046,7 @@ The coercing validators accept text that holds a value, convert it, and then app
 - Choosing and merging: `union`, `discriminatedUnion`, which takes a record of validators keyed by tag, and `intersection`. `lazy` for recursive data and `json` for text holding JSON.
 - Coercing validators for text input: `coerceString`, `coerceNumber`, `coerceBoolean`, `coerceBigint` and `coerceDate`, taking the options of their strict counterparts.
 - Results that are plain data: `{ ok: true, value }` or `{ ok: false, error: { issues } }`, built with `pass` and `fail`. Bad input never throws.
-- Issues with a stable `code`, a `path` to the offending value and `params` describing the failure. New codes are `unrecognized_key` and `invalid_union`.
+- Issues with a stable `code`, a `path` to the offending value and `params` describing the failure. New codes are `unrecognized_key`, `invalid_key` and `invalid_union`.
 - `formatIssue`, `flatten` and `formatPath` to turn issues into text and group them by field for forms. Text comes from a message map you pass, `englishMessages` for the built-in English or one of your own to reword or localize it, so a program that words its own issues does not bundle the English.
 - `standard(validator, messages)`, which exposes a validator as a Standard Schema v1.
 - `is`, a type guard for synchronous validators, and `Infer` to read the type a validator produces.

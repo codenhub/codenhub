@@ -1,5 +1,5 @@
 import { chain, collect, type Maybe } from "../core/async";
-import { failWith, invalidType, nestIssues, pass } from "../core/result";
+import { failWith, invalidType, nestIssues, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
@@ -8,7 +8,9 @@ import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
  *
  * @remarks
  * A wrong size is reported at once, without validating the entries. An issue's path ends at the
- * entry's key when it is a string or a number, and at its position in iteration order otherwise.
+ * entry's key when it is a string or a number, and at its position in iteration order otherwise. A
+ * key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key
+ * validator found.
  * The output is a new `Map`. It is synchronous when both validators are, and asynchronous otherwise.
  *
  * @example
@@ -52,7 +54,8 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
       settled.forEach(({ keyResult, valueResult }, index) => {
         const segment = segments[index] as string | number;
         if (!keyResult.ok) {
-          issues.push(...nestIssues(keyResult.error.issues, segment));
+          // Wrapped, so a bad key is not mistaken for a bad value at the same path.
+          issues.push(toIssue({ code: "invalid_key", path: [segment], params: { issues: keyResult.error.issues } }));
         }
         if (!valueResult.ok) {
           issues.push(...nestIssues(valueResult.error.issues, segment));
