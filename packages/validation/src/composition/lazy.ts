@@ -32,7 +32,9 @@ let openDepth = 0;
  * Every level of nesting is a level of recursion, and input nested past the stack, or a cyclic
  * object, would throw. `maxDepth` stops that first: a value found more than that many levels down
  * fails with `too_big` and `{ maximum, type: "depth" }` at its own path, so untrusted input can be
- * checked without a size cap tuned to the stack.
+ * checked without a size cap tuned to the stack. The count is of calls on the stack, so it bounds
+ * recursion that happens in one synchronous run, which is where the stack can overflow; a rule that
+ * awaits between levels starts the next from a fresh stack, and is not counted.
  *
  * @example
  * ```ts

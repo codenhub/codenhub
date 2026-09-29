@@ -42,7 +42,7 @@ Everything below exists, works in synchronous and asynchronous form where it com
 - **Consumer types.** The built declarations compile for a consumer under strict settings, and a fixture pins the types that must not compile.
 - **Size budgets.** Each validator family has a bundle scenario with a gzip ceiling, and there is a scenario for the whole package. A single leaf validator stays near 1 kB gzipped, and the whole package stays a small multiple of that.
 - **Determinism.** No validator depends on time, locale, randomness or state left by an earlier call, so the same input gives the same answer.
-- **Failure behavior.** Bad input never throws, however large or deeply nested: `lazy` stops recursion at a depth limit and fails instead. A bad option throws when the validator is created. A consumer's own callback that throws propagates.
+- **Failure behavior.** Bad input of a size the caller has bounded never throws, however it is shaped: `lazy` stops recursion at a depth limit and fails instead, and a parent reports any number of issues. What the package does not promise is a bound on input it is never told to limit: memory and time grow with the size of a flat input and with the issues it produces, which is why the docs ask the caller to cap it. A bad option throws when the validator is created. A consumer's own callback that throws propagates.
 
 ### Documentation
 

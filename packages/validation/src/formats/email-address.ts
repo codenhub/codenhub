@@ -16,7 +16,8 @@ export const isEmailAddress = (text: string, allowPlus: boolean, allowLocal: boo
     extra === undefined &&
     local !== undefined &&
     asciiHost !== undefined &&
-    text.length <= EMAIL_MAX_LENGTH &&
+    // The limit is on the address as it is delivered, where an internationalized host is longer than it is written.
+    local.length + 1 + asciiHost.length <= EMAIL_MAX_LENGTH &&
     local.length <= EMAIL_LOCAL_MAX_LENGTH &&
     EMAIL_LOCAL_PATTERN.test(local) &&
     (allowLocal ? HOSTNAME_PATTERN.test(asciiHost) : isPublicHost(asciiHost)) &&

@@ -17,8 +17,11 @@ const SPECIAL_USE_NAME_PATTERN = /(?:^|\.)(?:localhost|local|internal|test|examp
 export const isPublicHost = (host: string): boolean =>
   DOMAIN_NAME_PATTERN.test(host) && !SPECIAL_USE_NAME_PATTERN.test(host);
 
-/** A label of letters and digits from any script, joined by hyphens and dots: what can be an internationalized host. */
-const UNICODE_HOST_PATTERN = /^[\p{L}\p{N}.-]+$/u;
+/**
+ * Letters, combining marks and digits from any script, joined by hyphens and dots: what can be an
+ * internationalized host. Marks are there because `ü` is also written as `u` and a combining diaeresis.
+ */
+const UNICODE_HOST_PATTERN = /^[\p{L}\p{M}\p{N}.-]+$/u;
 /** Any character past ASCII. */
 const NON_ASCII_PATTERN = /[\u0080-\uffff]/;
 const HOST_MAX_LENGTH = 253;

@@ -21,6 +21,19 @@ describe("email", () => {
     ]);
   });
 
+  it("should accept a domain written with combining marks, as the URL parser reads it", () => {
+    expect(accepts(email(), "ada@münchen.de", "ada@münchen.de")).toEqual([true, true]);
+  });
+
+  it("should measure the address as it is delivered, where an internationalized host is longer", () => {
+    const label = Array.from({ length: 26 }, (_, index) => String.fromCodePoint(0x4e00 + index * 7)).join("");
+    const host = `${label}.${label}.${label}.${label}.com`;
+    const address = `${"a".repeat(64)}@${host}`;
+    expect(address.length).toBeLessThan(254);
+    expect(email()(address).ok).toBe(false);
+    expect(email()(`a@${host}`).ok).toBe(true);
+  });
+
   it("should reject a non-ASCII local part", () => {
     expect(accepts(email(), "ü@example.com", "用户@example.com")).toEqual([false, false]);
   });
