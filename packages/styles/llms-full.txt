@@ -572,36 +572,36 @@ Foundation tokens are not aliases for one color. They define layout, shape, moti
 
 The four `--elevation-*` values below are raw shadows for elements you style yourself. They are a separate thing from `.flat`/`.raised`/`.floating`, which scale a _component's own_ shadow geometry and default to no shadow at all until an aesthetic or one of those classes asks for depth — see [Composing → Elevation](docs/usage/composing.md#elevation) for that system. The two share `none`/`sm`/`md`/`lg` naming for the same weight of depth, but one is a fixed value and the other multiplies shadow parts, so they will not always paint identically.
 
-| Token                      | Purpose                                                                 |
-| -------------------------- | ----------------------------------------------------------------------- |
-| `--font-default`           | Default app font family.                                                |
-| `--container-narrow`       | Narrow content width.                                                   |
-| `--container-max`          | Default content width.                                                  |
-| `--container-wide`         | Wide content width.                                                     |
-| `--layout-gutter`          | Responsive inline page padding.                                         |
-| `--layout-section-block`   | Responsive section vertical padding.                                    |
-| `--layout-gap`             | Shared gap for `.view`, `.stack`, `.cluster`, and `.auto-grid`.         |
-| `--layout-grid-min`        | Minimum column width for `.auto-grid`.                                  |
-| `--radius-small`           | Small radius for compact utility surfaces such as code elements.        |
-| `--radius-control`         | Radius for buttons, inputs, tooltips, and compact UI.                   |
-| `--radius-surface`         | Radius for cards, panels, and alerts.                                   |
-| `--control-height`         | Default minimum height for controls.                                    |
-| `--border-width`           | Default border width.                                                   |
-| `--elevation-color`        | Shadow color the four elevations compose from. Heavier in dark themes.  |
-| `--elevation-none`         | No shadow. Use on an element that should read as flat against its page. |
-| `--elevation-sm`           | A light shadow for your own surface-level elements, such as cards.      |
-| `--elevation-md`           | A shadow for your own raised elements, such as dropdowns and popovers.  |
-| `--elevation-lg`           | A shadow for your own full overlays, such as modal dialogs.             |
-| `--focus-ring`             | Focus-visible ring color.                                               |
-| `--focus-ring-offset`      | Focus-visible outline offset. Negative, so the ring lands on the edge.  |
-| `--focus-ring-width`       | Focus-visible outline/ring width.                                       |
-| `--motion-duration-fast`   | Fast transition for buttons and input interactions (`120ms`).           |
-| `--motion-duration-normal` | Normal transition for layout and modals (`200ms`).                      |
-| `--motion-duration-slow`   | Slow animation for skeleton loaders and progress bars (`400ms`).        |
-| `--motion-ease`            | Default easing curve.                                                   |
-| `--z-popover`              | Popover/tooltip z-index.                                                |
-| `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint.                             |
-| `--breakpoint-2xl`         | Extended large Tailwind responsive breakpoint.                          |
+| Token                      | Purpose                                                                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--font-default`           | Default app font family.                                                                                                                    |
+| `--container-narrow`       | Narrow content width.                                                                                                                       |
+| `--container-max`          | Default content width.                                                                                                                      |
+| `--container-wide`         | Wide content width.                                                                                                                         |
+| `--layout-gutter`          | Responsive inline page padding.                                                                                                             |
+| `--layout-section-block`   | Responsive section vertical padding.                                                                                                        |
+| `--layout-gap`             | Shared gap for `.view`, `.stack`, `.cluster`, and `.auto-grid`.                                                                             |
+| `--layout-grid-min`        | Minimum column width for `.auto-grid`.                                                                                                      |
+| `--radius-small`           | Small radius for compact utility surfaces such as code elements.                                                                            |
+| `--radius-control`         | Radius for buttons, inputs, tooltips, and compact UI.                                                                                       |
+| `--radius-surface`         | Radius for cards, panels, and alerts.                                                                                                       |
+| `--control-height`         | Default minimum height for controls.                                                                                                        |
+| `--border-width`           | Default border width.                                                                                                                       |
+| `--elevation-color`        | Shadow color the four elevations compose from. Heavier in dark themes.                                                                      |
+| `--elevation-none`         | No shadow. Use on an element that should read as flat against its page.                                                                     |
+| `--elevation-sm`           | A light shadow for your own surface-level elements, such as cards.                                                                          |
+| `--elevation-md`           | A shadow for your own raised elements, such as dropdowns and popovers.                                                                      |
+| `--elevation-lg`           | A shadow for your own full overlays, such as modal dialogs.                                                                                 |
+| `--focus-ring`             | Focus-visible ring color.                                                                                                                   |
+| `--focus-ring-offset`      | Focus-visible outline offset. Unset: the negative of the focused element's line width, so the ring lands on the edge under every aesthetic. |
+| `--focus-ring-width`       | Focus-visible outline/ring width.                                                                                                           |
+| `--motion-duration-fast`   | Fast transition for buttons and input interactions (`120ms`).                                                                               |
+| `--motion-duration-normal` | Normal transition for layout and modals (`200ms`).                                                                                          |
+| `--motion-duration-slow`   | Slow animation for skeleton loaders and progress bars (`400ms`).                                                                            |
+| `--motion-ease`            | Default easing curve.                                                                                                                       |
+| `--z-popover`              | Popover/tooltip z-index.                                                                                                                    |
+| `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint.                                                                                                 |
+| `--breakpoint-2xl`         | Extended large Tailwind responsive breakpoint.                                                                                              |
 
 Next: [Customizing](docs/usage/customizing.md) covers presentation and material tokens — how much of an intent shows, and what a component is made of.
 
@@ -790,7 +790,7 @@ Every aesthetic's knobs reach the same way: each knob is _read_ with its default
 
 Knobs and material tokens reach in opposite directions, and telling them apart matters. A knob resolves once at the aesthetic's own class and inherits down already-resolved, so it reaches the aesthetic **from above**: setting it on the element or any ancestor works, but setting it on a _descendant_ of the aesthetic class changes nothing — the value has already been read. `--ui-radius` and the other material tokens above are read fresh by each component as it draws, so they reach **at or below** the element carrying them, which is how you round one card differently from its neighbours without touching the knob at all.
 
-Shipped aesthetics set the shared material tokens above. Every shipped aesthetic sets `--ui-ink` for its neutral line. `.glass` and `.chunky-tile` also set `--ui-control-ink`, so their controls keep a heavier line than their surfaces; the others clear it and their controls take `--ui-ink`. `.glass` sets `--ui-rule-ink` too, so a table's lines read on its plate; the others clear it. Intent classes still override the intent slots on each component.
+Shipped aesthetics set the shared material tokens above. Every shipped aesthetic sets `--ui-ink` for its neutral line. Every shipped aesthetic also sets `--ui-control-ink`: `.glass` and `.chunky-tile` to a line of their own, heavier than their surfaces', and the others to `--color-control-border`, since their ink is the primary colour in both themes. `.glass` sets `--ui-rule-ink` too, so a table's lines read on its plate; the others clear it. Intent classes still override the intent slots on each component.
 
 The same knobs tune each aesthetic's [solo class](docs/usage/aesthetics.md#solo-classes), which reads them on its own element.
 
@@ -874,7 +874,7 @@ Each aesthetic that scales from one number publishes it as a knob — see [Custo
 
 ## Neobrutalism
 
-The shadow is cast in the component's own intent, so a success button throws a green shadow and a destructive card a red one. With no intent, both the outline and the shadow use the ink, which follows the theme rather than the palette.
+The shadow is cast in the component's own intent, so a success button throws a green shadow and a destructive card a red one. With no intent, both the outline and the shadow use the ink, which follows the theme rather than the palette. Fields and toggles are the exception: they draw the theme's control border, as they do with no aesthetic, because the ink is the primary colour in both themes and a resting checkbox drawn in it reads as loudly as a primary one. The same holds under pixel, cyber, and sketch.
 
 `--neo-offset` is the knob: the shadow offset and the distance the press travels are the same number, so scaling the look scales both at once.
 
@@ -911,6 +911,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 - Buttons and an opted-in `.card` press with the plain `scale(0.97)`; reduced motion turns it off.
 - Text controls and toggles draw their line in the page's ink at 55% rather than the white hairline, which would erase an unchecked checkbox on a light page. It is `--ui-control-ink`; set it on the region to choose another.
 - A table's frame and rules draw the page's ink at 20%, because the hairline vanishes on the table's plate. It is `--ui-rule-ink`.
+- A table with a `<caption>` blurs behind the caption as well as its rows in Chromium and Safari, whose table box includes the caption, and under `.glass-liquid` the rim and sheen frame the caption too. Firefox keeps the caption off the pane. Label the table from a heading outside it with `aria-labelledby` where that matters.
 
 ### Liquid glass
 
@@ -946,7 +947,7 @@ The lens is drawn by an SVG filter in `backdrop-filter`, which Chromium renders 
 
 **Exceptions:**
 
-- Corners are one unit or nothing. Chips square instead of stepping — badges, key caps, code, checkboxes, and switches all read `--ui-clip-tight`, which this aesthetic sets to none, because one unit off each corner of a 24px badge is a bite rather than a corner. Tables, progress bars, and skeletons square too, each for its own reason: a table's `overflow: hidden` fights the clip and the corners square off where the two meet, and progress and skeleton never read a clip at all — a squaring aesthetic reaches them through `border-radius` alone. `.pre` is the one exception that steps: it carries no clip override, so it inherits the same polygon a button or a card gets, and with no border by default the cut shows with no ring around it.
+- Corners are one unit or nothing. Chips square instead of stepping — badges, key caps, code, checkboxes, and switches all read `--ui-clip-tight`, which this aesthetic sets to none, because one unit off each corner of a 24px badge is a bite rather than a corner. Tables, progress bars, and skeletons square too, each for its own reason: a table takes no clip, because in Chromium and WebKit its box includes its caption and the clip would cut the caption rather than the rows, and progress and skeleton never read a clip at all — a squaring aesthetic reaches them through `border-radius` alone. `.pre` is the one exception that steps: it carries no clip override, so it inherits the same polygon a button or a card gets, and with no border by default the cut shows with no ring around it.
 - The outline is an inset ring, because a clip removes a real border — and the focus ring, for the same reason, is a second inset layer rather than an outline. Both are the element's own edge rather than a shadow, so the border answers `.edged` and `.edgeless` the way a border does: a `.edgeless` badge and a `.solid` button draw none, a `.edged` card draws one, and a field keeps one whatever a container asks for.
 - The tooltip trigger and `.radio` are hardcoded past the clip rather than reached by it. `.tooltip-icon` forces `clip-path: none` because the docs call it a circular fixed identity, the same reason `.radio` forces it: the circle is the only thing telling it from a checkbox at a glance, and a stepped polygon would square either one.
 - `--font-pixel` is yours to supply. The package ships no font binary, so the aesthetic has no network side effect and falls back to the monospace stack.
@@ -1024,7 +1025,7 @@ A parallelogram slants its sides into the content, so give a surface that takes 
 
 ## Sketch
 
-Hand-drawn outlines: controls take long, uneven elliptical corners, and cards, panels, and alerts take sharper ones that stay clear of their padding. Siblings rotate through four outlines by position, and a field's control takes its field's position, so a row of buttons or a stacked form does not repeat one shape. The rotation is stable for a given DOM order, not random on each render. Every outline is a complete `border-radius`, used as written rather than scaled by the size step or placed by `.cut-diagonal`.
+Hand-drawn outlines: controls take long, uneven elliptical corners, and cards, panels, alerts, and tables take sharper ones that stay clear of their padding. Siblings rotate through four outlines by position, and a field's control takes its field's position, so a row of buttons or a stacked form does not repeat one shape. The rotation is stable for a given DOM order, not random on each render. Every outline is a complete `border-radius`, used as written rather than scaled by the size step or placed by `.cut-diagonal`.
 
 The 1px ink line is solid; checkboxes, dividers, and table rules are dashed. `--ui-line-style: dashed` dashes any other component, and `--ui-rule-style: solid` puts a divider or table back to solid. The 2px hard shadow is a small neutral depth cue.
 
@@ -1566,6 +1567,10 @@ Use `.table-wrap` around `.data-table` when table width may exceed its container
   </table>
 </div>
 ```
+
+A table takes the surface corner, like a card beside it. Nothing clips it: the four corner cells take the corners, so a `<caption>` sits above the table untouched in every engine. A cell that spans rows down into a bottom corner leaves that corner square.
+
+`.table-wrap` scrolls, and a scroll container clips whatever paints outside it. Under an aesthetic that draws a halo -- cyber's glow -- the wrapper pads itself by the halo's reach and pulls itself out by the same amount, so the glow fits inside it and the table stays where it would be. The wrapper then reaches that far past its parent, which only shows when the parent is flush with the viewport. Depth shadows, such as a `.raised` table's, are not given room and are still cut. The wrapper can only make room for a halo it is inside, so put the aesthetic class on `.table-wrap` or an ancestor rather than on a wrapped table alone: `<table class="data-table cyber">` inside a plain wrapper glows, and the wrapper cuts the glow. Leave the wrapper off a table that can never outgrow its container; keep it wherever one can, or a wide table widens the whole page.
 
 ## Surfaces
 

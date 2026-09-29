@@ -80,7 +80,8 @@
         <div class="stack tight">
           <h2 class="text-title">Progress</h2>
           <p class="text-body text-text-secondary">
-            Presentation reaches the track border and its width; the fill always uses the intent color.
+            Presentation tints the track and decides whether it draws a border; the value fill always uses the intent
+            color.
           </p>
         </div>
         <div data-matrix="progress" data-matrix-states="rest" data-testid="progress-matrix"></div>
@@ -119,7 +120,9 @@
       <section class="sect-inn stack loose">
         <div class="stack tight">
           <h2 class="text-title">Skeletons</h2>
-          <p class="text-body text-text-secondary">Presentation changes placeholder fill and edge strength.</p>
+          <p class="text-body text-text-secondary">
+            A skeleton reads intent and no presentation: it is a stand-in for content, not a box.
+          </p>
         </div>
         <div
           data-matrix="skeleton"
@@ -133,7 +136,7 @@
         <div class="stack tight">
           <h2 class="text-title">Loaders</h2>
           <p class="text-body text-text-secondary">
-            Presentation changes the loader tile and artwork. With no intent a loader keeps
+            A loader reads intent and no presentation; its artwork is a mask. With no intent a loader keeps
             <code class="code">currentColor</code>
             , so it matches whatever text surrounds it.
           </p>

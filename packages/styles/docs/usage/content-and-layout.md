@@ -131,6 +131,10 @@ Use `.table-wrap` around `.data-table` when table width may exceed its container
 </div>
 ```
 
+A table takes the surface corner, like a card beside it. Nothing clips it: the four corner cells take the corners, so a `<caption>` sits above the table untouched in every engine. A cell that spans rows down into a bottom corner leaves that corner square.
+
+`.table-wrap` scrolls, and a scroll container clips whatever paints outside it. Under an aesthetic that draws a halo -- cyber's glow -- the wrapper pads itself by the halo's reach and pulls itself out by the same amount, so the glow fits inside it and the table stays where it would be. The wrapper then reaches that far past its parent, which only shows when the parent is flush with the viewport. Depth shadows, such as a `.raised` table's, are not given room and are still cut. The wrapper can only make room for a halo it is inside, so put the aesthetic class on `.table-wrap` or an ancestor rather than on a wrapped table alone: `<table class="data-table cyber">` inside a plain wrapper glows, and the wrapper cuts the glow. Leave the wrapper off a table that can never outgrow its container; keep it wherever one can, or a wide table widens the whole page.
+
 ## Surfaces
 
 | Class          | Purpose                                                                               |

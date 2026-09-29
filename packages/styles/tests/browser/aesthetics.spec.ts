@@ -2404,8 +2404,10 @@ test.describe("aesthetics", () => {
 
 /* A control's boundary is not a pane's edge. Glass's white hairline and chunky
    tile's tile grey stay on surfaces, and a control inside either takes the
-   aesthetic's `--ui-control-ink` instead; every other aesthetic clears it, so a
-   region nested inside glass or chunky tile draws its controls in its own ink.
+   aesthetic's `--ui-control-ink` instead. The ink aesthetics name the theme's
+   control border there: their ink is the primary colour in both themes, and a
+   resting toggle drawn in it read as loudly as a primary one. A region nested
+   inside glass or chunky tile draws its controls in its own control ink.
    Read as the control's own `--intent-border`, the ink its line is drawn from:
    the painted line then walks toward the fill by P3, which is not this test's
    question. */
@@ -2413,6 +2415,10 @@ test.describe("control ink", () => {
   const CASES = [
     { aesthetic: "glass", controlInk: "light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55))" },
     { aesthetic: "chunky-tile", controlInk: "light-dark(var(--color-neutral-600), var(--color-neutral-400))" },
+    { aesthetic: "neobrutalism", controlInk: "var(--color-control-border)" },
+    { aesthetic: "pixel", controlInk: "var(--color-control-border)" },
+    { aesthetic: "cyber", controlInk: "var(--color-control-border)" },
+    { aesthetic: "sketch", controlInk: "var(--color-control-border)" },
   ] as const;
 
   for (const { aesthetic, controlInk } of CASES) {
@@ -2459,7 +2465,7 @@ test.describe("control ink", () => {
             control: inkOf(region.querySelector<HTMLElement>('[data-probe="control"]')!),
             expectedControl: resolve(ink, region),
             nested: inkOf(region.querySelector<HTMLElement>('[data-probe="nested"]')!),
-            nestedInk: resolve("var(--ui-ink)", nested),
+            nestedInk: resolve("var(--color-control-border)", nested),
             surfaceInk: resolve("var(--ui-ink)", region),
           };
 
@@ -2579,4 +2585,77 @@ test.describe("nested aesthetics", () => {
       expect(cards[index], `${inner} in ${outer}: card`).toBe(cards[reference]);
     }
   });
+});
+
+/* Under pixel the edge is an inset ring and the border is zero, and a knob
+   sized from the border alone covered the ring: the track had no visible
+   margin, and an unchecked and a checked switch both read as two halves. The
+   knob sits inside the ring now, the way it sits inside a real border. */
+test("keeps a switch's knob inside an inset-ring edge", async ({ page }) => {
+  await page.goto(withAesthetic(FORMS_URL, "pixel"));
+
+  const read = await page.evaluate(() => {
+    const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+    const probe = document.createElement("input");
+
+    probe.type = "checkbox";
+    probe.className = "switch";
+    host.append(probe);
+
+    const style = getComputedStyle(probe);
+    const knob = getComputedStyle(probe, "::after");
+    const result = {
+      border: Number.parseFloat(style.borderTopWidth),
+      shadow: style.boxShadow,
+      top: Number.parseFloat(knob.top),
+      height: Number.parseFloat(knob.height),
+      track: Number.parseFloat(style.height),
+    };
+
+    probe.remove();
+
+    return result;
+  });
+
+  expect(read.border, "pixel draws no border").toBe(0);
+  /* The ring is two pixels deep (the toggle cap); the knob starts past it. */
+  expect(read.top, `knob offset inside ${read.shadow}`).toBeGreaterThanOrEqual(3);
+  expect(read.top * 2 + read.height, "knob fits the track").toBeCloseTo(read.track, 1);
+});
+
+/* The ring is pulled in by the focused element's own line width, so it lands
+   on the edge. Declared once at `:root` it resolved against the base 1px, and
+   under a 2px aesthetic it covered half the edge and left a stripe of it
+   inside. A consumer's `--focus-ring-offset` still wins. */
+test("pulls the focus ring in by the aesthetic's line width", async ({ page }) => {
+  await page.goto(FORMS_URL);
+
+  const read = await page.evaluate(() => {
+    const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+    const region = document.createElement("div");
+
+    region.innerHTML =
+      '<button class="btn" data-case="plain">a</button>' +
+      '<div class="neobrutalism"><button class="btn" data-case="neo">b</button></div>' +
+      '<div style="--focus-ring-offset: 4px"><button class="btn" data-case="set">c</button></div>';
+    host.append(region);
+
+    const offset = (name: string) => {
+      const button = region.querySelector<HTMLElement>(`[data-case="${name}"]`)!;
+
+      button.focus();
+
+      return { offset: getComputedStyle(button).outlineOffset, visible: button.matches(":focus-visible") };
+    };
+    const result = { plain: offset("plain"), neo: offset("neo"), set: offset("set") };
+
+    region.remove();
+
+    return result;
+  });
+
+  expect(read.neo.visible, "programmatic focus shows the ring").toBe(true);
+  expect(read.plain.offset).toBe("-1px");
+  expect(read.neo.offset).toBe("-2px");
+  expect(read.set.offset).toBe("4px");
 });

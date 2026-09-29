@@ -410,7 +410,7 @@
     --_line-tone: var(--intent-color);
 
     outline: var(--focus-ring-width) solid var(--focus-ring);
-    outline-offset: var(--focus-ring-offset);
+    outline-offset: var(--focus-ring-offset, calc(-1 * var(--ui-border-width, var(--border-width))));
     box-shadow: var(--_focus-stack, var(--_shadow));
   }
 
@@ -610,7 +610,14 @@
   --switch-height: 1.25rem;
   --switch-width: 2.5rem;
   --switch-gap: 1px;
-  --switch-inset: calc(var(--_width) + var(--switch-gap));
+  /* The edge an aesthetic draws as an inset ring rather than as a border
+     (`.pixel`), present only while `--ui-shadow-edge` is declared -- the idiom
+     `box` uses. That ring paints under the knob, so a knob sized from the
+     border alone covered it: under pixel the border is zero, the knob met the
+     edge, and an unchecked and a checked switch both read as two halves. */
+  --_switch-ring: var(--ui-shadow-edge) var(--_ss);
+  --_switch-offset: calc(var(--_switch-ring, 0px) + var(--switch-gap));
+  --switch-inset: calc(var(--_width) + var(--_switch-offset));
   --switch-knob: calc(var(--switch-height) - var(--switch-inset) * 2);
   --switch-travel: calc(var(--switch-width) - var(--switch-inset) * 2 - var(--switch-knob));
 
@@ -647,8 +654,8 @@
     content: "";
     height: var(--switch-knob);
     width: var(--switch-knob);
-    top: var(--switch-gap);
-    inset-inline-start: var(--switch-gap);
+    top: var(--_switch-offset);
+    inset-inline-start: var(--_switch-offset);
   }
 
   &:checked::after {

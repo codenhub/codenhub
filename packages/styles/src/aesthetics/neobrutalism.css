@@ -93,9 +93,12 @@
     --ui-bg-alpha: 1;
     --ui-surface-image: initial;
 
-    /* The control ink glass and chunky tile name, cleared so a region nested
-       inside either draws its controls in this aesthetic's own ink. */
-    --ui-control-ink: initial;
+    /* A control's neutral line is the theme's control border, not this
+       aesthetic's ink: that ink is the primary colour in both themes, so every
+       unchecked toggle and resting field drew its boundary as loudly as a
+       primary one. Named rather than cleared, so a region nested inside glass
+       or chunky tile does not inherit theirs either. */
+    --ui-control-ink: var(--color-control-border);
     --ui-rule-ink: initial;
 
     /* Chunky tile's heavier label, cleared so a region nested inside it keeps

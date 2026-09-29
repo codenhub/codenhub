@@ -129,6 +129,12 @@ test.describe("solo utilities", () => {
     expect(sketch["border-top-width"], "sketch line").toBe("1px");
     expect(sketch["border-top-left-radius"], "sketch uneven corner").toBe("80px 3px");
     expect(sketch["box-shadow"], "sketch offset").toMatch(/\b2px 2px 0px 0px\b/);
+    /* The neutral depth colour, as the aesthetic class casts it, not the opaque
+       ink: in full ink the pane read as a neobrutalist slab. */
+    expect(
+      readSrgb(sketch["box-shadow"]!.match(/^[a-z]+\([^)]*\)/)![0]).alpha,
+      "sketch shadow is the depth colour",
+    ).toBeLessThan(1);
     expect(sketch["font-family"], "sketch font falls back to cursive").toContain("cursive");
   });
 

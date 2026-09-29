@@ -28,7 +28,9 @@
     --ui-corner-shape: round;
 
     --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
-    --ui-control-ink: initial;
+    /* Controls take the theme's control border rather than the ink, which is the
+       primary colour in both themes; see `neobrutalism.css`. */
+    --ui-control-ink: var(--color-control-border);
     --ui-rule-ink: initial;
     --ui-border-width: 1px;
     --ui-border-max: 100px;
@@ -108,7 +110,7 @@
   ) {
     /* The pointed outlines: controls, fields, surfaces, and chips. */
     &:is(.sketch, .sketch *):not(.sketch-rounded, .sketch-rounded *) {
-      &:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table) {
+      &:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble) {
         &:nth-child(4n + 2) {
           --ui-radius: var(--sketch-radius, 18px 240px 15px 255px / 240px 15px 255px 18px);
         }
@@ -140,7 +142,7 @@
         }
       }
 
-      &:is(.card, .panel, .alert) {
+      &:is(.card, .panel, .alert, .data-table) {
         &:nth-child(4n + 2) {
           --ui-radius-surface: var(--sketch-radius-surface, 4px 75px 5px 80px / 75px 3px 80px 4px);
         }
@@ -171,7 +173,7 @@
 
     /* The rounded outlines, in the same four places. */
     &:is(.sketch-rounded, .sketch-rounded *) {
-      &:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble, .data-table) {
+      &:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble) {
         &:nth-child(4n + 2) {
           --ui-radius: var(--sketch-radius-rounded, 11px 25px 12px 24px / 23px 11px 22px 12px);
         }
@@ -203,7 +205,7 @@
         }
       }
 
-      &:is(.card, .panel, .alert) {
+      &:is(.card, .panel, .alert, .data-table) {
         &:nth-child(4n + 2) {
           --ui-radius-surface: var(--sketch-radius-surface-rounded, 17px 36px 18px 34px / 33px 16px 32px 17px);
         }
@@ -284,7 +286,11 @@
   /* The surface shape: the element this exists for is usually a pane. An action
      takes the control shape below. */
   border-radius: var(--sketch-radius-surface, 80px 4px 75px 5px / 3px 70px 4px 80px);
-  box-shadow: 2px 2px 0 0 var(--_sketch-ink);
+  /* The aesthetic's neutral depth cue, not the ink: the class casts its 2px
+     offset in the depth colour, and a solo pane cast in full ink read as a
+     heavier, neobrutalist slab. The depth colour is a literal, for the reason
+     `.glass-solo` gives. */
+  box-shadow: 2px 2px 0 0 light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55));
   font-family: var(--font-sketch, cursive);
 }
 
