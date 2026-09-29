@@ -3,6 +3,8 @@
 Zero-dependency schema validation for TypeScript. Describe the data you expect, ask a schema whether some unknown input satisfies it, and get either the typed value or every reason it does not. Ships common validators for strings, numbers, objects, arrays and unions, and is built to be extended: custom checks, transforms, async rules and localizable messages compose with everything else.
 
 > **Experimental:** the API is still settling before a 1.0. Breaking changes land in minor releases and are listed in the [changelog](docs/changelog/index.md). What is most likely to move: the shape of `params` on built-in issues, the set of string formats, and object helpers such as `partial` and `required`.
+>
+> **Migrating from 0.0.1:** validators are now built first and run later. `val.string(x).min(3)` becomes `val.string().min(3).validate(x)`, and `validate` returns `{ ok, value }` or `{ ok, error }` with every issue instead of the first failure. The 0.0.1 immediate helpers are removed; the [0.1.0 changelog](docs/changelog/0.1.0.md) maps each old call to its replacement.
 
 ## Installation
 

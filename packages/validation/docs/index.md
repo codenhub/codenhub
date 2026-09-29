@@ -97,7 +97,7 @@ Independent properties and array items run their async checks concurrently. Issu
 
 ## Standard Schema
 
-Every schema implements [Standard Schema v1](https://standardschema.dev/) through its `~standard` property, so libraries that accept any Standard Schema (form libraries, API frameworks, routers) can use it without an adapter. The `validate` function there returns a promise only when the schema contains async work.
+Every schema implements [Standard Schema v1](https://standardschema.dev/) through its `~standard` property, so libraries that accept any Standard Schema (form libraries, API frameworks, routers) can use it without an adapter. The `validate` function there returns a promise only when the validation in progress reaches a callback that returns one; otherwise it returns the result directly.
 
 ## Next steps
 

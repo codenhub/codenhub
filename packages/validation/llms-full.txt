@@ -5,6 +5,8 @@
 Zero-dependency schema validation for TypeScript. Describe the data you expect, ask a schema whether some unknown input satisfies it, and get either the typed value or every reason it does not. Ships common validators for strings, numbers, objects, arrays and unions, and is built to be extended: custom checks, transforms, async rules and localizable messages compose with everything else.
 
 > **Experimental:** the API is still settling before a 1.0. Breaking changes land in minor releases and are listed in the [changelog](docs/changelog/index.md). What is most likely to move: the shape of `params` on built-in issues, the set of string formats, and object helpers such as `partial` and `required`.
+>
+> **Migrating from 0.0.1:** validators are now built first and run later. `val.string(x).min(3)` becomes `val.string().min(3).validate(x)`, and `validate` returns `{ ok, value }` or `{ ok, error }` with every issue instead of the first failure. The 0.0.1 immediate helpers are removed; the [0.1.0 changelog](docs/changelog/0.1.0.md) maps each old call to its replacement.
 
 ## Installation
 
@@ -171,7 +173,7 @@ Independent properties and array items run their async checks concurrently. Issu
 
 ## Standard Schema
 
-Every schema implements [Standard Schema v1](https://standardschema.dev/) through its `~standard` property, so libraries that accept any Standard Schema (form libraries, API frameworks, routers) can use it without an adapter. The `validate` function there returns a promise only when the schema contains async work.
+Every schema implements [Standard Schema v1](https://standardschema.dev/) through its `~standard` property, so libraries that accept any Standard Schema (form libraries, API frameworks, routers) can use it without an adapter. The `validate` function there returns a promise only when the validation in progress reaches a callback that returns one; otherwise it returns the result directly.
 
 ## Next steps
 
@@ -188,7 +190,7 @@ Every schema implements [Standard Schema v1](https://standardschema.dev/) throug
 
 Conventions used throughout:
 
-- **Failure code** is the `code` of the issue a rule reports. Every issue also carries `params` with the facts behind it, listed in [Errors and messages](docs/errors.md).
+- **Failure code** is the `code` of the issue a rule reports. Built-in issues carry the facts behind the failure in `params`, listed in [Errors and messages](docs/errors.md); issues from your own rules may omit it.
 - **Messages.** The last argument of a rule is an optional `message`: a string, or a function that builds one from the issue. A rule that takes options puts `message` inside them instead. Type failures accept a message as the factory's only argument, for example `val.string("Enter some text")`.
 - **Limits are checked when you build the schema.** `val.string().min(-1)` throws a `RangeError` immediately instead of failing every input later.
 - **Rules run in the order you chain them** and all of them report, so `val.string().min(5).email()` can produce two issues for one value.
@@ -735,7 +737,7 @@ Issues inside the parsed value are located from its root, so `theme` above repor
 
 - Schemas built from `val`: strings, numbers, bigints, booleans, dates, literals, enums, objects, arrays, tuples, records, sets, maps, unions, discriminated unions, intersections, recursive schemas, instances and JSON strings, all inferring their TypeScript type with `Infer`.
 - `validate`, `parse`, `is`, `validateAsync` and `parseAsync` on every schema, returning a result or throwing a `ValidationError` that carries every issue.
-- `refine`, `check`, `transform`, `pipe`, `and`, `or` and `val.custom` for rules of your own. They keep the validator's concrete type, so `val.object(...).refine(...).extend(...)` works, and any callback may be async.
+- `refine`, `check`, `transform`, `pipe`, `and`, `or` and `val.custom` for rules of your own. `refine` and `check` keep the validator's concrete type, so `val.object(...).refine(...).extend(...)` works; `transform`, `pipe`, `and` and `or` wrap it in a general validator, so add type-specific rules first. Any callback may be async.
 - Structured issues: an open set of `code`s, `path`, and `params` with the facts behind each failure. Every rule takes a message that can be a function of those facts, which is how messages are localized.
 - `ValidationOptions.context`, reaching checks and transforms as `ctx.options.context`, and `abortEarly`.
 - Standard Schema v1 support on every schema.

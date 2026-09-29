@@ -10,7 +10,7 @@ order: 10
 
 Conventions used throughout:
 
-- **Failure code** is the `code` of the issue a rule reports. Every issue also carries `params` with the facts behind it, listed in [Errors and messages](errors.md).
+- **Failure code** is the `code` of the issue a rule reports. Built-in issues carry the facts behind the failure in `params`, listed in [Errors and messages](errors.md); issues from your own rules may omit it.
 - **Messages.** The last argument of a rule is an optional `message`: a string, or a function that builds one from the issue. A rule that takes options puts `message` inside them instead. Type failures accept a message as the factory's only argument, for example `val.string("Enter some text")`.
 - **Limits are checked when you build the schema.** `val.string().min(-1)` throws a `RangeError` immediately instead of failing every input later.
 - **Rules run in the order you chain them** and all of them report, so `val.string().min(5).email()` can produce two issues for one value.
