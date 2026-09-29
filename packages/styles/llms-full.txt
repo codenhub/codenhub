@@ -790,7 +790,7 @@ Every aesthetic's knobs reach the same way: each knob is _read_ with its default
 
 Knobs and material tokens reach in opposite directions, and telling them apart matters. A knob resolves once at the aesthetic's own class and inherits down already-resolved, so it reaches the aesthetic **from above**: setting it on the element or any ancestor works, but setting it on a _descendant_ of the aesthetic class changes nothing — the value has already been read. `--ui-radius` and the other material tokens above are read fresh by each component as it draws, so they reach **at or below** the element carrying them, which is how you round one card differently from its neighbours without touching the knob at all.
 
-Shipped aesthetics set the shared material tokens above. Every shipped aesthetic sets `--ui-ink` for its neutral line. `.glass` and `.chunky-tile` also set `--ui-control-ink`, so their controls keep a heavier line than their surfaces; the others clear it and their controls take `--ui-ink`. `.glass` sets `--ui-rule-ink` too, so a table's lines read on its plate; the others clear it. Intent classes still override the intent slots on each component.
+Shipped aesthetics set the shared material tokens above. Every shipped aesthetic sets `--ui-ink` for its neutral line. Every shipped aesthetic also sets `--ui-control-ink`: `.glass` and `.chunky-tile` to a line of their own, heavier than their surfaces', and the others to `--color-control-border`, since their ink is the primary colour in both themes. `.glass` sets `--ui-rule-ink` too, so a table's lines read on its plate; the others clear it. Intent classes still override the intent slots on each component.
 
 The same knobs tune each aesthetic's [solo class](docs/usage/aesthetics.md#solo-classes), which reads them on its own element.
 
@@ -874,7 +874,7 @@ Each aesthetic that scales from one number publishes it as a knob — see [Custo
 
 ## Neobrutalism
 
-The shadow is cast in the component's own intent, so a success button throws a green shadow and a destructive card a red one. With no intent, both the outline and the shadow use the ink, which follows the theme rather than the palette.
+The shadow is cast in the component's own intent, so a success button throws a green shadow and a destructive card a red one. With no intent, both the outline and the shadow use the ink, which follows the theme rather than the palette. Fields and toggles are the exception: they draw the theme's control border, as they do with no aesthetic, because the ink is the primary colour in both themes and a resting checkbox drawn in it reads as loudly as a primary one. The same holds under pixel, cyber, and sketch.
 
 `--neo-offset` is the knob: the shadow offset and the distance the press travels are the same number, so scaling the look scales both at once.
 

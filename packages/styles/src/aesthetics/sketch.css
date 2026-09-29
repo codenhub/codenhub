@@ -28,7 +28,9 @@
     --ui-corner-shape: round;
 
     --ui-ink: light-dark(var(--color-neutral-950), var(--color-neutral-50));
-    --ui-control-ink: initial;
+    /* Controls take the theme's control border rather than the ink, which is the
+       primary colour in both themes; see `neobrutalism.css`. */
+    --ui-control-ink: var(--color-control-border);
     --ui-rule-ink: initial;
     --ui-border-width: 1px;
     --ui-border-max: 100px;

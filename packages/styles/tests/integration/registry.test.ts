@@ -906,12 +906,13 @@ test("every aesthetic declares or clears the label weight and tracking", async (
   expect(problems).toEqual([]);
 });
 
-/* `--ui-control-ink` is named by the aesthetics whose surface ink does not suit
-   a control's boundary and cleared with `initial` by every other, so a region
-   nested inside glass or chunky tile draws its controls in its own ink. See
-   docs/internal/model.md#presentation. */
+/* `--ui-control-ink` is named by every aesthetic: glass and chunky tile name a
+   line of their own, and the ink aesthetics name the theme's control border,
+   because their ink is the primary colour in both themes. Naming it rather
+   than clearing it is also what keeps a region nested inside glass or chunky
+   tile from inheriting theirs. See docs/internal/model.md#presentation. */
 test("every aesthetic names or clears the control ink", async () => {
-  const named = new Set(["glass", "chunky-tile"]);
+  const named = new Set(["glass", "chunky-tile", "neobrutalism", "pixel", "cyber", "sketch"]);
   const problems: string[] = [];
 
   for (const { name, source } of await aestheticSources()) {

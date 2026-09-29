@@ -2404,8 +2404,10 @@ test.describe("aesthetics", () => {
 
 /* A control's boundary is not a pane's edge. Glass's white hairline and chunky
    tile's tile grey stay on surfaces, and a control inside either takes the
-   aesthetic's `--ui-control-ink` instead; every other aesthetic clears it, so a
-   region nested inside glass or chunky tile draws its controls in its own ink.
+   aesthetic's `--ui-control-ink` instead. The ink aesthetics name the theme's
+   control border there: their ink is the primary colour in both themes, and a
+   resting toggle drawn in it read as loudly as a primary one. A region nested
+   inside glass or chunky tile draws its controls in its own control ink.
    Read as the control's own `--intent-border`, the ink its line is drawn from:
    the painted line then walks toward the fill by P3, which is not this test's
    question. */
@@ -2413,6 +2415,10 @@ test.describe("control ink", () => {
   const CASES = [
     { aesthetic: "glass", controlInk: "light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55))" },
     { aesthetic: "chunky-tile", controlInk: "light-dark(var(--color-neutral-600), var(--color-neutral-400))" },
+    { aesthetic: "neobrutalism", controlInk: "var(--color-control-border)" },
+    { aesthetic: "pixel", controlInk: "var(--color-control-border)" },
+    { aesthetic: "cyber", controlInk: "var(--color-control-border)" },
+    { aesthetic: "sketch", controlInk: "var(--color-control-border)" },
   ] as const;
 
   for (const { aesthetic, controlInk } of CASES) {
@@ -2459,7 +2465,7 @@ test.describe("control ink", () => {
             control: inkOf(region.querySelector<HTMLElement>('[data-probe="control"]')!),
             expectedControl: resolve(ink, region),
             nested: inkOf(region.querySelector<HTMLElement>('[data-probe="nested"]')!),
-            nestedInk: resolve("var(--ui-ink)", nested),
+            nestedInk: resolve("var(--color-control-border)", nested),
             surfaceInk: resolve("var(--ui-ink)", region),
           };
 

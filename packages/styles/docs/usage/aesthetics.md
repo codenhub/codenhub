@@ -45,7 +45,7 @@ Each aesthetic that scales from one number publishes it as a knob — see [Custo
 
 ## Neobrutalism
 
-The shadow is cast in the component's own intent, so a success button throws a green shadow and a destructive card a red one. With no intent, both the outline and the shadow use the ink, which follows the theme rather than the palette.
+The shadow is cast in the component's own intent, so a success button throws a green shadow and a destructive card a red one. With no intent, both the outline and the shadow use the ink, which follows the theme rather than the palette. Fields and toggles are the exception: they draw the theme's control border, as they do with no aesthetic, because the ink is the primary colour in both themes and a resting checkbox drawn in it reads as loudly as a primary one. The same holds under pixel, cyber, and sketch.
 
 `--neo-offset` is the knob: the shadow offset and the distance the press travels are the same number, so scaling the look scales both at once.
 
