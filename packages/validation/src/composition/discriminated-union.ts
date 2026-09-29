@@ -1,5 +1,5 @@
 import { chain, type Maybe } from "../core/async";
-import { isPlainObject } from "../core/objects";
+import { isPlainObject, setOwn } from "../core/objects";
 import { failWith, invalidType, nestIssues, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
 
@@ -25,9 +25,9 @@ export type InferDiscriminated<TKey extends string, TVariants extends Variants> 
  * instead of a list of everything that did not match.
  *
  * @remarks
- * The input's tag must be one of the keys of `variants`, and the variant validates the whole input.
- * The variant does not need to list the tag property: it is added back to the output, so the result
- * is a proper tagged union. A missing, unknown or non-string tag fails with `invalid_union`, at the
+ * The input's tag must be one of the keys of `variants`, and the variant validates the rest of the
+ * input, without the tag. The variant does not list the tag property, so a strict object works as a
+ * variant: the tag is added back to the output, so the result is a proper tagged union. A missing, unknown or non-string tag fails with `invalid_union`, at the
  * tag's path, with `params: { discriminator, options }` listing the accepted tags. It is synchronous
  * when every variant is, and asynchronous otherwise.
  *
@@ -65,7 +65,13 @@ export function discriminatedUnion<const TKey extends string, const TVariants ex
         nestIssues([toIssue({ code: "invalid_union", params: { discriminator: key, options: tags } })], key),
       );
     }
-    return chain((variants[tag] as AnyValidator)(input), (result) =>
+    const rest = {};
+    for (const name of Object.keys(input)) {
+      if (name !== key) {
+        setOwn(rest, name, input[name]);
+      }
+    }
+    return chain((variants[tag] as AnyValidator)(rest), (result) =>
       result.ok ? pass({ [key]: tag, ...(result.value as object) }) : result,
     );
   };

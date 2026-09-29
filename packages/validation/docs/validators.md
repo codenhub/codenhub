@@ -325,7 +325,7 @@ const id = union([string({ min: 1 }), number({ int: true })]);
 
 ### `discriminatedUnion`
 
-`discriminatedUnion(key, variants)` is for objects that share a tag property and differ in the rest, such as events with a `type`. It takes the name of the tag property and a record with a validator for each tag value. The input's tag chooses the variant, the variant validates the whole input, and a failure reports that variant's own issues instead of a list of everything that did not match.
+`discriminatedUnion(key, variants)` is for objects that share a tag property and differ in the rest, such as events with a `type`. It takes the name of the tag property and a record with a validator for each tag value. The input's tag chooses the variant, the variant validates the rest of the input, and a failure reports that variant's own issues instead of a list of everything that did not match.
 
 ```ts
 import { discriminatedUnion, number, object, string, type Infer } from "@codenhub/validation";
@@ -341,7 +341,7 @@ type Event = Infer<typeof event>;
 event({ type: "key", key: "a" }); // { ok: true, value: { type: "key", key: "a" } }
 ```
 
-A variant does not list the tag property itself: the tag is added back to the output, so the result is a proper tagged union and checking `event.type` narrows the type. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. Each variant must produce an object.
+A variant does not list the tag property itself, and does not see it, so a strict `object` works as a variant: the tag is added back to the output, so the result is a proper tagged union and checking `event.type` narrows the type. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. Each variant must produce an object.
 
 ### `intersection`
 

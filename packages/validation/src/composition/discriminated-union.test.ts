@@ -61,6 +61,21 @@ describe("discriminatedUnion", () => {
     expect(valueOf(passthrough({ type: "a", extra: 1 }))).toEqual({ type: "a", extra: 1 });
   });
 
+  it("should let a strict object be a variant, since the variant does not see the tag", () => {
+    const strict = discriminatedUnion("type", { a: object({ x: number() }, { unknownKeys: "strict" }) });
+    expect(valueOf(strict({ type: "a", x: 1 }))).toEqual({ type: "a", x: 1 });
+    expect(issuesOf(strict({ type: "a", x: 1, y: 2 })).map((issue) => [issue.code, issue.path])).toEqual([
+      ["unrecognized_key", ["y"]],
+    ]);
+  });
+
+  it("should not pass the input's own __proto__ key on as a prototype", () => {
+    const passthrough = discriminatedUnion("type", { a: object({}, { unknownKeys: "passthrough" }) });
+    const value = valueOf(passthrough(JSON.parse('{"type":"a","__proto__":{"admin":true}}')));
+    expect(Object.getPrototypeOf(value)).toBe(Object.prototype);
+    expect((value as { admin?: boolean }).admin).toBeUndefined();
+  });
+
   it("should never put the input in an issue", () => {
     expect(JSON.stringify(issuesOf(event({ type: "hunter2" })))).not.toContain("hunter2");
   });
