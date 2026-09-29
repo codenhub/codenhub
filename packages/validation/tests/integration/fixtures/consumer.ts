@@ -173,6 +173,13 @@ export const lengthValue: Infer<typeof length> = 3;
 export const loaded = transform(string(), async (id) => ({ id }));
 // @ts-expect-error a transform that returns a promise is asynchronous
 export const notSyncLoaded: Validator<{ id: string }> = loaded;
+declare const sometimesLater: (id: string) => number | Promise<number>;
+export const maybeLoaded = transform(string(), sometimesLater);
+export const maybeLoadedValue: Infer<typeof maybeLoaded> = 1;
+// @ts-expect-error the value is what the promise settles to
+export const maybeLoadedPromise: Infer<typeof maybeLoaded> = Promise.resolve(1);
+// @ts-expect-error a transform that may return a promise must be awaited
+export const maybeLoadedOk = maybeLoaded("a").ok;
 export const updates = object(partial({ name: string(), email: email() }));
 export const updateValue: Infer<typeof updates> = {};
 
