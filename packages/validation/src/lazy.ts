@@ -1,73 +1,51 @@
-import { BaseValidator, type ValidationContext, type Validator } from "./core";
-import { type ValidationResult } from "./result";
+import { type MaybePromise } from "./async";
+import { execute, Validator } from "./core";
+import { type Outcome, type ParseContext } from "./internal";
 
 /**
- * Schema validator that defers schema resolution until validation time.
+ * Validator that builds its schema on first use, so a schema can refer to itself. Created by {@link lazy}.
  *
- * Enables validation of recursive or self-referential data structures, such
- * as nested trees or comments with sub-comments.
- *
- * @typeParam TOutput - Output type produced by the deferred schema.
- * @typeParam TInput - Input type accepted by the deferred schema.
+ * @typeParam TOutput - Type the resolved validator produces.
  */
-export class LazyValidator<TOutput, TInput = unknown> extends BaseValidator<TOutput, TInput> {
-  private resolved?: Validator<TOutput, TInput>;
-  private isEvaluatingAsync = false;
+export class LazyValidator<TOutput> extends Validator<TOutput> {
+  private resolved?: Validator<TOutput>;
 
   /**
-   * Constructs a LazyValidator with a schema getter function.
+   * Creates a lazy validator.
    *
-   * @param getter - Function returning the target schema validator when called.
+   * @param getter - Returns the validator. Called once, on the first validation.
    */
-  constructor(private readonly getter: () => Validator<TOutput, TInput>) {
+  constructor(private readonly getter: () => Validator<TOutput>) {
     super();
   }
 
-  /**
-   * Resolves and caches the underlying schema validator.
-   */
-  get schema(): Validator<TOutput, TInput> {
-    if (this.resolved === undefined) {
-      this.resolved = this.getter();
-    }
-    return this.resolved;
+  /** The resolved validator. */
+  get schema(): Validator<TOutput> {
+    return (this.resolved ??= this.getter());
   }
 
-  protected override isAsync(): boolean {
-    if (this.isEvaluatingAsync) {
-      return false;
-    }
-    this.isEvaluatingAsync = true;
-    try {
-      const s = this.schema;
-      return s instanceof BaseValidator ? (s as unknown as { isAsync(): boolean }).isAsync() : false;
-    } finally {
-      this.isEvaluatingAsync = false;
-    }
-  }
-
-  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<TOutput> {
-    return (this.schema as Validator<TOutput, unknown>).validate(input as TInput, {
-      ...ctx.options,
-      path: ctx.path,
-    });
-  }
-
-  protected override async _validateAsync(input: unknown, ctx: ValidationContext): Promise<ValidationResult<TOutput>> {
-    return (this.schema as Validator<TOutput, unknown>).validateAsync(input as TInput, {
-      ...ctx.options,
-      path: ctx.path,
-    });
+  protected evaluate(input: unknown, ctx: ParseContext): MaybePromise<Outcome<TOutput>> {
+    return execute(this.schema, input, ctx);
   }
 }
 
 /**
- * Creates a schema validator that defers resolution until validation time.
+ * Creates a validator that resolves its schema on first use, which lets a schema refer to itself.
  *
- * @typeParam T - Type produced by the resolved schema validator.
- * @param getter - Function returning the schema validator.
- * @returns A new LazyValidator instance.
+ * TypeScript cannot infer a type that refers to itself, so annotate the variable.
+ *
+ * @example
+ * ```ts
+ * interface Category { name: string; children: Category[] }
+ * const category: Validator<Category> = val.lazy(() =>
+ *   val.object({ name: val.string(), children: val.array(category) }),
+ * );
+ * ```
+ *
+ * @typeParam TOutput - Type the resolved validator produces.
+ * @param getter - Returns the validator. Called once, on the first validation.
+ * @returns A lazy validator.
  */
-export function lazy<T>(getter: () => Validator<T>): LazyValidator<T> {
+export function lazy<TOutput>(getter: () => Validator<TOutput>): LazyValidator<TOutput> {
   return new LazyValidator(getter);
 }

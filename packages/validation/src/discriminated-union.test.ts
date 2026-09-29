@@ -1,122 +1,82 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { type Infer, type ValidationErr, type Validator, val } from ".";
+import { val, type Infer } from "./index";
+import { codesOf, issuesOf, messagesOf, pathsOf, valueOf } from "./test-utils";
 
-describe("DiscriminatedUnionValidator", () => {
-  const circleSchema = val.object({
-    kind: val.literal("circle"),
-    radius: val.number().min(0),
+const event = val.discriminatedUnion("type", [
+  val.object({ type: val.literal("click"), x: val.number(), y: val.number() }),
+  val.object({ type: val.literal("key"), key: val.string() }),
+]);
+
+describe("discriminatedUnion", () => {
+  it("validates against the variant the discriminator names", () => {
+    expect(valueOf(event.validate({ type: "click", x: 1, y: 2 }))).toEqual({ type: "click", x: 1, y: 2 });
+    expect(valueOf(event.validate({ type: "key", key: "a" }))).toEqual({ type: "key", key: "a" });
   });
 
-  const squareSchema = val.object({
-    kind: val.literal("square"),
-    size: val.number().min(0),
+  it("infers a union of the variants", () => {
+    expectTypeOf<Infer<typeof event>>().toEqualTypeOf<
+      { type: "click"; x: number; y: number } | { type: "key"; key: string }
+    >();
   });
 
-  const shapeSchema = val.discriminatedUnion("kind", [circleSchema, squareSchema]);
-
-  it("validates valid variants correctly", () => {
-    const circle = shapeSchema.validate({ kind: "circle", radius: 10 });
-    expect(circle).toEqual({
-      ok: true,
-      value: { kind: "circle", radius: 10 },
-    });
-
-    const square = shapeSchema.validate({ kind: "square", size: 5 });
-    expect(square).toEqual({
-      ok: true,
-      value: { kind: "square", size: 5 },
-    });
+  it("reports only the chosen variant's issues", () => {
+    expect(pathsOf(event.validate({ type: "click", x: "a", y: "b" }))).toEqual([["x"], ["y"]]);
   });
 
-  it("rejects non-object inputs", () => {
-    const res = shapeSchema.validate("not an object") as ValidationErr;
-    expect(res.ok).toBe(false);
-    expect(res.error.code).toBe("invalid_type");
+  it("reports an unknown or missing discriminator at its own path, listing the options", () => {
+    const [unknownTag] = issuesOf(event.validate({ type: "scroll" }));
+    expect(unknownTag).toMatchObject({ code: "invalid_union", path: ["type"], params: { options: ["click", "key"] } });
+    expect(messagesOf(event.validate({ type: "scroll" }))).toEqual(['Invalid "type": expected one of "click", "key"']);
+    expect(pathsOf(event.validate({}))).toEqual([["type"]]);
   });
 
-  it("fails with clear error at discriminator path when discriminator is invalid or missing", () => {
-    const missing = shapeSchema.validate({ radius: 10 }) as ValidationErr;
-    expect(missing.ok).toBe(false);
-    expect(missing.error.code).toBe("invalid_value");
-    expect(missing.error.path).toEqual(["kind"]);
-    expect(missing.error.message).toContain('Invalid discriminator value for "kind"');
-
-    const unknownKind = shapeSchema.validate({ kind: "triangle", side: 3 }) as ValidationErr;
-    expect(unknownKind.ok).toBe(false);
-    expect(unknownKind.error.code).toBe("invalid_value");
-    expect(unknownKind.error.path).toEqual(["kind"]);
+  it("names bigint tags in the message instead of throwing", () => {
+    const schema = val.discriminatedUnion("id", [
+      val.object({ id: val.literal(1n) }),
+      val.object({ id: val.literal(2n) }),
+    ]);
+    expect(messagesOf(schema.validate({ id: 3n }))).toEqual(['Invalid "id": expected one of 1n, 2n']);
   });
 
-  it("validates fields according to matched variant", () => {
-    const invalidCircle = shapeSchema.validate({ kind: "circle", radius: -5 }) as ValidationErr;
-    expect(invalidCircle.ok).toBe(false);
-    expect(invalidCircle.error.path).toEqual(["radius"]);
-    expect(invalidCircle.error.code).toBe("too_small");
+  it("does not read the discriminator from the prototype", () => {
+    expect(event.validate(Object.create({ type: "key" })).ok).toBe(false);
   });
 
-  it("supports asynchronous validation with async field schemas", async () => {
-    const asyncCircle = val.object({
-      kind: val.literal("circle"),
-      radius: val.number().refineAsync(async (r) => r > 0, "Must be positive"),
-    });
-    const asyncSchema = val.discriminatedUnion("kind", [asyncCircle, squareSchema]);
-
-    const res = await asyncSchema.validateAsync({ kind: "circle", radius: 10 });
-    expect(res).toEqual({
-      ok: true,
-      value: { kind: "circle", radius: 10 },
-    });
-
-    const invalid = (await asyncSchema.validateAsync({ kind: "circle", radius: -1 })) as ValidationErr;
-    expect(invalid.ok).toBe(false);
-    expect(invalid.error.path).toEqual(["radius"]);
-    expect(invalid.error.message).toBe("Must be positive");
+  it("rejects non-objects", () => {
+    expect(messagesOf(event.validate(null))).toEqual(["Expected object, received null"]);
   });
 
-  it("throws error when variant does not define a literal validator on discriminator key", () => {
-    const invalidVariant = val.object({
-      type: val.string(),
-      val: val.number(),
-    });
-
-    expect(() => {
-      val.discriminatedUnion("type", [invalidVariant]);
-    }).toThrow("Discriminated union variant does not define a literal validator");
-
-    // Also throws when discriminator has a 'value' property but is not a LiteralValidator
-    const pseudoLiteralVariant = val.object({
-      type: { value: "circle", validate: () => ({ ok: true, value: "circle" }) } as unknown as Validator<unknown>,
-    });
-    expect(() => {
-      val.discriminatedUnion("type", [pseudoLiteralVariant]);
-    }).toThrow("Discriminated union variant does not define a literal validator");
+  it("supports enum discriminators that cover several values", () => {
+    const schema = val.discriminatedUnion("kind", [
+      val.object({ kind: val.enum(["a", "b"]), shared: val.string() }),
+      val.object({ kind: val.literal("c"), own: val.number() }),
+    ]);
+    expect(schema.validate({ kind: "b", shared: "x" }).ok).toBe(true);
+    expect(schema.validate({ kind: "c", own: 1 }).ok).toBe(true);
   });
 
-  it("throws error when duplicate discriminator values exist across variants", () => {
-    const variant1 = val.object({
-      kind: val.literal("item"),
-      name: val.string(),
-    });
-    const variant2 = val.object({
-      kind: val.literal("item"),
-      description: val.string(),
-    });
-
-    expect(() => {
-      val.discriminatedUnion("kind", [variant1, variant2]);
-    }).toThrow('Duplicate discriminator value "item" across variants');
+  it("keeps variant rules", () => {
+    const schema = val.discriminatedUnion("t", [
+      val.object({ t: val.literal("a"), n: val.number() }).refine((value) => value.n > 0, "positive"),
+    ]);
+    expect(codesOf(schema.validate({ t: "a", n: 0 }))).toEqual(["custom"]);
   });
 
-  it("provides variants getter", () => {
-    expect(shapeSchema.variants).toEqual([circleSchema, squareSchema]);
+  it("uses a custom message when no variant matches", () => {
+    const schema = val.discriminatedUnion("t", [val.object({ t: val.literal("a") })], "unknown t");
+    expect(messagesOf(schema.validate({ t: "z" }))).toEqual(["unknown t"]);
   });
 
-  it("infers union output type correctly", () => {
-    type Shape = Infer<typeof shapeSchema>;
-    const shape1: Shape = { kind: "circle", radius: 10 };
-    const shape2: Shape = { kind: "square", size: 5 };
-    expect(shape1.kind).toBe("circle");
-    expect(shape2.kind).toBe("square");
+  it("refuses variants that cannot be told apart when the schema is built", () => {
+    expect(() =>
+      val.discriminatedUnion("t", [val.object({ t: val.literal("a") }), val.object({ t: val.literal("a") })]),
+    ).toThrow(/same "t" value/);
+    expect(() => val.discriminatedUnion("t", [val.object({ t: val.string() }) as never])).toThrow(/val\.literal\(\)/);
+    expect(() => val.discriminatedUnion("t", [val.object({ other: val.literal("a") }) as never])).toThrow(TypeError);
+  });
+
+  it("lists its tags", () => {
+    expect(event.tags).toEqual(["click", "key"]);
   });
 });

@@ -26,7 +26,7 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 - `packages/theme`: Zero-dependency browser theme preference helper for TypeScript apps.
 - `packages/toaster`: Instance-based browser toast and native dialog manager with accessible semantic, loading, and custom notifications.
 - `packages/ui-kit`: Browser UI utilities for feedback, internationalization, themes, toasts, and global styles.
-- `packages/validation`: Zero-dependency validation and primitive coercion helpers for TypeScript apps.
+- `packages/validation`: Zero-dependency schema validation for TypeScript: typed, composable, and extensible with custom checks, async rules and localizable messages.
 
 ### Tooling
 

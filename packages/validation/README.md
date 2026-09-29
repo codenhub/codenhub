@@ -1,8 +1,10 @@
 # @codenhub/validation
 
-Zero-dependency declarative schema validation and primitive coercion helpers for TypeScript application boundaries. Version 0.1.0 is a pure declarative schema builder designed with zero legacy baggage.
+Zero-dependency schema validation for TypeScript. Describe the data you expect, ask a schema whether some unknown input satisfies it, and get either the typed value or every reason it does not. Ships common validators for strings, numbers, objects, arrays and unions, and is built to be extended: custom checks, transforms, async rules and localizable messages compose with everything else.
 
-> **Experimental:** Validator coverage, normalization rules, error details, and the public API may change before a stable release.
+> **Experimental:** the API is still settling before a 1.0. Breaking changes land in minor releases and are listed in the [changelog](docs/changelog/index.md). What is most likely to move: the shape of `params` on built-in issues, the set of string formats, and object helpers such as `partial` and `required`.
+>
+> **Migrating from 0.0.1:** validators are now built first and run later. `val.string(x).min(3)` becomes `val.string().min(3).validate(x)`, and `validate` returns `{ ok, value }` or `{ ok, error }` with every issue instead of the first failure. The 0.0.1 immediate helpers are removed; the [0.1.0 changelog](docs/changelog/0.1.0.md) maps each old call to its replacement.
 
 ## Installation
 
@@ -12,111 +14,62 @@ pnpm add @codenhub/validation
 
 ## Usage
 
-Define declarative schemas and validate unknown boundary data returning discriminated results without throwing:
-
 ```ts
 import { val, type Infer } from "@codenhub/validation";
 
-const userSchema = val.object({
-  name: val.string().min(2),
+const user = val.object({
+  name: val.string().trim().min(2),
   email: val.string().email(),
   role: val.enum(["admin", "user"]).default("user"),
   age: val.number().int().min(18).optional(),
 });
 
-export type User = Infer<typeof userSchema>;
+type User = Infer<typeof user>;
 
-const result = userSchema.validate(data);
+const result = user.validate(unknownInput);
 
 if (result.ok) {
-  console.log("Valid user:", result.value);
+  result.value; // User
 } else {
-  console.error("Validation failed:", result.error.message, result.error.issues);
+  result.error.issues; // every problem, each with a code, a path and a message
 }
 ```
 
-## Features
+`validate` never throws for invalid input. Use `parse` when you would rather throw a `ValidationError`, and `validateAsync` or `parseAsync` when a schema has async checks.
 
-### Schemas and Discriminated Unions
-
-Construct typed primitives, objects, arrays, records, tuples, and indexed discriminated unions:
+Add your own rules to any schema:
 
 ```ts
-const eventSchema = val.discriminatedUnion("type", [
-  val.object({
-    type: val.literal("click"),
-    coordinates: val.tuple([val.number(), val.number()]),
-  }),
-  val.object({
-    type: val.literal("keypress"),
-    key: val.string().nonEmpty(),
-  }),
-]);
-```
+const signup = val.object({ password: val.string().min(8), confirm: val.string() }).refine((data) => data.password === data.confirm, { message: "Passwords must match", path: ["confirm"] });
 
-### Coercion Chaining
-
-Convert raw string or boundary inputs into typed, validated values using chainable coercers:
-
-```ts
-const portSchema = val.coerce.number().int().min(1).max(65535);
-const activeSchema = val.coerce.boolean().default(false);
-```
-
-### Customization and Async Validation
-
-Extend validation with `.check()`, `.superRefine()`, `val.custom()`, or asynchronous validations:
-
-```ts
-const userAvailabilitySchema = val.string().refineAsync(async (username) => await checkUsernameAvailability(username), "Username is already taken");
-
-const complexCheck = val.object({ password: val.string(), confirm: val.string() }).check((data, ctx) => {
-  if (data.password !== data.confirm) {
-    ctx.addIssue({
-      code: "custom",
-      message: "Passwords must match",
-      path: ["confirm"],
-    });
-  }
-});
-```
-
-### Standard Schema & Ergonomics
-
-All schemas implement the [Standard Schema v1](https://standardschema.dev/) specification (`~standard`) for seamless compatibility with ecosystem tools:
-
-```ts
-import { assert, flatten, is, parse, parseAsync, validate } from "@codenhub/validation";
-
-// Throwing parse or assertion
-const user = parse(rawData, userSchema);
-assert(rawData, userSchema);
-
-// Standalone result validation and flattening
-const res = validate(rawData, userSchema);
-if (!res.ok) {
-  const { formErrors, fieldErrors } = flatten(res);
-}
+const username = val.string().refine(async (name) => !(await isTaken(name)), "Username is taken");
 ```
 
 ## Documentation
 
 - [Documentation overview](docs/index.md)
-- [Results and coercion](docs/results-and-coercion.md)
 - [Validator reference](docs/validators.md)
+- [Customization](docs/customization.md)
+- [Errors and messages](docs/errors.md)
+- [Coercion](docs/coercion.md)
+- [Changelog](docs/changelog/index.md)
 
 ## Requirements
 
+- Node.js 22 or newer, or a current browser, worker or edge runtime. The code relies on `Object.hasOwn` and `URL.canParse`.
 - ESM-aware package resolution.
-- Browser, Node.js, and SSR runtimes are supported.
 - No runtime dependencies.
+
+Runtime code does not touch browser or Node.js globals, so it runs in the browser, on the server and in workers.
 
 ## Notes
 
-- `includeInput` defaults to `false`; enable it only when retaining input is safe.
-- Object and array validation defaults to `abortEarly: false`, aggregating all field and element errors into `error.issues`.
-- URL and email validators intentionally accept public host shapes only.
-- Validation failures do not throw by default when using `.validate()` or `val.validate()`; use `.parse()`, `val.parse()`, or `val.assert()` when an exception is preferred.
+- Every schema implements [Standard Schema v1](https://standardschema.dev/), so form and API libraries that accept one can take it directly.
+- Validation is synchronous until a `refine`, `check` or `transform` callback returns a promise. The sync methods then throw and tell you to use the async ones, instead of guessing.
+- Issues never contain the input unless you pass `includeInput: true`, and messages name types (`Expected number, received string`) instead of echoing values.
+- Rules never rewrite the value. `trim()`, `toLowerCase()`, `toUpperCase()`, `clamp()`, `transform()` and `default()` are the explicit ways to change it.
+- `email()` and `url()` accept public host names only by default; `url({ allowLocal: true })` opens up `localhost` and IP addresses.
+- Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input.
 
 ## License
 

@@ -1,142 +1,46 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { type ValidationErr, type ValidationOk, val } from ".";
+import { val, type Infer } from "./index";
+import { codesOf, issuesOf, messagesOf, pathsOf, valueOf } from "./test-utils";
 
-describe("RecordValidator", () => {
-  it("validates records with valid values", () => {
-    const schema = val.record(val.number().min(0));
-    const result = schema.validate({
-      apples: 5,
-      oranges: 10,
-    });
+describe("record", () => {
+  const scores = val.record(val.string(), val.number());
 
-    expect(result).toEqual({
-      ok: true,
-      value: { apples: 5, oranges: 10 },
-    });
+  it("validates every value", () => {
+    expect(valueOf(scores.validate({ a: 1, b: 2 }))).toEqual({ a: 1, b: 2 });
+    expect(pathsOf(scores.validate({ a: 1, b: "x", c: "y" }))).toEqual([["b"], ["c"]]);
+    expectTypeOf<Infer<typeof scores>>().toEqualTypeOf<Record<string, number>>();
   });
 
-  it("validates records with valid keys and values", () => {
-    const schema = val.record(val.number(), val.string().min(3));
-    const result = schema.validate({
-      app: 1,
-      api: 2,
-    });
-
-    expect(result).toEqual({
-      ok: true,
-      value: { app: 1, api: 2 },
-    });
+  it("validates every key, locating the issue at the entry", () => {
+    const schema = val.record(val.string().min(2), val.number());
+    const result = schema.validate({ a: 1, bb: 2 });
+    expect(pathsOf(result)).toEqual([["a"]]);
+    expect(codesOf(result)).toEqual(["too_small"]);
   });
 
-  it("rejects non-plain objects", () => {
-    const schema = val.record(val.string());
-    expect(schema.validate(null)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_type",
-        message: "Expected object, got null",
-        path: [],
-        expected: "plain object",
-        received: "null",
-      },
-    });
-
-    expect(schema.validate([1, 2])).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_type",
-        message: "Expected object, got array",
-        path: [],
-        expected: "plain object",
-        received: "array",
-      },
-    });
+  it("uses the key validator's output as the key", () => {
+    expect(valueOf(val.record(val.string().toLowerCase(), val.number()).validate({ A: 1 }))).toEqual({ a: 1 });
   });
 
-  it("rejects invalid keys according to keyValidator", () => {
-    const schema = val.record(val.number(), val.string().min(4));
-    const result = schema.validate({
-      a: 10,
-    });
-
-    expect(result).toEqual({
-      ok: false,
-      error: {
-        code: "too_small",
-        message: "Must be at least 4 characters",
-        path: ["a"],
-        expected: "at least 4 characters",
-        received: "1 characters",
-      },
-    });
+  it("makes literal keys optional in the type, since they are not required", () => {
+    const byRole = val.record(val.enum(["admin", "user"]), val.number());
+    expect(byRole.validate({ admin: 1 }).ok).toBe(true);
+    expect(byRole.validate({ guest: 1 }).ok).toBe(false);
+    expectTypeOf<Infer<typeof byRole>>().toEqualTypeOf<Partial<Record<"admin" | "user", number>>>();
   });
 
-  it("rejects invalid values according to valueValidator", () => {
-    const schema = val.record(val.number().min(0));
-    const result = schema.validate({
-      valid: 10,
-      invalid: -5,
-    });
-
-    expect(result).toEqual({
-      ok: false,
-      error: {
-        code: "too_small",
-        message: "Must be at least 0",
-        path: ["invalid"],
-        expected: "at least 0",
-        received: "-5",
-      },
-    });
+  it("rejects non-objects", () => {
+    expect(messagesOf(scores.validate([]))).toEqual(["Expected object, received array"]);
   });
 
-  it("accumulates issues across keys and values", () => {
-    const schema = val.record(val.number().min(0));
-    const result = schema.validate({
-      first: -1,
-      second: -2,
-    });
-
-    expect(result.ok).toBe(false);
-    const err = (result as ValidationErr).error;
-    expect(err.issues).toHaveLength(2);
-    expect(err.issues?.[0]?.path).toEqual(["first"]);
-    expect(err.issues?.[1]?.path).toEqual(["second"]);
+  it("keeps a __proto__ key as data", () => {
+    const output = valueOf(scores.validate(JSON.parse('{"__proto__":1}')));
+    expect(Object.getPrototypeOf(output)).toBe(Object.prototype);
+    expect(Object.hasOwn(output, "__proto__")).toBe(true);
   });
 
-  it("aborts early when abortEarly is true", () => {
-    const schema = val.record(val.number().min(0));
-    const result = schema.validate(
-      {
-        first: -1,
-        second: -2,
-      },
-      { abortEarly: true },
-    );
-
-    expect(result.ok).toBe(false);
-    const err = (result as ValidationErr).error;
-    expect(err.path).toEqual(["first"]);
-    expect(err.issues).toBeUndefined();
-  });
-
-  it("provides value and key getters", () => {
-    const valSchema = val.number();
-    const keySchema = val.string();
-    const schema = val.record(valSchema, keySchema);
-
-    expect(schema.value).toBe(valSchema);
-    expect(schema.key).toBe(keySchema);
-  });
-
-  it("prevents prototype pollution when input contains own __proto__ key", () => {
-    const raw = JSON.parse('{"__proto__": "polluted", "item": "safe"}') as Record<string, unknown>;
-    const schema = val.record(val.string());
-    const res = schema.validate(raw) as ValidationOk<Record<string, unknown>>;
-
-    expect(res.ok).toBe(true);
-    expect(Object.getPrototypeOf(res.value)).toBe(Object.prototype);
-    expect(res.value.__proto__).toBe("polluted");
+  it("stops at the first failing entry with abortEarly", () => {
+    expect(issuesOf(scores.validate({ a: "x", b: "y" }, { abortEarly: true }))).toHaveLength(1);
   });
 });

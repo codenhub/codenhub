@@ -1,530 +1,490 @@
+// `.catch` here is the validator method, not `Promise#catch`.
+/* oxlint-disable promise/prefer-await-to-then */
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { BaseValidator, type Infer, type InferInput, type ValidationContext } from "./core";
-import { val } from "./index";
-import { ValidationError, type ValidationErr, type ValidationResult } from "./result";
-import { type StandardSchemaV1 } from "./standard-schema";
+import { NEVER, ValidationError, val, type Infer } from "./index";
+import { codesOf, issuesOf, messagesOf, pathsOf, valueOf } from "./test-utils";
 
-class SimpleStringValidator extends BaseValidator<string, unknown> {
-  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<string> {
-    if (typeof input !== "string") {
-      return ctx.fail({
-        code: "invalid_type",
-        message: "Expected string",
-        path: ctx.path,
-        input,
-      });
+describe("execution modes", () => {
+  it("validate returns ok with the value for valid input", () => {
+    expect(val.string().validate("a")).toEqual({ ok: true, value: "a" });
+  });
+
+  it("validate returns a ValidationError carrying the issues for invalid input", () => {
+    const result = val.string().validate(1);
+    expect(result).toMatchObject({ ok: false, error: expect.any(ValidationError) });
+    expect(issuesOf(result)).toHaveLength(1);
+  });
+
+  it("parse returns the value, and throws the ValidationError for invalid input", () => {
+    expect(val.number().parse(2)).toBe(2);
+    expect(() => val.number().parse("x")).toThrow(ValidationError);
+  });
+
+  it("is narrows without throwing on invalid input", () => {
+    const input: unknown = "a";
+    expect(val.string().is(1)).toBe(false);
+    if (val.string().is(input)) {
+      expectTypeOf(input).toEqualTypeOf<string>();
     }
-    return ctx.ok(input);
-  }
-}
-
-describe("BaseValidator and modifiers", () => {
-  it("validates direct input and handles type guards via .is()", () => {
-    const validator = new SimpleStringValidator();
-
-    expect(validator.validate("hello")).toEqual({ ok: true, value: "hello" });
-    expect(validator.validate(123)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_type",
-        message: "Expected string",
-        path: [],
-      },
-    });
-
-    expect(validator.is("hello")).toBe(true);
-    expect(validator.is(123)).toBe(false);
   });
 
-  it("handles parse and parseAsync success and throws", async () => {
-    const validator = new SimpleStringValidator();
-
-    expect(validator.parse("valid")).toBe("valid");
-
-    expect(() => validator.parse(123)).toThrow(ValidationError);
-    expect(() => validator.parse(123)).toThrow(Error);
-
-    let caughtError: unknown;
-    try {
-      validator.parse(123);
-    } catch (caught) {
-      caughtError = caught;
-    }
-    expect(caughtError).toBeInstanceOf(ValidationError);
-    expect(caughtError).toBeInstanceOf(Error);
-    const err = caughtError as ValidationError;
-    expect(err.code).toBe("invalid_type");
-    expect(err.message).toBe("Expected string");
-    expect(err.flatten()).toEqual({
-      formErrors: ["Expected string"],
-      fieldErrors: {},
-    });
-
-    await expect(validator.parseAsync("valid_async")).resolves.toBe("valid_async");
-    await expect(validator.parseAsync(456)).rejects.toThrow(ValidationError);
-    await expect(validator.parseAsync(456)).rejects.toThrow(Error);
-  });
-
-  it("handles .optional() modifier", async () => {
-    const validator = new SimpleStringValidator().optional();
-
-    expect(validator.validate(undefined)).toEqual({ ok: true, value: undefined });
-    expect(validator.validate("test")).toEqual({ ok: true, value: "test" });
-    expect(validator.validate(42)).toMatchObject({ ok: false });
-    expect(validator.is(undefined)).toBe(true);
-    expect(validator.is("test")).toBe(true);
-    expect(validator.is(42)).toBe(false);
-
-    await expect(validator.validateAsync(undefined)).resolves.toEqual({ ok: true, value: undefined });
-    await expect(validator.validateAsync("test")).resolves.toEqual({ ok: true, value: "test" });
-
-    type Output = Infer<typeof validator>;
-    type Input = InferInput<typeof validator>;
-    expectTypeOf<[Output]>().toEqualTypeOf<[string | undefined]>();
-    expectTypeOf<Input>().toEqualTypeOf<unknown>();
-  });
-
-  it("handles .nullable() modifier", async () => {
-    const validator = new SimpleStringValidator().nullable();
-
-    expect(validator.validate(null)).toEqual({ ok: true, value: null });
-    expect(validator.validate("test")).toEqual({ ok: true, value: "test" });
-    expect(validator.validate(undefined)).toMatchObject({ ok: false });
-    expect(validator.is(null)).toBe(true);
-    expect(validator.is("test")).toBe(true);
-    expect(validator.is(undefined)).toBe(false);
-
-    await expect(validator.validateAsync(null)).resolves.toEqual({ ok: true, value: null });
-    await expect(validator.validateAsync("test")).resolves.toEqual({ ok: true, value: "test" });
-
-    type Output = Infer<typeof validator>;
-    expectTypeOf<Output>().toEqualTypeOf<string | null>();
-  });
-
-  it("handles .nullish() modifier", async () => {
-    const validator = new SimpleStringValidator().nullish();
-
-    expect(validator.validate(null)).toEqual({ ok: true, value: null });
-    expect(validator.validate(undefined)).toEqual({ ok: true, value: undefined });
-    expect(validator.validate("test")).toEqual({ ok: true, value: "test" });
-    expect(validator.validate(42)).toMatchObject({ ok: false });
-
-    await expect(validator.validateAsync(null)).resolves.toEqual({ ok: true, value: null });
-    await expect(validator.validateAsync(undefined)).resolves.toEqual({ ok: true, value: undefined });
-  });
-
-  it("handles .default() with static value and function factory", async () => {
-    const withStatic = new SimpleStringValidator().default("fallback");
-    expect(withStatic.validate(undefined)).toEqual({ ok: true, value: "fallback" });
-    expect(withStatic.validate("custom")).toEqual({ ok: true, value: "custom" });
-    expect(withStatic.validate(99)).toMatchObject({ ok: false });
-
-    let count = 0;
-    const withFactory = new SimpleStringValidator().default(() => `item_${++count}`);
-    expect(withFactory.validate(undefined)).toEqual({ ok: true, value: "item_1" });
-    expect(withFactory.validate(undefined)).toEqual({ ok: true, value: "item_2" });
-    expect(withFactory.validate("existing")).toEqual({ ok: true, value: "existing" });
-
-    await expect(withStatic.validateAsync(undefined)).resolves.toEqual({ ok: true, value: "fallback" });
-    await expect(withFactory.validateAsync(undefined)).resolves.toEqual({ ok: true, value: "item_3" });
-  });
-
-  it("handles .catch() modifier with static value and factory", async () => {
-    const withCatchStatic = new SimpleStringValidator().catch("safe_default");
-    expect(withCatchStatic.validate("good")).toEqual({ ok: true, value: "good" });
-    expect(withCatchStatic.validate(123)).toEqual({ ok: true, value: "safe_default" });
-    expect(withCatchStatic.parse(123)).toBe("safe_default");
-
-    const withCatchFactory = new SimpleStringValidator().catch((ctx) => `recovered_${ctx.path.join(".") || "root"}`);
-    expect(withCatchFactory.validate(123)).toEqual({ ok: true, value: "recovered_root" });
-    expect(withCatchFactory.validate(123, { path: ["user", "name"] })).toEqual({
-      ok: true,
-      value: "recovered_user.name",
-    });
-
-    await expect(withCatchStatic.validateAsync(123)).resolves.toEqual({ ok: true, value: "safe_default" });
-    await expect(withCatchStatic.parseAsync(123)).resolves.toBe("safe_default");
-  });
-
-  it("handles .refine() with custom message and structured options", () => {
-    const refinedString = new SimpleStringValidator().refine((val) => val.startsWith("ok_"), "Must start with ok_");
-
-    expect(refinedString.validate("ok_user")).toEqual({ ok: true, value: "ok_user" });
-    expect(refinedString.validate("bad_user")).toEqual({
-      ok: false,
-      error: {
-        code: "custom",
-        message: "Must start with ok_",
-        path: [],
-      },
-    });
-
-    const structuredRefined = new SimpleStringValidator().refine((val) => val.length > 3, {
-      code: "too_small",
-      message: "Too short",
-      path: ["length_check"],
-    });
-
-    expect(structuredRefined.validate("ab")).toEqual({
-      ok: false,
-      error: {
-        code: "too_small",
-        message: "Too short",
-        path: ["length_check"],
-      },
-    });
-  });
-
-  it("handles .refine() error throwing", () => {
-    const throwingRefined = new SimpleStringValidator().refine(() => {
-      throw new Error("Explosion in predicate");
-    });
-
-    expect(throwingRefined.validate("test")).toEqual({
-      ok: false,
-      error: {
-        code: "custom",
-        message: "Explosion in predicate",
-        path: [],
-      },
-    });
-  });
-
-  it("handles .refine() rejecting async predicate synchronously", () => {
-    const syncWithAsyncPred = new SimpleStringValidator().refine(
-      // @ts-expect-error - testing passing async fn to sync refine
-      async (val) => val === "test",
-    );
-
-    const res = syncWithAsyncPred.validate("test");
-    expect(res.ok).toBe(false);
-    expect((res as ValidationErr).error.message).toContain("validateAsync()");
-  });
-
-  it("handles .refineAsync() in validate, validateAsync, and parseAsync", async () => {
-    const asyncRefined = new SimpleStringValidator().refineAsync(async (val) => {
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      return val === "allowed";
-    }, "Value not allowed");
-
-    // Sync validate should fail indicating async check requires validateAsync()
-    const syncRes = asyncRefined.validate("allowed");
-    expect(syncRes.ok).toBe(false);
-    expect((syncRes as ValidationErr).error.message).toContain("validateAsync()");
-
-    // Async validate should succeed when predicate returns true
-    const asyncSuccess = await asyncRefined.validateAsync("allowed");
-    expect(asyncSuccess).toEqual({ ok: true, value: "allowed" });
-
-    // Async validate should fail when predicate returns false
-    const asyncFail = await asyncRefined.validateAsync("disallowed");
-    expect(asyncFail.ok).toBe(false);
-    expect((asyncFail as ValidationErr).error.message).toBe("Value not allowed");
-
-    await expect(asyncRefined.parseAsync("allowed")).resolves.toBe("allowed");
-    await expect(asyncRefined.parseAsync("disallowed")).rejects.toThrow(ValidationError);
-  });
-
-  it("handles .check() and .superRefine() with boolean, string, and ctx.addIssue", async () => {
-    // 1. Returning boolean
-    const checkBool = new SimpleStringValidator().check((val) => val === "pass");
-    expect(checkBool.validate("pass")).toEqual({ ok: true, value: "pass" });
-    expect(checkBool.validate("fail")).toMatchObject({
-      ok: false,
-      error: { message: "Check failed" },
-    });
-
-    // 2. Returning string message
-    const checkStr = new SimpleStringValidator().check((val) => {
-      if (val.length < 5) {
-        return "String too short";
-      }
-    });
-    expect(checkStr.validate("short")).toEqual({ ok: true, value: "short" });
-    expect(checkStr.validate("tiny")).toEqual({
-      ok: false,
-      error: {
-        code: "custom",
-        message: "String too short",
-        path: [],
-      },
-    });
-
-    // 3. Using ctx.addIssue targeting specific path
-    const checkWithIssues = new SimpleStringValidator().check((val, ctx) => {
-      if (!val.includes("@")) {
-        ctx.addIssue({
-          code: "invalid_format",
-          message: "Must contain @",
-          path: ["email_format"],
-        });
-      }
-    });
-
-    const issueRes = checkWithIssues.validate("no-at");
-    expect(issueRes.ok).toBe(false);
-    expect((issueRes as ValidationErr).error.code).toBe("invalid_format");
-    expect((issueRes as ValidationErr).error.message).toBe("Must contain @");
-    expect((issueRes as ValidationErr).error.path).toEqual(["email_format"]);
-
-    // 4. superRefine alias works identically
-    const superRefined = new SimpleStringValidator().superRefine((val, ctx) => {
-      if (val === "invalid") {
-        ctx.addIssue({ code: "custom", message: "Forbidden value", path: [] });
-      }
-    });
-    expect(superRefined.validate("invalid").ok).toBe(false);
-    expect(superRefined.validate("fine")).toEqual({ ok: true, value: "fine" });
-  });
-
-  it("handles .check() with async functions and validateAsync", async () => {
-    const asyncCheck = new SimpleStringValidator().check(async (val, ctx) => {
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      if (val === "taken") {
-        ctx.addIssue({ code: "custom", message: "Username taken", path: ["username"] });
-      }
-      if (val === "error_string") {
-        return "Async custom string error";
-      }
-      if (val === "rejected_bool") {
-        return false;
-      }
-    });
-
-    // Calling validate synchronously on async check fails cleanly
-    const syncRes = asyncCheck.validate("taken");
-    expect(syncRes.ok).toBe(false);
-    expect((syncRes as ValidationErr).error.message).toContain("validateAsync()");
-
-    // Async validate succeeds for clean value
-    const passRes = await asyncCheck.validateAsync("available");
-    expect(passRes).toEqual({ ok: true, value: "available" });
-
-    // Async validate handles ctx.addIssue
-    const issueRes = await asyncCheck.validateAsync("taken");
-    expect(issueRes.ok).toBe(false);
-    expect((issueRes as ValidationErr).error.message).toBe("Username taken");
-    expect((issueRes as ValidationErr).error.path).toEqual(["username"]);
-
-    // Async validate handles returned string
-    const strRes = await asyncCheck.validateAsync("error_string");
-    expect(strRes.ok).toBe(false);
-    expect((strRes as ValidationErr).error.message).toBe("Async custom string error");
-
-    // Async validate handles returned false
-    const boolRes = await asyncCheck.validateAsync("rejected_bool");
-    expect(boolRes.ok).toBe(false);
-    expect((boolRes as ValidationErr).error.message).toBe("Check failed");
-  });
-
-  it("handles .transform() output mapping and error throwing", () => {
-    const lengthValidator = new SimpleStringValidator().transform((val) => val.length);
-
-    expect(lengthValidator.validate("antigravity")).toEqual({ ok: true, value: 11 });
-
-    type Output = Infer<typeof lengthValidator>;
-    expectTypeOf<Output>().toEqualTypeOf<number>();
-
-    const throwingTransform = new SimpleStringValidator().transform(() => {
-      throw new Error("Parsing blew up");
-    });
-    expect(throwingTransform.validate("data")).toEqual({
-      ok: false,
-      error: {
-        code: "custom",
-        message: "Parsing blew up",
-        path: [],
-      },
-    });
-
-    // Sync transform returning Promise fails synchronously
-    const asyncInSync = new SimpleStringValidator().transform(async (val) => val.toUpperCase());
-    const syncRes = asyncInSync.validate("test");
-    expect(syncRes.ok).toBe(false);
-    expect((syncRes as ValidationErr).error.message).toContain("validateAsync()");
-  });
-
-  it("handles .transformAsync() output mapping in validateAsync and parseAsync", async () => {
-    const asyncTransform = new SimpleStringValidator().transformAsync(async (val) => {
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      return val.toUpperCase();
-    });
-
-    // Synchronous validate fails indicating async transform requires validateAsync()
-    const syncRes = asyncTransform.validate("hello");
-    expect(syncRes.ok).toBe(false);
-    expect((syncRes as ValidationErr).error.message).toContain("validateAsync()");
-
-    // validateAsync succeeds
-    const asyncRes = await asyncTransform.validateAsync("hello");
-    expect(asyncRes).toEqual({ ok: true, value: "HELLO" });
-
-    // parseAsync succeeds
-    await expect(asyncTransform.parseAsync("hello")).resolves.toBe("HELLO");
-
-    // Rejection / error handling
-    const failingTransform = new SimpleStringValidator().transformAsync(async () => {
-      throw new Error("Async transform exploded");
-    });
-    await expect(failingTransform.parseAsync("hello")).rejects.toThrow("Async transform exploded");
-  });
-
-  it("handles .pipe() pipeline across different validators", async () => {
-    const stringToInt = val
-      .string()
-      .trim()
-      .transform((val) => Number.parseInt(val, 10))
-      .pipe(val.number().positive().port());
-
-    expect(stringToInt.validate("  8080  ")).toEqual({ ok: true, value: 8080 });
-
-    const invalidNumber = stringToInt.validate("  -5  ");
-    expect(invalidNumber).toMatchObject({
-      ok: false,
-      error: {
-        code: "invalid_value",
-      },
-    });
-
-    const nonNumber = stringToInt.validate(123 as unknown as string);
-    expect(nonNumber).toMatchObject({
-      ok: false,
-      error: {
-        code: "invalid_type",
-      },
-    });
-
-    // Async pipeline validation
-    await expect(stringToInt.validateAsync("  3000  ")).resolves.toEqual({ ok: true, value: 3000 });
-  });
-
-  it("preserves path and options in ValidationContext", () => {
-    class CustomContextCheckValidator extends BaseValidator<string, string> {
-      protected _validate(_input: unknown, ctx: ValidationContext): ValidationResult<string> {
-        return {
-          ok: false,
-          error: new ValidationError({
-            code: "custom",
-            message: "Target issue",
-            path: ctx.options.path ?? [],
-          }),
-        };
-      }
-    }
-
-    const piped = new SimpleStringValidator().pipe(new CustomContextCheckValidator());
-    expect(piped.validate("value", { path: ["user", "profile"] })).toEqual({
-      ok: false,
-      error: {
-        code: "custom",
-        message: "Target issue",
-        path: ["user", "profile"],
-      },
-    });
-  });
-
-  it("conforms to the Standard Schema ~standard v1 specification", async () => {
-    const schema = val.string().min(3);
-    const standard = schema["~standard"];
-
-    expect(standard.version).toBe(1);
-    expect(standard.vendor).toBe("codenhub");
-
-    // Synchronous standard validation success
-    const successResult = standard.validate("codenhub");
-    expect(successResult).toEqual({ value: "codenhub" });
-
-    // Synchronous standard validation failure
-    const failureResult = standard.validate("ab");
-    expect(failureResult).toMatchObject({
-      issues: [
-        {
-          message: expect.any(String),
-          path: [],
-        },
-      ],
-    });
-
-    // Standard Schema with async validator
-    const asyncSchema = val.string().refineAsync(async (val) => val === "superadmin");
-    const asyncStandard = asyncSchema["~standard"];
-    expect(asyncStandard.version).toBe(1);
-    expect(asyncStandard.vendor).toBe("codenhub");
-
-    const asyncStandardSuccess = await asyncStandard.validate("superadmin");
-    expect(asyncStandardSuccess).toEqual({ value: "superadmin" });
-
-    const asyncStandardFailure = await asyncStandardFailureResult(asyncStandard.validate("guest"));
-    expect(asyncStandardFailure).toMatchObject({
-      issues: [
-        {
-          message: expect.any(String),
-        },
-      ],
-    });
-
-    // Standard Schema type inference test
-    type InferredInput = StandardSchemaV1.InferInput<typeof schema>;
-    type InferredOutput = StandardSchemaV1.InferOutput<typeof schema>;
-    expectTypeOf<InferredOutput>().toEqualTypeOf<string>();
-    expectTypeOf<InferredInput>().toEqualTypeOf<unknown>();
-  });
-
-  /* oxlint-disable promise/prefer-await-to-then */
-  it("fails synchronous validate() with async-required error when CatchValidator wraps an async validator", () => {
-    const asyncSchema = val.string().refineAsync(async (s) => s.length > 3);
-    const catchSchema = asyncSchema.catch("fallback");
-
-    // Synchronous validation should NOT resolve fallback for async-required errors
-    const syncRes = catchSchema.validate("ok");
-    expect(syncRes.ok).toBe(false);
-    expect((syncRes as ValidationErr).error.message).toContain("validateAsync()");
-
-    // Synchronous validation on non-async schema STILL resolves fallback
-    const syncCatch = val.string().min(5).catch("short");
-    const syncRes2 = syncCatch.validate("hi");
-    expect(syncRes2).toEqual({ ok: true, value: "short" });
-  });
-
-  it("resolves fallback in validateAsync() when inner async validator fails", async () => {
-    const asyncSchema = val.string().refineAsync(async (s) => s.length > 5);
-    const catchSchema = asyncSchema.catch("fallback");
-
-    const asyncRes = await catchSchema.validateAsync("hi");
-    expect(asyncRes).toEqual({ ok: true, value: "fallback" });
-  });
-  /* oxlint-enable promise/prefer-await-to-then */
-
-  it("does not trigger second validation run in ~standard when synchronous error message contains 'validateAsync()'", () => {
-    let callCount = 0;
-    const customValidator = val.custom((_input, ctx) => {
-      callCount++;
-      return ctx.fail({
-        code: "custom",
-        message: "You must use validateAsync() instead of manual loops",
-      });
-    });
-
-    const standardResult = customValidator["~standard"].validate("test");
-    // Should be synchronous result and evaluated only once
-    expect(callCount).toBe(1);
-    expect(standardResult).toMatchObject({
-      issues: [
-        {
-          message: "You must use validateAsync() instead of manual loops",
-        },
-      ],
-    });
+  it("validateAsync and parseAsync agree with their sync counterparts", async () => {
+    expect(await val.string().validateAsync("a")).toEqual({ ok: true, value: "a" });
+    expect(await val.string().parseAsync("a")).toBe("a");
+    await expect(val.string().parseAsync(1)).rejects.toBeInstanceOf(ValidationError);
   });
 });
 
-async function asyncStandardFailureResult<T>(
-  result: StandardSchemaV1.Result<T> | Promise<StandardSchemaV1.Result<T>>,
-): Promise<StandardSchemaV1.FailureResult> {
-  const resolved = await result;
-  if (resolved.issues === undefined) {
-    throw new Error("Expected standard schema validation to fail with issues");
-  }
-  return resolved;
-}
+describe("options", () => {
+  const schema = val.object({ a: val.string(), b: val.string() });
+
+  it("collects every issue by default", () => {
+    expect(pathsOf(schema.validate({}))).toEqual([["a"], ["b"]]);
+  });
+
+  it("stops at the first issue with abortEarly", () => {
+    expect(pathsOf(schema.validate({}, { abortEarly: true }))).toEqual([["a"]]);
+  });
+
+  it("never echoes the input into an issue unless includeInput is set", () => {
+    const [plain] = issuesOf(val.number().validate("hunter2"));
+    expect(JSON.stringify(plain)).not.toContain("hunter2");
+    expect(plain).not.toHaveProperty("input");
+    const [withInput] = issuesOf(val.number().validate("hunter2", { includeInput: true }));
+    expect(withInput?.input).toBe("hunter2");
+  });
+
+  it("passes context to checks", () => {
+    const schema = val.string().check((value, ctx) => {
+      const taken = (ctx.options.context as { taken: string[] }).taken;
+      if (taken.includes(value)) {
+        ctx.addIssue({ message: "taken" });
+      }
+    });
+    expect(schema.validate("a", { context: { taken: ["a"] } }).ok).toBe(false);
+    expect(schema.validate("b", { context: { taken: ["a"] } }).ok).toBe(true);
+  });
+});
+
+describe("immutability", () => {
+  it("leaves the original untouched when a rule is added", () => {
+    const base = val.string();
+    const strict = base.min(3);
+    expect(base.validate("a").ok).toBe(true);
+    expect(strict.validate("a").ok).toBe(false);
+  });
+
+  it("keeps the concrete type so rules chain in any order", () => {
+    const schema = val
+      .string()
+      .refine((value) => value !== "admin")
+      .check(() => undefined)
+      .max(5);
+    expectTypeOf(schema).toEqualTypeOf<ReturnType<typeof val.string>>();
+    expect(schema.validate("admin").ok).toBe(false);
+    expect(schema.validate("toolong").ok).toBe(false);
+  });
+
+  it("keeps object methods after refine", () => {
+    const schema = val
+      .object({ a: val.string() })
+      .refine(() => true)
+      .extend({ b: val.number() });
+    expect(schema.validate({ a: "x", b: 1 }).ok).toBe(true);
+  });
+});
+
+describe("optional, nullable, nullish", () => {
+  it("optional accepts undefined and otherwise defers to the inner validator", () => {
+    const schema = val.string().optional();
+    expect(valueOf(schema.validate(undefined))).toBeUndefined();
+    expect(schema.validate(null).ok).toBe(false);
+    expect(schema.validate(1).ok).toBe(false);
+    expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<string | undefined>();
+  });
+
+  it("nullable accepts null", () => {
+    const schema = val.string().nullable();
+    expect(valueOf(schema.validate(null))).toBeNull();
+    expect(schema.validate(undefined).ok).toBe(false);
+    expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<string | null>();
+  });
+
+  it("nullish accepts both", () => {
+    const schema = val.string().nullish();
+    expect(schema.validate(null).ok).toBe(true);
+    expect(schema.validate(undefined).ok).toBe(true);
+    expect(schema.validate("a").ok).toBe(true);
+    expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<string | null | undefined>();
+  });
+});
+
+describe("default", () => {
+  it("replaces undefined, not null or invalid input", () => {
+    const schema = val.string().default("x");
+    expect(valueOf(schema.validate(undefined))).toBe("x");
+    expect(valueOf(schema.validate("y"))).toBe("y");
+    expect(schema.validate(null).ok).toBe(false);
+  });
+
+  it("calls a factory once per validation", () => {
+    let calls = 0;
+    const schema = val.array(val.string()).default(() => {
+      calls += 1;
+      return [];
+    });
+    expect(valueOf(schema.validate(undefined))).not.toBe(valueOf(schema.validate(undefined)));
+    expect(calls).toBe(2);
+  });
+
+  it("types the output as required", () => {
+    const schema = val.number().default(0);
+    expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<number>();
+  });
+});
+
+describe("catch", () => {
+  it("returns the fallback when validation fails", () => {
+    expect(valueOf(val.number().catch(0).validate("x"))).toBe(0);
+    expect(valueOf(val.number().catch(0).validate(5))).toBe(5);
+  });
+
+  it("gives the discarded issues to a fallback function", () => {
+    const schema = val.number().catch((issues) => issues.length);
+    expect(valueOf(schema.validate("x"))).toBe(1);
+  });
+
+  it("does not swallow exceptions thrown by user callbacks", () => {
+    const schema = val
+      .string()
+      .transform((): string => {
+        throw new TypeError("bug");
+      })
+      .catch("fallback");
+    expect(() => schema.validate("x")).toThrow("bug");
+  });
+});
+
+describe("refine", () => {
+  it("fails with the default message when the predicate is false", () => {
+    expect(
+      messagesOf(
+        val
+          .number()
+          .refine((n) => n > 1)
+          .validate(0),
+      ),
+    ).toEqual(["Invalid value"]);
+  });
+
+  it("accepts a message string, a message function, and issue options", () => {
+    expect(
+      messagesOf(
+        val
+          .number()
+          .refine((n) => n > 1, "too low")
+          .validate(0),
+      ),
+    ).toEqual(["too low"]);
+    expect(
+      messagesOf(
+        val
+          .number()
+          .refine(
+            (n) => n > 1,
+            (details) => `code ${details.code}`,
+          )
+          .validate(0),
+      ),
+    ).toEqual(["code custom"]);
+
+    const schema = val
+      .object({ password: val.string(), confirm: val.string() })
+      .refine((data) => data.password === data.confirm, {
+        message: "Passwords must match",
+        path: ["confirm"],
+        code: "password_mismatch",
+        params: { field: "confirm" },
+      });
+    const [issue] = issuesOf(schema.validate({ password: "a", confirm: "b" }));
+    expect(issue).toMatchObject({
+      code: "password_mismatch",
+      path: ["confirm"],
+      message: "Passwords must match",
+      params: { field: "confirm" },
+    });
+  });
+
+  it("runs after the structure is valid, not before", () => {
+    let calls = 0;
+    const schema = val.string().refine(() => {
+      calls += 1;
+      return true;
+    });
+    schema.validate(1);
+    expect(calls).toBe(0);
+  });
+
+  it("propagates exceptions thrown by the predicate", () => {
+    expect(() =>
+      val
+        .string()
+        .refine(() => {
+          throw new Error("boom");
+        })
+        .validate("x"),
+    ).toThrow("boom");
+  });
+});
+
+describe("check", () => {
+  it("reports several issues, with paths relative to the checked value", () => {
+    const schema = val.object({ tags: val.array(val.string()) }).check((value, ctx) => {
+      value.tags.forEach((tag, index) => {
+        if (tag === "bad") {
+          ctx.addIssue({ message: "no bad tags", path: ["tags", index] });
+        }
+      });
+    });
+    expect(pathsOf(schema.validate({ tags: ["bad", "ok", "bad"] }))).toEqual([
+      ["tags", 0],
+      ["tags", 2],
+    ]);
+  });
+
+  it("locates relative paths under the value's own path", () => {
+    const schema = val.object({
+      inner: val.object({ a: val.string() }).check((_, ctx) => ctx.addIssue({ message: "x", path: ["a"] })),
+    });
+    expect(pathsOf(schema.validate({ inner: { a: "" } }))).toEqual([["inner", "a"]]);
+  });
+
+  it("supports custom issue codes and params", () => {
+    const schema = val.string().check((_, ctx) => {
+      ctx.addIssue({ code: "username_taken", message: "taken", params: { by: "someone" } });
+    });
+    expect(issuesOf(schema.validate("x"))[0]).toMatchObject({ code: "username_taken", params: { by: "someone" } });
+  });
+
+  it("is reusable as a named function", () => {
+    const noSpaces = (value: string, ctx: { addIssue(issue: { message: string }): void }) => {
+      if (value.includes(" ")) {
+        ctx.addIssue({ message: "no spaces" });
+      }
+    };
+    expect(val.string().check(noSpaces).validate("a b").ok).toBe(false);
+    expect(val.string().check(noSpaces).validate("ab").ok).toBe(true);
+  });
+
+  it("stops after the first failing rule with abortEarly", () => {
+    const schema = val.string().min(5).max(1);
+    expect(issuesOf(schema.validate("abc"))).toHaveLength(2);
+    expect(issuesOf(schema.validate("abc", { abortEarly: true }))).toHaveLength(1);
+  });
+});
+
+describe("transform", () => {
+  it("maps the value and its type", () => {
+    const schema = val.string().transform((text) => text.length);
+    expect(valueOf(schema.validate("abc"))).toBe(3);
+    expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<number>();
+  });
+
+  it("does not run when validation fails", () => {
+    let calls = 0;
+    val
+      .string()
+      .transform(() => (calls += 1))
+      .validate(1);
+    expect(calls).toBe(0);
+  });
+
+  it("can reject a value by reporting an issue and returning NEVER", () => {
+    const schema = val.string().transform((text, ctx) => {
+      const parsed = Number(text);
+      if (Number.isNaN(parsed)) {
+        ctx.addIssue({ message: "not numeric" });
+        return NEVER;
+      }
+      return parsed;
+    });
+    expect(valueOf(schema.validate("4"))).toBe(4);
+    expect(messagesOf(schema.validate("x"))).toEqual(["not numeric"]);
+  });
+});
+
+describe("pipe", () => {
+  it("feeds the output into the next validator", () => {
+    const schema = val.string().transform(Number).pipe(val.number().int().min(1));
+    expect(valueOf(schema.validate("3"))).toBe(3);
+    expect(schema.validate("0").ok).toBe(false);
+  });
+
+  it("does not run the next validator when the first fails", () => {
+    expect(codesOf(val.string().pipe(val.number()).validate(1))).toEqual(["invalid_type"]);
+  });
+});
+
+describe("or and union", () => {
+  it("accepts any variant and reports every variant's issues when none match", () => {
+    const schema = val.string().or(val.number());
+    expect(schema.validate("a").ok).toBe(true);
+    expect(schema.validate(1).ok).toBe(true);
+    const [issue] = issuesOf(schema.validate(true));
+    expect(issue?.code).toBe("invalid_union");
+    expect(issue?.params?.issues).toHaveLength(2);
+  });
+
+  it("returns the first variant that matches", () => {
+    const schema = val.union([val.string().transform(() => "first"), val.string().transform(() => "second")]);
+    expect(valueOf(schema.validate("x"))).toBe("first");
+  });
+
+  it("infers the union of the outputs", () => {
+    const schema = val.union([val.string(), val.number()]);
+    expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<string | number>();
+  });
+
+  it("uses a custom failure message", () => {
+    expect(messagesOf(val.union([val.string(), val.number()], "string or number").validate(true))).toEqual([
+      "string or number",
+    ]);
+  });
+});
+
+describe("and and intersection", () => {
+  it("requires both and merges object outputs", () => {
+    const schema = val.object({ a: val.string() }).and(val.object({ b: val.number() }));
+    expect(valueOf(schema.validate({ a: "x", b: 1 }))).toEqual({ a: "x", b: 1 });
+    expect(pathsOf(schema.validate({}))).toEqual([["a"], ["b"]]);
+    expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<{ a: string } & { b: number }>();
+  });
+
+  it("merges nested objects deeply and ignores prototype keys", () => {
+    const schema = val.intersection(
+      val.object({ nested: val.object({ a: val.string() }) }),
+      val.object({ nested: val.object({ b: val.string() }) }),
+    );
+    expect(valueOf(schema.validate({ nested: { a: "1", b: "2" } }))).toEqual({ nested: { a: "1", b: "2" } });
+
+    const loose = val.intersection(val.object({}).passthrough(), val.object({}).passthrough());
+    const merged = valueOf(loose.validate(JSON.parse('{"__proto__":{"polluted":true}}')));
+    expect(Object.getPrototypeOf(merged)).toBe(Object.prototype);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+
+  it("keeps fields named constructor and prototype as data", () => {
+    const schema = val.intersection(val.object({ constructor: val.string() }), val.object({ prototype: val.number() }));
+    expect(valueOf(schema.validate({ constructor: "a", prototype: 1 }))).toEqual({ constructor: "a", prototype: 1 });
+  });
+
+  it("takes the right-hand output for non-objects", () => {
+    const schema = val
+      .string()
+      .transform(() => "left")
+      .and(val.string().transform(() => "right"));
+    expect(valueOf(schema.validate("x"))).toBe("right");
+  });
+
+  it("stops after the first failing side with abortEarly", () => {
+    const schema = val.object({ a: val.string() }).and(val.object({ b: val.string() }));
+    expect(issuesOf(schema.validate({}, { abortEarly: true }))).toHaveLength(1);
+  });
+});
+
+describe("async", () => {
+  it("refine, check and transform accept async functions", async () => {
+    const schema = val
+      .string()
+      .refine(async (value) => value !== "taken", "taken")
+      .check(async (value, ctx) => {
+        if (value === "banned") {
+          ctx.addIssue({ message: "banned" });
+        }
+      })
+      .transform(async (value) => value.toUpperCase());
+    expect(valueOf(await schema.validateAsync("ok"))).toBe("OK");
+    expect(messagesOf(await schema.validateAsync("taken"))).toEqual(["taken"]);
+    expect(messagesOf(await schema.validateAsync("banned"))).toEqual(["banned"]);
+  });
+
+  it("treats a plain function that returns a promise as async", async () => {
+    const schema = val.string().refine((value) => Promise.resolve(value === "a"), "no");
+    expect((await schema.validateAsync("a")).ok).toBe(true);
+    expect((await schema.validateAsync("b")).ok).toBe(false);
+  });
+
+  it("makes the sync methods throw instead of guessing", () => {
+    const schema = val.string().refine(async () => true);
+    expect(() => schema.validate("x")).toThrow(/validateAsync/);
+    expect(() => schema.parse("x")).toThrow(/parseAsync/);
+    expect(() => schema.is("x")).toThrow(/async/);
+  });
+
+  it("does not run async work for sync-invalid input", () => {
+    let calls = 0;
+    const schema = val.string().refine(async () => {
+      calls += 1;
+      return true;
+    });
+    expect(() => schema.validate(1)).not.toThrow();
+    expect(calls).toBe(0);
+  });
+
+  it("keeps issue order stable when children finish out of order", async () => {
+    const slow = (ms: number) =>
+      val.string().refine(async () => {
+        await new Promise((resolve) => setTimeout(resolve, ms));
+        return false;
+      }, "bad");
+    const schema = val.object({ a: slow(20), b: slow(1), c: slow(10) });
+    expect(pathsOf(await schema.validateAsync({ a: "", b: "", c: "" }))).toEqual([["a"], ["b"], ["c"]]);
+  });
+
+  it("does not start work after a failure with abortEarly", async () => {
+    let calls = 0;
+    const counting = val.string().refine(async () => {
+      calls += 1;
+      return false;
+    });
+    const schema = val.object({ a: counting, b: counting });
+    await schema.validateAsync({ a: "", b: "" }, { abortEarly: true });
+    expect(calls).toBe(1);
+  });
+
+  it("propagates async exceptions", async () => {
+    const schema = val.string().refine(async () => {
+      throw new Error("boom");
+    });
+    await expect(schema.validateAsync("x")).rejects.toThrow("boom");
+  });
+
+  it("catch applies to async failures too", async () => {
+    const schema = val
+      .string()
+      .refine(async () => false)
+      .catch("fallback");
+    expect(valueOf(await schema.validateAsync("x"))).toBe("fallback");
+  });
+});
+
+describe("Standard Schema", () => {
+  it("exposes version 1 and the vendor", () => {
+    expect(val.string()["~standard"]).toMatchObject({ version: 1, vendor: "codenhub" });
+  });
+
+  it("returns a plain result synchronously", () => {
+    expect(val.string()["~standard"].validate("a")).toEqual({ value: "a" });
+    expect(val.string()["~standard"].validate(1)).toEqual({
+      issues: [{ message: "Expected string, received number", path: [] }],
+    });
+  });
+
+  it("returns a promise only for async schemas", async () => {
+    const schema = val.object({ n: val.string().refine(async () => false, "no") });
+    const result = schema["~standard"].validate({ n: "x" });
+    expect(result).toBeInstanceOf(Promise);
+    expect(await result).toEqual({ issues: [{ message: "no", path: ["n"] }] });
+  });
+});

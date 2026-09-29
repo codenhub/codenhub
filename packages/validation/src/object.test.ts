@@ -1,472 +1,204 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { type Infer, type InferObject, type ValidationErr, type ValidationOk, val } from ".";
+import { val, type Infer } from "./index";
+import { codesOf, issuesOf, messagesOf, pathsOf, valueOf } from "./test-utils";
 
-describe("ObjectValidator", () => {
-  it("validates valid object according to shape", () => {
-    const userSchema = val.object({
-      name: val.string().min(2),
-      age: val.number().min(0),
-    });
+const user = val.object({ name: val.string(), age: val.number().optional() });
 
-    const result = userSchema.validate({
-      name: "Alice",
-      age: 30,
-    });
-
-    expect(result).toEqual({
-      ok: true,
-      value: { name: "Alice", age: 30 },
-    });
+describe("object", () => {
+  it("validates each property and returns a new object", () => {
+    const input = { name: "Ada", age: 36 };
+    const output = valueOf(user.validate(input));
+    expect(output).toEqual(input);
+    expect(output).not.toBe(input);
   });
 
-  it("rejects non-plain objects", () => {
-    const schema = val.object({ name: val.string() });
-
-    expect(schema.validate(null)).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_type",
-        message: "Expected object, got null",
-        path: [],
-        expected: "plain object",
-        received: "null",
-      },
-    });
-
-    expect(schema.validate([1, 2, 3])).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_type",
-        message: "Expected object, got array",
-        path: [],
-        expected: "plain object",
-        received: "array",
-      },
-    });
-
-    expect(schema.validate("string")).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_type",
-        message: "Expected object, got string",
-        path: [],
-        expected: "plain object",
-        received: "string",
-      },
-    });
+  it("rejects non-objects, arrays, null and class instances, naming the received type", () => {
+    expect(messagesOf(user.validate(null))).toEqual(["Expected object, received null"]);
+    expect(messagesOf(user.validate([]))).toEqual(["Expected object, received array"]);
+    expect(messagesOf(user.validate("x"))).toEqual(["Expected object, received string"]);
+    class Person {
+      name = "Ada";
+    }
+    expect(messagesOf(user.validate(new Person()))).toEqual(["Expected object, received Person"]);
   });
 
-  it("strips unrecognized keys by default", () => {
+  it("accepts null-prototype objects", () => {
+    expect(user.validate(Object.assign(Object.create(null), { name: "a" })).ok).toBe(true);
+  });
+
+  it("uses a custom message for the type failure", () => {
+    expect(messagesOf(val.object({}, "need an object").validate(1))).toEqual(["need an object"]);
+  });
+
+  it("reports missing required properties at their path", () => {
+    expect(pathsOf(user.validate({}))).toEqual([["name"]]);
+    expect(codesOf(user.validate({}))).toEqual(["invalid_type"]);
+  });
+
+  it("collects issues from every property, with nested paths", () => {
     const schema = val.object({
-      id: val.number(),
+      user: val.object({ emails: val.array(val.string().email()) }),
+      count: val.number(),
     });
-
-    const result = schema.validate({
-      id: 1,
-      extra: "discarded",
-      nested: { ignore: true },
-    });
-
-    expect(result).toEqual({
-      ok: true,
-      value: { id: 1 },
-    });
+    const result = schema.validate({ user: { emails: ["a@b.co", "nope", 3] }, count: "x" });
+    expect(pathsOf(result)).toEqual([["user", "emails", 1], ["user", "emails", 2], ["count"]]);
   });
 
-  it("rejects unrecognized keys in strict mode", () => {
-    const schema = val
-      .object({
-        id: val.number(),
-      })
-      .strict();
-
-    const result = schema.validate({
-      id: 1,
-      extra: "not allowed",
-    });
-
-    expect(result).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "Unrecognized key: extra",
-        path: ["extra"],
-      },
-    });
+  it("only reads own properties", () => {
+    const inherited = Object.create({ name: "Ada" }) as Record<string, unknown>;
+    expect(user.validate(inherited).ok).toBe(false);
+    expect(user.validate({ ...inherited, name: "x" }).ok).toBe(true);
   });
 
-  it("supports custom strict error message", () => {
-    const schema = val
-      .object({
-        id: val.number(),
-      })
-      .strict("No extra properties allowed");
-
-    const result = schema.validate({
-      id: 1,
-      extra: "not allowed",
-    });
-
-    expect(result).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_value",
-        message: "No extra properties allowed",
-        path: ["extra"],
-      },
-    });
+  it("defaults, optional and nullable behave inside objects", () => {
+    const schema = val.object({ a: val.string().default("z"), b: val.string().optional(), c: val.string().nullable() });
+    expect(valueOf(schema.validate({ c: null }))).toEqual({ a: "z", c: null });
+    expect(Object.hasOwn(valueOf(schema.validate({ c: null })), "b")).toBe(false);
+    expect(Object.hasOwn(valueOf(schema.validate({ b: undefined, c: null })), "b")).toBe(true);
   });
 
-  it("preserves unrecognized keys in passthrough mode", () => {
-    const schema = val
-      .object({
-        id: val.number(),
-      })
-      .passthrough();
+  it("makes properties that accept undefined optional in the inferred type", () => {
+    const schema = val.object({ a: val.string(), b: val.string().optional(), c: val.number().default(0) });
+    expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<{ a: string; c: number; b?: string | undefined }>();
+  });
+});
 
-    const result = schema.validate({
-      id: 1,
-      extra: "preserved",
-      other: 42,
-    });
+describe("unknown keys", () => {
+  const schema = val.object({ a: val.string() });
+  const input = { a: "x", extra: 1 };
 
-    expect(result).toEqual({
-      ok: true,
-      value: {
-        id: 1,
-        extra: "preserved",
-        other: 42,
-      },
-    });
+  it("strips them by default", () => {
+    expect(valueOf(schema.validate(input))).toEqual({ a: "x" });
   });
 
-  it("switches back to strip mode with .strip()", () => {
-    const schema = val
-      .object({
-        id: val.number(),
-      })
-      .passthrough()
-      .strip();
-
-    const result = schema.validate({
-      id: 1,
-      extra: "preserved",
-    });
-
-    expect(result).toEqual({
-      ok: true,
-      value: { id: 1 },
-    });
+  it("rejects them in strict mode, one issue per key", () => {
+    const result = schema.strict().validate({ a: "x", b: 1, c: 2 });
+    expect(pathsOf(result)).toEqual([["b"], ["c"]]);
+    expect(codesOf(result)).toEqual(["unrecognized_key", "unrecognized_key"]);
   });
 
-  it("handles nested object validation and deep path tracking", () => {
+  it("keeps them in passthrough mode without validating them", () => {
+    expect(valueOf(schema.passthrough().validate(input))).toEqual(input);
+  });
+
+  it("can switch back to strip", () => {
+    expect(valueOf(schema.strict().strip().validate(input))).toEqual({ a: "x" });
+  });
+
+  it("treats __proto__ from JSON as data, never as a prototype write", () => {
+    const payload = JSON.parse('{"a":"x","__proto__":{"polluted":true}}') as unknown;
+    const output = valueOf(schema.passthrough().validate(payload));
+    expect(Object.getPrototypeOf(output)).toBe(Object.prototype);
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(Object.hasOwn(output, "__proto__")).toBe(true);
+  });
+
+  it("keeps rules added before switching mode", () => {
+    const checked = schema.refine((value) => value.a !== "bad").strict();
+    expect(checked.validate({ a: "bad" }).ok).toBe(false);
+    expect(checked.validate({ a: "x", b: 1 }).ok).toBe(false);
+  });
+
+  it("stops at the first unknown key with abortEarly", () => {
+    expect(issuesOf(schema.strict().validate({ a: "x", b: 1, c: 2 }, { abortEarly: true }))).toHaveLength(1);
+  });
+});
+
+describe("shape operations", () => {
+  const base = val.object({ a: val.string(), b: val.number(), c: val.boolean() });
+
+  it("extend adds and replaces properties", () => {
+    const extended = base.extend({ b: val.string(), d: val.null() });
+    expect(extended.validate({ a: "x", b: "y", c: true, d: null }).ok).toBe(true);
+    expect(extended.validate({ a: "x", b: 1, c: true, d: null }).ok).toBe(false);
+    expect(Object.keys(extended.shape)).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("extend accepts the shape of another object", () => {
+    const merged = base.extend(val.object({ z: val.string() }).shape);
+    expect(merged.validate({ a: "", b: 1, c: true, z: "" }).ok).toBe(true);
+  });
+
+  it("pick keeps only the listed properties", () => {
+    const picked = base.pick(["a", "c"]);
+    expect(Object.keys(picked.shape)).toEqual(["a", "c"]);
+    expectTypeOf<Infer<typeof picked>>().toEqualTypeOf<{ a: string; c: boolean }>();
+  });
+
+  it("omit removes the listed properties", () => {
+    const omitted = base.omit(["a"]);
+    expect(Object.keys(omitted.shape)).toEqual(["b", "c"]);
+    expectTypeOf<Infer<typeof omitted>>().toEqualTypeOf<{ b: number; c: boolean }>();
+  });
+
+  it("partial makes every property optional", () => {
+    const partial = base.partial();
+    expect(partial.validate({}).ok).toBe(true);
+    expect(partial.validate({ a: 1 }).ok).toBe(false);
+    expectTypeOf<Infer<typeof partial>>().toEqualTypeOf<{
+      a?: string | undefined;
+      b?: number | undefined;
+      c?: boolean | undefined;
+    }>();
+  });
+
+  it("required undoes partial for all or some properties", () => {
+    const partial = base.partial();
+    expect(partial.required().validate({}).ok).toBe(false);
+    const some = partial.required(["a"]);
+    expect(pathsOf(some.validate({}))).toEqual([["a"]]);
+    expectTypeOf<Infer<typeof some>>().toEqualTypeOf<{ a: string; b?: number | undefined; c?: boolean | undefined }>();
+  });
+
+  it("required leaves a union that merely accepts undefined alone, in the type too", () => {
+    const schema = val.object({ a: val.union([val.string(), val.undefined()]) }).required();
+    expect(schema.validate({}).ok).toBe(true);
+    expectTypeOf<Infer<typeof schema>>().toEqualTypeOf<{ a?: string | undefined }>();
+  });
+
+  it("required leaves properties that are not optional alone", () => {
+    expect(base.required().validate({ a: "", b: 1, c: true }).ok).toBe(true);
+  });
+
+  it("keyof validates against the property names", () => {
+    const keys = base.keyof();
+    expect(keys.validate("a").ok).toBe(true);
+    expect(keys.validate("z").ok).toBe(false);
+  });
+
+  it("keeps the unknown-key mode", () => {
+    expect(base.strict().pick(["a"]).validate({ a: "", b: 1 }).ok).toBe(false);
+  });
+
+  it("does not mutate the original", () => {
+    base.extend({ z: val.string() });
+    base.pick(["a"]);
+    expect(Object.keys(base.shape)).toEqual(["a", "b", "c"]);
+  });
+});
+
+describe("cross-field validation", () => {
+  const signup = val
+    .object({ password: val.string().min(8), confirm: val.string() })
+    .refine((data) => data.password === data.confirm, { message: "Passwords must match", path: ["confirm"] });
+
+  it("runs once the properties are valid, and points at the offending field", () => {
+    expect(pathsOf(signup.validate({ password: "12345678", confirm: "1234567" }))).toEqual([["confirm"]]);
+    expect(signup.validate({ password: "12345678", confirm: "12345678" }).ok).toBe(true);
+  });
+
+  it("does not run when a property is invalid", () => {
+    expect(pathsOf(signup.validate({ password: "short", confirm: "x" }))).toEqual([["password"]]);
+  });
+});
+
+describe("async properties", () => {
+  it("validates asynchronous properties together", async () => {
     const schema = val.object({
-      user: val.object({
-        profile: val.object({
-          email: val.string().email(),
-        }),
-      }),
+      a: val.string().refine(async (value) => value === "a", "not a"),
+      b: val.string().refine(async (value) => value === "b", "not b"),
     });
-
-    const success = schema.validate({
-      user: {
-        profile: {
-          email: "user@example.com",
-        },
-      },
-    });
-    expect(success.ok).toBe(true);
-
-    const failure = schema.validate({
-      user: {
-        profile: {
-          email: "not-an-email",
-        },
-      },
-    });
-
-    expect(failure).toEqual({
-      ok: false,
-      error: {
-        code: "invalid_format",
-        message: "Invalid email address",
-        path: ["user", "profile", "email"],
-        expected: "email address",
-        received: "not-an-email",
-      },
-    });
-  });
-
-  it("accumulates multiple issues across fields when abortEarly is false", () => {
-    const schema = val.object({
-      name: val.string().min(5),
-      age: val.number().min(18),
-    });
-
-    const result = schema.validate({
-      name: "Bob",
-      age: 10,
-    });
-
-    expect(result.ok).toBe(false);
-    const err = (result as ValidationErr).error;
-    expect(err.issues).toHaveLength(2);
-    expect(err.issues?.[0]?.path).toEqual(["name"]);
-    expect(err.issues?.[1]?.path).toEqual(["age"]);
-  });
-
-  it("aborts at the first issue when abortEarly is true", () => {
-    const schema = val.object({
-      name: val.string().min(5),
-      age: val.number().min(18),
-    });
-
-    const result = schema.validate(
-      {
-        name: "Bob",
-        age: 10,
-      },
-      { abortEarly: true },
-    );
-
-    expect(result.ok).toBe(false);
-    const err = (result as ValidationErr).error;
-    expect(err.path).toEqual(["name"]);
-    expect(err.issues).toBeUndefined();
-  });
-
-  it("supports .extend() to add and override properties", () => {
-    const base = val.object({
-      id: val.number(),
-      name: val.string(),
-    });
-
-    const extended = base.extend({
-      name: val.string().min(5),
-      role: val.string(),
-    });
-
-    expect(extended.validate({ id: 1, name: "Alexander", role: "admin" })).toEqual({
-      ok: true,
-      value: { id: 1, name: "Alexander", role: "admin" },
-    });
-
-    expect(extended.validate({ id: 1, name: "Al", role: "admin" })).toEqual({
-      ok: false,
-      error: {
-        code: "too_small",
-        message: "Must be at least 5 characters",
-        path: ["name"],
-        expected: "at least 5 characters",
-        received: "2 characters",
-      },
-    });
-  });
-
-  it("supports .pick() to select specific keys", () => {
-    const full = val.object({
-      id: val.number(),
-      name: val.string(),
-      password: val.string(),
-    });
-
-    const publicUser = full.pick(["id", "name"] as const);
-
-    expect(publicUser.validate({ id: 1, name: "Alice", password: "secret" })).toEqual({
-      ok: true,
-      value: { id: 1, name: "Alice" },
-    });
-  });
-
-  it("supports .omit() to exclude specific keys", () => {
-    const full = val.object({
-      id: val.number(),
-      name: val.string(),
-      password: val.string(),
-    });
-
-    const publicUser = full.omit(["password"] as const);
-
-    expect(publicUser.validate({ id: 1, name: "Alice", password: "secret" })).toEqual({
-      ok: true,
-      value: { id: 1, name: "Alice" },
-    });
-  });
-
-  it("supports .partial() to make all keys optional", () => {
-    const schema = val
-      .object({
-        name: val.string(),
-        age: val.number(),
-      })
-      .partial();
-
-    expect(schema.validate({})).toEqual({
-      ok: true,
-      value: {},
-    });
-
-    expect(schema.validate({ name: "Alice" })).toEqual({
-      ok: true,
-      value: { name: "Alice" },
-    });
-  });
-
-  it("supports .shape getter", () => {
-    const nameValidator = val.string();
-    const schema = val.object({ name: nameValidator });
-
-    expect(schema.shape.name).toBe(nameValidator);
-  });
-
-  it("infers types correctly for required and optional keys", () => {
-    const schema = val.object({
-      requiredStr: val.string(),
-      optionalStr: val.string().optional(),
-      defaultNum: val.number().default(0),
-    });
-
-    type Inferred = Infer<typeof schema>;
-    type ShapeInfer = InferObject<typeof schema.shape>;
-
-    // Type check assertions
-    const validData: Inferred = {
-      requiredStr: "hello",
-      optionalStr: undefined,
-      defaultNum: 42,
-    };
-    const validShape: ShapeInfer = validData;
-    expect(validShape.requiredStr).toBe("hello");
-  });
-
-  it("treats inherited properties as missing and prevents prototype inheritance leakage", () => {
-    const input = { other: "value" };
-
-    const schema = val.object({ toString: val.string() });
-    const res = schema.validate(input) as ValidationErr;
-    expect(res.ok).toBe(false);
-    expect(res.error.code).toBe("invalid_type");
-    expect(res.error.received).toBe("undefined");
-
-    const optionalSchema = val.object({ toString: val.string().optional() });
-    const optRes = optionalSchema.validate(input) as ValidationOk<Record<string, unknown>>;
-    expect(optRes.ok).toBe(true);
-    expect(Object.prototype.hasOwnProperty.call(optRes.value, "toString")).toBe(false);
-  });
-
-  it("creates empty ObjectValidator with val.object(), val.object({}), or val.object(undefined)", () => {
-    const o1 = val.object();
-    expect(o1.validate({ extra: 123 })).toEqual({ ok: true, value: {} });
-
-    const o2 = val.object({});
-    expect(o2.validate({ extra: 123 })).toEqual({ ok: true, value: {} });
-
-    const o3 = val.object(undefined);
-    expect(o3.validate({ extra: 123 })).toEqual({ ok: true, value: {} });
-  });
-
-  it("is 100% immutable across strict(), passthrough(), and strip()", () => {
-    const base = val.object({ name: val.string() });
-    const strictObj = base.strict();
-    const passObj = strictObj.passthrough();
-    const stripObj = passObj.strip();
-
-    const data = { name: "Alice", extra: "extra" };
-
-    // base is strip mode
-    expect(base.validate(data)).toEqual({ ok: true, value: { name: "Alice" } });
-    // strictObj rejects extra
-    expect(strictObj.validate(data).ok).toBe(false);
-    // passObj preserves extra
-    expect(passObj.validate(data)).toEqual({ ok: true, value: { name: "Alice", extra: "extra" } });
-    // stripObj strips extra
-    expect(stripObj.validate(data)).toEqual({ ok: true, value: { name: "Alice" } });
-  });
-
-  it("merges two ObjectValidators with .merge()", () => {
-    const user = val.object({ name: val.string(), age: val.number() });
-    const employee = val.object({ role: val.string(), age: val.number().min(18) });
-
-    const merged = user.merge(employee);
-    expect(merged.validate({ name: "Bob", role: "Dev", age: 25 })).toEqual({
-      ok: true,
-      value: { name: "Bob", role: "Dev", age: 25 },
-    });
-
-    const underage = merged.validate({ name: "Bob", role: "Dev", age: 16 }) as ValidationErr;
-    expect(underage.ok).toBe(false);
-    expect(underage.error.path).toEqual(["age"]);
-  });
-
-  it("makes nested properties recursively optional with .deepPartial()", () => {
-    const schema = val
-      .object({
-        title: val.string(),
-        author: val.object({
-          name: val.string(),
-          address: val.object({
-            city: val.string(),
-            zip: val.string(),
-          }),
-        }),
-      })
-      .deepPartial();
-
-    expect(schema.validate({})).toEqual({ ok: true, value: {} });
-    expect(schema.validate({ author: {} })).toEqual({ ok: true, value: { author: {} } });
-    expect(schema.validate({ author: { address: { city: "London" } } })).toEqual({
-      ok: true,
-      value: { author: { address: { city: "London" } } },
-    });
-
-    const invalid = schema.validate({ author: { address: { city: 123 } } }) as ValidationErr;
-    expect(invalid.ok).toBe(false);
-    expect(invalid.error.path).toEqual(["author", "address", "city"]);
-  });
-
-  it("extracts shape keys validator with .keyof()", () => {
-    const schema = val.object({
-      id: val.number(),
-      name: val.string(),
-      active: val.boolean(),
-    });
-
-    const keyValidator = schema.keyof();
-    expect(keyValidator.validate("id")).toEqual({ ok: true, value: "id" });
-    expect(keyValidator.validate("name")).toEqual({ ok: true, value: "name" });
-    expect(keyValidator.validate("active")).toEqual({ ok: true, value: "active" });
-
-    const invalid = keyValidator.validate("other") as ValidationErr;
-    expect(invalid.ok).toBe(false);
-    expect(invalid.error.code).toBe("invalid_value");
-  });
-
-  it("supports asynchronous validation of object fields with validateAsync()", async () => {
-    const schema = val.object({
-      username: val.string().refineAsync(async (u) => u !== "admin", "Username 'admin' is reserved"),
-      email: val.string(),
-    });
-
-    const valid = await schema.validateAsync({ username: "alice", email: "alice@example.com" });
-    expect(valid).toEqual({
-      ok: true,
-      value: { username: "alice", email: "alice@example.com" },
-    });
-
-    const invalid = (await schema.validateAsync({ username: "admin", email: "admin@example.com" })) as ValidationErr;
-    expect(invalid.ok).toBe(false);
-    expect(invalid.error.path).toEqual(["username"]);
-    expect(invalid.error.message).toBe("Username 'admin' is reserved");
-  });
-
-  it("prevents prototype pollution when input contains own __proto__ key", () => {
-    const raw = JSON.parse('{"__proto__": "polluted", "name": "safe"}') as Record<string, unknown>;
-    const schema = val.object({ name: val.string() }).passthrough();
-    const res = schema.validate(raw) as ValidationOk<Record<string, unknown>>;
-
-    expect(res.ok).toBe(true);
-    expect(Object.getPrototypeOf(res.value)).toBe(Object.prototype);
-    expect((res.value as Record<string, unknown>).__proto__).toBe("polluted");
+    expect(pathsOf(await schema.validateAsync({ a: "x", b: "y" }))).toEqual([["a"], ["b"]]);
   });
 });

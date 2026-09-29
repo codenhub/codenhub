@@ -1,107 +1,62 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { type ValidationErr, val } from ".";
+import { val, type Infer } from "./index";
+import { codesOf, issuesOf, messagesOf, pathsOf, valueOf } from "./test-utils";
 
-describe("MapValidator", () => {
-  it("validates valid Map instances", () => {
-    const schema = val.map(val.string(), val.number());
-    const validMap = new Map([
-      ["a", 1],
-      ["b", 2],
-    ]);
+describe("map", () => {
+  const headers = val.map(val.string(), val.number());
 
-    expect(schema.validate(validMap)).toEqual({
-      ok: true,
-      value: validMap,
-    });
+  it("validates keys and values", () => {
+    expect(valueOf(headers.validate(new Map([["a", 1]])))).toEqual(new Map([["a", 1]]));
+    expectTypeOf<Infer<typeof headers>>().toEqualTypeOf<Map<string, number>>();
   });
 
-  it("rejects non-Map inputs", () => {
-    const schema = val.map(val.string(), val.number());
-    const res = schema.validate({ a: 1 }) as ValidationErr;
-    expect(res.ok).toBe(false);
-    expect(res.error.code).toBe("invalid_type");
-    expect(res.error.message).toContain("Expected Map");
-  });
-
-  it("enforces min, max, and nonEmpty constraints immutably", () => {
-    const base = val.map(val.string(), val.number());
-    const min2 = base.min(2);
-    const max2 = base.max(2);
-    const nonEmpty = base.nonEmpty();
-
-    expect(base.validate(new Map()).ok).toBe(true);
-
-    expect(min2.validate(new Map([["a", 1]])).ok).toBe(false);
+  it("locates an entry by its key when it is a string or number", () => {
     expect(
-      min2.validate(
+      pathsOf(
+        headers.validate(
+          new Map<unknown, unknown>([
+            ["a", 1],
+            ["b", "x"],
+          ]),
+        ),
+      ),
+    ).toEqual([["b"]]);
+    expect(codesOf(headers.validate(new Map<unknown, unknown>([[1, 1]])))).toEqual(["invalid_type"]);
+  });
+
+  it("locates an entry by its position when the key is not a string or number", () => {
+    const schema = val.map(val.instanceOf(Date), val.number());
+    expect(
+      pathsOf(
+        schema.validate(
+          new Map<unknown, unknown>([
+            [new Date(), 1],
+            [new Date(), "x"],
+          ]),
+        ),
+      ),
+    ).toEqual([[1]]);
+  });
+
+  it("reports both a bad key and a bad value of one entry", () => {
+    expect(issuesOf(headers.validate(new Map<unknown, unknown>([[1, "x"]])))).toHaveLength(2);
+  });
+
+  it("rejects non-maps", () => {
+    expect(messagesOf(headers.validate({}))).toEqual(["Expected map, received object"]);
+  });
+
+  it("checks size", () => {
+    expect(headers.min(1).validate(new Map()).ok).toBe(false);
+    expect(
+      headers.max(1).validate(
         new Map([
           ["a", 1],
           ["b", 2],
-        ]),
-      ).ok,
-    ).toBe(true);
-
-    expect(
-      max2.validate(
-        new Map([
-          ["a", 1],
-          ["b", 2],
-          ["c", 3],
         ]),
       ).ok,
     ).toBe(false);
-    expect(
-      max2.validate(
-        new Map([
-          ["a", 1],
-          ["b", 2],
-        ]),
-      ).ok,
-    ).toBe(true);
-
-    expect(nonEmpty.validate(new Map()).ok).toBe(false);
-    expect(nonEmpty.validate(new Map([["a", 1]])).ok).toBe(true);
-  });
-
-  it("tracks key and value failure paths", () => {
-    const schema = val.map(val.string().min(2), val.number().min(0));
-
-    const invalidValueMap = new Map([["ok", -5]]);
-    const resVal = schema.validate(invalidValueMap) as ValidationErr;
-    expect(resVal.ok).toBe(false);
-    expect(resVal.error.path).toEqual(["ok"]);
-
-    const invalidKeyMap = new Map([["x", 10]]);
-    const resKey = schema.validate(invalidKeyMap) as ValidationErr;
-    expect(resKey.ok).toBe(false);
-    expect(resKey.error.path).toEqual(["x"]);
-  });
-
-  it("supports asynchronous validation with async key and value schemas", async () => {
-    const schema = val.map(
-      val.string().refineAsync(async (k) => k.startsWith("k_"), "Key must start with k_"),
-      val.number().refineAsync(async (v) => v > 0, "Value must be positive"),
-    );
-
-    const validMap = new Map([["k_1", 10]]);
-    const validRes = await schema.validateAsync(validMap);
-    expect(validRes).toEqual({
-      ok: true,
-      value: validMap,
-    });
-
-    const invalidMap = new Map([["wrong", -1]]);
-    const invalidRes = (await schema.validateAsync(invalidMap)) as ValidationErr;
-    expect(invalidRes.ok).toBe(false);
-  });
-
-  it("provides key and value getters", () => {
-    const keySchema = val.string();
-    const valSchema = val.number();
-    const schema = val.map(keySchema, valSchema);
-
-    expect(schema.key).toBe(keySchema);
-    expect(schema.value).toBe(valSchema);
+    expect(headers.nonEmpty().validate(new Map()).ok).toBe(false);
   });
 });

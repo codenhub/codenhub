@@ -1,127 +1,68 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { type Infer } from "./core";
 import { val } from "./index";
-import { enumValidator, literal } from "./literal";
+import { issuesOf, messagesOf, valueOf } from "./test-utils";
 
-describe("LiteralValidator, EnumValidator, AnyValidator, UnknownValidator", () => {
-  describe("val.literal()", () => {
-    it("validates exact literal strings, numbers, and booleans", () => {
-      const stringLit = val.literal("active");
-      expect(stringLit.validate("active")).toEqual({ ok: true, value: "active" });
-      expect(stringLit.validate("inactive")).toEqual({
-        ok: false,
-        error: {
-          code: "invalid_value",
-          message: 'Expected literal "active", got inactive',
-          path: [],
-          expected: '"active"',
-          received: "inactive",
-        },
-      });
-
-      const numLit = literal(42);
-      expect(numLit.validate(42)).toEqual({ ok: true, value: 42 });
-      expect(numLit.validate(43)).toMatchObject({ ok: false });
-
-      const boolLit = val.literal(true);
-      expect(boolLit.validate(true)).toEqual({ ok: true, value: true });
-      expect(boolLit.validate(false)).toMatchObject({ ok: false });
-
-      const nullLit = val.literal(null);
-      expect(nullLit.validate(null)).toEqual({ ok: true, value: null });
-      expect(nullLit.validate(undefined)).toMatchObject({ ok: false });
-
-      expect(stringLit.is("active")).toBe(true);
-      expect(stringLit.is("inactive")).toBe(false);
-
-      type LitOut = Infer<typeof stringLit>;
-      expectTypeOf<LitOut>().toEqualTypeOf<"active">();
-    });
-
-    it("supports custom failure messages", () => {
-      const schema = val.literal("v1", "Only v1 API is supported");
-      expect(schema.validate("v2", { path: ["api"] })).toEqual({
-        ok: false,
-        error: {
-          code: "invalid_value",
-          message: "Only v1 API is supported",
-          path: ["api"],
-          expected: '"v1"',
-          received: "v2",
-        },
-      });
-    });
+describe("literal", () => {
+  it("accepts exactly one value of any primitive kind", () => {
+    expect(val.literal("a").validate("a").ok).toBe(true);
+    expect(val.literal("a").validate("b").ok).toBe(false);
+    expect(val.literal(1).validate("1").ok).toBe(false);
+    expect(val.literal(1n).validate(1n).ok).toBe(true);
+    expect(val.literal(true).validate(true).ok).toBe(true);
+    expect(val.literal(null).validate(null).ok).toBe(true);
+    expect(val.literal(undefined).validate(undefined).ok).toBe(true);
   });
 
-  describe("val.enum()", () => {
-    it("validates enum values from tuple / array", () => {
-      const roles = ["admin", "editor", "viewer"] as const;
-      const schema = val.enum(roles);
-
-      expect(schema.validate("admin")).toEqual({ ok: true, value: "admin" });
-      expect(schema.validate("editor")).toEqual({ ok: true, value: "editor" });
-      expect(schema.validate("viewer")).toEqual({ ok: true, value: "viewer" });
-
-      expect(schema.validate("superuser")).toEqual({
-        ok: false,
-        error: {
-          code: "invalid_value",
-          message: "Expected one of [admin, editor, viewer], got superuser",
-          path: [],
-          expected: "admin, editor, viewer",
-          received: "superuser",
-        },
-      });
-
-      expect(schema.is("admin")).toBe(true);
-      expect(schema.is("guest")).toBe(false);
-
-      type Role = Infer<typeof schema>;
-      expectTypeOf<Role>().toEqualTypeOf<"admin" | "editor" | "viewer">();
-    });
-
-    it("supports custom failure messages", () => {
-      const schema = enumValidator(["asc", "desc"] as const, "Sort direction must be asc or desc");
-      expect(schema.validate("up")).toEqual({
-        ok: false,
-        error: {
-          code: "invalid_value",
-          message: "Sort direction must be asc or desc",
-          path: [],
-          expected: "asc, desc",
-          received: "up",
-        },
-      });
-    });
+  it("names the expected value in the message and params", () => {
+    const [issue] = issuesOf(val.literal("a").validate("b"));
+    expect(issue).toMatchObject({ message: 'Expected "a"', params: { expected: "a" } });
   });
 
-  describe("val.any() and val.unknown()", () => {
-    it("accepts arbitrary input in val.any()", () => {
-      const schema = val.any();
-      expect(schema.validate("hello")).toEqual({ ok: true, value: "hello" });
-      expect(schema.validate(123)).toEqual({ ok: true, value: 123 });
-      expect(schema.validate({ a: 1 })).toEqual({ ok: true, value: { a: 1 } });
-      expect(schema.validate(null)).toEqual({ ok: true, value: null });
-      expect(schema.validate(undefined)).toEqual({ ok: true, value: undefined });
+  it("exposes its value", () => {
+    expect(val.literal("a").value).toBe("a");
+  });
+});
 
-      expect(schema.is("anything")).toBe(true);
-      expect(schema.is(null)).toBe(true);
-    });
+describe("enum", () => {
+  it("accepts one of the listed strings or numbers", () => {
+    const role = val.enum(["admin", "user"]);
+    expect(role.validate("admin").ok).toBe(true);
+    expect(messagesOf(role.validate("root"))).toEqual(['Expected one of "admin", "user"']);
+    expect(val.enum([1, 2]).validate(2).ok).toBe(true);
+    expect(val.enum([1, 2]).validate("2").ok).toBe(false);
+  });
 
-    it("accepts arbitrary input in val.unknown()", () => {
-      const schema = val.unknown();
-      expect(schema.validate(true)).toEqual({ ok: true, value: true });
-      expect(schema.validate([1, 2, 3])).toEqual({ ok: true, value: [1, 2, 3] });
+  it("lists its values", () => {
+    expect(val.enum(["a", "b"]).values).toEqual(["a", "b"]);
+  });
+});
 
-      type Unk = Infer<typeof schema>;
-      expectTypeOf<Unk>().toEqualTypeOf<unknown>();
-    });
+describe("nativeEnum", () => {
+  it("accepts the values of a string enum", () => {
+    enum Color {
+      Red = "red",
+      Blue = "blue",
+    }
+    const schema = val.nativeEnum(Color);
+    expect(valueOf(schema.validate("red"))).toBe(Color.Red);
+    expect(schema.validate("Red").ok).toBe(false);
+  });
 
-    it("supports refinement and transformation on any / unknown", () => {
-      const notNull = val.unknown().refine((v) => v !== null && v !== undefined, "Cannot be nullish");
-      expect(notNull.validate(123)).toEqual({ ok: true, value: 123 });
-      expect(notNull.validate(null)).toMatchObject({ ok: false });
-    });
+  it("accepts numeric enum values but not their reverse-mapped names", () => {
+    enum Level {
+      Low,
+      High,
+    }
+    const schema = val.nativeEnum(Level);
+    expect(schema.validate(1).ok).toBe(true);
+    expect(schema.validate("High").ok).toBe(false);
+    expect(schema.validate("Low").ok).toBe(false);
+  });
+
+  it("accepts an as const object", () => {
+    const schema = val.nativeEnum({ A: "a", B: "b" } as const);
+    expect(schema.validate("a").ok).toBe(true);
+    expect(schema.validate("A").ok).toBe(false);
   });
 });

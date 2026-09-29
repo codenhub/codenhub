@@ -1,114 +1,70 @@
-import { BaseValidator, type ValidationContext } from "./core";
-import { describeReceived, type ValidationIssue, type ValidationResult } from "./result";
+import { coerceToBoolean } from "./coercion";
+import { Validator } from "./core";
+import { constraint, invalidCoercion, invalidType, pass, type Outcome, type ParseContext } from "./internal";
+import { type Message } from "./issue";
 
-type BooleanCheck = (value: boolean, ctx: ValidationContext) => ValidationIssue | undefined;
-
-/**
- * Validates boolean inputs against boolean-specific constraints.
- */
-export class BooleanValidator extends BaseValidator<boolean, unknown> {
-  protected readonly checks: BooleanCheck[] = [];
-
-  protected clone(): BooleanValidator {
-    const copy = new (this.constructor as new () => BooleanValidator)();
-    copy.checks.push(...this.checks);
-    return copy;
+/** Validator for booleans, created by {@link boolean}. */
+export class BooleanValidator extends Validator<boolean> {
+  /**
+   * Creates a boolean validator.
+   *
+   * @param message - Message when the input is not a boolean.
+   * @param isCoerced - Converts `true`/`false`, `yes`/`no`, `on`/`off` and `1`/`0` to booleans instead of rejecting them.
+   */
+  constructor(
+    private readonly message?: Message,
+    private readonly isCoerced = false,
+  ) {
+    super();
   }
 
-  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<boolean> {
-    if (typeof input !== "boolean") {
-      return ctx.fail({
-        code: "invalid_type",
-        message: `Expected boolean, got ${describeReceived(input)}`,
-        expected: "boolean",
-        received: describeReceived(input),
-        input,
-      });
+  protected evaluate(input: unknown, ctx: ParseContext): Outcome<boolean> {
+    if (this.isCoerced) {
+      const converted = coerceToBoolean(input);
+      return converted === undefined ? invalidCoercion(ctx, "boolean", input, this.message) : pass(converted);
     }
-
-    const localIssues: ValidationIssue[] = [];
-
-    for (const check of this.checks) {
-      const issue = check(input, ctx);
-      if (issue !== undefined) {
-        localIssues.push(issue);
-        ctx.addIssue(issue);
-        if (ctx.options.abortEarly) {
-          return ctx.fail(issue);
-        }
-      }
-    }
-
-    if (localIssues.length > 0) {
-      const firstIssue = localIssues[0];
-      if (localIssues.length === 1 && firstIssue) {
-        return ctx.fail(firstIssue);
-      }
-      return ctx.fail({
-        code: firstIssue?.code ?? "invalid_value",
-        message: firstIssue?.message ?? "Boolean validation failed",
-        path: ctx.path,
-        issues: localIssues,
-      });
-    }
-
-    return ctx.ok(input);
+    return typeof input === "boolean" ? pass(input) : invalidType(ctx, "boolean", input, this.message);
   }
 
   /**
-   * Enforces that the boolean value is strictly `true`.
+   * Requires the value to be `true`.
    *
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
    */
-  true(message?: string): this {
-    const copy = this.clone();
-    copy.checks.push((val, ctx) => {
-      if (val !== true) {
-        return {
-          code: "invalid_value",
-          message: message ?? "Must be true",
-          path: ctx.path,
-          expected: "true",
-          received: String(val),
-          input: val,
-        };
-      }
-      return undefined;
-    });
-    return copy as this;
+  true(message?: Message): this {
+    return this.addStep(
+      constraint((value) => value, {
+        code: "invalid_value",
+        message: message ?? "Must be true",
+        params: { expected: true },
+      }),
+    );
   }
 
   /**
-   * Enforces that the boolean value is strictly `false`.
+   * Requires the value to be `false`.
    *
-   * @param message - Optional custom failure message.
-   * @returns This validator instance for method chaining.
+   * @param message - Failure message.
+   * @returns The validator with the rule added.
    */
-  false(message?: string): this {
-    const copy = this.clone();
-    copy.checks.push((val, ctx) => {
-      if (val !== false) {
-        return {
-          code: "invalid_value",
-          message: message ?? "Must be false",
-          path: ctx.path,
-          expected: "false",
-          received: String(val),
-          input: val,
-        };
-      }
-      return undefined;
-    });
-    return copy as this;
+  false(message?: Message): this {
+    return this.addStep(
+      constraint((value) => !value, {
+        code: "invalid_value",
+        message: message ?? "Must be false",
+        params: { expected: false },
+      }),
+    );
   }
 }
 
 /**
- * Creates a {@link BooleanValidator} schema instance.
+ * Creates a validator for booleans.
  *
- * @returns A new BooleanValidator instance.
+ * @param message - Message when the input is not a boolean.
+ * @returns A boolean validator.
  */
-export function boolean(): BooleanValidator {
-  return new BooleanValidator();
+export function boolean(message?: Message): BooleanValidator {
+  return new BooleanValidator(message);
 }

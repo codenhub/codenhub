@@ -1,482 +1,264 @@
-import { BaseValidator, type Infer, type ValidationContext, type Validator } from "./core";
+import { chain, collect, type MaybePromise } from "./async";
+import { execute, OptionalValidator, Validator, type AnyValidator, type Infer } from "./core";
+import {
+  childContext,
+  createIssue,
+  failWith,
+  invalidType,
+  isPlainObject,
+  pass,
+  setOwn,
+  type Outcome,
+  type ParseContext,
+} from "./internal";
+import { type Message, type ValidationIssue } from "./issue";
 import { EnumValidator } from "./literal";
-import { describeReceived, type ValidationIssue, type ValidationResult } from "./result";
+
+/** Maps property names to the validators of their values. */
+export type Shape = Record<string, AnyValidator>;
+
+type Simplify<T> = { [K in keyof T]: T[K] } & {};
+
+type OptionalKeys<TShape extends Shape> = {
+  [K in keyof TShape]: undefined extends Infer<TShape[K]> ? K : never;
+}[keyof TShape];
 
 /**
- * Extracts the keys of an object shape whose inferred output type accepts `undefined`.
- */
-type OptionalKeys<T> = {
-  [K in keyof T]: undefined extends Infer<T[K]> ? K : never;
-}[keyof T];
-
-/**
- * Extracts the keys of an object shape whose inferred output type does not accept `undefined`.
- */
-type RequiredKeys<T> = Exclude<keyof T, OptionalKeys<T>>;
-
-/**
- * Infers the TypeScript object type produced by validating an object shape schema.
+ * Infers the object type a shape produces. A property whose validator accepts `undefined` becomes optional.
  *
- * @typeParam T - Record of property names mapped to child validators.
+ * @typeParam TShape - Property validators.
  */
-export type InferObject<T extends Record<string, Validator<unknown>>> = {
-  [K in RequiredKeys<T>]: Infer<T[K]>;
-} & {
-  [K in OptionalKeys<T>]?: Infer<T[K]>;
-};
-
-/** Plain object accepted by object validators, including null-prototype objects. */
-export type PlainObject = Record<string, unknown>;
-
-/**
- * Recursively maps an object shape definition so that all nested object schemas and properties are optional.
- *
- * @typeParam TShape - Object shape schema record.
- */
-export type DeepPartial<TShape extends Record<string, Validator<unknown>>> = {
-  [K in keyof TShape]: TShape[K] extends ObjectValidator<infer SubShape>
-    ? ObjectValidator<DeepPartial<SubShape>> extends Validator<infer O>
-      ? Validator<O | undefined, unknown>
-      : Validator<unknown | undefined, unknown>
-    : Validator<Infer<TShape[K]> | undefined, unknown>;
-};
-
-/**
- * Tests whether a value is a plain JavaScript object or a null-prototype object.
- *
- * @param value - Value to test.
- * @returns `true` if the value is a plain object, `false` otherwise.
- */
-export const isPlainObject = (value: unknown): value is PlainObject => {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
+export type InferObject<TShape extends Shape> = Simplify<
+  { [K in Exclude<keyof TShape, OptionalKeys<TShape>>]: Infer<TShape[K]> } & {
+    [K in OptionalKeys<TShape>]?: Infer<TShape[K]>;
   }
+>;
 
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
+type Partialized<TShape extends Shape> = { [K in keyof TShape]: OptionalValidator<Infer<TShape[K]>> };
+type Requirement<TShape extends Shape, TKey extends keyof TShape> = {
+  [K in keyof TShape]: K extends TKey
+    ? TShape[K] extends OptionalValidator<infer TInner>
+      ? Validator<TInner>
+      : TShape[K]
+    : TShape[K];
 };
 
+/** How a validator treats input properties its shape does not list. */
+type UnknownKeys = "strip" | "strict" | "passthrough";
+
 /**
- * Schema validator for structured JavaScript objects.
+ * Validator for plain objects, created by {@link object}.
  *
- * Validates individual properties against child schemas, supports stripping unknown
- * keys by default, strict unrecognized key detection, passthrough of extra keys,
- * and schema transformations like pick, omit, extend, merge, partial, and deepPartial.
+ * Only own enumerable properties are read. Class instances and arrays are not objects here.
+ * Unlisted properties are dropped from the output unless {@link ObjectValidator.passthrough} or
+ * {@link ObjectValidator.strict} says otherwise.
  *
- * @typeParam TShape - Object mapping string property names to validator schemas.
+ * @typeParam TShape - Property validators.
  */
-export class ObjectValidator<
-  TShape extends Record<string, Validator<unknown>> = Record<string, never>,
-> extends BaseValidator<InferObject<TShape>, unknown> {
+export class ObjectValidator<TShape extends Shape> extends Validator<InferObject<TShape>> {
   /**
-   * Constructs an ObjectValidator with the given property shape definition and mode.
+   * Creates an object validator.
    *
-   * @param _shape - Record of property names mapped to field schemas.
-   * @param mode - Key handling mode: 'strip', 'strict', or 'passthrough'. Defaults to 'strip'.
-   * @param strictMessage - Optional custom failure message used in strict mode.
+   * @param shape - Validator of each property.
+   * @param unknownKeys - What to do with input properties the shape does not list.
+   * @param message - Message when the input is not a plain object.
    */
   constructor(
-    protected readonly _shape: TShape,
-    private readonly mode: "strip" | "strict" | "passthrough" = "strip",
-    private readonly strictMessage?: string,
+    readonly shape: TShape,
+    private readonly unknownKeys: UnknownKeys = "strip",
+    private readonly message?: Message,
   ) {
     super();
   }
 
-  /**
-   * Returns the underlying shape record containing the property validators.
-   */
-  get shape(): TShape {
-    return this._shape;
-  }
-
-  /**
-   * Creates an immutable clone of this validator with updated configuration.
-   *
-   * @param mode - New key handling mode. Defaults to current mode.
-   * @param strictMessage - Custom strict error message. Defaults to current message.
-   * @returns A new cloned ObjectValidator instance.
-   */
-  clone(
-    mode: "strip" | "strict" | "passthrough" = this.mode,
-    strictMessage: string | undefined = this.strictMessage,
-  ): ObjectValidator<TShape> {
-    return new ObjectValidator(this._shape, mode, strictMessage);
-  }
-
-  /**
-   * Enforces that no unrecognized keys exist on the input object.
-   *
-   * @param message - Optional custom failure message for unrecognized keys.
-   * @returns A new immutable ObjectValidator in strict mode.
-   */
-  strict(message?: string): ObjectValidator<TShape> {
-    return this.clone("strict", message);
-  }
-
-  /**
-   * Configures the validator to preserve unrecognized keys in the output object.
-   *
-   * @returns A new immutable ObjectValidator in passthrough mode.
-   */
-  passthrough(): ObjectValidator<TShape> {
-    return this.clone("passthrough", this.strictMessage);
-  }
-
-  /**
-   * Configures the validator to strip unrecognized keys from the output object (default behavior).
-   *
-   * @returns A new immutable ObjectValidator in strip mode.
-   */
-  strip(): ObjectValidator<TShape> {
-    return this.clone("strip", this.strictMessage);
-  }
-
-  /**
-   * Extends this object schema with additional or overridden property schemas.
-   *
-   * @typeParam TExtra - Additional shape properties to merge into the schema.
-   * @param extension - Record of additional property schemas.
-   * @returns A new ObjectValidator containing the merged shape.
-   */
-  extend<TExtra extends Record<string, Validator<unknown>>>(extension: TExtra): ObjectValidator<TShape & TExtra> {
-    return new ObjectValidator(
-      {
-        ...this._shape,
-        ...extension,
-      },
-      this.mode,
-      this.strictMessage,
-    );
-  }
-
-  /**
-   * Merges another object schema into this one, overwriting conflicting keys.
-   *
-   * @typeParam TExtra - Shape definition of the other object validator.
-   * @param other - Another ObjectValidator whose shape will be merged in.
-   * @returns A new ObjectValidator containing the merged shape.
-   */
-  merge<TExtra extends Record<string, Validator<unknown>>>(
-    other: ObjectValidator<TExtra>,
-  ): ObjectValidator<TShape & TExtra> {
-    return new ObjectValidator(
-      {
-        ...this._shape,
-        ...other.shape,
-      },
-      this.mode,
-      this.strictMessage,
-    );
-  }
-
-  /**
-   * Creates a new object schema retaining only the specified keys.
-   *
-   * @typeParam TKey - Keys to retain in the new schema.
-   * @param keys - Array of property keys to keep.
-   * @returns A new ObjectValidator containing only the selected keys.
-   */
-  pick<TKey extends keyof TShape>(keys: readonly TKey[]): ObjectValidator<Pick<TShape, TKey>> {
-    const newShape = {} as Pick<TShape, TKey>;
-    for (const key of keys) {
-      if (Object.prototype.hasOwnProperty.call(this._shape, key)) {
-        newShape[key] = this._shape[key];
-      }
+  protected evaluate(input: unknown, ctx: ParseContext): MaybePromise<Outcome<InferObject<TShape>>> {
+    if (!isPlainObject(input)) {
+      return invalidType(ctx, "object", input, this.message);
     }
-    return new ObjectValidator(newShape, this.mode, this.strictMessage);
-  }
 
-  /**
-   * Creates a new object schema omitting the specified keys.
-   *
-   * @typeParam TKey - Keys to exclude from the new schema.
-   * @param keys - Array of property keys to omit.
-   * @returns A new ObjectValidator without the omitted keys.
-   */
-  omit<TKey extends keyof TShape>(keys: readonly TKey[]): ObjectValidator<Omit<TShape, TKey>> {
-    const keySet = new Set<keyof TShape>(keys);
-    const newShape = {} as Record<string, Validator<unknown>>;
-    for (const [key, validator] of Object.entries(this._shape)) {
-      if (!keySet.has(key as TKey)) {
-        newShape[key] = validator;
-      }
-    }
-    return new ObjectValidator(newShape as Omit<TShape, TKey>, this.mode, this.strictMessage);
-  }
-
-  /**
-   * Returns a new object schema where all top-level properties are optional.
-   *
-   * @returns A new ObjectValidator with all fields marked optional.
-   */
-  partial(): ObjectValidator<{ [K in keyof TShape]: Validator<Infer<TShape[K]> | undefined, unknown> }> {
-    const newShape = {} as Record<string, Validator<unknown>>;
-    for (const [key, validator] of Object.entries(this._shape)) {
-      newShape[key] = validator.optional();
-    }
-    return new ObjectValidator(
-      newShape as { [K in keyof TShape]: Validator<Infer<TShape[K]> | undefined, unknown> },
-      this.mode,
-      this.strictMessage,
-    );
-  }
-
-  /**
-   * Returns a new object schema where all properties and nested object properties are recursively optional.
-   *
-   * @returns A new ObjectValidator with recursively optional fields.
-   */
-  deepPartial(): ObjectValidator<DeepPartial<TShape>> {
-    const newShape = {} as Record<string, Validator<unknown>>;
-    for (const [key, validator] of Object.entries(this._shape)) {
-      let target: unknown = validator;
-      while (
-        target !== null &&
-        typeof target === "object" &&
-        "inner" in target &&
-        (target as { inner?: unknown }).inner !== undefined
-      ) {
-        if (target instanceof ObjectValidator) {
+    const keys = Object.keys(this.shape);
+    const issues: ValidationIssue[] = [];
+    if (this.unknownKeys === "strict") {
+      for (const key of Object.keys(input)) {
+        if (issues.length > 0 && ctx.options.abortEarly === true) {
           break;
         }
-        target = (target as { inner: unknown }).inner;
+        if (!Object.hasOwn(this.shape, key)) {
+          issues.push(
+            createIssue(childContext(ctx, key), {
+              code: "unrecognized_key",
+              message: `Unrecognized key "${key}"`,
+              params: { key },
+            }),
+          );
+        }
       }
-
-      if (target instanceof ObjectValidator) {
-        newShape[key] = (target as ObjectValidator<Record<string, Validator<unknown>>>).deepPartial().optional();
-      } else {
-        newShape[key] = validator.optional();
+      if (issues.length > 0 && ctx.options.abortEarly === true) {
+        return failWith(issues);
       }
     }
-    return new ObjectValidator(newShape as DeepPartial<TShape>, this.mode, this.strictMessage);
-  }
 
-  /**
-   * Creates an EnumValidator from the keys of this object shape.
-   *
-   * @returns An EnumValidator accepting any valid key from this schema.
-   */
-  keyof(): EnumValidator<keyof TShape & (string | number)> {
-    const keys = Object.keys(this._shape) as (keyof TShape & (string | number))[];
-    return new EnumValidator(keys);
-  }
-
-  protected override isAsync(): boolean {
-    return Object.values(this._shape).some((child) =>
-      child instanceof BaseValidator ? (child as unknown as { isAsync(): boolean }).isAsync() : false,
+    return chain(
+      collect(
+        keys.length,
+        (index) => {
+          const key = keys[index] as string;
+          return execute(
+            this.shape[key] as AnyValidator,
+            Object.hasOwn(input, key) ? input[key] : undefined,
+            childContext(ctx, key),
+          );
+        },
+        ctx.options.abortEarly === true ? (outcome) => !outcome.ok : undefined,
+      ),
+      (outcomes) => {
+        const output: Record<string, unknown> = {};
+        outcomes.forEach((outcome, index) => {
+          const key = keys[index] as string;
+          if (!outcome.ok) {
+            issues.push(...outcome.issues);
+          } else if (outcome.value !== undefined || Object.hasOwn(input, key)) {
+            setOwn(output, key, outcome.value);
+          }
+        });
+        if (issues.length > 0) {
+          return failWith(issues);
+        }
+        if (this.unknownKeys === "passthrough") {
+          for (const key of Object.keys(input)) {
+            if (!Object.hasOwn(this.shape, key)) {
+              setOwn(output, key, input[key]);
+            }
+          }
+        }
+        return pass(output as InferObject<TShape>);
+      },
     );
   }
 
-  protected _validate(input: unknown, ctx: ValidationContext): ValidationResult<InferObject<TShape>> {
-    if (!isPlainObject(input)) {
-      return ctx.fail({
-        code: "invalid_type",
-        message: `Expected object, got ${describeReceived(input)}`,
-        expected: "plain object",
-        received: describeReceived(input),
-        input: ctx.options.includeInput ? input : undefined,
-      });
-    }
-
-    const localIssues: ValidationIssue[] = [];
-    const output: Record<string, unknown> = {};
-
-    if (this.mode === "strict") {
-      for (const key of Object.keys(input)) {
-        if (!Object.prototype.hasOwnProperty.call(this._shape, key)) {
-          const issue: ValidationIssue = {
-            code: "invalid_value",
-            message: this.strictMessage ?? `Unrecognized key: ${key}`,
-            path: [...ctx.path, key],
-          };
-          if (ctx.options.includeInput) {
-            issue.input = input[key];
-          }
-          localIssues.push(issue);
-          ctx.addIssue(issue);
-          if (ctx.options.abortEarly) {
-            return ctx.fail(issue);
-          }
-        }
-      }
-    }
-
-    for (const [key, childValidator] of Object.entries(this._shape)) {
-      const childPath = [...ctx.path, key];
-      const hasProp = Object.prototype.hasOwnProperty.call(input, key);
-      const propValue = hasProp ? input[key] : undefined;
-      const res = childValidator.validate(propValue, {
-        ...ctx.options,
-        path: childPath,
-      });
-
-      if (!res.ok) {
-        if (res.error.issues && res.error.issues.length > 0) {
-          for (const iss of res.error.issues) {
-            localIssues.push(iss);
-            ctx.addIssue(iss);
-          }
-        } else {
-          localIssues.push(res.error);
-          ctx.addIssue(res.error);
-        }
-
-        if (ctx.options.abortEarly) {
-          return ctx.fail(localIssues[0]);
-        }
-      } else {
-        if (res.value !== undefined || hasProp) {
-          Object.defineProperty(output, key, {
-            value: res.value,
-            writable: true,
-            enumerable: true,
-            configurable: true,
-          });
-        }
-      }
-    }
-
-    if (this.mode === "passthrough") {
-      for (const key of Object.keys(input)) {
-        if (!Object.prototype.hasOwnProperty.call(this._shape, key)) {
-          Object.defineProperty(output, key, {
-            value: input[key],
-            writable: true,
-            enumerable: true,
-            configurable: true,
-          });
-        }
-      }
-    }
-
-    if (localIssues.length > 0) {
-      if (localIssues.length === 1) {
-        return ctx.fail(localIssues[0]);
-      }
-      return ctx.fail({
-        code: localIssues[0]?.code ?? "invalid_value",
-        message: localIssues[0]?.message ?? "Object validation failed",
-        path: localIssues[0]?.path ?? ctx.path,
-        issues: localIssues,
-      });
-    }
-
-    return ctx.ok(output as InferObject<TShape>);
+  /**
+   * Rejects input properties the shape does not list, with an `unrecognized_key` issue each.
+   *
+   * @returns A copy in strict mode, keeping its rules.
+   */
+  strict(): this {
+    return this.derive({ unknownKeys: "strict" });
   }
 
-  protected override async _validateAsync(
-    input: unknown,
-    ctx: ValidationContext,
-  ): Promise<ValidationResult<InferObject<TShape>>> {
-    if (!isPlainObject(input)) {
-      return ctx.fail({
-        code: "invalid_type",
-        message: `Expected object, got ${describeReceived(input)}`,
-        expected: "plain object",
-        received: describeReceived(input),
-        input: ctx.options.includeInput ? input : undefined,
-      });
-    }
+  /**
+   * Copies input properties the shape does not list to the output unchanged and unvalidated.
+   *
+   * @returns A copy in passthrough mode, keeping its rules.
+   */
+  passthrough(): this {
+    return this.derive({ unknownKeys: "passthrough" });
+  }
 
-    const localIssues: ValidationIssue[] = [];
-    const output: Record<string, unknown> = {};
+  /**
+   * Drops input properties the shape does not list from the output. This is the default.
+   *
+   * @returns A copy in strip mode, keeping its rules.
+   */
+  strip(): this {
+    return this.derive({ unknownKeys: "strip" });
+  }
 
-    if (this.mode === "strict") {
-      for (const key of Object.keys(input)) {
-        if (!Object.prototype.hasOwnProperty.call(this._shape, key)) {
-          const issue: ValidationIssue = {
-            code: "invalid_value",
-            message: this.strictMessage ?? `Unrecognized key: ${key}`,
-            path: [...ctx.path, key],
-          };
-          if (ctx.options.includeInput) {
-            issue.input = input[key];
-          }
-          localIssues.push(issue);
-          ctx.addIssue(issue);
-          if (ctx.options.abortEarly) {
-            return ctx.fail(issue);
-          }
-        }
-      }
-    }
+  /**
+   * Adds properties, replacing any with the same name. Rules added with `refine` or `check` are not kept.
+   *
+   * @typeParam TExtra - Shape of the added properties.
+   * @param extra - Validators of the added properties.
+   * @returns A validator for the combined shape.
+   */
+  extend<TExtra extends Shape>(extra: TExtra): ObjectValidator<Omit<TShape, keyof TExtra> & TExtra> {
+    const shape = { ...this.shape, ...extra } as unknown as Omit<TShape, keyof TExtra> & TExtra;
+    return new ObjectValidator(shape, this.unknownKeys, this.message);
+  }
 
-    /* oxlint-disable no-await-in-loop */
-    for (const [key, childValidator] of Object.entries(this._shape)) {
-      const childPath = [...ctx.path, key];
-      const hasProp = Object.prototype.hasOwnProperty.call(input, key);
-      const propValue = hasProp ? input[key] : undefined;
-      const res = await childValidator.validateAsync(propValue, {
-        ...ctx.options,
-        path: childPath,
-      });
+  /**
+   * Keeps only the listed properties. Rules added with `refine` or `check` are not kept.
+   *
+   * @typeParam TKey - Names of the properties to keep.
+   * @param keys - Names of the properties to keep.
+   * @returns A validator for the smaller shape.
+   */
+  pick<TKey extends keyof TShape & string>(keys: readonly TKey[]): ObjectValidator<Pick<TShape, TKey>> {
+    const picked = Object.fromEntries(keys.map((key) => [key, this.shape[key]]));
+    return new ObjectValidator(picked as Pick<TShape, TKey>, this.unknownKeys, this.message);
+  }
 
-      if (!res.ok) {
-        if (res.error.issues && res.error.issues.length > 0) {
-          for (const iss of res.error.issues) {
-            localIssues.push(iss);
-            ctx.addIssue(iss);
-          }
-        } else {
-          localIssues.push(res.error);
-          ctx.addIssue(res.error);
-        }
+  /**
+   * Removes the listed properties. Rules added with `refine` or `check` are not kept.
+   *
+   * @typeParam TKey - Names of the properties to remove.
+   * @param keys - Names of the properties to remove.
+   * @returns A validator for the smaller shape.
+   */
+  omit<TKey extends keyof TShape & string>(keys: readonly TKey[]): ObjectValidator<Omit<TShape, TKey>> {
+    const omitted = new Set<string>(keys);
+    const kept = Object.entries(this.shape).filter(([key]) => !omitted.has(key));
+    return new ObjectValidator(Object.fromEntries(kept) as Omit<TShape, TKey>, this.unknownKeys, this.message);
+  }
 
-        if (ctx.options.abortEarly) {
-          return ctx.fail(localIssues[0]);
-        }
-      } else {
-        if (res.value !== undefined || hasProp) {
-          Object.defineProperty(output, key, {
-            value: res.value,
-            writable: true,
-            enumerable: true,
-            configurable: true,
-          });
-        }
-      }
-    }
-    /* oxlint-enable no-await-in-loop */
+  /**
+   * Makes every property optional. Rules added with `refine` or `check` are not kept.
+   *
+   * @returns A validator whose properties all accept `undefined`.
+   */
+  partial(): ObjectValidator<Partialized<TShape>> {
+    const optional = Object.entries(this.shape).map(([key, validator]) => [key, validator.optional()]);
+    return new ObjectValidator(Object.fromEntries(optional) as Partialized<TShape>, this.unknownKeys, this.message);
+  }
 
-    if (this.mode === "passthrough") {
-      for (const key of Object.keys(input)) {
-        if (!Object.prototype.hasOwnProperty.call(this._shape, key)) {
-          Object.defineProperty(output, key, {
-            value: input[key],
-            writable: true,
-            enumerable: true,
-            configurable: true,
-          });
-        }
-      }
-    }
+  /**
+   * Makes the listed properties required again by unwrapping their `.optional()`. A property that
+   * is not wrapped by `.optional()` at its top level is left as it is. Rules added with `refine`
+   * or `check` are not kept.
+   *
+   * @typeParam TKey - Names of the properties to require.
+   * @param keys - Names of the properties to require. All of them when omitted.
+   * @returns A validator whose listed properties no longer accept `undefined`.
+   */
+  required<TKey extends keyof TShape & string = keyof TShape & string>(
+    keys?: readonly TKey[],
+  ): ObjectValidator<Requirement<TShape, TKey>> {
+    const listed = keys === undefined ? undefined : new Set<string>(keys);
+    const required = Object.entries(this.shape).map(([key, validator]) => [
+      key,
+      (listed === undefined || listed.has(key)) && validator instanceof OptionalValidator
+        ? (validator.inner as AnyValidator)
+        : validator,
+    ]);
+    return new ObjectValidator(
+      Object.fromEntries(required) as Requirement<TShape, TKey>,
+      this.unknownKeys,
+      this.message,
+    );
+  }
 
-    if (localIssues.length > 0) {
-      if (localIssues.length === 1) {
-        return ctx.fail(localIssues[0]);
-      }
-      return ctx.fail({
-        code: localIssues[0]?.code ?? "invalid_value",
-        message: localIssues[0]?.message ?? "Object validation failed",
-        path: localIssues[0]?.path ?? ctx.path,
-        issues: localIssues,
-      });
-    }
-
-    return ctx.ok(output as InferObject<TShape>);
+  /**
+   * Builds an enum validator from the property names.
+   *
+   * @returns A validator that accepts any of this object's keys.
+   */
+  keyof(): EnumValidator<keyof TShape & string> {
+    return new EnumValidator(Object.keys(this.shape) as (keyof TShape & string)[]);
   }
 }
 
 /**
- * Creates an object schema validator for a defined shape of field validators, or an empty object schema.
+ * Creates a validator for plain objects with the given properties.
  *
- * @typeParam TShape - Schema mapping property names to child validators.
- * @param shape - Optional record mapping field names to validator schemas.
- * @returns A new ObjectValidator instance.
+ * @example
+ * ```ts
+ * const user = val.object({ name: val.string(), age: val.number().optional() });
+ * ```
+ *
+ * @typeParam TShape - Property validators.
+ * @param shape - Validator of each property.
+ * @param message - Message when the input is not a plain object.
+ * @returns An object validator.
  */
-export function object<TShape extends Record<string, Validator<unknown>> = Record<string, never>>(
-  shape?: TShape,
-): ObjectValidator<TShape> {
-  return new ObjectValidator((shape ?? {}) as TShape);
+export function object<TShape extends Shape>(shape: TShape, message?: Message): ObjectValidator<TShape> {
+  return new ObjectValidator(shape, "strip", message);
 }
