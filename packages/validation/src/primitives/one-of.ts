@@ -21,5 +21,6 @@ export function oneOf<const T extends readonly (string | number)[]>(values: T): 
   return (input) =>
     (options as readonly unknown[]).includes(input)
       ? pass(input as T[number])
-      : failIssue("invalid_value", { options });
+      : // A copy per failure, so changing an issue's list cannot change what the validator accepts.
+        failIssue("invalid_value", { options: [...options] });
 }

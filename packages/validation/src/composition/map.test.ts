@@ -31,8 +31,14 @@ describe("map", () => {
     expect(issuesOf(result).map((issue) => issue.path)).toEqual([[0]]);
   });
 
-  it("should report a bad key and a bad value separately", () => {
-    expect(codesOf(stock(new Map([["", -1]])))).toEqual(["too_small", "too_small"]);
+  it("should report a bad key as invalid_key holding the key's issues, and a bad value as itself", () => {
+    const [keyIssue, valueIssue] = issuesOf(stock(new Map([["", -1]])));
+    expect(keyIssue).toEqual({
+      code: "invalid_key",
+      path: [""],
+      params: { issues: [{ code: "too_small", path: [], params: { minimum: 1, type: "string" } }] },
+    });
+    expect(valueIssue?.code).toBe("too_small");
   });
 
   it("should treat min and max as inclusive and length as exact", () => {
@@ -48,6 +54,6 @@ describe("map", () => {
   it("should be asynchronous when a validator is", async () => {
     const result = map(isFree, number())(new Map([["taken", 1]]));
     expect(isPending(result)).toBe(true);
-    expect(codesOf(await result)).toEqual(["taken"]);
+    expect(codesOf(await result)).toEqual(["invalid_key"]);
   });
 });

@@ -42,7 +42,7 @@ Everything below exists, works in synchronous and asynchronous form where it com
 - **Consumer types.** The built declarations compile for a consumer under strict settings, and a fixture pins the types that must not compile.
 - **Size budgets.** Each validator family has a bundle scenario with a gzip ceiling, and there is a scenario for the whole package. A single leaf validator stays near 1 kB gzipped, and the whole package stays a small multiple of that.
 - **Determinism.** No validator depends on time, locale, randomness or state left by an earlier call, so the same input gives the same answer.
-- **Failure behavior.** Bad input never throws. A bad option throws when the validator is created. A consumer's own callback that throws propagates.
+- **Failure behavior.** Bad input never throws, except input nested past the stack limit, which the docs call out. A bad option throws when the validator is created. A consumer's own callback that throws propagates.
 
 ### Documentation
 

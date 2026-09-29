@@ -1,4 +1,4 @@
-import { failWith, invalidType, pass, toIssue } from "../core/result";
+import { assertOrder, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { ValidationIssue, Validator } from "../core/types";
 
 /** Bounds for {@link date}. Every option is optional. */
@@ -28,22 +28,26 @@ const assertValidDate = (name: string, bound: Date | undefined): void => {
  *
  * @param options - Earliest and latest accepted moments, both inclusive.
  * @returns A validator that produces a `Date`.
- * @throws {RangeError} When `min` or `max` is an invalid `Date`.
+ * @throws {RangeError} When `min` or `max` is an invalid `Date`, or `min` is after `max`.
  */
 export function date(options: DateOptions = {}): Validator<Date> {
-  const { min, max } = options;
-  assertValidDate("Minimum date", min);
-  assertValidDate("Maximum date", max);
+  assertValidDate("Minimum date", options.min);
+  assertValidDate("Maximum date", options.max);
+  // Bounds are read as times now and reported as new Dates, so neither changing the options later
+  // nor changing a reported bound can move them.
+  const min = options.min?.getTime();
+  const max = options.max?.getTime();
+  assertOrder("min", min, "max", max);
   return (input) => {
     if (!(input instanceof Date) || Number.isNaN(input.getTime())) {
       return invalidType("valid date", input);
     }
     const issues: ValidationIssue[] = [];
-    if (min !== undefined && input.getTime() < min.getTime()) {
-      issues.push(toIssue({ code: "too_small", params: { minimum: min, inclusive: true, type: "date" } }));
+    if (min !== undefined && input.getTime() < min) {
+      issues.push(toIssue({ code: "too_small", params: { minimum: new Date(min), inclusive: true, type: "date" } }));
     }
-    if (max !== undefined && input.getTime() > max.getTime()) {
-      issues.push(toIssue({ code: "too_big", params: { maximum: max, inclusive: true, type: "date" } }));
+    if (max !== undefined && input.getTime() > max) {
+      issues.push(toIssue({ code: "too_big", params: { maximum: new Date(max), inclusive: true, type: "date" } }));
     }
     return issues.length > 0 ? failWith(issues) : pass(input);
   };

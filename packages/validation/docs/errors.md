@@ -22,7 +22,7 @@ const result = {
 };
 ```
 
-`error.issues` lists every problem the validator found, in a fixed order, and is never empty. Objects report the issues of their properties in the order the shape lists them, whichever finished first.
+`error.issues` lists every problem the validator found, in a fixed order, and is never empty. Its type says so too, so `result.error.issues[0]` is an issue and not `undefined`, even under `noUncheckedIndexedAccess`. A strict `object` reports its unrecognized keys first, then the issues of its properties in the order the shape lists them, whichever finished first.
 
 ## The issue
 
@@ -33,7 +33,9 @@ const result = {
 | `params`  | The facts behind the failure, such as the limit that was crossed. Present when there are any.                                               |
 | `message` | Fixed text, when the validator that reported the issue set one. The built-in validators never do; your own can.                             |
 
-**An issue never contains the input.** There is no field for it, and `params` holds type names and constraint values, never the value under test. Inputs are often passwords or tokens, and issues get logged and shown, so this is a rule and not a default. If you need the value, you already have it.
+**An issue never contains an input value.** There is no field for it, and `params` holds type names and constraint values, never the value under test. Inputs are often passwords or tokens, and issues get logged and shown, so this is a rule and not a default. If you need the value, you already have it.
+
+Keys are not values, and they do appear: a path leads through the keys of the input, so a `record` or `map` issue names the key it belongs to, and a strict `object` reports each key it does not recognize, in its path and in `params.key`. Do not put secrets in key names you validate.
 
 A path can be formatted for display with `formatPath`:
 
@@ -42,7 +44,10 @@ import { formatPath } from "@codenhub/validation";
 
 formatPath(["user", "addresses", 0, "street"]); // "user.addresses[0].street"
 formatPath([0, "title"]); // "[0].title"
+formatPath(["a.b"]); // '["a.b"]'
 ```
+
+A key that is empty or holds `.`, `[`, `]` or `"` is quoted in brackets, so a key named `a.b` and the path `a`, `b` never format the same.
 
 ## Built-in codes
 
@@ -56,10 +61,11 @@ The code set is open: a custom validator reports whatever code it likes. These a
 | `too_small`        | Below a minimum: too short, too few items, or too small a number or date.                         | `minimum`, `type`, and `inclusive` or `exact` where they apply.                                                                                                                                      |
 | `too_big`          | Above a maximum.                                                                                  | `maximum`, `type`, and `inclusive` or `exact` where they apply.                                                                                                                                      |
 | `unrecognized_key` | An object has a property its shape does not list, in strict mode.                                 | `key`. The issue's path ends at the key.                                                                                                                                                             |
+| `invalid_key`      | A key of a `record` or `map` failed its key validator.                                            | `issues`: what the key validator found, with paths relative to the key. The issue's path ends at the key, so it is not mistaken for a problem with the value there.                                  |
 | `invalid_union`    | A value matched none of the options of a `union`, or a tagged union got a missing or unknown tag. | For `union`, `issues`: the issues each option found, in order, with paths relative to the union's value. For `discriminatedUnion`, `discriminator` and `options`, and the issue's path is the tag's. |
 | `custom`           | The default code of a `refine` check or `fail` call that names no code.                           | Whatever the reporter set.                                                                                                                                                                           |
 
-`received` names types the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `map`, `set`, the class name of an instance, or the `typeof` of anything else.
+`received` names types the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `invalid date` for a `Date` holding no moment, `map`, `set`, the class name of an instance, `object` for anything that cannot be inspected without throwing, or the `typeof` of anything else.
 
 The validator reference lists the exact code and `params` each validator reports.
 
@@ -72,7 +78,7 @@ import { englishMessages, formatIssue, number } from "@codenhub/validation";
 
 const result = number({ min: 18 })(15);
 if (!result.ok) {
-  formatIssue(result.error.issues[0]!, englishMessages); // "Must be at least 18"
+  formatIssue(result.error.issues[0], englishMessages); // "Must be at least 18"
 }
 ```
 

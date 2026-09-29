@@ -7,7 +7,7 @@ description: Every validator and combinator, with its options, what it produces 
 
 Every validator here is created by calling a function and is then called with the value to check. Every one returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`, and never throws for invalid input. The code and `params` each failure reports are listed with the validator; [Issues and messages](errors.md) explains what they mean and how to turn them into text.
 
-Options are read once, when the validator is created. An option that makes no sense, such as a negative length, throws a `RangeError` or `TypeError` at that point, because it is a mistake in your code and not in the input.
+Options are read once, when the validator is created. An option that makes no sense, such as a negative length, a `NaN` bound, or limits no value can satisfy together such as `{ min: 5, max: 2 }`, throws a `RangeError` or `TypeError` at that point, because it is a mistake in your code and not in the input.
 
 ## Strings
 
@@ -71,10 +71,10 @@ The options, all optional:
 | `gt`, `lt`   | Strictly greater than or less than this value.                                                                       |
 | `int`        | A whole number.                                                                                                      |
 | `safeInt`    | A whole number a double can represent exactly, that is within `Number.MAX_SAFE_INTEGER`.                             |
-| `multipleOf` | A multiple of this positive number, tolerating floating-point error, so `0.3` is a multiple of `0.1`.                |
+| `multipleOf` | A multiple of this positive number, compared as the decimals both are written as, so `0.3` is a multiple of `0.1`.   |
 | `nonZero`    | Anything but zero.                                                                                                   |
 
-Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, non-negative is `min: 0`, negative is `lt: 0` and non-positive is `max: 0`. `clamp` throws a `RangeError` for a `NaN` bound or a minimum above its maximum, and `multipleOf` throws one unless it is a positive finite number.
+Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, non-negative is `min: 0`, negative is `lt: 0` and non-positive is `max: 0`. A `NaN` bound, or bounds no finite number can satisfy such as `{ min: 5, max: 2 }`, `{ gt: 1, lt: 1 }` or `{ min: Infinity }`, throws a `RangeError` rather than being ignored. `clamp` throws one for a `NaN` bound or a minimum above its maximum, and `multipleOf` throws one unless it is a positive finite number. `multipleOf` is exact at any size: whole numbers are compared as they are, and anything else as the decimal it is written as, which is what a number parsed from text is. A number computed in floating point is not always the decimal it looks like: `0.1 + 0.2` is `0.30000000000000004`, which is not a multiple of `0.1`.
 
 | Failure                       | `code`          | `params`                                                      |
 | ----------------------------- | --------------- | ------------------------------------------------------------- |
@@ -98,11 +98,11 @@ Bounds appear in `params` as bigints, which `JSON.stringify` cannot serialize. C
 
 `date(options?)` accepts valid `Date` objects and produces the same `Date`. An invalid date such as `new Date("nope")`, a timestamp or a string fails with `invalid_type` and `{ expected: "valid date", received }`. To check date text, use [`isoDate` or `datetime`](#formats).
 
-The options `min` and `max` are `Date`s, both inclusive, and throw a `RangeError` when created with an invalid `Date`. A date before `min` fails with `too_small` and `{ minimum, inclusive: true, type: "date" }`, and one after `max` with `too_big` and `{ maximum, inclusive: true, type: "date" }`, the bound being a `Date`.
+The options `min` and `max` are `Date`s, both inclusive, and throw a `RangeError` when created with an invalid `Date` or with `min` after `max`. They are read when the validator is created, so changing the `Date` objects later has no effect. A date before `min` fails with `too_small` and `{ minimum, inclusive: true, type: "date" }`, and one after `max` with `too_big` and `{ maximum, inclusive: true, type: "date" }`, the bound being a `Date`.
 
 ## Fixed values
 
-- `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`.
+- `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`. The one exception is `literal(NaN)`, which matches nothing, since `NaN === NaN` is false.
 - `oneOf(values)` accepts any one string or number of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The list is copied when the validator is created.
 - `nativeEnum(enumObject)` accepts any value of a TypeScript `enum`. It ignores the reverse-mapping names TypeScript adds to a numeric enum, so only the numbers are values.
 
@@ -133,26 +133,26 @@ A format is a validator for a string of a particular shape. Each accepts a strin
 
 A non-string fails with `invalid_type` and `{ expected: "string", received }`. A string that does not match fails with `invalid_format` and `{ format }`, and `format` names it as the table shows.
 
-| Validator    | Accepts                                                                     | `format`                     |
-| ------------ | --------------------------------------------------------------------------- | ---------------------------- |
-| `email()`    | An email address with a public domain name.                                 | `"email"`                    |
-| `url()`      | An absolute URL with an allowed protocol and a public host.                 | `"url"`                      |
-| `uuid()`     | A UUID of version 1 to 8, hyphenated, in any letter case.                   | `"uuid"`                     |
-| `ip()`       | An IPv4 or IPv6 address.                                                    | `"ip"`, `"ipv4"` or `"ipv6"` |
-| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists. | `"datetime"`                 |
-| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.       | `"date"`                     |
-| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens.            | `"hostname"`                 |
-| `hex()`      | One or more hexadecimal digits of any case.                                 | `"hex"`                      |
-| `base64()`   | Standard base64 with correct padding.                                       | `"base64"`                   |
-| `ulid()`     | A ULID, in any case.                                                        | `"ulid"`                     |
-| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.              | `"nanoid"`                   |
-| `cuid2()`    | A CUID2 identifier.                                                         | `"cuid2"`                    |
+| Validator    | Accepts                                                                       | `format`                     |
+| ------------ | ----------------------------------------------------------------------------- | ---------------------------- |
+| `email()`    | An email address with a public domain name.                                   | `"email"`                    |
+| `url()`      | An absolute URL with an allowed protocol and a public host.                   | `"url"`                      |
+| `uuid()`     | A UUID of version 1 to 8, or the nil or max UUID, hyphenated, in any case.    | `"uuid"`                     |
+| `ip()`       | An IPv4 or IPv6 address.                                                      | `"ip"`, `"ipv4"` or `"ipv6"` |
+| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists.   | `"datetime"`                 |
+| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.         | `"date"`                     |
+| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens.              | `"hostname"`                 |
+| `hex()`      | One or more hexadecimal digits of any case.                                   | `"hex"`                      |
+| `base64()`   | Standard base64 with correct padding. The empty string is base64 of no bytes. | `"base64"`                   |
+| `ulid()`     | A ULID, in any case.                                                          | `"ulid"`                     |
+| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.                | `"nanoid"`                   |
+| `cuid2()`    | A CUID2 identifier.                                                           | `"cuid2"`                    |
 
 `isoDate()` produces a string. To get a `Date`, use `date()` on a `Date` you built yourself.
 
 ### `email`
 
-`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The local part is limited to 64 characters and the whole address to 254. Hosts that are not public domain names, such as `localhost`, single-label hosts and IP addresses, are rejected.
+`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The local part is limited to 64 characters and the whole address to 254. Hosts that are not public domain names are rejected: `localhost`, single-label hosts, IP addresses, and special-use names that never reach a public host, which are those ending in `localhost`, `local`, `internal`, `home.arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
 
 ```ts
 import { email, pipe, string } from "@codenhub/validation";
@@ -164,12 +164,12 @@ address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
 
 ### `url`
 
-`url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The options are:
+`url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The value is returned as it came, so text the URL parser would quietly clean up is rejected instead: surrounding or embedded whitespace, control characters such as line breaks, backslashes, and a host written without both slashes, such as `https:example.com`, which a page on the same scheme would read as a path on its own host. Trim first with `pipe(string({ trim: true }), url())` when the input may have surrounding spaces. The options are:
 
-| Option       | Meaning                                                                                                              |
-| ------------ | -------------------------------------------------------------------------------------------------------------------- |
-| `protocols`  | Accepted protocols without the colon. Default `["http", "https"]`. The list is copied when the validator is created. |
-| `allowLocal` | Accept `localhost`, single-label hosts and IP addresses, which are rejected by default. Default `false`.             |
+| Option       | Meaning                                                                                                                                                           |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `protocols`  | Accepted protocols without the colon. Default `["http", "https"]`. The list is copied when the validator is created.                                              |
+| `allowLocal` | Accept `localhost`, single-label hosts, IP addresses and special-use names such as `db.internal`, which are rejected by default, as for `email`. Default `false`. |
 
 ```ts
 import { url } from "@codenhub/validation";
@@ -178,6 +178,23 @@ url()("https://example.com/a?b=1"); // ok
 url()("http://localhost:3000"); // fails: not a public host
 url({ allowLocal: true })("http://localhost:3000"); // ok
 url({ protocols: ["ftp"] })("ftp://example.com"); // ok
+```
+
+Three schemes have no host, and each is checked by its own rules when listed in `protocols`:
+
+| Scheme   | Accepted when                                                                                                                                                                                             |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mailto` | It names at least one recipient, and every recipient, in the path and in `to`, `cc` or `bcc`, is an address `email()` accepts. With `allowLocal`, an address may be on any hostname, such as `localhost`. |
+| `tel`    | It is a global number: `+`, digits with `-`, `.`, `(` or `)` between them, then optional `;name=value` parameters. A local number with `phone-context` is rejected.                                       |
+| `urn`    | It follows RFC 8141: a namespace of 2 to 32 letters, digits and inner hyphens, a colon, and a non-empty name.                                                                                             |
+
+Any other scheme without a host, such as `data`, `file` or `javascript`, is rejected even when listed and even with `allowLocal`, so listing a protocol never lets a URL through unchecked.
+
+```ts
+url({ protocols: ["mailto"] })("mailto:ada@example.com?cc=bob@example.org"); // ok
+url({ protocols: ["mailto"] })("mailto:ada@localhost"); // fails: not a public host
+url({ protocols: ["tel"] })("tel:+1-201-555-0123"); // ok
+url({ protocols: ["urn"] })("urn:isbn:0451450523"); // ok
 ```
 
 ### `ip`
@@ -221,7 +238,7 @@ See [Reusing shapes](#reusing-shapes) for extending, omitting and making propert
 
 Every collection validator takes the validator for its items, checks them all, and reports each issue with a path that leads through the item's position. A wrong size is reported at once, without validating the items, so a huge input is never worked through only to be rejected.
 
-The size options `min`, `max` and `length` are non-negative integers, and each throws a `RangeError` when created with anything else. `min` and `max` are inclusive. A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"` or `"map"`, and `exact: true` is added for `length`.
+The size options `min`, `max` and `length` are non-negative integers, and each throws a `RangeError` when created with anything else, as do limits no size can satisfy together, such as `min` above `max` or a `length` outside them. `min` and `max` are inclusive. A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"` or `"map"`, and `exact: true` is added for `length`.
 
 ### `array`
 
@@ -254,11 +271,11 @@ const call = tuple([string()], { rest: number() }); // [string, ...number[]]
 
 ### `record`
 
-`record(key, value)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to, whether the key or its value failed, and a bad key still has its value checked. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype.
+`record(key, value)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it is not mistaken for a problem with the value, and a bad key still has its value checked. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype.
 
 ### `set` and `map`
 
-`set(element, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string or a number and its position otherwise. Both take `min`, `max` and `length`.
+`set(element, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string or a number and its position otherwise. A map key that fails is reported as `invalid_key`, as for `record`. Both take `min`, `max` and `length`.
 
 ## Combining validators
 
@@ -294,7 +311,7 @@ const tags = withDefault(array(string()), () => []);
 `transform(validator, convert)` changes the value a validator produced into another, such as text into a `Date`. `convert` runs only when `validator` succeeded and cannot reject the value: to fail, write a validator that returns `fail(...)` and put it after this one with `pipe`. A `convert` that returns a promise makes the result asynchronous. A `convert` that throws is a bug and propagates.
 
 ```ts
-import { pipe, string, transform } from "@codenhub/validation";
+import { string, transform } from "@codenhub/validation";
 
 const length = transform(string(), (text) => text.length);
 ```
@@ -341,6 +358,8 @@ type Event = Infer<typeof event>;
 event({ type: "key", key: "a" }); // { ok: true, value: { type: "key", key: "a" } }
 ```
 
+**A variant must not list the tag.** Unlike some other libraries, where each variant is `object({ type: literal("click"), ... })`, a variant here is given the input without its tag, so a variant that lists it fails with `invalid_value` at the tag's path even though the input's tag is right. The record key already says which tag the variant is for.
+
 A variant does not list the tag property itself, and does not see it, so a strict `object` works as a variant: the tag is added back to the output, so the result is a proper tagged union and checking `event.type` narrows the type. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. Each variant must produce an object.
 
 ### `intersection`
@@ -366,6 +385,8 @@ const category: Validator<Category> = object({
   children: array(lazy(() => category)),
 });
 ```
+
+Each level of nesting is one level of recursion, so input nested deeper than the JavaScript stack allows throws a `RangeError` instead of failing, and so does a cyclic object, which a recursive validator follows forever. JSON cannot be cyclic, but a request body of thousands of nested arrays can be deep: cap the size of untrusted input before validating it, for instance with `pipe(string({ max: 100_000 }), json(category))`.
 
 ### `json`
 

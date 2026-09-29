@@ -26,8 +26,10 @@ export type InferDiscriminated<TKey extends string, TVariants extends Variants> 
  *
  * @remarks
  * The input's tag must be one of the keys of `variants`, and the variant validates the rest of the
- * input, without the tag. The variant does not list the tag property, so a strict object works as a
- * variant: the tag is added back to the output, so the result is a proper tagged union. A missing, unknown or non-string tag fails with `invalid_union`, at the
+ * input, without the tag. The variant must not list the tag property: one that does, such as
+ * `object({ type: literal("click"), ... })`, never sees it and fails. That is also why a strict object
+ * works as a variant. The tag is added back to the output, so the result is a proper tagged union.
+ * A missing, unknown or non-string tag fails with `invalid_union`, at the
  * tag's path, with `params: { discriminator, options }` listing the accepted tags. It is synchronous
  * when every variant is, and asynchronous otherwise.
  *
@@ -62,7 +64,7 @@ export function discriminatedUnion<const TKey extends string, const TVariants ex
     const tag = Object.hasOwn(input, key) ? input[key] : undefined;
     if (typeof tag !== "string" || !Object.hasOwn(variants, tag)) {
       return failWith(
-        nestIssues([toIssue({ code: "invalid_union", params: { discriminator: key, options: tags } })], key),
+        nestIssues([toIssue({ code: "invalid_union", params: { discriminator: key, options: [...tags] } })], key),
       );
     }
     const rest = {};

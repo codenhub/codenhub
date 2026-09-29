@@ -1,4 +1,4 @@
-import { assertSize, toIssue } from "../core/result";
+import { assertOrder, assertSize, toIssue } from "../core/result";
 import type { ValidationIssue } from "../core/types";
 
 /** Size constraints shared by arrays, sets and maps. Every option is optional. */
@@ -22,6 +22,9 @@ export function assertSizeOptions({ min, max, length }: SizeOptions): void {
       assertSize(name, size);
     }
   }
+  assertOrder("min", min, "max", max);
+  assertOrder("min", min, "length", length);
+  assertOrder("length", length, "max", max);
 }
 
 /** The issues for a collection whose size breaks a constraint, empty when it satisfies them all. */

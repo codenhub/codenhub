@@ -13,6 +13,33 @@ describe("url", () => {
     expect(accepts(url(), "example.com", "//example.com", "not a url", "")).toEqual([false, false, false, false]);
   });
 
+  it("should reject text the URL parser would have to clean up, since the value is returned as it came", () => {
+    expect(
+      accepts(
+        url(),
+        " https://example.com",
+        "https://example.com ",
+        "https://exa\nmple.com",
+        "https://example.com/a\r\nLocation: https://evil.com",
+        "https://example.com/\tx",
+        "https://example.com/a b",
+        "https:\\\\example.com\\path",
+        "https://example.com/\u0000",
+      ),
+    ).toEqual(Array(8).fill(false));
+    expect(url({ allowLocal: true })(" http://localhost").ok).toBe(false);
+  });
+
+  it("should reject a host written without both slashes, which resolves as a path against a same-scheme base", () => {
+    expect(accepts(url(), "https:example.com", "https:/example.com", "HTTP:example.com/a")).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    expect(accepts(url(), "https://example.com", "HTTPS://example.com/a")).toEqual([true, true]);
+    expect(accepts(url({ protocols: ["ftp"] }), "ftp:example.com", "ftp://example.com")).toEqual([false, true]);
+  });
+
   it("should reject other protocols, embedded credentials and non-public hosts", () => {
     expect(
       accepts(
@@ -27,6 +54,30 @@ describe("url", () => {
         "http://intranet",
       ),
     ).toEqual(Array(8).fill(false));
+  });
+
+  it("should reject special-use domain names, which never name a public host", () => {
+    const reserved = [
+      "http://admin.localhost",
+      "http://db.internal",
+      "http://printer.local",
+      "http://site.test",
+      "http://site.example",
+      "http://site.invalid",
+      "http://site.alt",
+      "http://site.onion",
+      "http://router.home.arpa",
+    ];
+    expect(accepts(url(), ...reserved)).toEqual(Array(reserved.length).fill(false));
+    expect(accepts(url({ allowLocal: true }), ...reserved)).toEqual(Array(reserved.length).fill(true));
+  });
+
+  it("should still accept public names that only contain a reserved word", () => {
+    expect(accepts(url(), "https://localhost.com", "https://test.example.com", "https://arpa.net")).toEqual([
+      true,
+      true,
+      true,
+    ]);
   });
 
   it("should accept local hosts only with allowLocal", () => {
@@ -59,5 +110,75 @@ describe("url", () => {
 
   it("should not echo the input", () => {
     expect(JSON.stringify(issuesOf(url()("https://user:hunter2@example.com")))).not.toContain("hunter2");
+  });
+});
+
+describe("url without a host", () => {
+  const mailto = url({ protocols: ["mailto"] });
+  const tel = url({ protocols: ["tel"] });
+  const urn = url({ protocols: ["urn"] });
+
+  it("should accept mailto addresses that email() accepts, in the path and in to, cc and bcc", () => {
+    const valid = [
+      "mailto:ada@example.com",
+      "MAILTO:ada@example.com",
+      "mailto:ada@example.com,bob@example.org?subject=Hi%20there",
+      "mailto:ada%2Bnews@example.com",
+      "mailto:ada@example.com?cc=bob@example.org&bcc=eve@example.net",
+    ];
+    expect(accepts(mailto, ...valid)).toEqual(valid.map(() => true));
+  });
+
+  it("should reject a mailto with no address, a bad address, bad encoding or a local host", () => {
+    const invalid = [
+      "mailto:",
+      "mailto:?subject=hi",
+      "mailto:not-an-address",
+      "mailto:ada@localhost",
+      "mailto:ada@db.internal",
+      "mailto:ada@example.com,",
+      "mailto:ada@example.com?cc=eve@localhost",
+      "mailto:ada@example.com?to=nope",
+      "mailto:ada%E0%A4%A@example.com",
+    ];
+    expect(accepts(mailto, ...invalid)).toEqual(invalid.map(() => false));
+  });
+
+  it("should accept a local mailto host only with allowLocal", () => {
+    const local = url({ protocols: ["mailto"], allowLocal: true });
+    expect(accepts(local, "mailto:ada@localhost", "mailto:ada@intranet", "mailto:nope")).toEqual([true, true, false]);
+  });
+
+  it("should accept global tel numbers with separators and parameters, and nothing else", () => {
+    expect(accepts(tel, "tel:+1-201-555-0123", "tel:+44(0)20.7946.0958", "tel:+12015550123;ext=1234")).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    const invalid = ["tel:", "tel:+", "tel:555-0123", "tel:+abc", "tel:+1-", "tel:1234;phone-context=example.com"];
+    expect(accepts(tel, ...invalid)).toEqual(invalid.map(() => false));
+  });
+
+  it("should accept urns with a namespace and a specific string, as RFC 8141 writes them", () => {
+    const valid = ["urn:isbn:0451450523", "urn:ietf:rfc:2648", "URN:example:a%20b", "urn:example:x?+r?=q#f"];
+    expect(accepts(urn, ...valid)).toEqual(valid.map(() => true));
+    const invalid = ["urn:", "urn:isbn", "urn:isbn:", "urn:x:abc", "urn:is_bn:1", "urn:isbn:%zz", "urn:-isbn:1"];
+    expect(accepts(urn, ...invalid)).toEqual(invalid.map(() => false));
+  });
+
+  it("should reject every other scheme without a host, even with allowLocal, rather than check nothing", () => {
+    const anything = url({ protocols: ["data", "file", "javascript"], allowLocal: true });
+    expect(accepts(anything, "data:text/plain,hi", "file:///etc/passwd", "javascript:alert(1)")).toEqual([
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it("should check long tel and urn text in linear time", () => {
+    const start = performance.now();
+    expect(tel(`tel:+${"1-".repeat(50_000)}x`).ok).toBe(false);
+    expect(urn(`urn:isbn:${"a".repeat(100_000)}%z`).ok).toBe(false);
+    expect(performance.now() - start).toBeLessThan(250);
   });
 });

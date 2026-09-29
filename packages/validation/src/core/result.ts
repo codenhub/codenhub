@@ -1,5 +1,12 @@
 import { isPlainObject } from "./objects";
-import type { ValidationErr, ValidationIssue, ValidationIssueCode, ValidationOk, ValidationPathSegment } from "./types";
+import type {
+  ValidationErr,
+  ValidationFailure,
+  ValidationIssue,
+  ValidationIssueCode,
+  ValidationOk,
+  ValidationPathSegment,
+} from "./types";
 
 /** Shared by every issue at the root, so reporting one allocates no path. */
 const ROOT_PATH: readonly ValidationPathSegment[] = Object.freeze([]);
@@ -47,8 +54,11 @@ export function fail(...issues: [IssueInput, ...IssueInput[]]): ValidationErr {
   return failWith(issues.map(toIssue));
 }
 
-/** Wraps issues that are already complete into a failed result. */
-export const failWith = (issues: readonly ValidationIssue[]): ValidationErr => ({ ok: false, error: { issues } });
+/** Wraps issues that are already complete into a failed result. Every caller passes at least one. */
+export const failWith = (issues: readonly ValidationIssue[]): ValidationErr => ({
+  ok: false,
+  error: { issues: issues as ValidationFailure["issues"] },
+});
 
 /** Fills in the defaults of an issue written by a validator author. */
 export function toIssue({ code = "custom", path = ROOT_PATH, params, message }: IssueInput): ValidationIssue {
@@ -77,14 +87,27 @@ export function describeType(value: unknown): string {
   if (value === null) {
     return "null";
   }
-  if (Array.isArray(value)) {
-    return "array";
-  }
   if (typeof value === "number" && !Number.isFinite(value)) {
     return Number.isNaN(value) ? "nan" : "infinity";
   }
+  if (typeof value !== "object") {
+    return typeof value;
+  }
+  try {
+    return describeObject(value);
+  } catch {
+    // A proxy trap or a constructor getter threw. Naming the type must never fail validation.
+    return "object";
+  }
+}
+
+/** Names an object by its kind, or by its class for an instance, reading its prototype. */
+function describeObject(value: object): string {
+  if (Array.isArray(value)) {
+    return "array";
+  }
   if (value instanceof Date) {
-    return "date";
+    return Number.isNaN(value.getTime()) ? "invalid date" : "date";
   }
   if (value instanceof Map) {
     return "map";
@@ -92,10 +115,10 @@ export function describeType(value: unknown): string {
   if (value instanceof Set) {
     return "set";
   }
-  if (typeof value === "object" && !isPlainObject(value)) {
-    return (Object.getPrototypeOf(value) as { constructor?: { name?: string } }).constructor?.name || "object";
+  if (isPlainObject(value)) {
+    return "object";
   }
-  return typeof value;
+  return (Object.getPrototypeOf(value) as { constructor?: { name?: string } }).constructor?.name || "object";
 }
 
 /** Fails because the input is not the type a validator accepts, naming both types and never the value. */
@@ -105,6 +128,41 @@ export const invalidType = (expected: string, input: unknown): ValidationErr =>
 /** Fails because coercion could not convert the input, naming both types and never the value. */
 export const invalidCoercion = (expected: string, input: unknown): ValidationErr =>
   failIssue("invalid_type", { expected, received: describeType(input), coerced: true });
+
+/**
+ * Rejects a lower and an upper bound that no value can satisfy, since that is a mistake in the schema
+ * and not in the input. `isExclusive` is for a pair where either side excludes its bound, so equal
+ * bounds leave nothing between them. A missing bound constrains nothing.
+ */
+export function assertOrder<T extends number | bigint>(
+  lowerName: string,
+  lower: T | undefined,
+  upperName: string,
+  upper: T | undefined,
+  isExclusive = false,
+): void {
+  if (lower !== undefined && upper !== undefined && (isExclusive ? lower >= upper : lower > upper)) {
+    throw new RangeError(`No value can satisfy ${lowerName} ${lower} and ${upperName} ${upper}`);
+  }
+}
+
+/** Rejects inclusive and exclusive bounds of a number or bigint that no value can satisfy together. */
+export function assertBounds<T extends number | bigint>({
+  min,
+  max,
+  gt,
+  lt,
+}: {
+  min?: T;
+  max?: T;
+  gt?: T;
+  lt?: T;
+}): void {
+  assertOrder("min", min, "max", max);
+  assertOrder("min", min, "lt", lt, true);
+  assertOrder("gt", gt, "max", max, true);
+  assertOrder("gt", gt, "lt", lt, true);
+}
 
 /** Rejects a size limit that is not a non-negative integer, since it is a mistake in the schema and not in the input. */
 export function assertSize(name: string, value: number): void {
