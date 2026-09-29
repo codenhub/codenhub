@@ -1218,4 +1218,38 @@ test.describe("forms", () => {
       expect(listBox.height).toBeGreaterThan(40);
     }
   });
+
+  /* The chevron sits at the inline end, with the room kept for it, so under
+     `dir="rtl"` both move to the left and the value starts at the right. */
+  test("mirrors a select's chevron and its room under right-to-left", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const styles = await page.evaluate(() => {
+      const read = (dir: string) => {
+        const host = document.createElement("div");
+        host.dir = dir;
+        host.style.width = "16rem";
+        host.innerHTML = '<select class="select"><option>One</option></select>';
+        document.body.append(host);
+        const style = getComputedStyle(host.firstElementChild!);
+        const result = {
+          chevronX: style.backgroundPositionX,
+          paddingLeft: style.paddingLeft,
+          paddingRight: style.paddingRight,
+        };
+        host.remove();
+
+        return result;
+      };
+
+      return { ltr: read("ltr"), rtl: read("rtl") };
+    });
+
+    expect(styles.ltr.paddingRight).toBe("40px");
+    expect(styles.ltr.paddingLeft).toBe("12px");
+    expect(styles.rtl.paddingLeft).toBe(styles.ltr.paddingRight);
+    expect(styles.rtl.paddingRight).toBe(styles.ltr.paddingLeft);
+    expect(styles.rtl.chevronX).not.toBe(styles.ltr.chevronX);
+    expect(styles.rtl.chevronX).not.toContain("100%");
+  });
 });
