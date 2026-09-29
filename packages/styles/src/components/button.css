@@ -79,7 +79,7 @@
      `.p-xs` is the tightest step, below `.p-sm`: a chip-sized button in a
      toolbar or a table cell.
 
-     `.icon` drops both floors -- `min-width` from its own base rule below and
+     `.icon` drops both floors -- `min-width` from its own base rule above and
      `min-height` from `--control-height` -- at every padding tier; labeled
      buttons keep the height floor everywhere but `.p-xs`. `.icon` is already
      square: `aspect-square` ties its width to whatever height it lands on, so a
