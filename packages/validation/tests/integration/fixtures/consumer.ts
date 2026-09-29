@@ -202,7 +202,10 @@ interface Category {
   name: string;
   children: Category[];
 }
-export const category: Validator<Category> = object({ name: string(), children: array(lazy(() => category)) });
+export const category: Validator<Category> = object({
+  name: string(),
+  children: array(lazy(() => category, { maxDepth: 64 })),
+});
 
 // Coercing validators produce the strict validator's type, and take its options.
 export const port = coerceNumber({ int: true, min: 1, max: 65535 });

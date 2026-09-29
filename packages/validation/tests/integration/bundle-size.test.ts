@@ -132,7 +132,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "standard",
     source: `import { englishMessages, number, standard } from "DIST"; export const check = standard(number(), englishMessages);`,
-    budget: 2380,
+    budget: 2420,
   },
   {
     name: "formatIssue with your own wording",
@@ -147,7 +147,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 7580,
+    budget: 7660,
   },
 ];
 

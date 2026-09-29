@@ -75,7 +75,7 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
 - `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal` and `printer.local`. `url({ allowLocal: true })` accepts them. Neither resolves the name, so a public name can still point at a private address.
 - Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input.
-- Validation recurses once per level of nesting, so input nested deeper than the JavaScript stack allows, such as a JSON body of thousands of nested arrays checked by a recursive `lazy` validator, throws a `RangeError`, and so does a cyclic object checked by one. Cap the size of untrusted input before validating it.
+- A recursive `lazy` validator stops at `maxDepth` levels, 128 by default, and fails with `too_big` instead of exhausting the stack, so deeply nested or cyclic input is reported like any other bad input. Nothing else limits how much input is checked, so cap the size of untrusted input, and give `array` a `max`, before validating it.
 
 ## License
 
@@ -503,7 +503,7 @@ The code set is open: a custom validator reports whatever code it likes. These a
 | `invalid_format`   | A string does not have the required format.                                                       | `format`, such as `"email"` or `"regex"`, plus what the rule needs.                                                                                                                                  |
 | `invalid_value`    | The value has the right type but a value that is not allowed.                                     | `expected` for a literal, `options` for a list of values, `unique: true` for a repeat in an array, or `type` plus `format` (`"int"`, `"safeInt"`, `"nonZero"`) or `multipleOf` for a number.         |
 | `too_small`        | Below a minimum: too short, too few items, or too small a number or date.                         | `minimum`, `type`, and `inclusive` or `exact` where they apply.                                                                                                                                      |
-| `too_big`          | Above a maximum.                                                                                  | `maximum`, `type`, and `inclusive` or `exact` where they apply.                                                                                                                                      |
+| `too_big`          | Above a maximum, or nested deeper than `lazy` allows.                                             | `maximum`, `type` (`"depth"` for `lazy`), and `inclusive` or `exact` where they apply.                                                                                                               |
 | `unrecognized_key` | An object has a property its shape does not list, in strict mode.                                 | `key`. The issue's path ends at the key.                                                                                                                                                             |
 | `invalid_key`      | A key of a `record` or `map` failed its key validator.                                            | `issues`: what the key validator found, with paths relative to the key. The issue's path ends at the key, so it is not mistaken for a problem with the value there.                                  |
 | `invalid_union`    | A value matched none of the options of a `union`, or a tagged union got a missing or unknown tag. | For `union`, `issues`: the issues each option found, in order, with paths relative to the union's value. For `discriminatedUnion`, `discriminator` and `options`, and the issue's path is the tag's. |
@@ -1012,7 +1012,9 @@ const category: Validator<Category> = object({
 });
 ```
 
-Each level of nesting is one level of recursion, so input nested deeper than the JavaScript stack allows throws a `RangeError` instead of failing, and so does a cyclic object, which a recursive validator follows forever. JSON cannot be cyclic, but a request body of thousands of nested arrays can be deep: cap the size of untrusted input before validating it, for instance with `pipe(string({ max: 100_000 }), json(category))`.
+Each level of nesting is one level of recursion, which the JavaScript stack can only hold so many of, so `lazy` counts them. `lazy(getter, { maxDepth })` takes the most levels of `lazy` that may be open at once, 128 by default, counting every `lazy` validator and not only that one, and a value found deeper fails with `too_big` and `{ maximum, type: "depth" }` at its own path. A request body of thousands of nested arrays and a cyclic object, which a recursive validator would follow forever, both come back as that failure and never throw. Raise `maxDepth` only for data you know is deeper, and only as far as the stack of your runtime holds for the validators you wrote. `maxDepth` must be a positive integer, or `lazy` throws a `RangeError` when created.
+
+The limit is about the stack and not about size, so it does not stop a large flat input: cap the size of untrusted input, for instance with `pipe(string({ max: 100_000 }), json(category))`, and give `array` a `max`.
 
 ### `json`
 

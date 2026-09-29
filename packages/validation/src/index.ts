@@ -8,7 +8,7 @@ export { discriminatedUnion, type InferDiscriminated, type Variants } from "./co
 export { fallback } from "./composition/fallback";
 export { intersection } from "./composition/intersection";
 export { json } from "./composition/json";
-export { lazy } from "./composition/lazy";
+export { lazy, type LazyOptions } from "./composition/lazy";
 export { map } from "./composition/map";
 export { nullable } from "./composition/nullable";
 export { nullish } from "./composition/nullish";

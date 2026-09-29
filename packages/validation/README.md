@@ -73,7 +73,7 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
 - `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal` and `printer.local`. `url({ allowLocal: true })` accepts them. Neither resolves the name, so a public name can still point at a private address.
 - Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input.
-- Validation recurses once per level of nesting, so input nested deeper than the JavaScript stack allows, such as a JSON body of thousands of nested arrays checked by a recursive `lazy` validator, throws a `RangeError`, and so does a cyclic object checked by one. Cap the size of untrusted input before validating it.
+- A recursive `lazy` validator stops at `maxDepth` levels, 128 by default, and fails with `too_big` instead of exhausting the stack, so deeply nested or cyclic input is reported like any other bad input. Nothing else limits how much input is checked, so cap the size of untrusted input, and give `array` a `max`, before validating it.
 
 ## License
 
