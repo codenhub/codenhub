@@ -47,6 +47,9 @@
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "codenhub": {
     "docs": {
       "label": "ValidationKit",
