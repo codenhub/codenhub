@@ -774,4 +774,72 @@ test.describe("feedback", () => {
     expect(getContrastRatio(primary.background, bubbles.tokens.page), "primary bubble is not").toBeGreaterThan(5);
     expectSameColor(primary.background, bubbles.tokens.primary, "primary bubble ground");
   });
+
+  /* WCAG 1.4.13: content shown on hover has to be hoverable itself. The bubble
+     sits a gap away from its trigger, so it lingers long enough for the
+     pointer to cross that gap, and once over the bubble the host is still
+     hovered. A hidden bubble is out of the way: nothing under the pointer. */
+  test("keeps a tooltip open while the pointer crosses onto its bubble", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+
+    await page.evaluate(() => {
+      const host = document.createElement("div");
+      host.style.cssText = "padding: 6rem 2rem";
+      host.innerHTML =
+        '<span class="tooltip" data-probe="host"><button type="button">Trigger</button><span class="tooltip-bubble" data-probe="bubble">A message long enough to aim for</span></span>';
+      document.body.prepend(host);
+    });
+
+    const trigger = page.locator('[data-probe="host"] button');
+    const bubble = page.locator('[data-probe="bubble"]');
+
+    expect(await bubble.evaluate((element) => getComputedStyle(element).visibility)).toBe("hidden");
+
+    await trigger.hover();
+    await expect(bubble).toHaveCSS("opacity", "1");
+
+    const triggerBox = (await trigger.boundingBox())!;
+    const bubbleBox = (await bubble.boundingBox())!;
+    const x = bubbleBox.x + bubbleBox.width / 2;
+
+    /* Into the gap, a pause longer than the fade alone would allow, then onto
+       the bubble: only the linger keeps it there to land on. */
+    await page.mouse.move(x, triggerBox.y + 1);
+    await page.mouse.move(x, (triggerBox.y + bubbleBox.y + bubbleBox.height) / 2);
+    await page.waitForTimeout(250);
+    await page.mouse.move(x, bubbleBox.y + bubbleBox.height / 2);
+    await page.waitForTimeout(800);
+
+    await expect(bubble).toHaveCSS("opacity", "1");
+    expect(await bubble.evaluate((element) => getComputedStyle(element).visibility)).toBe("visible");
+
+    await page.mouse.move(0, 0);
+    await expect(bubble).toHaveCSS("visibility", "hidden");
+  });
+
+  /* The other half of WCAG 1.4.13: a hover message has to be dismissible
+     without moving the pointer. CSS cannot hear Escape, so the consumer's
+     handler writes `data-state="closed"`, and that wins over hover and focus. */
+  test("hides a hovered tooltip that is marked closed", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+
+    await page.evaluate(() => {
+      const host = document.createElement("div");
+      host.style.cssText = "padding: 6rem 2rem";
+      host.innerHTML =
+        '<span class="tooltip" data-probe="host"><button type="button">Trigger</button><span class="tooltip-bubble" data-probe="bubble">Message</span></span>';
+      document.body.prepend(host);
+    });
+
+    const host = page.locator('[data-probe="host"]');
+    const bubble = page.locator('[data-probe="bubble"]');
+
+    await host.locator("button").focus();
+    await host.locator("button").hover();
+    await expect(bubble).toHaveCSS("visibility", "visible");
+
+    await host.evaluate((element) => element.setAttribute("data-state", "closed"));
+    await expect(bubble).toHaveCSS("visibility", "hidden");
+    await expect(bubble).toHaveCSS("opacity", "0");
+  });
 });

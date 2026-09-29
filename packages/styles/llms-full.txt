@@ -1392,18 +1392,19 @@ Add `role="status"` or `role="alert"` to alerts based on announcement urgency, m
 
 # Tooltips
 
-| Class or Attribute                     | Purpose                                                                  |
-| -------------------------------------- | ------------------------------------------------------------------------ |
-| `.tooltip`                             | Wrapper around a trigger and a bubble. Paints nothing itself.            |
-| `.tooltip-bubble`                      | The message. A real element, styled like any other surface.              |
-| `.tooltip-icon`                        | Circular icon-style trigger, for a message with nothing else to hang on. |
-| `[data-tooltip-position="top"]`        | Positions the bubble above the trigger, on `.tooltip`.                   |
-| `[data-tooltip-position="bottom"]`     | Positions the bubble below the trigger, on `.tooltip`.                   |
-| `[data-tooltip-position="left"]`       | Positions the bubble left of the trigger, on `.tooltip`.                 |
-| `[data-tooltip-position="right"]`      | Positions the bubble right of the trigger, on `.tooltip`.                |
-| No `data-tooltip-position`             | Defaults to top placement.                                               |
-| `[data-state="open"]`                  | Shows the bubble without hover, on `.tooltip`.                           |
-| `.tooltip-bubble.raised` / `.floating` | Adds one or two units of depth. The bubble is flat by default.           |
+| Class or Attribute                     | Purpose                                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------- |
+| `.tooltip`                             | Wrapper around a trigger and a bubble. Paints nothing itself.                         |
+| `.tooltip-bubble`                      | The message. A real element, styled like any other surface.                           |
+| `.tooltip-icon`                        | Circular icon-style trigger, for a message with nothing else to hang on.              |
+| `[data-tooltip-position="top"]`        | Positions the bubble above the trigger, on `.tooltip`.                                |
+| `[data-tooltip-position="bottom"]`     | Positions the bubble below the trigger, on `.tooltip`.                                |
+| `[data-tooltip-position="left"]`       | Positions the bubble left of the trigger, on `.tooltip`.                              |
+| `[data-tooltip-position="right"]`      | Positions the bubble right of the trigger, on `.tooltip`.                             |
+| No `data-tooltip-position`             | Defaults to top placement.                                                            |
+| `[data-state="open"]`                  | Shows the bubble without hover, on `.tooltip`.                                        |
+| `[data-state="closed"]`                | Hides the bubble even while hovered or focused, on `.tooltip`. For an Escape handler. |
+| `.tooltip-bubble.raised` / `.floating` | Adds one or two units of depth. The bubble is flat by default.                        |
 
 A tooltip is composition, not a single class: `.tooltip` wraps a trigger element and a `.tooltip-bubble`, and shows the bubble on hover or focus within the wrapper. The bubble is a real element because CSS generated content is not reliably exposed to assistive tech and cannot be the target of an `aria-describedby`, which needs a real element with a real `id`. Wire the association yourself: give the bubble an `id`, give the trigger `aria-describedby` pointing at it, and put `role="tooltip"` on the bubble.
 
@@ -1447,6 +1448,25 @@ The first two show plain triggers with default (top) and explicit bottom placeme
 `.tooltip` composes with any trigger: wrap an existing `.btn` or `.badge` in it and both keep their own look, gaining a bubble beside them. `.tooltip-icon` is only the circular chip for the case where there is nothing else to be the trigger.
 
 Showing and hiding the bubble is CSS-only — `:hover` and `:focus-within` on `.tooltip` — but that is presentational. It is not a complete accessible tooltip implementation by itself: provide the `id`/`aria-describedby`/`role="tooltip"` association outside the CSS; see [Accessibility](docs/accessibility.md).
+
+The bubble is hoverable, as WCAG 1.4.13 asks of content that appears on hover: once the pointer leaves the trigger, the bubble stays for `--tooltip-linger` (`300ms`, set on `.tooltip`) and then fades, so the pointer can cross the gap onto it, and it stays open for as long as the pointer is over it. A closed bubble is `visibility: hidden`, so it is nothing under the pointer. It stays in the accessibility tree through `aria-describedby`, which reads hidden content, but a bubble with no `aria-describedby` pointing at it is no longer read in place while hidden.
+
+1.4.13 also asks that the message can be dismissed without moving the pointer or focus, which takes a key handler. Write `data-state="closed"` on `.tooltip` on Escape, and clear it when the pointer and focus leave:
+
+```js
+for (const tooltip of document.querySelectorAll(".tooltip")) {
+  const reopen = () => tooltip.removeAttribute("data-state");
+  tooltip.addEventListener("pointerleave", reopen);
+  tooltip.addEventListener("focusout", reopen);
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  for (const tooltip of document.querySelectorAll(".tooltip:hover, .tooltip:focus-within")) {
+    tooltip.dataset.state = "closed";
+  }
+});
+```
 
 Next: [Content and layout](docs/usage/content-and-layout.md) covers layout helpers, content chips and tables, surfaces, and typography utilities.
 
@@ -1908,7 +1928,7 @@ This package provides CSS hooks for accessible states. It does not provide seman
 | Form control focus | `.ipt`, `.textarea`, and `.select` draw the global focus ring and move their line to the intent color.                                                                                                                                                                                                                                                                                                         |
 | Invalid controls   | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                                                                                                                                                                                                                                                                                                               |
 | Disabled controls  | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported.                                                                                                                                                                                                                                                                                      |
-| Open state         | `[data-state="open"]` on `.tooltip` shows its bubble without hover or focus. No other component reads it.                                                                                                                                                                                                                                                                                                      |
+| Open state         | `[data-state="open"]` on `.tooltip` shows its bubble without hover or focus, and `[data-state="closed"]` hides it while hovered or focused. No other component reads either.                                                                                                                                                                                                                                   |
 | Native `<dialog>`  | On a `<dialog>` carrying `.card`, `.panel`, or `.surface`, the closed state and a centered open box are restored in author origin, so the dialog does not render open on load or lose its centering to another rule. It ships with those classes, on every entrypoint that has them, and leaves other dialogs alone. Focus trapping, escape handling, and inert-background behavior stay outside this package. |
 
 ### Visually hidden content
@@ -1979,16 +1999,16 @@ Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`,
 
 Use semantic HTML and behavior appropriate for the component.
 
-| UI                | Required outside CSS                                                                                                                                                          |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Buttons           | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.                                                                          |
-| Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships. Keep hints and errors outside the `<label>`, and give a `.switch` `role="switch"`. |
-| Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                                                                                          |
-| Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                                                                               |
-| Tooltips          | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`.                                                                     |
-| Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                                                                                        |
-| Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.                                                                     |
-| Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package.                                                               |
+| UI                | Required outside CSS                                                                                                                                                                                                                    |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Buttons           | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.                                                                                                                                    |
+| Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships. Keep hints and errors outside the `<label>`, and give a `.switch` `role="switch"`.                                                           |
+| Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                                                                                                                                                    |
+| Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                                                                                                                                         |
+| Tooltips          | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`. Dismiss it on Escape by writing `data-state="closed"` (see [Tooltips](docs/usage/tooltips.md)); the bubble is already hoverable. |
+| Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                                                                                                                                                  |
+| Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.                                                                                                                               |
+| Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package.                                                                                                                         |
 
 ## State attribute guidance
 
@@ -2020,6 +2040,7 @@ A liquid-glass modifier, glass that keeps every presentation's fill whole, and a
 
 - **`.glass-liquid`**, a modifier of `.glass`: continuous corners, a bright rim, a lighter blur, a clearer ground, and a lens that bends what is behind a surface at its edges (Chromium today; Firefox and Safari keep the rim, blur, and ground). Put it beside `.glass` on the region, or on one surface inside a glass region; `.glass-solo.glass-liquid` paints the same pane on an element the package does not style. Without `.glass` in scope it changes the corners and nothing else. See [Aesthetics → Liquid glass](docs/usage/aesthetics.md#liquid-glass).
 - **`.unadorned`** removes the browser's own field decorations -- the date picker button, number spin buttons, and search clear button and magnifier -- on a control or on its `.input-group`, for a field whose adornments you draw yourself. See [Forms → Icons](docs/usage/forms.md#icons).
+- **`[data-state="closed"]` on `.tooltip`** hides the bubble while it is hovered or focused, for an Escape handler, and **`--tooltip-linger`** (300ms) sets how long a bubble stays after the pointer leaves its trigger. See [Tooltips](docs/usage/tooltips.md).
 - **`--ui-rule-ink`**, the neutral line color of a table's frame and rules, read ahead of `--ui-ink`. Glass sets it so a table's lines read on its plate; every other aesthetic clears it.
 
 ## Changed
@@ -2036,6 +2057,7 @@ A liquid-glass modifier, glass that keeps every presentation's fill whole, and a
 - **A default `.btn` is `--control-height` tall**, 40px, the same as `.ipt` beside it; it was 42px, and 44px under a 2px aesthetic line. Its vertical padding gives back the line width.
 - **`/tw` keeps Tailwind's `2xl` breakpoint.** It redefined `--breakpoint-2xl` as 90rem, which moved every `2xl:` utility in a consumer's own Tailwind build from 96rem. `--breakpoint-xs` (30rem) is still added. Nothing in the package used the override, so the compiled entrypoints are unchanged.
 - **Components honour reduced motion and fix `<dialog>` on every entrypoint.** `/components` and the focused `/tw/*` entries carry no reset, so the skeleton and progress shimmer, the indeterminate sweep, and the tooltip, toggle, and press transitions kept moving under `prefers-reduced-motion: reduce`, and a `<dialog class="card">` rendered open on load. Each component now stops its own motion, and the `<dialog>` fix ships beside `.card`. The fix now reaches only a dialog carrying `.card`, `.panel`, or `.surface`, so a dialog the package does not style keeps its own margin.
+- **A tooltip bubble is hoverable.** It lingers for `--tooltip-linger` after the pointer leaves the trigger and stays open while the pointer is over it, as WCAG 1.4.13 asks; it used to vanish on the way. A closed bubble is `visibility: hidden` rather than only transparent, so a bubble no `aria-describedby` points at is no longer read in place while closed.
 - **The Tailwind CSS peer range is `>=4.3.2 <5`.** It claimed `>=4.0.0`, but the `/tw` source needs `@source not` and `@source inline()` (Tailwind 4.1) and is tested against 4.3.2. The peer is still optional, and only `/tw` needs it.
 - **Browser floor is Firefox 128.** Non-inheriting elevation relies on `@property`; the documented floor was Firefox 121.
 

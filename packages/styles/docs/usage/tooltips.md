@@ -6,18 +6,19 @@ order: 8
 
 # Tooltips
 
-| Class or Attribute                     | Purpose                                                                  |
-| -------------------------------------- | ------------------------------------------------------------------------ |
-| `.tooltip`                             | Wrapper around a trigger and a bubble. Paints nothing itself.            |
-| `.tooltip-bubble`                      | The message. A real element, styled like any other surface.              |
-| `.tooltip-icon`                        | Circular icon-style trigger, for a message with nothing else to hang on. |
-| `[data-tooltip-position="top"]`        | Positions the bubble above the trigger, on `.tooltip`.                   |
-| `[data-tooltip-position="bottom"]`     | Positions the bubble below the trigger, on `.tooltip`.                   |
-| `[data-tooltip-position="left"]`       | Positions the bubble left of the trigger, on `.tooltip`.                 |
-| `[data-tooltip-position="right"]`      | Positions the bubble right of the trigger, on `.tooltip`.                |
-| No `data-tooltip-position`             | Defaults to top placement.                                               |
-| `[data-state="open"]`                  | Shows the bubble without hover, on `.tooltip`.                           |
-| `.tooltip-bubble.raised` / `.floating` | Adds one or two units of depth. The bubble is flat by default.           |
+| Class or Attribute                     | Purpose                                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------- |
+| `.tooltip`                             | Wrapper around a trigger and a bubble. Paints nothing itself.                         |
+| `.tooltip-bubble`                      | The message. A real element, styled like any other surface.                           |
+| `.tooltip-icon`                        | Circular icon-style trigger, for a message with nothing else to hang on.              |
+| `[data-tooltip-position="top"]`        | Positions the bubble above the trigger, on `.tooltip`.                                |
+| `[data-tooltip-position="bottom"]`     | Positions the bubble below the trigger, on `.tooltip`.                                |
+| `[data-tooltip-position="left"]`       | Positions the bubble left of the trigger, on `.tooltip`.                              |
+| `[data-tooltip-position="right"]`      | Positions the bubble right of the trigger, on `.tooltip`.                             |
+| No `data-tooltip-position`             | Defaults to top placement.                                                            |
+| `[data-state="open"]`                  | Shows the bubble without hover, on `.tooltip`.                                        |
+| `[data-state="closed"]`                | Hides the bubble even while hovered or focused, on `.tooltip`. For an Escape handler. |
+| `.tooltip-bubble.raised` / `.floating` | Adds one or two units of depth. The bubble is flat by default.                        |
 
 A tooltip is composition, not a single class: `.tooltip` wraps a trigger element and a `.tooltip-bubble`, and shows the bubble on hover or focus within the wrapper. The bubble is a real element because CSS generated content is not reliably exposed to assistive tech and cannot be the target of an `aria-describedby`, which needs a real element with a real `id`. Wire the association yourself: give the bubble an `id`, give the trigger `aria-describedby` pointing at it, and put `role="tooltip"` on the bubble.
 
@@ -61,5 +62,24 @@ The first two show plain triggers with default (top) and explicit bottom placeme
 `.tooltip` composes with any trigger: wrap an existing `.btn` or `.badge` in it and both keep their own look, gaining a bubble beside them. `.tooltip-icon` is only the circular chip for the case where there is nothing else to be the trigger.
 
 Showing and hiding the bubble is CSS-only — `:hover` and `:focus-within` on `.tooltip` — but that is presentational. It is not a complete accessible tooltip implementation by itself: provide the `id`/`aria-describedby`/`role="tooltip"` association outside the CSS; see [Accessibility](../accessibility.md).
+
+The bubble is hoverable, as WCAG 1.4.13 asks of content that appears on hover: once the pointer leaves the trigger, the bubble stays for `--tooltip-linger` (`300ms`, set on `.tooltip`) and then fades, so the pointer can cross the gap onto it, and it stays open for as long as the pointer is over it. A closed bubble is `visibility: hidden`, so it is nothing under the pointer. It stays in the accessibility tree through `aria-describedby`, which reads hidden content, but a bubble with no `aria-describedby` pointing at it is no longer read in place while hidden.
+
+1.4.13 also asks that the message can be dismissed without moving the pointer or focus, which takes a key handler. Write `data-state="closed"` on `.tooltip` on Escape, and clear it when the pointer and focus leave:
+
+```js
+for (const tooltip of document.querySelectorAll(".tooltip")) {
+  const reopen = () => tooltip.removeAttribute("data-state");
+  tooltip.addEventListener("pointerleave", reopen);
+  tooltip.addEventListener("focusout", reopen);
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  for (const tooltip of document.querySelectorAll(".tooltip:hover, .tooltip:focus-within")) {
+    tooltip.dataset.state = "closed";
+  }
+});
+```
 
 Next: [Content and layout](./content-and-layout.md) covers layout helpers, content chips and tables, surfaces, and typography utilities.
