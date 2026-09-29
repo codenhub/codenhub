@@ -819,6 +819,7 @@ An 8-bit look built from a stepped silhouette and an inset ring.
 - The edge is a one-unit inset ring, the same size as the cut, so the corner is covered and the line does not read as broken there.
 - The ring answers the edge axis, through `--ui-shadow-edge`. It is the border, not depth, so `.edgeless` draws none and a field's own floor keeps one.
 - No radius anywhere. `clip-path` clips a border away, so the border ceiling goes to zero and the ring does the drawing. A table takes no clip, because the clip would span its caption, so it is square.
+- A switch's knob sits inside the ring, which it reads through `--ui-shadow-edge`: sized from the zero border alone, it covered the ring and both states read as two halves.
 - Reads `--font-pixel` and falls back to monospace. The package ships no font binary.
 
 ### `.chunky-tile`

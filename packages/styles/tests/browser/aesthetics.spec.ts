@@ -2580,3 +2580,39 @@ test.describe("nested aesthetics", () => {
     }
   });
 });
+
+/* Under pixel the edge is an inset ring and the border is zero, and a knob
+   sized from the border alone covered the ring: the track had no visible
+   margin, and an unchecked and a checked switch both read as two halves. The
+   knob sits inside the ring now, the way it sits inside a real border. */
+test("keeps a switch's knob inside an inset-ring edge", async ({ page }) => {
+  await page.goto(withAesthetic(FORMS_URL, "pixel"));
+
+  const read = await page.evaluate(() => {
+    const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+    const probe = document.createElement("input");
+
+    probe.type = "checkbox";
+    probe.className = "switch";
+    host.append(probe);
+
+    const style = getComputedStyle(probe);
+    const knob = getComputedStyle(probe, "::after");
+    const result = {
+      border: Number.parseFloat(style.borderTopWidth),
+      shadow: style.boxShadow,
+      top: Number.parseFloat(knob.top),
+      height: Number.parseFloat(knob.height),
+      track: Number.parseFloat(style.height),
+    };
+
+    probe.remove();
+
+    return result;
+  });
+
+  expect(read.border, "pixel draws no border").toBe(0);
+  /* The ring is two pixels deep (the toggle cap); the knob starts past it. */
+  expect(read.top, `knob offset inside ${read.shadow}`).toBeGreaterThanOrEqual(3);
+  expect(read.top * 2 + read.height, "knob fits the track").toBeCloseTo(read.track, 1);
+});
