@@ -133,26 +133,26 @@ A format is a validator for a string of a particular shape. Each accepts a strin
 
 A non-string fails with `invalid_type` and `{ expected: "string", received }`. A string that does not match fails with `invalid_format` and `{ format }`, and `format` names it as the table shows.
 
-| Validator    | Accepts                                                                       | `format`                     |
-| ------------ | ----------------------------------------------------------------------------- | ---------------------------- |
-| `email()`    | An email address with a public domain name.                                   | `"email"`                    |
-| `url()`      | An absolute URL with an allowed protocol and a public host.                   | `"url"`                      |
-| `uuid()`     | A UUID of version 1 to 8, or the nil or max UUID, hyphenated, in any case.    | `"uuid"`                     |
-| `ip()`       | An IPv4 or IPv6 address.                                                      | `"ip"`, `"ipv4"` or `"ipv6"` |
-| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists.   | `"datetime"`                 |
-| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.         | `"date"`                     |
-| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens.              | `"hostname"`                 |
-| `hex()`      | One or more hexadecimal digits of any case.                                   | `"hex"`                      |
-| `base64()`   | Standard base64 with correct padding. The empty string is base64 of no bytes. | `"base64"`                   |
-| `ulid()`     | A ULID, in any case.                                                          | `"ulid"`                     |
-| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.                | `"nanoid"`                   |
-| `cuid2()`    | A CUID2 identifier.                                                           | `"cuid2"`                    |
+| Validator    | Accepts                                                                                   | `format`                     |
+| ------------ | ----------------------------------------------------------------------------------------- | ---------------------------- |
+| `email()`    | An email address with a public domain name.                                               | `"email"`                    |
+| `url()`      | An absolute URL with an allowed protocol and a public host.                               | `"url"`                      |
+| `uuid()`     | A UUID of version 1 to 8, or the nil or max UUID, hyphenated, in any case.                | `"uuid"`                     |
+| `ip()`       | An IPv4 or IPv6 address.                                                                  | `"ip"`, `"ipv4"` or `"ipv6"` |
+| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists.               | `"datetime"`                 |
+| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.                     | `"date"`                     |
+| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens, the last not all digits. | `"hostname"`                 |
+| `hex()`      | One or more hexadecimal digits of any case.                                               | `"hex"`                      |
+| `base64()`   | Standard base64 with correct padding. The empty string is base64 of no bytes.             | `"base64"`                   |
+| `ulid()`     | A ULID, in any case.                                                                      | `"ulid"`                     |
+| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.                            | `"nanoid"`                   |
+| `cuid2()`    | A CUID2 identifier.                                                                       | `"cuid2"`                    |
 
 `isoDate()` produces a string. To get a `Date`, use `date()` on a `Date` you built yourself.
 
 ### `email`
 
-`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The local part is limited to 64 characters and the whole address to 254. Hosts that are not public domain names are rejected: `localhost`, single-label hosts, IP addresses, and special-use names that never reach a public host, which are those ending in `localhost`, `local`, `internal`, `home.arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
+`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The local part is limited to 64 characters and the whole address to 254. The domain may be internationalized, as in `ada@münchen.de`, and is checked in its ASCII (punycode) form, while the local part must be ASCII: an address with other letters before the `@` (RFC 6531) is rejected. Hosts that are not public domain names are rejected: `localhost`, single-label hosts, IP addresses, and special-use names that never reach a public host, which are those ending in `localhost`, `local`, `internal`, `home.arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
 
 ```ts
 import { email, pipe, string } from "@codenhub/validation";
@@ -166,10 +166,10 @@ address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
 
 `url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The value is returned as it came, so text the URL parser would quietly clean up is rejected instead: surrounding or embedded whitespace, control characters such as line breaks, backslashes, and a host written without both slashes, such as `https:example.com`, which a page on the same scheme would read as a path on its own host. Trim first with `pipe(string({ trim: true }), url())` when the input may have surrounding spaces. The options are:
 
-| Option       | Meaning                                                                                                                                                           |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `protocols`  | Accepted protocols without the colon. Default `["http", "https"]`. The list is copied when the validator is created.                                              |
-| `allowLocal` | Accept `localhost`, single-label hosts, IP addresses and special-use names such as `db.internal`, which are rejected by default, as for `email`. Default `false`. |
+| Option       | Meaning                                                                                                                                                                                                                                                         |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `protocols`  | Accepted protocols without the colon, in any letter case. Default `["http", "https"]`. The list is copied when the validator is created, and a protocol that is not a scheme name, such as `"https:"`, throws a `TypeError` then, since it would match nothing. |
+| `allowLocal` | Accept `localhost`, single-label hosts, every IP address and special-use names such as `db.internal`, which are rejected by default, as for `email`. Default `false`.                                                                                           |
 
 ```ts
 import { url } from "@codenhub/validation";
