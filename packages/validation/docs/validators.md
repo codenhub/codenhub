@@ -88,9 +88,71 @@ Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, no
 
 `boolean()` accepts `true` and `false` and produces a boolean. Truthy and falsy values, and text such as `"true"`, fail with `invalid_type` and `{ expected: "boolean", received }`.
 
-## Email addresses
+## Bigints
 
-`email(options?)` accepts a string that is an email address with a public domain name and produces it unchanged. It does not trim or lowercase, so clean the input first with `pipe` when it may need it:
+`bigint(options?)` accepts bigints and produces a bigint. Numbers, including whole ones, fail with `invalid_type`. The options `min` and `max` are inclusive and `gt` and `lt` are exclusive, all bigints, and fail like the number bounds: `too_small` with `{ minimum, inclusive, type: "bigint" }`, or `too_big` with `{ maximum, inclusive, type: "bigint" }`. Positive is `gt: 0n`, non-negative is `min: 0n` and negative is `lt: 0n`.
+
+Bounds appear in `params` as bigints, which `JSON.stringify` cannot serialize. Convert them first if you send issues as JSON.
+
+## Dates
+
+`date(options?)` accepts valid `Date` objects and produces the same `Date`. An invalid date such as `new Date("nope")`, a timestamp or a string fails with `invalid_type` and `{ expected: "valid date", received }`. To check date text, use [`isoDate` or `datetime`](#formats).
+
+The options `min` and `max` are `Date`s, both inclusive, and throw a `RangeError` when created with an invalid `Date`. A date before `min` fails with `too_small` and `{ minimum, inclusive: true, type: "date" }`, and one after `max` with `too_big` and `{ maximum, inclusive: true, type: "date" }`, the bound being a `Date`.
+
+## Fixed values
+
+- `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`.
+- `oneOf(values)` accepts any one string or number of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The list is copied when the validator is created.
+- `nativeEnum(enumObject)` accepts any value of a TypeScript `enum`. It ignores the reverse-mapping names TypeScript adds to a numeric enum, so only the numbers are values.
+
+All three fail with `invalid_value`. `literal` reports `{ expected }` and the other two report `{ options }`, the list of accepted values.
+
+```ts
+import { literal, nativeEnum, oneOf } from "@codenhub/validation";
+
+const role = oneOf(["admin", "user"]);
+const version = literal("v1");
+
+enum Status {
+  Active = "active",
+  Archived = "archived",
+}
+const status = nativeEnum(Status);
+```
+
+## Any value, no value and instances
+
+- `unknown()` accepts every value and passes it through unchanged. Use it for a property you do not check.
+- `never()` rejects every value with `invalid_type` and `{ expected: "never", received }`. Use it to forbid a property, or for a branch that must never match.
+- `instanceOf(Class)` accepts instances of a class, subclasses and abstract classes included, checked with `instanceof`, so an instance from another realm such as an iframe is not recognized. It fails with `invalid_type` and `{ expected: "instance of Class", received }`.
+
+## Formats
+
+A format is a validator for a string of a particular shape. Each accepts a string and produces it unchanged, so trim or lowercase first with `pipe` when the input may need it. Each is imported on its own, so you only ship the ones you use.
+
+A non-string fails with `invalid_type` and `{ expected: "string", received }`. A string that does not match fails with `invalid_format` and `{ format }`, and `format` names it as the table shows.
+
+| Validator    | Accepts                                                                     | `format`                     |
+| ------------ | --------------------------------------------------------------------------- | ---------------------------- |
+| `email()`    | An email address with a public domain name.                                 | `"email"`                    |
+| `url()`      | An absolute URL with an allowed protocol and a public host.                 | `"url"`                      |
+| `uuid()`     | A UUID of version 1 to 8, hyphenated, in any letter case.                   | `"uuid"`                     |
+| `ip()`       | An IPv4 or IPv6 address.                                                    | `"ip"`, `"ipv4"` or `"ipv6"` |
+| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists. | `"datetime"`                 |
+| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.       | `"date"`                     |
+| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens.            | `"hostname"`                 |
+| `hex()`      | One or more hexadecimal digits of any case.                                 | `"hex"`                      |
+| `base64()`   | Standard base64 with correct padding.                                       | `"base64"`                   |
+| `ulid()`     | A ULID, in any case.                                                        | `"ulid"`                     |
+| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.              | `"nanoid"`                   |
+| `cuid2()`    | A CUID2 identifier.                                                         | `"cuid2"`                    |
+
+`isoDate()` produces a string. To get a `Date`, use `date()` on a `Date` you built yourself.
+
+### `email`
+
+`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The local part is limited to 64 characters and the whole address to 254. Hosts that are not public domain names, such as `localhost`, single-label hosts and IP addresses, are rejected.
 
 ```ts
 import { email, pipe, string } from "@codenhub/validation";
@@ -100,14 +162,31 @@ const address = pipe(string({ trim: true, lowercase: true }), email());
 address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
 ```
 
-The one option is `allowPlus`, default `true`, which controls whether `+` is accepted in the part before the `@`, as in `ada+news@example.com`.
+### `url`
 
-The local part is limited to 64 characters and the whole address to 254. Hosts that are not public domain names, such as `localhost`, single-label hosts and IP addresses, are rejected.
+`url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The options are:
 
-| Failure      | `code`           | `params`                           |
-| ------------ | ---------------- | ---------------------------------- |
-| Not a string | `invalid_type`   | `{ expected: "string", received }` |
-| Not an email | `invalid_format` | `{ format: "email" }`              |
+| Option       | Meaning                                                                                                              |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `protocols`  | Accepted protocols without the colon. Default `["http", "https"]`. The list is copied when the validator is created. |
+| `allowLocal` | Accept `localhost`, single-label hosts and IP addresses, which are rejected by default. Default `false`.             |
+
+```ts
+import { url } from "@codenhub/validation";
+
+url()("https://example.com/a?b=1"); // ok
+url()("http://localhost:3000"); // fails: not a public host
+url({ allowLocal: true })("http://localhost:3000"); // ok
+url({ protocols: ["ftp"] })("ftp://example.com"); // ok
+```
+
+### `ip`
+
+`ip(options?)` takes `version`, `"v4"` or `"v6"`, to accept one address family only. Without it both are accepted. The `format` in the issue is `"ipv4"` or `"ipv6"` when a version is given, and `"ip"` otherwise.
+
+### `datetime`
+
+`datetime(options?)` requires the `T` separator, a time, and `Z`, and rejects days that do not exist, so `2026-02-30T00:00:00Z` fails. The options are `offset`, default `false`, which accepts a UTC offset such as `+02:00` instead of only `Z`, and `precision`, a non-negative integer, which requires exactly that many fractional-second digits (`0` forbids them; without it they are optional). A `precision` that is not a non-negative integer throws a `RangeError` when the validator is created.
 
 ## Objects
 
@@ -183,4 +262,4 @@ A `check` that returns a promise makes the result asynchronous; see [Custom vali
 
 ### Types
 
-`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `EmailOptions`, `ObjectOptions`, `RefineIssue`, `Messages` and `FlattenedErrors` are exported for annotating your own code. Each is documented in the source, and the ones you meet in everyday use are explained in [Custom validators](custom-validators.md) and [Issues and messages](errors.md).
+`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `RefineIssue`, `LiteralValue`, `EnumLike`, `Constructor`, `Messages` and `FlattenedErrors` are exported for annotating your own code. Each is documented in the source, and the ones you meet in everyday use are explained in [Custom validators](custom-validators.md) and [Issues and messages](errors.md).

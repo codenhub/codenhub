@@ -1,0 +1,62 @@
+import { describe, expect, it } from "vitest";
+
+import { accepts, codesOf, issuesOf } from "../test-utils";
+import { datetime } from "./datetime";
+
+describe("datetime", () => {
+  it("should accept ISO 8601 with Z, with or without fractional seconds", () => {
+    expect(accepts(datetime(), "2026-09-28T14:30:00Z", "2026-09-28T14:30:00.123Z", "2026-09-28T14:30:00.1Z")).toEqual([
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  it("should reject days that do not exist, impossible times, dates alone and offsets", () => {
+    expect(
+      accepts(
+        datetime(),
+        "2026-02-30T00:00:00Z",
+        "2026-09-28T25:00:00Z",
+        "2026-09-28T14:60:00Z",
+        "2026-09-28",
+        "2026-09-28T14:30:00+02:00",
+        "2026-09-28 14:30:00Z",
+        "",
+      ),
+    ).toEqual(Array(7).fill(false));
+  });
+
+  it("should accept a leap day only in a leap year", () => {
+    expect(accepts(datetime(), "2024-02-29T00:00:00Z", "2026-02-29T00:00:00Z")).toEqual([true, false]);
+  });
+
+  it("should accept offsets when asked", () => {
+    const withOffset = datetime({ offset: true });
+    expect(
+      accepts(withOffset, "2026-09-28T14:30:00+02:00", "2026-09-28T14:30:00-05:30", "2026-09-28T14:30:00Z"),
+    ).toEqual([true, true, true]);
+    expect(withOffset("2026-09-28T14:30:00+2").ok).toBe(false);
+  });
+
+  it("should require an exact number of fractional digits with precision", () => {
+    expect(
+      accepts(datetime({ precision: 3 }), "2026-09-28T14:30:00.123Z", "2026-09-28T14:30:00Z", "2026-09-28T14:30:00.1Z"),
+    ).toEqual([true, false, false]);
+    expect(accepts(datetime({ precision: 0 }), "2026-09-28T14:30:00Z", "2026-09-28T14:30:00.1Z")).toEqual([
+      true,
+      false,
+    ]);
+  });
+
+  it("should reject a precision that is not a non-negative integer when the validator is created", () => {
+    for (const precision of [-1, 1.5, Number.NaN]) {
+      expect(() => datetime({ precision })).toThrow(RangeError);
+    }
+  });
+
+  it("should report invalid_type for a non-string and invalid_format for a bad one", () => {
+    expect(codesOf(datetime()(1))).toEqual(["invalid_type"]);
+    expect(issuesOf(datetime()("x"))[0]?.params).toEqual({ format: "datetime" });
+  });
+});

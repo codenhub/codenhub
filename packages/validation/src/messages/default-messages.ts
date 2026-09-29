@@ -22,10 +22,18 @@ const UNITS: Readonly<Record<string, string>> = { string: "characters" };
 /** Reads a parameter as text, so a missing or unusual one degrades to a readable message and not a crash. */
 const param = (issue: ValidationIssue, name: string): string => String(issue.params?.[name]);
 
+/** Writes a literal value the way it would appear in code, so `"a"` and `a` are not confused. */
+const formatValue = (value: unknown): string =>
+  typeof value === "string" ? JSON.stringify(value) : typeof value === "bigint" ? `${value}n` : String(value);
+
 const describeLimit = ({ code, params }: ValidationIssue): string => {
   const isMin = code === "too_small";
-  const bound = String(params?.[isMin ? "minimum" : "maximum"]);
+  const limit = params?.[isMin ? "minimum" : "maximum"];
+  const bound = String(limit);
   const type = String(params?.type);
+  if (limit instanceof Date) {
+    return `Must be on or ${isMin ? "after" : "before"} ${limit.toISOString()}`;
+  }
   if (params?.exact === true) {
     return `Must be exactly ${bound} ${UNITS[type] ?? "items"}`;
   }
@@ -51,6 +59,12 @@ const describeFormat = (issue: ValidationIssue): string => {
 };
 
 const describeValue = (issue: ValidationIssue): string => {
+  if (issue.params !== undefined && "expected" in issue.params) {
+    return `Expected ${formatValue(issue.params.expected)}`;
+  }
+  if (Array.isArray(issue.params?.options)) {
+    return `Expected one of ${issue.params.options.map(formatValue).join(", ")}`;
+  }
   if (issue.params?.multipleOf !== undefined) {
     return `Must be a multiple of ${param(issue, "multipleOf")}`;
   }

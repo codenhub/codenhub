@@ -25,8 +25,8 @@ The release is ready when every condition below holds. There is no "ship and fin
 
 Everything below exists, works in synchronous and asynchronous form where it composes, and follows the [architecture](architecture.md): a factory returning a `(input: unknown) => result` function, options for constraints, `pipe` and friends for meaning.
 
-- **Leaves.** `string`, `number`, `bigint`, `boolean`, `date`, `literal`, `oneOf` (the values of a list), `nativeEnum`, `unknown`, `never`, `instanceOf`. `null` and `undefined` are `literal(null)` and `literal(undefined)`.
-- **Formats.** `email`, `url`, `uuid`, `ip`, `datetime`, an ISO calendar date, `hostname`, `hex`, `base64`, `ulid`, `nanoid`, `cuid2`. Each is its own validator and its own module.
+- **Leaves** (done). `string`, `number`, `bigint`, `boolean`, `date`, `literal`, `oneOf` (the values of a list), `nativeEnum`, `unknown`, `never`, `instanceOf`. `null` and `undefined` are `literal(null)` and `literal(undefined)`.
+- **Formats** (done). `email`, `url`, `uuid`, `ip`, `datetime`, an ISO calendar date, `hostname`, `hex`, `base64`, `ulid`, `nanoid`, `cuid2`. Each is its own validator and its own module.
 - **Collections.** `array`, `tuple` (with a rest element), `record`, `set`, `map`, each with the size constraints the type has.
 - **Composition.** `object` with unknown-key handling (done), `optional` (done), `nullable`, `nullish`, `withDefault`, `fallback`, `transform`, `refine` (done), `pipe` (done), `union`, `discriminatedUnion`, `intersection`, `lazy` for recursive data, and `json` for text holding JSON.
 - **Shape reuse.** Shapes are plain objects, so extending, picking and omitting are spread and destructuring. What plain JavaScript cannot type, making every property optional or required again, gets a helper.
@@ -67,13 +67,12 @@ The claim that a package pays only for what it uses is proved once, on a real wo
 
 Each step ends with the tree green (`pnpm verify validation`) and the docs describing exactly what exists.
 
-1. **Foundation** (landed). Result, issue and path model, sync-until-async plumbing, `is`, messages, and the first vertical slice: `string`, `number`, `boolean`, `email`, `object`, `optional`, `pipe`, `refine`. With the consumer-types and bundle-size tests, so the shape is proved before the rest is ported.
-2. **Leaves and formats.** The remaining leaves and every format, porting the edge cases the previous design had already found: public-host checks, calendar-date validity, ip and datetime patterns, safe integers, `multipleOf` tolerance.
-3. **Composition.** Collections, the wrappers, unions, `lazy`, `json`, shape helpers. Asynchronous paths are tested for each composer, including that issue order never depends on which promise settles first.
-4. **Coercion and interop.** The coercing variants and the Standard Schema adapter.
-5. **Tooling.** `codenhub.bundled` in `hub check`, with the lifecycle and tooling docs.
-6. **Adoption proof.** One package migrated and measured.
-7. **Close-out.** Public docs and migration table completed, changelog written, generated files refreshed, release cut.
+1. **Foundation, leaves and formats** (landed). Result, issue and path model, sync-until-async plumbing, `is`, messages, and the first vertical slice: `string`, `number`, `boolean`, `email`, `object`, `optional`, `pipe`, `refine`. With the consumer-types and bundle-size tests, so the shape is proved before the rest is ported. Then the remaining leaves and every format, porting the edge cases the previous design had already found: public-host checks, calendar-date validity, ip and datetime patterns.
+2. **Composition.** Collections, the wrappers, unions, `lazy`, `json`, shape helpers. Asynchronous paths are tested for each composer, including that issue order never depends on which promise settles first.
+3. **Coercion and interop.** The coercing variants and the Standard Schema adapter.
+4. **Tooling.** `codenhub.bundled` in `hub check`, with the lifecycle and tooling docs.
+5. **Adoption proof.** One package migrated and measured.
+6. **Close-out.** Public docs and migration table completed, changelog written, generated files refreshed, release cut.
 
 ## Versioning until 1.0
 

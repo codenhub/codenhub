@@ -1,7 +1,7 @@
-import { failIssue, invalidType, pass } from "../core/result";
 import type { Validator } from "../core/types";
+import { PUBLIC_HOST_PATTERN } from "./patterns";
+import { textFormat } from "./text-format";
 
-const PUBLIC_HOST_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,}|xn--[a-z0-9-]{1,59})$/i;
 const EMAIL_LOCAL_PATTERN = /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*$/i;
 const EMAIL_LOCAL_MAX_LENGTH = 64;
 const EMAIL_MAX_LENGTH = 254;
@@ -45,10 +45,5 @@ const isEmail = (text: string, allowPlus: boolean): boolean => {
  */
 export function email(options: EmailOptions = {}): Validator<string> {
   const allowPlus = options.allowPlus ?? true;
-  return (input) => {
-    if (typeof input !== "string") {
-      return invalidType("string", input);
-    }
-    return isEmail(input, allowPlus) ? pass(input) : failIssue("invalid_format", { format: "email" });
-  };
+  return textFormat("email", (text) => isEmail(text, allowPlus));
 }

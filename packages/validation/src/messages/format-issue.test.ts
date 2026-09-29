@@ -3,7 +3,14 @@ import { describe, expect, it } from "vitest";
 import { fail } from "../core/result";
 import type { ValidationIssue } from "../core/types";
 import { email } from "../formats/email";
+import { ip } from "../formats/ip";
+import { url } from "../formats/url";
+import { uuid } from "../formats/uuid";
+import { bigint } from "../primitives/bigint";
+import { date } from "../primitives/date";
+import { literal } from "../primitives/literal";
 import { number } from "../primitives/number";
+import { oneOf } from "../primitives/one-of";
 import { string } from "../primitives/string";
 import { issuesOf } from "../test-utils";
 import { flatten, formatIssue, formatPath } from "./format-issue";
@@ -65,6 +72,39 @@ describe("formatIssue", () => {
     expect(messages(number({ safeInt: true })(2 ** 60))).toEqual(["Must be a safe integer"]);
     expect(messages(number({ nonZero: true })(0))).toEqual(["Must not be zero"]);
     expect(messages(number({ multipleOf: 5 })(7))).toEqual(["Must be a multiple of 5"]);
+  });
+
+  it("should describe the formats by their names", () => {
+    const messageOf = (result: ReturnType<ReturnType<typeof email>>): string[] =>
+      issuesOf(result).map((found) => formatIssue(found));
+
+    expect(messageOf(url()("x"))).toEqual(["Invalid URL"]);
+    expect(messageOf(uuid()("x"))).toEqual(["Invalid UUID"]);
+    expect(messageOf(ip({ version: "v4" })("x"))).toEqual(["Invalid IPv4 address"]);
+    expect(messageOf(ip()("x"))).toEqual(["Invalid IP address"]);
+  });
+
+  it("should word bigint and date bounds", () => {
+    const messages = (result: ReturnType<ReturnType<typeof bigint>>): string[] =>
+      issuesOf(result).map((found) => formatIssue(found));
+
+    expect(messages(bigint({ min: 10n })(1n))).toEqual(["Must be at least 10"]);
+    expect(messages(bigint({ lt: 10n })(10n))).toEqual(["Must be less than 10"]);
+    const earliest = new Date("2026-01-01T00:00:00Z");
+    expect(formatIssue(issuesOf(date({ min: earliest })(new Date("2025-01-01")))[0] as ValidationIssue)).toBe(
+      "Must be on or after 2026-01-01T00:00:00.000Z",
+    );
+    expect(formatIssue(issuesOf(date({ max: earliest })(new Date("2027-01-01")))[0] as ValidationIssue)).toBe(
+      "Must be on or before 2026-01-01T00:00:00.000Z",
+    );
+  });
+
+  it("should describe literals and lists of allowed values, writing values as they appear in code", () => {
+    expect(formatIssue(issuesOf(literal("admin")("x"))[0] as ValidationIssue)).toBe('Expected "admin"');
+    expect(formatIssue(issuesOf(literal(1n)(1))[0] as ValidationIssue)).toBe("Expected 1n");
+    expect(formatIssue(issuesOf(literal(null)(1))[0] as ValidationIssue)).toBe("Expected null");
+    expect(formatIssue(issuesOf(oneOf(["a", "b"])("x"))[0] as ValidationIssue)).toBe('Expected one of "a", "b"');
+    expect(formatIssue(issuesOf(oneOf([1, 2])(3))[0] as ValidationIssue)).toBe("Expected one of 1, 2");
   });
 
   it("should describe unrecognized keys, coercion failures and unions", () => {

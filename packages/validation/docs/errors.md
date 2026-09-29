@@ -48,15 +48,15 @@ formatPath([0, "title"]); // "[0].title"
 
 The code set is open: a custom validator reports whatever code it likes. These are the ones the built-in validators use.
 
-| Code               | Meaning                                                                 | `params`                                                                   |
-| ------------------ | ----------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `invalid_type`     | The value is not the type expected.                                     | `expected`, `received`, both type names.                                   |
-| `invalid_format`   | A string does not have the required format.                             | `format`, such as `"email"` or `"regex"`, plus what the rule needs.        |
-| `invalid_value`    | The value has the right type but a value that is not allowed.           | `type`, plus `format` (`"int"`, `"safeInt"`, `"nonZero"`) or `multipleOf`. |
-| `too_small`        | Below a minimum: too short, or too small a number.                      | `minimum`, `type`, and `inclusive` or `exact` where they apply.            |
-| `too_big`          | Above a maximum.                                                        | `maximum`, `type`, and `inclusive` or `exact` where they apply.            |
-| `unrecognized_key` | An object has a property its shape does not list, in strict mode.       | `key`. The issue's path ends at the key.                                   |
-| `custom`           | The default code of a `refine` check or `fail` call that names no code. | Whatever the reporter set.                                                 |
+| Code               | Meaning                                                                 | `params`                                                                                                                                            |
+| ------------------ | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invalid_type`     | The value is not the type expected.                                     | `expected`, `received`, both type names.                                                                                                            |
+| `invalid_format`   | A string does not have the required format.                             | `format`, such as `"email"` or `"regex"`, plus what the rule needs.                                                                                 |
+| `invalid_value`    | The value has the right type but a value that is not allowed.           | `expected` for a literal, `options` for a list of values, or `type` plus `format` (`"int"`, `"safeInt"`, `"nonZero"`) or `multipleOf` for a number. |
+| `too_small`        | Below a minimum: too short, or too small a number.                      | `minimum`, `type`, and `inclusive` or `exact` where they apply.                                                                                     |
+| `too_big`          | Above a maximum.                                                        | `maximum`, `type`, and `inclusive` or `exact` where they apply.                                                                                     |
+| `unrecognized_key` | An object has a property its shape does not list, in strict mode.       | `key`. The issue's path ends at the key.                                                                                                            |
+| `custom`           | The default code of a `refine` check or `fail` call that names no code. | Whatever the reporter set.                                                                                                                          |
 
 `received` names types the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `map`, `set`, the class name of an instance, or the `typeof` of anything else.
 
@@ -118,4 +118,4 @@ It takes the same message map as `formatIssue`. Field keys use the notation of `
 
 ## Reading the result
 
-A result is plain data, so it serializes as it is and can be logged, sent to a client or stored. Because no issue holds the input, doing so does not leak what was submitted.
+A result is plain data, so it can be logged, sent to a client or stored, and because no issue holds the input, doing so does not leak what was submitted. One caveat: the bounds of a `bigint` validator are bigints in `params`, which `JSON.stringify` cannot serialize, and those of a `date` validator are `Date`s, which it turns into ISO strings. Convert them first if you send issues as JSON.

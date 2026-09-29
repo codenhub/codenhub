@@ -52,15 +52,33 @@ export const check = object({ name: string({ min: 2 }), email: email(), age: opt
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue)); };`,
     budget: 3250,
   },
+  { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 680 },
+  { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 820 },
+  { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 900 },
+  {
+    name: "datetime",
+    source: `import { datetime } from "DIST"; export const check = datetime({ offset: true });`,
+    budget: 970,
+  },
+  {
+    name: "date",
+    source: `import { date } from "DIST"; export const check = date({ min: new Date(0) });`,
+    budget: 770,
+  },
+  {
+    name: "oneOf",
+    source: `import { oneOf } from "DIST"; export const check = oneOf(["admin", "user"]);`,
+    budget: 340,
+  },
   {
     name: "messages only",
     source: `import { formatIssue } from "DIST"; export const describe = formatIssue;`,
-    budget: 1000,
+    budget: 1180,
   },
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 3650,
+    budget: 5400,
   },
 ];
 
