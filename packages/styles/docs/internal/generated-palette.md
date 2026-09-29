@@ -47,7 +47,7 @@ Examples: `--palette-success-soft-bg` (transparent ground), `--palette-success-s
 
 ## Dark mode
 
-Light values are the unscoped default; dark values are re-declared under `.dark`, `.theme-dark`, and `[data-theme="dark"]`, the selector set `theme.css` uses for its explicit-override arm. No `@media (prefers-color-scheme: dark)` fallback is generated: a consumer reaching for a standalone palette handles its own theme switching, and the OS-only case belongs to `@codenhub/styles`' own `light-dark()` tokens when that package is in use.
+Light values are the unscoped default, declared on `:root` and on the explicit light selectors (`.light`, `.theme-light`, `[data-theme="light"]`) in one block; dark values are re-declared under `.dark`, `.theme-dark`, and `[data-theme="dark"]`, the selector set `theme.css` uses for its explicit-override arm. The light block comes first, so the nearest explicit theme wins at any depth and dark wins on an element carrying both, as `color-scheme` does. No `@media (prefers-color-scheme: dark)` fallback is generated: a consumer reaching for a standalone palette handles its own theme switching, and the OS-only case belongs to `@codenhub/styles`' own `light-dark()` tokens when that package is in use.
 
 ## Verifying the output
 

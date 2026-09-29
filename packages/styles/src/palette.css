@@ -7,7 +7,10 @@
 @layer theme, base, components, utilities;
 
 @layer theme {
-  :root {
+  :root,
+  .light,
+  .theme-light,
+  [data-theme="light"] {
     --palette-neutral-solid-bg: oklab(0.817 0 0);
     --palette-neutral-solid-fg: oklab(0.205 0 0);
     --palette-neutral-solid-edge: oklab(0 0 0 / 0);

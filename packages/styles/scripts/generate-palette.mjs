@@ -341,7 +341,14 @@ async function main() {
         "@layer theme, base, components, utilities;",
         "",
         "@layer theme {",
-        "  :root {",
+        /* The light values answer the explicit light selectors too, so a light
+           subtree nested inside a dark one reads them, as the package's own
+           tokens do. Before the dark block, so dark still wins on an element
+           carrying both, as `color-scheme` does in `theme.css`. */
+        "  :root,",
+        "  .light,",
+        "  .theme-light,",
+        '  [data-theme="light"] {',
         indent(toDeclarations(light)),
         "  }",
         "",

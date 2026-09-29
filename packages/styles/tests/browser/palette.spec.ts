@@ -265,4 +265,31 @@ test.describe("generated palette", () => {
       expect(mismatches).toEqual([]);
     });
   }
+
+  /* The nearest explicit theme wins, as it does for the package's own tokens:
+     a light subtree inside a dark one reads the light values, a dark one
+     inside it the dark values again, and dark wins on an element carrying
+     both, as `color-scheme` does. */
+  test("follows the nearest explicit theme, nested either way", async ({ page }) => {
+    const values = await page.evaluate(() => {
+      const read = (element: Element) => getComputedStyle(element).getPropertyValue("--palette-text").trim();
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<div data-theme="dark" id="outer"><div class="light" id="light"><div class="theme-dark" id="dark"></div></div></div><div class="light dark" id="both"></div>',
+      );
+
+      return {
+        both: read(document.getElementById("both")!),
+        dark: read(document.getElementById("dark")!),
+        light: read(document.getElementById("light")!),
+        outer: read(document.getElementById("outer")!),
+        root: read(document.documentElement),
+      };
+    });
+
+    expect(values.outer).not.toBe(values.root);
+    expect(values.light, "light inside dark").toBe(values.root);
+    expect(values.dark, "dark inside light inside dark").toBe(values.outer);
+    expect(values.both, "both classes on one element").toBe(values.outer);
+  });
 });
