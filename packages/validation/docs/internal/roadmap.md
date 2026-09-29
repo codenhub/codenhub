@@ -1,5 +1,5 @@
 ---
-status: DRAFT
+status: APPROVED
 last_updated: 2026-09-29
 scope: What `@codenhub/validation` must contain to be released as 0.1.0, how the work is ordered, and what it takes to reach 1.0.
 ---
@@ -9,8 +9,6 @@ scope: What `@codenhub/validation` must contain to be released as 0.1.0, how the
 ## Purpose
 
 This is the definition of done for the 0.1.0 release and the order the work happens in. The design it builds toward, and why, is in [architecture.md](architecture.md). Nothing in it names a consuming package: the package is for any package or app that has to check a value, and a list of expected adopters would go stale and imply they are the only ones.
-
-Its status is `DRAFT` until the maintainer approves it; the section "Decisions to confirm" lists what the approval covers and is deleted when it lands.
 
 ## Direction
 
@@ -51,7 +49,7 @@ Everything below exists, works in synchronous and asynchronous form where it com
 - `README.md` and every public page describe current behavior only and use examples that compile against the built declarations.
 - A reference page per family of validators, a guide to writing custom and asynchronous validators, a page on issues and messages, a page on coercion, and a migration table from 0.0.1.
 - The changelog entry for 0.1.0 is written from the finished package, and `llms.txt` and `llms-full.txt` are current.
-- `docs/internal/` matches the code and has no `DRAFT` documents left.
+- `docs/internal/` matches the code.
 
 ### Tooling
 
@@ -75,7 +73,7 @@ Each step ends with the tree green (`pnpm verify validation`) and the docs descr
 4. **Coercion and interop.** The coercing variants and the Standard Schema adapter.
 5. **Tooling.** `codenhub.bundled` in `hub check`, with the lifecycle and tooling docs.
 6. **Adoption proof.** One package migrated and measured.
-7. **Close-out.** Public docs and migration table completed, changelog written, generated files refreshed, `DRAFT` documents approved or deleted, release cut.
+7. **Close-out.** Public docs and migration table completed, changelog written, generated files refreshed, release cut.
 
 ## Versioning until 1.0
 
@@ -86,7 +84,7 @@ The plan is that 0.1.0 is the API, and everything after it is a 0.1.x release: f
 - Every release since 0.1.0 has been additive or a fix, with no change to an existing signature, issue code or `params` shape.
 - Validators in this package have been used by more than one package and by at least one app or site validating forms or an integration, and what they found is fixed.
 - The public docs have not needed a correction to what an existing validator does.
-- No item remains under "Decisions to confirm" or in a `DRAFT` document.
+- No document under `docs/internal/` is still a `DRAFT`.
 
 ## Not Planned
 
@@ -97,14 +95,3 @@ The plan is that 0.1.0 is the API, and everything after it is a 0.1.x release: f
 - **`InferInput`.** Every validator accepts `unknown`; there is no narrower input type to infer.
 - **Building the message into each validator.** Text is on demand so it can be replaced and so it costs nothing to a consumer that never shows it.
 - **JSON Schema generation and code generation.** Functions cannot be introspected, and it would add weight for a use this package is not for.
-
-## Decisions to confirm
-
-The design decisions the maintainer made in conversation are recorded in [architecture.md](architecture.md). These are the ones the plan makes without a stated answer, and approving this document approves them or replaces them:
-
-1. **Shape reuse by plain objects.** `extend`, `pick` and `omit` are not provided, because shapes are plain objects a caller spreads and destructures; only `partial` and `required` get helpers.
-2. **Coercion as separate factories** (for example `coerceNumber`) accepting the strict validator's options, instead of an option on the strict validator, so the strict one does not carry the conversion code.
-3. **Issues have no `input`, and `message` is optional.** No opt-in to keep the input; a custom validator may set a fixed message.
-4. **Names.** `oneOf` for a list of literal values, `withDefault` and `fallback` for the wrappers previously called `default` and `catch`, and a name for the ISO calendar date format (`isoDate` is proposed) since `date` is the `Date` validator.
-5. **The 1.0 conditions above.**
-6. **`is` narrows the input to the output type**, which is exact only for validators that do not transform. The docs say so and it is not restricted by the types.

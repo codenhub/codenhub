@@ -1,5 +1,5 @@
 ---
-status: DRAFT
+status: APPROVED
 last_updated: 2026-09-29
 scope: How the validation package is built and why, for whoever changes it next.
 ---
