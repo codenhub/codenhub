@@ -1,4 +1,4 @@
-import { isDate } from "../core/objects";
+import { timeOf } from "../core/objects";
 import { invalidCoercion } from "../core/result";
 import type { Validator } from "../core/types";
 import { isCalendarDate } from "../formats/calendar";
@@ -50,7 +50,7 @@ const readIso = (text: string): Date | undefined => {
 export function coerceDate(options: DateOptions = {}): Validator<Date> {
   const strict = date(options);
   return (input) => {
-    if (isDate(input)) {
+    if (timeOf(input) !== undefined) {
       return strict(input);
     }
     if (typeof input === "number" && Number.isInteger(input)) {

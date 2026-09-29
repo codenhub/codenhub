@@ -12,7 +12,7 @@ import { date } from "../primitives/date";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { issuesOf, valueOf } from "../test-utils";
-import { isDate, isMap, isPlainObject, isSet } from "./objects";
+import { entriesOf, isPlainObject, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "./objects";
 import { describeType } from "./result";
 
 /*
@@ -43,20 +43,26 @@ describe("values from another realm", () => {
     expect(isPlainObject(Object.create({ inherited: 1 }))).toBe(false);
   });
 
-  it("should be recognized as dates, maps and sets, and our own kinds of them", () => {
-    expect([isDate(foreign("new Date()")), isMap(foreign("new Map()")), isSet(foreign("new Set()"))]).toEqual([
-      true,
-      true,
-      true,
+  it("should be read as dates, maps and sets, and so should ours", () => {
+    expect([timeOf(foreign("new Date(5)")), timeOf(new Date(5)), timeOf(foreign("new Date(NaN)"))]).toEqual([
+      5,
+      5,
+      Number.NaN,
     ]);
-    expect([isDate(new Date()), isMap(new Map()), isSet(new Set())]).toEqual([true, true, true]);
+    expect([
+      sizeOfMap(foreign("new Map([[1, 2]])")),
+      sizeOfMap(new Map()),
+      sizeOfSet(foreign("new Set([1, 2])")),
+    ]).toEqual([1, 0, 2]);
+    expect(entriesOf(foreign("new Map([['a', 1]])"))).toEqual([["a", 1]]);
+    expect(valuesOf(foreign("new Set([1, 2])"))).toEqual([1, 2]);
   });
 
   it("should not be mistaken for a date, map or set by resembling one", () => {
-    const lookalike = { getTime: () => 0, has: () => true, [Symbol.toStringTag]: "Date" };
-    expect([isDate(lookalike), isMap(lookalike), isSet(lookalike)]).toEqual([false, false, false]);
-    expect([isDate(new Set()), isMap(new Set()), isSet(new Map()), isDate(null), isMap(undefined)]).toEqual(
-      Array(5).fill(false),
+    const lookalike = { getTime: () => 0, has: () => true, size: 1, [Symbol.toStringTag]: "Date" };
+    expect([timeOf(lookalike), sizeOfMap(lookalike), sizeOfSet(lookalike)]).toEqual([undefined, undefined, undefined]);
+    expect([timeOf(new Set()), sizeOfMap(new Set()), sizeOfSet(new Map()), timeOf(null), sizeOfMap(undefined)]).toEqual(
+      Array(5).fill(undefined),
     );
   });
 
@@ -99,5 +105,39 @@ describe("an object with a prototype of its own", () => {
   it("should keep the class name of an instance, and fall back to object for a nameless class", () => {
     expect(describeType(new (class Widget {})())).toBe("Widget");
     expect(describeType(new (class {})())).toBe("object");
+  });
+});
+
+describe("a value that is one of the kinds but has lost its prototype", () => {
+  const bare = <T extends object>(value: T): T => Object.setPrototypeOf(value, null) as T;
+
+  it("should still be read by the built-in methods, not through methods it no longer has", () => {
+    expect(timeOf(valueOf(date()(bare(new Date(0)))))).toBe(0);
+    expect(timeOf(valueOf(coerceDate()(bare(new Date(0)))))).toBe(0);
+    expect(valueOf(map(string(), number())(bare(new Map([["a", 1]]))))).toEqual(new Map([["a", 1]]));
+    expect(valueOf(set(number())(bare(new Set([1, 2]))))).toEqual(new Set([1, 2]));
+  });
+
+  it("should be checked against min, max and size like any other", () => {
+    expect(date({ min: new Date(5) })(bare(new Date(0))).ok).toBe(false);
+    expect(map(string(), number(), { max: 0 })(bare(new Map([["a", 1]]))).ok).toBe(false);
+    expect(set(number(), { min: 3 })(bare(new Set([1]))).ok).toBe(false);
+  });
+});
+
+describe("an object whose prototype cannot be inspected", () => {
+  const hostile = new Proxy(
+    {},
+    {
+      getPrototypeOf() {
+        throw new Error("boom");
+      },
+    },
+  );
+
+  it("should be rejected, not thrown from", () => {
+    expect(isPlainObject(hostile)).toBe(false);
+    expect(issuesOf(object({})(hostile)).map((issue) => issue.code)).toEqual(["invalid_type"]);
+    expect(issuesOf(record(string(), number())(hostile)).map((issue) => issue.code)).toEqual(["invalid_type"]);
   });
 });

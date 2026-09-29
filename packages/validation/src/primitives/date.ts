@@ -1,4 +1,4 @@
-import { isDate } from "../core/objects";
+import { timeOf } from "../core/objects";
 import { assertOrder, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { ValidationIssue, Validator } from "../core/types";
 
@@ -40,16 +40,17 @@ export function date(options: DateOptions = {}): Validator<Date> {
   const max = options.max?.getTime();
   assertOrder("min", min, "max", max);
   return (input) => {
-    if (!isDate(input) || Number.isNaN(input.getTime())) {
+    const time = timeOf(input);
+    if (time === undefined || Number.isNaN(time)) {
       return invalidType("valid date", input);
     }
     const issues: ValidationIssue[] = [];
-    if (min !== undefined && input.getTime() < min) {
+    if (min !== undefined && time < min) {
       issues.push(toIssue({ code: "too_small", params: { minimum: new Date(min), inclusive: true, type: "date" } }));
     }
-    if (max !== undefined && input.getTime() > max) {
+    if (max !== undefined && time > max) {
       issues.push(toIssue({ code: "too_big", params: { maximum: new Date(max), inclusive: true, type: "date" } }));
     }
-    return issues.length > 0 ? failWith(issues) : pass(input);
+    return issues.length > 0 ? failWith(issues) : pass(input as Date);
   };
 }
