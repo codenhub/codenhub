@@ -472,3 +472,34 @@ test("keeps a component dialog closed until opened, and centred once open", asyn
   expect(Number.parseFloat(dialogs.openMarginLeft)).toBeGreaterThan(0);
   expect(dialogs.plainMarginLeft, "a dialog the package does not style keeps the consumer's margin").toBe("0px");
 });
+
+/* The reset's reduced-motion rule is `!important` in `base`, which beats any
+   unlayered `!important`. The documented way back is a layer ordered before
+   `base`, stated before the package loads; this holds the docs to it. */
+test("lets a layer ordered before base keep an animation under reduced motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setContent(
+    `<!doctype html><html><head>
+      <style>@layer essential-motion, theme, base, components, utilities;
+        @layer essential-motion {
+          @media (prefers-reduced-motion: reduce) {
+            .essential { animation-duration: 1s !important; animation-iteration-count: infinite !important; }
+          }
+        }
+        @keyframes spin { to { rotate: 1turn; } }
+        .essential, .ordinary { animation: spin 1s linear infinite !important; }
+      </style>
+      <link rel="stylesheet" href="http://localhost:5184/shared/entry-vanilla.css">
+    </head><body><div class="essential"></div><div class="ordinary"></div></body></html>`,
+    { waitUntil: "load" },
+  );
+
+  const durations = await page.evaluate(() =>
+    [".essential", ".ordinary"].map(
+      (selector) => getComputedStyle(document.querySelector(selector)!).animationDuration,
+    ),
+  );
+
+  expect(Number.parseFloat(durations[0]!), "the essential animation keeps its duration").toBe(1);
+  expect(Number.parseFloat(durations[1]!), "every other animation is still stopped").toBeLessThan(0.001);
+});

@@ -1937,6 +1937,22 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 The loader fallback and each component's own reduced-motion rule ship with the component, so every entrypoint that includes it honors reduced motion without the reset -- `@codenhub/styles/components`, `@codenhub/styles/tw/components`, and each focused `/tw/*` component entrypoint included. The complete and native entrypoints add the reset's page-wide shortening on top.
 
+The reset's rule is `!important` inside the `base` layer, and a layered `!important` beats an unlayered one, so your own `!important` cannot switch an animation back on. To keep one running for users who ask for reduced motion -- a progress indicator you consider essential, say -- declare it `!important` in a layer ordered before `base`. The order is set by the first `@layer` statement the browser meets, so yours goes before the package loads:
+
+```css
+@layer essential-motion, theme, base, components, utilities;
+@import "@codenhub/styles";
+
+@layer essential-motion {
+  @media (prefers-reduced-motion: reduce) {
+    .upload-spinner {
+      animation-duration: 1s !important;
+      animation-iteration-count: infinite !important;
+    }
+  }
+}
+```
+
 ### Color and contrast
 
 | Feature            | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                    |
