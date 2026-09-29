@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -33,6 +33,11 @@ const withGitOutput = (message: string, output: string | undefined): string => {
   return detail === undefined || detail === "" ? message : `${message}\n${detail}`;
 };
 
+/** Creates a directory and any missing parents, succeeding when it already exists. Injected by tests. */
+export type DirectoryMaker = (directory: string) => Promise<unknown>;
+
+const makeDirectory: DirectoryMaker = (directory) => mkdir(directory, { recursive: true });
+
 /** Which tree to write out, and where. */
 export interface MaterializeTreeOptions {
   /** Repository directory to run `git` in. */
@@ -53,6 +58,12 @@ export interface MaterializeTreeOptions {
  * would put on disk. The repository's index and working tree are never touched:
  * the tree is staged into a throwaway index and checked out from there.
  *
+ * The destination is created first, by this process. Git creates the missing
+ * parents of every file it writes, and two `checkout-index` runs that both find
+ * a shared parent missing — `packages/plugins` for two sibling plugins — race to
+ * create it, and the loser fails with "cannot create directory". Callers write
+ * many trees at once, so no run may be left to create a directory another shares.
+ *
  * `treePath` not existing at `ref` is a legitimate result and returns `false`,
  * which is how a package that did not exist yet at a ref is told apart from one
  * that did. The ref itself being unreadable is different and throws: a caller
@@ -60,12 +71,14 @@ export interface MaterializeTreeOptions {
  * from a broken repository.
  * @param options Repository, ref, directory, and destination.
  * @param git Git runner, defaulting to real `git` processes.
+ * @param createDirectory Directory creator, defaulting to a recursive `mkdir`.
  * @returns Whether `treePath` existed at `ref` and was written out.
  * @throws When `ref` cannot be read, `treePath` names a file rather than a directory, or git fails to write the tree.
  */
 export async function materializeTreeAtRef(
   options: MaterializeTreeOptions,
   git: GitTreeRunner = runGit,
+  createDirectory: DirectoryMaker = makeDirectory,
 ): Promise<boolean> {
   const { cwd, destination, ref, treePath } = options;
   const commit = await git({ args: ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], cwd });
@@ -81,6 +94,7 @@ export async function materializeTreeAtRef(
     throw new Error(`${treePath} at ${ref} is not a directory.`);
   }
 
+  await createDirectory(destination);
   const indexDirectory = await mkdtemp(path.join(tmpdir(), "codenhub-tree-"));
   try {
     const env = { GIT_INDEX_FILE: path.join(indexDirectory, "index") };
