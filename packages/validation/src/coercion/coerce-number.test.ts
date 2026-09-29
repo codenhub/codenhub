@@ -18,6 +18,13 @@ describe("coerceNumber", () => {
     ).toEqual(Array(11).fill(false));
   });
 
+  it("should reject a long run of digits that does not end as a number in linear time", () => {
+    // A pattern with two adjacent digit runs backtracks quadratically: this took seconds before.
+    const start = performance.now();
+    expect(validator(`${"1".repeat(100_000)}x`).ok).toBe(false);
+    expect(performance.now() - start).toBeLessThan(250);
+  });
+
   it("should reject booleans, null, objects and arrays instead of guessing", () => {
     expect(accepts(validator, true, null, undefined, {}, [5], new Date(), 5n)).toEqual(Array(7).fill(false));
   });

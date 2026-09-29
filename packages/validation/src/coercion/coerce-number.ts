@@ -2,7 +2,8 @@ import { invalidCoercion } from "../core/result";
 import type { Validator } from "../core/types";
 import { number, type NumberOptions } from "../primitives/number";
 
-const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+\.?\d*|\.\d+)$/;
+// The fraction is one optional group so no two digit runs are adjacent, which keeps matching linear.
+const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
 
 /**
  * Creates a validator for numbers that also accepts text holding a decimal number, converting it,
