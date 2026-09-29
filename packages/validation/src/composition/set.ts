@@ -1,7 +1,7 @@
 import type { Maybe } from "../core/async";
 import { sizeOfSet, valuesOf } from "../core/objects";
-import { failWith, invalidType, pass } from "../core/result";
-import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
+import { failWith, invalidType, pass, repeatedItem } from "../core/result";
+import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 import { settle } from "./settle";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
@@ -11,8 +11,10 @@ import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
  * @remarks
  * A wrong size is reported at once, without validating the values. Otherwise every value is
  * validated, and each issue's path leads through the value's position in iteration order. The
- * output is a new `Set` of the validated values, so if `element` changes values, two that become
- * equal are stored once. It is synchronous when `element` is, and asynchronous otherwise.
+ * output is a new `Set` of the validated values. When `element` changes values so that one becomes
+ * equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its
+ * position, rather than dropped, so the output never holds fewer values than the size options allow.
+ * It is synchronous when `element` is, and asynchronous otherwise.
  *
  * @example
  * ```ts
@@ -43,7 +45,20 @@ export function set<TElement extends AnyValidator>(
     }
     return settle(
       valuesOf(input).map((value) => element(value)),
-      (values) => pass(new Set(values)),
+      (values) => {
+        // A value that validation made equal to an earlier one is reported, not merged, so the output
+        // holds as many values as the size options were checked against.
+        const output = new Set<unknown>();
+        const repeats: ValidationIssue[] = [];
+        values.forEach((value, index) => {
+          if (output.has(value)) {
+            repeats.push(repeatedItem(index));
+          } else {
+            output.add(value);
+          }
+        });
+        return repeats.length > 0 ? failWith(repeats) : pass(output);
+      },
     );
   };
   return validate as unknown as Composed<TElement, Set<Infer<TElement>>>;

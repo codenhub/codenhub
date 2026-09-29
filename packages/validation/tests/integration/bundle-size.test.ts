@@ -79,7 +79,7 @@ export const describe = (input: unknown) => { const result = check(input); retur
   {
     name: "set",
     source: `import { number, set } from "DIST"; export const check = set(number());`,
-    budget: 1780,
+    budget: 1840,
   },
   {
     name: "map",

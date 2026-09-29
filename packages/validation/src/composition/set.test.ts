@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { number } from "../primitives/number";
+import { string } from "../primitives/string";
 import { accepts, isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { set } from "./set";
 
@@ -30,9 +31,17 @@ describe("set", () => {
     expect(issuesOf(set(number(), { min: 2 })(new Set([1])))[0]?.params).toEqual({ minimum: 2, type: "set" });
   });
 
-  it("should store values that clean-up made equal once", () => {
+  it("should report a value that clean-up made equal to an earlier one, rather than drop it", () => {
     const clamped = set(number({ clamp: { min: 0, max: 10 } }));
-    expect(valueOf(clamped(new Set([20, 30]))).size).toBe(1);
+    expect(issuesOf(clamped(new Set([20, 5, 30])))).toEqual([
+      { code: "invalid_value", path: [2], params: { unique: true } },
+    ]);
+  });
+
+  it("should never produce fewer values than its size options allow", () => {
+    const lower = set(string({ lowercase: true }), { min: 2 });
+    expect(lower(new Set(["A", "a"])).ok).toBe(false);
+    expect(valueOf(lower(new Set(["A", "b"])))).toEqual(new Set(["a", "b"]));
   });
 
   it("should be asynchronous when the value validator is", async () => {
