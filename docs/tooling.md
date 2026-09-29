@@ -133,6 +133,8 @@ Diagnostics name the file they came from, so a batch that fails is reported agai
 
 Unrecognized flags and everything after a bare `--` are forwarded to the underlying tool, so `hub test error --reporter=verbose` reaches Vitest unchanged.
 
+The flags above always belong to `hub`, even where the underlying tool has one of the same name. `hub test error --changed` narrows the selection rather than asking Vitest for its own `--changed`, and `--bail=3` sets `hub`'s bail with the count ignored. `-v` and `-V` print the tooling version. A tool's flag that shares a name with one of these reaches the tool only after `--`, as `hub test error -- --bail=3`.
+
 ## Reporting
 
 A run reports what failed. Child output is captured rather than streamed, and a package that passed prints nothing beyond its place in the closing count; a package that failed prints its whole output under its own heading. A green workspace run is a handful of lines, which is what makes the one red package in it findable.
