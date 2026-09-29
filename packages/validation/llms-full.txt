@@ -162,7 +162,7 @@ export type Signup = Infer<typeof signup>;
 
 Issue paths lead down to the offending value, so a problem with `email` has the path `["email"]` and one inside a list has segments such as `["addresses", 0, "street"]`.
 
-`object` accepts plain objects only: created by `{}`, `Object.create(null)` or `JSON.parse`. Arrays, class instances, `Map`s and `null` are rejected. Properties the shape does not list are dropped from the output by default; the [validator reference](docs/validators.md#objects) shows how to reject them or keep them.
+`object` accepts plain objects only: created by `{}`, `Object.create(null)` or `JSON.parse`, in this realm or another such as an iframe. Arrays, class instances, `Map`s and `null` are rejected. Properties the shape does not list are dropped from the output by default; the [validator reference](docs/validators.md#objects) shows how to reject them or keep them.
 
 ## Combining validators
 
@@ -509,7 +509,7 @@ The code set is open: a custom validator reports whatever code it likes. These a
 | `invalid_union`    | A value matched none of the options of a `union`, or a tagged union got a missing or unknown tag. | For `union`, `issues`: the issues each option found, in order, with paths relative to the union's value. For `discriminatedUnion`, `discriminator` and `options`, and the issue's path is the tag's. |
 | `custom`           | The default code of a `refine` check or `fail` call that names no code.                           | Whatever the reporter set.                                                                                                                                                                           |
 
-`received` names types the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `invalid date` for a `Date` holding no moment, `map`, `set`, the class name of an instance, `object` for anything that cannot be inspected without throwing, or the `typeof` of anything else.
+`received` names types the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `invalid date` for a `Date` holding no moment, `map`, `set`, the class name of an instance, `object` for a plain object or anything that cannot be inspected without throwing, or the `typeof` of anything else. Where a plain object is expected (`object`, `record`, `discriminatedUnion`), one made with a prototype of its own, such as `Object.create({ a: 1 })`, is `non-plain object`.
 
 The validator reference lists the exact code and `params` each validator reports.
 
@@ -749,7 +749,7 @@ const status = nativeEnum(Status);
 
 - `unknown()` accepts every value and passes it through unchanged. Use it for a property you do not check.
 - `never()` rejects every value with `invalid_type` and `{ expected: "never", received }`. Use it to forbid a property, or for a branch that must never match.
-- `instanceOf(Class)` accepts instances of a class, subclasses and abstract classes included, checked with `instanceof`, so an instance from another realm such as an iframe is not recognized. It fails with `invalid_type` and `{ expected: "instance of Class", received }`.
+- `instanceOf(Class)` accepts instances of a class, subclasses and abstract classes included, checked with `instanceof`, so an instance from another realm such as an iframe is not recognized. `date`, `map`, `set` and `object` do not have that limit and accept values from any realm. It fails with `invalid_type` and `{ expected: "instance of Class", received }`.
 
 ## Formats
 
@@ -844,7 +844,7 @@ user({ name: "Ada" }); // { ok: true, value: { name: "Ada" } }
 user({ age: "x" }); // two issues: ["name"] and ["age"]
 ```
 
-- Only plain objects are accepted. Arrays, class instances, `Map`s, `Date`s and `null` fail with `invalid_type` and `{ expected: "object", received }`.
+- Only plain objects are accepted, whichever realm made them. Arrays, class instances, objects with a prototype of their own, `Map`s, `Date`s and `null` fail with `invalid_type` and `{ expected: "object", received }`.
 - Only own properties are read, so a value inherited through the prototype never satisfies a required property.
 - Every property is validated, even after an earlier one failed, and each issue's path leads down to it.
 - A property whose validator accepts `undefined`, such as one wrapped in `optional`, is optional in the inferred type, and is left out of the output when absent from the input.

@@ -125,7 +125,7 @@ const status = nativeEnum(Status);
 
 - `unknown()` accepts every value and passes it through unchanged. Use it for a property you do not check.
 - `never()` rejects every value with `invalid_type` and `{ expected: "never", received }`. Use it to forbid a property, or for a branch that must never match.
-- `instanceOf(Class)` accepts instances of a class, subclasses and abstract classes included, checked with `instanceof`, so an instance from another realm such as an iframe is not recognized. It fails with `invalid_type` and `{ expected: "instance of Class", received }`.
+- `instanceOf(Class)` accepts instances of a class, subclasses and abstract classes included, checked with `instanceof`, so an instance from another realm such as an iframe is not recognized. `date`, `map`, `set` and `object` do not have that limit and accept values from any realm. It fails with `invalid_type` and `{ expected: "instance of Class", received }`.
 
 ## Formats
 
@@ -220,7 +220,7 @@ user({ name: "Ada" }); // { ok: true, value: { name: "Ada" } }
 user({ age: "x" }); // two issues: ["name"] and ["age"]
 ```
 
-- Only plain objects are accepted. Arrays, class instances, `Map`s, `Date`s and `null` fail with `invalid_type` and `{ expected: "object", received }`.
+- Only plain objects are accepted, whichever realm made them. Arrays, class instances, objects with a prototype of their own, `Map`s, `Date`s and `null` fail with `invalid_type` and `{ expected: "object", received }`.
 - Only own properties are read, so a value inherited through the prototype never satisfies a required property.
 - Every property is validated, even after an earlier one failed, and each issue's path leads down to it.
 - A property whose validator accepts `undefined`, such as one wrapped in `optional`, is optional in the inferred type, and is left out of the output when absent from the input.

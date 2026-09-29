@@ -1,4 +1,5 @@
 import type { Maybe } from "../core/async";
+import { isSet } from "../core/objects";
 import { failWith, invalidType, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
 import { settle } from "./settle";
@@ -32,7 +33,7 @@ export function set<TElement extends AnyValidator>(
 ): Composed<TElement, Set<Infer<TElement>>> {
   assertSizeOptions(options);
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
-    if (!(input instanceof Set)) {
+    if (!isSet(input)) {
       return invalidType("set", input);
     }
     const oversize = sizeIssues(input.size, "set", options);
@@ -40,7 +41,7 @@ export function set<TElement extends AnyValidator>(
       return failWith(oversize);
     }
     return settle(
-      [...(input as Set<unknown>)].map((value) => element(value)),
+      [...input].map((value) => element(value)),
       (values) => pass(new Set(values)),
     );
   };

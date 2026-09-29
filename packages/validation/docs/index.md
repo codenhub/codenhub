@@ -82,7 +82,7 @@ export type Signup = Infer<typeof signup>;
 
 Issue paths lead down to the offending value, so a problem with `email` has the path `["email"]` and one inside a list has segments such as `["addresses", 0, "street"]`.
 
-`object` accepts plain objects only: created by `{}`, `Object.create(null)` or `JSON.parse`. Arrays, class instances, `Map`s and `null` are rejected. Properties the shape does not list are dropped from the output by default; the [validator reference](validators.md#objects) shows how to reject them or keep them.
+`object` accepts plain objects only: created by `{}`, `Object.create(null)` or `JSON.parse`, in this realm or another such as an iframe. Arrays, class instances, `Map`s and `null` are rejected. Properties the shape does not list are dropped from the output by default; the [validator reference](validators.md#objects) shows how to reject them or keep them.
 
 ## Combining validators
 

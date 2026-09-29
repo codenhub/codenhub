@@ -1,4 +1,5 @@
 import { chain, collect, type Maybe } from "../core/async";
+import { isMap } from "../core/objects";
 import { collectNested, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
@@ -34,14 +35,14 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
 ): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>> {
   assertSizeOptions(options);
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
-    if (!(input instanceof Map)) {
+    if (!isMap(input)) {
       return invalidType("map", input);
     }
     const oversize = sizeIssues(input.size, "map", options);
     if (oversize.length > 0) {
       return failWith(oversize);
     }
-    const entries = [...(input as Map<unknown, unknown>)];
+    const entries = [...input];
     const segments = entries.map(([name], index) =>
       typeof name === "string" || typeof name === "number" ? name : index,
     );

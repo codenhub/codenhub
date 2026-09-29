@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
-import { isPlainObject, setOwn } from "../core/objects";
-import { collectNested, failWith, invalidType, pass, toIssue } from "../core/result";
+import { invalidObject, isPlainObject, setOwn } from "../core/objects";
+import { collectNested, failWith, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 
 /**
@@ -46,7 +46,7 @@ export function record<TKey extends AnyValidator<string>, TValue extends AnyVali
 ): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>> {
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
-      return invalidType("object", input);
+      return invalidObject(input);
     }
     const names = Object.keys(input);
     const entries = names.map((name) =>

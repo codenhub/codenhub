@@ -1,3 +1,4 @@
+import { isDate } from "../core/objects";
 import { assertOrder, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { ValidationIssue, Validator } from "../core/types";
 
@@ -39,7 +40,7 @@ export function date(options: DateOptions = {}): Validator<Date> {
   const max = options.max?.getTime();
   assertOrder("min", min, "max", max);
   return (input) => {
-    if (!(input instanceof Date) || Number.isNaN(input.getTime())) {
+    if (!isDate(input) || Number.isNaN(input.getTime())) {
       return invalidType("valid date", input);
     }
     const issues: ValidationIssue[] = [];

@@ -39,7 +39,7 @@ const scenarios: Scenario[] = [
     source: `import { string } from "DIST"; export const check = string({ min: 2, trim: true });`,
     budget: 1200,
   },
-  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 840 },
+  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 860 },
   {
     name: "object of three fields",
     source: `import { email, number, object, optional, string } from "DIST";
@@ -64,7 +64,7 @@ export const describe = (input: unknown) => { const result = check(input); retur
   {
     name: "date",
     source: `import { date } from "DIST"; export const check = date({ min: new Date(0) });`,
-    budget: 770,
+    budget: 810,
   },
   {
     name: "oneOf",
@@ -147,7 +147,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 7660,
+    budget: 7780,
   },
 ];
 

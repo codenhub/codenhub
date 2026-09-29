@@ -1,4 +1,3 @@
-import { isPlainObject } from "./objects";
 import type {
   ValidationErr,
   ValidationFailure,
@@ -112,22 +111,17 @@ export function describeType(value: unknown): string {
 
 /** Names an object by its kind, or by its class for an instance, reading its prototype. */
 function describeObject(value: object): string {
-  if (Array.isArray(value)) {
-    return "array";
+  // The tag names the kind in any realm, which `instanceof` cannot. Only a name is at stake here, so a
+  // value that fakes its tag is named wrongly at worst, where the validators that accept a kind check it.
+  const kind = Object.prototype.toString.call(value).slice(8, -1);
+  if (kind === "Date") {
+    return Number.isNaN((value as Date).getTime()) ? "invalid date" : "date";
   }
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? "invalid date" : "date";
+  if (kind === "Array" || kind === "Map" || kind === "Set") {
+    return kind.toLowerCase();
   }
-  if (value instanceof Map) {
-    return "map";
-  }
-  if (value instanceof Set) {
-    return "set";
-  }
-  if (isPlainObject(value)) {
-    return "object";
-  }
-  return (Object.getPrototypeOf(value) as { constructor?: { name?: string } }).constructor?.name || "object";
+  const name = (Object.getPrototypeOf(value) as { constructor?: { name?: string } } | null)?.constructor?.name;
+  return name === undefined || name === "" || name === "Object" ? "object" : name;
 }
 
 /** Fails because the input is not the type a validator accepts, naming both types and never the value. */

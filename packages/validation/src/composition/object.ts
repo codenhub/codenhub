@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
-import { isPlainObject, setOwn } from "../core/objects";
-import { collectNested, failWith, invalidType, pass, toIssue } from "../core/result";
+import { invalidObject, isPlainObject, setOwn } from "../core/objects";
+import { collectNested, failWith, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 
 /** Maps property names to the validators of their values. */
@@ -65,7 +65,7 @@ export function object<TShape extends Shape>(
 
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
-      return invalidType("object", input);
+      return invalidObject(input);
     }
 
     const issues: ValidationIssue[] = [];
