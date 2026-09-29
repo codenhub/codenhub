@@ -106,6 +106,41 @@ export const invalidType = (expected: string, input: unknown): ValidationErr =>
 export const invalidCoercion = (expected: string, input: unknown): ValidationErr =>
   failIssue("invalid_type", { expected, received: describeType(input), coerced: true });
 
+/**
+ * Rejects a lower and an upper bound that no value can satisfy, since that is a mistake in the schema
+ * and not in the input. `isExclusive` is for a pair where either side excludes its bound, so equal
+ * bounds leave nothing between them. A missing bound constrains nothing.
+ */
+export function assertOrder<T extends number | bigint>(
+  lowerName: string,
+  lower: T | undefined,
+  upperName: string,
+  upper: T | undefined,
+  isExclusive = false,
+): void {
+  if (lower !== undefined && upper !== undefined && (isExclusive ? lower >= upper : lower > upper)) {
+    throw new RangeError(`No value can satisfy ${lowerName} ${lower} and ${upperName} ${upper}`);
+  }
+}
+
+/** Rejects inclusive and exclusive bounds of a number or bigint that no value can satisfy together. */
+export function assertBounds<T extends number | bigint>({
+  min,
+  max,
+  gt,
+  lt,
+}: {
+  min?: T;
+  max?: T;
+  gt?: T;
+  lt?: T;
+}): void {
+  assertOrder("min", min, "max", max);
+  assertOrder("min", min, "lt", lt, true);
+  assertOrder("gt", gt, "max", max, true);
+  assertOrder("gt", gt, "lt", lt, true);
+}
+
 /** Rejects a size limit that is not a non-negative integer, since it is a mistake in the schema and not in the input. */
 export function assertSize(name: string, value: number): void {
   if (!Number.isInteger(value) || value < 0) {

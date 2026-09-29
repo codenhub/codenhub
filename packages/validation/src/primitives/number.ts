@@ -1,4 +1,4 @@
-import { failWith, invalidType, pass, toIssue } from "../core/result";
+import { assertBounds, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { ValidationIssue, Validator } from "../core/types";
 
 /** Constraints and clean-up for {@link number}. Every option is optional. */
@@ -70,14 +70,20 @@ const isMultipleOf = (value: number, step: number): boolean => {
  *
  * @param options - Constraints and clean-up to apply.
  * @returns A validator that produces a number.
- * @throws {RangeError} When `multipleOf` is not a positive finite number, or `clamp` has a `NaN` bound or a
- * minimum above its maximum.
+ * @throws {RangeError} When a bound is `NaN`, no number can satisfy the bounds together, `multipleOf` is not a
+ * positive finite number, or `clamp` has a `NaN` bound or a minimum above its maximum.
  */
 export function number(options: NumberOptions = {}): Validator<number> {
   const { min, max, gt, lt, int, safeInt, multipleOf, nonZero, clamp } = options;
   if (multipleOf !== undefined && (!Number.isFinite(multipleOf) || multipleOf <= 0)) {
     throw new RangeError(`multipleOf must be a positive finite number, received ${multipleOf}`);
   }
+  for (const [name, bound] of Object.entries({ min, max, gt, lt })) {
+    if (Number.isNaN(bound)) {
+      throw new RangeError(`${name} must be a number, received NaN`);
+    }
+  }
+  assertBounds(options);
   if (clamp !== undefined) {
     if (Number.isNaN(clamp.min) || Number.isNaN(clamp.max)) {
       throw new RangeError("clamp bounds must be numbers, received NaN");

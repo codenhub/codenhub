@@ -35,7 +35,7 @@ export interface ArrayOptions extends SizeOptions {
  * @param element - Validator applied to every item.
  * @param options - Size limits and uniqueness.
  * @returns A validator that produces an array of what `element` produces.
- * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer.
+ * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function array<TElement extends AnyValidator>(
   element: TElement,

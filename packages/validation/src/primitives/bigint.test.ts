@@ -21,6 +21,18 @@ describe("bigint", () => {
     expect(accepts(bigint({ lt: 0n }), -1n, 0n, 1n)).toEqual([true, false, false]);
   });
 
+  it("should reject bounds no bigint can satisfy when the validator is created", () => {
+    for (const options of [
+      { min: 2n, max: 1n },
+      { gt: 1n, lt: 1n },
+      { min: 1n, lt: 1n },
+      { gt: 1n, max: 1n },
+    ]) {
+      expect(() => bigint(options)).toThrow(RangeError);
+    }
+    expect(() => bigint({ min: 1n, max: 1n })).not.toThrow();
+  });
+
   it("should compare beyond the safe integer range exactly", () => {
     expect(bigint({ max: 2n ** 64n })(2n ** 64n + 1n).ok).toBe(false);
   });

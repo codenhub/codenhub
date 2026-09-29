@@ -1,4 +1,4 @@
-import { failWith, invalidType, pass, toIssue } from "../core/result";
+import { assertOrder, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { ValidationIssue, Validator } from "../core/types";
 
 /** Bounds for {@link date}. Every option is optional. */
@@ -28,7 +28,7 @@ const assertValidDate = (name: string, bound: Date | undefined): void => {
  *
  * @param options - Earliest and latest accepted moments, both inclusive.
  * @returns A validator that produces a `Date`.
- * @throws {RangeError} When `min` or `max` is an invalid `Date`.
+ * @throws {RangeError} When `min` or `max` is an invalid `Date`, or `min` is after `max`.
  */
 export function date(options: DateOptions = {}): Validator<Date> {
   assertValidDate("Minimum date", options.min);
@@ -37,6 +37,7 @@ export function date(options: DateOptions = {}): Validator<Date> {
   // nor changing a reported bound can move them.
   const min = options.min?.getTime();
   const max = options.max?.getTime();
+  assertOrder("min", min, "max", max);
   return (input) => {
     if (!(input instanceof Date) || Number.isNaN(input.getTime())) {
       return invalidType("valid date", input);

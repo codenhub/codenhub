@@ -1,4 +1,4 @@
-import { failWith, invalidType, pass, toIssue } from "../core/result";
+import { assertBounds, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { ValidationIssue, Validator } from "../core/types";
 
 /** Constraints for {@link bigint}. Every option is optional. */
@@ -31,9 +31,11 @@ const outOfRange = (side: "min" | "max", bound: bigint, isInclusive: boolean): V
  *
  * @param options - Bounds to apply. Positive is `gt: 0n`, non-negative is `min: 0n`, negative is `lt: 0n`.
  * @returns A validator that produces a bigint.
+ * @throws {RangeError} When no bigint can satisfy the bounds together.
  */
 export function bigint(options: BigintOptions = {}): Validator<bigint> {
   const { min, max, gt, lt } = options;
+  assertBounds(options);
   return (input) => {
     if (typeof input !== "bigint") {
       return invalidType("bigint", input);

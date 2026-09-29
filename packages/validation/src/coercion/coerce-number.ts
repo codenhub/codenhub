@@ -25,8 +25,8 @@ const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
  *
  * @param options - Constraints and clean-up, exactly as for `number`.
  * @returns A validator that produces a number.
- * @throws {RangeError} When `multipleOf` is not a positive finite number, or `clamp` has a `NaN` bound or a
- * minimum above its maximum.
+ * @throws {RangeError} When a bound is `NaN`, no number can satisfy the bounds together, `multipleOf` is not a
+ * positive finite number, or `clamp` has a `NaN` bound or a minimum above its maximum.
  */
 export function coerceNumber(options: NumberOptions = {}): Validator<number> {
   const strict = number(options);

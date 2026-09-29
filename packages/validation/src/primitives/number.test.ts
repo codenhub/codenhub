@@ -95,6 +95,26 @@ describe("number", () => {
     });
   });
 
+  it("should reject a NaN bound when the validator is created, instead of ignoring it", () => {
+    for (const bound of ["min", "max", "gt", "lt"] as const) {
+      expect(() => number({ [bound]: Number.NaN })).toThrow(RangeError);
+    }
+    expect(() => number({ min: -Infinity, max: Infinity })).not.toThrow();
+  });
+
+  it("should reject bounds no number can satisfy when the validator is created", () => {
+    for (const options of [
+      { min: 2, max: 1 },
+      { gt: 1, lt: 1 },
+      { min: 1, lt: 1 },
+      { gt: 1, max: 1 },
+    ]) {
+      expect(() => number(options)).toThrow(RangeError);
+    }
+    expect(() => number({ min: 1, max: 1 })).not.toThrow();
+    expect(() => number({ gt: 0, lt: 1 })).not.toThrow();
+  });
+
   it("should report every constraint that fails", () => {
     expect(codesOf(number({ min: 10, int: true, nonZero: true })(0.5))).toEqual(["too_small", "invalid_value"]);
   });
