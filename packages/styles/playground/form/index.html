@@ -34,20 +34,34 @@
                 <span class="label">Project name</span>
                 <input class="ipt" type="text" value="Acme Labs" required />
               </label>
-              <label class="field" data-testid="field-slug">
-                <span class="label">URL slug</span>
+              <div class="field" data-testid="field-slug">
+                <label class="label" for="field-slug-control">URL slug</label>
                 <div class="input-group" style="--input-group-gap: 0" data-testid="slug-group">
                   <span class="text-body text-text-secondary" data-testid="slug-prefix">codenhub.dev/</span>
-                  <input class="ipt" type="text" value="acme-labs" required />
+                  <input
+                    class="ipt"
+                    type="text"
+                    value="acme-labs"
+                    required
+                    id="field-slug-control"
+                    aria-describedby="field-slug-hint"
+                  />
                 </div>
-                <span class="hint">Lowercase letters, numbers, and hyphens only.</span>
-              </label>
+                <span class="hint" id="field-slug-hint">Lowercase letters, numbers, and hyphens only.</span>
+              </div>
             </div>
-            <label class="field" data-testid="field-description">
-              <span class="label">Description</span>
-              <textarea class="textarea" rows="3">Internal tools and dashboards for the Acme growth team.</textarea>
-              <span class="hint" data-testid="description-count">55 / 240</span>
-            </label>
+            <div class="field" data-testid="field-description">
+              <label class="label" for="field-description-control">Description</label>
+              <textarea
+                class="textarea"
+                rows="3"
+                id="field-description-control"
+                aria-describedby="field-description-hint"
+              >
+Internal tools and dashboards for the Acme growth team.</textarea
+              >
+              <span class="hint" id="field-description-hint" data-testid="description-count">55 / 240</span>
+            </div>
           </div>
 
           <hr class="divider" />
@@ -94,21 +108,29 @@
                   <option>Admin</option>
                 </select>
               </label>
-              <label class="field" data-testid="field-workspace">
-                <span class="label">Workspace</span>
-                <select class="select" disabled data-testid="workspace-select">
+              <div class="field" data-testid="field-workspace">
+                <label class="label" for="field-workspace-control">Workspace</label>
+                <select
+                  class="select"
+                  disabled
+                  data-testid="workspace-select"
+                  id="field-workspace-control"
+                  aria-describedby="field-workspace-hint"
+                >
                   <option>Acme Corp</option>
                 </select>
-                <span class="hint">Contact an admin to move this project to a different workspace.</span>
-              </label>
+                <span class="hint" id="field-workspace-hint">
+                  Contact an admin to move this project to a different workspace.
+                </span>
+              </div>
             </div>
-            <label class="field" data-testid="field-invite">
-              <span class="label">Invite by email</span>
+            <div class="field" data-testid="field-invite">
+              <label class="label" for="field-invite-control">Invite by email</label>
               <div class="input-group">
                 <i class="ic-mail" aria-hidden="true"></i>
-                <input class="ipt" type="email" placeholder="teammate@acme.com" />
+                <input class="ipt" type="email" placeholder="teammate@acme.com" id="field-invite-control" />
               </div>
-            </label>
+            </div>
             <div class="cluster between" data-testid="field-notify">
               <span class="stack tight">
                 <span class="text-label">Notify by email</span>
@@ -123,35 +145,43 @@
           <div class="stack tight">
             <h2 class="text-title-sm">Billing</h2>
             <div class="form-grid">
-              <label class="field" data-testid="field-billing-email">
-                <span class="label">Billing email</span>
+              <div class="field" data-testid="field-billing-email">
+                <label class="label" for="field-billing-email-control">Billing email</label>
                 <input
                   class="ipt"
                   type="email"
                   value="finance@acme"
                   aria-invalid="true"
                   aria-describedby="billing-email-error"
+                  id="field-billing-email-control"
                 />
                 <span class="hint destructive" id="billing-email-error" data-testid="billing-email-error">
                   Enter a complete email address.
                 </span>
-              </label>
+              </div>
               <label class="field" data-testid="field-tax-id">
                 <span class="label">Tax ID</span>
                 <input class="ipt" type="text" placeholder="Optional" />
               </label>
             </div>
             <div class="form-grid">
-              <label class="field" data-testid="field-company">
-                <span class="label">Company name</span>
-                <input class="ipt" type="text" value="" aria-invalid="true" aria-describedby="company-error" />
+              <div class="field" data-testid="field-company">
+                <label class="label" for="field-company-control">Company name</label>
+                <input
+                  class="ipt"
+                  type="text"
+                  value=""
+                  aria-invalid="true"
+                  aria-describedby="company-error"
+                  id="field-company-control"
+                />
                 <span class="hint destructive" id="company-error" data-testid="company-error">
                   Company name is required.
                 </span>
-              </label>
-              <label class="field" data-testid="field-country">
-                <span class="label">Country</span>
-                <select class="select" aria-invalid="true" aria-describedby="country-error">
+              </div>
+              <div class="field" data-testid="field-country">
+                <label class="label" for="field-country-control">Country</label>
+                <select class="select" aria-invalid="true" aria-describedby="country-error" id="field-country-control">
                   <option value="">Select a country</option>
                   <option>United States</option>
                   <option>Brazil</option>
@@ -159,7 +189,7 @@
                 <span class="hint destructive" id="country-error" data-testid="country-error">
                   Select a country to continue.
                 </span>
-              </label>
+              </div>
             </div>
           </div>
 

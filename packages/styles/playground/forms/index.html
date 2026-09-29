@@ -150,22 +150,22 @@
           </p>
         </div>
         <div class="stack loose">
-          <label class="field" data-testid="input-group-leading">
-            <span class="label">Email</span>
+          <div class="field" data-testid="input-group-leading">
+            <label class="label" for="input-group-leading-control">Email</label>
             <div class="input-group">
               <i class="ic-mail" aria-hidden="true"></i>
-              <input class="ipt" type="email" value="you@example.com" />
+              <input class="ipt" type="email" value="you@example.com" id="input-group-leading-control" />
             </div>
-          </label>
-          <label class="field" data-testid="input-group-trailing">
-            <span class="label">Search</span>
+          </div>
+          <div class="field" data-testid="input-group-trailing">
+            <label class="label" for="input-group-trailing-control">Search</label>
             <div class="input-group">
-              <input class="ipt" type="search" value="styles" />
+              <input class="ipt" type="search" value="styles" id="input-group-trailing-control" />
               <i class="ic-search" aria-hidden="true"></i>
             </div>
-          </label>
-          <label class="field" data-testid="input-group-invalid">
-            <span class="label">Email</span>
+          </div>
+          <div class="field" data-testid="input-group-invalid">
+            <label class="label" for="input-group-invalid-control">Email</label>
             <div class="input-group">
               <i class="ic-mail" aria-hidden="true"></i>
               <input
@@ -174,37 +174,38 @@
                 value="not-an-email"
                 aria-invalid="true"
                 aria-describedby="input-group-error"
+                id="input-group-invalid-control"
               />
             </div>
             <span class="hint destructive" id="input-group-error">Enter a valid email.</span>
-          </label>
-          <label class="field" data-testid="input-group-disabled">
-            <span class="label">Email</span>
+          </div>
+          <div class="field" data-testid="input-group-disabled">
+            <label class="label" for="input-group-disabled-control">Email</label>
             <div class="input-group">
               <i class="ic-mail" aria-hidden="true"></i>
-              <input class="ipt" type="email" value="you@example.com" disabled />
+              <input class="ipt" type="email" value="you@example.com" disabled id="input-group-disabled-control" />
             </div>
-          </label>
+          </div>
           <div class="stack tight">
             <h3 class="text-title-sm">Presentation and aesthetic</h3>
             <p class="text-body text-text-secondary">
               The group reads the same axes a lone field does; the control inside stays flush.
             </p>
             <div class="form-grid">
-              <label class="field">
-                <span class="label">Soft, sunk</span>
+              <div class="field">
+                <label class="label" for="field-soft-sunk-control">Soft, sunk</label>
                 <div class="input-group soft edgeless">
                   <i class="ic-mail" aria-hidden="true"></i>
-                  <input class="ipt" type="email" value="you@example.com" />
+                  <input class="ipt" type="email" value="you@example.com" id="field-soft-sunk-control" />
                 </div>
-              </label>
-              <label class="field">
-                <span class="label">Primary</span>
+              </div>
+              <div class="field">
+                <label class="label" for="field-primary-control">Primary</label>
                 <div class="input-group primary">
                   <i class="ic-mail" aria-hidden="true"></i>
-                  <input class="ipt" type="email" value="you@example.com" />
+                  <input class="ipt" type="email" value="you@example.com" id="field-primary-control" />
                 </div>
-              </label>
+              </div>
             </div>
           </div>
         </div>
@@ -281,13 +282,19 @@
             <span class="label">Name</span>
             <input class="ipt" type="text" value="Codenhub" />
           </label>
-          <label class="field" data-testid="field-complete">
-            <span class="label">Email</span>
-            <input class="ipt" type="email" value="you@example.com" aria-describedby="field-hint" />
+          <div class="field" data-testid="field-complete">
+            <label class="label" for="field-complete-control">Email</label>
+            <input
+              class="ipt"
+              type="email"
+              value="you@example.com"
+              aria-describedby="field-hint"
+              id="field-complete-control"
+            />
             <span class="hint" id="field-hint" data-testid="field-hint">We only use this to send build failures.</span>
-          </label>
-          <label class="field" data-testid="field-with-error">
-            <span class="label">Email</span>
+          </div>
+          <div class="field" data-testid="field-with-error">
+            <label class="label" for="field-with-error-control">Email</label>
             <input
               class="ipt"
               type="email"
@@ -295,28 +302,37 @@
               aria-invalid="true"
               aria-describedby="field-error"
               data-testid="invalid-input"
+              id="field-with-error-control"
             />
             <span class="hint destructive" id="field-error" data-testid="field-error">Enter a valid email.</span>
-          </label>
-          <label class="field" data-testid="field-hint-and-error">
-            <span class="label">Email</span>
+          </div>
+          <div class="field" data-testid="field-hint-and-error">
+            <label class="label" for="field-hint-and-error-control">Email</label>
             <input
               class="ipt"
               type="email"
               value="not-an-email"
               aria-invalid="true"
               aria-describedby="field-both-hint field-both-error"
+              id="field-hint-and-error-control"
             />
             <span class="hint" id="field-both-hint">We only use this to send build failures.</span>
             <span class="hint destructive" id="field-both-error">Enter a valid email.</span>
-          </label>
-          <label class="field" data-testid="field-disabled">
-            <span class="label">Email</span>
-            <input class="ipt" type="email" value="you@example.com" disabled aria-describedby="field-disabled-hint" />
+          </div>
+          <div class="field" data-testid="field-disabled">
+            <label class="label" for="field-disabled-control">Email</label>
+            <input
+              class="ipt"
+              type="email"
+              value="you@example.com"
+              disabled
+              aria-describedby="field-disabled-hint"
+              id="field-disabled-control"
+            />
             <span class="hint" id="field-disabled-hint">
               A disabled control dims itself; the label and hint keep full contrast so the field stays readable.
             </span>
-          </label>
+          </div>
         </div>
         <div class="stack loose">
           <div class="stack tight">
@@ -330,21 +346,21 @@
               rather than the field's own stack.
             </p>
           </div>
-          <label class="field" data-testid="field-select">
-            <span class="label">Environment</span>
-            <select class="select" aria-describedby="field-select-hint">
+          <div class="field" data-testid="field-select">
+            <label class="label" for="field-select-control">Environment</label>
+            <select class="select" aria-describedby="field-select-hint" id="field-select-control">
               <option>Vanilla</option>
               <option>Build</option>
             </select>
             <span class="hint" id="field-select-hint">Which stylesheet the preview loads.</span>
-          </label>
-          <label class="field" data-testid="field-textarea">
-            <span class="label">Release notes</span>
-            <textarea class="textarea" rows="3" aria-describedby="field-textarea-hint">
+          </div>
+          <div class="field" data-testid="field-textarea">
+            <label class="label" for="field-textarea-control">Release notes</label>
+            <textarea class="textarea" rows="3" aria-describedby="field-textarea-hint" id="field-textarea-control">
 Collapsed the per-component intent blocks.</textarea
             >
             <span class="hint" id="field-textarea-hint">Markdown is not rendered.</span>
-          </label>
+          </div>
           <div class="field" data-testid="field-checkbox">
             <label class="cluster tight">
               <input class="checkbox" type="checkbox" checked aria-describedby="field-checkbox-hint" />
