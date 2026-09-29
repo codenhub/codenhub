@@ -78,6 +78,14 @@ describe("formatPath", () => {
   it("should be empty for the root", () => {
     expect(formatPath([])).toBe("");
   });
+
+  it("should quote a key that dot notation would misread, so different paths never share a name", () => {
+    expect(formatPath(["a.b"])).toBe('["a.b"]');
+    expect(formatPath(["a", "b"])).toBe("a.b");
+    expect(formatPath(["list", "[0]"])).toBe('list["[0]"]');
+    expect(formatPath(["x", ""])).toBe('x[""]');
+    expect(formatPath(["first-name", "0"])).toBe("first-name.0");
+  });
 });
 
 describe("formatIssue", () => {
@@ -242,6 +250,16 @@ describe("flatten", () => {
   it("should use the message map", () => {
     const failure = fail({ path: ["a"], code: "custom" }).error;
     expect(flatten(failure, { custom: "Oops" }).fieldErrors).toEqual({ a: ["Oops"] });
+  });
+
+  it("should keep a dotted key apart from the nested path it looks like", () => {
+    const { fieldErrors } = flatten({
+      issues: [
+        { code: "x", path: ["a.b"] },
+        { code: "y", path: ["a", "b"] },
+      ],
+    });
+    expect(Object.keys(fieldErrors)).toEqual(['["a.b"]', "a.b"]);
   });
 
   it("should not let a field named like an Object.prototype member collide", () => {

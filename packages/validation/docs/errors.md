@@ -44,7 +44,10 @@ import { formatPath } from "@codenhub/validation";
 
 formatPath(["user", "addresses", 0, "street"]); // "user.addresses[0].street"
 formatPath([0, "title"]); // "[0].title"
+formatPath(["a.b"]); // '["a.b"]'
 ```
+
+A key that is empty or holds `.`, `[`, `]` or `"` is quoted in brackets, so a key named `a.b` and the path `a`, `b` never format the same.
 
 ## Built-in codes
 
