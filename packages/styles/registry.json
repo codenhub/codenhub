@@ -520,7 +520,7 @@
       },
       "native": [],
       "composition": "none",
-      "compositionReason": "The track is a box, but the value fill is a `::after` rather than the element's own background, so `box` cannot be applied whole. The cost is that the fill and edge blend are reimplemented here and must agree with `box`: the ordering fix that stops `.edgeless` painting a ring over its own fill had to be made in both `box` and `.quote`, and now here too.",
+      "compositionReason": "The track is a box, but the value fill is a `::after` rather than the element's own background, so `box` cannot be applied whole. The cost is that the fill and edge blend are reimplemented here and must agree with `box`: the ordering that stops `.edgeless` painting a ring over its own fill has to be kept in `box`, `.quote`, and here.",
       "axes": ["fill", "edge"],
       "unsupported": [
         {

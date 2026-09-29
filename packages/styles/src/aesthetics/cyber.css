@@ -26,13 +26,11 @@
 
        The cut is the corner length at scale 1, and `box` multiplies it by the
        size step, so a `.p-xs` icon button takes half the cut and a `.lg` button
-       a quarter more -- always a true 45 degrees, because it stays a length. It
-       used to be capped at a quarter of the element's box, a percentage, which
-       ran shallower than 45 degrees on a small wide button; the step retired
-       the cap. A shape set through a knob is taken as written, unscaled: it is
-       read as `--ui-radius`, which `box` honours over the computed corner, and
-       left unset the reference makes the token guaranteed-invalid so the
-       computed corner draws. */
+       a quarter more -- always a true 45 degrees, because it stays a length. A
+       shape set through a knob is taken as written, unscaled: it is read as
+       `--ui-radius`, which `box` honours over the computed corner, and left
+       unset the reference makes the token guaranteed-invalid so the computed
+       corner draws. */
     --_cyber-cut: var(--cyber-cut, 0.625rem);
     --_cyber-glow: var(--cyber-glow, 8px);
 

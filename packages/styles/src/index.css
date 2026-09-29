@@ -1,27 +1,21 @@
 @import "tailwindcss";
 
 /* The build has no markup to scan, so Tailwind's automatic content detection
-   sees only this package's own files. The `src/` scan is load-bearing -- it is
+   sees only this package's own files. The `src/` scan is load-bearing: it is
    how the composition utilities (`box`, `surface`, `text-control`,
-   `input-group`, `loader-mask`) get emitted as standalone rules, since nothing
-   `@source inline`s them -- so `source(none)` is not an option. A handful of
-   Tailwind utility names also collide with a CSS property or a word this
-   file's own comments use (`backdrop-filter`, `filter`, `transition`,
-   `transform`, `container`), which reads like a risk of the same scan --
-   verified against Tailwind 4.3.2, none of them emit.
-   `tests/integration/exports.test.ts` guards it, so a scanner change that
-   starts emitting one is caught rather than shipping silently.
+   `input-group`, `loader-mask`) are emitted as standalone rules, so
+   `source(none)` is not an option. Tailwind utility names that collide with a
+   CSS property or a word these comments use (`backdrop-filter`, `filter`,
+   `transition`, `transform`, `container`) do not emit, verified against
+   Tailwind 4.3.2; `tests/integration/exports.test.ts` guards it.
 
-   The `@source not` lines below keep everything that is not `src/` out of that
-   scan: the sibling app and fixture directories, the `docs/` tree, the build
-   scripts, and the root prose and data files (`README.md`, `llms*.txt`,
-   `registry*.json`, `package.json`). Without them a class name or `--color-*`
-   reference that appears only in a documentation example ships as real CSS --
-   the violet ramp in `docs/usage/theming.md`'s custom-intent example was
-   compiling into `dist/index.css` and `dist/native.css`, and any utility in a
-   docs code fence did the same. `tests/integration/exports.test.ts` guards it.
-   `scripts/build-tw.mjs` strips these lines from the `dist/tw/` copy, where they
-   resolve to nothing and the `/tw` consumer scans their own tree anyway. */
+   The `@source not` lines keep everything that is not `src/` out of the scan:
+   the sibling app and fixture directories, the `docs/` tree, the build scripts,
+   and the root prose and data files. Without them a class name or `--color-*`
+   reference that appears only in a documentation example ships as real CSS.
+   `exports.test.ts` guards it. `scripts/build-tw.mjs` strips these lines from
+   the `dist/tw/` copy, where they resolve to nothing and the `/tw` consumer
+   scans their own tree. */
 @source not "../dist";
 @source not "../tests";
 @source not "../dev";

@@ -64,11 +64,10 @@
        has to be wider than the edge to show at all. */
     --ui-focus-inset: calc(var(--_pixel-unit) + var(--focus-ring-width));
 
-    /* One square unit off each corner, and nothing else. The staircase this
-       replaces stepped twice at half the unit to approximate a curve, which is the
-       one thing a low-resolution grid cannot do: at any size it read as a bevel
-       that had not quite committed. A single cut of the grid's own unit is the
-       shape the look is actually made of.
+    /* One square unit off each corner, and nothing else. A staircase
+       approximates a curve, which is the one thing a low-resolution grid cannot
+       do: it reads as a bevel that has not quite committed. A single cut of the
+       grid's own unit is the shape the look is made of.
 
        The polygon resolves the unit here, on `.pixel`, and inherits down
        already-resolved -- so a component cannot rescale the corner by setting

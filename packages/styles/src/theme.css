@@ -46,30 +46,22 @@
   --color-accent-hover: light-dark(var(--color-neutral-700), var(--color-neutral-300));
   --color-accent-subtle: light-dark(var(--color-neutral-100), var(--color-neutral-800));
   --color-accent-strong: light-dark(var(--color-neutral-800), var(--color-neutral-200));
-  /* Light was neutral-300 (1.42:1 against the page, already under 3:1 by the
-     text-control comment below) until a `.card.soft.edged` measured its own
-     border against its own fill rather than against the page: 12% of
-     `--intent-color` mixed into the ground and a line resolving to nearly the
-     same tone landed the two 4 RGB units apart, which reads as no boundary at
-     all. Dark's neutral-700 pairing already separated -- 27 units, still under
-     3:1 but at least legible -- so only light moved. Neutral-400 is not a new
-     number: `.chunky-tile` already measured it at 2.48:1 against the light
-     page and picked it for the same reason, "the heaviest grey that still
-     leaves a field legible." Dark is unchanged. */
+  /* Neutral-400 in light: the heaviest grey that still leaves a field legible
+     (2.48:1 against the page). A lighter line lands within a few RGB units of a
+     `.card.soft.edged`'s own fill and reads as no boundary. Dark's neutral-700
+     already separates (27 units). */
   --color-border: light-dark(var(--color-neutral-400), var(--color-neutral-700));
 
   /* A text control's line is the only thing identifying it: the box is
      transparent at rest, so nothing else marks where typing goes.
-     `--color-border` is neutral-300/700 and measures 1.42:1 on the light page,
-     which is a line you can barely see.
+     `--color-border` is the quiet surface line, too light for that.
 
-     One value rather than a `light-dark()` pair, and that is the point: the page
-     is neutral-50 in light and neutral-950 in dark, so a tone halfway between
-     them reads on both grounds at once. A text control draws it at
-     `--_line-rest` rather than whole, which is what keeps the field quiet while
-     leaving the pointer somewhere to go -- so the line as painted lands under
-     the 3:1 WCAG 1.4.11 asks of a control boundary. Recorded in
-     docs/accessibility.md. */
+     One value rather than a `light-dark()` pair: the page is neutral-50 in
+     light and neutral-950 in dark, so a tone halfway between them reads on both
+     grounds at once. A text control draws it at `--_line-rest` rather than
+     whole, which keeps the field quiet while leaving the pointer somewhere to
+     go, so the line as painted lands under the 3:1 WCAG 1.4.11 asks of a
+     control boundary. Recorded in docs/accessibility.md. */
   --color-control-border: var(--color-neutral-500);
   --color-background: light-dark(var(--color-neutral-50), var(--color-neutral-950));
   --color-foreground: light-dark(var(--color-neutral-100), var(--color-neutral-900));
@@ -79,40 +71,30 @@
   --color-text-contrast: light-dark(var(--color-neutral-50), var(--color-neutral-950));
   --color-text-hover: light-dark(var(--color-neutral-700), var(--color-neutral-200));
   /* No `--color-text-subtle`: the neutral intent points `--intent-subtle` at
-     `--color-surface`, not at a text-family tint, so the slot the other families
-     fill had no reader here. */
+     `--color-surface`, not at a text-family tint. */
   --color-text-strong: light-dark(var(--color-neutral-900), var(--color-neutral-100));
 
-  /* The tooltip bubble is the one component whose plate is chosen rather than
-     derived. Everything else composes its ground from the intent, and for the
-     bubble that produced the same 20% of the page's ink in both themes -- which
-     steps *lighter* than the surface on a dark page and *darker* on a light one.
-     Dark got the conventional reading, a floating thing lifted off its page;
-     light got a mid-grey slab two steps darker than every card on the screen,
-     carrying dark ink. Measured, the light bubble was neutral-400 at 2.01:1
-     against the page while the dark one was 2.27:1 the other way.
+  /* The tooltip bubble's plate is chosen per theme rather than derived: 20% of
+     the page's ink over the surface tone steps lighter than the surface on a
+     dark page and darker on a light one, and one derivation cannot serve both
+     directions. Both ends read as lifted: near-white over a light page, a mid
+     grey over a dark one.
 
-     One derivation cannot serve both directions, so the pair is stated. Both
-     ends read as lifted: near-white over a light page, a mid grey over a dark
-     one. Near-white is only 1.04:1 against the page, so the bubble draws a
-     hairline as well -- see `components/tooltip.css`. */
+     Near-white is only 1.04:1 against the page, so the bubble draws a hairline
+     as well -- see `components/tooltip.css`. */
   --color-tooltip: light-dark(var(--color-white), var(--color-neutral-700));
   --color-tooltip-contrast: light-dark(var(--color-neutral-900), var(--color-neutral-100));
 
-  /* Emerald-700 rather than 600. A filled button's label is normal-size text, so
-     WCAG 1.4.3 asks 4.5:1, and white on emerald-600 measures 3.50:1 -- it passed
-     only as large text, which `.btn` is not. One step darker carries the white
-     label and leaves the hue where it was. */
+  /* Emerald-700 rather than 600: a filled button's label is normal-size text
+     (WCAG 1.4.3 asks 4.5:1), and white on emerald-600 measures 3.50:1. */
   --color-success: var(--color-emerald-700);
   --color-success-contrast: var(--color-neutral-50);
-  /* Baked rather than mixed live. `box-hover` nests this token two `color-mix()`
-     levels deeper to compose the fill and the edge, and three levels of
-     `color-mix()` over a `light-dark()` crashes the WebKit renderer outright on
-     hover. Confirmed on all four semantic intents, not only this one. Each
-     pinned pair below is
-     `color-mix(in srgb, <base> 82%, <strong>)`, resolved once per theme and
-     screenshotted back so the blend stays exact; re-bake it if the base or
-     strong tone it was mixed from changes. */
+  /* Baked rather than mixed live: `box-hover` nests this token two
+     `color-mix()` levels deeper to compose the fill and the edge, and three
+     levels of `color-mix()` over a `light-dark()` crash the WebKit renderer on
+     hover. Each pinned pair below is `color-mix(in srgb, <base> 82%,
+     <strong>)`, resolved once per theme; re-bake it if the base or strong tone
+     it was mixed from changes. */
   --color-success-hover: light-dark(#007552, #008e66);
   /* The dark ground is `-900` to make room for the `-300` ink above it. `-subtle`
      is what `kbd`, `code`, `pre` and the tooltip bubble rest on, and those are the
@@ -121,21 +103,16 @@
      WCAG 1.4.3 asks of normal text -- and the other three sat at 4.9 to 5.0 with
      no headroom. One step darker puts all four past 9:1. */
   --color-success-subtle: light-dark(var(--color-emerald-100), var(--color-emerald-900));
-  /* The dark tone is `-300`, not `-100`. `-strong` is what a partial fill prints
-     -- the label of a soft badge, the dot of a soft radio -- and on a dark page
-     the `-100` shade of every hue is a pale tint that reads white at small
-     sizes. The intent's colour survived only in the fill and the border, so a
-     soft success badge and a soft destructive one had the same white label and a
-     radio's dot stopped matching its own ring. `-300` keeps the hue and stays
-     far above the contrast a mark or a label needs. Light keeps `-800`, which
-     was never the problem: it is saturated and dark against a light page. */
+  /* The dark tone is `-300`, not `-100`: `-strong` is what a partial fill
+     prints -- the label of a soft badge, the dot of a soft radio -- and on a
+     dark page the `-100` shade of every hue is a pale tint that reads white at
+     small sizes. `-300` keeps the hue. Light keeps `-800`, which is saturated
+     and dark against a light page. */
   --color-success-strong: light-dark(var(--color-emerald-800), var(--color-emerald-300));
-  /* Amber is the one family that cannot solve this by darkening. White on
-     amber-600 measures 3.07:1, and the amber dark enough to carry white has
-     stopped being amber -- it reads brown, which is not the colour a warning is
-     supposed to be. So the ink moves instead of the hue: dark ink on amber is
-     what a warning looks like nearly everywhere, and it is the only intent whose
-     contrast tone is not the page colour. */
+  /* Amber cannot solve contrast by darkening: white on amber-600 measures
+     3.07:1, and amber dark enough to carry white reads brown. So the ink moves
+     instead of the hue: dark ink on amber is what a warning looks like, and
+     warning is the only intent whose contrast tone is not the page colour. */
   --color-warning: var(--color-amber-600);
   --color-warning-contrast: var(--color-neutral-950);
   /* Same crash, same fix as `--color-success-hover` above. */
@@ -261,24 +238,21 @@
 }
 
 /* The first arm mirrors the `color-scheme: dark` block above, all three
-   spellings included -- a consumer writing `.theme-dark` for the token theme
-   was otherwise left without the matching `dark:` variant.
+   spellings included.
 
-   The second arm closes the gap that left open: `--color-*` tokens resolve
-   through `light-dark()` against the computed `color-scheme`, so with no
-   explicit selector at all `:root`'s `color-scheme: light dark` already
-   follows the OS preference -- see `concepts.md#theme-selection`. A selector
-   list cannot query computed style the way `light-dark()` does, but it can
-   still match "OS prefers dark, and not under a forced-light subtree" with a
-   plain descendant exclusion: `:not(:where(.light, .light *, ...))` matches
-   only when no ancestor (or the element itself) carries one of the three
-   light spellings. That is the one case the exclusion cannot see -- a
-   subtree forced light through some means other than these three selectors,
-   where `light-dark()` would still honor it but this variant could not
-   detect it. Out of contract: those three spellings are the only supported
-   way to force a theme, so nothing else is expected to set `color-scheme`
-   directly. Each arm is independent, so an explicit selector still wins at
-   any depth even inside a subtree the other arm would otherwise match. */
+   The second arm follows the OS preference. `--color-*` tokens resolve through
+   `light-dark()` against the computed `color-scheme`, so with no explicit
+   selector `:root`'s `color-scheme: light dark` already follows it -- see
+   `concepts.md#theme-selection`. A selector list cannot query computed style,
+   but it can match "OS prefers dark, and not under a forced-light subtree" with
+   a plain descendant exclusion: `:not(:where(.light, .light *, ...))` matches
+   only when no ancestor (or the element itself) carries one of the three light
+   spellings. The exclusion cannot see a subtree forced light by other means,
+   where `light-dark()` would still honor it; that is out of contract, since
+   those three spellings are the only supported way to force a theme.
+
+   Each arm is independent, so an explicit selector still wins at any depth even
+   inside a subtree the other arm would match. */
 @custom-variant dark {
   &:where(.dark, .dark *, .theme-dark, .theme-dark *, [data-theme="dark"], [data-theme="dark"] *) {
     @slot;

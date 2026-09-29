@@ -183,7 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
      swap this bare nav for branded chrome. Firing an event with the elements
      already attached means a consumer needs neither `.playground-nav`'s class
      name nor a DOMContentLoaded-registration-order coincidence to find them --
-     both were previously implicit and broke silently if either drifted. */
+     both would otherwise be implicit and break silently if either drifted. */
   document.dispatchEvent(
     new CustomEvent("playground:nav-ready", {
       detail: {

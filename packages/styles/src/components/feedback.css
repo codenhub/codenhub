@@ -38,40 +38,32 @@
   --_d-elevation: 0;
 
   /* Same carve-out as `.panel`'s, and for the same reason: a neutral alert
-     mixes 12% of near-black ink onto the page, measured `217, 217, 217`
-     against `250, 250, 250` -- the identical slab `.panel` read before its
-     own fix, not a status-signaling problem, since this is scoped to no
-     named intent. A named intent keeps its ordinary wash; untinting
-     `.alert.soft.destructive` too would silence the status it exists to
-     carry rather than quiet it, which is why an earlier, unconditional
-     version of this fix was rejected for `.alert` specifically. This
-     version never reaches that case: `:not(...)` names every intent class,
-     plus `.solid`/`.ghost` so an explicit presentation on the element is
-     never clamped to a cap it did not ask for.
+     mixes 12% of near-black ink onto the page (`217, 217, 217` against `250,
+     250, 250`), a slab rather than a status signal. Scoped to no named intent:
+     a named intent keeps its ordinary wash, because untinting
+     `.alert.soft.destructive` would silence the status it exists to carry
+     rather than quiet it. `:not(...)` names every intent class, plus
+     `.solid`/`.ghost` so an explicit presentation on the element is never
+     clamped to a cap it did not ask for.
 
-     Grounds on `--color-foreground` through `--_d-surface-ground`, exactly
-     like `.panel` and a resting `.card.soft`, so glass's ground and a
-     consumer's `--ui-surface-ground` still win over it -- an
-     alert has no hover state to reveal a tint into either, so this is
-     permanent rather than revealed. Unlike a neutral panel or badge, an
-     alert cannot lose its visual identity from this: `--_d-border: 100%`
-     above holds regardless of fill, so a neutral alert still reads as a
-     framed box, just a quiet one instead of a grey slab. */
+     Grounds on `--color-foreground` through `--_d-surface-ground`, exactly like
+     `.panel` and a resting `.card.soft`, so glass's ground and a consumer's
+     `--ui-surface-ground` still win over it. An alert has no hover state to
+     reveal a tint into either, so this is permanent. A neutral alert keeps its
+     identity: `--_d-border: 100%` above holds regardless of fill, so it still
+     reads as a framed box, just a quiet one instead of a grey slab. */
   &:not(.primary, .secondary, .success, .warning, .destructive, .info, .solid, .ghost) {
     --_fill-cap: 0%;
     --_d-surface-ground: var(--color-foreground);
   }
 }
 
-/* No icon is shipped: the five hardcoded per-intent masks this used to paint on
-   a `::before` are gone, the same way the per-input-type icon was removed from
-   `.input-group` -- see `docs/internal/model.md#input-group-owns-the-box-the-control-inside-gives-it-up`.
-   `.alert` is
-   already `flex`, so an icon dropped in as a real child is spaced by `gap-3`
-   with nothing to trigger: `.alert-icon` only fixes its size and alignment, not
-   whether one is present. Any icon element works, the same contract
-   `.input-group` documents -- an inline `<svg>`, an `<img>`, or a class from an
-   icon set such as `@codenhub/icons`. */
+/* No icon is shipped. `.alert` is already `flex`, so an icon dropped in as a
+   real child is spaced by `gap-3`: `.alert-icon` only fixes its size and
+   alignment, not whether one is present. Any icon element works, the same
+   contract `.input-group` documents -- an inline `<svg>`, an `<img>`, or a
+   class from an icon set such as `@codenhub/icons`. See
+   `docs/internal/model.md#input-group-owns-the-box-the-control-inside-gives-it-up`. */
 @utility alert-icon {
   @apply inline-flex flex-none items-center justify-center;
 
@@ -111,10 +103,7 @@
 
 /* An indicator reads intent and no presentation token at all. It is a stand-in
    for content rather than a box with a look of its own, so there is nothing for
-   a container's `.solid` or `.edgeless` to say about it -- which is also what
-   removes the visibility floor that used to fight `--ui-fill` for control of the
-   base tone, and the transparent border that only ever appeared if something up
-   the tree asked for an edge. */
+   a container's `.solid` or `.edgeless` to say about it. */
 @utility skeleton {
   --skeleton-base: color-mix(in oklab, var(--intent-color) 6%, var(--intent-subtle));
   --skeleton-sheen: color-mix(in oklab, var(--intent-color) 10%, var(--color-foreground));
@@ -161,17 +150,16 @@
      not `.pre`/`.code`/`.kbd`'s opaque `--intent-subtle` ground. */
   --_progress-surface: color-mix(in oklab, var(--intent-color) var(--_progress-fill), transparent);
   /* One `color-mix()`, not `box`/`.quote`'s two chained through a `--_line`
-     step: a WebKit build measurably destabilizes composing dozens of tracks
-     each carrying a three-level color-mix chain into the same page -- fine
-     at ten, a reproducible ~30-minute CI hang at forty, isolated by removing
-     one variable at a time (element count, then border at all, then chain
-     depth) until only chain depth reproduced it. `box`/`.quote`'s extra step
-     blends the line toward the fill first so a heavily filled box does not
-     draw a ring of a different colour around its own plate -- a real risk up
-     to `.solid`'s 100% fill. `.progress` never reaches that: `.solid` is
-     unsupported here (`registry.json`), so the fill this reads never exceeds
-     `.soft`'s 12%, and mixing straight from `--intent-border` at that fill
-     is indistinguishable from blending through the surface first. */
+     step: a WebKit build destabilizes when composing dozens of tracks each
+     carrying a three-level color-mix chain into one page (fine at ten, a
+     ~30-minute CI hang at forty; only chain depth reproduces it).
+     `box`/`.quote`'s extra step blends the line toward the fill first so a
+     heavily filled box does not draw a ring of a different colour around its
+     own plate -- a real risk up to `.solid`'s 100% fill. `.progress` never
+     reaches that: `.solid` is unsupported here (`registry.json`), so the fill
+     this reads never exceeds `.soft`'s 12%, and mixing straight from
+     `--intent-border` at that fill is indistinguishable from blending through
+     the surface first. */
   --_progress-edge: color-mix(in oklab, var(--intent-border) var(--ui-border, var(--_d-border)), transparent);
 
   @apply relative h-2.5 w-full overflow-hidden;
