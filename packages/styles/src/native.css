@@ -102,9 +102,10 @@
     @apply text-label;
   }
 
+  /* Links are left out: a link takes the text it sits in, so one inside a
+     heading stays heading-sized. */
   p,
-  li,
-  a {
+  li {
     @apply text-body;
   }
 

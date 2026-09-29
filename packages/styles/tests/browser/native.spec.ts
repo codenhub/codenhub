@@ -159,3 +159,25 @@ test("applies intent classes to classless native elements", async ({ page }) => 
   expectSameColor(styles.inputBorder, styles.tokenSuccess, "native input intent border");
   expectSameColor(styles.keyboardText, styles.tokenWarningStrong, "native kbd intent text");
 });
+
+/* A link takes the text it sits in: mapped to body copy, one inside a heading
+   printed at 14px and regular weight beside a 30px bold title. */
+test("keeps a link at the size and weight of the text around it", async ({ page }) => {
+  await page.goto(NATIVE_URL);
+
+  const styles = await page.evaluate(() => {
+    const host = document.createElement("div");
+    host.innerHTML = '<h2>Title <a href="#">link</a></h2><p>Body <a href="#">link</a></p>';
+    document.body.append(host);
+    const read = (selector: string) => {
+      const style = getComputedStyle(host.querySelector(selector)!);
+
+      return `${style.fontSize} ${style.fontWeight}`;
+    };
+
+    return { heading: read("h2"), headingLink: read("h2 a"), paragraph: read("p"), paragraphLink: read("p a") };
+  });
+
+  expect(styles.headingLink).toBe(styles.heading);
+  expect(styles.paragraphLink).toBe(styles.paragraph);
+});
