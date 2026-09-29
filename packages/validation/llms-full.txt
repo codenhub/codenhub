@@ -75,7 +75,7 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
 - `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal` and `printer.local`. `url({ allowLocal: true })` accepts them, and means "any host": it accepts every IP address, public ones included, and does not check ranges. Neither resolves the name, so a public name can still point at a private address.
 - Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input.
-- A recursive `lazy` validator stops at `maxDepth` levels, 128 by default, and fails with `too_big` instead of exhausting the stack, so deeply nested or cyclic input is reported like any other bad input. Nothing else limits how much input is checked, so cap the size of untrusted input, and give `array` a `max`, before validating it.
+- A recursive `lazy` validator stops at `maxDepth` levels, 128 by default, and fails with `too_big` instead of exhausting the stack, so deeply nested or cyclic input is reported like any other bad input. Nothing else limits how much input is checked: every issue found is kept, so a large list of wrong items is as many issues, and asynchronous rules of every item start at once. Cap the size of untrusted input, and give `array`, `set` and `map` a `max`, before validating it.
 
 ## License
 
@@ -421,7 +421,7 @@ const existingUser: AsyncValidator<User> = async (input) => {
 Things to know about asynchronous validation:
 
 - **Always `await` the result of an `AsyncValidator`.** It may be a promise, or a plain result when the validator could answer without waiting, for instance `optional(existingUser)` given `undefined`. `await` handles both.
-- **Independent properties run their rules concurrently.** In `signup` above, the username lookup and the email check start together.
+- **Independent properties and items run their rules concurrently.** In `signup` above, the username lookup and the email check start together, and so does the rule of every item of an array, with no limit. Give the array a `max` before validating a list you did not write, so it cannot start thousands of lookups at once.
 - **Issues stay in a fixed order.** They follow the order of the shape, not the order in which the promises finished.
 - **`is` needs a synchronous validator.** It throws a `TypeError` for one that turns out to return a promise.
 - **A rejected promise is a bug, not invalid input.** If your callback throws or rejects, the exception propagates. Report invalid input with `fail`.
@@ -481,7 +481,9 @@ const result = {
 
 **An issue never contains an input value.** There is no field for it, and `params` holds type names and constraint values, never the value under test. Inputs are often passwords or tokens, and issues get logged and shown, so this is a rule and not a default. If you need the value, you already have it.
 
-Keys are not values, and they do appear: a path leads through the keys of the input, so a `record` or `map` issue names the key it belongs to, and a strict `object` reports each key it does not recognize, in its path and in `params.key`. Do not put secrets in key names you validate.
+Keys are not values, and they do appear: a path leads through the keys of the input, so a `record` or `map` issue names the key it belongs to, and a strict `object` reports each key it does not recognize, in its path and in `params.key`. Do not put secrets in key names you validate. What a key spells is also text the sender chose, and `englishMessages` puts it inside the message (`Unrecognized key "…"`), as `formatPath` does in the field names of `flatten`, so escape it when you put a message into HTML or a log line where a line break or markup would matter.
+
+The same goes for what your own schema names. `literal` and `oneOf` report the values they accept, in `params` and in the English message, so do not use them to check a secret such as an API key: a failed check would print it.
 
 A path can be formatted for display with `formatPath`:
 
@@ -928,7 +930,7 @@ const tags = withDefault(array(string()), () => []);
 
 ### `fallback`
 
-`fallback(validator, value)` replaces a value that fails `validator` with a fallback, so the result never fails. The fallback is trusted and is not validated, and a function receives the issues that were found, which is the place to log them. This turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
+`fallback(validator, value)` replaces a value that fails `validator` with a fallback, so the result never fails. The fallback is trusted and is not validated, and a function receives the issues that were found, which is the place to log them. A function is called with the issues, so a fallback that is itself a function has to be returned from one: `fallback(validator, () => callback)`. This turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
 
 ### `pipe`
 
@@ -936,7 +938,7 @@ const tags = withDefault(array(string()), () => []);
 
 ### `transform`
 
-`transform(validator, convert)` changes the value a validator produced into another, such as text into a `Date`. `convert` runs only when `validator` succeeded and cannot reject the value: to fail, write a validator that returns `fail(...)` and put it after this one with `pipe`. A `convert` that returns a promise makes the result asynchronous. A `convert` that throws is a bug and propagates.
+`transform(validator, convert)` changes the value a validator produced into another, such as text into a `Date`. `convert` runs only when `validator` succeeded and cannot reject the value: to fail, write a validator that returns `fail(...)` and put it after this one with `pipe`. A `convert` that returns a promise makes the result asynchronous, and so does any value with a `then` method, as `await` would treat it, so a value that has one for another reason has to be wrapped in an object before it is returned. A `convert` that throws is a bug and propagates.
 
 ```ts
 import { string, transform } from "@codenhub/validation";

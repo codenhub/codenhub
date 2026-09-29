@@ -35,7 +35,9 @@ const result = {
 
 **An issue never contains an input value.** There is no field for it, and `params` holds type names and constraint values, never the value under test. Inputs are often passwords or tokens, and issues get logged and shown, so this is a rule and not a default. If you need the value, you already have it.
 
-Keys are not values, and they do appear: a path leads through the keys of the input, so a `record` or `map` issue names the key it belongs to, and a strict `object` reports each key it does not recognize, in its path and in `params.key`. Do not put secrets in key names you validate.
+Keys are not values, and they do appear: a path leads through the keys of the input, so a `record` or `map` issue names the key it belongs to, and a strict `object` reports each key it does not recognize, in its path and in `params.key`. Do not put secrets in key names you validate. What a key spells is also text the sender chose, and `englishMessages` puts it inside the message (`Unrecognized key "…"`), as `formatPath` does in the field names of `flatten`, so escape it when you put a message into HTML or a log line where a line break or markup would matter.
+
+The same goes for what your own schema names. `literal` and `oneOf` report the values they accept, in `params` and in the English message, so do not use them to check a secret such as an API key: a failed check would print it.
 
 A path can be formatted for display with `formatPath`:
 
