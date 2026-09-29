@@ -111,7 +111,12 @@
        layer is cleared rather than inherited. */
     --ui-focus-inset: initial;
     --ui-hover-transform: none;
-    --ui-active-transform: none;
+    /* The base press, stated because every token here is: the depth in this
+       aesthetic is the blur, so a control has no slab to press into, and a pane
+       that gives slightly under the pointer is the one answer a press gets. This
+       read `none` from when the base look had no press, and kept it once the
+       base gained one. */
+    --ui-active-transform: scale(0.97);
     --ui-active-translate-x: initial;
     --ui-active-translate-y: initial;
 
@@ -129,6 +134,12 @@
     .glass {
       --ui-backdrop: none;
       --ui-surface-ground: var(--color-background);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .glass {
+      --ui-active-transform: none;
     }
   }
 }

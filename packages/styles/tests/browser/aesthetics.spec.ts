@@ -670,6 +670,32 @@ test.describe("aesthetics", () => {
       expect(isTransparent(rules.ruleless.rule), "a ruleless table draws none").toBe(true);
     });
 
+    /* Glass has no slab for a press to travel into, so the base scale is the
+       press. It read `none` from before the base look had one, and a click on a
+       glass button changed nothing. Pressed for real, since `:active` is what
+       `box-active` keys on. */
+    test("presses with the base scale, and not at all under reduced motion", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "glass"));
+
+      const button = page.getByTestId("btn-solid-primary");
+      const pressedTransform = () => button.evaluate((node) => getComputedStyle(node).transform);
+      const press = async (expected: RegExp, label: string) => {
+        await button.hover();
+        await page.mouse.down();
+        try {
+          /* The transform is transitioned, so this polls for the settled value. */
+          await expect.poll(pressedTransform, label).toMatch(expected);
+        } finally {
+          await page.mouse.up();
+        }
+      };
+
+      await press(/^matrix\(0\.97, 0, 0, 0\.97,/, "pressed");
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await press(/^none$/, "pressed under reduced motion");
+      await page.emulateMedia({ reducedMotion: null });
+    });
+
     /* `.neutral` beat the control line's zero-specificity selector, so writing the
        intent out put the pane hairline back on the one boundary it erases. */
     test("draws a neutral control's line in the control ink", async ({ page }) => {
