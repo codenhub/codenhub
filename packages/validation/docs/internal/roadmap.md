@@ -51,9 +51,9 @@ Everything below exists, works in synchronous and asynchronous form where it com
 - The changelog entry for 0.1.0 is written from the finished package, and `llms.txt` and `llms-full.txt` are current.
 - `docs/internal/` matches the code.
 
-### Tooling
+### Tooling (done)
 
-`hub check` accepts a declared `codenhub.bundled` list of devDependencies that a package's build inlines, and `docs/specs/packages-lifecycle.md` and `docs/tooling.md` describe it. This is a change to shared tooling, made in its own commit, and it exists so that a package can take this one as a devDependency without an exception per package.
+`hub check` accepts a declared `codenhub.bundled` list of devDependencies that a package's build inlines, and fails when the built output still names one. `docs/specs/packages-lifecycle.md` and `docs/tooling.md` describe it. A package can take this one as a devDependency without an exception per package.
 
 ### Adoption proof
 
@@ -67,10 +67,9 @@ The claim that a package pays only for what it uses is proved once, on a real wo
 
 Each step ends with the tree green (`pnpm verify validation`) and the docs describing exactly what exists.
 
-1. **Foundation, leaves, formats, composition, coercion and interop** (landed). Result, issue and path model, sync-until-async plumbing, `is`, messages, and the first vertical slice: `string`, `number`, `boolean`, `email`, `object`, `optional`, `pipe`, `refine`. With the consumer-types and bundle-size tests, so the shape is proved before the rest is ported. Then the remaining leaves and every format, porting the edge cases the previous design had already found: public-host checks, calendar-date validity, ip and datetime patterns. Then the collections, wrappers, unions, `lazy`, `json` and `partial`, with asynchronous behavior tested for each composer, including that issue order never depends on which promise settles first. Then the five coercing validators and the Standard Schema adapter.
-2. **Tooling.** `codenhub.bundled` in `hub check`, with the lifecycle and tooling docs.
-3. **Adoption proof.** One package migrated and measured.
-4. **Close-out.** Public docs and migration table completed, changelog written, generated files refreshed, release cut.
+1. **Foundation, leaves, formats, composition, coercion and interop** (landed). Result, issue and path model, sync-until-async plumbing, `is`, messages, and the first vertical slice: `string`, `number`, `boolean`, `email`, `object`, `optional`, `pipe`, `refine`. With the consumer-types and bundle-size tests, so the shape is proved before the rest is ported. Then the remaining leaves and every format, porting the edge cases the previous design had already found: public-host checks, calendar-date validity, ip and datetime patterns. Then the collections, wrappers, unions, `lazy`, `json` and `partial`, with asynchronous behavior tested for each composer, including that issue order never depends on which promise settles first. Then the five coercing validators and the Standard Schema adapter, and the `codenhub.bundled` support in `hub check`.
+2. **Adoption proof.** One package migrated and measured.
+3. **Close-out.** Public docs and migration table completed, changelog written, generated files refreshed, release cut.
 
 ## Versioning until 1.0
 
