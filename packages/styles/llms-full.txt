@@ -1153,23 +1153,24 @@ Use `<button>` for actions or an accessible link for navigation; see [Accessibil
 
 # Forms
 
-| Class or Selector                                                     | Purpose                                                                  |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `.field`                                                              | Vertical field wrapper.                                                  |
-| `.label`                                                              | Form label text.                                                         |
-| `.hint`                                                               | Secondary helper text.                                                   |
-| `.hint.destructive`                                                   | Helper text with destructive intent.                                     |
-| `.surface`                                                            | Shared public container composition utility.                             |
-| `.text-control`                                                       | Shared public text-control composition utility.                          |
-| `.ipt`                                                                | Input control styling.                                                   |
-| `.input-group`                                                        | Wrapper that owns the field box so a control can carry an icon or affix. |
-| `.textarea`                                                           | Textarea control styling.                                                |
-| `.select`                                                             | Select control styling.                                                  |
-| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                         |
-| `input[type="radio"].radio`                                           | Custom radio control styling.                                            |
-| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                           |
-| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                                      |
-| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                                        |
+| Class or Selector                                                     | Purpose                                                                               |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `.field`                                                              | Vertical field wrapper.                                                               |
+| `.label`                                                              | Form label text.                                                                      |
+| `.hint`                                                               | Secondary helper text.                                                                |
+| `.hint.destructive`                                                   | Helper text with destructive intent.                                                  |
+| `.surface`                                                            | Shared public container composition utility.                                          |
+| `.text-control`                                                       | Shared public text-control composition utility.                                       |
+| `.ipt`                                                                | Input control styling.                                                                |
+| `.input-group`                                                        | Wrapper that owns the field box so a control can carry an icon or affix.              |
+| `.unadorned`                                                          | Removes the browser's own field decorations, on the control or on its `.input-group`. |
+| `.textarea`                                                           | Textarea control styling.                                                             |
+| `.select`                                                             | Select control styling.                                                               |
+| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                                      |
+| `input[type="radio"].radio`                                           | Custom radio control styling.                                                         |
+| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                                        |
+| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                                                   |
+| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                                                     |
 
 ## Icons
 
@@ -1199,7 +1200,22 @@ The package ships no icon for text inputs. Icons for `.input-group` are the cons
 
 The group reads intent and both [presentation](docs/usage/composing.md#presentation) axes the same way a lone `.ipt` does — `.input-group.soft.edgeless` is the sunk variant, `.input-group.primary` colors the boundary — and follows whichever [aesthetic](docs/usage/aesthetics.md) is in scope. `aria-invalid` or `disabled` on the control inside propagates to the group; so does either on the group itself. Focus is shown with `:focus-within`, so unlike a lone field the ring also appears on a mouse click.
 
-Non-icon input types keep the browser's native `date` and `datetime-local` pickers. WebKit's native `search` decorations are still suppressed on `.text-control` to keep them from overlapping the value.
+Text controls keep the browser's own decorations: the date and time picker button, a number field's spin buttons, and a search field's clear button and magnifier. Each one is also behaviour -- the picker button is the only pointer route to the picker, and the clear button empties the field.
+
+`.unadorned` removes all of them, for a field whose adornments you draw yourself. Put it on the control, or on its `.input-group` to reach the control inside. Removing a decoration removes what it did, so wire the behaviour back to your own adornment: `input.showPicker()` for a picker, `stepUp()`/`stepDown()` for spin buttons, and setting `value` to `""` and dispatching an `input` event for a clear button. Keyboard entry keeps working either way. Firefox exposes no way to remove its date picker button, so it stays there.
+
+```html
+<div class="field">
+  <label class="label" for="query">Search</label>
+  <div class="input-group unadorned">
+    <i class="ic-search" aria-hidden="true"></i>
+    <input class="ipt" type="search" id="query" />
+    <button type="button" class="btn icon ghost p-xs" aria-label="Clear search">
+      <i class="ic-x" aria-hidden="true"></i>
+    </button>
+  </div>
+</div>
+```
 
 The slot works the same way for a text affix — a URL host, a currency symbol, a unit — not just an icon:
 
@@ -1979,6 +1995,7 @@ A liquid-glass modifier, glass that keeps every presentation's fill whole, and a
 ## Added
 
 - **`.glass-liquid`**, a modifier of `.glass`: continuous corners, a bright rim, a lighter blur, a clearer ground, and a lens that bends what is behind a surface at its edges (Chromium today; Firefox and Safari keep the rim, blur, and ground). Put it beside `.glass` on the region, or on one surface inside a glass region; `.glass-solo.glass-liquid` paints the same pane on an element the package does not style. Without `.glass` in scope it changes the corners and nothing else. See [Aesthetics → Liquid glass](docs/usage/aesthetics.md#liquid-glass).
+- **`.unadorned`** removes the browser's own field decorations -- the date picker button, number spin buttons, and search clear button and magnifier -- on a control or on its `.input-group`, for a field whose adornments you draw yourself. See [Forms → Icons](docs/usage/forms.md#icons).
 - **`--ui-rule-ink`**, the neutral line color of a table's frame and rules, read ahead of `--ui-ink`. Glass sets it so a table's lines read on its plate; every other aesthetic clears it.
 
 ## Changed
@@ -1990,6 +2007,7 @@ A liquid-glass modifier, glass that keeps every presentation's fill whole, and a
 - **Table rules draw at the aesthetic's line width**, uncapped, so `.chunky-tile`'s 2px frame no longer sits over a 1px row rule and `.pixel` draws them at all.
 - **The focus ring is pulled in by the focused element's line width.** `--focus-ring-offset` is no longer declared at `:root`; its default is computed on the element, so it lands on the edge under every aesthetic. Setting `--focus-ring-offset` yourself still wins, but reading `var(--focus-ring-offset)` in your own CSS now needs a fallback.
 - **Ink aesthetics draw controls in the control border.** Under `.neobrutalism`, `.pixel`, `.cyber`, and `.sketch`, a resting neutral field or toggle uses `--color-control-border` instead of the near-primary ink. A bare native checkbox or radio under `/native` takes the control ink too, and a `.neutral` field under glass takes it like an unclassed one.
+- **Text controls keep the browser's own decorations.** The date picker button, number spin buttons, and search clear button were hidden on every text control, which also removed what they do. They are back by default; add `.unadorned` to remove them.
 - **Browser floor is Firefox 128.** Non-inheriting elevation relies on `@property`; the documented floor was Firefox 121.
 
 ## Fixed

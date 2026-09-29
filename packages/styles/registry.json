@@ -545,6 +545,7 @@
     "field",
     "label",
     "hint",
+    "unadorned",
     "table-wrap",
     "quote-inline",
     "alert-icon",

@@ -6,23 +6,24 @@ order: 6
 
 # Forms
 
-| Class or Selector                                                     | Purpose                                                                  |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `.field`                                                              | Vertical field wrapper.                                                  |
-| `.label`                                                              | Form label text.                                                         |
-| `.hint`                                                               | Secondary helper text.                                                   |
-| `.hint.destructive`                                                   | Helper text with destructive intent.                                     |
-| `.surface`                                                            | Shared public container composition utility.                             |
-| `.text-control`                                                       | Shared public text-control composition utility.                          |
-| `.ipt`                                                                | Input control styling.                                                   |
-| `.input-group`                                                        | Wrapper that owns the field box so a control can carry an icon or affix. |
-| `.textarea`                                                           | Textarea control styling.                                                |
-| `.select`                                                             | Select control styling.                                                  |
-| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                         |
-| `input[type="radio"].radio`                                           | Custom radio control styling.                                            |
-| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                           |
-| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                                      |
-| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                                        |
+| Class or Selector                                                     | Purpose                                                                               |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `.field`                                                              | Vertical field wrapper.                                                               |
+| `.label`                                                              | Form label text.                                                                      |
+| `.hint`                                                               | Secondary helper text.                                                                |
+| `.hint.destructive`                                                   | Helper text with destructive intent.                                                  |
+| `.surface`                                                            | Shared public container composition utility.                                          |
+| `.text-control`                                                       | Shared public text-control composition utility.                                       |
+| `.ipt`                                                                | Input control styling.                                                                |
+| `.input-group`                                                        | Wrapper that owns the field box so a control can carry an icon or affix.              |
+| `.unadorned`                                                          | Removes the browser's own field decorations, on the control or on its `.input-group`. |
+| `.textarea`                                                           | Textarea control styling.                                                             |
+| `.select`                                                             | Select control styling.                                                               |
+| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                                      |
+| `input[type="radio"].radio`                                           | Custom radio control styling.                                                         |
+| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                                        |
+| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                                                   |
+| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                                                     |
 
 ## Icons
 
@@ -52,7 +53,22 @@ The package ships no icon for text inputs. Icons for `.input-group` are the cons
 
 The group reads intent and both [presentation](./composing.md#presentation) axes the same way a lone `.ipt` does — `.input-group.soft.edgeless` is the sunk variant, `.input-group.primary` colors the boundary — and follows whichever [aesthetic](./aesthetics.md) is in scope. `aria-invalid` or `disabled` on the control inside propagates to the group; so does either on the group itself. Focus is shown with `:focus-within`, so unlike a lone field the ring also appears on a mouse click.
 
-Non-icon input types keep the browser's native `date` and `datetime-local` pickers. WebKit's native `search` decorations are still suppressed on `.text-control` to keep them from overlapping the value.
+Text controls keep the browser's own decorations: the date and time picker button, a number field's spin buttons, and a search field's clear button and magnifier. Each one is also behaviour -- the picker button is the only pointer route to the picker, and the clear button empties the field.
+
+`.unadorned` removes all of them, for a field whose adornments you draw yourself. Put it on the control, or on its `.input-group` to reach the control inside. Removing a decoration removes what it did, so wire the behaviour back to your own adornment: `input.showPicker()` for a picker, `stepUp()`/`stepDown()` for spin buttons, and setting `value` to `""` and dispatching an `input` event for a clear button. Keyboard entry keeps working either way. Firefox exposes no way to remove its date picker button, so it stays there.
+
+```html
+<div class="field">
+  <label class="label" for="query">Search</label>
+  <div class="input-group unadorned">
+    <i class="ic-search" aria-hidden="true"></i>
+    <input class="ipt" type="search" id="query" />
+    <button type="button" class="btn icon ghost p-xs" aria-label="Clear search">
+      <i class="ic-x" aria-hidden="true"></i>
+    </button>
+  </div>
+</div>
+```
 
 The slot works the same way for a text affix — a URL host, a currency symbol, a unit — not just an icon:
 

@@ -122,21 +122,42 @@
     --ui-fg-on-fill: 100%;
     --_fill-cap: 100%;
   }
+}
 
-  /* Native decorations a field replaces with its own artwork. */
+/* The browser's own field decorations -- the date picker button, a number's
+   spin buttons, a search field's clear and magnifier -- stay by default,
+   because each one is also behaviour: hiding the picker button hides the only
+   pointer route to the picker. `.unadorned` removes them for a consumer who
+   draws their own adornments in an `.input-group` and wires the behaviour back
+   (`showPicker()`, `stepUp()`/`stepDown()`, clearing the value). On the
+   control, or on the group to reach the control inside.
+
+   Firefox exposes no pseudo-element for its date picker button, so that one
+   stays there; its number spinners go with `appearance: textfield`. */
+@utility unadorned {
   &::-webkit-search-decoration,
   &::-webkit-search-cancel-button,
   &::-webkit-search-results-button,
   &::-webkit-search-results-decoration,
   &::-webkit-calendar-picker-indicator,
   &::-webkit-inner-spin-button,
-  &::-webkit-clear-button {
+  &::-webkit-outer-spin-button,
+  &::-webkit-clear-button,
+  & > input::-webkit-search-decoration,
+  & > input::-webkit-search-cancel-button,
+  & > input::-webkit-search-results-button,
+  & > input::-webkit-search-results-decoration,
+  & > input::-webkit-calendar-picker-indicator,
+  & > input::-webkit-inner-spin-button,
+  & > input::-webkit-outer-spin-button,
+  & > input::-webkit-clear-button {
     -webkit-appearance: none;
-    display: none !important;
-    opacity: 0;
-    pointer-events: none;
-    width: 0;
-    height: 0;
+    display: none;
+  }
+
+  &[type="number"],
+  & > input[type="number"] {
+    appearance: textfield;
   }
 }
 

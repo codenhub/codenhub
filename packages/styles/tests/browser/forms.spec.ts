@@ -1055,4 +1055,74 @@ test.describe("forms", () => {
     expect(styles.errorFontWeight).toBe("400");
     expect(styles.errorFontSize).not.toBe(styles.bareFontSize);
   });
+
+  /* A number field keeps the browser's spin buttons and a search field its
+     clear button, so the native behaviour is there by default. `.unadorned`
+     removes them -- on the control, or on an `.input-group` for the control
+     inside -- for a consumer who draws their own adornments. Each field is
+     shot beside a reference of the same type whose decorations this test hides
+     with its own stylesheet, so a decoration is the only thing that can tell
+     the two apart. Hovered and focused, because Chromium draws the spin
+     buttons and the clear button only then. */
+  test("keeps native field decorations unless the field is unadorned", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    await page.evaluate(() => {
+      const hidden = [
+        "search-decoration",
+        "search-cancel-button",
+        "search-results-button",
+        "search-results-decoration",
+        "calendar-picker-indicator",
+        "inner-spin-button",
+        "outer-spin-button",
+        "clear-button",
+      ]
+        .map((part) => `.reference::-webkit-${part}`)
+        .join(",");
+      const style = document.createElement("style");
+      style.textContent = `${hidden} { -webkit-appearance: none; display: none; } .reference[type="number"] { appearance: textfield; }`;
+      document.head.append(style);
+
+      const host = document.createElement("div");
+      host.style.cssText = "width: 16rem; display: grid; gap: 0.5rem; caret-color: transparent";
+      host.innerHTML = [
+        '<input class="ipt reference" type="number" value="3" data-probe="number-reference">',
+        '<input class="ipt" type="number" value="3" data-probe="number">',
+        '<input class="ipt unadorned" type="number" value="3" data-probe="number-unadorned">',
+        '<div class="input-group" data-probe="group-reference"><input class="ipt reference" type="number" value="3"></div>',
+        '<div class="input-group unadorned" data-probe="group-unadorned"><input class="ipt" type="number" value="3"></div>',
+        '<input class="ipt reference" type="search" value="3" data-probe="search-reference">',
+        '<input class="ipt" type="search" value="3" data-probe="search">',
+        '<input class="ipt unadorned" type="search" value="3" data-probe="search-unadorned">',
+      ].join("");
+      document.body.prepend(host);
+    });
+
+    const shoot = async (probe: string) => {
+      const element = page.locator(`[data-probe="${probe}"]`);
+      const control = element.locator("xpath=self::input | .//input").first();
+      await control.focus();
+      await control.hover();
+      const box = (await element.boundingBox())!;
+
+      /* The interior only: a decoration draws inside the padding, and the
+         rounded corners' anti-aliasing varies with the element's position. */
+      return page.screenshot({
+        animations: "disabled",
+        clip: { x: box.x + 4, y: box.y + 4, width: box.width - 8, height: box.height - 8 },
+      });
+    };
+
+    const number = await shoot("number-reference");
+    const group = await shoot("group-reference");
+    const search = await shoot("search-reference");
+
+    expect((await shoot("number")).equals(number), "a plain number field keeps its spin buttons").toBe(false);
+    expect((await shoot("number-unadorned")).equals(number), "an unadorned number field draws none").toBe(true);
+    expect((await shoot("group-unadorned")).equals(group), "an unadorned group reaches its control").toBe(true);
+    expect((await shoot("search-unadorned")).equals(search), "an unadorned search field draws no clear button").toBe(
+      true,
+    );
+  });
 });
