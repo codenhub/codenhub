@@ -4,8 +4,10 @@
     "lib": ["DOM", "ES2024"],
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "noEmit": true
+    "noEmit": true,
+    "types": ["node"],
+    "skipLibCheck": true
   },
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "tests/**/*.ts", "vitest.config.ts"]
 }

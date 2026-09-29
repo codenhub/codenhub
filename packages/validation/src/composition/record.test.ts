@@ -31,11 +31,15 @@ describe("record", () => {
     ]);
   });
 
-  it("should report a bad key at that key, and validate its value as well", () => {
+  it("should report a bad key as invalid_key at that key, holding the key's issues, and still check its value", () => {
     const shortKeys = record(string({ max: 2 }), number());
-    expect(issuesOf(shortKeys({ abc: "x" })).map((issue) => [issue.path, issue.code])).toEqual([
-      [["abc"], "too_big"],
-      [["abc"], "invalid_type"],
+    expect(issuesOf(shortKeys({ abc: "x" }))).toEqual([
+      {
+        code: "invalid_key",
+        path: ["abc"],
+        params: { issues: [{ code: "too_big", path: [], params: { maximum: 2, type: "string" } }] },
+      },
+      { code: "invalid_type", path: ["abc"], params: { expected: "number", received: "string" } },
     ]);
   });
 
@@ -67,7 +71,7 @@ describe("record", () => {
     const taken = record(isFree, number());
     const result = taken({ ok: 1, taken: 2 });
     expect(isPending(result)).toBe(true);
-    expect(codesOf(await result)).toEqual(["taken"]);
+    expect(codesOf(await result)).toEqual(["invalid_key"]);
     expect(isPending(scores({ a: 1 }))).toBe(false);
   });
 });

@@ -1,8 +1,6 @@
 import type { Validator } from "../core/types";
+import { HOSTNAME_PATTERN } from "./patterns";
 import { textFormat } from "./text-format";
-
-const HOSTNAME_PATTERN =
-  /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i;
 
 /**
  * Creates a validator for hostnames: dot-separated labels of letters, digits and hyphens, at most 253 characters. Unlike `url`, single-label hosts such as `localhost` are accepted. The value is not modified.

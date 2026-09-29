@@ -8,13 +8,21 @@ import type { ValidationFailure, ValidationIssue, ValidationPathSegment } from "
  */
 export type Messages = Readonly<Record<string, string | ((issue: ValidationIssue) => string) | undefined>>;
 
+/** Characters that would make a key read as more than one segment, or as an index. */
+const AMBIGUOUS_KEY_PATTERN = /[.[\]"]/;
+
 /**
  * Formats a path as dot-and-bracket notation.
+ *
+ * @remarks
+ * A key that is empty or holds `.`, `[`, `]` or `"` is written quoted in brackets, as
+ * `["a.b"]`, so no two different paths format the same.
  *
  * @example
  * ```ts
  * formatPath(["user", "addresses", 0, "street"]); // "user.addresses[0].street"
  * formatPath([0, "title"]); // "[0].title"
+ * formatPath(["a.b"]); // '["a.b"]'
  * ```
  *
  * @param path - Segments leading to a value.
@@ -25,6 +33,8 @@ export function formatPath(path: readonly ValidationPathSegment[]): string {
   for (const segment of path) {
     if (typeof segment === "number") {
       formatted += `[${segment}]`;
+    } else if (segment === "" || AMBIGUOUS_KEY_PATTERN.test(segment)) {
+      formatted += `[${JSON.stringify(segment)}]`;
     } else {
       formatted += formatted.length > 0 ? `.${segment}` : segment;
     }

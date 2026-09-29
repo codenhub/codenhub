@@ -54,6 +54,7 @@ describe("describeType", () => {
     [Number.NaN, "nan"],
     [Number.POSITIVE_INFINITY, "infinity"],
     [new Date(), "date"],
+    [new Date(Number.NaN), "invalid date"],
     [new Map(), "map"],
     [new Set(), "set"],
     [new (class Widget {})(), "Widget"],
@@ -64,6 +65,23 @@ describe("describeType", () => {
     [1n, "bigint"],
   ])("should name %s as %s", (value, expected) => {
     expect(describeType(value)).toBe(expected);
+  });
+
+  it("should say object for an input that throws when inspected, instead of throwing", () => {
+    const trap = new Proxy(
+      {},
+      {
+        getPrototypeOf() {
+          throw new Error("trap");
+        },
+      },
+    );
+    const getter = Object.create({
+      get constructor() {
+        throw new Error("getter");
+      },
+    }) as object;
+    expect([describeType(trap), describeType(getter)]).toEqual(["object", "object"]);
   });
 });
 

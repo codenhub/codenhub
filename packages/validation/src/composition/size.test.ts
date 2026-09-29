@@ -8,7 +8,14 @@ describe("assertSizeOptions", () => {
     expect(() => assertSizeOptions({ min: 0, max: 3, length: 2 })).not.toThrow();
   });
 
-  it.each([{ min: -1 }, { max: 1.5 }, { length: Number.NaN }])("should throw a RangeError for %o", (options) => {
+  it.each([
+    { min: -1 },
+    { max: 1.5 },
+    { length: Number.NaN },
+    { min: 3, max: 2 },
+    { min: 3, length: 2 },
+    { max: 2, length: 3 },
+  ])("should throw a RangeError for %o", (options) => {
     expect(() => assertSizeOptions(options)).toThrow(RangeError);
   });
 });

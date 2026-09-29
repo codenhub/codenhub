@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { isPlainObject, setOwn } from "../core/objects";
-import { failWith, invalidType, nestIssues, pass } from "../core/result";
+import { failWith, invalidType, nestIssues, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 
 /**
@@ -20,7 +20,9 @@ export type InferRecord<TKey extends string, TValue> = string extends TKey
  *
  * @remarks
  * Each key passes `key` and each value passes `value`. An issue's path ends at the key it belongs
- * to, whether the key or its value failed. Only own enumerable properties are read. The output is
+ * to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the
+ * key validator found, so it cannot be mistaken for a problem with the value; the value is still
+ * checked. Only own enumerable properties are read. The output is
  * a new object and the input is never modified. A key such as `__proto__` from parsed JSON is
  * kept as data and never writes to a prototype. It is synchronous when both validators are, and
  * asynchronous otherwise.
@@ -56,7 +58,8 @@ export function record<TKey extends AnyValidator<string>, TValue extends AnyVali
       settled.forEach(({ keyResult, valueResult }, index) => {
         const name = names[index] as string;
         if (!keyResult.ok) {
-          issues.push(...nestIssues(keyResult.error.issues, name));
+          // Wrapped, so a bad key is not mistaken for a bad value at the same path.
+          issues.push(toIssue({ code: "invalid_key", path: [name], params: { issues: keyResult.error.issues } }));
         }
         if (!valueResult.ok) {
           issues.push(...nestIssues(valueResult.error.issues, name));

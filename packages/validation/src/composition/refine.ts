@@ -41,12 +41,20 @@ export function refine<T>(
   check: (value: T) => boolean | PromiseLike<boolean>,
   issue: RefineIssue = {},
 ): AnyValidator<T> {
-  const rejected = fail(typeof issue === "string" ? { message: issue } : issue);
+  const { path, params, ...rest } = typeof issue === "string" ? { message: issue } : issue;
+  // The path and params are copied and frozen once, and every rejection builds its own issue around
+  // them, so neither the caller nor a result can change what a later rejection reports. The freeze is
+  // shallow: an object nested in params is the caller's own.
+  const reported: IssueInput = {
+    ...rest,
+    ...(path !== undefined && { path: Object.freeze([...path]) }),
+    ...(params !== undefined && { params: Object.freeze({ ...params }) }),
+  };
   return (input) =>
     chain(validator(input), (result): Maybe<ValidationResult<T>> => {
       if (!result.ok) {
         return result;
       }
-      return chain(check(result.value), (isAccepted) => (isAccepted ? result : rejected));
+      return chain(check(result.value), (isAccepted) => (isAccepted ? result : fail(reported)));
     });
 }

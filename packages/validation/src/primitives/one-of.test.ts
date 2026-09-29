@@ -28,6 +28,14 @@ describe("oneOf", () => {
     expect(validator("c").ok).toBe(false);
   });
 
+  it("should give each failure its own list, so changing one cannot change what is accepted", () => {
+    const validator = oneOf(["a", "b"]);
+    const reported = issuesOf(validator("c"))[0]?.params?.options as string[];
+    reported.push("c");
+    expect(validator("c").ok).toBe(false);
+    expect(issuesOf(validator("c"))[0]?.params?.options).toEqual(["a", "b"]);
+  });
+
   it("should accept nothing for an empty list", () => {
     expect(oneOf([])("x").ok).toBe(false);
   });

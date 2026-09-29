@@ -1,17 +1,28 @@
 import type { Validator } from "../core/types";
-import { PUBLIC_HOST_PATTERN } from "./patterns";
+import { isHostlessUrl } from "./hostless-url";
+import { isPublicHost } from "./patterns";
 import { textFormat } from "./text-format";
+
+/**
+ * Characters the URL parser strips or rewrites instead of rejecting: control characters, spaces and
+ * backslashes. The value is returned as it came, so text holding them would pass as one URL and be
+ * read as another, or carry a line break into a header.
+ */
+// oxlint-disable-next-line no-control-regex
+const UNPARSED_CHARACTER_PATTERN = /[\u0000-\u0020\u007f\\]/;
 
 /** Options for {@link url}. */
 export interface UrlOptions {
   /**
-   * Accepted protocols, without the colon.
+   * Accepted protocols, without the colon. Of the schemes without a host, `mailto`, `tel` and `urn`
+   * are accepted, each checked by its own rules; any other is always rejected.
    *
    * @defaultValue ["http", "https"]
    */
   protocols?: readonly string[];
   /**
-   * Accepts hosts that are not public domain names: `localhost`, single-label hosts and IP addresses.
+   * Accepts hosts that are not public domain names: `localhost`, single-label hosts, IP addresses, and
+   * special-use names such as `app.localhost`, `db.internal` or `printer.local`.
    *
    * @defaultValue false
    */
@@ -22,6 +33,11 @@ export interface UrlOptions {
  * Creates a validator for absolute URLs with an allowed protocol and a public domain name, and
  * without embedded credentials. The value is not modified, and no scheme is guessed for input that
  * lacks one.
+ *
+ * @remarks
+ * Text the URL parser would have to clean up is rejected rather than accepted as written:
+ * surrounding or embedded whitespace, control characters such as line breaks, backslashes, and a
+ * host without both slashes before it, as in `https:example.com`.
  *
  * @example
  * ```ts
@@ -37,15 +53,24 @@ export function url(options: UrlOptions = {}): Validator<string> {
   const protocols = [...(options.protocols ?? ["http", "https"])];
   const allowLocal = options.allowLocal ?? false;
   return textFormat("url", (text) => {
-    if (!URL.canParse(text)) {
+    if (UNPARSED_CHARACTER_PATTERN.test(text) || !URL.canParse(text)) {
       return false;
     }
     const parsed = new URL(text);
+    const scheme = parsed.protocol.slice(0, -1);
+    if (!protocols.includes(scheme)) {
+      return false;
+    }
+    if (parsed.host === "") {
+      return isHostlessUrl(scheme, text.slice(parsed.protocol.length), allowLocal);
+    }
     return (
-      protocols.includes(parsed.protocol.slice(0, -1)) &&
+      // The parser supplies missing slashes for http and https, but against a base on the same scheme
+      // "https:example.com" is a path, so a URL with a host must be written with "//" before it.
+      text.startsWith("//", parsed.protocol.length) &&
       parsed.username === "" &&
       parsed.password === "" &&
-      (allowLocal || PUBLIC_HOST_PATTERN.test(parsed.hostname))
+      (allowLocal || isPublicHost(parsed.hostname))
     );
   });
 }

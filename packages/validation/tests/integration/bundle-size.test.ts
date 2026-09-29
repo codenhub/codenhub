@@ -16,7 +16,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  * Budgets sit a little above what each scenario measures, so ordinary changes pass and a regression
  * does not. Raise one only on purpose, and say why in the change.
  */
-const distEntry = fileURLToPath(new URL("../../dist/index.js", import.meta.url));
+// Forward slashes, because the path is pasted into source code, where a Windows backslash is an escape.
+const distEntry = fileURLToPath(new URL("../../dist/index.js", import.meta.url)).replaceAll("\\", "/");
 
 interface Scenario {
   name: string;
@@ -31,29 +32,29 @@ const scenarios: Scenario[] = [
   {
     name: "number",
     source: `import { number } from "DIST"; export const check = number({ int: true, min: 0 });`,
-    budget: 1150,
+    budget: 1340,
   },
   {
     name: "string",
     source: `import { string } from "DIST"; export const check = string({ min: 2, trim: true });`,
     budget: 1200,
   },
-  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 800 },
+  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 840 },
   {
     name: "object of three fields",
     source: `import { email, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });`,
-    budget: 2450,
+    budget: 2580,
   },
   {
     name: "object of three fields with messages",
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 3250,
+    budget: 3580,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 680 },
-  { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 820 },
+  { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 1380 },
   { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 900 },
   {
     name: "datetime",
@@ -78,22 +79,22 @@ export const describe = (input: unknown) => { const result = check(input); retur
   {
     name: "set",
     source: `import { number, set } from "DIST"; export const check = set(number());`,
-    budget: 1650,
+    budget: 1780,
   },
   {
     name: "map",
     source: `import { map, number, string } from "DIST"; export const check = map(string(), number());`,
-    budget: 2200,
+    budget: 2320,
   },
   {
     name: "tuple",
     source: `import { number, tuple } from "DIST"; export const check = tuple([number(), number()]);`,
-    budget: 1480,
+    budget: 1640,
   },
   {
     name: "record",
     source: `import { number, record, string } from "DIST"; export const check = record(string(), number());`,
-    budget: 2050,
+    budget: 2160,
   },
   {
     name: "union",
@@ -110,7 +111,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "coerceNumber",
     source: `import { coerceNumber } from "DIST"; export const check = coerceNumber({ int: true });`,
-    budget: 1280,
+    budget: 1460,
   },
   {
     name: "coerceString",
@@ -125,9 +126,9 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "coerceBigint",
     source: `import { coerceBigint } from "DIST"; export const check = coerceBigint();`,
-    budget: 870,
+    budget: 930,
   },
-  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1060 },
+  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1170 },
   {
     name: "standard",
     source: `import { englishMessages, number, standard } from "DIST"; export const check = standard(number(), englishMessages);`,
@@ -146,7 +147,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 6950,
+    budget: 7460,
   },
 ];
 
@@ -171,7 +172,13 @@ const measure = async ({ name, source }: Scenario): Promise<number> => {
     logLevel: "silent",
   });
   const [file] = readdirSync(outDir).filter((candidate) => candidate.endsWith(".js"));
-  return gzipSync(readFileSync(join(outDir, file as string)), { level: 9 }).length;
+  const output = readFileSync(join(outDir, file as string));
+  // A path the bundler cannot resolve is left as an import, and a bundle of one import line is tiny
+  // enough to pass every budget, so make sure the package was actually inlined.
+  if (/\bfrom\s*["']/.test(output.toString())) {
+    throw new Error(`${name} did not bundle the package: an import was left unresolved`);
+  }
+  return gzipSync(output, { level: 9 }).length;
 };
 
 // Each scenario runs a real build, which is quick alone and slower under load or coverage.

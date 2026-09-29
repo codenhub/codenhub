@@ -73,6 +73,9 @@ if (syncResult.ok) {
   const messages: string[] = syncResult.error.issues.map((issue) => formatIssue(issue, englishMessages));
   void messages;
   void flatten(syncResult.error, englishMessages);
+  // A failure is never empty, so its first issue needs no `!`, even with noUncheckedIndexedAccess.
+  const first: string = formatIssue(syncResult.error.issues[0], englishMessages);
+  void first;
 }
 
 // An asynchronous rule makes everything that holds it asynchronous, and the type says so.

@@ -24,7 +24,7 @@ import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
  * @param element - Validator applied to every value.
  * @param options - Size limits.
  * @returns A validator that produces a `Set` of what `element` produces.
- * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer.
+ * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function set<TElement extends AnyValidator>(
   element: TElement,

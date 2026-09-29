@@ -39,6 +39,12 @@ describe("email", () => {
     expect(accepts(email(), "a@127.0.0.1", "a@[::1]", "a@intranet")).toEqual([false, false, false]);
   });
 
+  it("should reject special-use domain names, in any letter case", () => {
+    expect(
+      accepts(email(), "a@foo.localhost", "a@Mail.INTERNAL", "a@box.local", "a@x.test", "a@router.home.arpa"),
+    ).toEqual(Array(5).fill(false));
+  });
+
   it("should allow plus addressing by default and let it be forbidden", () => {
     expect(email()("a+b@example.com").ok).toBe(true);
     expect(email({ allowPlus: false })("a+b@example.com").ok).toBe(false);

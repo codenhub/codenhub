@@ -67,6 +67,26 @@ describe("refine", () => {
     expect(issuesOf(await isFree("taken"))[0]?.code).toBe("username_taken");
   });
 
+  it("should give each rejection its own issues, so changing one result cannot change the next", () => {
+    const rejectAll = refine(string(), () => false, { code: "no", path: ["field"] });
+    const first = issuesOf(rejectAll("a"));
+    (first as unknown[]).push({ code: "injected", path: [] });
+    const path = first[0]?.path as unknown[];
+    expect(() => path.push("x")).toThrow(TypeError);
+    expect(issuesOf(rejectAll("a"))).toEqual([{ code: "no", path: ["field"] }]);
+  });
+
+  it("should copy the params it is given, so neither the caller nor a result can change later rejections", () => {
+    const params = { field: "a" };
+    const rejectAll = refine(string(), () => false, { code: "no", params });
+    params.field = "changed";
+    const reported = issuesOf(rejectAll("a"))[0]?.params as Record<string, unknown>;
+    expect(() => {
+      reported.field = "z";
+    }).toThrow(TypeError);
+    expect(issuesOf(rejectAll("a"))[0]?.params).toEqual({ field: "a" });
+  });
+
   it("should let exceptions thrown by a check propagate, as bugs and not invalid input", () => {
     const broken = refine(string(), () => {
       throw new Error("bug");
