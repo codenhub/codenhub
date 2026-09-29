@@ -84,7 +84,7 @@ export const describe = (input: unknown) => { const result = check(input); retur
   {
     name: "map",
     source: `import { map, number, string } from "DIST"; export const check = map(string(), number());`,
-    budget: 2320,
+    budget: 2360,
   },
   {
     name: "tuple",
@@ -147,7 +147,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 8160,
+    budget: 8200,
   },
 ];
 

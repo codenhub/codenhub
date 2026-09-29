@@ -43,8 +43,10 @@ const brand = <T>(read: () => T): T | undefined => {
  * load, because a call made while the module loads is never dropped from a bundle, and every consumer
  * would carry it.
  */
-const sizeOf = (prototype: object, value: unknown): number | undefined =>
-  brand(() => (Object.getOwnPropertyDescriptor(prototype, "size")?.get as () => number).call(value));
+const sizeOf = (prototype: object, value: unknown): number | undefined => {
+  const getter = Object.getOwnPropertyDescriptor(prototype, "size")?.get as (() => number) | undefined;
+  return brand(() => getter?.call(value));
+};
 
 /** The moment a `Date` holds, `NaN` for an invalid one, or undefined when the value is not a `Date`, in any realm. */
 export const timeOf = (value: unknown): number | undefined => brand(() => Date.prototype.getTime.call(value));
