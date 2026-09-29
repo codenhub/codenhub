@@ -108,6 +108,13 @@
     --ui-corner-br: initial;
     --ui-corner-bl: initial;
 
+    /* The ring is the edge and nothing here is depth, so the shadow ink, the
+       press's shadow, and the depth colour are cleared or restated rather than
+       inherited from an aesthetic around this one. */
+    --ui-shadow-ink: initial;
+    --ui-active-shadow-x: initial;
+    --ui-active-shadow-y: initial;
+    --elevation-color: light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55));
     --ui-hover-transform: none;
     --ui-active-transform: none;
     --ui-active-translate-x: initial;

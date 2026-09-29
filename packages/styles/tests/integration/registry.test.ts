@@ -962,17 +962,30 @@ test("every material token's readers are the utilities that read it", async () =
 
 /* Material inherits, so an aesthetic that leaves a token alone hands a region
    nested inside it whatever the aesthetic outside set. Every aesthetic names or
-   clears each one, the way it already does the shadow geometry. */
+   clears each one, the way it already does the shadow geometry.
+
+   The set is the registry's material map and every token any aesthetic
+   declares. The map alone left `--ui-focus-inset` and `--elevation-color`
+   unguarded, and both leaked: a region nested inside `.pixel` drew pixel's
+   inset focus ring, and a glass card inside `.chunky-tile` cast an opaque black
+   shadow. A token one aesthetic sets is one another can inherit. */
 test("every aesthetic names or clears every material token", async () => {
   const problems: string[] = [];
+  const sources = await aestheticSources();
+  const declared = (body: string): string[] =>
+    [...body.matchAll(/(?:^|\s)(--(?:ui-[a-z-]+|elevation-color))\s*:/g)].map((match) => match[1]!);
+  const bodies = sources.map(
+    ({ name, source }) =>
+      [
+        name,
+        withoutComments(source).match(new RegExp(String.raw`\.${name}(?![A-Za-z0-9_-])[^{]*\{([^{}]*)\}`))?.[1] ?? "",
+      ] as const,
+  );
+  const tokens = new Set([...Object.keys(registry.material ?? {}), ...bodies.flatMap(([, body]) => declared(body))]);
 
-  for (const { name, source } of await aestheticSources()) {
-    const body = withoutComments(source).match(
-      new RegExp(String.raw`\.${name}(?![A-Za-z0-9_-])[^{]*\{([^{}]*)\}`),
-    )?.[1];
-
-    for (const token of Object.keys(registry.material ?? {})) {
-      if (!new RegExp(String.raw`(?:^|\s)${token}\s*:`).test(body ?? "")) {
+  for (const [name, body] of bodies) {
+    for (const token of tokens) {
+      if (!new RegExp(String.raw`(?:^|\s)${token}\s*:`).test(body)) {
         problems.push(`${name} neither names nor clears ${token}`);
       }
     }
