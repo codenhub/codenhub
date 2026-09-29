@@ -40,7 +40,7 @@
    instead (below), which every engine draws on the rows. Recorded in
    `registry.json` beside the decision. */
 @utility data-table {
-  @apply box text-body w-full border-separate text-left;
+  @apply box text-body w-full border-separate text-start;
 
   --_d-fill: 12%;
   --_d-fg-on-fill: 0%;
@@ -239,7 +239,7 @@
   }
 
   & caption {
-    @apply text-label text-text-secondary pb-2 text-left;
+    @apply text-label text-text-secondary pb-2 text-start;
   }
 
   /* The head's plate is painted on its cells rather than on the section, so the
@@ -264,11 +264,15 @@
      inset ring a clip cannot cut. A rule is not a frame and nothing clips a
      table, so under pixel the capped width would draw no rule at all -- no line
      under the head or above the foot, and `.ruled` would change nothing. A
-     divider reads the same uncapped width for the same reason. */
+     divider reads the same uncapped width for the same reason.
+
+     Alignment is logical and stated on the cells, not only on the table: a
+     `th` centers unless its parent names an alignment, and `start` is the
+     initial value, which counts as naming none. */
   --_table-rule-width: var(--ui-border-width, var(--border-width));
   & th,
   & td {
-    @apply px-4 py-3 align-top;
+    @apply px-4 py-3 text-start align-top;
 
     border-bottom-style: var(--ui-rule-style, var(--ui-line-style, solid));
     border-bottom-width: var(--_table-rule-width);

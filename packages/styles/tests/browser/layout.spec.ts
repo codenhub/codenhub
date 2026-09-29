@@ -71,3 +71,40 @@ test("renders horizontal and vertical semantic dividers", async ({ page }) => {
   expect(verticalDivider.borderLeftWidth).not.toBe("0px");
   expect(verticalDivider.borderLeftColor).not.toBe("rgba(0, 0, 0, 0)");
 });
+
+test("aligns a table's cells and caption to the inline start in either direction", async ({ page }) => {
+  await page.goto(LAYOUT_URL);
+
+  const alignment = await page.evaluate(() => {
+    const read = (dir: string) => {
+      const wrapper = document.createElement("div");
+      wrapper.dir = dir;
+      wrapper.style.width = "40rem";
+      wrapper.innerHTML =
+        '<table class="data-table"><caption>Caption</caption><thead><tr><th>Head</th><th>Head</th></tr></thead><tbody><tr><td>Cell</td><td>Cell</td></tr></tbody></table>';
+      document.body.append(wrapper);
+
+      const offset = (selector: string) => {
+        const element = wrapper.querySelector(selector)!;
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const text = range.getBoundingClientRect();
+        const box = element.getBoundingClientRect();
+
+        return dir === "rtl" ? box.right - text.right : text.left - box.left;
+      };
+
+      return { caption: offset("caption"), td: offset("td"), th: offset("th") };
+    };
+
+    return { ltr: read("ltr"), rtl: read("rtl") };
+  });
+
+  /* Text sits against the start edge -- within the cell's own padding -- in
+     both directions, never pushed across the cell. */
+  for (const direction of ["ltr", "rtl"] as const) {
+    for (const part of ["caption", "th", "td"] as const) {
+      expect(alignment[direction][part], `${direction} ${part}`).toBeLessThan(24);
+    }
+  }
+});
