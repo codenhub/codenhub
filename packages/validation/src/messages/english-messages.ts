@@ -1,4 +1,5 @@
 import type { ValidationIssue } from "../core/types";
+import type { Messages } from "./format-issue";
 
 const FORMAT_NAMES: Readonly<Record<string, string>> = {
   email: "email address",
@@ -90,28 +91,32 @@ const describeValue = (issue: ValidationIssue): string => {
 };
 
 /**
- * The English text for an issue, built from its `code` and `params`.
+ * The built-in English wording for every issue the validators can report, as a message map.
  *
- * Kept as one function so a consumer that never formats an issue does not bundle any of it.
+ * @remarks
+ * Pass it to `formatIssue`, `flatten` or `standard` to get text such as "Must be at least 18". It is
+ * a separate value, not something `formatIssue` carries, so a program that words its own issues, or
+ * that never shows one, does not bundle it. To change some of the wording, spread it and override
+ * the codes you want: `{ ...englishMessages, too_small: "Too short" }`. A custom validator's own codes
+ * are not in it; give them a `message` on the issue or an entry of your own.
+ *
+ * @example
+ * ```ts
+ * const result = number({ min: 18 })(15);
+ * if (!result.ok) {
+ *   formatIssue(result.error.issues[0], englishMessages); // "Must be at least 18"
+ * }
+ * ```
  */
-export function defaultMessage(issue: ValidationIssue): string {
-  switch (issue.code) {
-    case "invalid_type":
-      return issue.params?.coerced === true
-        ? `Cannot convert ${param(issue, "received")} to ${param(issue, "expected")}`
-        : `Expected ${param(issue, "expected")}, received ${param(issue, "received")}`;
-    case "too_small":
-    case "too_big":
-      return describeLimit(issue);
-    case "invalid_format":
-      return describeFormat(issue);
-    case "invalid_value":
-      return issue.params?.unique === true ? "Must be unique" : describeValue(issue);
-    case "unrecognized_key":
-      return `Unrecognized key "${param(issue, "key")}"`;
-    case "invalid_union":
-      return "Does not match any of the allowed types";
-    default:
-      return "Invalid value";
-  }
-}
+export const englishMessages: Messages = {
+  invalid_type: (issue) =>
+    issue.params?.coerced === true
+      ? `Cannot convert ${param(issue, "received")} to ${param(issue, "expected")}`
+      : `Expected ${param(issue, "expected")}, received ${param(issue, "received")}`,
+  too_small: describeLimit,
+  too_big: describeLimit,
+  invalid_format: describeFormat,
+  invalid_value: (issue) => (issue.params?.unique === true ? "Must be unique" : describeValue(issue)),
+  unrecognized_key: (issue) => `Unrecognized key "${param(issue, "key")}"`,
+  invalid_union: "Does not match any of the allowed types",
+};

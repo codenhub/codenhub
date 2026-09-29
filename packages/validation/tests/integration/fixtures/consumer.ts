@@ -14,6 +14,7 @@ import {
   datetime,
   discriminatedUnion,
   email,
+  englishMessages,
   fail,
   fallback,
   flatten,
@@ -69,9 +70,9 @@ if (syncResult.ok) {
   const name: string = syncResult.value.name;
   void name;
 } else {
-  const messages: string[] = syncResult.error.issues.map((issue) => formatIssue(issue));
+  const messages: string[] = syncResult.error.issues.map((issue) => formatIssue(issue, englishMessages));
   void messages;
-  void flatten(syncResult.error);
+  void flatten(syncResult.error, englishMessages);
 }
 
 // An asynchronous rule makes everything that holds it asynchronous, and the type says so.
@@ -213,7 +214,7 @@ export const environment = object({ PORT: port, DEBUG: withDefault(flag, false) 
 export const environmentValue: Infer<typeof environment> = { PORT: 1, DEBUG: false };
 
 // A validator exposed as a Standard Schema keeps its call signature and its types.
-export const exposed = standard(object({ email: email() }));
+export const exposed = standard(object({ email: email() }), englishMessages);
 export const exposedResult = exposed({ email: "a@example.com" });
 export const asStandard: StandardSchemaV1<unknown, { email: string }> = exposed;
 export const standardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: "a@example.com" };

@@ -65,29 +65,33 @@ The validator reference lists the exact code and `params` each validator reports
 
 ## Turning an issue into text
 
-Validators do not build message text when they fail. That keeps them small, and it means text is a choice you make where you show it. `formatIssue` builds it:
+Validators do not build message text when they fail. That keeps them small, and it means text is a choice you make where you show it. `formatIssue` builds it from a message map, and `englishMessages` is the built-in English one:
 
 ```ts
-import { formatIssue, number } from "@codenhub/validation";
+import { englishMessages, formatIssue, number } from "@codenhub/validation";
 
 const result = number({ min: 18 })(15);
 if (!result.ok) {
-  formatIssue(result.error.issues[0]!); // "Must be at least 18"
+  formatIssue(result.error.issues[0]!, englishMessages); // "Must be at least 18"
 }
 ```
+
+The English wording is a separate value you import, and `formatIssue` does not carry it. A program that words its own issues, or never shows one, does not bundle it, which is about 1 kB gzipped. It also means `formatIssue(issue)` with no map says only "Invalid value", so pass a map wherever you show text.
 
 The text comes from the first of these that exists:
 
 1. The issue's own `message`.
 2. An entry for its `code` in the message map you pass as the second argument.
-3. The built-in English wording, built from the `code` and `params`.
+3. The generic "Invalid value".
 
-### Localizing and rewording
+### Rewording and localizing
 
-Pass a map from code to text to replace the built-in wording for the codes it names. A string is used as it is, and a function receives the issue, so it can use `params`:
+A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`. To change some of the English, spread `englishMessages` and override the codes you want; to translate, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
 
 ```ts
-import { formatIssue, type Messages } from "@codenhub/validation";
+import { englishMessages, formatIssue, type Messages } from "@codenhub/validation";
+
+const shorter: Messages = { ...englishMessages, too_small: "Too short" };
 
 const pt: Messages = {
   invalid_type: (issue) => `Esperado ${String(issue.params?.expected)}`,
@@ -95,27 +99,28 @@ const pt: Messages = {
   username_taken: "Este nome de usuário já existe",
 };
 
+formatIssue(issue, shorter);
 formatIssue(issue, pt);
 ```
 
-Codes the map does not name keep the English wording, so a partial map is fine while a translation is in progress. A custom validator's own codes belong in the map too.
+A custom validator's own codes belong in the map too, or can carry a `message` on the issue.
 
 ## Errors for a form
 
 `flatten` groups the messages of a failed result for display: issues at the root go to `formErrors`, and the rest are keyed by their formatted path in `fieldErrors`.
 
 ```ts
-import { flatten } from "@codenhub/validation";
+import { englishMessages, flatten } from "@codenhub/validation";
 
 const result = signup(input);
 if (!result.ok) {
-  const { formErrors, fieldErrors } = flatten(result.error, pt);
+  const { formErrors, fieldErrors } = flatten(result.error, englishMessages);
   fieldErrors["email"]; // ["Invalid email address"]
   fieldErrors["addresses[0].street"]; // ["Must be at least 3 characters"]
 }
 ```
 
-It takes the same message map as `formatIssue`. Field keys use the notation of `formatPath`.
+It takes the same message map as `formatIssue`, and without one every message is "Invalid value". Field keys use the notation of `formatPath`.
 
 ## Reading the result
 

@@ -32,7 +32,7 @@ Everything below exists, works in synchronous and asynchronous form where it com
 - **Shape reuse** (done). Shapes are plain objects, so extending, picking and omitting are spread and destructuring, and `partial(shape)` makes every property optional. There is no `required`: it would have to unwrap `optional`, and a function cannot be unwrapped, while the original required shape is still in hand.
 - **Coercion** (done). Variants of `string`, `number`, `boolean`, `bigint` and `date` that convert text input such as `"42"` or `"yes"` first, for query strings, environment variables and form fields, taking the same options as their strict versions.
 - **Results and guards.** `pass`, `fail` and the result types (done), `is` (done), `Infer` (done).
-- **Messages.** `formatIssue`, `flatten`, `formatPath` (done), English wording for every built-in issue, and caller-supplied message maps for localization. The wording exists for every issue a built-in validator can report.
+- **Messages** (done). `formatIssue`, `flatten`, `formatPath`, `englishMessages` as a separate import with wording for every issue a built-in validator can report, and message maps of your own for rewording and localization.
 - **Interop** (done). `standard(validator)`, the Standard Schema v1 adapter.
 - **Nothing dropped by accident.** Every capability of the previous, unreleased design either exists in the new form or is listed under "Not Planned" with the reason. The changelog carries the mapping for anyone coming from 0.0.1.
 
@@ -83,9 +83,8 @@ The plan is that 0.1.0 is the API, and everything after it is a 0.1.x release: f
 
 ## Later / Possible
 
-These came out of measuring an adopter and are not conditions for 0.1.0. Each is additive, so it fits a 0.1.x release, but the first two change what the package costs and are the maintainer's call.
+These came out of measuring an adopter and are not conditions for 0.1.0. Each is additive, so it fits a 0.1.x release.
 
-- **Separable built-in wording.** Ship the English wording as a value a consumer imports and passes to `formatIssue`, so a consumer that words its own issues does not bundle about 1.0 kB gzipped it never uses. It changes what `formatIssue(issue)` returns without an argument.
 - **A slimmer shared core.** The reporting of the received type and the issue building are about 0.6 kB gzipped in every consumer, and could be smaller.
 - **A leaf for function-valued options.** A `func()` validator, since callbacks are common in configuration.
 - **A fixed message on a validator.** A way to give one validator its own wording without a code-keyed map.

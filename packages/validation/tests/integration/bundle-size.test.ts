@@ -47,9 +47,9 @@ export const check = object({ name: string({ min: 2 }), email: email(), age: opt
   },
   {
     name: "object of three fields with messages",
-    source: `import { email, formatIssue, number, object, optional, string } from "DIST";
+    source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
-export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue)); };`,
+export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
     budget: 3250,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 680 },
@@ -130,13 +130,18 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1060 },
   {
     name: "standard",
-    source: `import { number, standard } from "DIST"; export const check = standard(number());`,
+    source: `import { englishMessages, number, standard } from "DIST"; export const check = standard(number(), englishMessages);`,
     budget: 2380,
   },
   {
-    name: "messages only",
-    source: `import { formatIssue } from "DIST"; export const describe = formatIssue;`,
-    budget: 1180,
+    name: "formatIssue with your own wording",
+    source: `import { formatIssue } from "DIST"; export const describe = (issue: Parameters<typeof formatIssue>[0]) => formatIssue(issue, { too_small: "Too short" });`,
+    budget: 230,
+  },
+  {
+    name: "formatIssue with the English wording",
+    source: `import { englishMessages, formatIssue } from "DIST"; export const describe = (issue: Parameters<typeof formatIssue>[0]) => formatIssue(issue, englishMessages);`,
+    budget: 1300,
   },
   {
     name: "everything",

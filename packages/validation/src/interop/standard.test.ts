@@ -4,6 +4,7 @@ import { object } from "../composition/object";
 import { fail, pass } from "../core/result";
 import type { AsyncValidator } from "../core/types";
 import { email } from "../formats/email";
+import { englishMessages } from "../messages/english-messages";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { isFree, isPending } from "../test-utils";
@@ -11,7 +12,7 @@ import { standard } from "./standard";
 import type { StandardSchemaV1 } from "./standard-schema";
 
 describe("standard", () => {
-  const signup = standard(object({ email: email(), age: number({ int: true }) }));
+  const signup = standard(object({ email: email(), age: number({ int: true }) }), englishMessages);
 
   it("should describe itself as a Standard Schema v1 from this vendor", () => {
     expect(signup["~standard"].version).toBe(1);
@@ -43,21 +44,21 @@ describe("standard", () => {
 
   it("should keep working as the validator it wraps, with the same results", () => {
     const inner = object({ age: number() });
-    const wrapped = standard(inner);
+    const wrapped = standard(inner, englishMessages);
     expect(wrapped({ age: 1 })).toEqual(inner({ age: 1 }));
     expect(wrapped({})).toEqual(inner({}));
   });
 
   it("should not modify the validator it was given", () => {
     const inner = number();
-    standard(inner);
+    standard(inner, englishMessages);
     expect("~standard" in inner).toBe(false);
   });
 
   it("should give each call its own wrapper, so the same validator can be exposed with different messages", () => {
     const inner = number({ min: 1 });
-    const english = standard(inner);
-    const portuguese = standard(inner, { too_small: "Muito pequeno" });
+    const english = standard(inner, englishMessages);
+    const portuguese = standard(inner, { ...englishMessages, too_small: "Muito pequeno" });
     expect(english["~standard"].validate(0)).toEqual({ issues: [{ message: "Must be at least 1", path: [] }] });
     expect(portuguese["~standard"].validate(0)).toEqual({ issues: [{ message: "Muito pequeno", path: [] }] });
   });
@@ -79,7 +80,7 @@ describe("standard", () => {
     expect(isPending(signup["~standard"].validate({}))).toBe(false);
 
     const username: AsyncValidator<string> = isFree;
-    const asynchronous = standard(username);
+    const asynchronous = standard(username, englishMessages);
     const result = asynchronous["~standard"].validate("taken");
     expect(isPending(result)).toBe(true);
     expect(await result).toEqual({ issues: [{ message: "Invalid value", path: [] }] });
@@ -87,8 +88,8 @@ describe("standard", () => {
   });
 
   it("should pass through a value that a validator changed", () => {
-    expect(standard(string({ trim: true }))["~standard"].validate("  a  ")).toEqual({ value: "a" });
-    expect(standard(() => pass(42))["~standard"].validate("x")).toEqual({ value: 42 });
+    expect(standard(string({ trim: true }), englishMessages)["~standard"].validate("  a  ")).toEqual({ value: "a" });
+    expect(standard(() => pass(42), englishMessages)["~standard"].validate("x")).toEqual({ value: 42 });
   });
 
   it("should never put the input in a message", () => {

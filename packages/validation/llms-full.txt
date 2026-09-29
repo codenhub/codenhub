@@ -19,14 +19,14 @@ pnpm add @codenhub/validation
 A validator is a function. Call it with any value and read the result:
 
 ```ts
-import { email, formatIssue } from "@codenhub/validation";
+import { email, englishMessages, formatIssue } from "@codenhub/validation";
 
 const result = email()(input);
 
 if (result.ok) {
   result.value; // string
 } else {
-  formatIssue(result.error.issues[0]); // "Invalid email address"
+  formatIssue(result.error.issues[0], englishMessages); // "Invalid email address"
 }
 ```
 
@@ -46,7 +46,7 @@ type Signup = Infer<typeof signup>; // { name: string; email: string; age?: numb
 const result = signup(requestBody);
 ```
 
-Invalid input never throws. Every problem is in `result.error.issues`, each with a `code`, a `path` to the offending value and `params` describing the failure. Turn an issue into text with `formatIssue`, or group them by field for a form with `flatten`.
+Invalid input never throws. Every problem is in `result.error.issues`, each with a `code`, a `path` to the offending value and `params` describing the failure. Turn an issue into text with `formatIssue`, or group them by field for a form with `flatten`, passing `englishMessages` or a map of your own.
 
 Write your own validator by returning `pass(value)` or `fail(...)` from any function, and add rules to an existing one with `refine`, including rules that need to `await` something.
 
@@ -70,7 +70,7 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 ## Notes
 
 - A validator returns `{ ok: true, value }` or `{ ok: false, error }`. Bad input is never thrown; a bad option, such as `string({ min: -1 })`, throws when the validator is created.
-- Issues never contain the input, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, and can be replaced to localize it.
+- Issues never contain the input, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English, which is a separate import so a program that words its own issues does not bundle it, or your own to reword or localize.
 - Rules never rewrite the value unless you ask: `trim`, `lowercase`, `uppercase` and `clamp` are the options that do.
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
 - `email()` accepts public host names only.
@@ -122,7 +122,7 @@ Because a validator is only a function, you can write your own with no helper at
 A result is one of two plain objects, so you branch on `ok`:
 
 ```ts
-import { email, formatIssue } from "@codenhub/validation";
+import { email, englishMessages, formatIssue } from "@codenhub/validation";
 
 const result = email()(input);
 
@@ -130,7 +130,7 @@ if (result.ok) {
   save(result.value); // typed as string
 } else {
   for (const issue of result.error.issues) {
-    console.log(issue.path, formatIssue(issue));
+    console.log(issue.path, formatIssue(issue, englishMessages));
   }
 }
 ```
@@ -504,29 +504,33 @@ The validator reference lists the exact code and `params` each validator reports
 
 ## Turning an issue into text
 
-Validators do not build message text when they fail. That keeps them small, and it means text is a choice you make where you show it. `formatIssue` builds it:
+Validators do not build message text when they fail. That keeps them small, and it means text is a choice you make where you show it. `formatIssue` builds it from a message map, and `englishMessages` is the built-in English one:
 
 ```ts
-import { formatIssue, number } from "@codenhub/validation";
+import { englishMessages, formatIssue, number } from "@codenhub/validation";
 
 const result = number({ min: 18 })(15);
 if (!result.ok) {
-  formatIssue(result.error.issues[0]!); // "Must be at least 18"
+  formatIssue(result.error.issues[0]!, englishMessages); // "Must be at least 18"
 }
 ```
+
+The English wording is a separate value you import, and `formatIssue` does not carry it. A program that words its own issues, or never shows one, does not bundle it, which is about 1 kB gzipped. It also means `formatIssue(issue)` with no map says only "Invalid value", so pass a map wherever you show text.
 
 The text comes from the first of these that exists:
 
 1. The issue's own `message`.
 2. An entry for its `code` in the message map you pass as the second argument.
-3. The built-in English wording, built from the `code` and `params`.
+3. The generic "Invalid value".
 
-### Localizing and rewording
+### Rewording and localizing
 
-Pass a map from code to text to replace the built-in wording for the codes it names. A string is used as it is, and a function receives the issue, so it can use `params`:
+A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`. To change some of the English, spread `englishMessages` and override the codes you want; to translate, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
 
 ```ts
-import { formatIssue, type Messages } from "@codenhub/validation";
+import { englishMessages, formatIssue, type Messages } from "@codenhub/validation";
+
+const shorter: Messages = { ...englishMessages, too_small: "Too short" };
 
 const pt: Messages = {
   invalid_type: (issue) => `Esperado ${String(issue.params?.expected)}`,
@@ -534,27 +538,28 @@ const pt: Messages = {
   username_taken: "Este nome de usuário já existe",
 };
 
+formatIssue(issue, shorter);
 formatIssue(issue, pt);
 ```
 
-Codes the map does not name keep the English wording, so a partial map is fine while a translation is in progress. A custom validator's own codes belong in the map too.
+A custom validator's own codes belong in the map too, or can carry a `message` on the issue.
 
 ## Errors for a form
 
 `flatten` groups the messages of a failed result for display: issues at the root go to `formErrors`, and the rest are keyed by their formatted path in `fieldErrors`.
 
 ```ts
-import { flatten } from "@codenhub/validation";
+import { englishMessages, flatten } from "@codenhub/validation";
 
 const result = signup(input);
 if (!result.ok) {
-  const { formErrors, fieldErrors } = flatten(result.error, pt);
+  const { formErrors, fieldErrors } = flatten(result.error, englishMessages);
   fieldErrors["email"]; // ["Invalid email address"]
   fieldErrors["addresses[0].street"]; // ["Must be at least 3 characters"]
 }
 ```
 
-It takes the same message map as `formatIssue`. Field keys use the notation of `formatPath`.
+It takes the same message map as `formatIssue`, and without one every message is "Invalid value". Field keys use the notation of `formatPath`.
 
 ## Reading the result
 
@@ -567,9 +572,9 @@ A result is plain data, so it can be logged, sent to a client or stored, and bec
 [Standard Schema](https://standardschema.dev/) is a small shared interface that lets libraries accept a validator without depending on the one that made it. Form libraries, API frameworks and routers that support it take any conforming validator, from any library, directly. `standard` makes a validator conforming.
 
 ```ts
-import { email, number, object, standard } from "@codenhub/validation";
+import { email, englishMessages, number, object, standard } from "@codenhub/validation";
 
-const signup = standard(object({ email: email(), age: number({ int: true }) }));
+const signup = standard(object({ email: email(), age: number({ int: true }) }), englishMessages);
 
 signup["~standard"].validate({ email: "nope", age: 1.5 });
 // {
@@ -592,12 +597,13 @@ The package exports the `StandardSchemaV1` type so you can accept one in your ow
 
 ## Messages
 
-The specification requires a message on every issue, and this is the one place this package builds it, so a program that never uses `standard` never bundles the text. Messages come from [`formatIssue`](docs/errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map you pass as the second argument, then the built-in English wording.
+The specification requires a message on every issue, and this is the one place this package builds it, so a program that never uses `standard` never bundles the text. `standard` therefore takes the message map as its second argument, and it is required: pass `englishMessages` for the built-in English, or a map of your own. Messages then come from [`formatIssue`](docs/errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then "Invalid value".
 
 ```ts
-import { number, standard } from "@codenhub/validation";
+import { englishMessages, number, standard } from "@codenhub/validation";
 
 const age = standard(number({ min: 18 }), {
+  ...englishMessages,
   too_small: (issue) => `Você precisa ter pelo menos ${String(issue.params?.minimum)} anos`,
 });
 ```
@@ -606,7 +612,7 @@ Each issue's `path` is the issue's own path, as an array of strings and numbers.
 
 ## A note on functions
 
-A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator)["~standard"] }`.
+A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator, englishMessages)["~standard"] }`.
 
 <!-- Source: docs/validators.md -->
 
@@ -998,9 +1004,13 @@ The coercing validators accept text that holds a value, convert it, and then app
 
 ## Exposing a validator to other libraries
 
-`standard(validator, messages?)` returns the validator with the `~standard` property that [Standard Schema](docs/standard-schema.md) asks for, so libraries that accept one can take it directly. Its optional `messages` map rewords or localizes the text that specification requires on every issue.
+`standard(validator, messages)` returns the validator with the `~standard` property that [Standard Schema](docs/standard-schema.md) asks for, so libraries that accept one can take it directly. Its `messages` map, such as `englishMessages`, supplies the text that specification requires on every issue.
 
 ## Working with results
+
+### `formatIssue`, `flatten`, `formatPath` and `englishMessages`
+
+`formatIssue(issue, messages?)` turns an issue into text, `flatten(failure, messages?)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then a message map you pass, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. [Issues and messages](docs/errors.md) explains all four.
 
 ### `Infer`
 
@@ -1035,9 +1045,9 @@ The coercing validators accept text that holds a value, convert it, and then app
 - Choosing and merging: `union`, `discriminatedUnion`, which takes a record of validators keyed by tag, and `intersection`. `lazy` for recursive data and `json` for text holding JSON.
 - Results that are plain data: `{ ok: true, value }` or `{ ok: false, error: { issues } }`, built with `pass` and `fail`. Bad input never throws.
 - Issues with a stable `code`, a `path` to the offending value and `params` describing the failure. Issues never contain the input.
-- `formatIssue`, `flatten` and `formatPath` to turn issues into text and group them by field for forms. English wording is built only when you ask for it, and a message map replaces it to localize.
+- `formatIssue`, `flatten` and `formatPath` to turn issues into text and group them by field for forms. Text comes from a message map you pass, `englishMessages` for the built-in English or one of your own to reword or localize it, so a program that words its own issues does not bundle the English.
 - Coercing validators for text input: `coerceString`, `coerceNumber`, `coerceBoolean`, `coerceBigint` and `coerceDate`, taking the options of their strict counterparts.
-- `standard(validator)`, which exposes a validator as a Standard Schema v1, with an optional message map for the text the specification requires.
+- `standard(validator, messages)`, which exposes a validator as a Standard Schema v1, with the message map for the text the specification requires.
 - `is`, a type guard for synchronous validators, and `Infer` to read the type a validator produces.
 - Asynchronous validation tracked in the types: a validator holding a rule that returns a promise is an `AsyncValidator`, and so is everything that contains it, so the compiler makes you `await` it.
 
@@ -1079,11 +1089,11 @@ The coercing validators accept text that holds a value, convert it, and then app
 Reading a result also changed. Where 0.0.1 returned `{ ok, value }` or `{ ok, error }` with a single failure, 0.1.0 returns every issue in `result.error.issues`:
 
 ```ts
-import { formatIssue, string } from "@codenhub/validation";
+import { englishMessages, formatIssue, string } from "@codenhub/validation";
 
 const result = string({ min: 3 })(input);
 
 if (!result.ok) {
-  formatIssue(result.error.issues[0]!); // was: result.error.message
+  formatIssue(result.error.issues[0]!, englishMessages); // was: result.error.message
 }
 ```

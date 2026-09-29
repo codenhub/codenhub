@@ -391,9 +391,13 @@ The coercing validators accept text that holds a value, convert it, and then app
 
 ## Exposing a validator to other libraries
 
-`standard(validator, messages?)` returns the validator with the `~standard` property that [Standard Schema](standard-schema.md) asks for, so libraries that accept one can take it directly. Its optional `messages` map rewords or localizes the text that specification requires on every issue.
+`standard(validator, messages)` returns the validator with the `~standard` property that [Standard Schema](standard-schema.md) asks for, so libraries that accept one can take it directly. Its `messages` map, such as `englishMessages`, supplies the text that specification requires on every issue.
 
 ## Working with results
+
+### `formatIssue`, `flatten`, `formatPath` and `englishMessages`
+
+`formatIssue(issue, messages?)` turns an issue into text, `flatten(failure, messages?)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then a message map you pass, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. [Issues and messages](errors.md) explains all four.
 
 ### `Infer`
 

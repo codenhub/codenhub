@@ -63,9 +63,11 @@ An issue is `{ code, path, params?, message? }` and nothing else.
 
 **Issues never contain the input.** No `input` field exists, and `params` carries type names and constraint values, never the value under test. This is a privacy invariant, not a default: inputs are passwords and tokens, and an issue is something callers log. Any new rule must keep it, and the unit tests check it per validator.
 
-### Messages are on demand
+### Messages are on demand, and the English is separate
 
-Text is not built when an issue is created. `formatIssue(issue, messages?)` builds it from `code` and `params`, taking the first of: the issue's own `message`, an entry for its `code` in a caller-supplied map, the built-in English wording. `flatten` groups formatted messages by path for forms.
+Text is not built when an issue is created. `formatIssue(issue, messages?)` builds it from a message map, taking the first of: the issue's own `message`, an entry for its `code` in the map, then the generic "Invalid value". `flatten` groups formatted messages by path for forms.
+
+The built-in English wording is not inside `formatIssue`. It is `englishMessages`, a map in its own module that a consumer imports and passes in. That is what keeps a program that words its own issues from bundling about 1 kB gzipped of English it never shows, and it makes rewording and localization the same operation: spread `englishMessages` and override some codes, or write a whole map. It also means a bare `formatIssue(issue)` is deliberately unhelpful, so `standard`, which the specification obliges to produce text, takes the map as a required argument instead of falling back silently.
 
 That split is what keeps validators small (no string per rule) and makes localization a data problem: a map keyed by code. A consumer that never asks for text never bundles any. `message` on the issue exists so a custom rule can carry its own wording without a map.
 
@@ -127,12 +129,12 @@ The claim that a consumer pays only for what it uses was measured on a real work
 The claim held in the sense that matters for correctness: the built output contained none of the validators the package did not use, no coercion code and no Standard Schema adapter, and `hub check` found no leak. It did not hold in the sense of being small for a package that only checks a few options. Where the bytes went:
 
 - **The validators, about 1.9 kB**, of which about 0.6 kB is the core every validator shares: reporting the received type, building issues, and the sync-until-async plumbing. `string` alone is close to 1 kB because its options are all in one function, so a consumer that uses `min` still carries `pattern`, `startsWith` and the rest.
-- **The built-in English wording, about 1.0 kB.** `formatIssue` carries the wording for every issue a built-in can report, and it cannot be shaken per code, so a consumer that words its own issues still bundles it.
+- **The built-in English wording, about 1.0 kB.** In the first measurement `formatIssue` carried the wording for every issue a built-in can report, and it could not be shaken per code, so a consumer that worded its own issues still bundled it. It is now a separate import, and the same package supplying its own three lines of wording dropped to +1.9 kB (7.6 kB in total, +35%) with none of the English in its build.
 - **The consumer's own glue, about 0.3 kB.**
 
-Two consequences follow. First, hand-written checks are cheaper in bytes for a handful of options, and the package earns its place through consistency and shared behavior rather than size, so "lightweight" holds per validator and not for a package that validates little. Second, inlining copies the shared core into every package that inlines it: an application that installs several such packages carries one copy per package, where a regular dependency would be deduplicated by the application's bundler. Inlining buys isolation from this package's version, and that is worth revisiting once the API is 1.0.
+Two consequences follow. First, hand-written checks are still cheaper in bytes for a handful of options, and the package earns its place through consistency and shared behavior rather than size, so "lightweight" holds per validator and not for a package that validates little. Second, inlining copies the shared core into every package that inlines it: an application that installs several such packages carries one copy per package, where a regular dependency would be deduplicated by the application's bundler. Inlining buys isolation from this package's version, and that is worth revisiting once the API is 1.0.
 
-Gaps the migration exposed, none of them needed by the 0.1.0 release conditions: there is no leaf for function-valued options, which are common in configuration, so the consumer wrote one with `refine`; a validator cannot carry a fixed message of its own, so per-field wording goes through `refine`'s issue or a message map keyed by code; and a message that needs the offending value or a sibling name cannot be built by a validator.
+Gaps the migration exposed that remain, none of them needed by the 0.1.0 release conditions: there is no leaf for function-valued options, which are common in configuration, so the consumer wrote one with `refine`; a validator cannot carry a fixed message of its own, so per-field wording goes through `refine`'s issue or a message map keyed by code; and a message that needs the offending value or a sibling name cannot be built by a validator.
 
 ## Coercion
 
@@ -142,7 +144,7 @@ The conversions are narrow on purpose, because a conversion that guesses turns a
 
 ## Standard Schema
 
-A validator is a function and not a schema object, so Standard Schema v1 support is an adapter: `standard(validator, messages?)` returns a new function that calls the validator and carries a `~standard` property, and leaves the validator you gave untouched. The standard requires a `message` on every issue, and the adapter supplies it with `formatIssue`, so the cost of messages is paid only by whoever asks for interop. Input type and output type are `unknown` and the validator's `Infer`, since validators take `unknown`.
+A validator is a function and not a schema object, so Standard Schema v1 support is an adapter: `standard(validator, messages?)` returns a new function that calls the validator and carries a `~standard` property, and leaves the validator you gave untouched. The standard requires a `message` on every issue, and the adapter supplies it with `formatIssue` and a message map it requires as an argument, so the cost of messages is paid only by whoever asks for interop. Input type and output type are `unknown` and the validator's `Infer`, since validators take `unknown`.
 
 `~standard.validate` is synchronous for a synchronous validator and returns a promise for an asynchronous one, through `chain`. The interface types are vendored in `src/interop/standard-schema.ts` so the package needs no dependency for them.
 

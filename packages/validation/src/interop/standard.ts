@@ -10,13 +10,13 @@ import type { StandardSchemaV1 } from "./standard-schema";
  * @remarks
  * The result is a validator that behaves exactly as the one you gave, plus the `~standard` property
  * the specification asks for. The one you gave is not modified. The specification requires a message
- * on every issue, so this is where the text is built, with `formatIssue`; pass a message map to reword
- * or localize it. `~standard.validate` returns its result directly for a synchronous validator and a
+ * on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass:
+ * `englishMessages` for the built-in English, or a map of your own. `~standard.validate` returns its result directly for a synchronous validator and a
  * promise for an asynchronous one. Input and output types are `unknown` and what the validator produces.
  *
  * @example
  * ```ts
- * const signup = standard(object({ email: email(), age: number({ int: true }) }));
+ * const signup = standard(object({ email: email(), age: number({ int: true }) }), englishMessages);
  *
  * signup["~standard"].validate({ email: "nope" });
  * // { issues: [{ message: "Invalid email address", path: ["email"] }, ...] }
@@ -24,12 +24,13 @@ import type { StandardSchemaV1 } from "./standard-schema";
  *
  * @typeParam TValidator - The validator to expose.
  * @param validator - The validator to expose as a Standard Schema.
- * @param messages - Text that replaces the built-in wording for the codes it names.
+ * @param messages - Text for the issue codes, such as `englishMessages`. Required, because the specification
+ * needs a message on every issue and there is no built-in default to fall back on.
  * @returns A validator that is also a Standard Schema.
  */
 export function standard<TValidator extends AnyValidator>(
   validator: TValidator,
-  messages?: Messages,
+  messages: Messages,
 ): TValidator & StandardSchemaV1<unknown, Infer<TValidator>> {
   const wrapped = (input: unknown) => validator(input);
   const props: StandardSchemaV1.Props<unknown, Infer<TValidator>> = {

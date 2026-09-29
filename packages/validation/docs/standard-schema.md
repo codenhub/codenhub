@@ -8,9 +8,9 @@ description: Use a validator wherever a library accepts a Standard Schema, such 
 [Standard Schema](https://standardschema.dev/) is a small shared interface that lets libraries accept a validator without depending on the one that made it. Form libraries, API frameworks and routers that support it take any conforming validator, from any library, directly. `standard` makes a validator conforming.
 
 ```ts
-import { email, number, object, standard } from "@codenhub/validation";
+import { email, englishMessages, number, object, standard } from "@codenhub/validation";
 
-const signup = standard(object({ email: email(), age: number({ int: true }) }));
+const signup = standard(object({ email: email(), age: number({ int: true }) }), englishMessages);
 
 signup["~standard"].validate({ email: "nope", age: 1.5 });
 // {
@@ -33,12 +33,13 @@ The package exports the `StandardSchemaV1` type so you can accept one in your ow
 
 ## Messages
 
-The specification requires a message on every issue, and this is the one place this package builds it, so a program that never uses `standard` never bundles the text. Messages come from [`formatIssue`](errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map you pass as the second argument, then the built-in English wording.
+The specification requires a message on every issue, and this is the one place this package builds it, so a program that never uses `standard` never bundles the text. `standard` therefore takes the message map as its second argument, and it is required: pass `englishMessages` for the built-in English, or a map of your own. Messages then come from [`formatIssue`](errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then "Invalid value".
 
 ```ts
-import { number, standard } from "@codenhub/validation";
+import { englishMessages, number, standard } from "@codenhub/validation";
 
 const age = standard(number({ min: 18 }), {
+  ...englishMessages,
   too_small: (issue) => `Você precisa ter pelo menos ${String(issue.params?.minimum)} anos`,
 });
 ```
@@ -47,4 +48,4 @@ Each issue's `path` is the issue's own path, as an array of strings and numbers.
 
 ## A note on functions
 
-A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator)["~standard"] }`.
+A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator, englishMessages)["~standard"] }`.

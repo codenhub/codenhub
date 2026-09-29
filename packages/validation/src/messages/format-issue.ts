@@ -1,11 +1,10 @@
 import type { ValidationFailure, ValidationIssue, ValidationPathSegment } from "../core/types";
-import { defaultMessage } from "./default-messages";
 
 /**
- * Replacement or additional message text, keyed by issue code.
+ * Message text keyed by issue code, such as `englishMessages` or a translation.
  *
  * A string is used as it is. A function receives the issue, so it can word the message from
- * `params` or translate it. This is how messages are localized.
+ * `params`. This is how messages are worded and localized.
  */
 export type Messages = Readonly<Record<string, string | ((issue: ValidationIssue) => string) | undefined>>;
 
@@ -33,24 +32,28 @@ export function formatPath(path: readonly ValidationPathSegment[]): string {
   return formatted;
 }
 
+/** What {@link formatIssue} says when nothing supplies text for an issue. */
+const FALLBACK_MESSAGE = "Invalid value";
+
 /**
  * Turns an issue into text a person can read.
  *
  * @remarks
  * The text comes from the first of these that exists: the issue's own `message`, an entry for its
- * `code` in `messages`, then the built-in English wording. Only this function carries that wording,
- * so a program that never formats an issue does not ship any of it.
+ * `code` in `messages`, then the generic "Invalid value". The built-in English wording is not carried
+ * here, so a program that words its own issues does not bundle it: pass `englishMessages` for it, or a
+ * map of your own, or both spread together.
  *
  * @example
  * ```ts
  * const result = number({ min: 18 })(15);
  * if (!result.ok) {
- *   formatIssue(result.error.issues[0]); // "Must be at least 18"
+ *   formatIssue(result.error.issues[0], englishMessages); // "Must be at least 18"
  * }
  * ```
  *
  * @param issue - The issue to describe.
- * @param messages - Text that replaces the built-in wording for the codes it names.
+ * @param messages - Text for the codes it names, such as `englishMessages`.
  * @returns The message.
  */
 export function formatIssue(issue: ValidationIssue, messages?: Messages): string {
@@ -58,10 +61,10 @@ export function formatIssue(issue: ValidationIssue, messages?: Messages): string
     return issue.message;
   }
   const custom = messages?.[issue.code];
-  if (custom !== undefined) {
-    return typeof custom === "function" ? custom(issue) : custom;
+  if (custom === undefined) {
+    return FALLBACK_MESSAGE;
   }
-  return defaultMessage(issue);
+  return typeof custom === "function" ? custom(issue) : custom;
 }
 
 /** Issue messages grouped for display next to form fields. */
@@ -77,7 +80,7 @@ export interface FlattenedErrors {
  * keyed by their {@link formatPath} notation in `fieldErrors`.
  *
  * @param failure - The `error` of a failed result.
- * @param messages - Text that replaces the built-in wording, as for {@link formatIssue}.
+ * @param messages - Text for the codes it names, as for {@link formatIssue}.
  * @returns The grouped messages.
  */
 export function flatten(failure: ValidationFailure, messages?: Messages): FlattenedErrors {

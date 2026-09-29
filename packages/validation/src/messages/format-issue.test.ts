@@ -19,9 +19,55 @@ import { number } from "../primitives/number";
 import { oneOf } from "../primitives/one-of";
 import { string } from "../primitives/string";
 import { issuesOf } from "../test-utils";
-import { flatten, formatIssue, formatPath } from "./format-issue";
+import { englishMessages } from "./english-messages";
+import { flatten, formatIssue as formatWith, formatPath, type Messages } from "./format-issue";
+
+const formatIssue = (issue: ValidationIssue, messages: Messages = englishMessages): string =>
+  formatWith(issue, messages);
 
 const issue = (value: Partial<ValidationIssue> & { code: string }): ValidationIssue => ({ path: [], ...value });
+
+describe("without the English wording", () => {
+  it("should use the issue's own message, an entry for its code, and nothing else", () => {
+    expect(formatWith(issue({ code: "too_small", message: "Fixed" }))).toBe("Fixed");
+    expect(formatWith(issue({ code: "too_small" }), { too_small: "Mine" })).toBe("Mine");
+  });
+
+  it("should say Invalid value when nothing supplies text, never the built-in wording", () => {
+    const [found] = issuesOf(number({ min: 18 })(15));
+    expect(formatWith(found as ValidationIssue)).toBe("Invalid value");
+    expect(formatWith(found as ValidationIssue, {})).toBe("Invalid value");
+    expect(flatten({ issues: [found as ValidationIssue] }).formErrors).toEqual(["Invalid value"]);
+  });
+});
+
+describe("englishMessages", () => {
+  it("should have wording for every code the built-in validators report", () => {
+    for (const code of [
+      "invalid_type",
+      "invalid_value",
+      "invalid_format",
+      "too_small",
+      "too_big",
+      "unrecognized_key",
+      "invalid_union",
+    ]) {
+      expect(englishMessages[code]).toBeDefined();
+    }
+  });
+
+  it("should be combined with a map of your own by spreading, keeping the rest of the wording", () => {
+    const reworded: Messages = { ...englishMessages, too_small: "Too short" };
+    const [small] = issuesOf(string({ min: 3 })("a"));
+    const [type] = issuesOf(string()(1));
+    expect(formatWith(small as ValidationIssue, reworded)).toBe("Too short");
+    expect(formatWith(type as ValidationIssue, reworded)).toBe("Expected string, received number");
+  });
+
+  it("should not have wording for a code a custom validator invents", () => {
+    expect(englishMessages["username_taken"]).toBeUndefined();
+  });
+});
 
 describe("formatPath", () => {
   it("should join keys with dots and indexes with brackets", () => {
@@ -169,7 +215,7 @@ describe("flatten", () => {
       { path: ["user", "email"], message: "Required" },
     ).error;
 
-    expect(flatten(failure)).toEqual({
+    expect(flatten(failure, englishMessages)).toEqual({
       formErrors: ["Form is invalid"],
       fieldErrors: { "user.email": ["Invalid email address", "Required"], "tags[0]": ["Too short"] },
     });
