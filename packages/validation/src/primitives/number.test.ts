@@ -87,7 +87,19 @@ describe("number", () => {
 
     it("should run before the constraints, so they see the clamped number", () => {
       expect(number({ clamp: { min: 0, max: 10 }, max: 10 })(50).ok).toBe(true);
-      expect(number({ clamp: { min: 0, max: 10 }, min: 11 })(5).ok).toBe(false);
+      expect(number({ clamp: { min: 0, max: 10 }, min: 5 })(2).ok).toBe(false);
+    });
+
+    it("should reject a range whose every value breaks a bound, when the validator is created", () => {
+      for (const options of [
+        { clamp: { min: 0, max: 10 }, min: 11 },
+        { clamp: { min: 0, max: 10 }, gt: 10 },
+        { clamp: { min: 20, max: 30 }, max: 10 },
+        { clamp: { min: 20, max: 30 }, lt: 20 },
+      ]) {
+        expect(() => number(options)).toThrow(RangeError);
+      }
+      expect(() => number({ clamp: { min: 0, max: 10 }, min: 10, lt: 11 })).not.toThrow();
     });
 
     it("should still reject non-numbers", () => {
