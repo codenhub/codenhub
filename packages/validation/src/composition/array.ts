@@ -1,5 +1,5 @@
 import type { Maybe } from "../core/async";
-import { failWith, invalidType, pass, toIssue } from "../core/result";
+import { failWith, invalidType, pass, repeatedItem } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
 import { settle } from "./settle";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
@@ -68,7 +68,7 @@ export function array<TElement extends AnyValidator>(
           const key = keyOf(item);
           const isRepeat = seen.has(key);
           seen.add(key);
-          return isRepeat ? [toIssue({ code: "invalid_value", path: [index], params: { unique: true } })] : [];
+          return isRepeat ? [repeatedItem(index)] : [];
         });
         return repeats.length > 0 ? failWith(repeats) : pass(items);
       },
