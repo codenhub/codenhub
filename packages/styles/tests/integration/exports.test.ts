@@ -490,6 +490,51 @@ test("utility names that collide with the package's own prose do not leak into t
   expect(leaks).toEqual([]);
 });
 
+/* The list above only names the collisions someone already found. Any word in
+   a scanned file that happens to be a Tailwind utility compiles too -- the
+   license's "contents" once shipped `.contents{display:contents}` -- so this
+   holds every class the compiled entrypoints emit to one the stylesheet source
+   names itself: a selector, an `@utility`, or an `@source inline()` candidate.
+   Comments and `url()` strings are stripped from both sides first, so artwork
+   and prose name nothing. */
+const stripCommentsAndUrls = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/url\("[^"]*"\)/g, "url()");
+const classNamesIn = (css: string) => new Set([...css.matchAll(/\.(-?[a-zA-Z_][\w-]*)/g)].map((match) => match[1]!));
+
+test("compiled entrypoints emit only classes the stylesheet source names", async () => {
+  const sourceDirectory = path.resolve(packageRoot, "src");
+  const sourceFiles = (await readdir(sourceDirectory, { recursive: true })).filter(
+    (entry): entry is string => typeof entry === "string" && entry.endsWith(".css"),
+  );
+  const sourceText = stripCommentsAndUrls(
+    (await Promise.all(sourceFiles.map((file) => readFile(path.join(sourceDirectory, file), "utf8")))).join("\n"),
+  );
+  const named = classNamesIn(sourceText);
+
+  for (const match of sourceText.matchAll(/@utility\s+([\w-]+)/g)) {
+    named.add(match[1]!);
+  }
+
+  for (const match of sourceText.matchAll(/@source\s+inline\("([^"]*)"\)/g)) {
+    for (const candidate of match[1]!.split(/\s+/)) {
+      named.add(candidate);
+    }
+  }
+
+  const outputs = await Promise.all(
+    ["dist/index.css", "dist/components.css", "dist/native.css", "dist/theme.css"].map(async (target) => ({
+      output: await readFile(path.resolve(packageRoot, target), "utf8"),
+      target,
+    })),
+  );
+  const leaks = outputs.flatMap(({ output, target }) =>
+    [...classNamesIn(stripCommentsAndUrls(output))]
+      .filter((name) => !named.has(name))
+      .map((name) => `${target} emits .${name}, which src/ never names`),
+  );
+
+  expect(leaks).toEqual([]);
+});
+
 test("aggregate exports emit each public rule expansion once", async () => {
   const aggregateOutputs = await Promise.all(
     aggregateExportTargets.map(async (target) => ({

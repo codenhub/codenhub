@@ -17,6 +17,9 @@
 @source not "../*.md";
 @source not "../*.txt";
 @source not "../*.json";
+@source not "../*.ts";
+@source not "../LICENSE";
+@source not "../NOTICE";
 @import "./typography.css";
 @import "./utilities/index.css";
 @import "./components/index.css";

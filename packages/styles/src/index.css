@@ -11,8 +11,10 @@
 
    The `@source not` lines keep everything that is not `src/` out of the scan:
    the sibling app and fixture directories, the `docs/` tree, the build scripts,
-   and the root prose and data files. Without them a class name or `--color-*`
-   reference that appears only in a documentation example ships as real CSS.
+   and the root prose, data, config, and license files. Without them a class
+   name or `--color-*` reference that appears only in a documentation example
+   ships as real CSS -- the license's "contents" once shipped as
+   `.contents{display:contents}`.
    `exports.test.ts` guards it. `scripts/build-tw.mjs` strips these lines from
    the `dist/tw/` copy, where they resolve to nothing and the `/tw` consumer
    scans their own tree. */
@@ -27,6 +29,9 @@
 @source not "../*.md";
 @source not "../*.txt";
 @source not "../*.json";
+@source not "../*.ts";
+@source not "../LICENSE";
+@source not "../NOTICE";
 
 @import "./theme.css";
 @import "./typography.css";
