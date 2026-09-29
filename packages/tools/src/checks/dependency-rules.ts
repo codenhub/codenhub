@@ -2,7 +2,7 @@ import { join } from "node:path";
 
 import { findDependencyCycles } from "../workspace/dependency-order.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
-import { readBinaryNames, readDependencyUsage, SCENARIO_DIRECTORY } from "./dependency-usage.ts";
+import { findBuiltImports, readBinaryNames, readDependencyUsage, SCENARIO_DIRECTORY } from "./dependency-usage.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
 const MANIFEST_LOCATION = "package.json";
@@ -133,6 +133,24 @@ export interface DependencyContext {
   byLocation: ReadonlyMap<string, WorkspacePackage>;
 }
 
+/** What `codenhub.bundled` says, or that it says something unreadable. */
+interface BundledDeclaration {
+  /** Names listed, empty when the field is absent or unreadable. */
+  names: readonly string[];
+  /** `false` when the field is present but is not an array of package names. */
+  isValid: boolean;
+}
+
+function readBundled(workspacePackage: WorkspacePackage): BundledDeclaration {
+  const codenhub = workspacePackage.manifest.codenhub;
+  const bundled = isRecord(codenhub) ? codenhub.bundled : undefined;
+  if (bundled === undefined) {
+    return { isValid: true, names: [] };
+  }
+  const isNames = Array.isArray(bundled) && bundled.every((name) => typeof name === "string" && name.length > 0);
+  return isNames ? { isValid: true, names: bundled as string[] } : { isValid: false, names: [] };
+}
+
 function checkRanges(workspacePackage: WorkspacePackage, context: DependencyContext): Finding[] {
   const findings: Finding[] = [];
   for (const { field, name, range } of readDependencies(workspacePackage, INSTALLED_FIELDS)) {
@@ -191,7 +209,30 @@ async function checkUsage(workspacePackage: WorkspacePackage, context: Dependenc
   const consumerNames = new Set(
     declared.filter(({ field }) => CONSUMER_FIELDS.includes(field)).map(({ name }) => name),
   );
+  const devNames = new Set(declared.filter(({ field }) => field === "devDependencies").map(({ name }) => name));
+  const bundled = readBundled(workspacePackage);
+  // Only a devDependency can be inlined: a name a consumer installs is not inlined, whatever the list says.
+  const inlinedNames = new Set(bundled.names.filter((name) => devNames.has(name)));
   const findings: Finding[] = [];
+
+  if (!bundled.isValid) {
+    findings.push({
+      code: "dependencies/bundled-invalid",
+      location: MANIFEST_LOCATION,
+      message: `"codenhub.bundled" must be an array of package names.`,
+      severity: "error",
+    });
+  }
+  for (const name of [...new Set(bundled.names)].sort()) {
+    if (!devNames.has(name)) {
+      findings.push({
+        code: "dependencies/bundled-not-dev",
+        location: MANIFEST_LOCATION,
+        message: `"${name}" is listed in "codenhub.bundled" but is not a devDependency, so a consumer would install it.`,
+        severity: "error",
+      });
+    }
+  }
 
   for (const name of [...usage.authored].sort()) {
     if (!declaredNames.has(name)) {
@@ -208,7 +249,7 @@ async function checkUsage(workspacePackage: WorkspacePackage, context: Dependenc
   // field holds a name changes nothing about what that someone receives.
   if (!workspacePackage.isPrivate) {
     for (const name of [...usage.shipped].sort()) {
-      if (declaredNames.has(name) && !consumerNames.has(name)) {
+      if (declaredNames.has(name) && !consumerNames.has(name) && !inlinedNames.has(name)) {
         findings.push({
           code: "dependencies/runtime-declaration",
           location: MANIFEST_LOCATION,
@@ -216,6 +257,28 @@ async function checkUsage(workspacePackage: WorkspacePackage, context: Dependenc
           severity: "error",
         });
       }
+    }
+  }
+
+  if (!workspacePackage.isPrivate && inlinedNames.size > 0) {
+    for (const name of [...inlinedNames].sort()) {
+      if (!usage.authored.has(name)) {
+        findings.push({
+          code: "dependencies/bundled-unused",
+          location: MANIFEST_LOCATION,
+          message: `"${name}" is listed in "codenhub.bundled" but no source file imports it.`,
+          severity: "warning",
+        });
+      }
+    }
+    const leaked = await findBuiltImports(workspacePackage, inlinedNames);
+    for (const [name, file] of [...leaked].sort(([left], [right]) => left.localeCompare(right))) {
+      findings.push({
+        code: "dependencies/bundled-leaked",
+        location: file,
+        message: `"${name}" is listed in "codenhub.bundled" but the built output still names it, so a consumer would be missing it.`,
+        severity: "error",
+      });
     }
   }
 
@@ -249,7 +312,7 @@ async function checkUsage(workspacePackage: WorkspacePackage, context: Dependenc
 /**
  * Creates the rule that checks how a package declares and uses its dependencies.
  *
- * Ranges, cycles, and usage are one rule because they share a subject and a code
+ * Ranges, cycles, usage, and inlined dependencies are one rule because they share a subject and a code
  * prefix: every finding is something wrong with the dependency list, and the
  * exception register waives them by the same `dependencies/` codes.
  * @param workspacePackages Every workspace package, needed by the checks that compare one against the rest.
