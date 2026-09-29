@@ -410,7 +410,7 @@
     --_line-tone: var(--intent-color);
 
     outline: var(--focus-ring-width) solid var(--focus-ring);
-    outline-offset: var(--focus-ring-offset);
+    outline-offset: var(--focus-ring-offset, calc(-1 * var(--ui-border-width, var(--border-width))));
     box-shadow: var(--_focus-stack, var(--_shadow));
   }
 

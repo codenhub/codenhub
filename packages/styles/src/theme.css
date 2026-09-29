@@ -213,15 +213,11 @@
     --elevation-lg: 0 20px 25px -5px var(--elevation-color), 0 8px 10px -6px var(--elevation-color);
 
     --focus-ring: color-mix(in srgb, var(--color-primary) 64%, transparent);
-    /* Negative, so the ring is drawn over the edge rather than beside it: at a
-       positive offset the outline floats a gap away and reads as a second, detached
-       frame around the control. Pulled in by exactly the material line width, the
-       ring lands on top of the line and a focused control reads as its own edge
-       thickening -- which is what a focus indicator is meant to look like.
-
-       A component drawing no line at rest loses nothing: the outline moves one
-       pixel inward over its own fill, which at a hairline is not a visible change. */
-    --focus-ring-offset: calc(-1 * var(--border-width));
+    /* `--focus-ring-offset` is not declared: its default is the negative of the
+       line width of whatever is focused, which only the focused element knows,
+       so the outline computes it there -- see `reset.css`. Declared here it
+       resolved against the base 1px once and inherited, and under a 2px
+       aesthetic the ring covered half the edge and left a stripe of it inside. */
     --focus-ring-width: 3px;
 
     --motion-duration-fast: 120ms;

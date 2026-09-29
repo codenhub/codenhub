@@ -72,9 +72,20 @@
     color: var(--color-primary-contrast);
   }
 
+  /* Negative, so the ring is drawn over the edge rather than beside it: at a
+     positive offset the outline floats a gap away and reads as a second,
+     detached frame around the control. Pulled in by exactly the line width the
+     aesthetic draws, the ring lands on top of the line and a focused control
+     reads as its own edge thickening -- which is what a focus indicator is
+     meant to look like. Computed here, on the focused element, because that is
+     where an aesthetic's `--ui-border-width` resolves; `--focus-ring-offset`,
+     when a consumer sets it, still wins.
+
+     A component drawing no line at rest loses nothing: the outline moves inward
+     over its own fill by a hairline, which is not a visible change. */
   :focus-visible {
     outline: var(--focus-ring-width) solid var(--focus-ring);
-    outline-offset: var(--focus-ring-offset);
+    outline-offset: var(--focus-ring-offset, calc(-1 * var(--ui-border-width, var(--border-width))));
   }
 
   @media (forced-colors: active) {

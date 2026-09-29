@@ -2622,3 +2622,40 @@ test("keeps a switch's knob inside an inset-ring edge", async ({ page }) => {
   expect(read.top, `knob offset inside ${read.shadow}`).toBeGreaterThanOrEqual(3);
   expect(read.top * 2 + read.height, "knob fits the track").toBeCloseTo(read.track, 1);
 });
+
+/* The ring is pulled in by the focused element's own line width, so it lands
+   on the edge. Declared once at `:root` it resolved against the base 1px, and
+   under a 2px aesthetic it covered half the edge and left a stripe of it
+   inside. A consumer's `--focus-ring-offset` still wins. */
+test("pulls the focus ring in by the aesthetic's line width", async ({ page }) => {
+  await page.goto(FORMS_URL);
+
+  const read = await page.evaluate(() => {
+    const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+    const region = document.createElement("div");
+
+    region.innerHTML =
+      '<button class="btn" data-case="plain">a</button>' +
+      '<div class="neobrutalism"><button class="btn" data-case="neo">b</button></div>' +
+      '<div style="--focus-ring-offset: 4px"><button class="btn" data-case="set">c</button></div>';
+    host.append(region);
+
+    const offset = (name: string) => {
+      const button = region.querySelector<HTMLElement>(`[data-case="${name}"]`)!;
+
+      button.focus();
+
+      return { offset: getComputedStyle(button).outlineOffset, visible: button.matches(":focus-visible") };
+    };
+    const result = { plain: offset("plain"), neo: offset("neo"), set: offset("set") };
+
+    region.remove();
+
+    return result;
+  });
+
+  expect(read.neo.visible, "programmatic focus shows the ring").toBe(true);
+  expect(read.plain.offset).toBe("-1px");
+  expect(read.neo.offset).toBe("-2px");
+  expect(read.set.offset).toBe("4px");
+});
