@@ -603,6 +603,20 @@ test.describe("aesthetics", () => {
       expect(buttonBackdrop === "" || buttonBackdrop === "none", "button backdrop").toBe(true);
     });
 
+    /* `.neutral` beat the control line's zero-specificity selector, so writing the
+       intent out put the pane hairline back on the one boundary it erases. */
+    test("draws a neutral control's line in the control ink", async ({ page }) => {
+      await page.goto(withAesthetic(FORMS_URL, "glass"));
+
+      const [[, none], [, neutral]] = await readAll(
+        page,
+        ["checkbox-default-none", "checkbox-default-neutral"],
+        ["border-top-color"],
+      );
+
+      expectSameColor(neutral!["border-top-color"]!, none!["border-top-color"]!, "neutral checkbox line");
+    });
+
     test("makes glass surfaces opaque under reduced transparency", async ({ page, browserName }) => {
       test.skip(browserName !== "chromium", "Only Chromium can emulate the transparency preference");
       const session = await page.context().newCDPSession(page);

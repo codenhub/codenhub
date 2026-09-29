@@ -37,11 +37,16 @@
     --intent-fill-max: 20%;
   }
 
-  /* Native text controls need the same stronger neutral boundary as their classed
-     counterparts, without changing buttons, checkboxes, radios, or other inputs --
-     control ink included, as `intent.css`'s class reset reads it. */
+  /* Native text controls and toggles need the same stronger neutral boundary as
+     their classed counterparts, without changing buttons or other inputs --
+     control ink included, as `intent.css`'s class reset reads it. The checkbox
+     and the radio were left out when `.checkbox` and `.radio` joined that
+     reset, so a bare one drew `--color-border` -- 2.48:1 light, 1.91:1 dark,
+     where the classed one's line is 4.54:1 and 4.18:1. */
   :where(
     input:not([type]),
+    input[type="checkbox"],
+    input[type="radio"],
     input[type="text"],
     input[type="number"],
     input[type="email"],
