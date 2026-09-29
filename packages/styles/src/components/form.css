@@ -707,6 +707,12 @@
     transition: none;
   }
 
+  /* The switch knob is the one mark visible while unchecked, and with forced
+     colours off it would keep the package grey on a system Canvas. */
+  .switch::after {
+    background-color: CanvasText;
+  }
+
   .checkbox:checked,
   .radio:checked,
   .switch:checked {

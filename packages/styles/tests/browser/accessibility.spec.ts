@@ -507,3 +507,36 @@ test("lets a layer ordered before base keep an animation under reduced motion", 
   expect(Number.parseFloat(durations[0]!), "the essential animation keeps its duration").toBe(1);
   expect(Number.parseFloat(durations[1]!), "every other animation is still stopped").toBeLessThan(0.001);
 });
+
+/* The switch opts out of forced colors to keep its states apart, so every
+   part of it has to name a system color itself: an unchecked knob left in the
+   package grey could vanish on a dark high-contrast Canvas. */
+test("draws a switch in system colors in forced colors, checked or not", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.setContent(
+    '<!doctype html><html><body><input type="checkbox" class="switch" id="off"><input type="checkbox" class="switch" id="on" checked></body></html>',
+  );
+  await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+
+  const colors = await page.evaluate(() => {
+    const resolve = (color: string) => {
+      const probe = document.createElement("span");
+      probe.style.color = color;
+      document.body.append(probe);
+      const resolved = getComputedStyle(probe).color;
+      probe.remove();
+      return resolved;
+    };
+    const knob = (id: string) => getComputedStyle(document.getElementById(id)!, "::after").backgroundColor;
+
+    return {
+      canvasText: resolve("CanvasText"),
+      highlightText: resolve("HighlightText"),
+      offKnob: knob("off"),
+      onKnob: knob("on"),
+    };
+  });
+
+  expect(colors.offKnob).toBe(colors.canvasText);
+  expect(colors.onKnob).toBe(colors.highlightText);
+});
