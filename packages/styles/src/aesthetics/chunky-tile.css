@@ -34,6 +34,7 @@
        tile's 600 sat too close to the page (3.40:1 now, 8.62:1). See
        docs/internal/model.md#presentation. */
     --ui-control-ink: light-dark(var(--color-neutral-600), var(--color-neutral-400));
+    --ui-rule-ink: initial;
 
     /* One knob for both radii, where glass splits them: a tile and the button
        inside it share a corner, and drifting apart loses the single-object read.

@@ -131,6 +131,17 @@ The bubble has since come off that ramp altogether, and the row above is kept be
 
 The bound the old form was reaching for still holds. Uncapped, a neutral `.solid` prints near-white on light grey and loses its label; the ramp answers that case with 0%, which is what it wanted. And `--ui-fg-on-fill` stays the ceiling rather than becoming the result, so the presentation token still decides — derived from the fill alone it would be declared and unread, which is the failure `--ui-border` already had.
 
+### A capped fill rests on the page
+
+The cap stops the ink, not the plate. A neutral `.solid` fills to 20% of the page's ink, and until the plate had a ground of its own that 20% sat over nothing: on a plain page it read as the light grey plate it is meant to be, and over anything else -- glass's backdrop, an image, a filled card around it -- it showed what was behind it, and a `.solid` read as a tint. So wherever the intent's cap stops the fill short, `box` paints it over the page background:
+
+```
+plate  = 100% when the intent's cap stopped the fill, else 0%
+ground = color-mix(--color-background plate, the component's own ground)
+```
+
+It is a step rather than a ramp, because the two percentages cannot be divided in every engine yet, and a fill the cap stopped is one the presentation asked to be full. The component's own cap is measured out first, so what it reinterprets stays a tint: a text control's 20% `.solid` wash and a neutral `.card.soft`'s 0% are the same at every intent. A toggle lifts the intent cap, so its plate never takes this ground. `.quote` composes its own fill and takes the same step. The generated palette follows: neutral `.solid` is ground-independent like every other `.solid`.
+
 ### Hover is derived, never declared
 
 ```
@@ -256,7 +267,7 @@ Setting the fill alone was not enough. `--ui-fg-on-fill` is the other half of wh
 
 Until 0.5.0 it did both through private floors, `--_fill-floor` and `--_fg-on-fill-floor`, rather than the inputs. That was a workaround for the cascade, not a design: `.ghost`/`.soft` were unlayered then, and an unlayered declaration beat `text-control`'s layered `:checked` at any specificity. With presentation in `components` ([Cascade layers](#cascade-layers)), `:checked` in `utilities` at 0-2-0 beats every fill class, and writes the inputs as S1 asks -- a state is the one kind of rule the layer map lets write a public token from `utilities`, so a consumer's own `[--ui-fill:...]` loses to it, as it loses to `aria-invalid`. A toggle is a void `<input>`, so the inputs reach nothing but its own mark.
 
-Two things made the floors removable rather than merely redundant. `text-control` used to restate `box`'s fill and ink formulas because `box`'s ramp did not see `--_fill-cap`; it does now, so the copies are gone and the ink ramps in one place. And `box` ramps the ink against the bounded fill _before_ `--ui-bg-alpha` thins it, so a checked toggle under `.glass`'s 0.8 keeps full contrast ink on its translucent plate, which the ink floor used to guarantee separately; `forms.spec.ts` asserts it. Measured when the floors went, the painted fill, ink, line, shadow, and mark of every text control and toggle -- across presentations, intents, checked state, container presentation, every aesthetic region, and both themes, in all three engines -- matched the floors exactly.
+Two things made the floors removable rather than merely redundant. `text-control` used to restate `box`'s fill and ink formulas because `box`'s ramp did not see `--_fill-cap`; it does now, so the copies are gone and the ink ramps in one place. And `box` ramps the ink against the bounded fill _before_ `--ui-bg-alpha` thins it, so a checked toggle under a region that sets it -- `.glass` did, at 0.8, through 0.5.0 -- keeps full contrast ink on a thinned plate, which the ink floor used to guarantee separately; `forms.spec.ts` asserts it. Measured when the floors went, the painted fill, ink, line, shadow, and mark of every text control and toggle -- across presentations, intents, checked state, container presentation, every aesthetic region, and both themes, in all three engines -- matched the floors exactly.
 
 `--_fill-cap` stays a private seam, and not for the old reason. A component writing `--ui-fill` from `utilities` would beat a consumer's utility, which the layer map reserves for state; and `--ui-fill` cascades, so a neutral panel writing `0%` would turn every badge inside it ghost, where a cap bounds the component and stops there.
 
@@ -410,7 +421,9 @@ One change of ownership. The shared reset declares:
 
 An aesthetic sets `--ui-ink` to substitute its own neutral line color, and an intent class still overrides the whole slot, so a destructive control keeps its red edge under any aesthetic. This deleted the two fourteen-selector component lists in `neobrutalism.css` and closed a gap the replaced model had: a bare `<input>` under `.pixel` used to get the silhouette but not the ink, because the ink had to resolve against the component's own intent and a container-level token could not do that.
 
-Controls -- the text controls, `.input-group`, and the toggles -- read `--ui-control-ink` ahead of it (`var(--ui-control-ink, var(--ui-ink, var(--color-control-border)))`), because the theme keeps a control border apart from a surface border and an aesthetic's surface line is not always a control's boundary. Glass's hairline leaves a light-theme unchecked checkbox at 1.45:1 against the page, and chunky tile's surface grey leaves a field below 3:1. Their separate control inks preserve their surface treatment while making controls visible; a nested aesthetic clears the token to take its own ink.
+Controls -- the text controls, `.input-group`, and the toggles -- read `--ui-control-ink` ahead of it (`var(--ui-control-ink, var(--ui-ink, var(--color-control-border)))`), because the theme keeps a control border apart from a surface border and an aesthetic's surface line is not always a control's boundary. Glass's hairline leaves a light-theme unchecked checkbox at 1.45:1 against the page, and chunky tile's surface grey leaves a field below 3:1. Their separate control inks preserve their surface treatment while making controls visible; a nested aesthetic clears the token to take its own ink. The rule is `:where()` for the unclassed case and `.neutral` beside it at 0-2-0, as the tooltip bubble's is: `.neutral` alone carries 0-1-0 and beat the `:where()`, so a `.neutral` field under glass drew the hairline an unclassed one did not.
+
+A table's lines read `--ui-rule-ink` the same way, ahead of `--ui-ink`, because they are drawn on a plate rather than at a pane's edge against the backdrop. Glass's hairline vanished on a table's light plate: its default, `.ruled`, and `.ruleless` forms rendered as one table. Glass names a rule ink, the theme's ink at a fifth; every other aesthetic clears it, and a bare `<table>` reads it as `.data-table` does.
 
 The resting text-field line stays partially blended: making it full strength would push the measured rest-to-hover colour step on most hued fields below a visibly distinct change. `.progress` keeps its quiet `.soft.edgeless` track rather than defaulting to a heavy outline; its measured value, not the track, conveys the quantity. `.ghost.edged` is available for a stronger frame. Neither default makes a blanket 3:1 boundary promise under every aesthetic; [Accessibility](../accessibility.md) records the limits.
 
@@ -470,6 +483,7 @@ Beyond composition, the package strives for three things, in this order: that it
 | `--ui-border-max`         | `100px`                            | Ceiling on the computed edge width.                                         |
 | `--ui-ink`                | `--color-border`                   | Neutral line color when no intent is set.                                   |
 | `--ui-control-ink`        | `--ui-ink`                         | Neutral line color for controls; read ahead of `--ui-ink`.                  |
+| `--ui-rule-ink`           | `--ui-ink`                         | Neutral line color of a table's frame and rules; read ahead of `--ui-ink`.  |
 | `--ui-shadow-x`           | `0px`                              | Shadow offset, colorless so it inherits safely.                             |
 | `--ui-shadow-y`           | `0px`                              | Shadow offset.                                                              |
 | `--ui-shadow-blur`        | `0px`                              | Shadow blur.                                                                |
@@ -488,9 +502,9 @@ Beyond composition, the package strives for three things, in this order: that it
 | `--ui-shadow-edge`        | _undefined_                        | Declared, even empty, when the shadow is the edge.                          |
 | `--ui-elevation`          | `1`                                | Unitless multiplier over the shadow geometry.                               |
 | `--ui-surface-shadow`     | _unset_                            | Complete value; resolved by surfaces only.                                  |
-| `--ui-surface-ground`     | `--color-background`               | Ground a surface sits on; how glass goes translucent.                       |
-| `--ui-bg-alpha`           | `1`                                | Multiplier over fill, for translucency.                                     |
-| `--ui-backdrop`           | `none`                             | Backdrop filter; resolved by surfaces only.                                 |
+| `--ui-surface-ground`     | `--color-background`               | Ground a surface or a table sits on; how glass goes translucent.            |
+| `--ui-bg-alpha`           | `1`                                | Multiplier over fill. No shipped aesthetic thins one.                       |
+| `--ui-backdrop`           | `none`                             | Backdrop filter; resolved by surfaces and the data table only.              |
 | `--ui-surface-image`      | `none`                             | Painted layer; resolved by surfaces only.                                   |
 | `--ui-hover-transform`    | `none`                             | Transform applied on interactive hover.                                     |
 | `--ui-clip`               | `none`                             | Silhouette for structural components.                                       |
@@ -538,7 +552,7 @@ R4 and R5 governed role blocks, and went with [the roles](#shared-composition-no
 
 R3 is new, and it is what the material additions above exist to make possible: without `--ui-ink`, the shadow parts, `--ui-backdrop`, and the tint pair it would be a rule the shipped aesthetics immediately break. Every shipped aesthetic keeps it, and between them they deleted two fourteen-selector lists, a nine-selector hover rule, and every component name an aesthetic used to have to know.
 
-Where an aesthetic must reach one kind of component and not another, the way to say so is a token only that kind resolves. A surface resolves `--ui-backdrop` and `--ui-surface-shadow`; nothing else does. That is why glass blurs cards and panels while controls stay solid, and why its two-layer drop shadow does not land under every button on the page. Adding such a slot costs one line in the components that accept it, and it is visible in those components rather than inferred from a table somewhere else.
+Where an aesthetic must reach one kind of component and not another, the way to say so is a token only that kind resolves. A surface resolves `--ui-backdrop` and `--ui-surface-shadow`, and a data table resolves the backdrop and the surface ground, because it is a pane of content; nothing else does. That is why glass blurs cards, panels, and tables while controls stay solid, and why its two-layer drop shadow does not land under every button on the page. Adding such a slot costs one line in the components that accept it, and it is visible in those components rather than inferred from a table somewhere else.
 
 ### The cost of a no-op
 
@@ -756,9 +770,11 @@ No aesthetic class in scope. 1px edges, 0.5rem control radius, 0.875rem surface 
 
 Translucent surfaces over a blurred backdrop with a hairline highlight edge. Needs something behind it to blur; on a flat page background it is a translucent panel and nothing more.
 
-- Blur and saturation reach surfaces only, through `--ui-backdrop`. Controls stay solid: an active blur costs a compositing layer apiece, and one under every control of a dense cluster reads as noise.
-- The edge is a light hairline in both themes, because glass catches light from above regardless of what is under it. Controls do not take it: the hairline erased an unchecked checkbox on a light page, so their line is `--ui-control-ink`, the theme's ink at 55% -- translucent, so it tints what is behind the pane rather than drawing a flat grey.
+- Blur and saturation reach surfaces and the data table only, through `--ui-backdrop`. Controls stay solid: an active blur costs a compositing layer apiece, and one under every control of a dense cluster reads as noise. A table is a pane of content, and next to frosted cards an opaque one read as a slab. Only its default and `.soft` forms frost: a `.solid` table is opaque, and a `.ghost` one has nothing behind its type to blur.
+- The glass is the ground, not the fill. Translucency is `--ui-surface-ground`, the plate a partial fill is painted over; every presentation keeps its whole fill, so a `.solid` button, a checked toggle, and a `.solid` card are opaque. Through 0.5.0 glass also set `--ui-bg-alpha: 0.8`, which thinned every fill in the region -- how much colour a presentation asked for depended on the aesthetic, which is presentation's question ([R1](#rules-for-aesthetics)).
+- The edge is a light hairline in both themes, because glass catches light from above regardless of what is under it. Text controls and toggles do not take it: the hairline erased an unchecked checkbox on a light page, so their line is `--ui-control-ink`, the theme's ink at 55% -- translucent, so it tints what is behind the pane rather than drawing a flat grey. A table's frame and rules do not take it either: it vanished on the table's plate, so they draw `--ui-rule-ink`, the same ink at 20%. Buttons and badges keep the hairline.
 - Both shadow layers pull in with negative spread, so the shadow tucks under the surface instead of haloing onto the backdrop.
+- A press is the base `scale(0.97)`, dropped under reduced motion. Controls carry no shadow here, so there is no slab to press into. Through 0.5.0 glass wrote `none`, a value it took from before the base look had a press and kept once it gained one, so a click on a glass button changed nothing.
 - Every surface in its region is glass, a neutral `.card.soft`, `.panel`, and `.alert` included: their quiet ground is a private default beneath `--ui-surface-ground`, so glass's ground wins over it. Until 0.5.0 they wrote the public token and sat opaque.
 - Under `prefers-reduced-transparency`, opacity goes to 100% and the blur is dropped. Transparency is the whole aesthetic, so the honest degradation is an opaque surface rather than a softer blur.
 - Corners are `--glass-radius` and `--glass-radius-surface`, at 0.75rem and 1rem. Rounder than the base geometry, because a translucent panel with a tight corner reads as a cut-out rather than as a pane; a full step above `--radius-surface` landed closer to a pill than to glass. Read with a fallback rather than declared, so an ancestor can set them — [R8](#rules-for-aesthetics), which these two were the first to break.

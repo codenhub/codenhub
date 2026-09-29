@@ -35,6 +35,21 @@
      own presentation instead of the container's reinterpretation of one. */
   --_fill-cap: 100%;
   --_capped: min(var(--ui-fill, var(--_d-fill)), var(--_fill-cap, 100%), var(--intent-fill-max, 100%));
+  /* Whether the intent's cap stopped the fill short, as 0% or 100%. A capped
+     fill is a plate the presentation asked to be full, so it rests on the page
+     background rather than on nothing: 20% of the page's ink over nothing
+     showed whatever sat behind a neutral `.solid` -- glass's backdrop, an
+     image, the colour of a filled card around it -- where on a plain page it
+     read as the light grey plate it is meant to be. The component's own cap
+     is measured out first, so a text control's 20% wash and a neutral
+     `.card.soft`'s 0% stay the tints they are, whatever the intent. Stepped
+     rather than scaled because the two percentages cannot be divided in every
+     engine yet. */
+  --_plate: clamp(
+    0%,
+    calc((min(var(--ui-fill, var(--_d-fill)), var(--_fill-cap, 100%)) - var(--_capped)) * 1000),
+    100%
+  );
   --_fill: calc(var(--_capped) * var(--ui-bg-alpha, 1));
   --_hover-fill: calc(min(100%, var(--_capped) + var(--hover-step)) * var(--ui-bg-alpha, 1));
   /* How much of the foreground is the contrast ink: what the presentation asks
@@ -57,8 +72,12 @@
      declaration beats the inherited one at any specificity; `surface`, `kbd`,
      `code`, `pre` and the tooltip each restate theirs after `@apply box`. */
   --_d-ground: transparent;
+  /* The ground, made the page background wherever `--_plate` says the cap
+     stopped the fill -- over a component's own ground too, so a capped
+     `.solid` surface under glass is opaque like every other `.solid`. */
+  --_ground: color-mix(in oklab, var(--color-background) var(--_plate), var(--_d-ground, transparent));
 
-  --_bg: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_d-ground, transparent));
+  --_bg: color-mix(in oklab, var(--intent-color) var(--_fill), var(--_ground));
   /* The two ends answer different questions: `--intent-contrast` prints *on* the
      fill, `--intent-strong` prints on the page (the slot for readable ink on a
      subtle fill). Reading `--intent-color` at the page end instead makes every
@@ -254,7 +273,7 @@
    and wrong for something you type into, so a component opts in. */
 @utility box-hover {
   &:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled]):hover {
-    --_bg: color-mix(in oklab, var(--intent-hover) var(--_hover-fill), var(--_d-ground, transparent));
+    --_bg: color-mix(in oklab, var(--intent-hover) var(--_hover-fill), var(--_ground));
     /* P3 again, against the hover tone: the line still fades as the fill fills
        in, but toward the hover ink. Without this the edge keeps the resting ink
        -- a ring of the colour the box just left. */

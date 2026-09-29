@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "./fixtures";
-import { expectSameColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
+import { expectSameColor, flattenColor, getColorDistance, isTransparent, readSrgb } from "./test-utils";
 
 /* An aesthetic is a cascading class the playground puts on the preview root, so
    these read the ordinary component fixtures under a chosen aesthetic rather
@@ -601,6 +601,113 @@ test.describe("aesthetics", () => {
       const buttonBackdrop = readBackdrop(button);
 
       expect(buttonBackdrop === "" || buttonBackdrop === "none", "button backdrop").toBe(true);
+    });
+
+    /* The glass is the ground a partial fill is painted over, not a thinning of
+       the fill: how much colour a presentation asks for is presentation's
+       question. `--ui-bg-alpha: 0.8` used to answer it here, and every `.solid`
+       in the region -- button, checked toggle, card -- showed the backdrop
+       through it. A neutral `.solid` is opaque too, because the cap that stops
+       its ink rests it on the page background. */
+    test("keeps every presentation's fill whole", async ({ page, browserName }) => {
+      await allowTransparency(page, browserName);
+
+      const read = async (url: string, testIds: readonly string[]) => {
+        await page.goto(withAesthetic(url, "glass"));
+        return readAll(page, testIds, ["background-color"]);
+      };
+      const opaque = [
+        ...(await read(BUTTONS_URL, ["btn-solid-primary", "btn-solid-none", "btn-solid-neutral"])),
+        ...(await read(FORMS_URL, ["checkbox-solid-primary-checked", "switch-soft-edged-success-checked"])),
+        ...(await read(SURFACES_URL, ["card-solid-primary", "card-solid-none", "panel-solid-destructive"])),
+        ...(await read(TYPOGRAPHY_URL, ["data-table-solid-primary", "data-table-solid-none"])),
+      ];
+
+      for (const [testId, styles] of opaque) {
+        expect(readSrgb(styles["background-color"]!).alpha, `${testId} alpha`).toBe(1);
+      }
+
+      const [[, soft]] = await read(BUTTONS_URL, ["btn-soft-edged-primary"]);
+
+      expect(readSrgb(soft!["background-color"]!).alpha, "soft button keeps its whole tint").toBeCloseTo(0.12, 2);
+    });
+
+    /* A table is a pane of content, and next to frosted cards an opaque one read
+       as a slab -- while its `.solid` form, thinned, showed more of the backdrop
+       than its default one did. Its lines are drawn on the plate rather than at
+       its edge against the backdrop, so they take glass's rule ink: the pane
+       hairline vanished there, and `.ruled` rendered as the default. */
+    test("frosts a table and keeps its rules visible", async ({ page, browserName }) => {
+      await allowTransparency(page, browserName);
+      await page.goto(withAesthetic(TYPOGRAPHY_URL, "glass"));
+
+      const table = await readStyles(page, "data-table-default-none", BACKDROP_PROPERTIES);
+
+      expect(readBackdrop(table), "table backdrop").toContain("blur(14px)");
+      expect(readSrgb(table["background-color"]!).alpha, "table alpha").toBeLessThan(1);
+
+      const rules = await page.evaluate(() => {
+        const read = (testId: string) => {
+          const cell = document.querySelector(`[data-testid="${testId}"] tbody tr:first-child > td`)!;
+          const rule = getComputedStyle(cell).borderBottomColor;
+          const plate = getComputedStyle(cell.closest("table")!).backgroundColor;
+          return { plate, rule };
+        };
+        const probe = document.createElement("span");
+        probe.style.color = "var(--color-background)";
+        document.body.append(probe);
+        const page = getComputedStyle(probe).color;
+        probe.remove();
+
+        return { page, ruled: read("data-table-ruled"), ruleless: read("data-table-ruleless") };
+      });
+      const painted = (color: string, plate: string) => flattenColor(color, flattenColor(plate, rules.page));
+
+      expect(
+        getColorDistance(painted(rules.ruled.rule, rules.ruled.plate), flattenColor(rules.ruled.plate, rules.page)),
+        "a ruled table's rule reads on its plate",
+      ).toBeGreaterThan(20);
+      expect(isTransparent(rules.ruleless.rule), "a ruleless table draws none").toBe(true);
+    });
+
+    /* Glass has no slab for a press to travel into, so the base scale is the
+       press. It read `none` from before the base look had one, and a click on a
+       glass button changed nothing. Pressed for real, since `:active` is what
+       `box-active` keys on. */
+    test("presses with the base scale, and not at all under reduced motion", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "glass"));
+
+      const button = page.getByTestId("btn-solid-primary");
+      const pressedTransform = () => button.evaluate((node) => getComputedStyle(node).transform);
+      const press = async (expected: RegExp, label: string) => {
+        await button.hover();
+        await page.mouse.down();
+        try {
+          /* The transform is transitioned, so this polls for the settled value. */
+          await expect.poll(pressedTransform, label).toMatch(expected);
+        } finally {
+          await page.mouse.up();
+        }
+      };
+
+      await press(/^matrix\(0\.97, 0, 0, 0\.97,/, "pressed");
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await press(/^none$/, "pressed under reduced motion");
+      await page.emulateMedia({ reducedMotion: null });
+    });
+
+    /* `.neutral` beat the control line's zero-specificity selector, so writing the
+       intent out put the pane hairline back on the one boundary it erases. */
+    test("draws a neutral control's line in the control ink", async ({ page }) => {
+      await page.goto(withAesthetic(FORMS_URL, "glass"));
+
+      const [[, none], [, neutral]] = await readAll(
+        page,
+        ["checkbox-default-none", "checkbox-default-neutral"],
+        ["border-top-color"],
+      );
+
+      expectSameColor(neutral!["border-top-color"]!, none!["border-top-color"]!, "neutral checkbox line");
     });
 
     test("makes glass surfaces opaque under reduced transparency", async ({ page, browserName }) => {

@@ -74,6 +74,33 @@ test("styles native forms and buttons without utility classes", async ({ page })
   await expect(button).not.toHaveCSS("border-radius", "0px");
 });
 
+/* A bare checkbox or radio is `.checkbox` or `.radio` reached another way, so it
+   takes the same control line. Left off the native list when the classed toggles
+   joined it, a bare one drew `--color-border` at 2.48:1. */
+test("gives native toggles the control line", async ({ page }) => {
+  await page.goto(NATIVE_URL);
+
+  const borders = await page.evaluate(() => {
+    const host = document.createElement("div");
+    host.innerHTML = `<input type="checkbox" /><input type="radio" />`;
+    document.body.append(host);
+
+    const read = (selector: string) =>
+      getComputedStyle(host.querySelector(selector)!).getPropertyValue("--intent-border");
+    const values = {
+      checkbox: read('input[type="checkbox"]'),
+      expected: getComputedStyle(document.documentElement).getPropertyValue("--color-control-border"),
+      radio: read('input[type="radio"]'),
+    };
+
+    host.remove();
+    return values;
+  });
+
+  expect(borders.checkbox.trim(), "checkbox").toBe(borders.expected.trim());
+  expect(borders.radio.trim(), "radio").toBe(borders.expected.trim());
+});
+
 /* `native.css` re-declares border and background after `@apply`, which would
    defeat the intent contract if those declarations outranked the utilities.
    They sit in the base layer and the utilities win, so intent still reaches
@@ -107,7 +134,7 @@ test("applies intent classes to classless native elements", async ({ page }) => 
       keyboardText: getComputedStyle(host.querySelector("kbd")!).color,
       plainButtonBg: getComputedStyle(host.querySelector("button:not(.destructive)")!).backgroundColor,
       neutralFill: resolveColor(
-        `color-mix(in oklab, var(--color-text) ${getComputedStyle(host.querySelector("button:not(.destructive)")!).getPropertyValue("--intent-fill-max").trim()}, transparent)`,
+        `color-mix(in oklab, var(--color-text) ${getComputedStyle(host.querySelector("button:not(.destructive)")!).getPropertyValue("--intent-fill-max").trim()}, var(--color-background))`,
       ),
       tokenDestructive: resolveToken("destructive"),
       /* At the fraction a text control rests its line at, not the whole tone: a

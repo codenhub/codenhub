@@ -8,10 +8,10 @@
 
 @layer theme {
   :root {
-    --palette-neutral-solid-bg: oklab(0.145 0 0 / 0.2);
+    --palette-neutral-solid-bg: oklab(0.817 0 0);
     --palette-neutral-solid-fg: oklab(0.205 0 0);
     --palette-neutral-solid-edge: oklab(0 0 0 / 0);
-    --palette-neutral-solid-bg-hover: oklab(0.371 0 0 / 0.34);
+    --palette-neutral-solid-bg-hover: oklab(0.77624 0 0);
     --palette-neutral-solid-edge-hover: oklab(0 0 0 / 0);
     --palette-neutral-soft-fg: oklab(0.205 0 0);
     --palette-neutral-soft-bg: oklab(0.145 0 0 / 0.12);
@@ -233,10 +233,10 @@
   .dark,
   .theme-dark,
   [data-theme="dark"] {
-    --palette-neutral-solid-bg: oklab(0.985 0 0 / 0.2);
+    --palette-neutral-solid-bg: oklab(0.313 0 0);
     --palette-neutral-solid-fg: oklab(0.97 0 0);
     --palette-neutral-solid-edge: oklab(0 0 0 / 0);
-    --palette-neutral-solid-bg-hover: oklab(0.922 0 0 / 0.34);
+    --palette-neutral-solid-bg-hover: oklab(0.40918 0 0);
     --palette-neutral-solid-edge-hover: oklab(0 0 0 / 0);
     --palette-neutral-soft-fg: oklab(0.97 0 0);
     --palette-neutral-soft-bg: oklab(0.985 0 0 / 0.12);

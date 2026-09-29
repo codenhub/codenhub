@@ -40,8 +40,18 @@
        on a field's 60% resting line, in light. See
        docs/internal/model.md#presentation. */
     --ui-control-ink: light-dark(rgb(0 0 0 / 0.55), rgb(255 255 255 / 0.55));
+    /* Nor is a line drawn on a plate: the hairline vanished on a table's light
+       plate, and its default, `.ruled`, and `.ruleless` forms rendered as one.
+       A table's frame and rules take the theme's ink at a fifth, translucent
+       for the same reason the control line is. */
+    --ui-rule-ink: light-dark(rgb(0 0 0 / 0.2), rgb(255 255 255 / 0.2));
 
-    --ui-bg-alpha: 0.8;
+    /* The glass is the ground, not the fill. `0.8` here thinned every fill in
+       the region -- a `.solid` button, a checked toggle, a `.solid` card -- so
+       how much colour a presentation asked for depended on the aesthetic,
+       which is presentation's question (R1). Translucency lives in
+       `--ui-surface-ground` below, the plate a partial fill is painted over. */
+    --ui-bg-alpha: 1;
     --ui-backdrop: blur(14px) saturate(1.6);
     --ui-surface-image: initial;
 
@@ -101,7 +111,12 @@
        layer is cleared rather than inherited. */
     --ui-focus-inset: initial;
     --ui-hover-transform: none;
-    --ui-active-transform: none;
+    /* The base press, stated because every token here is: the depth in this
+       aesthetic is the blur, so a control has no slab to press into, and a pane
+       that gives slightly under the pointer is the one answer a press gets. This
+       read `none` from when the base look had no press, and kept it once the
+       base gained one. */
+    --ui-active-transform: scale(0.97);
     --ui-active-translate-x: initial;
     --ui-active-translate-y: initial;
 
@@ -117,9 +132,14 @@
      surface rather than a softer blur. */
   @media (prefers-reduced-transparency: reduce) {
     .glass {
-      --ui-bg-alpha: 1;
       --ui-backdrop: none;
       --ui-surface-ground: var(--color-background);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .glass {
+      --ui-active-transform: none;
     }
   }
 }

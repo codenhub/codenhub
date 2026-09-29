@@ -111,9 +111,9 @@ test("applies intent on the element without cascading it from a container", asyn
       tokenText: resolveToken("text"),
       tokenTextStrong: resolveToken("text-strong"),
       /* The neutral fill stops at its intent's cap, so the no-intent button is a
-         translucent plate of the ink rather than the ink itself. */
+         plate of the ink over the page rather than the ink itself. */
       neutralFill: resolveColor(
-        `color-mix(in oklab, var(--color-text) ${getComputedStyle(inherited).getPropertyValue("--intent-fill-max").trim()}, transparent)`,
+        `color-mix(in oklab, var(--color-text) ${getComputedStyle(inherited).getPropertyValue("--intent-fill-max").trim()}, var(--color-background))`,
       ),
     };
 

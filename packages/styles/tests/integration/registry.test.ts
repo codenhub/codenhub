@@ -914,6 +914,29 @@ test("every aesthetic names or clears the control ink", async () => {
   expect(problems).toEqual([]);
 });
 
+/* `--ui-rule-ink` is the control ink's counterpart for the lines a table draws
+   on its plate: named by glass, whose neutral line is a highlight that vanishes
+   there, and cleared by every other aesthetic so a table nested inside glass
+   draws its own. */
+test("every aesthetic names or clears the rule ink", async () => {
+  const named = new Set(["glass"]);
+  const problems: string[] = [];
+
+  for (const { name, source } of await aestheticSources()) {
+    const clean = withoutComments(source);
+    const body = clean.match(new RegExp(String.raw`\.${name}(?![A-Za-z0-9_-])[^{]*\{([^{}]*)\}`))?.[1];
+    const value = body?.match(/(?:^|\s)--ui-rule-ink\s*:\s*([^;]+);/)?.[1]?.trim();
+
+    if (value === undefined) {
+      problems.push(`${name} declares no --ui-rule-ink`);
+    } else if (named.has(name) === (value === "initial")) {
+      problems.push(`${name} should ${named.has(name) ? "name" : "clear"} --ui-rule-ink, found ${value}`);
+    }
+  }
+
+  expect(problems).toEqual([]);
+});
+
 /* The body of every `@utility` in the package, keyed by name, braces matched so
    a nested modifier stays inside its component. */
 async function utilityBodies(): Promise<Map<string, string>> {
