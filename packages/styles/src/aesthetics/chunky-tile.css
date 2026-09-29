@@ -1,9 +1,9 @@
 /* Chunky tile: rounded slabs seated on a darker shade of themselves, pressed flat
    on click. The look mobile learning and game UIs use -- Duolingo is the one most
    people picture -- named for what it is made of rather than for a product, the
-   way the other three are.
+   way the others are.
 
-   Tier 1 only. Load after the base stylesheet. */
+   Tier 1 only. */
 
 /* The layer map, stated before anything uses a layer -- see `theme.css`. The
    aesthetic's token class sits in `components`, below every utility, so a

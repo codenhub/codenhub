@@ -103,7 +103,7 @@
     --_line-tone: var(--intent-color);
   }
 
-  /* R8, P6: `:checked` is a state, so it re-declares the presentation inputs
+  /* S1, P6: `:checked` is a state, so it re-declares the presentation inputs
      -- a full fill and full contrast ink -- and lifts the cap that would bound
      them, and `box` composes the rest. It does not write a result (the failure
      mode P6 exists for: an early version pinned `--_fill` and `--_fg` directly,

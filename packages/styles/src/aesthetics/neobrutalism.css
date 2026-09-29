@@ -1,8 +1,7 @@
 /* Neobrutalism: thick ink outline, a hard unblurred offset shadow, and a press
    that moves the element into its own shadow. Material tokens only, no component
    named -- the ink reaches everything through the intent reset, the shadow is
-   colourless geometry each component colours against its own intent. Load after
-   the base stylesheet; source order decides against the zero-specificity reset. */
+   colourless geometry each component colours against its own intent. */
 
 /* The layer map, stated before anything uses a layer -- see `theme.css`. The
    aesthetic's token class sits in `components`, below every utility, so a
