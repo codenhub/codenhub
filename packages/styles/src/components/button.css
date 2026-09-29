@@ -17,6 +17,13 @@
   @apply box box-hover box-active relative inline-flex w-fit cursor-pointer items-center justify-center gap-2 px-4 py-2 whitespace-nowrap no-underline select-none;
 
   min-height: var(--control-height);
+  /* The surrounding font, not the user agent's smaller button one, on every
+     entry: `/components` carries no reset to say so, and a `.btn` link and a
+     `.btn` button have to print the same label. `.sm` and `.lg` set their own
+     size over this. */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
   /* The label is material, shared with `.badge`: weight, tracking, case, and a
      text shadow, set by an aesthetic as tokens (`.chunky-tile`'s heavier,
      tracked label), and a consumer's own `font-*`, `tracking-*`, `uppercase`, or

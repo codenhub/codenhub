@@ -181,3 +181,42 @@ test("keeps a link at the size and weight of the text around it", async ({ page 
   expect(styles.headingLink).toBe(styles.heading);
   expect(styles.paragraphLink).toBe(styles.paragraph);
 });
+
+/* A button's label is the size of the text around it, whichever element and
+   entrypoint draws it: the user agent's 13.33px applied to `<button>` alone,
+   so a native button, a `.btn` button, and a `.btn` link all disagreed. */
+test("sizes every button label like the text around it", async ({ page }) => {
+  await page.goto(NATIVE_URL);
+
+  const sizes = await page.evaluate(() => {
+    const host = document.createElement("div");
+    host.style.fontSize = "16px";
+    host.innerHTML =
+      '<button>Native</button><button class="btn">Class</button><a class="btn" href="#">Link</a><input type="submit" value="Submit">';
+    document.body.append(host);
+
+    return [...host.children].map((element) => getComputedStyle(element).fontSize);
+  });
+
+  expect(sizes).toEqual(["16px", "16px", "16px", "16px"]);
+});
+
+/* `/components` carries no reset, so the components themselves have to take
+   the surrounding font for a `.btn` and a text control to read the same there
+   as on every other entry. */
+test("sizes component labels like the text around them without the reset", async ({ page }) => {
+  await page.setContent("<!doctype html><html><body></body></html>");
+  await page.addStyleTag({ url: "http://localhost:5184/shared/entry-components.css" });
+
+  const sizes = await page.evaluate(() => {
+    const host = document.createElement("div");
+    host.style.fontSize = "16px";
+    host.innerHTML =
+      '<button class="btn">Class</button><a class="btn" href="#">Link</a><input class="ipt"><select class="select"></select><textarea class="textarea"></textarea>';
+    document.body.append(host);
+
+    return [...host.children].map((element) => getComputedStyle(element).fontSize);
+  });
+
+  expect(sizes).toEqual(["16px", "16px", "16px", "16px", "16px"]);
+});

@@ -79,6 +79,12 @@
 
   @apply w-full appearance-none;
 
+  /* The surrounding font rather than the user agent's smaller field one, on
+     every entry: `/components` carries no reset to say so. */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+
   &::placeholder {
     color: var(--color-text-secondary);
   }

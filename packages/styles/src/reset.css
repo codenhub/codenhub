@@ -51,12 +51,16 @@
     margin: 0;
   }
 
+  /* The whole font, not only the family: the user agent gives a button and a
+     field their own smaller size, so a `<button>`, a `.btn` link, and the
+     same `.btn` on another entrypoint each printed a different label size.
+     Tailwind's Preflight does the same on the entries that carry it. */
   button,
   input,
   optgroup,
   select,
   textarea {
-    font-family: inherit;
+    font: inherit;
   }
 
   button,
