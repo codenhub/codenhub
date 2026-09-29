@@ -37,11 +37,11 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 ### Motion and transparency
 
-| Feature                 | Behavior                                                                                                            |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Reduced-motion loaders  | Loader variants use animated embedded SVGs normally and static masks when `prefers-reduced-motion: reduce` matches. |
-| Reduced-motion document | The reset additionally shortens document animations and transitions when `prefers-reduced-motion: reduce` matches.  |
-| Reduced transparency    | `.glass` drops its blur and becomes an opaque surface when `prefers-reduced-transparency: reduce` matches.          |
+| Feature                 | Behavior                                                                                                                                |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Reduced-motion loaders  | Loader variants use animated embedded SVGs normally and static masks when `prefers-reduced-motion: reduce` matches.                     |
+| Reduced-motion document | The reset additionally shortens document animations and transitions when `prefers-reduced-motion: reduce` matches.                      |
+| Reduced transparency    | `.glass` and `.glass-liquid` drop their blur and lens and become an opaque surface when `prefers-reduced-transparency: reduce` matches. |
 
 The loader fallback is embedded in loader CSS, so focused imports that include loaders honor reduced motion without the reset. This includes `@codenhub/styles/components`, `@codenhub/styles/tw/components`, and `@codenhub/styles/tw/loader`. The complete and native entrypoints include both that fallback and the reset's broader animation and transition shortening.
 

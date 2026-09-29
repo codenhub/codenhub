@@ -71,6 +71,7 @@
     "size": ["sm", "lg"],
     "padding": ["p-xs", "p-sm", "p-lg", "flush"],
     "shape": ["pill", "icon", "cut-diagonal", "cut-diagonal-reverse", "sketch-rounded"],
+    "aesthetic": ["glass-liquid"],
     "state": ["disabled", "interactive", "hoverable", "pressable", "active", "indeterminate"],
     "layout": ["vertical", "horizontal", "between", "tight", "loose", "narrow", "wide"],
     "rule": ["ruled", "ruleless"]
@@ -577,7 +578,9 @@
       "class": "glass",
       "solo": "glass-solo",
       "completeShadow": true,
-      "completeShadowReason": "Two shadow layers with negative spread, given whole through the surface's --ui-surface-shadow. Opts out of the elevation multiplier until expressed as parts."
+      "completeShadowReason": "Two shadow layers with negative spread, given whole through the surface's --ui-surface-shadow. Opts out of the elevation multiplier until expressed as parts.",
+      "selectors": ["alert", "card", "panel", "tooltip-bubble"],
+      "selectorReason": "`.glass-liquid` layers a blur and a lens behind a surface's content on its ::before and ::after. A surface with a backdrop filter of its own is a backdrop root that hides the page from any layer inside it, and a lens in the same filter list as the blur would take the blur down with it in an engine that cannot draw the lens. A pseudo-element is not a value a token can reach. Other nested aesthetics, and plain glass nested inside, are excluded so they keep their own material."
     },
     {
       "class": "pixel",
