@@ -17,6 +17,18 @@
   @apply box box-hover box-active relative inline-flex w-fit cursor-pointer items-center justify-center gap-2 px-4 py-2 whitespace-nowrap no-underline select-none;
 
   min-height: var(--control-height);
+  /* The vertical padding gives back the line `box` draws, so a default button
+     is exactly `--control-height` tall like `.ipt` beside it, under any
+     aesthetic's line width. At the default 16px/1.5 text the label and the
+     padding fill it; the size and padding modifiers set their own. */
+  padding-block: calc(0.5rem - var(--_width));
+  /* The surrounding font, not the user agent's smaller button one, on every
+     entry: `/components` carries no reset to say so, and a `.btn` link and a
+     `.btn` button have to print the same label. `.sm` and `.lg` set their own
+     size over this. */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
   /* The label is material, shared with `.badge`: weight, tracking, case, and a
      text shadow, set by an aesthetic as tokens (`.chunky-tile`'s heavier,
      tracked label), and a consumer's own `font-*`, `tracking-*`, `uppercase`, or
@@ -50,11 +62,24 @@
     min-width: var(--control-height);
   }
 
+  /* The size steps for an icon button, square at each: `.sm`'s 2rem, with the
+     padding giving back the line width the way the default button's does, and
+     `.lg`'s 3rem. Each names its width as well as its height, because WebKit
+     does not let `aspect-ratio` widen a box past its `min-width`. */
+  &.icon.sm {
+    min-width: 2rem;
+    padding: calc(0.375rem - var(--_width));
+  }
+
+  &.icon.lg {
+    min-width: 3rem;
+  }
+
   /* Bare `sm`/`lg` are the size modifier's class names, so `p-` prefixes here.
      `.p-xs` is the tightest step, below `.p-sm`: a chip-sized button in a
      toolbar or a table cell.
 
-     `.icon` drops both floors -- `min-width` from its own base rule below and
+     `.icon` drops both floors -- `min-width` from its own base rule above and
      `min-height` from `--control-height` -- at every padding tier; labeled
      buttons keep the height floor everywhere but `.p-xs`. `.icon` is already
      square: `aspect-square` ties its width to whatever height it lands on, so a

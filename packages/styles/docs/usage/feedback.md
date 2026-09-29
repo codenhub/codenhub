@@ -33,7 +33,7 @@ Activity indicator modifier classes compose with `.loader`:
 | `.bars-wave`           | Three vertical bars scaling in a wave.  |
 | `.pulse-ring`          | Two concentric rings pulsing outward.   |
 
-These variants retain their embedded SVG animations normally. Under `prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding static mask. This fallback is part of focused loader, button, and components imports; it does not depend on the global reset. See [Accessibility](../accessibility.md).
+These variants retain their embedded SVG animations normally. Under `prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding static mask. This fallback ships wherever the loader does -- the complete, native, and `/components` entrypoints, `/tw/components`, and `/tw/loader` -- and does not depend on the global reset. `/tw/button` does not include the loader; pair it with `/tw/loader`. See [Accessibility](../accessibility.md).
 
 Loader size modifiers:
 
@@ -43,7 +43,7 @@ Loader size modifiers:
 | `.sm`    | Small (`1.25rem`).   |
 | `.lg`    | Large (`2.25rem`).   |
 
-Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, they use the text palette, except `.loader`, which keeps `currentColor` so it matches whatever content surrounds it.
+Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, alerts and badges use the text palette, while the indicators -- `.loader`, `.skeleton`, and `.progress` -- take `currentColor`, so they match whatever content surrounds them.
 
 Skeletons, loaders, and dividers are indicators: they read intent but ignore fill and edge [presentation](./composing.md#presentation). `.progress` is not one of them — its track reads both, `.soft.edgeless` by default; only the moving value fill stays intent-colored at full strength regardless of presentation. `.solid` is unsupported on the track, and `.ghost.edgeless` renders but is discouraged, since neither leaves the track a visible frame. See [Composing → Component axis reference](./composing.md#component-axis-reference) for the full table.
 
@@ -52,6 +52,8 @@ Skeletons, loaders, and dividers are indicators: they read intent but ignore fil
 ```
 
 The package ships no icon of its own: `.alert` is already `flex`, so an icon dropped in as a child is spaced from the message by its `gap-3`. `.alert-icon` only sizes and aligns whatever icon element you provide — an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons` — the same contract [`.input-group`](./forms.md#icons) documents.
+
+`.alert-icon` sizes the icon to `1.25rem`. A `@codenhub/icons` glyph sizes itself in an unlayered rule that no class of this package can outrank, so `.alert-icon` sets that set's `--ic-size` as well; an icon set with a different prefix keeps its own size unless you set its knob. Resize an alert icon with an ordinary rule of your own, and set `--ic-size` along with `width` and `height` for a `@codenhub/icons` glyph.
 
 Alerts and badges read the shared [presentation](./composing.md#presentation) classes. Without one they use a tinted surface, intent-colored text, and a mixed intent border -- except a neutral `.alert` (no named intent), which rests untinted instead, the same no-named-intent carve-out `.card.soft` and `.panel` use: a plain `--color-foreground` plate rather than 12% of near-black ink over the page. A named intent (`.alert.success`, `.alert.destructive`, and so on) keeps its ordinary tint. `.badge` is unaffected either way -- it has no border to fall back on at rest, so untinting it would make a neutral badge disappear rather than read quieter.
 

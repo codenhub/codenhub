@@ -17,6 +17,9 @@
 @source not "../*.md";
 @source not "../*.txt";
 @source not "../*.json";
+@source not "../*.ts";
+@source not "../LICENSE";
+@source not "../NOTICE";
 @import "./typography.css";
 @import "./utilities/index.css";
 @import "./components/index.css";
@@ -99,9 +102,10 @@
     @apply text-label;
   }
 
+  /* Links are left out: a link takes the text it sits in, so one inside a
+     heading stays heading-sized. */
   p,
-  li,
-  a {
+  li {
     @apply text-body;
   }
 
@@ -192,7 +196,8 @@
     transition: none;
   }
 
-  input[type="checkbox"]:checked {
+  input[type="checkbox"]:checked,
+  input[type="checkbox"]:indeterminate {
     background-color: Highlight;
     border-color: Highlight;
 

@@ -1055,4 +1055,201 @@ test.describe("forms", () => {
     expect(styles.errorFontWeight).toBe("400");
     expect(styles.errorFontSize).not.toBe(styles.bareFontSize);
   });
+
+  /* A number field keeps the browser's spin buttons and a search field its
+     clear button, so the native behaviour is there by default. `.unadorned`
+     removes them -- on the control, or on an `.input-group` for the control
+     inside -- for a consumer who draws their own adornments. Each field is
+     shot beside a reference of the same type whose decorations this test hides
+     with its own stylesheet, so a decoration is the only thing that can tell
+     the two apart. Hovered and focused, because Chromium draws the spin
+     buttons and the clear button only then. */
+  test("keeps native field decorations unless the field is unadorned", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    await page.evaluate(() => {
+      const hidden = [
+        "search-decoration",
+        "search-cancel-button",
+        "search-results-button",
+        "search-results-decoration",
+        "calendar-picker-indicator",
+        "inner-spin-button",
+        "outer-spin-button",
+        "clear-button",
+      ]
+        .map((part) => `.reference::-webkit-${part}`)
+        .join(",");
+      const style = document.createElement("style");
+      style.textContent = `${hidden} { -webkit-appearance: none; display: none; } .reference[type="number"] { appearance: textfield; }`;
+      document.head.append(style);
+
+      const host = document.createElement("div");
+      host.style.cssText = "width: 16rem; display: grid; gap: 0.5rem; caret-color: transparent";
+      host.innerHTML = [
+        '<input class="ipt reference" type="number" value="3" data-probe="number-reference">',
+        '<input class="ipt" type="number" value="3" data-probe="number">',
+        '<input class="ipt unadorned" type="number" value="3" data-probe="number-unadorned">',
+        '<div class="input-group" data-probe="group-reference"><input class="ipt reference" type="number" value="3"></div>',
+        '<div class="input-group unadorned" data-probe="group-unadorned"><input class="ipt" type="number" value="3"></div>',
+        '<input class="ipt reference" type="search" value="3" data-probe="search-reference">',
+        '<input class="ipt" type="search" value="3" data-probe="search">',
+        '<input class="ipt unadorned" type="search" value="3" data-probe="search-unadorned">',
+      ].join("");
+      document.body.prepend(host);
+    });
+
+    const shoot = async (probe: string) => {
+      const element = page.locator(`[data-probe="${probe}"]`);
+      const control = element.locator("xpath=self::input | .//input").first();
+      await control.focus();
+      await control.hover();
+      const box = (await element.boundingBox())!;
+
+      /* The interior only: a decoration draws inside the padding, and the
+         rounded corners' anti-aliasing varies with the element's position. */
+      return page.screenshot({
+        animations: "disabled",
+        clip: { x: box.x + 4, y: box.y + 4, width: box.width - 8, height: box.height - 8 },
+      });
+    };
+
+    const number = await shoot("number-reference");
+    const group = await shoot("group-reference");
+    const search = await shoot("search-reference");
+
+    expect((await shoot("number")).equals(number), "a plain number field keeps its spin buttons").toBe(false);
+    expect((await shoot("number-unadorned")).equals(number), "an unadorned number field draws none").toBe(true);
+    expect((await shoot("group-unadorned")).equals(group), "an unadorned group reaches its control").toBe(true);
+    expect((await shoot("search-unadorned")).equals(search), "an unadorned search field draws no clear button").toBe(
+      true,
+    );
+  });
+
+  /* A hint wraps, and at a line height equal to its size the lines touched.
+     It takes the text-sm leading every other 14px text in the package has. */
+  test("leads a wrapped hint like the rest of the package's small text", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const hint = await page.evaluate(() => {
+      const element = document.createElement("p");
+      element.className = "hint";
+      element.style.width = "8rem";
+      element.textContent = "A hint long enough to wrap onto several lines";
+      document.body.append(element);
+      const style = getComputedStyle(element);
+      const result = { fontSize: style.fontSize, lineHeight: style.lineHeight };
+      element.remove();
+
+      return result;
+    });
+
+    expect(hint).toEqual({ fontSize: "14px", lineHeight: "20px" });
+  });
+
+  /* A mixed checkbox -- some of a group checked -- is a state of its own: the
+     checked plate, so it reads as "on" in part, with a dash for a mark rather
+     than a tick. Indeterminate wins over checked when both are set, as the
+     browser's own checkbox draws it. */
+  test("draws an indeterminate checkbox as the checked plate with a dash", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const styles = await page.evaluate(() => {
+      const host = document.createElement("div");
+      host.innerHTML =
+        '<input type="checkbox" class="checkbox success" checked><input type="checkbox" class="checkbox success"><input type="checkbox" class="checkbox success" checked>';
+      document.body.append(host);
+      const [checked, mixed, both] = [...host.querySelectorAll("input")] as HTMLInputElement[];
+      mixed!.indeterminate = true;
+      both!.indeterminate = true;
+      const read = (element: Element) => ({
+        background: getComputedStyle(element).backgroundColor,
+        mark: getComputedStyle(element, "::after").maskImage || getComputedStyle(element, "::after").webkitMaskImage,
+        opacity: getComputedStyle(element, "::after").opacity,
+      });
+      const result = { both: read(both!), checked: read(checked!), mixed: read(mixed!) };
+      host.remove();
+
+      return result;
+    });
+
+    expect(styles.mixed.background).toBe(styles.checked.background);
+    expect(styles.mixed.opacity).toBe("1");
+    expect(styles.mixed.mark).not.toBe(styles.checked.mark);
+    expect(styles.both.mark).toBe(styles.mixed.mark);
+  });
+
+  /* A select showing several rows is a list box, not a drop-down: it draws no
+     chevron, grows to its rows, and gives back the room kept for the chevron.
+     A one-row select keeps all three. */
+  test("draws a multi-row select as a list box", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const styles = await page.evaluate(() => {
+      const options = "<option>One</option><option>Two</option><option>Three</option><option>Four</option>";
+      const host = document.createElement("div");
+      host.innerHTML = [
+        `<select class="select">${options}</select>`,
+        `<select class="select" multiple>${options}</select>`,
+        `<select class="select" size="4">${options}</select>`,
+        `<select class="select" size="1">${options}</select>`,
+      ].join("");
+      document.body.append(host);
+      const result = [...host.querySelectorAll("select")].map((select) => {
+        const style = getComputedStyle(select);
+
+        return {
+          chevron: style.backgroundImage !== "none",
+          height: select.getBoundingClientRect().height,
+          symmetric: style.paddingLeft === style.paddingRight,
+        };
+      });
+      host.remove();
+
+      return result;
+    });
+    const [single, multiple, sized, sizedOne] = styles;
+
+    expect(single).toEqual({ chevron: true, height: 40, symmetric: false });
+    expect(sizedOne).toEqual(single);
+    for (const listBox of [multiple!, sized!]) {
+      expect(listBox.chevron).toBe(false);
+      expect(listBox.symmetric).toBe(true);
+      expect(listBox.height).toBeGreaterThan(40);
+    }
+  });
+
+  /* The chevron sits at the inline end, with the room kept for it, so under
+     `dir="rtl"` both move to the left and the value starts at the right. */
+  test("mirrors a select's chevron and its room under right-to-left", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const styles = await page.evaluate(() => {
+      const read = (dir: string) => {
+        const host = document.createElement("div");
+        host.dir = dir;
+        host.style.width = "16rem";
+        host.innerHTML = '<select class="select"><option>One</option></select>';
+        document.body.append(host);
+        const style = getComputedStyle(host.firstElementChild!);
+        const result = {
+          chevronX: style.backgroundPositionX,
+          paddingLeft: style.paddingLeft,
+          paddingRight: style.paddingRight,
+        };
+        host.remove();
+
+        return result;
+      };
+
+      return { ltr: read("ltr"), rtl: read("rtl") };
+    });
+
+    expect(styles.ltr.paddingRight).toBe("40px");
+    expect(styles.ltr.paddingLeft).toBe("12px");
+    expect(styles.rtl.paddingLeft).toBe(styles.ltr.paddingRight);
+    expect(styles.rtl.paddingRight).toBe(styles.ltr.paddingLeft);
+    expect(styles.rtl.chevronX).not.toBe(styles.ltr.chevronX);
+    expect(styles.rtl.chevronX).not.toContain("100%");
+  });
 });

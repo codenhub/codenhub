@@ -9,6 +9,8 @@ import {
 } from "./test-utils";
 
 const FEEDBACK_URL = "http://localhost:5184/feedback/?env=vanilla";
+/* The forms page renders `@codenhub/icons` glyphs, which the alert-icon check needs. */
+const FORMS_URL = "http://localhost:5184/forms/?env=vanilla";
 
 test.describe("feedback", () => {
   test("loads canonical compiled styles with tokens and components", async ({ page }) => {
@@ -773,5 +775,96 @@ test.describe("feedback", () => {
     expect(getContrastRatio(resting.background, bubbles.tokens.page), "resting bubble is quiet").toBeLessThan(3);
     expect(getContrastRatio(primary.background, bubbles.tokens.page), "primary bubble is not").toBeGreaterThan(5);
     expectSameColor(primary.background, bubbles.tokens.primary, "primary bubble ground");
+  });
+
+  /* WCAG 1.4.13: content shown on hover has to be hoverable itself. The bubble
+     sits a gap away from its trigger, so it lingers long enough for the
+     pointer to cross that gap, and once over the bubble the host is still
+     hovered. A hidden bubble is out of the way: nothing under the pointer. */
+  test("keeps a tooltip open while the pointer crosses onto its bubble", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+
+    await page.evaluate(() => {
+      const host = document.createElement("div");
+      host.style.cssText = "padding: 6rem 2rem";
+      host.innerHTML =
+        '<span class="tooltip" data-probe="host"><button type="button">Trigger</button><span class="tooltip-bubble" data-probe="bubble">A message long enough to aim for</span></span>';
+      document.body.prepend(host);
+    });
+
+    const trigger = page.locator('[data-probe="host"] button');
+    const bubble = page.locator('[data-probe="bubble"]');
+
+    expect(await bubble.evaluate((element) => getComputedStyle(element).visibility)).toBe("hidden");
+
+    await trigger.hover();
+    await expect(bubble).toHaveCSS("opacity", "1");
+
+    const triggerBox = (await trigger.boundingBox())!;
+    const bubbleBox = (await bubble.boundingBox())!;
+    const x = bubbleBox.x + bubbleBox.width / 2;
+
+    /* Into the gap, a pause longer than the fade alone would allow, then onto
+       the bubble: only the linger keeps it there to land on. */
+    await page.mouse.move(x, triggerBox.y + 1);
+    await page.mouse.move(x, (triggerBox.y + bubbleBox.y + bubbleBox.height) / 2);
+    await page.waitForTimeout(250);
+    await page.mouse.move(x, bubbleBox.y + bubbleBox.height / 2);
+    await page.waitForTimeout(800);
+
+    await expect(bubble).toHaveCSS("opacity", "1");
+    expect(await bubble.evaluate((element) => getComputedStyle(element).visibility)).toBe("visible");
+
+    await page.mouse.move(0, 0);
+    await expect(bubble).toHaveCSS("visibility", "hidden");
+  });
+
+  /* The other half of WCAG 1.4.13: a hover message has to be dismissible
+     without moving the pointer. CSS cannot hear Escape, so the consumer's
+     handler writes `data-state="closed"`, and that wins over hover and focus. */
+  test("hides a hovered tooltip that is marked closed", async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+
+    await page.evaluate(() => {
+      const host = document.createElement("div");
+      host.style.cssText = "padding: 6rem 2rem";
+      host.innerHTML =
+        '<span class="tooltip" data-probe="host"><button type="button">Trigger</button><span class="tooltip-bubble" data-probe="bubble">Message</span></span>';
+      document.body.prepend(host);
+    });
+
+    const host = page.locator('[data-probe="host"]');
+    const bubble = page.locator('[data-probe="bubble"]');
+
+    await host.locator("button").focus();
+    await host.locator("button").hover();
+    await expect(bubble).toHaveCSS("visibility", "visible");
+
+    await host.evaluate((element) => element.setAttribute("data-state", "closed"));
+    await expect(bubble).toHaveCSS("visibility", "hidden");
+    await expect(bubble).toHaveCSS("opacity", "0");
+  });
+
+  /* `.alert-icon` sizes whatever icon is dropped in, including a glyph from
+     `@codenhub/icons`, whose own sizing rule is unlayered. It does so through
+     the icon set's `--ic-size` knob rather than `!important`, so a consumer's
+     ordinary rule can still resize it. */
+  test("sizes an alert icon without shutting out the consumer", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const sizes = await page.evaluate(() => {
+      const host = document.createElement("div");
+      host.innerHTML =
+        '<div class="alert"><i class="ic-mail alert-icon" aria-hidden="true"></i>Default</div>' +
+        '<div class="alert"><svg class="alert-icon" viewBox="0 0 24 24" width="48" height="48" aria-hidden="true"></svg>Inline SVG</div>' +
+        '<div class="alert"><i class="ic-mail alert-icon" aria-hidden="true" style="--ic-size: 2rem; width: 2rem; height: 2rem"></i>Resized</div>';
+      document.body.append(host);
+      const result = [...host.querySelectorAll(".alert-icon")].map((icon) => icon.getBoundingClientRect().width);
+      host.remove();
+
+      return result;
+    });
+
+    expect(sizes).toEqual([20, 20, 32]);
   });
 });

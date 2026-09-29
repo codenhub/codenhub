@@ -218,7 +218,7 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "tailwindcss": ">=4.0.0"
+    "tailwindcss": ">=4.3.2 <5"
   },
   "peerDependenciesMeta": {
     "tailwindcss": {

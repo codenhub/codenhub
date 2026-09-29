@@ -277,7 +277,7 @@ const COMPONENTS = {
       const intentClass = intent === "none" ? "" : intent;
 
       return (
-        `<span class="tooltip-icon" tabindex="0" aria-label="${title(intent)} tooltip" aria-describedby="${bubbleId}">?</span>` +
+        `<button type="button" class="tooltip-icon" aria-label="${title(intent)} tooltip" aria-describedby="${bubbleId}">?</button>` +
         `<span class="tooltip-bubble ${intentClass}" role="tooltip" id="${bubbleId}">${title(intent)} tooltip</span>`
       );
     },

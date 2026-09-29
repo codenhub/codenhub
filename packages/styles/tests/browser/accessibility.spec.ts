@@ -65,7 +65,9 @@ test("gives every loader fixture a unique ID matching its variant", async ({ pag
    real element with a real `id` -- see docs/usage/tooltips.md. This asserts
    the fixture actually wires that association: each trigger's
    `aria-describedby` has to resolve to the real `.tooltip-bubble` element
-   carrying the message. */
+   carrying the message. The trigger is a real `<button>`, which is focusable
+   and takes its `aria-label` as a name in every screen reader; a `<span>` with
+   `tabindex` and no role is not reliably announced. */
 test("makes tooltip examples keyboard-focusable and describes them with a real bubble element", async ({ page }) => {
   await page.goto(FEEDBACK_URL);
 
@@ -80,13 +82,15 @@ test("makes tooltip examples keyboard-focusable and describes them with a real b
         accessibleName: tooltip.getAttribute("aria-label"),
         bubbleText: bubble?.textContent?.trim() ?? null,
         isBubble: bubble?.classList.contains("tooltip-bubble") ?? false,
-        tabIndex: tooltip.getAttribute("tabindex"),
+        tagName: tooltip.tagName,
+        type: tooltip.getAttribute("type"),
       };
     }),
   );
 
   for (const attributes of tooltipAttributes) {
-    expect(attributes.tabIndex).toBe("0");
+    expect(attributes.tagName).toBe("BUTTON");
+    expect(attributes.type).toBe("button");
     expect(attributes.isBubble).toBe(true);
     expect(attributes.accessibleName).toBe(attributes.bubbleText);
   }
@@ -398,4 +402,184 @@ test("allows document-level horizontal overflow instead of clipping it", async (
 
   expect(overflow.html).not.toMatch(/hidden|clip/);
   expect(overflow.body).not.toMatch(/hidden|clip/);
+});
+
+/* `/components` carries no reset, so every component that moves stops on its
+   own under reduced motion, the way the loaders already swap their artwork. */
+test("stops component motion under reduced motion without the reset", async ({ page }) => {
+  await page.setContent("<!doctype html><html><body></body></html>");
+  await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+
+  const motion = await page.evaluate(() => {
+    document.body.innerHTML = [
+      '<button class="btn">Button</button>',
+      '<div class="skeleton"></div>',
+      '<div class="progress active" style="--progress-value: 40%"></div>',
+      '<div class="progress indeterminate"></div>',
+      '<span class="tooltip"><button>Trigger</button><span class="tooltip-bubble">Bubble</span></span>',
+      '<input type="checkbox" class="checkbox"><input type="radio" class="radio"><input type="checkbox" class="switch">',
+    ].join("");
+    const longest = (value: string) => Math.max(...value.split(",").map((part) => Number.parseFloat(part) || 0));
+    const transition = (selector: string, pseudo?: string) =>
+      longest(getComputedStyle(document.querySelector(selector)!, pseudo).transitionDuration);
+    const animation = (selector: string, pseudo?: string) =>
+      getComputedStyle(document.querySelector(selector)!, pseudo).animationName;
+
+    return {
+      animations: [
+        animation(".skeleton"),
+        animation(".progress.active", "::before"),
+        animation(".progress.indeterminate", "::after"),
+      ],
+      transitions: [
+        transition(".btn"),
+        transition(".progress.active", "::after"),
+        transition(".tooltip-bubble"),
+        transition(".checkbox", "::after"),
+        transition(".radio", "::after"),
+        transition(".switch", "::after"),
+      ],
+    };
+  });
+
+  expect(motion.animations).toEqual(["none", "none", "none"]);
+  for (const duration of motion.transitions) {
+    expect(duration).toBeLessThanOrEqual(0.001);
+  }
+});
+
+/* The user agent hides a closed `<dialog>` and centres an open one, but both
+   rules lose to any author rule, and `.card`'s own `display` and a margin reset
+   beat them. The fix travels with the components it exists for, so it holds on
+   `/components`, and reaches only dialogs carrying one of them. */
+test("keeps a component dialog closed until opened, and centred once open", async ({ page }) => {
+  await page.setContent("<!doctype html><html><body></body></html>");
+  await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+  await page.addStyleTag({ content: "@layer consumer { dialog { margin: 0; } }" });
+
+  const dialogs = await page.evaluate(() => {
+    document.body.innerHTML =
+      '<dialog class="card" id="closed">Closed</dialog><dialog class="card" id="open">Open</dialog><dialog id="plain">Plain</dialog>';
+    (document.getElementById("open") as HTMLDialogElement).showModal();
+    (document.getElementById("plain") as HTMLDialogElement).show();
+    const read = (id: string) => getComputedStyle(document.getElementById(id)!);
+
+    return {
+      closedDisplay: read("closed").display,
+      openMarginLeft: read("open").marginLeft,
+      plainMarginLeft: read("plain").marginLeft,
+    };
+  });
+
+  expect(dialogs.closedDisplay).toBe("none");
+  expect(Number.parseFloat(dialogs.openMarginLeft)).toBeGreaterThan(0);
+  expect(dialogs.plainMarginLeft, "a dialog the package does not style keeps the consumer's margin").toBe("0px");
+});
+
+/* The reset's reduced-motion rule is `!important` in `base`, which beats any
+   unlayered `!important`. The documented way back is a layer ordered before
+   `base`, stated before the package loads; this holds the docs to it. */
+test("lets a layer ordered before base keep an animation under reduced motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.setContent(
+    `<!doctype html><html><head>
+      <style>@layer essential-motion, theme, base, components, utilities;
+        @layer essential-motion {
+          @media (prefers-reduced-motion: reduce) {
+            .essential { animation-duration: 1s !important; animation-iteration-count: infinite !important; }
+          }
+        }
+        @keyframes spin { to { rotate: 1turn; } }
+        .essential, .ordinary { animation: spin 1s linear infinite !important; }
+      </style>
+      <link rel="stylesheet" href="http://localhost:5184/shared/entry-vanilla.css">
+    </head><body><div class="essential"></div><div class="ordinary"></div></body></html>`,
+    { waitUntil: "load" },
+  );
+
+  const durations = await page.evaluate(() =>
+    [".essential", ".ordinary"].map(
+      (selector) => getComputedStyle(document.querySelector(selector)!).animationDuration,
+    ),
+  );
+
+  expect(Number.parseFloat(durations[0]!), "the essential animation keeps its duration").toBe(1);
+  expect(Number.parseFloat(durations[1]!), "every other animation is still stopped").toBeLessThan(0.001);
+});
+
+/* The switch opts out of forced colors to keep its states apart, so every
+   part of it has to name a system color itself: an unchecked knob left in the
+   package grey could vanish on a dark high-contrast Canvas. */
+test("draws a switch in system colors in forced colors, checked or not", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.setContent(
+    '<!doctype html><html><body><input type="checkbox" class="switch" id="off"><input type="checkbox" class="switch" id="on" checked></body></html>',
+  );
+  await page.addStyleTag({ url: COMPONENT_STYLES_URL });
+
+  const colors = await page.evaluate(() => {
+    const resolve = (color: string) => {
+      const probe = document.createElement("span");
+      probe.style.color = color;
+      document.body.append(probe);
+      const resolved = getComputedStyle(probe).color;
+      probe.remove();
+      return resolved;
+    };
+    const knob = (id: string) => getComputedStyle(document.getElementById(id)!, "::after").backgroundColor;
+
+    return {
+      canvasText: resolve("CanvasText"),
+      highlightText: resolve("HighlightText"),
+      offKnob: knob("off"),
+      onKnob: knob("on"),
+    };
+  });
+
+  expect(colors.offKnob).toBe(colors.canvasText);
+  expect(colors.onKnob).toBe(colors.highlightText);
+});
+
+/* A mixed checkbox is "on" in part, and in forced colors it has to say so the
+   way a checked one does: a Highlight plate and a HighlightText mark. */
+test("draws an indeterminate checkbox in system colors in forced colors", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+
+  for (const [stylesUrl, className] of [
+    [COMPONENT_STYLES_URL, "checkbox"],
+    [NATIVE_STYLES_URL, ""],
+  ] as const) {
+    /* One page, one entrypoint at a time: the two loads cannot share it. */
+    // oxlint-disable-next-line no-await-in-loop -- one entrypoint at a time keeps the failure naming it.
+    await page.setContent(
+      `<!doctype html><html><body><input type="checkbox" class="${className}" id="mixed"></body></html>`,
+    );
+    // oxlint-disable-next-line no-await-in-loop -- one entrypoint at a time keeps the failure naming it.
+    await page.addStyleTag({ url: stylesUrl });
+
+    // oxlint-disable-next-line no-await-in-loop -- one entrypoint at a time keeps the failure naming it.
+    const colors = await page.evaluate(() => {
+      const resolve = (color: string) => {
+        const probe = document.createElement("span");
+        probe.style.color = color;
+        document.body.append(probe);
+        const resolved = getComputedStyle(probe).color;
+        probe.remove();
+        return resolved;
+      };
+      const mixed = document.getElementById("mixed") as HTMLInputElement;
+      mixed.indeterminate = true;
+
+      return {
+        background: getComputedStyle(mixed).backgroundColor,
+        highlight: resolve("Highlight"),
+        highlightText: resolve("HighlightText"),
+        mark: getComputedStyle(mixed, "::after").backgroundColor,
+      };
+    });
+
+    expect(colors.background, stylesUrl).toBe(colors.highlight);
+    expect(colors.mark, stylesUrl).toBe(colors.highlightText);
+  }
 });

@@ -318,7 +318,10 @@ const UNLAYERED_ALLOWED: { reason: string; matches: (rule: { context: string; se
       rule.context.includes("prefers-reduced-motion:reduce") &&
       /^\.(?:loader|dots?-[a-z-]+|bars-wave|pulse-ring)(?:,|$)/.test(rule.selector),
   },
-  { reason: "dialog restatement", matches: (rule) => /^dialog(?::not\(\[open\]\)|\[open\])$/.test(rule.selector) },
+  {
+    reason: "dialog restatement on the package's containers",
+    matches: (rule) => /^dialog:is\(\.card,\.panel,\.surface\)(?::not\(\[open\]\)|\[open\])$/.test(rule.selector),
+  },
   { reason: "solo class", matches: (rule) => /-solo\b/.test(rule.selector) },
 ];
 
@@ -490,6 +493,128 @@ test("utility names that collide with the package's own prose do not leak into t
   expect(leaks).toEqual([]);
 });
 
+/* The list above only names the collisions someone already found. Any word in
+   a scanned file that happens to be a Tailwind utility compiles too -- the
+   license's "contents" once shipped `.contents{display:contents}` -- so this
+   holds every class the compiled entrypoints emit to one the stylesheet source
+   names itself: a selector, an `@utility`, or an `@source inline()` candidate.
+   Classes are read from selector preludes only, on both sides, so class-like
+   text in a declaration value, a comment, or a string names nothing. */
+
+/* Comments out, strings kept: a `/*` inside a string such as
+   `@source not "../*.md"` opens no comment. */
+function stripComments(css: string): string {
+  let output = "";
+  let quote: string | null = null;
+
+  for (let index = 0; index < css.length; index++) {
+    const character = css[index]!;
+
+    if (quote) {
+      if (character === quote && css[index - 1] !== "\\") {
+        quote = null;
+      }
+    } else if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === "/" && css[index + 1] === "*") {
+      const end = css.indexOf("*/", index + 2);
+
+      index = end === -1 ? css.length : end + 1;
+      continue;
+    }
+    output += character;
+  }
+
+  return output;
+}
+
+/* The prelude of every style rule, nested ones included: the text before a
+   `{` that does not start an at-rule. A declaration ends at `;` or `}` and is
+   dropped, and quoted strings are skipped so a brace in one opens nothing. */
+function selectorPreludes(source: string): string[] {
+  const css = stripComments(source);
+  const preludes: string[] = [];
+  let buffer = "";
+  let quote: string | null = null;
+
+  for (let index = 0; index < css.length; index++) {
+    const character = css[index]!;
+
+    if (quote) {
+      buffer += character;
+      if (character === quote && css[index - 1] !== "\\") {
+        quote = null;
+      }
+    } else if (character === '"' || character === "'") {
+      quote = character;
+      buffer += character;
+    } else if (character === "{") {
+      const head = buffer.trim();
+
+      if (!head.startsWith("@")) {
+        preludes.push(head);
+      }
+      buffer = "";
+    } else if (character === "}" || character === ";") {
+      buffer = "";
+    } else {
+      buffer += character;
+    }
+  }
+
+  return preludes;
+}
+
+const classNamesIn = (css: string) =>
+  new Set(
+    selectorPreludes(css).flatMap((prelude) =>
+      [...prelude.matchAll(/\.(-?[a-zA-Z_][\w-]*)/g)].map((match) => match[1]!),
+    ),
+  );
+
+test("classNamesIn reads selectors, not declaration values", () => {
+  const names = classNamesIn(
+    '@source not "../*.md";.a,.b:is(.c){content:".d";font-family:x.e}/* .k{ */.f{&.g{--h:.i}}@media (min-width:1px){.j{color:red}}',
+  );
+
+  expect([...names].sort()).toEqual(["a", "b", "c", "f", "g", "j"]);
+});
+
+test("compiled entrypoints emit only classes the stylesheet source names", async () => {
+  const sourceDirectory = path.resolve(packageRoot, "src");
+  const sourceFiles = (await readdir(sourceDirectory, { recursive: true })).filter(
+    (entry): entry is string => typeof entry === "string" && entry.endsWith(".css"),
+  );
+  const sourceText = stripComments(
+    (await Promise.all(sourceFiles.map((file) => readFile(path.join(sourceDirectory, file), "utf8")))).join("\n"),
+  );
+  const named = classNamesIn(sourceText);
+
+  for (const match of sourceText.matchAll(/@utility\s+([\w-]+)/g)) {
+    named.add(match[1]!);
+  }
+
+  for (const match of sourceText.matchAll(/@source\s+inline\("([^"]*)"\)/g)) {
+    for (const candidate of match[1]!.split(/\s+/)) {
+      named.add(candidate);
+    }
+  }
+
+  const outputs = await Promise.all(
+    ["dist/index.css", "dist/components.css", "dist/native.css", "dist/theme.css"].map(async (target) => ({
+      output: await readFile(path.resolve(packageRoot, target), "utf8"),
+      target,
+    })),
+  );
+  const leaks = outputs.flatMap(({ output, target }) =>
+    [...classNamesIn(output)]
+      .filter((name) => !named.has(name))
+      .map((name) => `${target} emits .${name}, which src/ never names`),
+  );
+
+  expect(leaks).toEqual([]);
+});
+
 test("aggregate exports emit each public rule expansion once", async () => {
   const aggregateOutputs = await Promise.all(
     aggregateExportTargets.map(async (target) => ({
@@ -505,9 +630,11 @@ test("aggregate exports emit each public rule expansion once", async () => {
   }
 });
 
-/* Compiles the given package exports the way a Tailwind consumer does: their
-   own `@import "tailwindcss"` first, then each export in order. */
-const compileAsConsumer = async (exportNames: readonly string[], candidates?: string) => {
+/* Compiles the given package exports the way a Tailwind consumer does, as the
+   Tailwind guide tells them to: their own `@import "tailwindcss"` first, then
+   each export in order -- except with `./tw`, which imports Tailwind itself
+   and replaces that line. */
+const compileAsConsumer = async (exportNames: readonly string[], candidates?: string, { minify = true } = {}) => {
   const temporaryRoot = await mkdtemp(path.join(tmpdir(), "codenhub-styles-export-"));
   const inputPath = path.join(temporaryRoot, "input.css");
   const outputPath = path.join(temporaryRoot, "output.css");
@@ -524,21 +651,47 @@ const compileAsConsumer = async (exportNames: readonly string[], candidates?: st
 `
     : "";
 
+  const tailwindImport = exportNames.includes("./tw")
+    ? ""
+    : `@import "${tailwindCssUrl}";
+`;
+
   try {
-    await writeFile(
-      inputPath,
-      `@import "${tailwindCssUrl}";
-${imports.join("")}${candidateSource}`,
+    await writeFile(inputPath, `${tailwindImport}${imports.join("")}${candidateSource}`);
+    await executeFile(
+      process.execPath,
+      [tailwindCliPath, "-i", inputPath, "-o", outputPath, ...(minify ? ["--minify"] : [])],
+      {
+        cwd: packageRoot,
+      },
     );
-    await executeFile(process.execPath, [tailwindCliPath, "-i", inputPath, "-o", outputPath, "--minify"], {
-      cwd: packageRoot,
-    });
 
     return await readFile(outputPath, "utf8");
   } finally {
     await rm(temporaryRoot, { force: true, recursive: true });
   }
 };
+
+/* `./tw` is the one source entry that imports Tailwind, so the guide has a
+   consumer import it alone. Preflight's border reset is the marker: two copies
+   means Tailwind was imported twice. Unminified, because the minifier merges
+   the duplicate rules and hides it, which a consumer's development build does
+   not. */
+test("./tw brings Tailwind's Preflight exactly once", async () => {
+  const output = await compileAsConsumer(["./tw"], "btn", { minify: false });
+
+  expect(output.match(/::file-selector-button \{\s*box-sizing: border-box;/g) ?? []).toHaveLength(1);
+});
+
+/* `/tw` shares one Tailwind build with the consumer's own utilities, so a
+   breakpoint it redefined moved every `2xl:` class in their app. It adds `xs`
+   and leaves Tailwind's own steps alone. */
+test("./tw adds an xs breakpoint and keeps Tailwind's 2xl", async () => {
+  const output = await compileAsConsumer(["./tw"], "xs:flex 2xl:flex");
+
+  expect(output).toMatch(/@media \(min-width:30rem\)\{\.xs\\:flex\{display:flex\}\}/);
+  expect(output).toMatch(/@media \(min-width:96rem\)\{\.\\32 xl\\:flex\{display:flex\}\}/);
+});
 
 /* Every `--color-*` a stylesheet reads that it never declares. Tailwind marks
    each `@theme` value a `@reference`d file reaches as reference-only, the last

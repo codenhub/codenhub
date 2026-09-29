@@ -44,7 +44,7 @@ For the Tailwind CSS v4 entrypoint, theme selection, the intent/presentation axe
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                       |
 | Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation). |
-| Tailwind CSS  | Version 4 or newer is required only for `/tw` source entrypoints.                                                                                        |
+| Tailwind CSS  | 4.3.2 or newer, below 5, is required only for `/tw` source entrypoints.                                                                                  |
 | Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                          |
 
 ## Notes
@@ -79,6 +79,15 @@ The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source 
 - No theme-toggling logic. Theme selection is a class or attribute a consumer applies; wiring a toggle to system preference, storage, or a user setting is outside this package. The `@codenhub/theme` package covers that need for consumers who want it.
 - No shipped font binaries. `.pixel`, `.chunky-tile`, `.cyber`, and `.sketch` accept a consumer-supplied font and fall back to a system stack when none is given.
 - No compatibility layer for removed tokens or classes. Breaking changes are documented, not silently aliased.
+
+## Trade-offs
+
+Known costs of the design, stated so they can be weighed before adopting it:
+
+- **Class names are short and unprefixed.** `.primary`, `.success`, `.dark`, `.light`, `.label`, `.field`, `.hint`, `.section`, `.stack`, `.flat`, and `.ghost` are global names, so another stylesheet on the same page that uses them collides with this one. The package sits in cascade layers, so your own unlayered CSS wins a collision, but a third-party library's styles for the same name still meet the package's.
+- **The complete stylesheets are large before compression.** Minified, `@codenhub/styles` is about 183 KB, `/native` about 251 KB, and `/components` about 145 KB; served compressed they are about 15 KB, 18 KB, and 12 KB with gzip. The repetition that compression removes is the composition every component carries. Import the narrowest entrypoint that covers a page; see [Setup → Import paths](docs/setup.md#import-paths).
+- **`--color-foreground` is a surface tone, not a text colour.** It is the plate a step off the page that a quiet card or panel rests on. The text colour is `--color-text`.
+- **The success, warning, destructive, and info hover tones are fixed values.** `--color-success-hover` and its three siblings are precomputed rather than mixed from their base colour, because mixing them live crashed WebKit. Overriding `--color-success` alone leaves its hover on the old hue, so retheme the whole family; see [Theming → Color tokens](docs/usage/theming.md#color-tokens).
 
 ## Next steps
 
@@ -171,9 +180,9 @@ Compiled entrypoints are ready-to-import CSS and require only tooling that can r
 | Import path                      | Composition and effects                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@codenhub/styles`               | Compiled complete surface: Tailwind base/theme output, tokens, typography, utilities, components, and reset. Applies global reset, root theme, and focus rules.                                                                                                                                                                                                                                                                                                                                                            |
-| `@codenhub/styles/theme`         | Compiled Tailwind theme variables, Codenhub tokens, and the presentation classes. Sets root theme properties and system/explicit theme selectors; no reset or component classes.                                                                                                                                                                                                                                                                                                                                           |
+| `@codenhub/styles/theme`         | Compiled Tailwind theme variables, Codenhub tokens, and the intent, presentation, elevation, and corner-pattern classes. Sets root theme properties and system/explicit theme selectors; no reset or component classes.                                                                                                                                                                                                                                                                                                    |
 | `@codenhub/styles/palette`       | Generated, self-contained `--palette-*` custom properties: every intent/presentation cell's fill, text, and edge color, plus the flat `border`/`surface`/`text` neutral tokens, pre-composed to a flat value. For a consumer that cannot take this package as a build-time dependency (an optional peer, for example) but wants to look consistent with it. Not a replacement for the components themselves when Tailwind is available -- see [Customizing → Generated palette](docs/usage/customizing.md#generated-palette). |
-| `@codenhub/styles/components`    | Compiled theme tokens, typography utilities, and every component class. Includes static reduced-motion loader masks; no reset, layout/content utilities, or native mappings.                                                                                                                                                                                                                                                                                                                                               |
+| `@codenhub/styles/components`    | Compiled theme tokens, typography utilities, and every component class. Each component carries its own reduced-motion rule and the `<dialog>` fix travels with `.card`; no reset, layout/content utilities, or native mappings.                                                                                                                                                                                                                                                                                            |
 | `@codenhub/styles/native`        | Compiled complete surface plus classless mappings for headings, text, content elements, form controls, and buttons. Applies the reset and broad element selectors.                                                                                                                                                                                                                                                                                                                                                         |
 | `@codenhub/styles/aesthetics`    | Compiled `.neobrutalism`, `.glass`, `.pixel`, `.chunky-tile`, `.cyber`, and `.sketch` classes, and each one's `-solo` class. Adds no tokens or components of its own; import in either order.                                                                                                                                                                                                                                                                                                                              |
 | `@codenhub/styles/aesthetics/*`  | One compiled aesthetic and its solo class: `/neobrutalism`, `/glass`, `/pixel`, `/chunky-tile`, `/cyber`, or `/sketch`. Same rules and ordering as the combined file.                                                                                                                                                                                                                                                                                                                                                      |
@@ -218,7 +227,7 @@ What that means in practice:
 - Consumer tooling must resolve package CSS imports.
 - Every shipped stylesheet can be pasted into an HTML `<style>` element, for critical-CSS inlining or a server-rendered head: none contains the `</style` sequence that would end the element early.
 - Chrome 123, Safari 17.5, or Firefox 128 and newer. Color tokens are declared with `light-dark()` and selected by `color-scheme` (Firefox 120), `.input-group` propagates a nested control's invalid and disabled state with `:has()` (Firefox 121), and the elevation multiplier is registered non-inheriting with `@property` (Firefox 128; without it an elevation class would reach the unclassed elements inside it).
-- Tailwind CSS 4 or newer is required only for `/tw` source entrypoints.
+- Tailwind CSS 4.3.2 or newer, below 5, is required only for `/tw` source entrypoints.
 - The package has no JavaScript runtime. Apps must provide semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements; see [Accessibility](docs/accessibility.md).
 
 <!-- Source: docs/concepts.md -->
@@ -524,15 +533,15 @@ Every row is an override point: set it on `:root` to retheme globally, or on any
 
 Intent classes set these seven slots; components read them. Because every supporting component reads the same seven names, an intent works on every component that supports intent, and a custom intent needs no component changes.
 
-| Token               | Purpose                                                                               |
-| ------------------- | ------------------------------------------------------------------------------------- |
-| `--intent-color`    | The intent's base color. What a fill is made of.                                      |
-| `--intent-contrast` | Readable color on top of a filled `--intent-color`.                                   |
-| `--intent-hover`    | The intent's hovered base color.                                                      |
-| `--intent-strong`   | The intent printed on a page. Text, icon, or border wherever the fill is not full.    |
-| `--intent-subtle`   | Low-emphasis tone. Tinted surfaces and tracks. Neutral resolves to `--color-surface`. |
-| `--intent-border`   | Line color. Resolves to `--color-border` when no intent is set.                       |
-| `--intent-fill-max` | How far a fill of this intent is allowed to go. `100%` for every intent but neutral.  |
+| Token               | Purpose                                                                                                                                                                                                                                |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--intent-color`    | The intent's base color. What a fill is made of.                                                                                                                                                                                       |
+| `--intent-contrast` | Readable color on top of a filled `--intent-color`.                                                                                                                                                                                    |
+| `--intent-hover`    | The intent's hovered base color.                                                                                                                                                                                                       |
+| `--intent-strong`   | The intent printed on a page. Text, icon, or border wherever the fill is not full.                                                                                                                                                     |
+| `--intent-subtle`   | Low-emphasis tone. Tinted surfaces and tracks. Neutral resolves to `--color-surface`.                                                                                                                                                  |
+| `--intent-border`   | Line color. With no intent it resolves to the aesthetic's `--ui-ink`, then `--color-border`; text controls and toggles read `--ui-control-ink`, then `--ui-ink`, then `--color-control-border`, and tables read `--ui-rule-ink` first. |
+| `--intent-fill-max` | How far a fill of this intent is allowed to go. `100%` for every intent but neutral.                                                                                                                                                   |
 
 `--intent-color` and `--intent-strong` are two ends of the same family and not interchangeable. The base is a ground, chosen to be filled with; the strong tone is chosen to be read against a page. A `.soft` or `.ghost` component prints the strong one, which is why an unfilled warning reads in amber-800 rather than the amber-600 its solid sibling is filled with.
 
@@ -595,13 +604,12 @@ The four `--elevation-*` values below are raw shadows for elements you style you
 | `--focus-ring`             | Focus-visible ring color.                                                                                                                   |
 | `--focus-ring-offset`      | Focus-visible outline offset. Unset: the negative of the focused element's line width, so the ring lands on the edge under every aesthetic. |
 | `--focus-ring-width`       | Focus-visible outline/ring width.                                                                                                           |
-| `--motion-duration-fast`   | Fast transition for buttons and input interactions (`120ms`).                                                                               |
-| `--motion-duration-normal` | Normal transition for layout and modals (`200ms`).                                                                                          |
-| `--motion-duration-slow`   | Slow animation for skeleton loaders and progress bars (`400ms`).                                                                            |
+| `--motion-duration-fast`   | Fast transition for a table row's hover (`120ms`).                                                                                          |
+| `--motion-duration-normal` | Every component's colour, border, shadow, and press transitions, toggle marks, and the tooltip bubble (`200ms`).                            |
+| `--motion-duration-slow`   | Progress value changes, and the base of the skeleton and progress shimmer cycle (`400ms`).                                                  |
 | `--motion-ease`            | Default easing curve.                                                                                                                       |
 | `--z-popover`              | Popover/tooltip z-index.                                                                                                                    |
 | `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint.                                                                                                 |
-| `--breakpoint-2xl`         | Extended large Tailwind responsive breakpoint.                                                                                              |
 
 Next: [Customizing](docs/usage/customizing.md) covers presentation and material tokens — how much of an intent shows, and what a component is made of.
 
@@ -817,7 +825,7 @@ Naming: `--palette-<intent>-<presentation>-<slot>`, where `<intent>` is one of t
 - A ground qualifier (`page` or `subtle`) inserted before the slot, present only on `.soft`/`.ghost`'s `bg` and `edge` -- `.solid` is ground-independent at full fill, and `fg` never varies by ground. No qualifier means the `transparent` ground (`.badge`/`.btn`'s ground): `--palette-success-soft-bg`. `page` is `.alert`'s ground (`--color-background`): `--palette-success-soft-page-bg`. `subtle` is `.pre`/`.code`/`.kbd`/`.tooltip-bubble`'s ground (that intent's own `--intent-subtle`): `--palette-success-soft-subtle-bg`.
 - A `-hover` suffix on `bg` and `edge` only -- `fg` never changes on hover: `--palette-success-soft-page-bg-hover`.
 
-Dark values are scoped the same way `@codenhub/styles`' own explicit theme override is: `.dark`, `.theme-dark`, and `[data-theme="dark"]`, on the element or an ancestor. There is no `prefers-color-scheme` fallback in this file -- a consumer reaching for a standalone palette is already handling its own theme switching, so the OS-preference case is left to `@codenhub/styles`' own `light-dark()`-based tokens when that package is actually in use.
+Light values sit on `:root` and dark values are scoped the same way `@codenhub/styles`' own explicit theme override is: `.dark`, `.theme-dark`, and `[data-theme="dark"]`, on the element or an ancestor. The light values also answer `.light`, `.theme-light`, and `[data-theme="light"]`, so the nearest explicit theme wins at any depth -- a light subtree nested inside a dark one reads the light values. There is no `prefers-color-scheme` fallback in this file -- a consumer reaching for a standalone palette is already handling its own theme switching, so the OS-preference case is left to `@codenhub/styles`' own `light-dark()`-based tokens when that package is actually in use.
 
 Three more tokens sit alongside the intent cells for the same reason, without an intent, presentation, ground, or hover axis of their own: `--palette-border`, `--palette-surface`, and `--palette-text`, flat values for `--color-border`, `--color-surface`, and `--color-text` -- the resting colors anything that is not intent-colored needs (a container's border, a dialog's background, its text), which an optional-peer consumer needs just as much as the intent cells.
 
@@ -887,6 +895,7 @@ The shadow is cast in the component's own intent, so a success button throws a g
 - Content chips are left alone. A `.kbd`, `.code`, or `.pre` is content rather than structure, and an ink edge on one reads as a defect: a key cap keeps the quiet border color and a code chip keeps no border at all.
 - Only `.btn` and an opted-in `.card` respond to hover and press. A card opts in with `.interactive`, or with one of its halves — `.hoverable` for the hover response alone, `.pressable` for the press alone; a plain card, an alert, or a panel is a container and stays put.
 - An alert rests on the slab under this aesthetic and nowhere else. Here the slab is a second ink line rather than depth, and an alert is the only container the package rests flat, so without it a neobrutalist alert is the one box on the page that reads as unfinished. It is a resting default, so `.flat` still takes it off and `.floating` still doubles it.
+- The tooltip trigger takes the zero corner like everything else and draws square; `.radio` keeps its circle.
 
 ## Glass
 
@@ -947,7 +956,7 @@ The lens is drawn by an SVG filter in `backdrop-filter`, which Chromium renders 
 
 - Corners are one unit or nothing. Chips square instead of stepping — badges, key caps, code, checkboxes, and switches all read `--ui-clip-tight`, which this aesthetic sets to none, because one unit off each corner of a 24px badge is a bite rather than a corner. Tables, progress bars, and skeletons square too, each for its own reason: a table takes no clip, because in Chromium and WebKit its box includes its caption and the clip would cut the caption rather than the rows, and progress and skeleton never read a clip at all — a squaring aesthetic reaches them through `border-radius` alone. `.pre` is the one exception that steps: it carries no clip override, so it inherits the same polygon a button or a card gets, and with no border by default the cut shows with no ring around it.
 - The outline is an inset ring, because a clip removes a real border — and the focus ring, for the same reason, is a second inset layer rather than an outline. Both are the element's own edge rather than a shadow, so the border answers `.edged` and `.edgeless` the way a border does: a `.edgeless` badge and a `.solid` button draw none, a `.edged` card draws one, and a field keeps one whatever a container asks for.
-- The tooltip trigger and `.radio` are hardcoded past the clip rather than reached by it. `.tooltip-icon` and `.radio` force `clip-path: none`: the circle is the only thing telling a radio from a checkbox at a glance, and a stepped polygon would square either one.
+- The tooltip trigger and `.radio` are hardcoded past the clip rather than reached by it. `.tooltip-icon` and `.radio` force `clip-path: none`: the circle is the only thing telling a radio from a checkbox at a glance, and a stepped polygon would bite a 20px trigger rather than shape it. The tooltip trigger still takes pixel's zero corner and draws square; the radio keeps its circle.
 - `--font-pixel` is yours to supply. The package ships no font binary, so the aesthetic has no network side effect and falls back to the monospace stack.
 - Numeral legibility depends on the face you pick. At UI sizes -- pagination, counters, small badges -- some pixel/bitmap faces render lookalike digits such as `2`/`8` or `3`/`9` closely enough to misread at a glance; this is a property of the font, not something the aesthetic's CSS can correct. Prefer a face with clearly distinct digit shapes wherever small numeric text matters.
 
@@ -1124,7 +1133,7 @@ Size and shape classes:
 | `.p-xs`                                                                | Tightest padding modifier (`px-2 py-0.5`; icon `p-0.5`). Also drops the `--control-height` minimum so a chip-sized button fits a table cell or a dense toolbar; every other size and padding class keeps that floor for a labeled button. |
 | `.p-sm`                                                                | Compact padding modifier (`px-2.5 py-1`; icon `p-1`).                                                                                                                                                                                     |
 | `.p-lg`                                                                | Spacious padding modifier (`px-6 py-3`; icon `p-3`).                                                                                                                                                                                      |
-| `.icon`                                                                | Square icon button, sized to its own padding rather than to `--control-height`. Use an accessible name in HTML.                                                                                                                           |
+| `.icon`                                                                | Square icon button, at least `--control-height` on each side, or 2rem with `.sm` and 3rem with `.lg`. With `.p-xs`, `.p-sm`, or `.p-lg` it drops that floor and sizes to its own padding. Use an accessible name in HTML.                 |
 | `.disabled`, `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` | Disabled styling.                                                                                                                                                                                                                         |
 
 Examples:
@@ -1153,23 +1162,24 @@ Use `<button>` for actions or an accessible link for navigation; see [Accessibil
 
 # Forms
 
-| Class or Selector                                                     | Purpose                                                                  |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `.field`                                                              | Vertical field wrapper.                                                  |
-| `.label`                                                              | Form label text.                                                         |
-| `.hint`                                                               | Secondary helper text.                                                   |
-| `.hint.destructive`                                                   | Helper text with destructive intent.                                     |
-| `.surface`                                                            | Shared public container composition utility.                             |
-| `.text-control`                                                       | Shared public text-control composition utility.                          |
-| `.ipt`                                                                | Input control styling.                                                   |
-| `.input-group`                                                        | Wrapper that owns the field box so a control can carry an icon or affix. |
-| `.textarea`                                                           | Textarea control styling.                                                |
-| `.select`                                                             | Select control styling.                                                  |
-| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                         |
-| `input[type="radio"].radio`                                           | Custom radio control styling.                                            |
-| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                           |
-| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                                      |
-| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                                        |
+| Class or Selector                                                     | Purpose                                                                                                        |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `.field`                                                              | Vertical field wrapper.                                                                                        |
+| `.label`                                                              | Form label text.                                                                                               |
+| `.hint`                                                               | Secondary helper text.                                                                                         |
+| `.hint.destructive`                                                   | Helper text with destructive intent.                                                                           |
+| `.surface`                                                            | Shared public container composition utility.                                                                   |
+| `.text-control`                                                       | Shared public text-control composition utility.                                                                |
+| `.ipt`                                                                | Input control styling.                                                                                         |
+| `.input-group`                                                        | Wrapper that owns the field box so a control can carry an icon or affix.                                       |
+| `.unadorned`                                                          | Removes the browser's own field decorations, on the control or on its `.input-group`.                          |
+| `.textarea`                                                           | Textarea control styling.                                                                                      |
+| `.select`                                                             | Select control styling. With `multiple` or a `size` above 1 it is a list box: no chevron, as tall as its rows. |
+| `input[type="checkbox"].checkbox`                                     | Custom checkbox control styling.                                                                               |
+| `input[type="radio"].radio`                                           | Custom radio control styling.                                                                                  |
+| `input[type="checkbox"].switch`                                       | Custom switch control styling.                                                                                 |
+| `[aria-invalid="true"]` on controls                                   | Destructive border and focus color.                                                                            |
+| `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]` on controls | Disabled styling.                                                                                              |
 
 ## Icons
 
@@ -1178,28 +1188,43 @@ The package ships no icon for text inputs. Icons for `.input-group` are the cons
 `.input-group` is the wrapper for a control that carries one. It owns the field box — border, radius, fill, focus ring, invalid and disabled state — and the control inside it goes flush, so the boundary is drawn once. Any icon element works, placed before the control for a leading icon or after it for a trailing one: an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons`.
 
 ```html
-<label class="field">
-  <span class="label">Email</span>
+<div class="field">
+  <label class="label" for="contact-email">Email</label>
   <div class="input-group">
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true">
       <rect width="20" height="16" x="2" y="4" rx="2" />
       <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
     </svg>
-    <input class="ipt" type="email" />
+    <input class="ipt" type="email" id="contact-email" />
   </div>
-</label>
-<label class="field">
-  <span class="label">Search</span>
+</div>
+<div class="field">
+  <label class="label" for="site-search">Search</label>
   <div class="input-group">
-    <input class="ipt" type="search" />
+    <input class="ipt" type="search" id="site-search" />
     <i class="ic-search" aria-hidden="true"></i>
   </div>
-</label>
+</div>
 ```
 
 The group reads intent and both [presentation](docs/usage/composing.md#presentation) axes the same way a lone `.ipt` does — `.input-group.soft.edgeless` is the sunk variant, `.input-group.primary` colors the boundary — and follows whichever [aesthetic](docs/usage/aesthetics.md) is in scope. `aria-invalid` or `disabled` on the control inside propagates to the group; so does either on the group itself. Focus is shown with `:focus-within`, so unlike a lone field the ring also appears on a mouse click.
 
-Non-icon input types keep the browser's native `date` and `datetime-local` pickers. WebKit's native `search` decorations are still suppressed on `.text-control` to keep them from overlapping the value.
+Text controls keep the browser's own decorations: the date and time picker button, a number field's spin buttons, and a search field's clear button and magnifier. Each one is also behaviour -- the picker button is the only pointer route to the picker, and the clear button empties the field.
+
+`.unadorned` removes all of them, for a field whose adornments you draw yourself. Put it on the control, or on its `.input-group` to reach the control inside. Removing a decoration removes what it did, so wire the behaviour back to your own adornment: `input.showPicker()` for a picker, `stepUp()`/`stepDown()` for spin buttons, and setting `value` to `""` and dispatching an `input` event for a clear button. Keyboard entry keeps working either way. Firefox exposes no way to remove its date picker button, so it stays there.
+
+```html
+<div class="field">
+  <label class="label" for="query">Search</label>
+  <div class="input-group unadorned">
+    <i class="ic-search" aria-hidden="true"></i>
+    <input class="ipt" type="search" id="query" />
+    <button type="button" class="btn icon ghost p-xs" aria-label="Clear search">
+      <i class="ic-x" aria-hidden="true"></i>
+    </button>
+  </div>
+</div>
+```
 
 The slot works the same way for a text affix — a URL host, a currency symbol, a unit — not just an icon:
 
@@ -1236,6 +1261,8 @@ All three toggles rest at `.soft`. Presentation decides the _unchecked_ plate; c
 
 A checked checkbox and a checked switch cut their mark out of that pinned plate. A checked radio thickens its ring to twice the resting line and takes the intent whole on it, and the dot follows the same pinned plate, so `.radio.soft` and `.radio.solid` render the same filled circle once checked — presentation only changes what the radio looks like before it's picked.
 
+A checkbox whose `indeterminate` property is set -- a group some of whose items are checked -- takes the same pinned plate with a dash for its mark, and keeps the dash while it is also `checked`, as the browser's own checkbox does. The property is set from script (`input.indeterminate = true`); there is no attribute for it.
+
 ## Text controls
 
 Text controls also take intent, which colors the resting border and the focus-visible border, and both [presentation](docs/usage/composing.md#presentation) axes. `.ghost` fills nothing, `.soft` takes `12%`, and `.solid` takes `20%` — quiet enough that typed text still reads on it, and ordered so the louder name draws the stronger tint. None of them touches the line.
@@ -1268,11 +1295,11 @@ The boundary is the edge axis's, and it splits the same way. A container's `.edg
 ## Example
 
 ```html
-<label class="field">
-  <span class="label">Email</span>
-  <input class="ipt" type="email" aria-invalid="true" aria-describedby="email-error" />
+<div class="field">
+  <label class="label" for="email">Email</label>
+  <input class="ipt" type="email" id="email" aria-invalid="true" aria-describedby="email-error" />
   <span class="hint destructive" id="email-error">Enter a valid email.</span>
-</label>
+</div>
 <label style="display: flex; gap: 0.5rem; align-items: center">
   <input type="checkbox" class="checkbox success" />
   <span>Accept terms</span>
@@ -1282,12 +1309,12 @@ The boundary is the edge axis's, and it splits the same way. A container's `.edg
   <span>Standard plan</span>
 </label>
 <label style="display: flex; gap: 0.5rem; align-items: center">
-  <input type="checkbox" class="switch destructive" />
+  <input type="checkbox" class="switch destructive" role="switch" />
   <span>Enable</span>
 </label>
 ```
 
-Use labels, `type`, validation logic, `aria-describedby`, and error message relationships; see [Accessibility](docs/accessibility.md).
+Keep a hint or error message outside the `<label>` and point `aria-describedby` at it, so it is announced as a description rather than read as part of the field's name. Give a `.switch` `role="switch"`. Use labels, `type`, validation logic, `aria-describedby`, and error message relationships; see [Accessibility](docs/accessibility.md).
 
 <!-- Source: docs/usage/feedback.md -->
 
@@ -1320,7 +1347,7 @@ Activity indicator modifier classes compose with `.loader`:
 | `.bars-wave`           | Three vertical bars scaling in a wave.  |
 | `.pulse-ring`          | Two concentric rings pulsing outward.   |
 
-These variants retain their embedded SVG animations normally. Under `prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding static mask. This fallback is part of focused loader, button, and components imports; it does not depend on the global reset. See [Accessibility](docs/accessibility.md).
+These variants retain their embedded SVG animations normally. Under `prefers-reduced-motion: reduce`, loader CSS substitutes a corresponding static mask. This fallback ships wherever the loader does -- the complete, native, and `/components` entrypoints, `/tw/components`, and `/tw/loader` -- and does not depend on the global reset. `/tw/button` does not include the loader; pair it with `/tw/loader`. See [Accessibility](docs/accessibility.md).
 
 Loader size modifiers:
 
@@ -1330,7 +1357,7 @@ Loader size modifiers:
 | `.sm`    | Small (`1.25rem`).   |
 | `.lg`    | Large (`2.25rem`).   |
 
-Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, they use the text palette, except `.loader`, which keeps `currentColor` so it matches whatever content surrounds it.
+Alerts, badges, progress bars, skeletons, and loaders accept `.primary`, `.secondary`, `.success`, `.warning`, `.destructive`, and `.info`. Without an intent, alerts and badges use the text palette, while the indicators -- `.loader`, `.skeleton`, and `.progress` -- take `currentColor`, so they match whatever content surrounds them.
 
 Skeletons, loaders, and dividers are indicators: they read intent but ignore fill and edge [presentation](docs/usage/composing.md#presentation). `.progress` is not one of them — its track reads both, `.soft.edgeless` by default; only the moving value fill stays intent-colored at full strength regardless of presentation. `.solid` is unsupported on the track, and `.ghost.edgeless` renders but is discouraged, since neither leaves the track a visible frame. See [Composing → Component axis reference](docs/usage/composing.md#component-axis-reference) for the full table.
 
@@ -1339,6 +1366,8 @@ Skeletons, loaders, and dividers are indicators: they read intent but ignore fil
 ```
 
 The package ships no icon of its own: `.alert` is already `flex`, so an icon dropped in as a child is spaced from the message by its `gap-3`. `.alert-icon` only sizes and aligns whatever icon element you provide — an inline `<svg>`, an `<img>`, or a class from an icon set such as `@codenhub/icons` — the same contract [`.input-group`](docs/usage/forms.md#icons) documents.
+
+`.alert-icon` sizes the icon to `1.25rem`. A `@codenhub/icons` glyph sizes itself in an unlayered rule that no class of this package can outrank, so `.alert-icon` sets that set's `--ic-size` as well; an icon set with a different prefix keeps its own size unless you set its knob. Resize an alert icon with an ordinary rule of your own, and set `--ic-size` along with `width` and `height` for a `@codenhub/icons` glyph.
 
 Alerts and badges read the shared [presentation](docs/usage/composing.md#presentation) classes. Without one they use a tinted surface, intent-colored text, and a mixed intent border -- except a neutral `.alert` (no named intent), which rests untinted instead, the same no-named-intent carve-out `.card.soft` and `.panel` use: a plain `--color-foreground` plate rather than 12% of near-black ink over the page. A named intent (`.alert.success`, `.alert.destructive`, and so on) keeps its ordinary tint. `.badge` is unaffected either way -- it has no border to fall back on at rest, so untinting it would make a neutral badge disappear rather than read quieter.
 
@@ -1377,18 +1406,19 @@ Add `role="status"` or `role="alert"` to alerts based on announcement urgency, m
 
 # Tooltips
 
-| Class or Attribute                     | Purpose                                                                  |
-| -------------------------------------- | ------------------------------------------------------------------------ |
-| `.tooltip`                             | Wrapper around a trigger and a bubble. Paints nothing itself.            |
-| `.tooltip-bubble`                      | The message. A real element, styled like any other surface.              |
-| `.tooltip-icon`                        | Circular icon-style trigger, for a message with nothing else to hang on. |
-| `[data-tooltip-position="top"]`        | Positions the bubble above the trigger, on `.tooltip`.                   |
-| `[data-tooltip-position="bottom"]`     | Positions the bubble below the trigger, on `.tooltip`.                   |
-| `[data-tooltip-position="left"]`       | Positions the bubble left of the trigger, on `.tooltip`.                 |
-| `[data-tooltip-position="right"]`      | Positions the bubble right of the trigger, on `.tooltip`.                |
-| No `data-tooltip-position`             | Defaults to top placement.                                               |
-| `[data-state="open"]`                  | Shows the bubble without hover, on `.tooltip`.                           |
-| `.tooltip-bubble.raised` / `.floating` | Adds one or two units of depth. The bubble is flat by default.           |
+| Class or Attribute                     | Purpose                                                                                                                                                                     |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.tooltip`                             | Wrapper around a trigger and a bubble. Paints nothing itself.                                                                                                               |
+| `.tooltip-bubble`                      | The message. A real element, styled like any other surface.                                                                                                                 |
+| `.tooltip-icon`                        | Round icon-style trigger, for a message with nothing else to hang on. It takes the aesthetic's corner: square under `.neobrutalism` and `.pixel`, a diamond under `.cyber`. |
+| `[data-tooltip-position="top"]`        | Positions the bubble above the trigger, on `.tooltip`.                                                                                                                      |
+| `[data-tooltip-position="bottom"]`     | Positions the bubble below the trigger, on `.tooltip`.                                                                                                                      |
+| `[data-tooltip-position="left"]`       | Positions the bubble left of the trigger, on `.tooltip`.                                                                                                                    |
+| `[data-tooltip-position="right"]`      | Positions the bubble right of the trigger, on `.tooltip`.                                                                                                                   |
+| No `data-tooltip-position`             | Defaults to top placement.                                                                                                                                                  |
+| `[data-state="open"]`                  | Shows the bubble without hover, on `.tooltip`.                                                                                                                              |
+| `[data-state="closed"]`                | Hides the bubble even while hovered or focused, on `.tooltip`. For an Escape handler.                                                                                       |
+| `.tooltip-bubble.raised` / `.floating` | Adds one or two units of depth. The bubble is flat by default.                                                                                                              |
 
 A tooltip is composition, not a single class: `.tooltip` wraps a trigger element and a `.tooltip-bubble`, and shows the bubble on hover or focus within the wrapper. The bubble is a real element because CSS generated content is not reliably exposed to assistive tech and cannot be the target of an `aria-describedby`, which needs a real element with a real `id`. Wire the association yourself: give the bubble an `id`, give the trigger `aria-describedby` pointing at it, and put `role="tooltip"` on the bubble.
 
@@ -1422,16 +1452,35 @@ Intent works on a tooltip bubble the same way it works on a filled component: `.
 </span>
 
 <span class="tooltip" data-tooltip-position="right">
-  <span class="tooltip-icon" tabindex="0" aria-label="More details" aria-describedby="icon-bubble">?</span>
+  <button type="button" class="tooltip-icon" aria-label="More details" aria-describedby="icon-bubble">?</button>
   <span class="tooltip-bubble" role="tooltip" id="icon-bubble">More details</span>
 </span>
 ```
 
 The first two show plain triggers with default (top) and explicit bottom placement. The third combines an intent with `.raised` on the bubble to show they compose freely — the intent decides the bubble's fill, `.raised` decides whether it casts depth. The fourth uses `data-state="open"` on the wrapper to keep a tooltip visible without a hover or focus interaction, useful for a tooltip that should be demonstrated or tested without simulating pointer input. The fifth uses `.tooltip-icon` as the trigger, for a message with no other element to hang it on.
 
-`.tooltip` composes with any trigger: wrap an existing `.btn` or `.badge` in it and both keep their own look, gaining a bubble beside them. `.tooltip-icon` is only the circular chip for the case where there is nothing else to be the trigger.
+`.tooltip` composes with any trigger: wrap an existing `.btn` or `.badge` in it and both keep their own look, gaining a bubble beside them. `.tooltip-icon` is only the round chip for the case where there is nothing else to be the trigger.
 
 Showing and hiding the bubble is CSS-only — `:hover` and `:focus-within` on `.tooltip` — but that is presentational. It is not a complete accessible tooltip implementation by itself: provide the `id`/`aria-describedby`/`role="tooltip"` association outside the CSS; see [Accessibility](docs/accessibility.md).
+
+The bubble is hoverable, as WCAG 1.4.13 asks of content that appears on hover: once the pointer leaves the trigger, the bubble stays for `--tooltip-linger` (`300ms`, set on `.tooltip`) and then fades, so the pointer can cross the gap onto it, and it stays open for as long as the pointer is over it. A closed bubble is `visibility: hidden`, so it is nothing under the pointer. It stays in the accessibility tree through `aria-describedby`, which reads hidden content, but a bubble with no `aria-describedby` pointing at it is no longer read in place while hidden.
+
+1.4.13 also asks that the message can be dismissed without moving the pointer or focus, which takes a key handler. Write `data-state="closed"` on `.tooltip` on Escape, and clear it when the pointer and focus leave:
+
+```js
+for (const tooltip of document.querySelectorAll(".tooltip")) {
+  const reopen = () => tooltip.removeAttribute("data-state");
+  tooltip.addEventListener("pointerleave", reopen);
+  tooltip.addEventListener("focusout", reopen);
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  for (const tooltip of document.querySelectorAll(".tooltip:hover, .tooltip:focus-within")) {
+    tooltip.dataset.state = "closed";
+  }
+});
+```
 
 Next: [Content and layout](docs/usage/content-and-layout.md) covers layout helpers, content chips and tables, surfaces, and typography utilities.
 
@@ -1478,13 +1527,13 @@ A table draws three kinds of line, and `.ruled` and `.ruleless` move all of them
 
 ```html
 <table class="data-table">
-  Head and foot boundaries only
+  <!-- Head and foot boundaries only -->
 </table>
 <table class="data-table ruled">
-  Every row separated
+  <!-- Every row separated -->
 </table>
 <table class="data-table ruleless">
-  No lines inside the table at all
+  <!-- No lines inside the table at all -->
 </table>
 ```
 
@@ -1495,7 +1544,7 @@ The boundaries under a head and above a foot separate the parts of a table from 
 ```html
 <section style="--ui-rule: 100%">
   <table class="data-table">
-    Ruled by the region
+    <!-- Ruled by the region -->
   </table>
 </section>
 ```
@@ -1523,10 +1572,10 @@ This is the one place intent cascades, because a table's rows are parts of the t
 
 ```html
 <table class="data-table success soft edged">
-  ...
+  <!-- ... -->
 </table>
-<table class="data-table">
-  A ghost table: rules and type, no header plate
+<table class="data-table ghost">
+  <!-- A ghost table: rules and type, no header plate -->
 </table>
 <kbd class="kbd primary solid">Ctrl</kbd>
 <kbd class="kbd primary soft edged">Shift</kbd>
@@ -1665,20 +1714,20 @@ A project that already runs Tailwind CSS v4 can process this package's source in
 ## Import the source entrypoint
 
 ```css
-@import "tailwindcss";
 @import "@codenhub/styles/tw";
 
 @source "./src";
 ```
 
-Tailwind CSS v4 scans your project automatically — most projects need nothing beyond the two imports above. `@source` paths resolve relative to the CSS file that declares them, not your project root, so `./src` here means "the `src/` next to this stylesheet"; adjust it to match where your own global stylesheet actually lives. Add `@source` only for markup Tailwind's automatic scan won't reach on its own: a path excluded by default (`.gitignore`d, or inside `node_modules` — an external component library, for instance) or, in a monorepo, one outside this file's own directory tree. Point it at your app's markup, not at this package — `/tw` already ships every class definition it publishes, so scanning it too only slows the build without adding classes.
+`/tw` imports Tailwind itself, so it replaces your own `@import "tailwindcss"` rather than joining it: with both, Tailwind's Preflight is emitted twice. Every other `/tw/*` entrypoint expects your import to come first; see [Using a focused entrypoint](#using-a-focused-entrypoint).
+
+Tailwind CSS v4 scans your project automatically — most projects need nothing beyond the import above. `@source` paths resolve relative to the CSS file that declares them, not your project root, so `./src` here means "the `src/` next to this stylesheet"; adjust it to match where your own global stylesheet actually lives. Add `@source` only for markup Tailwind's automatic scan won't reach on its own: a path excluded by default (`.gitignore`d, or inside `node_modules` — an external component library, for instance) or, in a monorepo, one outside this file's own directory tree. Point it at your app's markup, not at this package — `/tw` already ships every class definition it publishes, so scanning it too only slows the build without adding classes.
 
 ## Add aesthetics
 
 Add an aesthetic from the source entrypoint the same way as the compiled one, after the base import:
 
 ```css
-@import "tailwindcss";
 @import "@codenhub/styles/tw";
 @import "@codenhub/styles/tw/aesthetics";
 
@@ -1688,6 +1737,14 @@ Add an aesthetic from the source entrypoint the same way as the compiled one, af
 ## Using a focused entrypoint
 
 Import a focused `/tw/*` entrypoint instead of the combined one — such as `/tw/button` or `/tw/form` — when a build only needs one component family; see the full [import path table](docs/setup.md#import-paths) for what each one composes.
+
+Unlike `/tw`, the focused entrypoints and `/tw/native` do not import Tailwind, so keep your own import first:
+
+```css
+@import "tailwindcss";
+@import "@codenhub/styles/tw/button";
+@import "@codenhub/styles/tw/loader";
+```
 
 ## Troubleshooting
 
@@ -1700,10 +1757,10 @@ Import a focused `/tw/*` entrypoint instead of the combined one — such as `/tw
 **Duplicate token and reset rules**
 
 - **What happened:** the built stylesheet is larger than expected, and browser devtools show the same custom properties or reset rules defined twice.
-- **Why:** importing both a compiled entrypoint (`@codenhub/styles`) and a `/tw` entrypoint (`@codenhub/styles/tw`) in the same build compiles the same tokens and reset from two independent sources; Tailwind's build has no way to know they describe the same package.
-- **Fix:** pick one path per project — `/tw` entrypoints for a project running Tailwind CSS v4, compiled entrypoints everywhere else.
+- **Why:** one of two things. Importing both a compiled entrypoint (`@codenhub/styles`) and a `/tw` entrypoint (`@codenhub/styles/tw`) in the same build compiles the same tokens and reset from two independent sources; Tailwind's build has no way to know they describe the same package. Or your stylesheet imports `tailwindcss` beside `/tw`, which already imports it, so Preflight is emitted twice.
+- **Fix:** pick one path per project — `/tw` entrypoints for a project running Tailwind CSS v4, compiled entrypoints everywhere else — and drop your own `@import "tailwindcss"` when you import `/tw`.
 
-Tailwind CSS 4 or newer is required for every `/tw` entrypoint.
+Every `/tw` entrypoint requires Tailwind CSS 4.3.2 or newer, below 5: the source uses `@source not` and `@source inline()`, which arrived in 4.1, and it is tested against 4.3.2.
 
 <!-- Source: docs/integrating/nextjs.md -->
 
@@ -1746,7 +1803,7 @@ export default function App({ Component, pageProps }: AppProps) {
 }
 ```
 
-Running Tailwind CSS v4? `@import "@codenhub/styles/tw"` is a CSS directive, so it belongs in a CSS file, not a bare import in `layout.tsx`/`_app.tsx` — add it (with `@import "tailwindcss"` and, if needed, `@source`) to your global CSS file, and import that file from the same root file shown above instead. See [Tailwind CSS v4](docs/integrating/tailwind.md).
+Running Tailwind CSS v4? `@import "@codenhub/styles/tw"` is a CSS directive, so it belongs in a CSS file, not a bare import in `layout.tsx`/`_app.tsx` — add it (with `@source` if needed; `/tw` imports Tailwind itself, so leave out your own `@import "tailwindcss"`) to your global CSS file, and import that file from the same root file shown above instead. See [Tailwind CSS v4](docs/integrating/tailwind.md).
 
 ## Force a theme
 
@@ -1879,14 +1936,14 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 ### Focus and state
 
-| Feature            | Behavior                                                                                                                                                                                                                                                                                                                        |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `:focus-visible`   | Global focus-visible outline using `--focus-ring`, `--focus-ring-width`, and `--focus-ring-offset`.                                                                                                                                                                                                                             |
-| Form control focus | `.ipt`, `.textarea`, and `.select` draw the global focus ring and move their line to the intent color.                                                                                                                                                                                                                          |
-| Invalid controls   | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                                                                                                                                                                                                                                |
-| Disabled controls  | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported.                                                                                                                                                                                                       |
-| Open state         | `[data-state="open"]` styles supported surfaces and tooltips.                                                                                                                                                                                                                                                                   |
-| Native `<dialog>`  | `dialog:not([open])` and a centered `dialog[open]` are restored in author origin, so `.card` composed onto a `<dialog>` (the closest primitive the package ships) does not render open on load or lose its centering to another rule. Focus trapping, escape handling, and inert-background behavior stay outside this package. |
+| Feature            | Behavior                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `:focus-visible`   | Global focus-visible outline using `--focus-ring`, `--focus-ring-width`, and `--focus-ring-offset`.                                                                                                                                                                                                                                                                                                            |
+| Form control focus | `.ipt`, `.textarea`, and `.select` draw the global focus ring and move their line to the intent color.                                                                                                                                                                                                                                                                                                         |
+| Invalid controls   | `[aria-invalid="true"]` applies destructive border/focus color on form controls.                                                                                                                                                                                                                                                                                                                               |
+| Disabled controls  | `[disabled]`, `[aria-disabled="true"]`, `[data-disabled]`, and `.disabled` apply disabled cursor/opacity where supported.                                                                                                                                                                                                                                                                                      |
+| Open state         | `[data-state="open"]` on `.tooltip` shows its bubble without hover or focus, and `[data-state="closed"]` hides it while hovered or focused. No other component reads either.                                                                                                                                                                                                                                   |
+| Native `<dialog>`  | On a `<dialog>` carrying `.card`, `.panel`, or `.surface`, the closed state and a centered open box are restored in author origin, so the dialog does not render open on load or lose its centering to another rule. It ships with those classes, on every entrypoint that has them, and leaves other dialogs alone. Focus trapping, escape handling, and inert-background behavior stay outside this package. |
 
 ### Visually hidden content
 
@@ -1905,13 +1962,30 @@ This package provides CSS hooks for accessible states. It does not provide seman
 
 ### Motion and transparency
 
-| Feature                 | Behavior                                                                                                                                |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Reduced-motion loaders  | Loader variants use animated embedded SVGs normally and static masks when `prefers-reduced-motion: reduce` matches.                     |
-| Reduced-motion document | The reset additionally shortens document animations and transitions when `prefers-reduced-motion: reduce` matches.                      |
-| Reduced transparency    | `.glass` and `.glass-liquid` drop their blur and lens and become an opaque surface when `prefers-reduced-transparency: reduce` matches. |
+| Feature                   | Behavior                                                                                                                                                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Reduced-motion loaders    | Loader variants use animated embedded SVGs normally and static masks when `prefers-reduced-motion: reduce` matches.                                                                                                |
+| Reduced-motion components | Every component stops its own transitions and animations -- the skeleton and progress shimmer, the indeterminate sweep, the tooltip, toggle marks, and the press -- when `prefers-reduced-motion: reduce` matches. |
+| Reduced-motion document   | The reset additionally shortens every other animation and transition on the page when `prefers-reduced-motion: reduce` matches.                                                                                    |
+| Reduced transparency      | `.glass` and `.glass-liquid` drop their blur and lens and become an opaque surface when `prefers-reduced-transparency: reduce` matches.                                                                            |
 
-The loader fallback is embedded in loader CSS, so focused imports that include loaders honor reduced motion without the reset. This includes `@codenhub/styles/components`, `@codenhub/styles/tw/components`, and `@codenhub/styles/tw/loader`. The complete and native entrypoints include both that fallback and the reset's broader animation and transition shortening.
+The loader fallback and each component's own reduced-motion rule ship with the component, so every entrypoint that includes it honors reduced motion without the reset -- `@codenhub/styles/components`, `@codenhub/styles/tw/components`, and each focused `/tw/*` component entrypoint included. The complete and native entrypoints add the reset's page-wide shortening on top.
+
+The reset's rule is `!important` inside the `base` layer, and a layered `!important` beats an unlayered one, so your own `!important` cannot switch an animation back on. To keep one running for users who ask for reduced motion -- a progress indicator you consider essential, say -- declare it `!important` in a layer ordered before `base`. The order is set by the first `@layer` statement the browser meets, so yours goes before the package loads:
+
+```css
+@layer essential-motion, theme, base, components, utilities;
+@import "@codenhub/styles";
+
+@layer essential-motion {
+  @media (prefers-reduced-motion: reduce) {
+    .upload-spinner {
+      animation-duration: 1s !important;
+      animation-iteration-count: infinite !important;
+    }
+  }
+}
+```
 
 ### Color and contrast
 
@@ -1926,10 +2000,10 @@ The loader fallback is embedded in loader CSS, so focused imports that include l
 
 ### Forced colors and direction
 
-| Feature        | Behavior                                                                                                           |
-| -------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Forced colors  | `forced-colors: active` preserves visible borders and checked states using system colors.                          |
-| Text direction | Quote bar, alert icon, progress fill, vertical divider, and switch knob mirror under `dir="rtl"`. No class needed. |
+| Feature        | Behavior                                                                                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Forced colors  | `forced-colors: active` preserves visible borders and checked states using system colors.                                                               |
+| Text direction | Quote bar, alert icon, progress fill, vertical divider, switch knob, table alignment, and a select's chevron mirror under `dir="rtl"`. No class needed. |
 
 In forced colors, class-based form controls including `.text-control` receive a 2px `Highlight` system-color focus outline. The native entrypoint provides the same visible system outline for unclassed text inputs, selects, textareas, checkboxes, and radios.
 
@@ -1939,16 +2013,16 @@ Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`,
 
 Use semantic HTML and behavior appropriate for the component.
 
-| UI                | Required outside CSS                                                                                            |
-| ----------------- | --------------------------------------------------------------------------------------------------------------- |
-| Buttons           | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.            |
-| Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships.                      |
-| Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                            |
-| Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                 |
-| Tooltips          | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`.       |
-| Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                          |
-| Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.       |
-| Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package. |
+| UI                | Required outside CSS                                                                                                                                                                                                                    |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Buttons           | Use `<button>` for actions or accessible links for navigation. Add accessible names for `.btn.icon`.                                                                                                                                    |
+| Forms             | Use labels, `type`, validation logic, `aria-describedby`, and error message relationships. Keep hints and errors outside the `<label>`, and give a `.switch` `role="switch"`.                                                           |
+| Alerts            | Add `role="status"` or `role="alert"` based on announcement urgency.                                                                                                                                                                    |
+| Toasts            | Add live-region behavior, dismissal behavior, focus rules, and pause/timeout logic when needed.                                                                                                                                         |
+| Tooltips          | Give the bubble a real `id` and `role="tooltip"`, and reference it from the trigger's `aria-describedby`. Dismiss it on Escape by writing `data-state="closed"` (see [Tooltips](docs/usage/tooltips.md)); the bubble is already hoverable. |
+| Progress          | Use semantic progress elements or ARIA values when numeric progress must be announced.                                                                                                                                                  |
+| Skeletons/loaders | Mark decorative loading visuals with `aria-hidden="true"` and expose loading state elsewhere when needed.                                                                                                                               |
+| Popovers/modals   | Provide focus trapping, escape handling, inert background behavior, labels, and roles outside this CSS package.                                                                                                                         |
 
 ## State attribute guidance
 
@@ -1963,7 +2037,7 @@ Use ARIA or data attributes when native attributes are not available for the ele
 ```html
 <a class="btn secondary" aria-disabled="true">Unavailable</a>
 <span class="tooltip" data-state="open">
-  <span class="tooltip-icon" tabindex="0" aria-label="More details" aria-describedby="more-details-bubble">?</span>
+  <button type="button" class="tooltip-icon" aria-label="More details" aria-describedby="more-details-bubble">?</button>
   <span class="tooltip-bubble" role="tooltip" id="more-details-bubble">More details</span>
 </span>
 ```
@@ -1974,11 +2048,15 @@ Use ARIA or data attributes when native attributes are not available for the ele
 
 # 0.6.0
 
-A liquid-glass modifier, glass that keeps every presentation's fill whole, and a round of fixes to tables, controls, and the focus ring.
+A liquid-glass modifier, glass that keeps every presentation's fill whole, hoverable tooltips, native field decorations with an `.unadorned` opt-out, indeterminate checkboxes and list-box selects, and a round of fixes to tables, controls, the focus ring, right-to-left layout, and reduced motion on every entrypoint.
 
 ## Added
 
 - **`.glass-liquid`**, a modifier of `.glass`: continuous corners, a bright rim, a lighter blur, a clearer ground, and a lens that bends what is behind a surface at its edges (Chromium today; Firefox and Safari keep the rim, blur, and ground). Put it beside `.glass` on the region, or on one surface inside a glass region; `.glass-solo.glass-liquid` paints the same pane on an element the package does not style. Without `.glass` in scope it changes the corners and nothing else. See [Aesthetics → Liquid glass](docs/usage/aesthetics.md#liquid-glass).
+- **`.unadorned`** removes the browser's own field decorations -- the date picker button, number spin buttons, and search clear button and magnifier -- on a control or on its `.input-group`, for a field whose adornments you draw yourself. See [Forms → Icons](docs/usage/forms.md#icons).
+- **`[data-state="closed"]` on `.tooltip`** hides the bubble while it is hovered or focused, for an Escape handler, and **`--tooltip-linger`** (300ms) sets how long a bubble stays after the pointer leaves its trigger. See [Tooltips](docs/usage/tooltips.md).
+- **An indeterminate `.checkbox`** (and a native one under `/native`) draws the checked plate with a dash for its mark, and a Highlight plate in forced colors. See [Forms → Toggles](docs/usage/forms.md#toggles).
+- **A multi-row `.select`** -- `multiple`, or a `size` above 1 -- draws as a list box: no chevron, as tall as its rows, with the chevron's room given back. It used to keep the chevron and a one-row height.
 - **`--ui-rule-ink`**, the neutral line color of a table's frame and rules, read ahead of `--ui-ink`. Glass sets it so a table's lines read on its plate; every other aesthetic clears it.
 
 ## Changed
@@ -1990,12 +2068,31 @@ A liquid-glass modifier, glass that keeps every presentation's fill whole, and a
 - **Table rules draw at the aesthetic's line width**, uncapped, so `.chunky-tile`'s 2px frame no longer sits over a 1px row rule and `.pixel` draws them at all.
 - **The focus ring is pulled in by the focused element's line width.** `--focus-ring-offset` is no longer declared at `:root`; its default is computed on the element, so it lands on the edge under every aesthetic. Setting `--focus-ring-offset` yourself still wins, but reading `var(--focus-ring-offset)` in your own CSS now needs a fallback.
 - **Ink aesthetics draw controls in the control border.** Under `.neobrutalism`, `.pixel`, `.cyber`, and `.sketch`, a resting neutral field or toggle uses `--color-control-border` instead of the near-primary ink. A bare native checkbox or radio under `/native` takes the control ink too, and a `.neutral` field under glass takes it like an unclassed one.
+- **Text controls keep the browser's own decorations.** The date picker button, number spin buttons, and search clear button were hidden on every text control, which also removed what they do. They are back by default; add `.unadorned` to remove them.
+- **Buttons and fields take the surrounding font on every entrypoint.** `<button>` under `/native`, and every `.btn` and text control under `/components`, used the user agent's smaller control font (13.33px), so the same label printed at three sizes across elements and entrypoints. They inherit the page's font now, as they already did on `.`.
+- **A default `.btn` is `--control-height` tall**, 40px, the same as `.ipt` beside it; it was 42px, and 44px under a 2px aesthetic line. Its vertical padding gives back the line width.
+- **`/tw` keeps Tailwind's `2xl` breakpoint.** It redefined `--breakpoint-2xl` as 90rem, which moved every `2xl:` utility in a consumer's own Tailwind build from 96rem. `--breakpoint-xs` (30rem) is still added. Nothing in the package used the override, so the compiled entrypoints are unchanged.
+- **Components honour reduced motion and fix `<dialog>` on every entrypoint.** `/components` and the focused `/tw/*` entries carry no reset, so the skeleton and progress shimmer, the indeterminate sweep, and the tooltip, toggle, and press transitions kept moving under `prefers-reduced-motion: reduce`, and a `<dialog class="card">` rendered open on load. Each component now stops its own motion, and the `<dialog>` fix ships beside `.card`. The fix now reaches only a dialog carrying `.card`, `.panel`, or `.surface`, so a dialog the package does not style keeps its own margin.
+- **A tooltip bubble is hoverable.** It lingers for `--tooltip-linger` after the pointer leaves the trigger and stays open while the pointer is over it, as WCAG 1.4.13 asks; it used to vanish on the way. A closed bubble is `visibility: hidden` rather than only transparent, so a bubble no `aria-describedby` points at is no longer read in place while closed.
+- **`.alert-icon` sizes without `!important`.** It set its 1.25rem size `!important`, which no consumer rule could override. It sets `--ic-size` for `@codenhub/icons` glyphs and a plain size for any other icon now, so your own rule resizes it. An icon set that sizes itself in an unlayered rule under another knob keeps its own size.
+- **The Tailwind CSS peer range is `>=4.3.2 <5`.** It claimed `>=4.0.0`, but the `/tw` source needs `@source not` and `@source inline()` (Tailwind 4.1) and is tested against 4.3.2. The peer is still optional, and only `/tw` needs it.
 - **Browser floor is Firefox 128.** Non-inheriting elevation relies on `@property`; the documented floor was Firefox 121.
 
 ## Fixed
 
 - **A switch's knob sits inside `.pixel`'s inset ring** instead of covering it, so an unchecked and a checked switch no longer read as two halves.
 - **The sketch solo shadow is cast in the depth colour** rather than full ink.
+- **No stray `.contents` rule.** The compiled `.`, `/native`, and `/components` stylesheets shipped Tailwind's `.contents{display:contents}`, picked up from the license text; the build no longer scans the package's root files.
+- **Links under `/native` keep the size of their text.** `a` was mapped to body copy, so a link inside a heading printed at 14px and regular weight.
+- **The Tailwind guide no longer imports Tailwind twice.** `/tw` imports Tailwind itself, so it replaces your own `@import "tailwindcss"`; with both, an unminified build carried two copies of Preflight. The focused `/tw/*` entrypoints and `/tw/native` still expect your import first.
+- **`.tooltip-icon` keeps its size on a `<button>`.** The docs now use a real `<button type="button">` as the trigger, since `aria-label` on a role-less `<span>` is not reliably announced; the chip resets the padding and minimum size a button brings under `/native` and `/components`. The docs also no longer call it circular under every aesthetic: it is square under `.neobrutalism` and `.pixel`.
+- **A wrapped `.hint` has room between its lines.** Its line height equalled its 14px size, so wrapped lines touched; it takes `text-sm`'s 20px leading now.
+- **`/palette` follows a light subtree nested in a dark one.** Its light values sat on `:root` alone, so a `.light` region inside `.dark` kept the dark values. They answer the explicit light selectors too now.
+- **An unchecked switch's knob is `CanvasText` in forced colors.** The switch opts out of forced colors to keep its states apart, and its unchecked knob kept the package grey on the system `Canvas`.
+- **A select's chevron mirrors under `dir="rtl"`.** It and the padding kept for it stayed on the right, so a right-to-left value started beside the chevron.
+- **`.btn.icon` follows the size step.** `.sm` left an icon button at the default 40px, and under WebKit a `.lg` one was 40px wide and 48px tall. They are square at 32px and 48px now.
+- **Tables align to the inline start.** `.data-table` cells and its caption used `text-left`, so a right-to-left table stayed left-aligned.
+- **A region of one aesthetic nested inside another keeps its own material.** Every aesthetic now restates the depth colour and clears the focus inset, hover transform, and shadow tokens it does not use, so glass inside `.chunky-tile` no longer casts a black slab under every card, glass inside `.cyber` casts its shadow again, and a region inside `.pixel` no longer inherits pixel's inset focus layer.
 
 <!-- Source: docs/changelog/0.5.0.md -->
 

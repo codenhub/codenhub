@@ -26,6 +26,9 @@
 @source not "../*.md";
 @source not "../*.txt";
 @source not "../*.json";
+@source not "../*.ts";
+@source not "../LICENSE";
+@source not "../NOTICE";
 
 /* Color tokens are declared once with `light-dark()`, which resolves at the
    point of use against the consuming element's computed `color-scheme`. Theme
@@ -133,7 +136,6 @@
   --color-info-strong: light-dark(var(--color-indigo-800), var(--color-indigo-300));
 
   --breakpoint-xs: 30rem;
-  --breakpoint-2xl: 90rem;
 }
 
 /* Tailwind only keeps a `@theme` variable in the compiled output when it
@@ -251,8 +253,11 @@
    where `light-dark()` would still honor it; that is out of contract, since
    those three spellings are the only supported way to force a theme.
 
-   Each arm is independent, so an explicit selector still wins at any depth even
-   inside a subtree the other arm would match. */
+   Each arm is independent, so an explicit selector wins over the OS preference
+   at any depth. It does not win over an explicit selector of the opposite
+   theme further up: `.dark *` matches every descendant of a `.dark` element,
+   including one inside a nested `.light`, so a `dark:` utility still fires
+   there although its tokens are light. `setup.md#dark-variant` documents it. */
 @custom-variant dark {
   &:where(.dark, .dark *, .theme-dark, .theme-dark *, [data-theme="dark"], [data-theme="dark"] *) {
     @slot;

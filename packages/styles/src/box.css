@@ -234,6 +234,15 @@
     transform var(--motion-duration-normal) var(--motion-ease),
     translate var(--motion-duration-normal) var(--motion-ease);
 
+  /* Reduced motion stops here as well as in `reset.css`: `/components` and the
+     focused `/tw/*` entries carry no reset, so each component that moves says
+     so itself -- this for everything `box` paints, and the components with a
+     transition or animation of their own beside it. The same near-zero
+     duration the reset uses, so a `transitionend` still fires. */
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0.01ms;
+  }
+
   /* An aesthetic that clips cannot show the global focus outline, so it declares
      `--ui-focus-inset` and gets an inset layer instead. With no such aesthetic
      the token is undefined, which makes the whole stack invalid at computed-value

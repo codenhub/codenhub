@@ -32,7 +32,7 @@ test("styles complete quiet tables while preserving table layout", async ({ page
 
   expect(styles.tableDisplay).toBe("table");
   expect(styles.borderCollapse).toBe("separate");
-  expect(styles.captionAlign).toBe("left");
+  expect(styles.captionAlign).toBe("start");
   expect(Number.parseFloat(styles.cellPadding)).toBeGreaterThan(0);
   expect(Number(styles.headingWeight)).toBeGreaterThanOrEqual(500);
   /* Nothing clips the table: in Chromium and WebKit the table's box holds its

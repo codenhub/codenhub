@@ -18,6 +18,10 @@
    this package only styles the bubble. See docs/usage/tooltips.md. */
 @utility tooltip {
   --tooltip-gap: 0.5rem;
+  /* How long the bubble stays after the pointer leaves the trigger: long
+     enough to cross `--tooltip-gap` onto the bubble, which keeps it open
+     (WCAG 1.4.13). */
+  --tooltip-linger: 300ms;
   --tooltip-top: calc(var(--tooltip-gap) * -1);
   --tooltip-right: auto;
   --tooltip-bottom: auto;
@@ -55,7 +59,18 @@
    through its own `.raised`/`.floating`, like any other component. See
    model.md#elevation. */
 @utility tooltip-bubble {
-  @apply surface pointer-events-none absolute z-(--z-popover) w-max max-w-72 px-2.5 py-2 text-sm font-normal whitespace-normal opacity-0 transition-[opacity,transform] duration-(--motion-duration-normal) ease-(--motion-ease);
+  @apply surface absolute z-(--z-popover) w-max max-w-72 px-2.5 py-2 text-sm font-normal whitespace-normal opacity-0;
+
+  /* Hidden rather than merely transparent, so a closed bubble is nothing
+     under the pointer, and it lingers before it goes: the host stays hovered
+     once the pointer is over the bubble, so crossing the gap in
+     `--tooltip-linger` keeps it open. Visibility switches at the end of the
+     fade, so the bubble is there to land on for the whole of it. */
+  visibility: hidden;
+  transition-property: opacity, transform, visibility;
+  transition-duration: var(--motion-duration-normal);
+  transition-timing-function: var(--motion-ease);
+  transition-delay: var(--tooltip-linger, 0s);
 
   /* Filled, over a ground of its own. An intent floods the fill
      (`.tooltip-bubble.primary` is the primary colour); with no intent
@@ -100,6 +115,12 @@
   &.edgeless {
     --_edge-floor: 0%;
   }
+
+  /* The bubble appears without growing under reduced motion, for the entries
+     without the reset; see `box.css`. */
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0.01ms;
+  }
 }
 
 /* Shown on hover or focus anywhere in the host, or pinned open with
@@ -117,6 +138,20 @@
   .tooltip[data-state="open"] .tooltip-bubble {
     opacity: 1;
     transform: var(--tooltip-transform) scale(1);
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  /* Dismissed: a hover message has to close without the pointer moving
+     (WCAG 1.4.13), and CSS cannot hear Escape, so the consumer's handler
+     writes `data-state="closed"` and clears it when the pointer and focus
+     leave. Later and as specific as the rule above, so it wins over hover and
+     focus alike. */
+  .tooltip[data-state="closed"] .tooltip-bubble {
+    opacity: 0;
+    transform: var(--tooltip-transform) scale(0);
+    visibility: hidden;
+    transition-delay: 0s;
   }
 }
 
@@ -127,9 +162,11 @@
    a plate alone leaves three of eight intents indistinguishable;
    `--intent-border` is the slot that differs.
 
-   `clip-path: none` stays because this is a circular fixed identity, not a
-   shape a container's aesthetic reaches, the same way `.radio` keeps its own
-   circle instead of taking `.pixel`'s stepped silhouette. */
+   Its corner is the aesthetic's, through the pill corner and then the control
+   corner: round by default, a diamond under `.cyber`, square under
+   `.neobrutalism` and `.pixel`, whose corner is zero. Only the silhouette
+   clip is refused -- `clip-path: none`, as `.radio` has it -- because
+   `.pixel`'s stepped polygon would bite a 20px chip rather than shape it. */
 @utility tooltip-icon {
   @apply box inline-flex size-5 cursor-default items-center justify-center text-sm font-bold;
 
@@ -139,6 +176,12 @@
   --_d-elevation: 0;
   --_d-ground: var(--intent-subtle);
 
+  /* The trigger is best a real `<button>`, which is a `.btn` under `/native`
+     and carries the user agent's padding under `/components`; either would
+     stretch the chip past its own size. */
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
   border-radius: var(--ui-radius-pill, var(--ui-radius, var(--ui-corner, calc(infinity * 1px))));
   clip-path: none;
 }

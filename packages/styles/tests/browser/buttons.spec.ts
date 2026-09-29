@@ -601,3 +601,54 @@ test.describe("buttons", () => {
     }
   });
 });
+
+/* A default button stands exactly as tall as a text field, so the two line up
+   in a row whatever width of line the aesthetic draws: the border sits inside
+   `--control-height`, as it does on `.ipt`. */
+test("stands a default button as tall as a text field at any line width", async ({ page }) => {
+  await page.goto(BUTTONS_URL);
+
+  const heights = await page.evaluate(() => {
+    const host = document.createElement("div");
+    host.style.cssText = "display: flex; align-items: flex-start; gap: 0.5rem; font-size: 16px; line-height: 1.5";
+    host.innerHTML =
+      '<button class="btn">Save</button><input class="ipt">' +
+      '<div style="--ui-border-width: 2px; display: contents"><button class="btn edged">Save</button><input class="ipt"></div>';
+    document.body.append(host);
+
+    return [...host.querySelectorAll("button, input")].map((element) => element.getBoundingClientRect().height);
+  });
+
+  expect(heights).toEqual([40, 40, 40, 40]);
+});
+
+/* An icon button follows the size step like a labelled one: `.sm` is the
+   32px step, the default the 40px control height, `.lg` the 48px one -- and
+   stays square at each. `.sm` used to leave it at 40px. */
+test("sizes an icon button with the size step and keeps it square", async ({ page }) => {
+  await page.goto(BUTTONS_URL);
+
+  const sizes = await page.evaluate(() => {
+    const host = document.createElement("div");
+    host.style.cssText = "display: flex; align-items: flex-start; gap: 0.5rem; font-size: 16px; line-height: 1.5";
+    host.innerHTML =
+      '<button class="btn icon sm" aria-label="Add">+</button>' +
+      '<button class="btn icon" aria-label="Add">+</button>' +
+      '<button class="btn icon lg" aria-label="Add">+</button>';
+    document.body.append(host);
+    const result = [...host.children].map((element) => {
+      const { height, width } = element.getBoundingClientRect();
+
+      return [width, height];
+    });
+    host.remove();
+
+    return result;
+  });
+
+  expect(sizes).toEqual([
+    [32, 32],
+    [40, 40],
+    [48, 48],
+  ]);
+});
