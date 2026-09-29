@@ -43,7 +43,8 @@ export function coerceNumber(options: NumberOptions = {}): Validator<number> {
     // A whole number past Number.MAX_SAFE_INTEGER has already lost digits, so reading it would
     // produce a different number than the text says.
     return Number.isFinite(converted) && (!Number.isInteger(converted) || Number.isSafeInteger(converted))
-      ? strict(converted)
+      ? // "-0" is read as 0, since a minus sign in front of nothing is not a value anyone meant.
+        strict(converted === 0 ? 0 : converted)
       : invalidCoercion("number", input);
   };
 }

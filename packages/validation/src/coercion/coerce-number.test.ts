@@ -61,4 +61,9 @@ describe("coerceNumber", () => {
   it("should reject bad options when the validator is created, as number does", () => {
     expect(() => coerceNumber({ multipleOf: 0 })).toThrow(RangeError);
   });
+
+  it("should read minus zero as zero", () => {
+    expect(Object.is(valueOf(coerceNumber()("-0")), 0)).toBe(true);
+    expect(coerceNumber({ nonZero: true })("-0").ok).toBe(false);
+  });
 });
