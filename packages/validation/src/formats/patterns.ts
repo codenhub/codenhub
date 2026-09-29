@@ -1,3 +1,7 @@
+/** Dot-separated labels of letters, digits and hyphens, at most 253 characters, single labels included. */
+export const HOSTNAME_PATTERN =
+  /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i;
+
 /** A domain name with at least one dot and a real top-level domain. */
 const DOMAIN_NAME_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,}|xn--[a-z0-9-]{1,59})$/i;
 

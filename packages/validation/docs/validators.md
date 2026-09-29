@@ -180,6 +180,23 @@ url({ allowLocal: true })("http://localhost:3000"); // ok
 url({ protocols: ["ftp"] })("ftp://example.com"); // ok
 ```
 
+Three schemes have no host, and each is checked by its own rules when listed in `protocols`:
+
+| Scheme   | Accepted when                                                                                                                                                                                             |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mailto` | It names at least one recipient, and every recipient, in the path and in `to`, `cc` or `bcc`, is an address `email()` accepts. With `allowLocal`, an address may be on any hostname, such as `localhost`. |
+| `tel`    | It is a global number: `+`, digits with `-`, `.`, `(` or `)` between them, then optional `;name=value` parameters. A local number with `phone-context` is rejected.                                       |
+| `urn`    | It follows RFC 8141: a namespace of 2 to 32 letters, digits and inner hyphens, a colon, and a non-empty name.                                                                                             |
+
+Any other scheme without a host, such as `data`, `file` or `javascript`, is rejected even when listed and even with `allowLocal`, so listing a protocol never lets a URL through unchecked.
+
+```ts
+url({ protocols: ["mailto"] })("mailto:ada@example.com?cc=bob@example.org"); // ok
+url({ protocols: ["mailto"] })("mailto:ada@localhost"); // fails: not a public host
+url({ protocols: ["tel"] })("tel:+1-201-555-0123"); // ok
+url({ protocols: ["urn"] })("urn:isbn:0451450523"); // ok
+```
+
 ### `ip`
 
 `ip(options?)` takes `version`, `"v4"` or `"v6"`, to accept one address family only. Without it both are accepted. The `format` in the issue is `"ipv4"` or `"ipv6"` when a version is given, and `"ip"` otherwise.
