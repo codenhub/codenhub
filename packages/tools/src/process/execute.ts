@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 
 const WINDOWS_QUOTE_ESCAPE = /(\\*)"/g;
 const WINDOWS_TRAILING_BACKSLASHES = /(\\+)$/g;
@@ -187,13 +187,62 @@ export function formatCommand(spec: CommandSpec): string {
   return [spec.command, ...spec.args].map((part) => (/\s/.test(part) ? `"${part}"` : part)).join(" ");
 }
 
+/**
+ * Lists every process descended from one, read from a `ps` snapshot.
+ *
+ * A package script runs under a shell, and the shell's children are what hold
+ * the output pipes open: signalling the shell alone leaves them running, and the
+ * run waits on them as if nothing had been killed.
+ * @param processId Root of the tree.
+ * @param table `pid ppid` lines, one process per line.
+ * @returns Descendant process ids, excluding the root itself.
+ */
+export function listDescendants(processId: number, table: string): number[] {
+  const childrenByParent = new Map<number, number[]>();
+  for (const line of table.split("\n")) {
+    const [pid, ppid] = line.trim().split(/\s+/).map(Number);
+    if (pid === undefined || ppid === undefined || !Number.isInteger(pid) || !Number.isInteger(ppid)) {
+      continue;
+    }
+    childrenByParent.set(ppid, [...(childrenByParent.get(ppid) ?? []), pid]);
+  }
+  const descendants: number[] = [];
+  const pending = [processId];
+  while (pending.length > 0) {
+    const children = childrenByParent.get(pending.pop() as number) ?? [];
+    descendants.push(...children);
+    pending.push(...children);
+  }
+  return descendants;
+}
+
+function signalAll(processIds: readonly number[], signal: NodeJS.Signals): void {
+  for (const processId of processIds) {
+    try {
+      process.kill(processId, signal);
+    } catch {
+      // Already gone, which is the outcome being asked for.
+    }
+  }
+}
+
 function killProcessTree(processId: number, kill: (signal: NodeJS.Signals) => void): void {
   if (process.platform === "win32") {
     spawn("taskkill", ["/pid", String(processId), "/t", "/f"], { stdio: "ignore" }).unref();
     return;
   }
+  // The tree is read before anything is signalled: once the root dies its
+  // children are re-parented and no longer traceable to it. A child spawned in
+  // its own process group would be simpler to kill, but would also stop
+  // receiving the terminal's Ctrl+C, so an interrupted run would leave it behind.
+  const snapshot = spawnSync("ps", ["-A", "-o", "pid=,ppid="], { encoding: "utf8" });
+  const descendants = snapshot.status === 0 ? listDescendants(processId, snapshot.stdout) : [];
   kill("SIGTERM");
-  setTimeout(() => kill("SIGKILL"), FORCE_KILL_GRACE_MS).unref();
+  signalAll(descendants, "SIGTERM");
+  setTimeout(() => {
+    kill("SIGKILL");
+    signalAll(descendants, "SIGKILL");
+  }, FORCE_KILL_GRACE_MS).unref();
 }
 
 /**
