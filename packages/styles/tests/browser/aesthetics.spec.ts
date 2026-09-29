@@ -1143,9 +1143,10 @@ test.describe("aesthetics", () => {
          `button.css`'s contract and the neobrutalism suite already covers it. */
       expect(button["--ui-active-shadow-y"].trim(), "the bar collapses on press").toBe("0px");
       expect(button["--ui-active-translate-y"].trim(), "the element travels the bar's depth").toBe("4px");
-      /* Chunky tile declares no hover transform, so `box-hover` falls back to
-         `none` and the tile holds still under the pointer. */
-      expect(button["--ui-hover-transform"].trim(), "no hover transform declared").toBe("");
+      /* The tile holds still under the pointer, and says so rather than leaving
+         the token undeclared: undeclared, a region nested inside an aesthetic
+         that moves on hover would inherit the move. */
+      expect(button["--ui-hover-transform"].trim(), "no hover transform").toBe("none");
     });
 
     /* `box-active` reaches `.card.interactive`, not only `.btn`. Under a
@@ -2170,4 +2171,93 @@ test.describe("control ink", () => {
       expectSameColor(read.nested, read.nestedInk, `neobrutalism nested in ${aesthetic} checkbox ink`);
     });
   }
+});
+
+/* An aesthetic nested inside another is the aesthetic, not a blend of the two.
+   Material inherits, so every token one aesthetic sets is one a region nested
+   inside it inherits unless that region names or clears it --
+   `registry.test.ts` holds the declarations, and this holds the painted result:
+   a focused button and a resting card inside every other aesthetic compute
+   exactly what they compute on their own. Pixel's inset focus ring once
+   reached every region nested inside it, and a glass card inside chunky tile
+   cast chunky tile's opaque black depth. */
+test.describe("nested aesthetics", () => {
+  const AESTHETICS = ["neobrutalism", "glass", "pixel", "chunky-tile", "cyber", "sketch"] as const;
+
+  test("paints a nested region exactly as it paints alone", async ({ page }) => {
+    await page.goto(BUTTONS_URL);
+
+    const cases = AESTHETICS.flatMap((inner) => [
+      { inner, outer: "" },
+      ...AESTHETICS.filter((outer) => outer !== inner).map((outer) => ({ inner, outer })),
+    ]);
+
+    await page.evaluate((all) => {
+      const host = document.querySelector('[data-testid="preview-root"]')!;
+      const previous = document.createElement("button");
+
+      previous.id = "nested-probe-previous";
+      host.append(previous);
+
+      for (const [index, { inner, outer }] of all.entries()) {
+        const region = document.createElement("div");
+
+        region.className = inner;
+        region.innerHTML =
+          `<button class="btn primary" data-nested-probe="${index}" style="transition:none">Probe</button>` +
+          `<div class="card" data-nested-card="${index}" style="transition:none">Card</div>`;
+
+        if (outer) {
+          const wrapper = document.createElement("div");
+
+          wrapper.className = outer;
+          wrapper.append(region);
+          host.append(wrapper);
+        } else {
+          host.append(region);
+        }
+      }
+
+      previous.focus();
+    }, cases);
+
+    /* A real keyboard move, for the reason the resting-shadow test gives:
+       `:focus-visible` follows each engine's own modality heuristic. */
+    const focused: { focusVisible: boolean; shadow: string }[] = [];
+
+    /* oxlint-disable no-await-in-loop -- one focus moves at a time. */
+    while (focused.length < cases.length) {
+      await page.keyboard.press("Tab");
+      focused.push(
+        await page.evaluate(() => {
+          const active = document.activeElement!;
+
+          return { focusVisible: active.matches(":focus-visible"), shadow: getComputedStyle(active).boxShadow };
+        }),
+      );
+    }
+
+    const cards = await page.evaluate(
+      (count) =>
+        Array.from(
+          { length: count },
+          (_, index) => getComputedStyle(document.querySelector(`[data-nested-card="${index}"]`)!).boxShadow,
+        ),
+      cases.length,
+    );
+    const alone = new Map(cases.flatMap((entry, index) => (entry.outer ? [] : [[entry.inner, index] as const])));
+
+    for (const [index, { inner, outer }] of cases.entries()) {
+      const reference = alone.get(inner)!;
+
+      expect(focused[index]!.focusVisible, `${inner} in ${outer || "nothing"} is focus-visible`).toBe(true);
+
+      if (!outer) {
+        continue;
+      }
+
+      expect(focused[index]!.shadow, `${inner} in ${outer}: focused button`).toBe(focused[reference]!.shadow);
+      expect(cards[index], `${inner} in ${outer}: card`).toBe(cards[reference]);
+    }
+  });
 });

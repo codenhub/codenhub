@@ -54,6 +54,15 @@
     --ui-shadow-y: 0px;
     --ui-shadow-blur: 0px;
     --ui-shadow-spread: 0px;
+    --ui-shadow-inset: initial;
+    --ui-shadow-ink: initial;
+    --ui-active-shadow-x: initial;
+    --ui-active-shadow-y: initial;
+    /* The theme's depth colour, restated: the surface shadow below resolves it
+       here, on the region, so inside chunky tile it inherited opaque black and
+       cast a black slab under every card, and inside cyber it inherited
+       transparent and cast none. */
+    --elevation-color: light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55));
     /* No halo, cleared so a region nested inside another
        aesthetic does not inherit one. */
     --ui-halo-blur: initial;
@@ -88,6 +97,9 @@
     /* Nothing here draws its edge as a ring, and an aesthetic nested inside pixel
        has to say so rather than inherit it. */
     --ui-shadow-edge: initial;
+    /* Nothing clips, so the global focus outline shows; pixel's inset focus
+       layer is cleared rather than inherited. */
+    --ui-focus-inset: initial;
     --ui-hover-transform: none;
     --ui-active-transform: none;
     --ui-active-translate-x: initial;
