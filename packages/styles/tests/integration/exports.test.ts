@@ -498,17 +498,94 @@ test("utility names that collide with the package's own prose do not leak into t
    license's "contents" once shipped `.contents{display:contents}` -- so this
    holds every class the compiled entrypoints emit to one the stylesheet source
    names itself: a selector, an `@utility`, or an `@source inline()` candidate.
-   Comments and `url()` strings are stripped from both sides first, so artwork
-   and prose name nothing. */
-const stripCommentsAndUrls = (css: string) => css.replace(/\/\*[\s\S]*?\*\//g, "").replace(/url\("[^"]*"\)/g, "url()");
-const classNamesIn = (css: string) => new Set([...css.matchAll(/\.(-?[a-zA-Z_][\w-]*)/g)].map((match) => match[1]!));
+   Classes are read from selector preludes only, on both sides, so class-like
+   text in a declaration value, a comment, or a string names nothing. */
+
+/* Comments out, strings kept: a `/*` inside a string such as
+   `@source not "../*.md"` opens no comment. */
+function stripComments(css: string): string {
+  let output = "";
+  let quote: string | null = null;
+
+  for (let index = 0; index < css.length; index++) {
+    const character = css[index]!;
+
+    if (quote) {
+      if (character === quote && css[index - 1] !== "\\") {
+        quote = null;
+      }
+    } else if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === "/" && css[index + 1] === "*") {
+      const end = css.indexOf("*/", index + 2);
+
+      index = end === -1 ? css.length : end + 1;
+      continue;
+    }
+    output += character;
+  }
+
+  return output;
+}
+
+/* The prelude of every style rule, nested ones included: the text before a
+   `{` that does not start an at-rule. A declaration ends at `;` or `}` and is
+   dropped, and quoted strings are skipped so a brace in one opens nothing. */
+function selectorPreludes(source: string): string[] {
+  const css = stripComments(source);
+  const preludes: string[] = [];
+  let buffer = "";
+  let quote: string | null = null;
+
+  for (let index = 0; index < css.length; index++) {
+    const character = css[index]!;
+
+    if (quote) {
+      buffer += character;
+      if (character === quote && css[index - 1] !== "\\") {
+        quote = null;
+      }
+    } else if (character === '"' || character === "'") {
+      quote = character;
+      buffer += character;
+    } else if (character === "{") {
+      const head = buffer.trim();
+
+      if (!head.startsWith("@")) {
+        preludes.push(head);
+      }
+      buffer = "";
+    } else if (character === "}" || character === ";") {
+      buffer = "";
+    } else {
+      buffer += character;
+    }
+  }
+
+  return preludes;
+}
+
+const classNamesIn = (css: string) =>
+  new Set(
+    selectorPreludes(css).flatMap((prelude) =>
+      [...prelude.matchAll(/\.(-?[a-zA-Z_][\w-]*)/g)].map((match) => match[1]!),
+    ),
+  );
+
+test("classNamesIn reads selectors, not declaration values", () => {
+  const names = classNamesIn(
+    '@source not "../*.md";.a,.b:is(.c){content:".d";font-family:x.e}/* .k{ */.f{&.g{--h:.i}}@media (min-width:1px){.j{color:red}}',
+  );
+
+  expect([...names].sort()).toEqual(["a", "b", "c", "f", "g", "j"]);
+});
 
 test("compiled entrypoints emit only classes the stylesheet source names", async () => {
   const sourceDirectory = path.resolve(packageRoot, "src");
   const sourceFiles = (await readdir(sourceDirectory, { recursive: true })).filter(
     (entry): entry is string => typeof entry === "string" && entry.endsWith(".css"),
   );
-  const sourceText = stripCommentsAndUrls(
+  const sourceText = stripComments(
     (await Promise.all(sourceFiles.map((file) => readFile(path.join(sourceDirectory, file), "utf8")))).join("\n"),
   );
   const named = classNamesIn(sourceText);
@@ -530,7 +607,7 @@ test("compiled entrypoints emit only classes the stylesheet source names", async
     })),
   );
   const leaks = outputs.flatMap(({ output, target }) =>
-    [...classNamesIn(stripCommentsAndUrls(output))]
+    [...classNamesIn(output)]
       .filter((name) => !named.has(name))
       .map((name) => `${target} emits .${name}, which src/ never names`),
   );
