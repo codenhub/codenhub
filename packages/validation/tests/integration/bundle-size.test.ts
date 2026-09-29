@@ -169,7 +169,8 @@ const measure = async ({ name, source }: Scenario): Promise<number> => {
   return gzipSync(readFileSync(join(outDir, file as string)), { level: 9 }).length;
 };
 
-describe("bundle size", () => {
+// Each scenario runs a real build, which is quick alone and slower under load or coverage.
+describe("bundle size", { timeout: 30_000 }, () => {
   beforeAll(() => {
     if (!existsSync(distEntry)) {
       throw new Error("run `pnpm build validation` first: this test reads dist/");
