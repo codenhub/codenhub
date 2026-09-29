@@ -32,12 +32,6 @@ Aesthetics compose the foundation rather than justify new tokens. Exact appearan
 - **Synthwave/retro.** Visual references are awaited before defining its appearance, tokens, or implementation. No look has been selected.
 - **Retro-OS bevel (`.retro-os`).** A raised two-tone edge with the standard press, not an inverted pressed bevel. A first implementation -- square corners, a 1px ink line, the two depth layers inset as a shade and a white highlight, and a grey surface face -- was built and rejected on review because it did not read as a retro OS; the design starts over from references. A two-tone bevel needs two depth layers with separate base colours, which the foundation no longer carries; whether the new design needs them is decided with it.
 
-## Aesthetics assessed and deferred
-
-Costed against the current model and not a fit. Recorded so the question is not reopened from scratch.
-
-- **Liquid glass**: the refraction that defines it needs an SVG filter element in the DOM, which a CSS-only package cannot ship; the specular highlight is a surface-only treatment; `clip-path: path()` rejects percentages, so the silhouette cannot scale with the box; and `corner-shape: squircle` is Chrome-only. What is reachable without those is `.glass` with a heavier blur.
-
 ## Notes
 
 Two measurements shaped the material tokens and outlive the change that needed them, so both live in [Model](./model.md) rather than here: a no-op `clip-path` or `backdrop-filter` costs nothing in any baseline engine ([The cost of a no-op](./model.md#the-cost-of-a-no-op)), and an indirect token resolves its `var()` references once, on the element that declares it, which is why a shape pair needs two token slots rather than one ([Indirect tokens resolve once](./model.md#indirect-tokens-resolve-once)).

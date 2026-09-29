@@ -784,6 +784,207 @@ test.describe("aesthetics", () => {
         .poll(() => card.evaluate((element) => getComputedStyle(element).boxShadow))
         .toContain("rgb(255, 0, 255)");
     });
+
+    /* Liquid glass moves the blur off the surface onto a layer behind its
+       content, and puts a lens on a second layer above it. A surface with a
+       backdrop filter is a backdrop root, and a layer inside one sees only the
+       surface -- so the surface's own filter must be gone for either layer to
+       reach the page. The lens renders only where an engine draws an SVG filter
+       in `backdrop-filter`; these read the declared contract, which every engine
+       computes. */
+    test.describe("liquid", () => {
+      const LIQUID = "glass glass-liquid";
+      const readLayers = (page: Page, selector: string) =>
+        page
+          .locator(selector)
+          .first()
+          .evaluate((element) => {
+            const host = getComputedStyle(element);
+            const before = getComputedStyle(element, "::before");
+            const after = getComputedStyle(element, "::after");
+            const backdrop = (styles: CSSStyleDeclaration) =>
+              styles.backdropFilter && styles.backdropFilter !== "none"
+                ? styles.backdropFilter
+                : (styles.getPropertyValue("-webkit-backdrop-filter") ?? "");
+
+            return {
+              host: backdrop(host),
+              position: host.position,
+              isolation: host.isolation,
+              before: before.content,
+              beforeBackdrop: backdrop(before),
+              after: after.content,
+              afterBackdrop: after.backdropFilter,
+              rim: after.boxShadow,
+            };
+          });
+
+      test("layers the blur and the lens behind every surface", async ({ page, browserName }) => {
+        await allowTransparency(page, browserName);
+        /* oxlint-disable no-await-in-loop -- one page, navigated in turn. */
+        for (const [url, testId] of [
+          [SURFACES_URL, "card-default-none"],
+          [SURFACES_URL, "panel-default-none"],
+          [FEEDBACK_URL, "alert-default-destructive"],
+          [TYPOGRAPHY_URL, "data-table-default-none"],
+        ] as const) {
+          await page.goto(withAesthetic(url, LIQUID));
+
+          const layers = await readLayers(page, `[data-testid="${testId}"]`);
+
+          expect(layers.host, `${testId} has no backdrop of its own`).toMatch(/^(none)?$/);
+          expect(layers.isolation, testId).toBe("isolate");
+          expect(layers.position, testId).toBe("relative");
+          expect(layers.before, `${testId} blur layer`).toBe('""');
+          expect(layers.beforeBackdrop, `${testId} blur layer`).toContain("blur(2px)");
+          expect(layers.after, `${testId} lens layer`).toBe('""');
+          expect(layers.afterBackdrop, `${testId} lens layer`).toContain("#lens");
+          expect(layers.rim, `${testId} rim`).toContain("inset");
+        }
+      });
+
+      test("keeps controls solid and the tooltip bubble in place", async ({ page, browserName }) => {
+        await allowTransparency(page, browserName);
+        await page.goto(withAesthetic(SURFACES_URL, LIQUID));
+
+        const bubble = await page.getByTestId("preview-root").evaluate((root) => {
+          const host = document.createElement("span");
+
+          host.className = "tooltip";
+          host.innerHTML = '<button class="btn">Trigger</button><span class="tooltip-bubble" role="tooltip">Tip</span>';
+          root.append(host);
+
+          const read = (element: Element) => ({
+            position: getComputedStyle(element).position,
+            before: getComputedStyle(element, "::before").content,
+          });
+          const result = {
+            bubble: read(host.querySelector(".tooltip-bubble")!),
+            button: read(host.querySelector(".btn")!),
+          };
+
+          host.remove();
+
+          return result;
+        });
+
+        expect(bubble.bubble.position, "bubble keeps its own placement").toBe("absolute");
+        expect(bubble.bubble.before, "bubble takes the layers").toBe('""');
+        expect(bubble.button.before, "a control takes no layer").toBe("none");
+
+        /* A `.solid` table is opaque, not frosted, so there is nothing for a
+           layer to blur behind it. */
+        await page.goto(withAesthetic(TYPOGRAPHY_URL, LIQUID));
+
+        const solidTable = await readLayers(page, '[data-testid="data-table-solid-primary"]');
+
+        expect(solidTable.before, "a solid table takes no layer").toBe("none");
+      });
+
+      test("reaches one surface inside a glass region, and skips a plain glass region nested inside", async ({
+        page,
+        browserName,
+      }) => {
+        await allowTransparency(page, browserName);
+        await page.goto(withAesthetic(SURFACES_URL, "glass"));
+
+        const read = await page.getByTestId("preview-root").evaluate((root) => {
+          const region = document.createElement("div");
+
+          region.innerHTML =
+            '<div class="card" data-probe="plain">Plain</div>' +
+            '<div class="card glass-liquid" data-probe="one">Liquid</div>' +
+            '<div class="glass-liquid"><div class="glass"><div class="card" data-probe="nested">Nested</div></div></div>';
+          root.append(region);
+
+          const layer = (probe: string) =>
+            getComputedStyle(region.querySelector(`[data-probe="${probe}"]`)!, "::before").content;
+          const hostBackdrop = (probe: string) => {
+            const styles = getComputedStyle(region.querySelector(`[data-probe="${probe}"]`)!);
+
+            return styles.backdropFilter && styles.backdropFilter !== "none"
+              ? styles.backdropFilter
+              : styles.getPropertyValue("-webkit-backdrop-filter");
+          };
+          const result = {
+            plain: layer("plain"),
+            one: layer("one"),
+            nested: layer("nested"),
+            nestedBackdrop: hostBackdrop("nested"),
+          };
+
+          region.remove();
+
+          return result;
+        });
+
+        expect(read.plain, "a plain glass card takes no layer").toBe("none");
+        expect(read.one, "liquid on one card").toBe('""');
+        expect(read.nested, "plain glass nested in liquid takes no layer").toBe("none");
+        expect(read.nestedBackdrop, "and keeps its own blur").toContain("blur(14px)");
+      });
+
+      test("drops the blur and the lens under reduced transparency", async ({ page, browserName }) => {
+        if (browserName === "chromium") {
+          const session = await page.context().newCDPSession(page);
+
+          await session.send("Emulation.setEmulatedMedia", {
+            features: [{ name: "prefers-reduced-transparency", value: "reduce" }],
+          });
+        }
+
+        await page.goto(withAesthetic(SURFACES_URL, LIQUID));
+
+        /* Only Chromium can be told the preference here; the other two report
+           none and have nothing to assert. */
+        test.skip(
+          !(await page.evaluate(() => matchMedia("(prefers-reduced-transparency: reduce)").matches)),
+          "engine cannot emulate reduced transparency",
+        );
+
+        const layers = await readLayers(page, '[data-testid="card-default-none"]');
+        const ground = await page
+          .getByTestId("card-default-none")
+          .evaluate((element) => getComputedStyle(element).backgroundColor);
+
+        expect(layers.beforeBackdrop, "no blur").toMatch(/^(none)?$/);
+        expect(layers.afterBackdrop, "no lens").toBe("none");
+        expect(readSrgb(ground).alpha, "an opaque ground").toBe(1);
+      });
+
+      test("paints the liquid pane on a solo element and leaves its own placement alone", async ({ page }) => {
+        await page.goto(SURFACES_URL);
+
+        const read = await page.getByTestId("preview-root").evaluate((root) => {
+          const loose = document.createElement("div");
+          const fixed = document.createElement("div");
+
+          loose.className = "glass-solo glass-liquid";
+          fixed.className = "glass-solo glass-liquid";
+          fixed.style.position = "fixed";
+          root.append(loose, fixed);
+
+          const result = {
+            loose: getComputedStyle(loose).position,
+            fixed: getComputedStyle(fixed).position,
+            before: getComputedStyle(loose, "::before").content,
+            after: getComputedStyle(loose, "::after").content,
+            host: getComputedStyle(loose).backdropFilter,
+          };
+
+          loose.remove();
+          fixed.remove();
+
+          return result;
+        });
+
+        expect(read.loose, "an unpositioned element is anchored").toBe("relative");
+        expect(read.fixed, "a fixed element stays fixed").toBe("fixed");
+        expect(read.before).toBe('""');
+        expect(read.after).toBe('""');
+        expect(read.host, "the element's own blur moves to the layer").toMatch(/^(none)?$/);
+      });
+    });
   });
 
   test.describe("pixel", () => {
@@ -2289,7 +2490,17 @@ test.describe("control ink", () => {
    reached every region nested inside it, and a glass card inside chunky tile
    cast chunky tile's opaque black depth. */
 test.describe("nested aesthetics", () => {
-  const AESTHETICS = ["neobrutalism", "glass", "pixel", "chunky-tile", "cyber", "sketch"] as const;
+  /* Liquid glass is a modifier, not an aesthetic, but it writes layers onto
+     surfaces, and a region nested inside it must not take them. */
+  const AESTHETICS = [
+    "neobrutalism",
+    "glass",
+    "glass glass-liquid",
+    "pixel",
+    "chunky-tile",
+    "cyber",
+    "sketch",
+  ] as const;
 
   test("paints a nested region exactly as it paints alone", async ({ page }) => {
     await page.goto(BUTTONS_URL);
@@ -2346,10 +2557,11 @@ test.describe("nested aesthetics", () => {
 
     const cards = await page.evaluate(
       (count) =>
-        Array.from(
-          { length: count },
-          (_, index) => getComputedStyle(document.querySelector(`[data-nested-card="${index}"]`)!).boxShadow,
-        ),
+        Array.from({ length: count }, (_, index) => {
+          const card = document.querySelector(`[data-nested-card="${index}"]`)!;
+
+          return [getComputedStyle(card).boxShadow, getComputedStyle(card, "::before").content].join(" | ");
+        }),
       cases.length,
     );
     const alone = new Map(cases.flatMap((entry, index) => (entry.outer ? [] : [[entry.inner, index] as const])));

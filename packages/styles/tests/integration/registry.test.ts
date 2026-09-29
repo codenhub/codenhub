@@ -780,21 +780,36 @@ test("an aesthetic names a component only with a recorded reason", async () => {
   expect(problems).toEqual([]);
 });
 
-/* Sketch writes its rotation onto components, so it has to skip a region of
-   another aesthetic nested inside it or overrule that aesthetic's corners. Every
-   list of aesthetics it names is that exclusion, and a list missing one is how a
-   new aesthetic would silently take sketch's outlines. */
-test("sketch excludes every other aesthetic from its rotation", async () => {
-  const source = withoutComments(await read("src/aesthetics/sketch.css"));
-  const others = (registry.aesthetics ?? []).map((aesthetic) => aesthetic.class).filter((name) => name !== "sketch");
-  const lists = [...source.matchAll(/:is\(([^()]*)\)/g)]
-    .map(([, list]) => list!.split(",").map((selector) => selector.trim().replace(/^\./, "")))
-    .filter((names) => names.some((name) => others.includes(name)));
+/* An aesthetic that writes onto components -- sketch's rotation, liquid glass's
+   layers -- has to skip a region of another aesthetic nested inside it, or
+   overrule that aesthetic's material. Every list of aesthetics it names is that
+   exclusion, and a list missing one is how a new aesthetic would silently take
+   another's treatment. */
+test("an aesthetic writing onto components excludes every other aesthetic", async () => {
+  const names = (registry.aesthetics ?? []).map((aesthetic) => aesthetic.class);
+  const excluding = ["sketch", "glass"];
+  const sources = await Promise.all(
+    excluding.map(async (name) => [name, withoutComments(await read(`src/aesthetics/${name}.css`))] as const),
+  );
+  const problems: string[] = [];
 
-  expect(lists.length).toBeGreaterThan(0);
-  for (const names of lists) {
-    expect(names.toSorted()).toEqual(others.toSorted());
+  for (const [name, source] of sources) {
+    const others = names.filter((other) => other !== name).toSorted();
+    const lists = [...source.matchAll(/:is\(([^()]*)\)/g)]
+      .map(([, list]) => list!.split(",").map((selector) => selector.trim().replace(/^\./, "")))
+      .filter((listed) => listed.some((listedName) => others.includes(listedName)));
+
+    if (!names.includes(name) || lists.length === 0) {
+      problems.push(`${name} names no exclusion list`);
+    }
+    for (const listed of lists) {
+      if (listed.toSorted().join() !== others.join()) {
+        problems.push(`${name} excludes ${listed.toSorted().join(", ")}, not ${others.join(", ")}`);
+      }
+    }
   }
+
+  expect(problems).toEqual([]);
 });
 
 /* A solo class is the aesthetic painted onto one element the package does not

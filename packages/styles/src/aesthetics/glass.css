@@ -142,6 +142,131 @@
       --ui-active-transform: none;
     }
   }
+
+  /* Liquid glass: a modifier of glass, the way `.sketch-rounded` is of sketch.
+     Continuous corners, a bright rim where light catches the pane, a lighter
+     blur, and -- in engines that render an SVG filter in `backdrop-filter`,
+     Chromium today -- a lens that bends the backdrop at the edges. On the region
+     beside `.glass`, or on one surface inside a glass region. Without `.glass`
+     in scope it changes corners and nothing else.
+
+     The corner knobs are glass's own, with larger defaults: a continuous corner
+     reads smaller than a round one of the same radius. Where `corner-shape` is
+     not drawn the corners stay round. */
+  .glass-liquid {
+    --ui-corner: var(--glass-radius, 1rem);
+    --ui-corner-surface: var(--glass-radius-surface, 1.5rem);
+    --ui-corner-shape: squircle;
+    --ui-ink: light-dark(rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.16));
+    --ui-surface-ground: color-mix(in srgb, var(--color-background) 30%, transparent);
+    --ui-surface-image: initial;
+
+    /* The blur moves off the surface onto a layer behind its content (below).
+       A surface with a backdrop filter of its own is a backdrop root, and a layer
+       inside one sees only the surface, never the page behind it. */
+    --ui-backdrop: none;
+    --_glass-liquid-blur: blur(2px) saturate(1.8);
+
+    /* The lens is its own layer rather than a second function in the blur's
+       list: Firefox and WebKit accept `url()` there and draw nothing for it, and
+       a filter list with an unusable reference is dropped whole -- the blur with
+       it. Kept apart, an engine that ignores the lens still blurs.
+
+       The displacement map is built inside the filter from the box itself:
+       erode a flood of the filter region by 8px, blur it into a ramp, and take
+       the ramp's slope across x and y as the two displacement channels. Every
+       length is absolute, so the band is the same width on a tooltip and on a
+       page-wide card; no length is a percentage of the box. The blur is wider
+       than the erosion so the ramp's corners round off -- the other way the
+       square core showed through as loops at every corner. A filter cannot read
+       a custom property, so the band and the strength are fixed, not knobs. */
+    --_glass-liquid-lens: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='lens' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feFlood flood-color='white'/><feMorphology operator='erode' radius='8'/><feGaussianBlur stdDeviation='10' result='ramp'/><feOffset in='ramp' dx='-3' result='l'/><feOffset in='ramp' dx='3' result='r'/><feComposite in='l' in2='r' operator='arithmetic' k2='2' k3='-2' k4='0.5' result='dx'/><feOffset in='ramp' dy='-3' result='u'/><feOffset in='ramp' dy='3' result='d'/><feComposite in='u' in2='d' operator='arithmetic' k2='2' k3='-2' k4='0.5' result='dy'/><feColorMatrix in='dx' values='0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1' result='x'/><feColorMatrix in='dy' values='0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1'/><feComposite in='x' operator='arithmetic' k2='1' k3='1'/><feDisplacementMap in='SourceGraphic' scale='110' xChannelSelector='R' yChannelSelector='G'/></filter></svg>#lens");
+
+    /* The rim: light caught on the top-left edge and, fainter, the bottom-right,
+       over a soft inner glow. Drawn on the lens layer, the topmost, because a
+       rim drawn on the surface itself would sit under the layers and blur. */
+    --_glass-liquid-rim:
+      inset 1px 1px 0 light-dark(rgb(255 255 255 / 0.75), rgb(255 255 255 / 0.35)),
+      inset -1px -1px 0 light-dark(rgb(255 255 255 / 0.35), rgb(255 255 255 / 0.12)),
+      inset 0 0 18px light-dark(rgb(255 255 255 / 0.22), rgb(255 255 255 / 0.05));
+    --_glass-liquid-sheen: linear-gradient(
+      160deg,
+      light-dark(rgb(255 255 255 / 0.22), rgb(255 255 255 / 0.06)),
+      transparent 45%
+    );
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-liquid {
+      --ui-surface-ground: var(--color-background);
+      --_glass-liquid-blur: none;
+      --_glass-liquid-lens: none;
+    }
+  }
+
+  /* The layers: a treatment no token reaches, so a selector list glass owns and
+     the registry records. Two pseudo-elements behind a surface's content, the
+     blur beneath and the lens with the rim and sheen above it. `isolation`
+     keeps them above the surface's own plate, which they then blur with the
+     page; `position` anchors them, and a component that positions itself --
+     the tooltip bubble -- keeps its own. A default or `.soft` table frosts
+     under glass, so it takes the layers too. Both slots are spent, so a surface
+     inside a liquid region carries no `::before` or `::after` of the
+     consumer's; the fields cannot host one, and controls stay solid as they do
+     under glass.
+
+     A region of another aesthetic nested inside, or of plain glass, keeps its
+     own material and takes no layers. This list names the other aesthetics, and
+     `registry.test.ts` fails when one is missing. */
+  :is(.glass-liquid, .glass-liquid *):is(.glass, .glass *):is(
+    .card,
+    .panel,
+    .alert,
+    .tooltip-bubble,
+    .surface,
+    .data-table:not(.solid, .ghost)
+  ):not(
+    .glass-liquid :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch),
+    .glass-liquid :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *,
+    .glass-liquid .glass:not(.glass-liquid),
+    .glass-liquid .glass:not(.glass-liquid) *
+  ) {
+    position: relative;
+    isolation: isolate;
+
+    &::before,
+    &::after {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border-radius: inherit;
+      corner-shape: inherit;
+      content: "";
+      pointer-events: none;
+    }
+
+    /* Prefixed first, for the reason `surface` gives. */
+    &::before {
+      -webkit-backdrop-filter: var(--_glass-liquid-blur);
+      backdrop-filter: var(--_glass-liquid-blur);
+    }
+
+    &::after {
+      backdrop-filter: var(--_glass-liquid-lens);
+      background-image: var(--_glass-liquid-sheen);
+      box-shadow: var(--_glass-liquid-rim);
+    }
+  }
+}
+
+/* Forced colours paint the plain surface: no layer blurs, bends, or lights it. */
+@media (forced-colors: active) {
+  .glass-liquid {
+    --_glass-liquid-blur: none;
+    --_glass-liquid-lens: none;
+    --_glass-liquid-rim: none;
+    --_glass-liquid-sheen: none;
+  }
 }
 
 /* Solo: the same look painted onto the one element carrying the class, for an
@@ -181,5 +306,61 @@
     background-color: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+}
+
+/* With `.glass-liquid`, the liquid pane: its corner and ground, and the same two
+   layers behind the element's content. The element's own blur goes, for the
+   backdrop-root reason the modifier gives. Both pseudo-elements are spent, so a
+   foreign element that draws its own `::before` or `::after` loses them.
+
+   The layers need a positioned element to anchor to. That one declaration is
+   layered, where the element's own `fixed` or `absolute` beats it -- a toast
+   keeps its placement, and an unpositioned element is anchored. */
+@layer components {
+  .glass-solo.glass-liquid {
+    position: relative;
+  }
+}
+
+.glass-solo.glass-liquid {
+  isolation: isolate;
+  background-color: color-mix(
+    in srgb,
+    var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0))) 30%,
+    transparent
+  );
+  border-color: light-dark(rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.16));
+  border-radius: var(--glass-radius-surface, 1.5rem);
+  corner-shape: squircle;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+
+  &::before,
+  &::after {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    corner-shape: inherit;
+    content: "";
+    pointer-events: none;
+  }
+
+  &::before {
+    -webkit-backdrop-filter: var(--_glass-liquid-blur);
+    backdrop-filter: var(--_glass-liquid-blur);
+  }
+
+  &::after {
+    backdrop-filter: var(--_glass-liquid-lens);
+    background-image: var(--_glass-liquid-sheen);
+    box-shadow: var(--_glass-liquid-rim);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass-solo.glass-liquid {
+    background-color: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
   }
 }

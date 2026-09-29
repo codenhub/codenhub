@@ -83,6 +83,28 @@ The shadow is cast in the component's own intent, so a success button throws a g
 - Text controls and toggles draw their line in the page's ink at 55% rather than the white hairline, which would erase an unchecked checkbox on a light page. It is `--ui-control-ink`; set it on the region to choose another.
 - A table's frame and rules draw the page's ink at 20%, because the hairline vanishes on the table's plate. It is `--ui-rule-ink`.
 
+### Liquid glass
+
+`.glass-liquid` is a modifier of glass, after Apple's Liquid Glass: continuous corners, a bright rim where light catches the pane, a lighter blur, a clearer ground, and a lens that bends what is behind a surface at its edges. Put it beside `.glass` on the region, or on one surface inside a glass region.
+
+```html
+<section class="glass glass-liquid">
+  <div class="card">A pane that bends the page behind it</div>
+</section>
+```
+
+The lens is drawn by an SVG filter in `backdrop-filter`, which Chromium renders and Firefox and Safari do not yet. Elsewhere the pane keeps everything but the lens: the rim, the blur, the ground, and the corners, round rather than continuous where `corner-shape` is not drawn. Nothing needs to be in your markup: the filter ships inside the stylesheet.
+
+**Exceptions:**
+
+- It reaches `.card`, `.panel`, `.alert`, the tooltip bubble, and a default or `.soft` `.data-table`. Controls stay solid, as they do under glass.
+- It draws its blur and lens on each surface's `::before` and `::after`, so a surface inside a liquid region cannot carry a `::before` or `::after` of your own, and each surface becomes a positioned stacking context -- a surface you position yourself keeps your placement.
+- The lens is 8px of erosion blurred over 10px at every size, and its strength is fixed. A filter cannot read a custom property, so neither is a knob. The corners are, through `--glass-radius` and `--glass-radius-surface`, with larger defaults: a continuous corner reads smaller than a round one of the same radius.
+- A region of another aesthetic nested inside a liquid region, or of plain `.glass`, keeps its own material and takes no layers.
+- Without `.glass` in scope it changes the corners and nothing else.
+- Under `prefers-reduced-transparency: reduce` the blur and the lens go and the surface is opaque, as under glass; in forced colours the layers draw nothing.
+- Text sits over a clearer pane than under glass. Over busy content, check that your text still reads -- the ground is 30% of the page colour, where glass's is 45%.
+
 ## Pixel
 
 `--pixel-unit` is one pixel of the imaginary low-resolution grid, `4px` by default. One square unit is cut from each corner and the outline is one unit thick, so the cut and what covers it are the same size.
@@ -213,7 +235,7 @@ An aesthetic class sets material tokens and nothing paints until a component rea
 
 | Aesthetic       | Solo class           | Paints                                                                                                                                                                                                                               |
 | --------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner.                                                                                                                                            |
+| `.glass`        | `.glass-solo`        | Translucent ground, hairline edge, blur, the tucked two-layer shadow, the surface corner. With `.glass-liquid`, the liquid pane on its `::before` and `::after`.                                                                     |
 | `.neobrutalism` | `.neobrutalism-solo` | 2px ink edge, square corners, the hard offset slab.                                                                                                                                                                                  |
 | `.pixel`        | `.pixel-solo`        | The stepped silhouette, the inset ring in place of a border, the pixel font.                                                                                                                                                         |
 | `.chunky-tile`  | `.chunky-tile-solo`  | The tile corner, 2px edge, the bar under it, the rounded font.                                                                                                                                                                       |

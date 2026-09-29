@@ -779,6 +779,25 @@ Translucent surfaces over a blurred backdrop with a hairline highlight edge. Nee
 - Under `prefers-reduced-transparency`, opacity goes to 100% and the blur is dropped. Transparency is the whole aesthetic, so the honest degradation is an opaque surface rather than a softer blur.
 - Corners are `--glass-radius` and `--glass-radius-surface`, at 0.75rem and 1rem. Rounder than the base geometry, because a translucent panel with a tight corner reads as a cut-out rather than as a pane; a full step above `--radius-surface` landed closer to a pill than to glass. Read with a fallback rather than declared, so an ancestor can set them — [R8](#rules-for-aesthetics), which these two were the first to break.
 
+#### `.glass-liquid`
+
+A modifier of glass, after Apple's Liquid Glass, the way `.sketch-rounded` is of sketch. It was assessed and deferred until 0.5.0 on four grounds, and each fell to measurement or to a slot the foundation had since gained:
+
+- **Refraction needs no SVG in the DOM.** Chromium renders `backdrop-filter: url()` pointing at a data URI, at an external file, or inline, identically. Firefox and WebKit accept the value -- `CSS.supports` is true in all three, so no feature query can gate it -- and draw nothing for it.
+- **The specular highlight is reachable**: a surface-only treatment, which is what `--ui-surface-shadow` and `--ui-surface-image` already are. It is drawn on a layer instead (below), but not for want of a slot.
+- **The silhouette needs no `clip-path: path()`.** `--ui-corner-shape: squircle` follows the box's own radius.
+- **`squircle` being Chromium-only is not disqualifying**: cyber ships `bevel` on the same terms, and a continuous corner degrades to round, which is closer than bevel's square.
+
+The lens is not a warp. Its displacement map is built inside the filter from the filter region itself: a flood eroded by 8px, blurred over 10px into a ramp, and the ramp's slope across x and y taken as the two displacement channels. Every length is absolute, so the band is the same width on a tooltip and a page-wide card; nothing is a percentage of the box. The blur is wider than the erosion because the square core otherwise showed through as loops at every corner. A filter reads no custom property, so the band and strength are fixed, not knobs.
+
+- **The blur and the lens are layers, not the surface's own filter.** A surface with a backdrop filter is a backdrop root, and a layer inside one sees only the surface, never the page -- measured: a lens on the `::before` of a blurred surface bent nothing. So `.glass-liquid` sets `--ui-backdrop: none` and draws the blur on `::before` and the lens on `::after`, behind the content, inside a surface made a stacking context so they land above its plate.
+- **The two are separate layers so an engine that cannot draw the lens keeps the blur.** A filter list with a reference it cannot use is dropped whole; in one list, the lens would take the blur down with it where it does not render. Whether Firefox and Safari drop the list was not measurable here -- neither engine's test build draws `backdrop-filter` at all -- so the split is the precaution that makes the answer not matter.
+- **The rim and the sheen are on the lens layer**, the topmost, because the surface's own box shadow sits under the layers and would blur with the page.
+- The layers are a selector list glass owns, [R3](#rules-for-aesthetics)'s exception, recorded in the registry: a pseudo-element is not a value a token reaches. Anchoring them writes `position: relative` and `isolation: isolate` on the surface, which no surface writes itself; the tooltip bubble's own `absolute` wins. A region of another aesthetic nested inside, or of plain glass, keeps its own material and takes no layers.
+- Surfaces and the frosted table only, as under glass. The fields cannot host a pseudo-element; see [the budget](#pseudo-element-budget).
+- Lighter than glass: `blur(2px) saturate(1.8)`, a 30% ground where glass's is 45%, and corners of 1rem and 1.5rem through glass's own knobs. The lens needs detail left to bend. Reduced transparency drops the blur and the lens and makes the ground opaque; forced colours draw no layer.
+- `.glass-solo.glass-liquid` paints the same pane on a solo element. Its anchor is the one layered declaration a solo class makes, so an element's own `fixed` or `absolute` beats it and a toast keeps its placement.
+
 ### `.neobrutalism`
 
 Thick ink outline, a hard unblurred offset shadow, and a press that moves the element into its own shadow.
@@ -969,6 +988,8 @@ Four spend theirs:
 | `.progress`                      | `::before` (the `.active` shimmer) and `::after` (the fill, reused for `.indeterminate`) | none       |
 
 The three toggles were checked against the same real-child treatment `.alert`'s icon and `.tooltip`'s bubble got in 0.2.0, and rejected: an `<input>` is a void element, so composing a mark in means wrapping every checkbox, radio, and switch in a span whether or not anything ever reaches for the freed slot -- a cost paid by every consumer of the package's single most common form control, for a slot that is already free. Their `::after` is spoken for by the checked state itself, generated by the control rather than authored by a consumer -- exactly what a pseudo-element is for, unlike the icon or the message the alert and tooltip fixes moved out of one. An aesthetic wanting a treatment on a toggle writes it to the open `::before`.
+
+`.glass-liquid` is the first treatment to spend slots: both of every surface's, and of a default or `.soft` table's, for its blur and lens layers, and only inside a liquid region.
 
 `.progress` has no free slot, and the composing argument applies harder, not softer: the fill's width and the shimmer are the bar's only visible state, so a real child would still need a wrapper around it and still would not be a consumer's own content. An aesthetic reaching `.progress` goes through `--progress-color`/`--progress-surface`/`--progress-edge` ([Tier 1](#tier-1----material-tokens)) or a selector rule on the track itself, `.my-aesthetic .progress` (Tier 2's second option) -- never a third pseudo-element, because there is not one to spend.
 
