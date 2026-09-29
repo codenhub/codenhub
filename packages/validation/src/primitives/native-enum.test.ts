@@ -31,6 +31,14 @@ describe("nativeEnum", () => {
     expect(issuesOf(nativeEnum(Level)(5))[0]?.params).toEqual({ options: [0, 1] });
   });
 
+  it("should keep a string member whose value is the name of a numeric one", () => {
+    enum Mixed {
+      A = 1,
+      B = "A",
+    }
+    expect(accepts(nativeEnum(Mixed), 1, "A", "B", 0)).toEqual([true, true, false, false]);
+  });
+
   it("should work with a plain object written like an enum", () => {
     expect(accepts(nativeEnum({ a: "x", b: "y" } as const), "x", "a")).toEqual([true, false]);
   });
