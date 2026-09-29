@@ -136,6 +136,10 @@ describe("materializeTreeAtRef with real git", () => {
 
   mkdirSync(repository);
   git("init", "--quiet");
+  // The same line-ending rule the real repository commits. Without it the
+  // machine's own setting applies, and Git for Windows' system-wide
+  // `core.autocrlf=true` would write every file back with CRLF endings.
+  writeFileSync(path.join(repository, ".gitattributes"), "* text=auto eol=lf\n");
   for (const sibling of siblings) {
     mkdirSync(path.join(repository, sibling, "docs"), { recursive: true });
     writeFileSync(path.join(repository, sibling, "docs", "index.md"), `# ${sibling}\n`);
