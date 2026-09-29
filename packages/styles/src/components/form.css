@@ -298,12 +298,14 @@
   letter-spacing: 0.025em;
 }
 
+/* A hint wraps, so it takes `text-sm`'s leading like the package's other 14px
+   text rather than a line height equal to its size, where wrapped lines touch. */
 @utility hint {
+  @apply text-sm;
+
   color: var(--color-text-secondary);
-  font-size: 0.875rem;
   font-weight: 400;
   letter-spacing: 0.05em;
-  line-height: 100%;
 
   &.destructive {
     color: var(--intent-color);

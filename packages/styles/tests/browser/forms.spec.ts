@@ -1125,4 +1125,25 @@ test.describe("forms", () => {
       true,
     );
   });
+
+  /* A hint wraps, and at a line height equal to its size the lines touched.
+     It takes the text-sm leading every other 14px text in the package has. */
+  test("leads a wrapped hint like the rest of the package's small text", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const hint = await page.evaluate(() => {
+      const element = document.createElement("p");
+      element.className = "hint";
+      element.style.width = "8rem";
+      element.textContent = "A hint long enough to wrap onto several lines";
+      document.body.append(element);
+      const style = getComputedStyle(element);
+      const result = { fontSize: style.fontSize, lineHeight: style.lineHeight };
+      element.remove();
+
+      return result;
+    });
+
+    expect(hint).toEqual({ fontSize: "14px", lineHeight: "20px" });
+  });
 });
