@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { array } from "../composition/array";
 import { json } from "../composition/json";
 import { map } from "../composition/map";
+import { record } from "../composition/record";
 import { set } from "../composition/set";
 import { tuple } from "../composition/tuple";
 import { union } from "../composition/union";
@@ -181,6 +182,17 @@ describe("formatIssue", () => {
     expect(messageOf(tuple([string()], { rest: string() })([]))).toEqual(["Must contain at least 1 item"]);
     expect(messageOf(set(string(), { max: 0 })(new Set(["a"])))).toEqual(["Must contain at most 0 items"]);
     expect(messageOf(map(string(), string(), { min: 1 })(new Map()))).toEqual(["Must contain at least 1 item"]);
+  });
+
+  it("should word record sizes as a count of keys, singular for one", () => {
+    const messageOf = (result: ValidationResult<unknown>): string[] =>
+      issuesOf(result).map((found) => formatIssue(found));
+
+    expect(messageOf(record(string(), string(), { min: 2 })({ a: "x" }))).toEqual(["Must contain at least 2 keys"]);
+    expect(messageOf(record(string(), string(), { max: 1 })({ a: "x", b: "y" }))).toEqual([
+      "Must contain at most 1 key",
+    ]);
+    expect(messageOf(record(string(), string(), { length: 0 })({ a: "x" }))).toEqual(["Must contain exactly 0 keys"]);
   });
 
   it("should describe duplicates, unions and JSON", () => {

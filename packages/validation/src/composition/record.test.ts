@@ -16,6 +16,35 @@ describe("record", () => {
     expect(output).not.toBe(input);
   });
 
+  it("should treat min and max as inclusive and length as exact, counting keys", () => {
+    expect(accepts(record(string(), number(), { min: 2 }), { a: 1 }, { a: 1, b: 2 })).toEqual([false, true]);
+    expect(accepts(record(string(), number(), { max: 1 }), { a: 1 }, { a: 1, b: 2 })).toEqual([true, false]);
+    expect(accepts(record(string(), number(), { length: 1 }), {}, { a: 1 })).toEqual([false, true]);
+    expect(issuesOf(record(string(), number(), { max: 1 })({ a: 1, b: 2 }))).toEqual([
+      { code: "too_big", path: [], params: { maximum: 1, type: "record" } },
+    ]);
+  });
+
+  it("should report a wrong size at once, without validating any entry", () => {
+    let calls = 0;
+    const counted = record(
+      string(),
+      (input) => {
+        calls += 1;
+        return number()(input);
+      },
+      { max: 1 },
+    );
+    expect(codesOf(counted({ a: "x", b: "y" }))).toEqual(["too_big"]);
+    expect(calls).toBe(0);
+  });
+
+  it("should reject size options no key count can satisfy when the validator is created", () => {
+    for (const options of [{ min: -1 }, { max: 1.5 }, { min: 2, max: 1 }, { length: 3, max: 2 }]) {
+      expect(() => record(string(), number(), options)).toThrow(RangeError);
+    }
+  });
+
   it("should accept an empty object", () => {
     expect(scores({}).ok).toBe(true);
   });

@@ -2,6 +2,7 @@ import { chain, collect, type Maybe } from "../core/async";
 import { invalidObject, isPlainObject, setOwn } from "../core/objects";
 import { collectNested, failWith, pass, repeatedKey, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
+import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
 /**
  * The object type a record produces. A record with open string keys always has every key it lists;
@@ -27,8 +28,9 @@ export type InferRecord<TKey extends string, TValue> = string extends TKey
  * kept as data and never writes to a prototype. A key that the `key` validator changes, such as by
  * lowercasing, must stay distinct: a second entry that arrives at a key already taken is reported as
  * `invalid_key` with `{ issues: [{ code: "invalid_value", params: { unique: true } }] }` instead of
- * silently replacing the first. It is synchronous when both validators are, and
- * asynchronous otherwise.
+ * silently replacing the first. A wrong number of keys is reported at once, as `too_small` or
+ * `too_big` with `type: "record"`, without validating any entry. It is synchronous when both validators
+ * are, and asynchronous otherwise.
  *
  * @example
  * ```ts
@@ -41,17 +43,25 @@ export type InferRecord<TKey extends string, TValue> = string extends TKey
  * @typeParam TValue - The validator for values.
  * @param key - Validator applied to every key.
  * @param value - Validator applied to every value.
+ * @param options - Limits on the number of keys.
  * @returns A validator that produces a dictionary object.
+ * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(
   key: TKey,
   value: TValue,
+  options: SizeOptions = {},
 ): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>> {
+  assertSizeOptions(options);
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
       return invalidObject(input);
     }
     const names = Object.keys(input);
+    const oversize = sizeIssues(names.length, "record", options);
+    if (oversize.length > 0) {
+      return failWith(oversize);
+    }
     const entries = names.map((name) =>
       chain(key(name), (keyResult) => chain(value(input[name]), (valueResult) => ({ keyResult, valueResult }))),
     );

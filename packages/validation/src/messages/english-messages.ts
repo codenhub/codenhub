@@ -21,7 +21,13 @@ const FORMAT_NAMES: Readonly<Record<string, string>> = {
 
 /** Singular and plural of what a string limit counts. */
 const UNITS: Readonly<Record<string, readonly [string, string]>> = { string: ["character", "characters"] };
-const COLLECTIONS: ReadonlySet<string> = new Set(["array", "set", "map"]);
+/** What each collection's size counts, singular and plural. */
+const COLLECTIONS: Readonly<Record<string, readonly [string, string]>> = {
+  array: ["item", "items"],
+  set: ["item", "items"],
+  map: ["item", "items"],
+  record: ["key", "keys"],
+};
 
 /** Reads a parameter as text, so a missing or unusual one degrades to a readable message and not a crash. */
 const param = (issue: ValidationIssue, name: string): string => String(issue.params?.[name]);
@@ -41,9 +47,10 @@ const describeLimit = ({ code, params }: ValidationIssue): string => {
   if (type === "depth") {
     return `Must be nested at most ${bound} levels deep`;
   }
-  if (COLLECTIONS.has(type)) {
+  const counts = COLLECTIONS[type];
+  if (counts !== undefined) {
     const wording = params?.exact === true ? "exactly" : isMin ? "at least" : "at most";
-    return `Must contain ${wording} ${bound} ${limit === 1 ? "item" : "items"}`;
+    return `Must contain ${wording} ${bound} ${counts[limit === 1 ? 0 : 1]}`;
   }
   const unit = UNITS[type];
   const counted = (count: unknown): string => (unit === undefined ? "items" : unit[count === 1 ? 0 : 1]);

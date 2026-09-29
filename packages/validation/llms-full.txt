@@ -75,7 +75,7 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
 - `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal` and `printer.local`. `url({ allowLocal: true })` accepts them, and means "any host": it accepts every IP address, public ones included, and does not check ranges. Neither resolves the name, so a public name can still point at a private address.
 - Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input.
-- A recursive `lazy` validator stops at `maxDepth` levels, 128 by default, and fails with `too_big` instead of exhausting the stack, so deeply nested or cyclic input is reported like any other bad input. Nothing else limits how much input is checked: every issue found is kept, so a large list of wrong items is as many issues, and asynchronous rules of every item start at once. Cap the size of untrusted input, and give `array`, `set` and `map` a `max`, before validating it.
+- A recursive `lazy` validator stops at `maxDepth` levels, 128 by default, and fails with `too_big` instead of exhausting the stack, so deeply nested or cyclic input is reported like any other bad input. Nothing else limits how much input is checked: every issue found is kept, so a large list of wrong items is as many issues, and asynchronous rules of every item start at once. Cap the size of untrusted input, and give `array`, `set`, `map` and `record` a `max`, before validating it.
 
 ## License
 
@@ -870,7 +870,7 @@ See [Reusing shapes](#reusing-shapes) for extending, omitting and making propert
 
 Every collection validator takes the validator for its items, checks them all, and reports each issue with a path that leads through the item's position. A wrong size is reported at once, without validating the items, so a huge input is never worked through only to be rejected.
 
-The size options `min`, `max` and `length` are non-negative integers, and each throws a `RangeError` when created with anything else, as do limits no size can satisfy together, such as `min` above `max` or a `length` outside them. `min` and `max` are inclusive. A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"` or `"map"`, and `exact: true` is added for `length`.
+The size options `min`, `max` and `length` are non-negative integers, and each throws a `RangeError` when created with anything else, as do limits no size can satisfy together, such as `min` above `max` or a `length` outside them. `min` and `max` are inclusive. A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"`, `"map"` or `"record"`, and `exact: true` is added for `length`. A record's size is its number of keys.
 
 ### `array`
 
@@ -903,7 +903,7 @@ const call = tuple([string()], { rest: number() }); // [string, ...number[]]
 
 ### `record`
 
-`record(key, value)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it is not mistaken for a problem with the value, and a bad key still has its value checked. A key that the key validator changes, such as by lowercasing, must stay distinct: `{ A: 1, a: 2 }` under `string({ lowercase: true })` reports the second as `invalid_key` whose `params.issues` holds one `invalid_value` issue with `{ unique: true }`, rather than dropping a value. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype.
+`record(key, value, options?)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it is not mistaken for a problem with the value, and a bad key still has its value checked. A key that the key validator changes, such as by lowercasing, must stay distinct: `{ A: 1, a: 2 }` under `string({ lowercase: true })` reports the second as `invalid_key` whose `params.issues` holds one `invalid_value` issue with `{ unique: true }`, rather than dropping a value. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype. It takes `min`, `max` and `length`, which count keys, so `record(string(), number(), { max: 100 })` rejects a dictionary of more than 100 keys before checking any of them.
 
 ### `set` and `map`
 
@@ -1081,7 +1081,7 @@ The coercing validators accept text that holds a value, convert it, and then app
 - Validators as plain functions, created by calling a factory and then called with the value: `email()(input)`, `number({ int: true, min: 0 })(input)`. Any function with that shape is a validator, so your own need no helper.
 - Leaves: `string`, `number`, `bigint`, `boolean`, `date`, `literal`, `oneOf`, `nativeEnum`, `unknown`, `never` and `instanceOf`. `null` and `undefined` are `literal(null)` and `literal(undefined)`.
 - String formats, each its own validator: `email`, `url`, `uuid`, `ip`, `datetime`, `isoDate`, `hostname`, `hex`, `base64`, `ulid`, `nanoid` and `cuid2`.
-- Collections: `array` (with `min`, `max`, `length` and `unique`), `tuple` (with `rest`), `record`, `set` and `map`.
+- Collections: `array` (with `min`, `max`, `length` and `unique`), `tuple` (with `rest`), and `record`, `set` and `map` (with `min`, `max` and `length`).
 - Combinators: `object`, with `unknownKeys` of `"strip"`, `"strict"` or `"passthrough"`, and `partial` to make every property of a shape optional; `optional`, `nullable`, `nullish`, `withDefault`, `fallback`, `pipe`, `transform` and `refine`, including rules and conversions that return a promise.
 - Choosing and merging: `union`, `discriminatedUnion`, which takes a record of validators keyed by tag, and `intersection`. `lazy` for recursive data, which stops at a depth limit, 128 levels by default, and fails with `too_big` instead of overflowing the stack, and `json` for text holding JSON.
 - Coercing validators for text input: `coerceString`, `coerceNumber`, `coerceBoolean`, `coerceBigint` and `coerceDate`, taking the options of their strict counterparts.

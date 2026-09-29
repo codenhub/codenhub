@@ -94,7 +94,7 @@ export const describe = (input: unknown) => { const result = check(input); retur
   {
     name: "record",
     source: `import { number, record, string } from "DIST"; export const check = record(string(), number());`,
-    budget: 2220,
+    budget: 2420,
   },
   {
     name: "union",
