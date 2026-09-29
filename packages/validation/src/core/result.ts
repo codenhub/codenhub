@@ -76,11 +76,20 @@ export function toIssue({ code = "custom", path = ROOT_PATH, params, message }: 
 export const failIssue = (code: ValidationIssueCode, params?: Readonly<Record<string, unknown>>): ValidationErr =>
   failWith([toIssue(params === undefined ? { code } : { code, params })]);
 
-/** Moves issues one level down, for a parent reporting what its child found under `segment`. */
-export const nestIssues = (
+/**
+ * Adds the issues a child found to its parent's list, one level down under `segment`. It pushes one
+ * by one because spreading a long list into `push` passes each as an argument, which overflows the
+ * stack past about 120,000 issues and would turn bad input into an exception.
+ */
+export function collectNested(
+  target: ValidationIssue[],
   issues: readonly ValidationIssue[],
   segment: ValidationPathSegment,
-): readonly ValidationIssue[] => issues.map((issue) => ({ ...issue, path: [segment, ...issue.path] }));
+): void {
+  for (const issue of issues) {
+    target.push({ ...issue, path: [segment, ...issue.path] });
+  }
+}
 
 /** Names the runtime type of a value for messages without echoing the value. */
 export function describeType(value: unknown): string {

@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { isPlainObject, setOwn } from "../core/objects";
-import { failWith, invalidType, nestIssues, pass, toIssue } from "../core/result";
+import { collectNested, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 
 /**
@@ -62,7 +62,7 @@ export function record<TKey extends AnyValidator<string>, TValue extends AnyVali
           issues.push(toIssue({ code: "invalid_key", path: [name], params: { issues: keyResult.error.issues } }));
         }
         if (!valueResult.ok) {
-          issues.push(...nestIssues(valueResult.error.issues, name));
+          collectNested(issues, valueResult.error.issues, name);
         }
         if (keyResult.ok && valueResult.ok) {
           setOwn(output, keyResult.value as string, valueResult.value);

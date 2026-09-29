@@ -1,5 +1,5 @@
 import { chain, collect, type Maybe } from "../core/async";
-import { failWith, nestIssues } from "../core/result";
+import { collectNested, failWith } from "../core/result";
 import type { ValidationIssue, ValidationPathSegment, ValidationResult } from "../core/types";
 
 /**
@@ -19,7 +19,7 @@ export function settle(
       if (result.ok) {
         values.push(result.value);
       } else {
-        issues.push(...nestIssues(result.error.issues, segments?.[index] ?? index));
+        collectNested(issues, result.error.issues, segments?.[index] ?? index);
       }
     });
     return issues.length > 0 ? failWith(issues) : build(values);

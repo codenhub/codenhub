@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { isPlainObject, setOwn } from "../core/objects";
-import { failIssue, failWith, invalidType, nestIssues, pass } from "../core/result";
+import { collectNested, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 
 /** Maps property names to the validators of their values. */
@@ -72,7 +72,7 @@ export function object<TShape extends Shape>(
     if (unknownKeys === "strict") {
       for (const key of Object.keys(input)) {
         if (!Object.hasOwn(shape, key)) {
-          issues.push(...nestIssues(failIssue("unrecognized_key", { key }).error.issues, key));
+          issues.push(toIssue({ code: "unrecognized_key", path: [key], params: { key } }));
         }
       }
     }
@@ -83,7 +83,7 @@ export function object<TShape extends Shape>(
       settled.forEach((result, index) => {
         const key = keys[index] as string;
         if (!result.ok) {
-          issues.push(...nestIssues(result.error.issues, key));
+          collectNested(issues, result.error.issues, key);
         } else if (result.value !== undefined || Object.hasOwn(input, key)) {
           setOwn(output, key, result.value);
         }

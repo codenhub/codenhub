@@ -1,5 +1,5 @@
 import { chain, collect, type Maybe } from "../core/async";
-import { failWith, invalidType, nestIssues, pass, toIssue } from "../core/result";
+import { collectNested, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
@@ -58,7 +58,7 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
           issues.push(toIssue({ code: "invalid_key", path: [segment], params: { issues: keyResult.error.issues } }));
         }
         if (!valueResult.ok) {
-          issues.push(...nestIssues(valueResult.error.issues, segment));
+          collectNested(issues, valueResult.error.issues, segment);
         }
         if (keyResult.ok && valueResult.ok) {
           output.set(keyResult.value, valueResult.value);
