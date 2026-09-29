@@ -48,7 +48,7 @@ Options are applied in a fixed order that the docs state: clean-up (`trim`, `low
 
 Invalid input is a normal outcome, so it is a return value: `{ ok: true, value }` or `{ ok: false, error: { issues } }`. The shape matches the `Result<T>` used elsewhere in the repository on purpose, and is defined locally so the package depends on nothing. `docs/specs/errors.md` asks packages without an error dependency to return a package-local result, and asks that throwing and returning not be mixed for the same failure, which is why there is no `parse` or `assert`.
 
-Two things do throw, and both are programmer errors: an invalid option when a validator is created (`string({ min: -1 })` is a `RangeError`, `string({ lowercase: true, uppercase: true })` is a `TypeError`), and a callback the consumer wrote that throws, which propagates as the bug it is. Validation never throws for bad input.
+Two things do throw, and both are programmer errors: an invalid option when a validator is created (`string({ min: -1 })` is a `RangeError`, `string({ lowercase: true, uppercase: true })` is a `TypeError`), and a callback the consumer wrote that throws, which propagates as the bug it is. Validation never throws for bad input, with one exception it cannot avoid cheaply: each level of nesting is a level of recursion, so input nested past the stack limit, or cyclic input under a recursive `lazy` validator, throws a `RangeError`. A depth counter would add a parameter or shared state to every composer; the docs tell consumers to cap untrusted input instead.
 
 `is(validator, input)` is the boolean projection, for hooks that need a type guard. Its narrowing is exact only for a validator that does not change the value, and the docs say so.
 
@@ -61,7 +61,7 @@ An issue is `{ code, path, params?, message? }` and nothing else.
 - `params` holds the facts behind the failure (`{ minimum: 3, type: "string" }`, `{ expected: "string", received: "number" }`), enough to build a message and to branch on.
 - `message` is optional and never set by a built-in validator. A custom validator can set it when it wants fixed text.
 
-**Issues never contain the input.** No `input` field exists, and `params` carries type names and constraint values, never the value under test. This is a privacy invariant, not a default: inputs are passwords and tokens, and an issue is something callers log. Any new rule must keep it, and the unit tests check it per validator.
+**Issues never contain an input value.** No `input` field exists, and `params` carries type names and constraint values, never the value under test. Keys are the exception by necessity: a path is made of the input's keys, and `unrecognized_key` names the key in `params.key` as well. This is a privacy invariant, not a default: inputs are passwords and tokens, and an issue is something callers log. Any new rule must keep it, and the unit tests check it per validator.
 
 ### Messages are on demand, and the English is separate
 

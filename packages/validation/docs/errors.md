@@ -33,7 +33,9 @@ const result = {
 | `params`  | The facts behind the failure, such as the limit that was crossed. Present when there are any.                                               |
 | `message` | Fixed text, when the validator that reported the issue set one. The built-in validators never do; your own can.                             |
 
-**An issue never contains the input.** There is no field for it, and `params` holds type names and constraint values, never the value under test. Inputs are often passwords or tokens, and issues get logged and shown, so this is a rule and not a default. If you need the value, you already have it.
+**An issue never contains an input value.** There is no field for it, and `params` holds type names and constraint values, never the value under test. Inputs are often passwords or tokens, and issues get logged and shown, so this is a rule and not a default. If you need the value, you already have it.
+
+Keys are not values, and they do appear: a path leads through the keys of the input, so a `record` or `map` issue names the key it belongs to, and a strict `object` reports each key it does not recognize, in its path and in `params.key`. Do not put secrets in key names you validate.
 
 A path can be formatted for display with `formatPath`:
 

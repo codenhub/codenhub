@@ -27,7 +27,8 @@ export interface ValidationIssue {
   readonly path: readonly ValidationPathSegment[];
   /**
    * Facts a message can be built from, such as `{ minimum: 3, type: "string" }` for `too_small` or
-   * `{ expected: "string", received: "number" }` for `invalid_type`. Never contains the input.
+   * `{ expected: "string", received: "number" }` for `invalid_type`. Never contains an input value;
+   * the only input it can name is a key, as `unrecognized_key` does.
    */
   readonly params?: Readonly<Record<string, unknown>>;
   /**

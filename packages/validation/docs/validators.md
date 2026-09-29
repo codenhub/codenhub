@@ -341,6 +341,8 @@ type Event = Infer<typeof event>;
 event({ type: "key", key: "a" }); // { ok: true, value: { type: "key", key: "a" } }
 ```
 
+**A variant must not list the tag.** Unlike some other libraries, where each variant is `object({ type: literal("click"), ... })`, a variant here is given the input without its tag, so a variant that lists it fails with `invalid_value` at the tag's path even though the input's tag is right. The record key already says which tag the variant is for.
+
 A variant does not list the tag property itself, and does not see it, so a strict `object` works as a variant: the tag is added back to the output, so the result is a proper tagged union and checking `event.type` narrows the type. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. Each variant must produce an object.
 
 ### `intersection`
@@ -366,6 +368,8 @@ const category: Validator<Category> = object({
   children: array(lazy(() => category)),
 });
 ```
+
+Each level of nesting is one level of recursion, so input nested deeper than the JavaScript stack allows throws a `RangeError` instead of failing, and so does a cyclic object, which a recursive validator follows forever. JSON cannot be cyclic, but a request body of thousands of nested arrays can be deep: cap the size of untrusted input before validating it, for instance with `pipe(string({ max: 100_000 }), json(category))`.
 
 ### `json`
 

@@ -68,11 +68,12 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 ## Notes
 
 - A validator returns `{ ok: true, value }` or `{ ok: false, error }`. Bad input is never thrown; a bad option, such as `string({ min: -1 })`, throws when the validator is created.
-- Issues never contain the input, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English, which is a separate import so a program that words its own issues does not bundle it, or your own to reword or localize.
+- Issues never contain an input value, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English, which is a separate import so a program that words its own issues does not bundle it, or your own to reword or localize. Keys are another matter: a path leads through the input's own keys, and a strict `object` names each key it does not recognize.
 - Rules never rewrite the value unless you ask: `trim`, `lowercase`, `uppercase` and `clamp` are the options that do.
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
 - `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal` and `printer.local`. `url({ allowLocal: true })` accepts them. Neither resolves the name, so a public name can still point at a private address.
 - Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input.
+- Validation recurses once per level of nesting, so input nested deeper than the JavaScript stack allows, such as a JSON body of thousands of nested arrays checked by a recursive `lazy` validator, throws a `RangeError`, and so does a cyclic object checked by one. Cap the size of untrusted input before validating it.
 
 ## License
 

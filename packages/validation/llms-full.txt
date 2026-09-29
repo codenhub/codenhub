@@ -70,11 +70,12 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 ## Notes
 
 - A validator returns `{ ok: true, value }` or `{ ok: false, error }`. Bad input is never thrown; a bad option, such as `string({ min: -1 })`, throws when the validator is created.
-- Issues never contain the input, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English, which is a separate import so a program that words its own issues does not bundle it, or your own to reword or localize.
+- Issues never contain an input value, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English, which is a separate import so a program that words its own issues does not bundle it, or your own to reword or localize. Keys are another matter: a path leads through the input's own keys, and a strict `object` names each key it does not recognize.
 - Rules never rewrite the value unless you ask: `trim`, `lowercase`, `uppercase` and `clamp` are the options that do.
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
 - `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal` and `printer.local`. `url({ allowLocal: true })` accepts them. Neither resolves the name, so a public name can still point at a private address.
 - Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input.
+- Validation recurses once per level of nesting, so input nested deeper than the JavaScript stack allows, such as a JSON body of thousands of nested arrays checked by a recursive `lazy` validator, throws a `RangeError`, and so does a cyclic object checked by one. Cap the size of untrusted input before validating it.
 
 ## License
 
@@ -473,7 +474,9 @@ const result = {
 | `params`  | The facts behind the failure, such as the limit that was crossed. Present when there are any.                                               |
 | `message` | Fixed text, when the validator that reported the issue set one. The built-in validators never do; your own can.                             |
 
-**An issue never contains the input.** There is no field for it, and `params` holds type names and constraint values, never the value under test. Inputs are often passwords or tokens, and issues get logged and shown, so this is a rule and not a default. If you need the value, you already have it.
+**An issue never contains an input value.** There is no field for it, and `params` holds type names and constraint values, never the value under test. Inputs are often passwords or tokens, and issues get logged and shown, so this is a rule and not a default. If you need the value, you already have it.
+
+Keys are not values, and they do appear: a path leads through the keys of the input, so a `record` or `map` issue names the key it belongs to, and a strict `object` reports each key it does not recognize, in its path and in `params.key`. Do not put secrets in key names you validate.
 
 A path can be formatted for display with `formatPath`:
 
@@ -956,6 +959,8 @@ type Event = Infer<typeof event>;
 event({ type: "key", key: "a" }); // { ok: true, value: { type: "key", key: "a" } }
 ```
 
+**A variant must not list the tag.** Unlike some other libraries, where each variant is `object({ type: literal("click"), ... })`, a variant here is given the input without its tag, so a variant that lists it fails with `invalid_value` at the tag's path even though the input's tag is right. The record key already says which tag the variant is for.
+
 A variant does not list the tag property itself, and does not see it, so a strict `object` works as a variant: the tag is added back to the output, so the result is a proper tagged union and checking `event.type` narrows the type. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. Each variant must produce an object.
 
 ### `intersection`
@@ -981,6 +986,8 @@ const category: Validator<Category> = object({
   children: array(lazy(() => category)),
 });
 ```
+
+Each level of nesting is one level of recursion, so input nested deeper than the JavaScript stack allows throws a `RangeError` instead of failing, and so does a cyclic object, which a recursive validator follows forever. JSON cannot be cyclic, but a request body of thousands of nested arrays can be deep: cap the size of untrusted input before validating it, for instance with `pipe(string({ max: 100_000 }), json(category))`.
 
 ### `json`
 
