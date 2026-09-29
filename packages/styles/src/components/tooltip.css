@@ -100,6 +100,12 @@
   &.edgeless {
     --_edge-floor: 0%;
   }
+
+  /* The bubble appears without growing under reduced motion, for the entries
+     without the reset; see `box.css`. */
+  @media (prefers-reduced-motion: reduce) {
+    transition-duration: 0.01ms;
+  }
 }
 
 /* Shown on hover or focus anywhere in the host, or pinned open with

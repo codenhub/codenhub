@@ -151,3 +151,25 @@
     --_d-surface-ground: var(--color-foreground);
   }
 }
+
+/* The user agent already promises both of these for a native `<dialog>` --
+   `dialog:not([open]) { display: none }` and a centred `margin: auto` on the
+   open box -- but both are user-agent origin, which loses to any author rule
+   at all. `.card`'s own `display: block` beats the first outright, so a
+   `<dialog class="card">` rendered open with no `open` attribute and no
+   `.showModal()` call, and a margin reset beats the second, so an opened one
+   pinned to the top-left. The registry has no dialog component, and these
+   three are the containers a consumer reaches for.
+
+   Here rather than in the reset, so every entrypoint that ships `.card` ships
+   the fix, `/components` included. Unlayered, because a behaviour override has
+   to win over any layered rule whatever its specificity, and scoped to the
+   package's own containers, so a dialog the package does not style keeps
+   whatever margin its author gives it. */
+dialog:is(.card, .panel, .surface):not([open]) {
+  display: none;
+}
+
+dialog:is(.card, .panel, .surface)[open] {
+  margin: auto;
+}

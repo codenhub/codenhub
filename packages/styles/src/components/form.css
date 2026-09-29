@@ -521,6 +521,14 @@
   &:checked::after {
     @apply opacity-100;
   }
+
+  /* The mark appears without moving under reduced motion, for the entries
+     without the reset; see `box.css`. */
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      transition-duration: 0.01ms;
+    }
+  }
 }
 
 /* The same control with a round silhouette and a dot for its mark, and the
@@ -579,6 +587,14 @@
 
   &:checked::after {
     @apply scale-100 opacity-100;
+  }
+
+  /* The mark appears without moving under reduced motion, for the entries
+     without the reset; see `box.css`. */
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      transition-duration: 0.01ms;
+    }
   }
 }
 
@@ -666,6 +682,14 @@
 
     :dir(rtl) & {
       translate: calc(-1 * var(--switch-travel));
+    }
+  }
+
+  /* The mark appears without moving under reduced motion, for the entries
+     without the reset; see `box.css`. */
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      transition-duration: 0.01ms;
     }
   }
 }

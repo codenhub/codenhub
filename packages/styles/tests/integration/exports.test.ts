@@ -318,7 +318,10 @@ const UNLAYERED_ALLOWED: { reason: string; matches: (rule: { context: string; se
       rule.context.includes("prefers-reduced-motion:reduce") &&
       /^\.(?:loader|dots?-[a-z-]+|bars-wave|pulse-ring)(?:,|$)/.test(rule.selector),
   },
-  { reason: "dialog restatement", matches: (rule) => /^dialog(?::not\(\[open\]\)|\[open\])$/.test(rule.selector) },
+  {
+    reason: "dialog restatement on the package's containers",
+    matches: (rule) => /^dialog:is\(\.card,\.panel,\.surface\)(?::not\(\[open\]\)|\[open\])$/.test(rule.selector),
+  },
   { reason: "solo class", matches: (rule) => /-solo\b/.test(rule.selector) },
 ];
 

@@ -122,6 +122,12 @@
       calc(var(--_corner) * var(--ui-corner-br, 1)) calc(var(--_corner) * var(--ui-corner-bl, 1))
   );
   corner-shape: var(--ui-corner-shape, round);
+
+  /* Reduced motion stops the shimmer here, for the entries without the reset;
+     see `box.css`. The gradient stays, so the placeholder still reads. */
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }
 
 /* The track is a box, the fill is not: `box.css`'s formula composes the frame,
@@ -201,5 +207,19 @@
   &.indeterminate::after {
     width: 33%;
     animation: anim-progress-indeterminate 1.5s infinite ease-in-out;
+  }
+
+  /* Reduced motion, for the entries without the reset; see `box.css`. The
+     value moves without sliding, and the shimmer and the indeterminate sweep
+     stop where the reset would stop them: the fill rests at the start. */
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      transition-duration: 0.01ms;
+    }
+
+    &.active::before,
+    &.indeterminate::after {
+      animation: none;
+    }
   }
 }
