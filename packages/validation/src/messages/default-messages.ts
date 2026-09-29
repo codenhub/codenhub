@@ -18,7 +18,8 @@ const FORMAT_NAMES: Readonly<Record<string, string>> = {
   json: "JSON",
 };
 
-const UNITS: Readonly<Record<string, string>> = { string: "characters" };
+/** Singular and plural of what a string limit counts. */
+const UNITS: Readonly<Record<string, readonly [string, string]>> = { string: ["character", "characters"] };
 const COLLECTIONS: ReadonlySet<string> = new Set(["array", "set", "map"]);
 
 /** Reads a parameter as text, so a missing or unusual one degrades to a readable message and not a crash. */
@@ -40,12 +41,14 @@ const describeLimit = ({ code, params }: ValidationIssue): string => {
     const wording = params?.exact === true ? "exactly" : isMin ? "at least" : "at most";
     return `Must contain ${wording} ${bound} ${limit === 1 ? "item" : "items"}`;
   }
+  const unit = UNITS[type];
+  const counted = (count: unknown): string => (unit === undefined ? "items" : unit[count === 1 ? 0 : 1]);
   if (params?.exact === true) {
-    return `Must be exactly ${bound} ${UNITS[type] ?? "items"}`;
+    return `Must be exactly ${bound} ${counted(limit)}`;
   }
   const isInclusive = params?.inclusive !== false;
   const wording = isMin ? (isInclusive ? "at least" : "greater than") : isInclusive ? "at most" : "less than";
-  return type in UNITS ? `Must be ${wording} ${bound} ${UNITS[type]}` : `Must be ${wording} ${bound}`;
+  return unit === undefined ? `Must be ${wording} ${bound}` : `Must be ${wording} ${bound} ${counted(limit)}`;
 };
 
 const describeFormat = (issue: ValidationIssue): string => {

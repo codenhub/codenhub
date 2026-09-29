@@ -57,7 +57,9 @@ describe("formatIssue", () => {
 
     expect(messageOf(string()(1))).toEqual(["Expected string, received number"]);
     expect(messageOf(string({ min: 3 })("a"))).toEqual(["Must be at least 3 characters"]);
-    expect(messageOf(string({ max: 1 })("ab"))).toEqual(["Must be at most 1 characters"]);
+    expect(messageOf(string({ max: 1 })("ab"))).toEqual(["Must be at most 1 character"]);
+    expect(messageOf(string({ min: 1 })(""))).toEqual(["Must be at least 1 character"]);
+    expect(messageOf(string({ length: 1 })(""))).toEqual(["Must be exactly 1 character"]);
     expect(messageOf(string({ length: 3 })("ab"))).toEqual(["Must be exactly 3 characters"]);
     expect(messageOf(string({ pattern: /^a$/ })("b"))).toEqual(["Must match /^a$/"]);
     expect(messageOf(string({ startsWith: "x" })("b"))).toEqual(['Must start with "x"']);
