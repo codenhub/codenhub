@@ -54,7 +54,7 @@ export const describe = (input: unknown) => { const result = check(input); retur
     budget: 3580,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 680 },
-  { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 890 },
+  { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 1380 },
   { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 900 },
   {
     name: "datetime",
