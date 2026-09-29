@@ -13,7 +13,7 @@ describe("date", () => {
 
   it("should reject an invalid Date, timestamps and date strings", () => {
     expect(accepts(date(), new Date("nope"), 1_700_000_000_000, "2026-09-28", null, {})).toEqual(Array(5).fill(false));
-    expect(issuesOf(date()(new Date("nope")))[0]?.params).toEqual({ expected: "valid date", received: "date" });
+    expect(issuesOf(date()(new Date("nope")))[0]?.params).toEqual({ expected: "valid date", received: "invalid date" });
   });
 
   it("should treat min and max as inclusive", () => {

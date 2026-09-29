@@ -87,14 +87,27 @@ export function describeType(value: unknown): string {
   if (value === null) {
     return "null";
   }
-  if (Array.isArray(value)) {
-    return "array";
-  }
   if (typeof value === "number" && !Number.isFinite(value)) {
     return Number.isNaN(value) ? "nan" : "infinity";
   }
+  if (typeof value !== "object") {
+    return typeof value;
+  }
+  try {
+    return describeObject(value);
+  } catch {
+    // A proxy trap or a constructor getter threw. Naming the type must never fail validation.
+    return "object";
+  }
+}
+
+/** Names an object by its kind, or by its class for an instance, reading its prototype. */
+function describeObject(value: object): string {
+  if (Array.isArray(value)) {
+    return "array";
+  }
   if (value instanceof Date) {
-    return "date";
+    return Number.isNaN(value.getTime()) ? "invalid date" : "date";
   }
   if (value instanceof Map) {
     return "map";
@@ -102,10 +115,10 @@ export function describeType(value: unknown): string {
   if (value instanceof Set) {
     return "set";
   }
-  if (typeof value === "object" && !isPlainObject(value)) {
-    return (Object.getPrototypeOf(value) as { constructor?: { name?: string } }).constructor?.name || "object";
+  if (isPlainObject(value)) {
+    return "object";
   }
-  return typeof value;
+  return (Object.getPrototypeOf(value) as { constructor?: { name?: string } }).constructor?.name || "object";
 }
 
 /** Fails because the input is not the type a validator accepts, naming both types and never the value. */

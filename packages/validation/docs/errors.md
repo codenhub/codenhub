@@ -60,7 +60,7 @@ The code set is open: a custom validator reports whatever code it likes. These a
 | `invalid_union`    | A value matched none of the options of a `union`, or a tagged union got a missing or unknown tag. | For `union`, `issues`: the issues each option found, in order, with paths relative to the union's value. For `discriminatedUnion`, `discriminator` and `options`, and the issue's path is the tag's. |
 | `custom`           | The default code of a `refine` check or `fail` call that names no code.                           | Whatever the reporter set.                                                                                                                                                                           |
 
-`received` names types the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `map`, `set`, the class name of an instance, or the `typeof` of anything else.
+`received` names types the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `invalid date` for a `Date` holding no moment, `map`, `set`, the class name of an instance, `object` for anything that cannot be inspected without throwing, or the `typeof` of anything else.
 
 The validator reference lists the exact code and `params` each validator reports.
 
