@@ -70,6 +70,12 @@ describe("discriminatedUnion", () => {
     expect(Object.keys(valueOf(event({ type: "key", key: "a" })))).toEqual(["type", "key"]);
     const passthrough = discriminatedUnion("type", { a: object({}, { unknownKeys: "passthrough" }) });
     expect(valueOf(passthrough({ type: "a", extra: 1 }))).toEqual({ type: "a", extra: 1 });
+    const retagged = discriminatedUnion("type", {
+      a: transform(object({}), () => ({ type: "b", extra: 1 })) as never,
+    });
+    const value = valueOf(retagged({ type: "a" }));
+    expect(value).toEqual({ type: "a", extra: 1 });
+    expect(Object.keys(value)).toEqual(["type", "extra"]);
   });
 
   it("should throw when a variant produces something other than a plain object, instead of flattening it", async () => {

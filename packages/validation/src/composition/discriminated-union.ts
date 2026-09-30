@@ -106,7 +106,8 @@ export function discriminatedUnion<const TKey extends string, const TVariants ex
         // Spreading it into the tagged output would take it apart, silently, so it is a bug in the schema.
         throw new TypeError(`variants.${tag} must produce a plain object, received ${describeType(result.value)}`);
       }
-      return pass({ [key]: tag, ...result.value });
+      // The tag is defined first, for its place in the output, and again last, so the variant cannot replace it.
+      return pass({ [key]: tag, ...result.value, [key]: tag });
     });
   };
   return validate as unknown as Composed<TVariants[keyof TVariants], InferDiscriminated<TKey, TVariants>>;
