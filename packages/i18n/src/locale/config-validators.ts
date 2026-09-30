@@ -1,13 +1,14 @@
 import {
   array,
   boolean,
+  check,
   formatIssue,
   formatPath,
+  func,
   object,
   optional,
-  refine,
   string,
-  unknown,
+  unique,
   type Messages,
   type Validator,
 } from "@codenhub/validation";
@@ -27,19 +28,23 @@ const CONFIG_MESSAGES: Messages = {
 };
 
 /** A locale identifier: a non-blank string that, trimmed, is a conservative ASCII identifier. Produces the trimmed one. */
-const localeIdentifier = refine(string({ trim: true, min: 1 }), isValidLocaleIdentifier, {
-  code: "invalid_format",
-  message: "Must be an ASCII locale identifier with alphanumeric, hyphen-separated subtags",
-});
+const localeIdentifier = string(
+  { trim: true, min: 1 },
+  check(isValidLocaleIdentifier, {
+    code: "invalid_format",
+    message: "Must be an ASCII locale identifier with alphanumeric, hyphen-separated subtags",
+  }),
+);
 
 /** Trimmed, non-empty, case-insensitively unique locale identifiers. */
-const localeList = array(localeIdentifier, { min: 1, unique: (locale) => locale.toLowerCase() });
+const localeList = array(
+  localeIdentifier,
+  { min: 1 },
+  unique((locale) => locale.toLowerCase()),
+);
 
-/** A function-valued option. Validators have no leaf for functions, so this is one. */
-const callback = refine(unknown(), (value) => typeof value === "function", {
-  code: "invalid_type",
-  message: "Must be a function",
-});
+/** A function-valued option. */
+const callback = func({ message: "Must be a function" });
 
 const defaultIsConfigured = (config: { locales: readonly string[]; defaultLocale: string }): boolean =>
   resolveConfiguredLocale(config.locales, config.defaultLocale) !== undefined;
@@ -56,19 +61,16 @@ const DEFAULT_LOCALE_ISSUE = {
  *
  * @internal
  */
-export const i18nConfig = refine(
-  object(
-    {
-      locales: localeList,
-      defaultLocale: string(),
-      loadLocale: callback,
-      getLocaleDirection: callback,
-      isSilent: optional(boolean()),
-    },
-    { unknownKeys: "passthrough" },
-  ),
-  defaultIsConfigured,
-  DEFAULT_LOCALE_ISSUE,
+export const i18nConfig = object(
+  {
+    locales: localeList,
+    defaultLocale: string(),
+    loadLocale: callback,
+    getLocaleDirection: callback,
+    isSilent: optional(boolean()),
+  },
+  { unknownKeys: "passthrough" },
+  check(defaultIsConfigured, DEFAULT_LOCALE_ISSUE),
 );
 
 /**
@@ -77,13 +79,10 @@ export const i18nConfig = refine(
  *
  * @internal
  */
-export const localeRoutingConfig = refine(
-  object(
-    { locales: localeList, defaultLocale: string(), prefixDefaultLocale: boolean() },
-    { unknownKeys: "passthrough" },
-  ),
-  defaultIsConfigured,
-  DEFAULT_LOCALE_ISSUE,
+export const localeRoutingConfig = object(
+  { locales: localeList, defaultLocale: string(), prefixDefaultLocale: boolean() },
+  { unknownKeys: "passthrough" },
+  check(defaultIsConfigured, DEFAULT_LOCALE_ISSUE),
 );
 
 /**
