@@ -10,15 +10,18 @@ export type Variants = Record<string, AnyValidator<object>>;
 
 /**
  * The variants as `discriminatedUnion` accepts them. A variant whose output type is an array or a
- * function, which cannot carry the tag, or already has the tag property, which the variant is never
- * given, is typed `never`, so passing it is a compile error at that variant.
+ * function, which cannot carry the tag, or declares the tag property, which the variant is never
+ * given, is typed `never`, so passing it is a compile error at that variant. An output with an index
+ * signature, such as a `record`, declares no property in particular, so it is accepted.
  */
 type CheckedVariants<TKey extends string, TVariants extends Variants> = {
   [TTag in keyof TVariants]: Infer<TVariants[TTag]> extends readonly unknown[] | ((...args: never[]) => unknown)
     ? never
-    : TKey extends keyof Infer<TVariants[TTag]>
-      ? never
-      : TVariants[TTag];
+    : string extends keyof Infer<TVariants[TTag]>
+      ? TVariants[TTag]
+      : TKey extends keyof Infer<TVariants[TTag]>
+        ? never
+        : TVariants[TTag];
 };
 
 /**
@@ -41,7 +44,7 @@ export type InferDiscriminated<TKey extends string, TVariants extends Variants> 
  * The input's tag must be one of the keys of `variants`, and the variant validates the rest of the
  * input, without the tag. The variant must not list the tag property: one that does, such as
  * `object({ type: literal("click"), ... })`, never sees it and fails, so its type is rejected. That is
- * also why a strict object works as a variant. The tag is added back to the output, so the result is a
+ * also why a strict object works as a variant, and a `record` does too, checking every key but the tag. The tag is added back to the output, so the result is a
  * proper tagged union. Each variant must produce a plain object: an array, a `Date`, a class instance
  * or anything else would be taken apart by adding the tag, so a variant whose output type is an array
  * or a function is a compile error, and one that produces any non-plain value throws a `TypeError`

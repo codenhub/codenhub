@@ -233,6 +233,10 @@ export const producesArray = discriminatedUnion("type", {
   a: transform(object({}), () => [1]),
 });
 export const passthroughVariant = discriminatedUnion("type", { a: object({}, { unknownKeys: "passthrough" }) });
+// A record declares no tag, so it can be a variant, and the output still narrows on the tag.
+export const tallies = discriminatedUnion("type", { totals: record(string(), number()), none: object({}) });
+export const talliesTag = (value: Infer<typeof tallies>): number | undefined =>
+  value.type === "totals" ? value["ada"] : undefined;
 export const both = intersection(object({ name: string() }), object({ age: number() }));
 export const bothValue: Infer<typeof both> = { name: "Ada", age: 36 };
 export const settingsFromText = json(object({ theme: oneOf(["light", "dark"]) }));
