@@ -163,7 +163,7 @@ Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM:SS`, a
 
 **Returns** — A validator that produces a `Date`.
 
-**Throws** — When `min` or `max` is an invalid `Date`, or `min` is after `max`.
+**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
 
 **Example**
 
@@ -181,7 +181,7 @@ export declare function coerceNumber(options?: NumberOptions): Validator<number>
 
 Creates a validator for numbers that also accepts text holding a decimal number, converting it, then applies the same constraints as [number](#number).
 
-Surrounding whitespace is ignored. Empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and `"NaN"` are rejected, and so is text holding a whole number beyond `Number.MAX_SAFE_INTEGER`, which could not be read exactly (use `coerceBigint` for those). So are booleans, `null`, objects and arrays: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+Surrounding whitespace is ignored, and a dot with no digits on one side, as in `".5"` or `"5."`, is read as people type it. Empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and `"NaN"` are rejected, and so is text holding a whole number beyond `Number.MAX_SAFE_INTEGER`, which could not be read exactly (use `coerceBigint` for those). So are booleans, `null`, objects and arrays: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
 
 **Parameters**
 
@@ -259,7 +259,7 @@ Creates a validator for valid `Date` objects. An invalid `Date` such as `new Dat
 
 **Returns** — A validator that produces a `Date`.
 
-**Throws** — When `min` or `max` is an invalid `Date`, or `min` is after `max`.
+**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
 
 **Example**
 
@@ -301,7 +301,7 @@ export declare function discriminatedUnion<const TKey extends string, const TVar
 
 Creates a validator for objects that share a tag property and differ in the rest, such as events with a `type`. The tag chooses the variant, so a failure reports that variant's own issues instead of a list of everything that did not match.
 
-The input's tag must be one of the keys of `variants`, and the variant validates the rest of the input, without the tag. The variant must not list the tag property: one that does, such as `object({ type: literal("click"), ... })`, never sees it and fails, so its type is rejected. That is also why a strict object works as a variant. The tag is added back to the output, so the result is a proper tagged union. Each variant must produce a plain object: an array, a `Date`, a class instance or anything else would be taken apart by adding the tag, so a variant whose output type is an array or a function is a compile error, and one that produces any non-plain value throws a `TypeError` when it does, as a callback's bug does. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. It is synchronous when every variant is, and asynchronous otherwise. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
+The input's tag must be one of the keys of `variants`, and the variant validates the rest of the input, without the tag. The variant must not list the tag property: one that does, such as `object({ type: literal("click"), ... })`, never sees it and fails, so its type is rejected. That is also why a strict object works as a variant, and a `record` does too, checking every key but the tag. The tag is added back to the output, so the result is a proper tagged union. Each variant must produce a plain object: an array, a `Date`, a class instance or anything else would be taken apart by adding the tag, so a variant whose output type is an array or a function is a compile error, and one that produces any non-plain value throws a `TypeError` when it does, as a callback's bug does. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. It is synchronous when every variant is, and asynchronous otherwise. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
 
 **Parameters**
 
@@ -465,6 +465,30 @@ formatPath([0, "title"]); // "[0].title"
 formatPath(["a.b"]); // '["a.b"]'
 ```
 
+### func
+
+```ts
+export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(): Validator<T>;
+```
+
+Creates a validator for functions, such as a callback in a configuration object. Classes, arrow, async and generator functions are all functions, and a function from another realm is one too.
+
+Only that the value is a function can be checked at runtime: the parameters it takes and what it returns cannot. Name the signature you expect as the type argument, and it is the type of the output, taken on trust as a cast would be. Without one, the output is a function that takes any arguments and returns `unknown`.
+
+**Type parameters**
+
+- `T` — The signature the function is expected to have. It is not checked.
+
+**Returns** — A validator that produces the function, unchanged.
+
+**Example**
+
+```ts
+const config = object({ onChange: func<(value: string) => void>() });
+config({ onChange: (value: string) => console.log(value) }); // { ok: true, ... }
+config({ onChange: "log" }); // { ok: false, ... }, params { expected: "function", received: "string" }
+```
+
 ### hex
 
 ```ts
@@ -535,7 +559,7 @@ export declare function intersection<TLeft extends AnyValidator, TRight extends 
 
 Creates a validator that accepts a value only when it passes both validators, and produces the two results merged.
 
-Both validators receive the same input and both run, so the issues of each are reported together. The outputs are merged: plain objects and maps key by key and arrays of the same length item by item, recursively, and two sets must hold the same values, while any other pair must be the same value, or two dates holding the same moment. Where the outputs differ otherwise, such as `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path, rather than one side silently winning. Two `object`s with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and asynchronous otherwise.
+Both validators receive the same input and both run, so the issues of each are reported together. The outputs are merged: plain objects key by key, arrays of the same length item by item, and maps and sets of the same size entry by entry in iteration order, which both validators keep from the input, recursively, so maps keyed by objects and sets of objects merge too. Any other pair must be the same value, or two dates holding the same moment. Where the outputs differ otherwise, such as `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path, rather than one side silently winning. Cyclic or shared objects in the outputs are merged once, and the merged output keeps their shape. Two `object`s with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and asynchronous otherwise.
 
 **Parameters**
 
@@ -737,7 +761,7 @@ export declare function map<TKey extends AnyValidator, TValue extends AnyValidat
 
 Creates a validator for `Map`s whose every key passes `key` and every value passes `value`.
 
-A wrong size is reported at once, without validating the entries. An issue's path ends at the entry's key when it is a string or a number, and at its position in iteration order otherwise. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found. A key that the key validator changes must stay distinct: an entry that arrives at a key already taken is reported as `invalid_key`, so no value is silently replaced. The output is a new `Map`. It is synchronous when both validators are, and asynchronous otherwise.
+A wrong size is reported at once, without validating the entries. An issue's path ends at the entry's key when it is a string, and at its position in iteration order, a number, for any other key, so no two entries share a path, as a number key and the position of an object key could. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found. A key that the key validator changes must stay distinct: an entry that arrives at a key already taken is reported as `invalid_key`, so no value is silently replaced. The output is a new `Map`. It is synchronous when both validators are, and asynchronous otherwise.
 
 **Parameters**
 
@@ -945,14 +969,14 @@ user({ name: "A" }); // { ok: false, error: { issues: [{ code: "too_small", path
 ### oneOf
 
 ```ts
-export declare function oneOf<const T extends readonly (string | number)[]>(values: T): Validator<T[number]>;
+export declare function oneOf<const T extends readonly LiteralValue[]>(values: T): Validator<T[number]>;
 ```
 
-Creates a validator that accepts any one value of a list, compared with `===`. The type is the union of the listed values, so `oneOf(["admin", "user"])` produces `"admin" | "user"`.
+Creates a validator that accepts any one value of a list, compared with `===`. The values may be any primitives, as for `literal`. The type is the union of the listed values, so `oneOf(["admin", "user"])` produces `"admin" | "user"`.
 
 **Parameters**
 
-- `values` — The accepted strings or numbers. The list is copied, so changing it later has no effect.
+- `values` — The accepted values: any primitive, as for `literal`, including `null` and `undefined`. The list is copied, so changing it later has no effect.
 
 **Type parameters**
 
@@ -2281,6 +2305,14 @@ The validated value, after any transforms and defaults.
 
 ## Type aliases
 
+### AnyFunction
+
+```ts
+export type AnyFunction = (...args: never[]) => unknown;
+```
+
+Any function, whatever it takes and returns.
+
 ### AnyValidator
 
 ```ts
@@ -2533,11 +2565,11 @@ if (!result.ok) {
 
 ```ts
 type CheckedVariants<TKey extends string, TVariants extends Variants> = {
-    [TTag in keyof TVariants]: Infer<TVariants[TTag]> extends readonly unknown[] | ((...args: never[]) => unknown) ? never : TKey extends keyof Infer<TVariants[TTag]> ? never : TVariants[TTag];
+    [TTag in keyof TVariants]: Infer<TVariants[TTag]> extends readonly unknown[] | ((...args: never[]) => unknown) ? never : string extends keyof Infer<TVariants[TTag]> ? TVariants[TTag] : TKey extends keyof Infer<TVariants[TTag]> ? never : TVariants[TTag];
 };
 ```
 
-The variants as `discriminatedUnion` accepts them. A variant whose output type is an array or a function, which cannot carry the tag, or already has the tag property, which the variant is never given, is typed `never`, so passing it is a compile error at that variant.
+The variants as `discriminatedUnion` accepts them. A variant whose output type is an array or a function, which cannot carry the tag, or declares the tag property, which the variant is never given, is typed `never`, so passing it is a compile error at that variant. An output with an index signature, such as a `record`, declares no property in particular, so it is accepted.
 
 Not exported; declared in `src/composition/discriminated-union.ts`.
 
@@ -2587,9 +2619,9 @@ Not exported; declared in `src/composition/discriminated-union.ts`, `src/composi
 ### Transformed
 
 ```ts
-type Transformed<R> = [unknown] extends [R] ? AsyncValidator<Awaited<R>> : [Extract<R, PromiseLike<unknown>>] extends [never] ? Validator<R> : AsyncValidator<Awaited<R>>;
+type Transformed<R> = 0 extends 1 & R ? Validator<R> : [unknown] extends [R] ? AsyncValidator<Awaited<R>> : [Extract<R, PromiseLike<unknown>>] extends [never] ? Validator<R> : AsyncValidator<Awaited<R>>;
 ```
 
-What a synchronous validator becomes once `convert` runs on its value: still synchronous when `convert` never returns a promise, and asynchronous, producing what the promise settles to, when it may return one, such as a function typed `number | Promise<number>`. A function typed as returning `unknown` or `any` may return one too, so it makes the validator asynchronous.
+What a synchronous validator becomes once `convert` runs on its value: still synchronous when `convert` never returns a promise, and asynchronous, producing what the promise settles to, when it may return one, such as a function typed `number | Promise<number>`. A function typed as returning `unknown` may return one too, so it makes the validator asynchronous. One typed as returning `any`, such as `JSON.parse`, has opted out of type checking, and is taken at its word as synchronous: typing it asynchronous would make the most common conversion need an `await` it never needs.
 
 Not exported; declared in `src/composition/transform.ts`.
