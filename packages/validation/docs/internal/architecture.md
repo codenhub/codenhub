@@ -59,12 +59,14 @@ The reasons, in order of weight:
 
 Every pre-made validator is created by calling a function, options optional: `email()`, `string({ min: 2 })`, `url({ host: hostname() })`. There is no validator that is used bare, because a bare validator cannot grow an option without a breaking change, and because one rule with no exceptions is easier to remember than two. A single value therefore reads `email()(input)`.
 
-Every factory has the same signature: `validator(options?, ...checks)`, where a composer's own arguments, such as the shape of `object` or the item of `array`, come first. Options are an object and checks are functions, so the factory tells them apart with `typeof` and `string(startsWith("a"))` needs no empty options. Every factory accepts a `message` option, so every validator has an options object that can grow without a breaking change.
+Every factory has the same signature: `validator(options?, ...checks)`, where a composer's own arguments, such as the shape of `object` or the item of `array`, come first. Options are an object and checks are functions, so the factory tells them apart with `typeof` and `string(startsWith("a"))` needs no empty options. Every factory that reports an issue of its own accepts a `message` option, so its validators have an options object that can grow without a breaking change.
+
+The wrappers are the exception: `optional`, `nullable`, `nullish`, `fallback`, `transform`, `pipe` and `partial` report no issue of their own, only their child's, so they take neither options nor checks. `optional` could not take checks in any case, since its second argument is a default, which may itself be a function. `json` takes the validator of the parsed value first and optionally, so its checks follow options and need the validator: `json(object(shape), {}, check(...))`.
 
 ### Options, checks, formats and composition
 
 - **Options** carry the common constraints and the clean-up of one type: `string({ min, max, length, trim, case })`, `number({ min, max, gt, lt, int, safeInt, clamp })`, and `min`, `max` and `length` on collections. They are the short way to say the usual thing, and each costs one small branch in its validator.
-- **Checks** carry the rarer constraints, each in its own module: `pattern`, `startsWith`, `endsWith`, `includes`, `lowercase`, `uppercase`, `multipleOf`, `nonZero`, `unique`. A consumer that never requires a prefix does not bundle the code that checks one. See [Checks](#checks).
+- **Checks** carry the rarer constraints, each in its own module: `pattern`, `startsWith`, `endsWith`, `includes`, `lowercase`, `uppercase`, `multipleOf`, `nonZero`, `unique`. Each takes its message last; `unique(by?, message?)` takes what to compare first, since a function in first place is what to compare, not a message. A consumer that never requires a prefix does not bundle the code that checks one. See [Checks](#checks).
 - **Formats** are separate validators: `email()`, `url()`, `uuid()`. Each is its own module, so a consumer that wants `email` does not pay for `uuid`.
 - **Composition** carries everything else, by function: `object`, `optional`, `pipe`, `transform`. Cleaning a string before checking a format is `pipe(string({ trim: true }), email())`, not an option on `email`.
 
@@ -220,7 +222,7 @@ The package is `sideEffects: false`, every module is side-effect free at load, a
 
 There is no input-type parameter. Every validator accepts `unknown`, and that is the honest input type of a function that exists to check unknown data. `Infer<typeof validator>` reads the output type from either flavor.
 
-The public types are the ones a consumer writes: `Validator`, `AsyncValidator`, `Check`, `AsyncCheck`, `Message`, `MessageOptions`, `Factory`, `Rest`, `AsyncRest`, `Infer`, `ValidationResult`, `ValidationIssue`, `Messages` and the options interface of each validator. The types that compute a composer's return type, such as `Composed`, `AnyValidator` and `InferShape`, are internal, so they can change without breaking a caller.
+Every type a public signature names is exported, since `hub check` requires it and a consumer that exports a validator from a library must be able to name its type in declarations. So the types that compute a composer's return type, such as `Composed`, `AnyValidator` and `InferShape`, are public too. The ones a consumer is expected to write are `Validator`, `AsyncValidator`, `Check`, `AsyncCheck`, `Message`, `Infer`, `ValidationResult`, `ValidationIssue`, `Messages` and the options interface of each validator; the docs present the rest as the machinery of signatures, and a change to them is still a change to the API.
 
 An `object` output type is built with `Simplify`, so hover text shows one object, and a property whose validator can produce `undefined` becomes optional in it.
 

@@ -14,7 +14,6 @@ import {
   coerceString,
   date,
   datetime,
-  discriminatedUnion,
   email,
   englishMessages,
   fail,
@@ -35,22 +34,22 @@ import {
   object,
   startsWith,
   symbol,
+  tagged,
   oneOf,
   optional,
   partial,
   pass,
   pipe,
   record,
-  refine,
   set,
   standard,
   string,
   transform,
   tuple,
   union,
+  unique,
   unknown,
   url,
-  withDefault,
   type AsyncCheck,
   type AsyncValidator,
   type Check,
@@ -88,22 +87,34 @@ if (syncResult.ok) {
 }
 
 // An asynchronous rule makes everything that holds it asynchronous, and the type says so.
-export const username = refine(string(), async (name) => name !== "admin", { code: "username_taken" });
+export const username = string(check(async (name) => name !== "admin", { code: "username_taken" }));
 export const asyncSignup = object({ username, email: email() });
 export const asyncResult: Promise<Awaited<ReturnType<typeof asyncSignup>>> = Promise.resolve(asyncSignup({}));
 // @ts-expect-error an asynchronous validator's result cannot be read as if it were synchronous
 export const notSync: Validator<unknown> = asyncSignup;
 export const stillAsync: AsyncValidator<{ username: string; email: string }> = asyncSignup;
 
-// A check written as a type guard narrows what the validator produces, synchronous or not.
-export const onlyText = refine(union([string(), number()]), (value): value is string => typeof value === "string");
-export const onlyTextValue: Infer<typeof onlyText> = "a";
-// @ts-expect-error the guard narrowed the output to string
-export const badOnlyTextValue: Infer<typeof onlyText> = 1;
-export const onlyTextLater = refine(union([username, number()]), (value): value is string => typeof value === "string");
-export const onlyTextLaterValue: AsyncValidator<string> = onlyTextLater;
-// @ts-expect-error a guard on an asynchronous validator is still asynchronous
-export const onlyTextLaterSync: Validator<string> = onlyTextLater;
+// A check on an object sees the whole object, typed, with no annotation.
+export const signupChecked = object(
+  { password: string({ min: 8 }), confirm: string() },
+  check((data) => data.password === data.confirm, { path: ["confirm"] }),
+);
+export const signupCheckedSync: Validator<{ password: string; confirm: string }> = signupChecked;
+export const wrongShapeCheck = object(
+  { a: string() },
+  // @ts-expect-error a check of the wrong shape cannot be given
+  check((data: { b: number }) => data.b > 0),
+);
+export const uniqueIds = array(
+  object({ id: number() }),
+  { max: 10 },
+  unique((user) => user.id),
+);
+export const uniqueIdsSync: Validator<{ id: number }[]> = uniqueIds;
+export const checkedLater: AsyncValidator<string[]> = array(
+  string(),
+  check(async (list) => list.length > 0),
+);
 
 // Guards accept only synchronous validators.
 export const raw: unknown = "text";
@@ -158,14 +169,20 @@ export const bigValue: Infer<typeof big> = 1n;
 export const badBig: Infer<typeof big> = 1;
 
 // Collections keep their item types.
-export const tags = array(string(), { max: 5, unique: true });
+export const tags = array(string(), { max: 5 }, unique());
 export const tagList: Infer<typeof tags> = ["a", "b"];
 // @ts-expect-error items must be strings
 export const badTagList: Infer<typeof tags> = [1];
 // The callback of `unique` is typed by the item, with no annotation.
-export const users = array(object({ id: number() }), { unique: (user) => user.id });
-// @ts-expect-error the item has no `name`
-export const badUsers = array(object({ id: number() }), { unique: (user) => user.name });
+export const users = array(
+  object({ id: number() }),
+  unique((user) => user.id),
+);
+export const badUsers = array(
+  object({ id: number() }),
+  // @ts-expect-error the item has no `name`
+  unique((user) => user.name),
+);
 export const point = tuple([number(), number()]);
 export const pointValue: Infer<typeof point> = [1, 2];
 // @ts-expect-error a tuple has a fixed length
@@ -183,7 +200,7 @@ export const idsValue: Infer<typeof ids> = new Set([1]);
 
 // Wrappers change the output type, and object properties follow.
 export const settings = object({
-  role: withDefault(oneOf(["admin", "user"]), "user"),
+  role: optional(oneOf(["admin", "user"]), "user"),
   nickname: nullable(string()),
   page: fallback(number(), 1),
   note: optional(string()),
@@ -224,7 +241,7 @@ export const idOrName = union([number({ int: true }), string()]);
 export const idOrNameValue: Infer<typeof idOrName> = "a";
 // @ts-expect-error booleans are not in the union
 export const badIdOrName: Infer<typeof idOrName> = true;
-export const event = discriminatedUnion("type", {
+export const event = tagged("type", {
   click: object({ x: number(), y: number() }),
   key: object({ key: string() }),
 });
@@ -236,26 +253,26 @@ export const clickX: number | undefined = (() => {
   return result.ok && result.value.type === "click" ? result.value.x : undefined;
 })();
 // A variant must not list the tag, which it is never given, and must produce an object that can carry it.
-export const listsTag = discriminatedUnion("type", {
+export const listsTag = tagged("type", {
   // @ts-expect-error the variant lists the tag it is never given
   a: object({ type: literal("a"), x: number() }),
 });
-export const producesArray = discriminatedUnion("type", {
+export const producesArray = tagged("type", {
   // @ts-expect-error a variant must produce an object that can carry the tag, not an array
   a: transform(object({}), () => [1]),
 });
-export const passthroughVariant = discriminatedUnion("type", { a: object({}, { unknownKeys: "passthrough" }) });
+export const passthroughVariant = tagged("type", { a: object({}, { unknownKeys: "passthrough" }) });
 // A record declares no tag, so it can be a variant, and the output still narrows on the tag.
-export const tallies = discriminatedUnion("type", { totals: record(string(), number()), none: object({}) });
+export const tallies = tagged("type", { totals: record(string(), number()), none: object({}) });
 export const talliesTag = (value: Infer<typeof tallies>): number | undefined =>
   value.type === "totals" ? value["ada"] : undefined;
 // An index signature does not excuse a tag the output also declares: the variant is never given it.
-export const indexedWithTag = discriminatedUnion("type", {
+export const indexedWithTag = tagged("type", {
   // @ts-expect-error the variant declares the tag beside its index signature
   a: intersection(record(string(), unknown()), object({ type: string() })),
 });
 declare const indexedOptionalTag: Validator<{ [key: string]: unknown; type?: string }>;
-export const indexedWithOptionalTag = discriminatedUnion("type", {
+export const indexedWithOptionalTag = tagged("type", {
   // @ts-expect-error the variant declares the tag, even as optional, beside its index signature
   a: indexedOptionalTag,
 });
@@ -287,7 +304,7 @@ export const counter = coerceBigint({ min: 0n });
 export const counterValue: Infer<typeof counter> = 1n;
 export const when = coerceDate();
 export const whenValue: Infer<typeof when> = new Date();
-export const environment = object({ PORT: port, DEBUG: withDefault(flag, false) });
+export const environment = object({ PORT: port, DEBUG: optional(flag, false) });
 export const environmentValue: Infer<typeof environment> = { PORT: 1, DEBUG: false };
 
 // A validator exposed as a Standard Schema keeps its call signature and its types.

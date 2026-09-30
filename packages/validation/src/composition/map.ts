@@ -1,10 +1,15 @@
 import { chain, collect, type Maybe } from "../core/async";
+import { tail, word } from "../core/checks";
 import { entriesOf, sizeOfMap } from "../core/objects";
-import { assertFunction, collectNested, failWith, invalidType, pass, repeatedKey, toIssue } from "../core/result";
+import { assertFunction, collectNested, failWith, issue, repeatedKey, typeIssue } from "../core/result";
 import type {
   AnyValidator,
+  AsyncRest,
+  AsyncValidator,
   Composed,
   Infer,
+  MessageOptions,
+  Rest,
   ValidationIssue,
   ValidationPathSegment,
   ValidationResult,
@@ -41,19 +46,26 @@ import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
   key: TKey,
   value: TValue,
-  options: SizeOptions = {},
-): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>> {
+  ...rest: Rest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>
+): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>>;
+export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
+  key: TKey,
+  value: TValue,
+  ...rest: AsyncRest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>
+): AsyncValidator<Map<Infer<TKey>, Infer<TValue>>>;
+export function map(key: AnyValidator, value: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("key", key);
   assertFunction("value", value);
+  const [options, reject, accept] = tail<SizeOptions & MessageOptions, Map<unknown, unknown>>(rest);
   assertSizeOptions(options);
-  const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return (input: unknown): Maybe<ValidationResult<unknown>> => {
     const size = sizeOfMap(input);
     if (size === undefined) {
-      return invalidType("map", input);
+      return reject([typeIssue("map", input)]);
     }
     const oversize = sizeIssues(size, "map", options);
     if (oversize.length > 0) {
-      return failWith(oversize);
+      return reject(oversize);
     }
     const entries = entriesOf(input);
     // A string key is its own segment; any other is the position, a number, so segments never collide.
@@ -68,21 +80,20 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
         const segment = segments[index] as ValidationPathSegment;
         if (!keyResult.ok) {
           // Wrapped, so a bad key is not mistaken for a bad value at the same path.
-          issues.push(toIssue({ code: "invalid_key", path: [segment], params: { issues: keyResult.error.issues } }));
+          issues.push(...word([issue("invalid_key", { issues: keyResult.error.issues }, [segment])], options.message));
         }
         if (!valueResult.ok) {
           collectNested(issues, valueResult.error.issues, segment);
         }
         if (keyResult.ok && valueResult.ok) {
           if (output.has(keyResult.value)) {
-            issues.push(repeatedKey(segment));
+            issues.push(...word([repeatedKey(segment)], options.message));
           } else {
             output.set(keyResult.value, valueResult.value);
           }
         }
       });
-      return issues.length > 0 ? failWith(issues) : pass(output);
+      return issues.length > 0 ? failWith(issues) : accept(output);
     });
   };
-  return validate as unknown as Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>>;
 }

@@ -9,7 +9,7 @@ import type { ValidationIssue, ValidationPathSegment, ValidationResult } from ".
  */
 export function settle(
   results: readonly Maybe<ValidationResult<unknown>>[],
-  build: (values: unknown[]) => ValidationResult<unknown>,
+  build: (values: unknown[]) => Maybe<ValidationResult<unknown>>,
   segments?: readonly ValidationPathSegment[],
 ): Maybe<ValidationResult<unknown>> {
   return chain(collect(results), (settled) => {

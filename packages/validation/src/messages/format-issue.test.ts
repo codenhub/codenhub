@@ -6,6 +6,7 @@ import { multipleOf } from "../checks/multiple-of";
 import { nonZero } from "../checks/non-zero";
 import { pattern } from "../checks/pattern";
 import { startsWith } from "../checks/starts-with";
+import { unique } from "../checks/unique";
 import { array } from "../composition/array";
 import { json } from "../composition/json";
 import { map } from "../composition/map";
@@ -212,9 +213,7 @@ describe("formatIssue", () => {
   });
 
   it("should describe duplicates, unions and JSON", () => {
-    expect(formatIssue(issuesOf(array(string(), { unique: true })(["a", "a"]))[0] as ValidationIssue)).toBe(
-      "Must be unique",
-    );
+    expect(formatIssue(issuesOf(array(string(), unique())(["a", "a"]))[0] as ValidationIssue)).toBe("Must be unique");
     expect(formatIssue(issuesOf(union([string()])(1))[0] as ValidationIssue)).toBe(
       "Does not match any of the allowed types",
     );

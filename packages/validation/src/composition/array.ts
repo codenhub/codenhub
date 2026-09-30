@@ -1,22 +1,21 @@
 import type { Maybe } from "../core/async";
-import { assertFunction, failWith, invalidType, pass, repeatedItem } from "../core/result";
-import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
+import { tail } from "../core/checks";
+import { assertFunction, typeIssue } from "../core/result";
+import type {
+  AnyValidator,
+  AsyncRest,
+  AsyncValidator,
+  Composed,
+  Infer,
+  MessageOptions,
+  Rest,
+  ValidationResult,
+} from "../core/types";
 import { settle } from "./settle";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
-/**
- * Constraints for {@link array}. Every option is optional.
- *
- * @typeParam TItem - The type of an item after validation, which `unique` receives.
- */
-export interface ArrayOptions<TItem = unknown> extends SizeOptions {
-  /**
-   * Rejects duplicates, reporting each repeat at its own index. `true` compares the validated items
-   * themselves; a function compares the value it returns for each item, so `(user) => user.id`
-   * makes ids unique. Comparison is SameValueZero, as for a `Set`.
-   */
-  unique?: boolean | ((item: TItem) => unknown);
-}
+/** Constraints for {@link array}. Every option is optional. Duplicates are rejected with the `unique()` check. */
+export interface ArrayOptions extends SizeOptions, MessageOptions {}
 
 /**
  * Creates a validator for arrays whose every item passes `element`.
@@ -42,42 +41,33 @@ export interface ArrayOptions<TItem = unknown> extends SizeOptions {
  * @throws {TypeError} When `element` is not a function.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
-export function array<TElement extends AnyValidator>(
-  element: TElement,
-  options: ArrayOptions<Infer<TElement>> = {},
-): Composed<TElement, Infer<TElement>[]> {
-  assertFunction("element", element);
+export function array<TItem extends AnyValidator>(
+  item: TItem,
+  ...rest: Rest<Infer<TItem>[], ArrayOptions>
+): Composed<TItem, Infer<TItem>[]>;
+export function array<TItem extends AnyValidator>(
+  item: TItem,
+  ...rest: AsyncRest<Infer<TItem>[], ArrayOptions>
+): AsyncValidator<Infer<TItem>[]>;
+export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
+  assertFunction("item", item);
+  const [options, reject, accept] = tail<ArrayOptions, unknown[]>(rest);
   assertSizeOptions(options);
-  const { unique } = options;
-  const keyOf = typeof unique === "function" ? (unique as (item: unknown) => unknown) : (item: unknown) => item;
 
-  const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!Array.isArray(input)) {
-      return invalidType("array", input);
+      return reject([typeIssue("array", input)]);
     }
     const { length } = input;
     const oversize = sizeIssues(length, "array", options);
     if (oversize.length > 0) {
-      return failWith(oversize);
+      return reject(oversize);
     }
     return settle(
       // Read by index up to the length that was checked, never through the array's own iterator, which
       // the input can replace to yield other items or never stop.
-      Array.from({ length }, (_, index) => element(input[index])),
-      (items) => {
-        if (unique === undefined || unique === false) {
-          return pass(items);
-        }
-        const seen = new Set<unknown>();
-        const repeats = items.flatMap((item, index) => {
-          const key = keyOf(item);
-          const isRepeat = seen.has(key);
-          seen.add(key);
-          return isRepeat ? [repeatedItem(index)] : [];
-        });
-        return repeats.length > 0 ? failWith(repeats) : pass(items);
-      },
+      Array.from({ length }, (_, index) => item(input[index])),
+      accept,
     );
   };
-  return validate as unknown as Composed<TElement, Infer<TElement>[]>;
 }

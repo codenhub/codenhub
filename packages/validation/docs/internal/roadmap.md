@@ -25,15 +25,15 @@ This is the definition of done for the 0.2.0 release and the order the work happ
 
 Everything follows the [architecture](architecture.md): a factory with the signature `validator(options?, ...checks)` returning a `(input: unknown) => result` function, options for common constraints, checks for rare ones, composition for meaning.
 
-- **Checks and builders.** The `Check` and `AsyncCheck` types, and `check`, `format` and `guard`, with which every built-in validator and check is written. `refine` is removed.
+- **Checks and builders.** The `Check` and `AsyncCheck` types, and `check`, `format` and `guard`, built on the same internals as every built-in validator and check. `refine` is removed.
 - **Leaves.** `string`, `number`, `bigint`, `boolean`, `date`, `symbol`, `literal`, `oneOf` (a list of values or an enum object, replacing `nativeEnum`), `unknown`, `never`, `instanceOf`, `func`.
 - **Options and checks.** `string({ min, max, length, trim, case })`, with `case: "lower" | "upper"` replacing `lowercase` and `uppercase`. `number({ min, max, gt, lt, int, safeInt, clamp })`. Collections keep `min`, `max` and `length`. The checks `pattern`, `startsWith`, `endsWith`, `includes`, `lowercase`, `uppercase`, `multipleOf`, `nonZero` and `unique` replace the options they were.
 - **Messages per validator.** A `message` option on every validator, and a message argument on every built-in check.
-- **Composition.** `object`, `array`, `tuple`, `record`, `set`, `map`, `optional(validator, value?)` replacing `withDefault`, `nullable`, `nullish`, `fallback`, `transform`, `pipe`, `union`, `tagged` replacing `discriminatedUnion`, `intersection`, `lazy`, `json`, `partial`. Every composer takes checks.
+- **Composition.** `object`, `array`, `tuple`, `record`, `set`, `map`, `optional(validator, value?)` replacing `withDefault`, `nullable`, `nullish`, `fallback`, `transform`, `pipe`, `union`, `tagged` replacing `discriminatedUnion`, `intersection`, `lazy`, `json`, `partial`. Every composer that reports an issue of its own takes a message and checks; the wrappers take neither.
 - **Parts.** `hostname`, `domain` (a public domain name), `ip` and `port` (numbers) as validators on their own. `url({ protocols, host, path, port, query, repeated })`, with `host` replacing `allowLocal`. `email({ domain, local, allowPlus })`. `searchParams(validator, { repeated })`.
 - **Formats.** The 0.1.0 formats, with `ip` returning the canonical form, plus `phone` (E.164, returned canonical), `slug`, `semver`, `jwt` (its structure, not its signature), `creditCard` (the Luhn check), `cidr`, `mac`, `time`, `duration`, `base64({ url })` and `uuid({ version })`.
 - **Unchanged.** Coercion, `is`, `pass` and `fail`, the result shape, `formatIssue`, `flatten`, `formatPath`, `englishMessages` with wording for every new code, and `standard`.
-- **Types.** The public types are `Validator`, `AsyncValidator`, `Check`, `AsyncCheck`, `Message`, `MessageOptions`, `Factory`, `Rest`, `AsyncRest`, `Infer`, `ValidationResult`, `ValidationIssue`, `Messages` and the options interfaces. The rest are internal.
+- **Types.** Every type a public signature names is exported, as `hub check` requires. The docs present `Validator`, `AsyncValidator`, `Check`, `AsyncCheck`, `Message`, `Infer`, `ValidationResult`, `ValidationIssue`, `Messages` and the options interfaces as the ones a consumer writes, and the rest as the machinery of signatures.
 
 ### Quality
 

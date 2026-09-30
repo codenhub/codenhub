@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { unique } from "../checks/unique";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { accepts, codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
@@ -87,10 +88,12 @@ describe("array", () => {
 
   describe("unique", () => {
     it("should reject repeats at their own index, keeping the first", () => {
-      expect(issuesOf(array(string(), { unique: true })(["a", "b", "a", "b", "a"])).map((issue) => issue.path)).toEqual(
-        [[2], [3], [4]],
-      );
-      expect(issuesOf(array(string(), { unique: true })(["a", "a"]))[0]).toEqual({
+      expect(issuesOf(array(string(), unique())(["a", "b", "a", "b", "a"])).map((issue) => issue.path)).toEqual([
+        [2],
+        [3],
+        [4],
+      ]);
+      expect(issuesOf(array(string(), unique())(["a", "a"]))[0]).toEqual({
         code: "invalid_value",
         path: [1],
         params: { unique: true },
@@ -98,22 +101,29 @@ describe("array", () => {
     });
 
     it("should compare by the key a function returns", () => {
-      const users = array(object({ id: number() }), { unique: (user) => user.id });
+      const users = array(
+        object({ id: number() }),
+        unique((user) => user.id),
+      );
       expect(users([{ id: 1 }, { id: 2 }]).ok).toBe(true);
       expect(users([{ id: 1 }, { id: 1 }]).ok).toBe(false);
-      expect(array(object({ id: number() }), { unique: true })([{ id: 1 }, { id: 1 }]).ok).toBe(true);
+      expect(array(object({ id: number() }), unique())([{ id: 1 }, { id: 1 }]).ok).toBe(true);
     });
 
     it("should compare validated items, so clean-up is applied first", () => {
-      expect(array(string({ trim: true }), { unique: true })(["a", " a "]).ok).toBe(false);
+      expect(array(string({ trim: true }), unique())(["a", " a "]).ok).toBe(false);
     });
 
     it("should only check for repeats once every item is valid", () => {
-      expect(codesOf(array(number(), { unique: true })([1, 1, "x"]))).toEqual(["invalid_type"]);
+      expect(codesOf(array(number(), unique())([1, 1, "x"]))).toEqual(["invalid_type"]);
     });
 
-    it("should not check for repeats when it is false or absent", () => {
-      expect(array(string(), { unique: false })(["a", "a"]).ok).toBe(true);
+    it("should not check for repeats without the check", () => {
+      expect(array(string())(["a", "a"]).ok).toBe(true);
+    });
+
+    it("should take a message for every repeat", () => {
+      expect(issuesOf(array(string(), unique(undefined, "Twice"))(["a", "a"]))[0]?.message).toBe("Twice");
     });
   });
 

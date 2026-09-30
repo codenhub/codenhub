@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { check } from "../builders/check";
 import { fail, pass } from "../core/result";
 import type { AsyncValidator, Validator } from "../core/types";
 import { email } from "../formats/email";
@@ -7,7 +8,6 @@ import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { codesOf, valueOf } from "../test-utils";
 import { pipe } from "./pipe";
-import { refine } from "./refine";
 
 describe("pipe", () => {
   const address = pipe(string({ trim: true, case: "lower" }), email());
@@ -43,11 +43,7 @@ describe("pipe", () => {
   it("should be asynchronous when any step is, and preserve order", async () => {
     const taken: AsyncValidator<string> = async (input) =>
       input === "admin" ? fail({ code: "taken" }) : pass(input as string);
-    const username = pipe(
-      string({ trim: true }),
-      taken,
-      refine(string(), (name) => name.length > 2, { code: "short" }),
-    );
+    const username = pipe(string({ trim: true }), taken, string(check((name) => name.length > 2, { code: "short" })));
     expect(valueOf(await username(" ada "))).toBe("ada");
     expect(codesOf(await username(" admin "))).toEqual(["taken"]);
     expect(codesOf(await username(" ab "))).toEqual(["short"]);

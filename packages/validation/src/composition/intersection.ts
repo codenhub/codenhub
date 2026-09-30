@@ -1,10 +1,15 @@
 import { chain, collect, type Maybe } from "../core/async";
+import { tail } from "../core/checks";
 import { entriesOf, isPlainObject, setOwn, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "../core/objects";
-import { assertFunction, failWith, pass, toIssue } from "../core/result";
+import { assertFunction, failWith, issue } from "../core/result";
 import type {
   AnyValidator,
+  AsyncRest,
+  AsyncValidator,
   Composed,
   Infer,
+  MessageOptions,
+  Rest,
   ValidationIssue,
   ValidationPathSegment,
   ValidationResult,
@@ -129,7 +134,7 @@ function mergeOne(pending: Pending, inner: Step[], conflicts: ValidationIssue[],
     inner.push(() => values.forEach((value) => output.add(value)));
     return output;
   }
-  conflicts.push(toIssue({ code: "invalid_intersection", path: pathOf(pending) }));
+  conflicts.push(issue("invalid_intersection", undefined, pathOf(pending)));
   return right;
 }
 
@@ -200,17 +205,24 @@ function merge(left: unknown, right: unknown, conflicts: ValidationIssue[]): unk
 export function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(
   left: TLeft,
   right: TRight,
-): Composed<TLeft | TRight, Infer<TLeft> & Infer<TRight>> {
+  ...rest: Rest<Infer<TLeft> & Infer<TRight>, MessageOptions>
+): Composed<TLeft | TRight, Infer<TLeft> & Infer<TRight>>;
+export function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(
+  left: TLeft,
+  right: TRight,
+  ...rest: AsyncRest<Infer<TLeft> & Infer<TRight>, MessageOptions>
+): AsyncValidator<Infer<TLeft> & Infer<TRight>>;
+export function intersection(left: AnyValidator, right: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("left", left);
   assertFunction("right", right);
-  const validate = (input: unknown): Maybe<ValidationResult<unknown>> =>
+  const [, reject, accept] = tail<MessageOptions, unknown>(rest);
+  return (input: unknown): Maybe<ValidationResult<unknown>> =>
     chain(collect([left(input), right(input)]), ([first, second]) => {
       if (first?.ok && second?.ok) {
         const conflicts: ValidationIssue[] = [];
         const merged = merge(first.value, second.value, conflicts);
-        return conflicts.length > 0 ? failWith(conflicts) : pass(merged);
+        return conflicts.length > 0 ? reject(conflicts) : accept(merged);
       }
       return failWith([first, second].flatMap((result) => (result?.ok === false ? result.error.issues : [])));
     });
-  return validate as unknown as Composed<TLeft | TRight, Infer<TLeft> & Infer<TRight>>;
 }

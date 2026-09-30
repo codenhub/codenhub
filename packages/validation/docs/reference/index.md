@@ -13,21 +13,13 @@ group: Reference
 ### array
 
 ```ts
-export declare function array<TElement extends AnyValidator>(element: TElement, options?: ArrayOptions<Infer<TElement>>): Composed<TElement, Infer<TElement>[]>;
+export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: Rest<Infer<TItem>[], ArrayOptions>): Composed<TItem, Infer<TItem>[]>;
+export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Infer<TItem>[], ArrayOptions>): AsyncValidator<Infer<TItem>[]>;
 ```
 
 Creates a validator for arrays whose every item passes `element`.
 
 A wrong size is reported at once, without validating the items, so a huge array is never worked through only to be rejected. Otherwise every item is validated, and each issue's path leads through the item's index. `unique` is checked on the validated items, after the others pass. The output is a new array; the input is never modified. It is synchronous when `element` is, and asynchronous otherwise.
-
-**Parameters**
-
-- `element` — Validator applied to every item.
-- `options` — Size limits and uniqueness.
-
-**Type parameters**
-
-- `TElement` — The validator for each item.
 
 **Returns** — A validator that produces an array of what `element` produces.
 
@@ -136,43 +128,6 @@ Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a
 datetime()("2026-09-28T14:30:00Z"); // { ok: true, ... }
 datetime()("2026-02-30T00:00:00Z"); // { ok: false, ... }: February has no 30th
 datetime({ offset: true })("2026-09-28T14:30:00+02:00"); // { ok: true, ... }
-```
-
-### discriminatedUnion
-
-```ts
-export declare function discriminatedUnion<const TKey extends string, const TVariants extends Variants>(key: TKey, variants: TVariants & CheckedVariants<TKey, TVariants>): Composed<TVariants[keyof TVariants], InferDiscriminated<TKey, TVariants>>;
-```
-
-Creates a validator for objects that share a tag property and differ in the rest, such as events with a `type`. The tag chooses the variant, so a failure reports that variant's own issues instead of a list of everything that did not match.
-
-The input's tag must be one of the keys of `variants`, and the variant validates the rest of the input, without the tag. The variant must not list the tag property: one that does, such as `object({ type: literal("click"), ... })`, never sees it and fails, so its type is rejected. That is also why a strict object works as a variant, and a `record` does too, checking every key but the tag. The tag is added back to the output, so the result is a proper tagged union. Each variant must produce a plain object: an array, a `Date`, a class instance or anything else would be taken apart by adding the tag, so a variant whose output type is an array or a function is a compile error, and one that produces any non-plain value throws a `TypeError` when it does, as a callback's bug does. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. It is synchronous when every variant is, and asynchronous otherwise. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
-
-**Parameters**
-
-- `key` — The name of the tag property.
-- `variants` — A validator for each tag value. Each must produce a plain object.
-
-**Type parameters**
-
-- `TKey` — The name of the tag property.
-- `TVariants` — The variants, keyed by tag.
-
-**Returns** — A validator that produces one of the variants' objects, tagged.
-
-**Throws** — When a variant is not a function, and, from the returned validator, when a variant produces something other than a plain object.
-
-**Example**
-
-```ts
-const event = discriminatedUnion("type", {
-  click: object({ x: number(), y: number() }),
-  key: object({ key: string({ min: 1 }) }),
-});
-
-event({ type: "key", key: "a" }); // { ok: true, value: { type: "key", key: "a" } }
-event({ type: "scroll" }); // { ok: false, ... }, code "invalid_union" at path ["type"]
-event({ type: "click", x: 1 }); // { ok: false, ... }, code "invalid_type" at path ["y"]
 ```
 
 ### email
@@ -505,7 +460,8 @@ upload("a.txt"); // { ok: false, ... }, params { expected: "instance of File", r
 ### intersection
 
 ```ts
-export declare function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(left: TLeft, right: TRight): Composed<TLeft | TRight, Infer<TLeft> & Infer<TRight>>;
+export declare function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(left: TLeft, right: TRight, ...rest: Rest<Infer<TLeft> & Infer<TRight>, MessageOptions>): Composed<TLeft | TRight, Infer<TLeft> & Infer<TRight>>;
+export declare function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(left: TLeft, right: TRight, ...rest: AsyncRest<Infer<TLeft> & Infer<TRight>, MessageOptions>): AsyncValidator<Infer<TLeft> & Infer<TRight>>;
 ```
 
 Creates a validator that accepts a value only when it passes both validators, and produces the two results merged.
@@ -606,8 +562,9 @@ isoDate()("2026-02-29"); // { ok: false, ... }: 2026 is not a leap year
 ### json
 
 ```ts
-export declare function json(): Validator<unknown>;
-export declare function json<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, Infer<TValidator>>;
+export declare function json(options?: MessageOptions): Validator<unknown>;
+export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, MessageOptions>): Composed<TValidator, Infer<TValidator>>;
+export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, MessageOptions>): AsyncValidator<Infer<TValidator>>;
 ```
 
 Creates a validator for text that holds JSON: it parses the text, then optionally validates what was parsed.
@@ -637,7 +594,8 @@ settings("{oops"); // { ok: false, ... }, code "invalid_format"
 ### lazy
 
 ```ts
-export declare function lazy<TValidator extends AnyValidator>(getter: () => TValidator, options?: LazyOptions): Composed<TValidator, Infer<TValidator>>;
+export declare function lazy<TValidator extends AnyValidator>(getter: () => TValidator, ...rest: Rest<Infer<TValidator>, LazyOptions>): Composed<TValidator, Infer<TValidator>>;
+export declare function lazy<TValidator extends AnyValidator>(getter: () => TValidator, ...rest: AsyncRest<Infer<TValidator>, LazyOptions>): AsyncValidator<Infer<TValidator>>;
 ```
 
 Creates a validator that looks up another validator the first time it runs, so a validator can refer to itself for recursive data such as a tree or a comment thread.
@@ -649,7 +607,6 @@ Every level of nesting is a level of recursion, and input nested past the stack,
 **Parameters**
 
 - `getter` — Returns the validator. Called once, on first use.
-- `options` — The depth limit.
 
 **Type parameters**
 
@@ -730,7 +687,8 @@ string(lowercase("Must be lowercase"));
 ### map
 
 ```ts
-export declare function map<TKey extends AnyValidator, TValue extends AnyValidator>(key: TKey, value: TValue, options?: SizeOptions): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>>;
+export declare function map<TKey extends AnyValidator, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: Rest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>>;
+export declare function map<TKey extends AnyValidator, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncValidator<Map<Infer<TKey>, Infer<TValue>>>;
 ```
 
 Creates a validator for `Map`s whose every key passes `key` and every value passes `value`.
@@ -741,7 +699,6 @@ A wrong size is reported at once, without validating the entries. An issue's pat
 
 - `key` — Validator applied to every key.
 - `value` — Validator applied to every value.
-- `options` — Size limits.
 
 **Type parameters**
 
@@ -884,7 +841,8 @@ nickname(undefined); // { ok: true, value: undefined }
 ### object
 
 ```ts
-export declare function object<TShape extends Shape>(shape: TShape, options?: ObjectOptions): Composed<TShape[keyof TShape], InferShape<TShape>>;
+export declare function object<TShape extends Shape>(shape: TShape, ...rest: Rest<InferShape<TShape>, ObjectOptions>): Composed<TShape[keyof TShape], InferShape<TShape>>;
+export declare function object<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferShape<TShape>, ObjectOptions>): AsyncValidator<InferShape<TShape>>;
 ```
 
 Creates a validator for plain objects with the given properties.
@@ -894,7 +852,7 @@ Only own enumerable properties are read, and class instances and arrays are not 
 **Parameters**
 
 - `shape` — Validator of each property.
-- `options` — How to treat properties the shape does not list.
+- `rest` — Options, including how to treat properties the shape does not list, then checks, which run once every property has passed and see the whole object.
 
 **Type parameters**
 
@@ -910,6 +868,11 @@ Only own enumerable properties are read, and class instances and arrays are not 
 const user = object({ name: string({ min: 2 }), age: optional(number({ int: true })) });
 user({ name: "Ada" }); // { ok: true, value: { name: "Ada" } }
 user({ name: "A" }); // { ok: false, error: { issues: [{ code: "too_small", path: ["name"], ... }] } }
+
+const signup = object(
+  { password: string({ min: 8 }), confirm: string() },
+  check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
+);
 ```
 
 ### oneOf
@@ -952,19 +915,23 @@ oneOf(Status)("active"); // { ok: true, value: Status.Active }
 
 ```ts
 export declare function optional<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, Infer<TValidator> | undefined>;
+export declare function optional<TValidator extends AnyValidator>(validator: TValidator, value: Fallback<Exclude<Infer<TValidator>, undefined>>): Composed<TValidator, Exclude<Infer<TValidator>, undefined>>;
 ```
 
-Wraps a validator so `undefined` is accepted and passed through, and every other value goes to the wrapped validator. Inside `object`, the property then becomes optional in the inferred type.
+Wraps a validator so `undefined` is accepted, and every other value goes to the wrapped validator. Inside `object`, the property then becomes optional in the inferred type.
+
+Given a default, `undefined` is replaced by it instead, the output type no longer includes `undefined`, and inside `object` the property is always present in the output. The default is trusted and is not run through the wrapped validator. A function is called for every use to produce the default, so pass one for an object or array, which would otherwise be shared by every result. To use a function as the default value itself, return it from a function.
 
 **Parameters**
 
 - `validator` — The validator for values that are present.
+- `value` — The default, or a function that returns it.
 
 **Type parameters**
 
 - `TValidator` — The wrapped validator.
 
-**Returns** — A validator that produces the wrapped type, or `undefined`.
+**Returns** — A validator that produces the wrapped type, and `undefined` or the default for `undefined`.
 
 **Throws** — When `validator` is not a function.
 
@@ -973,8 +940,11 @@ Wraps a validator so `undefined` is accepted and passed through, and every other
 ```ts
 const nickname = optional(string({ min: 2 }));
 nickname(undefined); // { ok: true, value: undefined }
-nickname("Ad"); // { ok: true, value: "Ad" }
 nickname(null); // { ok: false, ... }: null is not undefined
+
+const role = optional(oneOf(["admin", "user"]), "user");
+role(undefined); // { ok: true, value: "user" }
+const tags = optional(array(string()), () => []);
 ```
 
 ### partial
@@ -1085,7 +1055,8 @@ address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
 ### record
 
 ```ts
-export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, options?: SizeOptions): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>>;
+export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: Rest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>>;
+export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncValidator<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>>;
 ```
 
 Creates a validator for plain objects used as a dictionary: any number of keys, all following the same rules.
@@ -1096,7 +1067,6 @@ Each key passes `key` and each value passes `value`. An issue's path ends at the
 
 - `key` — Validator applied to every key.
 - `value` — Validator applied to every value.
-- `options` — Limits on the number of keys.
 
 **Type parameters**
 
@@ -1118,62 +1088,16 @@ scores({ ada: 3, alan: 5 }); // { ok: true, value: { ada: 3, alan: 5 } }
 scores({ ada: "3" }); // { ok: false, ... }, code "invalid_type" at path ["ada"]
 ```
 
-### refine
-
-```ts
-export declare function refine<T, TNarrowed extends T>(validator: Validator<T>, check: (value: T) => value is TNarrowed, issue?: RefineIssue): Validator<TNarrowed>;
-export declare function refine<T, TNarrowed extends T>(validator: AnyValidator<T>, check: (value: T) => value is TNarrowed, issue?: RefineIssue): AsyncValidator<TNarrowed>;
-export declare function refine<T>(validator: Validator<T>, check: (value: T) => boolean, issue?: RefineIssue): Validator<T>;
-export declare function refine<T>(validator: AnyValidator<T>, check: (value: T) => boolean | PromiseLike<boolean>, issue?: RefineIssue): AsyncValidator<T>;
-```
-
-Adds a rule the wrapped validator cannot express, such as two fields having to match.
-
-The check runs only when the wrapped validator succeeded, and receives the value it produced. A check that returns a promise, such as a database lookup, makes the result asynchronous, and the type says so. A check written as a type guard, `(value): value is Admin => ...`, narrows the output type to what it guards. To report several issues at once or choose the path per failure, write a validator function instead.
-
-**Parameters**
-
-- `validator` — The validator to add the rule to.
-- `check` — Returns `true` when the value is acceptable.
-- `issue` — How to report a rejected value. Defaults to code `"custom"`.
-
-**Type parameters**
-
-- `T` — The type the wrapped validator produces.
-- `TNarrowed` — The type a type-guard `check` narrows the output to.
-
-**Returns** — A validator with the same output type as the wrapped one, or the narrower type a type-guard `check` names.
-
-**Throws** — When `validator` or `check` is not a function.
-
-**Example**
-
-```ts
-const signup = refine(
-  object({ password: string({ min: 8 }), confirm: string() }),
-  (data) => data.password === data.confirm,
-  { message: "Passwords must match", path: ["confirm"] },
-);
-```
-
 ### set
 
 ```ts
-export declare function set<TElement extends AnyValidator>(element: TElement, options?: SizeOptions): Composed<TElement, Set<Infer<TElement>>>;
+export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: Rest<Set<Infer<TItem>>, SizeOptions & MessageOptions>): Composed<TItem, Set<Infer<TItem>>>;
+export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Set<Infer<TItem>>, SizeOptions & MessageOptions>): AsyncValidator<Set<Infer<TItem>>>;
 ```
 
 Creates a validator for `Set`s whose every value passes `element`.
 
 A wrong size is reported at once, without validating the values. Otherwise every value is validated, and each issue's path leads through the value's position in iteration order. The output is a new `Set` of the validated values. When `element` changes values so that one becomes equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its position, rather than dropped, so the output never holds fewer values than the size options allow. It is synchronous when `element` is, and asynchronous otherwise.
-
-**Parameters**
-
-- `element` — Validator applied to every value.
-- `options` — Size limits.
-
-**Type parameters**
-
-- `TElement` — The validator for each value.
 
 **Returns** — A validator that produces a `Set` of what `element` produces.
 
@@ -1243,6 +1167,44 @@ Requires a string to start with a prefix. It fails with `invalid_format` and `pa
 string(startsWith("https://"));
 ```
 
+### tagged
+
+```ts
+export declare function tagged<const TKey extends string, const TVariants extends Variants>(key: TKey, variants: TVariants & CheckedVariants<TKey, TVariants>, ...rest: Rest<InferTagged<TKey, TVariants>, MessageOptions>): Composed<TVariants[keyof TVariants], InferTagged<TKey, TVariants>>;
+export declare function tagged<const TKey extends string, const TVariants extends Variants>(key: TKey, variants: TVariants & CheckedVariants<TKey, TVariants>, ...rest: AsyncRest<InferTagged<TKey, TVariants>, MessageOptions>): AsyncValidator<InferTagged<TKey, TVariants>>;
+```
+
+Creates a validator for objects that share a tag property and differ in the rest, such as events with a `type`. The tag chooses the variant, so a failure reports that variant's own issues instead of a list of everything that did not match.
+
+The input's tag must be one of the keys of `variants`, and the variant validates the rest of the input, without the tag. The variant must not list the tag property: one that does, such as `object({ type: literal("click"), ... })`, never sees it and fails, so its type is rejected. That is also why a strict object works as a variant, and a `record` does too, checking every key but the tag. The tag is added back to the output, so the result is a proper tagged union. Each variant must produce a plain object: an array, a `Date`, a class instance or anything else would be taken apart by adding the tag, so a variant whose output type is an array or a function is a compile error, and one that produces any non-plain value throws a `TypeError` when it does, as a callback's bug does. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. It is synchronous when every variant is, and asynchronous otherwise. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
+
+**Parameters**
+
+- `key` — The name of the tag property.
+- `variants` — A validator for each tag value. Each must produce a plain object.
+
+**Type parameters**
+
+- `TKey` — The name of the tag property.
+- `TVariants` — The variants, keyed by tag.
+
+**Returns** — A validator that produces one of the variants' objects, tagged.
+
+**Throws** — When a variant is not a function, and, from the returned validator, when a variant produces something other than a plain object.
+
+**Example**
+
+```ts
+const event = tagged("type", {
+  click: object({ x: number(), y: number() }),
+  key: object({ key: string({ min: 1 }) }),
+});
+
+event({ type: "key", key: "a" }); // { ok: true, value: { type: "key", key: "a" } }
+event({ type: "scroll" }); // { ok: false, ... }, code "invalid_union" at path ["type"]
+event({ type: "click", x: 1 }); // { ok: false, ... }, code "invalid_type" at path ["y"]
+```
+
 ### transform
 
 ```ts
@@ -1281,7 +1243,8 @@ const user = transform(string(), async (id) => await loadUser(id));
 ### tuple
 
 ```ts
-export declare function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]], TRest extends AnyValidator | undefined = undefined>(items: TItems, options?: TupleOptions<TRest>): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>>;
+export declare function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]], TRest extends AnyValidator | undefined = undefined>(items: TItems, ...rest: Rest<InferTuple<TItems, TRest>, TupleOptions<TRest>>): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>>;
+export declare function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]], TRest extends AnyValidator | undefined = undefined>(items: TItems, ...rest: AsyncRest<InferTuple<TItems, TRest>, TupleOptions<TRest>>): AsyncValidator<InferTuple<TItems, TRest>>;
 ```
 
 Creates a validator for arrays of fixed length whose items each have their own validator.
@@ -1291,7 +1254,6 @@ A wrong length is reported at once, without validating the items. With `rest`, t
 **Parameters**
 
 - `items` — One validator per position.
-- `options` — The validator for extra positions.
 
 **Type parameters**
 
@@ -1333,12 +1295,13 @@ ulid()("01ARZ3NDEKTSV4RRFFQ69G5FAU!"); // { ok: false, ... }, code "invalid_form
 ### union
 
 ```ts
-export declare function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(options: TOptions): Composed<TOptions[number], Infer<TOptions[number]>>;
+export declare function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(options: TOptions, ...rest: Rest<Infer<TOptions[number]>, MessageOptions>): Composed<TOptions[number], Infer<TOptions[number]>>;
+export declare function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(options: TOptions, ...rest: AsyncRest<Infer<TOptions[number]>, MessageOptions>): AsyncValidator<Infer<TOptions[number]>>;
 ```
 
 Creates a validator that accepts a value passing any one of several validators.
 
-The validators are tried in order and the first that accepts the value wins, so put the more specific ones first, and the value it produced is the result. If none accepts it, the result is one `invalid_union` issue at the value's own location whose `params.issues` lists, per option in order, the issues that option found; their paths are relative to the value the union received. For objects that share a tag property, `discriminatedUnion` reports the failing variant's own issues instead. It is synchronous when every option is, and asynchronous otherwise.
+The validators are tried in order and the first that accepts the value wins, so put the more specific ones first, and the value it produced is the result. If none accepts it, the result is one `invalid_union` issue at the value's own location whose `params.issues` lists, per option in order, the issues that option found; their paths are relative to the value the union received. For objects that share a tag property, `tagged` reports the failing variant's own issues instead. It is synchronous when every option is, and asynchronous otherwise.
 
 **Parameters**
 
@@ -1359,6 +1322,34 @@ const id = union([string({ min: 1 }), number({ int: true })]);
 id("a1"); // { ok: true, value: "a1" }
 id(7); // { ok: true, value: 7 }
 id(true); // { ok: false, ... }, code "invalid_union"
+```
+
+### unique
+
+```ts
+export declare function unique<T>(by?: (item: T) => unknown, message?: Message): Check<readonly T[]>;
+```
+
+Requires the items of an array to be distinct, reporting each repeat at its own index with `invalid_value` and `params` `{ unique: true }`.
+
+Without `by` it compares the validated items themselves; with it, the value `by` returns for each, so `unique((user) => user.id)` makes ids unique. Comparison is SameValueZero, as for a `Set`.
+
+**Parameters**
+
+- `by` — What to compare for each item. The item itself when omitted.
+- `message` — Wording for each issue.
+
+**Type parameters**
+
+- `T` — The type of an item.
+
+**Returns** — A check of arrays.
+
+**Example**
+
+```ts
+array(string(), { max: 10 }, unique());
+array(object({ id: number(), name: string() }), unique((user) => user.id, "Ids must be unique"));
 ```
 
 ### uppercase
@@ -1425,53 +1416,15 @@ uuid()("00000000-0000-0000-0000-000000000000"); // { ok: true, ... }, the nil UU
 uuid()("not-a-uuid"); // { ok: false, ... }, code "invalid_format"
 ```
 
-### withDefault
-
-```ts
-export declare function withDefault<TValidator extends AnyValidator>(validator: TValidator, value: Exclude<Infer<TValidator>, undefined> | (() => Exclude<Infer<TValidator>, undefined>)): Composed<TValidator, Exclude<Infer<TValidator>, undefined>>;
-```
-
-Wraps a validator so `undefined` is replaced by a default value, and every other value goes to the wrapped validator. Inside `object`, the property is then always present in the output.
-
-The default is trusted and is not run through the wrapped validator. A function is called for every use to produce the default, so pass one for an object or array, which would otherwise be shared by every result. To use a function as the default value itself, return it from a function.
-
-**Parameters**
-
-- `validator` — The validator for values that are present.
-- `value` — The default, or a function that returns it.
-
-**Type parameters**
-
-- `TValidator` — The wrapped validator.
-
-**Returns** — A validator that produces the wrapped type, never `undefined`.
-
-**Throws** — When `validator` is not a function.
-
-**Example**
-
-```ts
-const role = withDefault(oneOf(["admin", "user"]), "user");
-role(undefined); // { ok: true, value: "user" }
-role("admin"); // { ok: true, value: "admin" }
-role("guest"); // { ok: false, ... }: only undefined is replaced
-
-const tags = withDefault(array(string()), () => []);
-```
-
 ## Interfaces
 
 ### ArrayOptions
 
 ```ts
-export interface ArrayOptions<TItem = unknown> extends SizeOptions
+export interface ArrayOptions extends SizeOptions, MessageOptions
 ```
 
-Constraints for [array](#array). Every option is optional.
-
-**Type parameters**
-
-- `TItem` — The type of an item after validation, which `unique` receives.
+Constraints for [array](#array). Every option is optional. Duplicates are rejected with the `unique()` check.
 
 #### length
 
@@ -1481,17 +1434,13 @@ Inherited from [SizeOptions](#sizeoptions).
 
 Inherited from [SizeOptions](#sizeoptions).
 
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
 #### min
 
 Inherited from [SizeOptions](#sizeoptions).
-
-#### unique
-
-```ts
-unique?: boolean | ((item: TItem) => unknown);
-```
-
-Rejects duplicates, reporting each repeat at its own index. `true` compares the validated items themselves; a function compares the value it returns for each item, so `(user) => user.id` makes ids unique. Comparison is SameValueZero, as for a `Set`.
 
 ### BigintOptions
 
@@ -1696,7 +1645,7 @@ Location of the failure relative to the value being validated. Defaults to that 
 ### LazyOptions
 
 ```ts
-export interface LazyOptions
+export interface LazyOptions extends MessageOptions
 ```
 
 Options for [lazy](#lazy).
@@ -1708,6 +1657,10 @@ maxDepth?: number;
 ```
 
 The most levels of `lazy` that may be open at once, counting every `lazy` validator, not only this one. Input nested deeper fails with `too_big` instead of exhausting the stack. Since the levels of every `lazy` count, a `maxDepth` of 1 inside another `lazy` fails at once: set it for the whole nesting.
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
 
 ### MessageOptions
 
@@ -1796,10 +1749,14 @@ Requires a whole number that a double represents exactly, that is within `Number
 ### ObjectOptions
 
 ```ts
-export interface ObjectOptions
+export interface ObjectOptions extends MessageOptions
 ```
 
 Options for [object](#object).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
 
 #### unknownKeys
 
@@ -2122,10 +2079,14 @@ Removes leading and trailing whitespace before the constraints run, and from the
 ### TupleOptions
 
 ```ts
-export interface TupleOptions<TRest extends AnyValidator | undefined = undefined>
+export interface TupleOptions<TRest extends AnyValidator | undefined = undefined> extends MessageOptions
 ```
 
 Options for [tuple](#tuple).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
 
 #### rest
 
@@ -2377,23 +2338,6 @@ const age = number({ int: true });
 type Age = Infer<typeof age>; // number
 ```
 
-### InferDiscriminated
-
-```ts
-export type InferDiscriminated<TKey extends string, TVariants extends Variants> = {
-    [TTag in keyof TVariants & string]: Simplify<Infer<TVariants[TTag]> & {
-        [K in TKey]: TTag;
-    }>;
-}[keyof TVariants & string];
-```
-
-The type a tagged union produces: one object type per variant, each with its tag property set to the literal tag, so checking the tag narrows the type.
-
-**Type parameters**
-
-- `TKey` — The name of the tag property.
-- `TVariants` — The variants, keyed by tag.
-
 ### InferRecord
 
 ```ts
@@ -2422,6 +2366,23 @@ The object type a shape produces. A property whose validator accepts `undefined`
 **Type parameters**
 
 - `TShape` — Property validators.
+
+### InferTagged
+
+```ts
+export type InferTagged<TKey extends string, TVariants extends Variants> = {
+    [TTag in keyof TVariants & string]: Simplify<Infer<TVariants[TTag]> & {
+        [K in TKey]: TTag;
+    }>;
+}[keyof TVariants & string];
+```
+
+The type a tagged union produces: one object type per variant, each with its tag property set to the literal tag, so checking the tag narrows the type.
+
+**Type parameters**
+
+- `TKey` — The name of the tag property.
+- `TVariants` — The variants, keyed by tag.
 
 ### InferTuple
 
@@ -2471,14 +2432,6 @@ export type PartialShape<TShape extends Shape> = {
 ```
 
 A shape with every property wrapped in `optional`.
-
-### RefineIssue
-
-```ts
-export type RefineIssue = IssueInput | string;
-```
-
-How a failed [refine](#refine) check is reported. A string is shorthand for `{ message }`.
 
 ### Rest
 
@@ -2609,7 +2562,7 @@ export declare const coerceBoolean: Factory<boolean, MessageOptions>;
 
 Creates a validator for booleans that also accepts the words `true`/`false`, `yes`/`no`, `on`/`off` and `1`/`0`, in any letter case and ignoring surrounding whitespace, and the numbers `1` and `0`.
 
-Anything else is rejected, so a typo such as `"ture"` is an error and not `false`. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`. Combine with `withDefault` for an environment variable that may be missing.
+Anything else is rejected, so a typo such as `"ture"` is an error and not `false`. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`. Combine with `optional` with a default for an environment variable that may be missing.
 
 **Returns** — A validator that produces a boolean.
 
@@ -2828,9 +2781,9 @@ type CheckedVariants<TKey extends string, TVariants extends Variants> = {
 };
 ```
 
-The variants as `discriminatedUnion` accepts them. A variant whose output type is an array or a function, which cannot carry the tag, or declares the tag property, even as optional or beside an index signature, which the variant is never given, is typed `never`, so passing it is a compile error at that variant. An index signature alone, as a `record` has, declares no property, so it is accepted.
+The variants as `tagged` accepts them. A variant whose output type is an array or a function, which cannot carry the tag, or declares the tag property, even as optional or beside an index signature, which the variant is never given, is typed `never`, so passing it is a compile error at that variant. An index signature alone, as a `record` has, declares no property, so it is accepted.
 
-Not exported; declared in `src/composition/discriminated-union.ts`.
+Not exported; declared in `src/composition/tagged.ts`.
 
 ### DeclaredKeys
 
@@ -2842,7 +2795,17 @@ type DeclaredKeys<T> = keyof {
 
 The property names a type declares, without its index signatures: `{ [key: string]: unknown; type: string }` declares `"type"`, and a `Record<string, number>` declares none.
 
-Not exported; declared in `src/composition/discriminated-union.ts`.
+Not exported; declared in `src/composition/tagged.ts`.
+
+### Fallback
+
+```ts
+type Fallback<T> = T | (() => T);
+```
+
+A value, or a function called for every use to produce it.
+
+Not exported; declared in `src/composition/optional.ts`.
 
 ### InferItems
 
@@ -2885,7 +2848,7 @@ type Simplify<T> = {
 } & {};
 ```
 
-Not exported; declared in `src/composition/discriminated-union.ts`, `src/composition/object.ts`.
+Not exported; declared in `src/composition/object.ts`, `src/composition/tagged.ts`.
 
 ### Transformed
 

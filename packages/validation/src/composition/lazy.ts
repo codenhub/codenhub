@@ -1,8 +1,19 @@
-import { assertFunction, failIssue } from "../core/result";
-import type { AnyValidator, Composed, Infer } from "../core/types";
+import { chain } from "../core/async";
+import { tail } from "../core/checks";
+import { assertFunction, issue } from "../core/result";
+import type {
+  AnyValidator,
+  AsyncRest,
+  AsyncValidator,
+  Composed,
+  Infer,
+  MessageOptions,
+  Rest,
+  ValidationResult,
+} from "../core/types";
 
 /** Options for {@link lazy}. */
-export interface LazyOptions {
+export interface LazyOptions extends MessageOptions {
   /**
    * The most levels of `lazy` that may be open at once, counting every `lazy` validator, not only this
    * one. Input nested deeper fails with `too_big` instead of exhausting the stack. Since the levels of
@@ -63,17 +74,23 @@ let openDepth = 0;
  */
 export function lazy<TValidator extends AnyValidator>(
   getter: () => TValidator,
-  options: LazyOptions = {},
-): Composed<TValidator, Infer<TValidator>> {
+  ...rest: Rest<Infer<TValidator>, LazyOptions>
+): Composed<TValidator, Infer<TValidator>>;
+export function lazy<TValidator extends AnyValidator>(
+  getter: () => TValidator,
+  ...rest: AsyncRest<Infer<TValidator>, LazyOptions>
+): AsyncValidator<Infer<TValidator>>;
+export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("getter", getter);
+  const [options, reject, accept] = tail<LazyOptions, unknown>(rest);
   const { maxDepth = DEFAULT_MAX_DEPTH } = options;
   if (!Number.isInteger(maxDepth) || maxDepth < 1) {
     throw new RangeError(`maxDepth must be a positive integer, received ${maxDepth}`);
   }
-  let resolved: TValidator | undefined;
-  const validate = (input: unknown) => {
+  let resolved: AnyValidator | undefined;
+  return (input: unknown) => {
     if (openDepth >= maxDepth) {
-      return failIssue("too_big", { maximum: maxDepth, type: "depth" });
+      return reject([issue("too_big", { maximum: maxDepth, type: "depth" })]);
     }
     openDepth += 1;
     try {
@@ -82,12 +99,11 @@ export function lazy<TValidator extends AnyValidator>(
         if (typeof found !== "function") {
           throw new TypeError(`getter() must return a function, received ${found === null ? "null" : typeof found}`);
         }
-        resolved = found as TValidator;
+        resolved = found as AnyValidator;
       }
-      return resolved(input);
+      return chain(resolved(input), (result: ValidationResult<unknown>) => (result.ok ? accept(result.value) : result));
     } finally {
       openDepth -= 1;
     }
   };
-  return validate as Composed<TValidator, Infer<TValidator>>;
 }

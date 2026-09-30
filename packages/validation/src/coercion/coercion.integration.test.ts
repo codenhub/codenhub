@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { array } from "../composition/array";
 import { object } from "../composition/object";
+import { optional } from "../composition/optional";
 import { pipe } from "../composition/pipe";
 import { transform } from "../composition/transform";
-import { withDefault } from "../composition/with-default";
 import { string } from "../primitives/string";
 import { issuesOf, valueOf } from "../test-utils";
 import { coerceBoolean } from "./coerce-boolean";
@@ -13,9 +13,9 @@ import { coerceNumber } from "./coerce-number";
 describe("coercing a whole environment", () => {
   const env = object({
     PORT: coerceNumber({ int: true, min: 1, max: 65535 }),
-    DEBUG: withDefault(coerceBoolean(), false),
+    DEBUG: optional(coerceBoolean(), false),
     ORIGINS: transform(string(), (text) => text.split(",")),
-    RETRIES: withDefault(coerceNumber({ int: true, min: 0 }), 3),
+    RETRIES: optional(coerceNumber({ int: true, min: 0 }), 3),
   });
 
   it("should parse text values into typed configuration", () => {

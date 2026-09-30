@@ -1,7 +1,18 @@
 import { chain, collect, type Maybe } from "../core/async";
-import { invalidObject, isPlainObject, setOwn } from "../core/objects";
-import { assertFunction, collectNested, failWith, pass, repeatedKey, toIssue } from "../core/result";
-import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
+import { tail, word } from "../core/checks";
+import { isPlainObject, objectIssue, setOwn } from "../core/objects";
+import { assertFunction, collectNested, failWith, issue, repeatedKey } from "../core/result";
+import type {
+  AnyValidator,
+  AsyncRest,
+  AsyncValidator,
+  Composed,
+  Infer,
+  MessageOptions,
+  Rest,
+  ValidationIssue,
+  ValidationResult,
+} from "../core/types";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
 /**
@@ -52,19 +63,26 @@ export type InferRecord<TKey extends string, TValue> = string extends TKey
 export function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(
   key: TKey,
   value: TValue,
-  options: SizeOptions = {},
-): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>> {
+  ...rest: Rest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>
+): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>>;
+export function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(
+  key: TKey,
+  value: TValue,
+  ...rest: AsyncRest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>
+): AsyncValidator<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>>;
+export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("key", key);
   assertFunction("value", value);
+  const [options, reject, accept] = tail<SizeOptions & MessageOptions, Record<string, unknown>>(rest);
   assertSizeOptions(options);
-  const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
-      return invalidObject(input);
+      return reject([objectIssue(input)]);
     }
     const names = Object.keys(input);
     const oversize = sizeIssues(names.length, "record", options);
     if (oversize.length > 0) {
-      return failWith(oversize);
+      return reject(oversize);
     }
     const entries = names.map((name) =>
       chain(key(name), (keyResult) => chain(value(input[name]), (valueResult) => ({ keyResult, valueResult }))),
@@ -76,21 +94,20 @@ export function record<TKey extends AnyValidator<string>, TValue extends AnyVali
         const name = names[index] as string;
         if (!keyResult.ok) {
           // Wrapped, so a bad key is not mistaken for a bad value at the same path.
-          issues.push(toIssue({ code: "invalid_key", path: [name], params: { issues: keyResult.error.issues } }));
+          issues.push(...word([issue("invalid_key", { issues: keyResult.error.issues }, [name])], options.message));
         }
         if (!valueResult.ok) {
           collectNested(issues, valueResult.error.issues, name);
         }
         if (keyResult.ok && valueResult.ok) {
           if (Object.hasOwn(output, keyResult.value as string)) {
-            issues.push(repeatedKey(name));
+            issues.push(...word([repeatedKey(name)], options.message));
           } else {
             setOwn(output, keyResult.value as string, valueResult.value);
           }
         }
       });
-      return issues.length > 0 ? failWith(issues) : pass(output);
+      return issues.length > 0 ? failWith(issues) : accept(output);
     });
   };
-  return validate as unknown as Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>>;
 }

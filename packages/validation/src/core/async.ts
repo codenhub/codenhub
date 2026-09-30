@@ -20,7 +20,7 @@ export const isThenable = (value: unknown): value is PromiseLike<unknown> =>
  * Applies `next` to a value that may still be pending, staying synchronous when it is not.
  *
  * A validator's own result is a plain object, so a value with a `then` inside it is not mistaken
- * for a pending result. What `transform` and `refine` get back from the consumer's callback is
+ * for a pending result. What `transform` and `check` get back from the consumer's callback is
  * another matter: a value with a `then` method is treated as a promise there, as `await` would.
  */
 export function chain<T, R>(value: Maybe<T>, next: (resolved: T) => Maybe<R>): Maybe<R> {

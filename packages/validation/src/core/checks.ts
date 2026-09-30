@@ -1,6 +1,14 @@
 import { chain, collect, type Maybe } from "./async";
 import { failWith, issue, pass, typeIssue } from "./result";
-import type { AsyncCheck, Check, Message, MessageOptions, ValidationIssue, ValidationResult } from "./types";
+import type {
+  AsyncCheck,
+  Check,
+  Message,
+  MessageOptions,
+  ValidationErr,
+  ValidationIssue,
+  ValidationResult,
+} from "./types";
 
 /**
  * Separates the arguments of a factory, `(options?, ...checks)`, into its options and its checks. An
@@ -101,4 +109,25 @@ export function member<T>(
     accepts(input)
       ? finish(input as T, [], message, checks)
       : failWith(word([issue("invalid_value", params())], message));
+}
+
+/**
+ * Reads what follows a composer's own arguments, options then checks, into the two ends of the
+ * composer: `reject` fails with issues the composer found itself, such as a wrong type or size, worded
+ * by the options' `message`, and `accept` runs the checks on a value once every child has passed.
+ * Issues a child found are never worded here, since they are the child's.
+ */
+export function tail<TOptions extends MessageOptions, T>(
+  args: readonly unknown[],
+): [
+  options: TOptions,
+  reject: (issues: ValidationIssue[]) => ValidationErr,
+  accept: (value: T) => Maybe<ValidationResult<T>>,
+] {
+  const [options, checks] = split<TOptions, T>(args);
+  return [
+    options,
+    (issues) => failWith(word(issues, options.message)),
+    (value) => finish(value, [], undefined, checks),
+  ];
 }

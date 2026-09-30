@@ -12,7 +12,7 @@ const FALSE_WORDS = new Set(["false", "0", "no", "off"]);
  * @remarks
  * Anything else is rejected, so a typo such as `"ture"` is an error and not `false`. A value that
  * cannot be converted fails with `invalid_type` and `coerced: true` in `params`. Combine with
- * `withDefault` for an environment variable that may be missing.
+ * `optional` with a default for an environment variable that may be missing.
  *
  * @example
  * ```ts
