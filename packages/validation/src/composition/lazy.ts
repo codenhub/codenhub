@@ -34,7 +34,9 @@ let openDepth = 0;
  * fails with `too_big` and `{ maximum, type: "depth" }` at its own path, so untrusted input can be
  * checked without a size cap tuned to the stack. The count is of calls on the stack, so it bounds
  * recursion that happens in one synchronous run, which is where the stack can overflow; a rule that
- * awaits between levels starts the next from a fresh stack, and is not counted.
+ * awaits between levels starts the next from a fresh stack, and is not counted. So `maxDepth` does not
+ * bound an asynchronous recursive schema: it follows input of any depth, and a cyclic object until
+ * memory runs out. Give such a schema a bound of its own.
  *
  * @example
  * ```ts
