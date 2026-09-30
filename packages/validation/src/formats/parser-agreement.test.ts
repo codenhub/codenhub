@@ -61,6 +61,9 @@ const HOSTLESS_PIECES = [
   '"',
   "<",
   "'",
+  "`",
+  "%zz",
+  "body=",
 ];
 
 /**

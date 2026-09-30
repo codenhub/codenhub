@@ -266,6 +266,26 @@ describe("url without a host", () => {
     expect(valueOf(all("mailto://example.com/ada@example.com"))).toBe("mailto:%2F%2Fexample.com%2Fada@example.com");
   });
 
+  it("should accept subject and body text only as RFC 6068 writes it: qchar and escapes", () => {
+    const valid = [
+      "mailto:ada@example.com?subject=Hi%20there&body=Line%0D%0Aline",
+      "mailto:ada@example.com?subject=(re):a,b;c@d!$'*+-._~",
+      "mailto:ada@example.com?subject=",
+    ];
+    expect(accepts(mailto, ...valid)).toEqual(valid.map(() => true));
+    const invalid = [
+      "mailto:ada@example.com?subject=%zz",
+      "mailto:ada@example.com?body=a%2",
+      "mailto:ada@example.com?body=a`b",
+      "mailto:ada@example.com?subject=a{b}|c^d",
+      "mailto:ada@example.com?body=a[b]",
+      "mailto:ada@example.com?body=a/b",
+      "mailto:ada@example.com?subject=a?b",
+      "mailto:ada@example.com?body=a=b",
+    ];
+    expect(accepts(mailto, ...invalid)).toEqual(invalid.map(() => false));
+  });
+
   it("should check a mailto with any number of recipients without throwing", () => {
     const recipients = Array.from({ length: 200_000 }, () => "ada@example.com").join(",");
     expect(mailto(`mailto:?to=${recipients}`).ok).toBe(true);

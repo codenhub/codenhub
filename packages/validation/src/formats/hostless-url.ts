@@ -27,6 +27,11 @@ const FIELD_PATTERN = /^(?:to|cc|bcc|subject|body)$/;
 /** The fields that hold recipients, which must pass as addresses too. */
 const RECIPIENT_FIELD_PATTERN = /^(?:to|cc|bcc)$/;
 /**
+ * The text of a `subject` or `body` as RFC 6068 writes it: letters, digits, `- . _ ~`, the delimiters
+ * `! $ ' ( ) * + , ; : @`, and escapes, which is how a line break or any other character is written.
+ */
+const TEXT_VALUE_PATTERN = /^(?:[\w.~!$'()*+,;:@-]|%[0-9a-f]{2})*$/i;
+/**
  * Characters of an address that a mailto URL must escape (RFC 6068): all but letters, digits, `@` and
  * `_ . ~ ! $ ' * + -`. Only a local part holds any, such as `?`, `&`, `#` or `%`, which would end the
  * address or start an escape.
@@ -37,8 +42,8 @@ const MAILTO_ESCAPED_PATTERN = /[^\w.~!$'*+@-]/g;
  * Reads the part of a mailto URL after the colon, returning it with every recipient as `email` returns
  * it and every field name in lowercase, or undefined when it is not a mailto. Every field of the query
  * must be `name=value` with a name from an allowlist: `to`, `cc` and `bcc`, whose recipients must pass
- * as addresses like those in the path, and `subject` and `body`, whose text is kept as the parser
- * wrote it, since RFC 6068 lets `body` hold encoded line breaks.
+ * as addresses like those in the path, and `subject` and `body`, whose text must be written as RFC
+ * 6068 allows and is kept as written, encoded line breaks included.
  */
 function toMailto(rest: string, allowLocal: boolean): string | undefined {
   const queryStart = rest.indexOf("?");
@@ -61,7 +66,11 @@ function toMailto(rest: string, allowLocal: boolean): string | undefined {
     const name = field.slice(0, separator).toLowerCase();
     const value = field.slice(separator + 1);
     isMailto &&= separator !== -1 && FIELD_PATTERN.test(name);
-    return `${name}=${isMailto && RECIPIENT_FIELD_PATTERN.test(name) ? toRecipients(value) : value}`;
+    if (!RECIPIENT_FIELD_PATTERN.test(name)) {
+      isMailto &&= TEXT_VALUE_PATTERN.test(value);
+      return `${name}=${value}`;
+    }
+    return `${name}=${isMailto ? toRecipients(value) : value}`;
   };
   try {
     const recipients = path === "" ? "" : toRecipients(path);
