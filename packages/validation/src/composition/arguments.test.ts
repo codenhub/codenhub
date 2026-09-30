@@ -63,6 +63,18 @@ describe("composer arguments", () => {
     },
   );
 
+  it.each([
+    ["union", () => union([] as never), "union() needs at least one option"],
+    ["pipe", () => (pipe as (...validators: unknown[]) => unknown)(), "pipe() needs at least one validator"],
+  ])("%s should reject an empty list when it is created", (_, create, message) => {
+    expect(create).toThrow(new TypeError(message));
+  });
+
+  it("should reject a lazy getter that returns something other than a validator, naming the getter", () => {
+    const broken = lazy(() => undefined as never);
+    expect(() => broken(1)).toThrow(new TypeError("getter() must return a function, received undefined"));
+  });
+
   it("should still accept json() without a validator", () => {
     expect(json()("1").ok).toBe(true);
   });

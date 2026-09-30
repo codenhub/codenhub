@@ -7,6 +7,7 @@ import { string } from "../primitives/string";
 import { codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { array } from "./array";
 import { intersection } from "./intersection";
+import { json } from "./json";
 import { object } from "./object";
 import { transform } from "./transform";
 
@@ -92,6 +93,19 @@ describe("intersection", () => {
     const merged = valueOf(intersection(open, open)(cyclic)) as Record<string, unknown>;
     expect(merged["self"]).toBe(cyclic);
     expect(merged["name"]).toBe("a");
+  });
+
+  it("should merge outputs nested far deeper than the stack allows instead of throwing", () => {
+    const depth = 20_000;
+    const text = "[".repeat(depth) + "]".repeat(depth);
+    expect(intersection(json(), json())(text).ok).toBe(true);
+    const conflicting = intersection(
+      json(),
+      transform(json(), (): unknown[] => JSON.parse(`${"[".repeat(depth)}1${"]".repeat(depth)}`) as unknown[]),
+    );
+    const [issue] = issuesOf(conflicting(`${"[".repeat(depth)}2${"]".repeat(depth)}`));
+    expect(issue?.code).toBe("invalid_intersection");
+    expect(issue?.path).toHaveLength(depth);
   });
 
   it("should fail with the issues of a non-object input on both sides", () => {

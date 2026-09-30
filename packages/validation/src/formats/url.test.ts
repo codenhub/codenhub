@@ -4,16 +4,17 @@ import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
 import { url } from "./url";
 
 describe("url", () => {
-  it("should accept absolute http and https URLs with public hosts, unchanged", () => {
-    expect(valueOf(url()("https://Example.com/a?b=1#c"))).toBe("https://Example.com/a?b=1#c");
-    expect(url()("http://sub.example.co.uk").ok).toBe(true);
+  it("should accept absolute http and https URLs with public hosts, as the URL parser writes them", () => {
+    expect(valueOf(url()("https://Example.com/a?b=1#c"))).toBe("https://example.com/a?b=1#c");
+    expect(valueOf(url()("http://sub.example.co.uk"))).toBe("http://sub.example.co.uk/");
+    expect(valueOf(url()("https://example.com:443/"))).toBe("https://example.com/");
   });
 
   it("should reject input that is not an absolute URL, without guessing a scheme", () => {
     expect(accepts(url(), "example.com", "//example.com", "not a url", "")).toEqual([false, false, false, false]);
   });
 
-  it("should reject text the URL parser would have to clean up, since the value is returned as it came", () => {
+  it("should reject text holding whitespace or control characters, which a written URL never contains", () => {
     expect(
       accepts(
         url(),
@@ -23,31 +24,40 @@ describe("url", () => {
         "https://example.com/a\r\nLocation: https://evil.com",
         "https://example.com/\tx",
         "https://example.com/a b",
-        "https:\\\\example.com\\path",
         "https://example.com/\u0000",
+        "https://example.com/\u007f",
       ),
     ).toEqual(Array(8).fill(false));
     expect(url({ allowLocal: true })(" http://localhost").ok).toBe(false);
   });
 
-  it("should reject an authority the URL parser would rewrite: extra slashes, an empty userinfo, an escaped host", () => {
-    const rewritten = [
-      "http:///example.com",
-      "https:////example.com/a",
-      "https://@example.com",
-      "https://:@example.com",
-      "https://%65xample.com",
-      "https://ex%61mple.com/",
-    ];
-    expect(accepts(url(), ...rewritten)).toEqual(rewritten.map(() => false));
-    expect(accepts(url({ allowLocal: true }), "http:///localhost", "http://@localhost")).toEqual([false, false]);
-    expect(accepts(url(), "https://example.com/%41?b=%20#%2F", "https://example.com/@a")).toEqual([true, true]);
+  it("should return the path the parser reads, so dot segments cannot hide where it leads", () => {
+    expect(valueOf(url()("https://example.com/public/../admin"))).toBe("https://example.com/admin");
+    expect(valueOf(url()("https://example.com/public/%2e%2e/admin"))).toBe("https://example.com/admin");
+    expect(valueOf(url()("https://example.com/a/./b"))).toBe("https://example.com/a/b");
   });
 
-  it("should reject a host the URL parser would rewrite before reading it, such as fullwidth or decomposed letters", () => {
-    const rewritten = ["https://\uff45xample.com", "https://mu\u0308nchen.de/", "https://\ufb01sh.com"];
-    expect(accepts(url(), ...rewritten)).toEqual([false, false, false]);
-    expect(accepts(url(), "https://m\u00fcnchen.de/", "https://example.com/\uff45")).toEqual([true, true]);
+  it("should return characters that are unsafe in markup percent-encoded, as the parser writes them", () => {
+    expect(valueOf(url()('https://example.com/a"b<c>'))).toBe("https://example.com/a%22b%3Cc%3E");
+    expect(valueOf(url()("https://example.com/ü"))).toBe("https://example.com/%C3%BC");
+  });
+
+  it("should return the host the parser reads when the text spells it another way", () => {
+    expect(valueOf(url()("https://exa­mple.com/"))).toBe("https://example.com/");
+    expect(valueOf(url()("https://exa️mple.com/"))).toBe("https://example.com/");
+    expect(valueOf(url()("https://evil。com/"))).toBe("https://evil.com/");
+    expect(valueOf(url()("https://ｅxample.com"))).toBe("https://example.com/");
+    expect(valueOf(url()("https://münchen.de/"))).toBe("https://xn--mnchen-3ya.de/");
+    expect(valueOf(url()("https://münchen.de/"))).toBe("https://xn--mnchen-3ya.de/");
+    expect(valueOf(url()("https://%65xample.com"))).toBe("https://example.com/");
+  });
+
+  it("should return the authority the parser reads when slashes or an empty userinfo are off", () => {
+    expect(valueOf(url()("http:///example.com"))).toBe("http://example.com/");
+    expect(valueOf(url()("https:example.com"))).toBe("https://example.com/");
+    expect(valueOf(url()("https:\\\\example.com\\path"))).toBe("https://example.com/path");
+    expect(valueOf(url()("https://@example.com"))).toBe("https://example.com/");
+    expect(valueOf(url({ protocols: ["ftp"] })("ftp:example.com"))).toBe("ftp://example.com/");
   });
 
   it("should reject a host longer than the 253 characters a domain name can have", () => {
@@ -59,14 +69,8 @@ describe("url", () => {
     expect(url({ allowLocal: true })(`https://${labels(20)}/`).ok).toBe(false);
   });
 
-  it("should reject a host written without both slashes, which resolves as a path against a same-scheme base", () => {
-    expect(accepts(url(), "https:example.com", "https:/example.com", "HTTP:example.com/a")).toEqual([
-      false,
-      false,
-      false,
-    ]);
-    expect(accepts(url(), "https://example.com", "HTTPS://example.com/a")).toEqual([true, true]);
-    expect(accepts(url({ protocols: ["ftp"] }), "ftp:example.com", "ftp://example.com")).toEqual([false, true]);
+  it("should reject a punycode host that does not decode", () => {
+    expect(accepts(url(), "https://xn--zz.com", "https://example.xn--zz")).toEqual([false, false]);
   });
 
   it("should reject other protocols, embedded credentials and non-public hosts", () => {
@@ -162,19 +166,13 @@ describe("url", () => {
     ]);
   });
 
-  it("should accept an IPv4 host only as ip() writes it, never in a form the URL parser rewrites", () => {
-    const local = url({ allowLocal: true, protocols: ["http", "foo"] });
-    expect(accepts(local, "http://127.0.0.1:3000/", "http://10.0.0.1")).toEqual([true, true]);
-    const rewritten = [
-      "http://0x7f.1",
-      "http://0X7F.0.0.1",
-      "http://127.1",
-      "http://0177.0.0.1",
-      "http://127.000.0.1",
-      "http://2130706433",
-      "foo://127.1",
-    ];
-    expect(accepts(local, ...rewritten)).toEqual(rewritten.map(() => false));
+  it("should return an IPv4 host in the one form the parser reads it, however it was written", () => {
+    const local = url({ allowLocal: true });
+    const spellings = ["http://0x7f.1", "http://0X7F.0.0.1", "http://127.1", "http://0177.0.0.1", "http://2130706433"];
+    for (const spelling of spellings) {
+      expect(valueOf(local(spelling))).toBe("http://127.0.0.1/");
+    }
+    expect(accepts(url(), ...spellings)).toEqual(spellings.map(() => false));
   });
 
   it("should copy the protocol list, so changing it later has no effect", () => {
@@ -225,6 +223,68 @@ describe("url without a host", () => {
     expect(accepts(mailto, ...invalid)).toEqual(invalid.map(() => false));
   });
 
+  it("should accept only the fields RFC 6068 gives a message: to, cc, bcc, subject and body", () => {
+    expect(accepts(mailto, "mailto:ada@example.com?Subject=Hi&BODY=Line%0D%0Aline")).toEqual([true]);
+    const invalid = [
+      "mailto:ada@example.com?from=boss@example.com",
+      "mailto:ada@example.com?reply-to=eve@example.net",
+      "mailto:ada@example.com?subject=Hi&x-mailer=spoof",
+      "mailto:ada@example.com?",
+      "mailto:ada@example.com?subject",
+      "mailto:ada@example.com?subject=Hi&&body=x",
+    ];
+    expect(accepts(mailto, ...invalid)).toEqual(invalid.map(() => false));
+  });
+
+  it("should return each mailto recipient as email() does, so a later check on the value sees where mail goes", () => {
+    expect(valueOf(mailto("mailto:ada@EXAMPLE.com"))).toBe("mailto:ada@example.com");
+    expect(valueOf(mailto("mailto:ada@exa%6dple.com"))).toBe("mailto:ada@example.com");
+    expect(valueOf(mailto("mailto:Ada@München.de"))).toBe("mailto:Ada@xn--mnchen-3ya.de");
+    expect(valueOf(mailto("mailto:ada%2Bnews@example.com"))).toBe("mailto:ada+news@example.com");
+    expect(valueOf(mailto("mailto:?To=Bob@EXAMPLE.org&Subject=Hi%20there"))).toBe(
+      "mailto:?to=Bob@example.org&subject=Hi%20there",
+    );
+  });
+
+  it("should keep the mailto characters that would end an address percent-encoded in its local part", () => {
+    expect(valueOf(mailto("mailto:a%3fb%26c%23d%25e@example.com"))).toBe("mailto:a%3Fb%26c%23d%25e@example.com");
+    expect(valueOf(mailto("mailto:ada@example.com?cc=a%3Db@example.org"))).toBe(
+      "mailto:ada@example.com?cc=a%3Db@example.org",
+    );
+  });
+
+  it("should apply the rules of mailto, tel and urn even when the URL is written with a host", () => {
+    const all = url({ protocols: ["mailto", "tel", "urn"] });
+    const invalid = [
+      "mailto://evil.example.org",
+      "mailto://example.com?to=ada@example.com",
+      "tel://example.com",
+      "urn://example.com",
+    ];
+    expect(accepts(all, ...invalid)).toEqual(invalid.map(() => false));
+    // `/` is allowed in a local part, so this names one recipient, and the value says so.
+    expect(valueOf(all("mailto://example.com/ada@example.com"))).toBe("mailto:%2F%2Fexample.com%2Fada@example.com");
+  });
+
+  it("should accept subject and body text as RFC 6068 writes it, and / and ? as a URL query allows them", () => {
+    const valid = [
+      "mailto:ada@example.com?subject=Hi%20there&body=Line%0D%0Aline",
+      "mailto:ada@example.com?subject=(re):a,b;c@d!$'*+-._~",
+      "mailto:ada@example.com?subject=",
+      "mailto:ada@example.com?subject=Why?&body=https://example.com/a?b",
+    ];
+    expect(accepts(mailto, ...valid)).toEqual(valid.map(() => true));
+    const invalid = [
+      "mailto:ada@example.com?subject=%zz",
+      "mailto:ada@example.com?body=a%2",
+      "mailto:ada@example.com?body=a`b",
+      "mailto:ada@example.com?subject=a{b}|c^d",
+      "mailto:ada@example.com?body=a[b]",
+      "mailto:ada@example.com?body=a=b",
+    ];
+    expect(accepts(mailto, ...invalid)).toEqual(invalid.map(() => false));
+  });
+
   it("should check a mailto with any number of recipients without throwing", () => {
     const recipients = Array.from({ length: 200_000 }, () => "ada@example.com").join(",");
     expect(mailto(`mailto:?to=${recipients}`).ok).toBe(true);
@@ -243,6 +303,18 @@ describe("url without a host", () => {
       true,
     ]);
     const invalid = ["tel:", "tel:+", "tel:555-0123", "tel:+abc", "tel:+1-", "tel:1234;phone-context=example.com"];
+    expect(accepts(tel, ...invalid)).toEqual(invalid.map(() => false));
+  });
+
+  it("should accept only the characters RFC 3966 allows in a tel parameter value", () => {
+    expect(accepts(tel, "tel:+1;x=a-_.!~*'()[]/:&+$", "tel:+1;isub=a%20b", "tel:+1;flag")).toEqual([true, true, true]);
+    const invalid = [
+      'tel:+1;x="><img/src=x/onerror=alert(1)>',
+      "tel:+1;x=<",
+      "tel:+1;x=%zz",
+      "tel:+1;x=",
+      "tel:+1;x=a,b",
+    ];
     expect(accepts(tel, ...invalid)).toEqual(invalid.map(() => false));
   });
 

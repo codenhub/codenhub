@@ -1,3 +1,9 @@
+/**
+ * Validators for values and shapes, each a standalone function that returns a typed value or every issue found.
+ *
+ * @packageDocumentation
+ */
+
 export { coerceBigint } from "./coercion/coerce-bigint";
 export { coerceBoolean } from "./coercion/coerce-boolean";
 export { coerceDate } from "./coercion/coerce-date";

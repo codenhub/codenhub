@@ -94,6 +94,10 @@ describe("ip", () => {
       expect(accepts(ip({ version: "v6" }), "fe80::1%", "fe80::1%a b", "fe80::1%a%b", "fec0::1%eth0")).toEqual(
         Array(4).fill(false),
       );
+      // A leading `::` stands for zero groups, so these start with 0, not with the fe80 written later.
+      expect(accepts(ip({ version: "v6" }), "::fe80:1%eth0", "::fe80%eth0", "::ffff:fe80:1.2.3.4%eth0")).toEqual(
+        Array(3).fill(false),
+      );
     });
 
     it("should agree with node:net on addresses without a zone", () => {

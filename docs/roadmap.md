@@ -14,7 +14,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
 
 - **Per-package landing pages.** Public surface stabilization is otherwise done: `apps/www`'s package list is the canonical entry point at `codenhub.dev`, `@codenhub/app-shell` gives the three deploy surfaces identical chrome, and `apps/docs` / `apps/demo` have slimmed their landing pages to a searchable list. What is left is a landing page per package at `codenhub.dev`, closer to a commercial page than a docs page, making the case for why a consumer should reach for it.
 - **`apps/docs` polish.** UI/UX and code cleanup, and the navigation rework: a clearer scheme for what individual sidebar entries are named, per-symbol reference anchors, search weighting, and the deck treatment (`description` / `since`) for hand-authored pages. The Guides / Reference / Changelog tab strip has landed; deeper sidebar nesting was weighed and rejected.
-- **Generated API reference rollout.** The generator, the `reference` check, and the `codenhub.docs.reference` opt-in are proven on `@codenhub/error`. Next: opt in packages with different shapes (`icons`, `kbd`, `router`, `validation`) to find where generated signatures and prose fall short, then flip to default-on with a `codenhub.docs.reference: false` opt-out.
+- **Generated API reference rollout.** The generator, the `reference` check, and the `codenhub.docs.reference` opt-in are proven on `@codenhub/error`, and `@codenhub/validation` is opted in, which showed that merged declarations and overloads render incompletely. Next: opt in packages with different shapes (`icons`, `kbd`, `router`) to find where generated signatures and prose fall short, then flip to default-on with a `codenhub.docs.reference: false` opt-out.
 
 ## Planned
 

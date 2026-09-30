@@ -26,11 +26,15 @@ type Output<TValidators extends readonly AnyValidator[]> = TValidators extends r
  * @typeParam TValidators - The validators to run, in order. At least one.
  * @param validators - The validators to run, in order.
  * @returns A validator that produces what the last one produces.
- * @throws {TypeError} When a validator is not a function.
+ * @throws {TypeError} When no validator is given or one is not a function.
  */
 export function pipe<const TValidators extends readonly [AnyValidator, ...AnyValidator[]]>(
   ...validators: TValidators
 ): Composed<TValidators[number], Output<TValidators>> {
+  if (validators.length === 0) {
+    // The types forbid it, but a pipe of nothing would accept every value unchecked.
+    throw new TypeError("pipe() needs at least one validator");
+  }
   validators.forEach((validator, index) => assertFunction(`validators[${index}]`, validator));
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> =>
     validators.reduce<Maybe<ValidationResult<unknown>>>(

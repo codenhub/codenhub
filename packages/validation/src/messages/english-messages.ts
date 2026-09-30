@@ -68,11 +68,11 @@ const describeFormat = (issue: ValidationIssue): string => {
     case "regex":
       return `Must match ${param(issue, "pattern")}`;
     case "startsWith":
-      return `Must start with "${param(issue, "value")}"`;
+      return `Must start with ${formatValue(issue.params?.["value"])}`;
     case "endsWith":
-      return `Must end with "${param(issue, "value")}"`;
+      return `Must end with ${formatValue(issue.params?.["value"])}`;
     case "includes":
-      return `Must include "${param(issue, "value")}"`;
+      return `Must include ${formatValue(issue.params?.["value"])}`;
     default:
       return `Invalid ${FORMAT_NAMES[format] ?? format}`;
   }

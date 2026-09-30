@@ -19,7 +19,11 @@ export type LiteralValue = string | number | boolean | bigint | symbol | null | 
  * @typeParam T - The literal type.
  * @param value - The only accepted value.
  * @returns A validator that produces `value`.
+ * @throws {RangeError} When `value` is `NaN`, which no value equals, so the literal would accept nothing.
  */
 export function literal<const T extends LiteralValue>(value: T): Validator<T> {
+  if (Number.isNaN(value)) {
+    throw new RangeError("literal(NaN) accepts nothing");
+  }
   return (input) => (input === value ? pass(value) : failIssue("invalid_value", { expected: value }));
 }

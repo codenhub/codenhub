@@ -125,6 +125,14 @@ describe("formatIssue", () => {
     expect(messageOf(email()("nope"))).toEqual(["Invalid email address"]);
   });
 
+  it("should quote an affix as a string literal, so one holding a quote or line break reads unambiguously", () => {
+    const messageOf = (result: ValidationResult<unknown>): string[] =>
+      issuesOf(result).map((issue) => formatIssue(issue, englishMessages));
+    expect(messageOf(string({ startsWith: 'a"b' })("x"))).toEqual(['Must start with "a\\"b"']);
+    expect(messageOf(string({ endsWith: "a\nb" })("x"))).toEqual(['Must end with "a\\nb"']);
+    expect(messageOf(string({ includes: "\\" })("x"))).toEqual(['Must include "\\\\"']);
+  });
+
   it("should word number limits with their inclusivity", () => {
     const messages = (result: ReturnType<ReturnType<typeof number>>): string[] =>
       issuesOf(result).map((found) => formatIssue(found));

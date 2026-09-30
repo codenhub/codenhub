@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "composite": true,
-    "lib": ["DOM", "ES2024"],
+    "lib": ["ES2024"],
     "module": "Preserve",
     "moduleResolution": "bundler",
     "noEmit": true,

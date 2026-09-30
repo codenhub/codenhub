@@ -24,13 +24,17 @@ import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult }
  * @typeParam TOptions - The validators to try, at least one.
  * @param options - The validators to try, in order.
  * @returns A validator that produces what the first accepting option produces.
- * @throws {TypeError} When an option is not a function.
+ * @throws {TypeError} When `options` is empty or an option is not a function.
  */
 export function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(
   options: TOptions,
 ): Composed<TOptions[number], Infer<TOptions[number]>> {
   // Copied, so changing the list after the validator is made changes nothing.
   const tried = [...options];
+  if (tried.length === 0) {
+    // The types forbid it, but a union of nothing would reject every value without saying why.
+    throw new TypeError("union() needs at least one option");
+  }
   tried.forEach((option, index) => assertFunction(`options[${index}]`, option));
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     const found: (readonly ValidationIssue[])[] = [];

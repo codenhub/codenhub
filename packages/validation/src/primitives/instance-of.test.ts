@@ -9,6 +9,11 @@ abstract class Shape {}
 class Circle extends Shape {}
 
 describe("instanceOf", () => {
+  it("should refuse a target that is not a function when created, rather than throw on every input", () => {
+    expect(() => instanceOf(undefined as unknown as typeof Animal)).toThrow(TypeError);
+    expect(() => instanceOf({} as unknown as typeof Animal)).toThrow(TypeError);
+  });
+
   it("should accept instances of the class and of its subclasses", () => {
     expect(accepts(instanceOf(Animal), new Animal(), new Dog(), {}, "dog", null)).toEqual([
       true,
