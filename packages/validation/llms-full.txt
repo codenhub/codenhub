@@ -223,13 +223,13 @@ port("eighty"); // { ok: false, ... }, code "invalid_type"
 
 There is one for each type that commonly arrives as text. Each takes exactly the options of its strict counterpart, applies them to the converted value, and throws for a bad option when it is created, so `coerceNumber({ multipleOf: 0 })` fails at once just as `number({ multipleOf: 0 })` does.
 
-| Validator                | Produces | Accepts                                                                                                                     | Strict version |
-| ------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| `coerceString(options?)` | string   | Strings, finite numbers, bigints and booleans, converted to their string form.                                              | `string`       |
-| `coerceNumber(options?)` | number   | Numbers, and strings holding a decimal number such as `"42"`, `" 3.5 "`, `"-1"`, `".5"`.                                    | `number`       |
-| `coerceBoolean()`        | boolean  | Booleans, the numbers `1` and `0`, and the words `true`, `false`, `yes`, `no`, `on`, `off`, `1` and `0` in any letter case. | `boolean`      |
-| `coerceBigint(options?)` | bigint   | Bigints, safe integers, and strings holding a decimal integer.                                                              | `bigint`       |
-| `coerceDate(options?)`   | `Date`   | `Date`s, whole timestamps in milliseconds, and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`.             | `date`         |
+| Validator                | Produces | Accepts                                                                                                                                                  | Strict version |
+| ------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `coerceString(options?)` | string   | Strings, finite numbers, bigints and booleans, converted to their string form.                                                                           | `string`       |
+| `coerceNumber(options?)` | number   | Numbers, and strings holding a decimal number such as `"42"`, `" 3.5 "`, `"-1"`, `".5"`, `"5."`, a dot with no digits on one side being how people type. | `number`       |
+| `coerceBoolean()`        | boolean  | Booleans, the numbers `1` and `0`, and the words `true`, `false`, `yes`, `no`, `on`, `off`, `1` and `0` in any letter case.                              | `boolean`      |
+| `coerceBigint(options?)` | bigint   | Bigints, safe integers, and strings holding a decimal integer.                                                                                           | `bigint`       |
+| `coerceDate(options?)`   | `Date`   | `Date`s, whole timestamps in milliseconds, and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`.                                          | `date`         |
 
 Surrounding whitespace is ignored in the text each accepts.
 
@@ -731,12 +731,12 @@ Bounds appear in `params` as bigints, which `JSON.stringify` cannot serialize. C
 
 `date(options?)` accepts valid `Date` objects and produces the same `Date`. An invalid date such as `new Date("nope")`, a timestamp or a string fails with `invalid_type` and `{ expected: "valid date", received }`. To check date text, use [`isoDate` or `datetime`](#formats).
 
-The options `min` and `max` are `Date`s, both inclusive, and throw a `RangeError` when created with an invalid `Date` or with `min` after `max`. They are read when the validator is created, so changing the `Date` objects later has no effect. A date before `min` fails with `too_small` and `{ minimum, inclusive: true, type: "date" }`, and one after `max` with `too_big` and `{ maximum, inclusive: true, type: "date" }`, the bound being a `Date`.
+The options `min` and `max` are `Date`s, both inclusive, and throw a `RangeError` when created with anything but a valid `Date`, such as an invalid one or a date string, or with `min` after `max`. They are read when the validator is created, so changing the `Date` objects later has no effect. A date before `min` fails with `too_small` and `{ minimum, inclusive: true, type: "date" }`, and one after `max` with `too_big` and `{ maximum, inclusive: true, type: "date" }`, the bound being a `Date`.
 
 ## Fixed values
 
 - `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`. The one exception is `NaN`: `NaN === NaN` is false, so `literal(NaN)` could accept nothing, and it throws a `RangeError` when created.
-- `oneOf(values)` accepts any one string or number of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The list is copied when the validator is created. An empty list throws a `TypeError` and one holding `NaN`, which no value equals, a `RangeError`, since either is a mistake in the schema.
+- `oneOf(values)` accepts any one value of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The values may be any primitives `literal` accepts, so `oneOf([true, false, null])` is a three-state flag. The list is copied when the validator is created. An empty list throws a `TypeError` and one holding `NaN`, which no value equals, a `RangeError`, since either is a mistake in the schema.
 - `nativeEnum(enumObject)` accepts any value of a TypeScript `enum`. It ignores the reverse-mapping names TypeScript adds to a numeric enum, so only the numbers are values. An enum with no values throws a `TypeError`.
 
 All three fail with `invalid_value`. `literal` reports `{ expected }` and the other two report `{ options }`, the list of accepted values.
@@ -754,10 +754,11 @@ enum Status {
 const status = nativeEnum(Status);
 ```
 
-## Any value, no value and instances
+## Any value, no value, functions and instances
 
 - `unknown()` accepts every value and passes it through unchanged. Use it for a property you do not check.
 - `never()` rejects every value with `invalid_type` and `{ expected: "never", received }`. Use it to forbid a property, or for a branch that must never match.
+- `func()` accepts any function, from any realm, classes and async and generator functions included, and produces it unchanged. It fails with `invalid_type` and `{ expected: "function", received }`. Only that the value is a function can be checked, not the parameters it takes or what it returns, so name the signature you expect as the type argument, `func<(value: string) => void>()`, and it becomes the output type on trust, as a cast would; without one the output takes any arguments and returns `unknown`.
 - `instanceOf(Class)` accepts instances of a class, subclasses and abstract classes included, checked with `instanceof`, so an instance from another realm such as an iframe is not recognized. `date`, `map`, `set` and `object` do not have that limit and accept values from any realm. It fails with `invalid_type` and `{ expected: "instance of Class", received }`. A target that is not a function, such as an import that resolved to nothing, throws a `TypeError` when the validator is created.
 
 ## Formats
@@ -785,7 +786,7 @@ A non-string fails with `invalid_type` and `{ expected: "string", received }`. A
 
 ### `email`
 
-`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The value is the address as mail is delivered to it: the local part as written, and the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode. So `Ada@München.DE` produces `Ada@xn--mnchen-3ya.de`, and every spelling the parser reads as one domain, such as fullwidth letters in `ada@ｅxample.com` or an invisible variation selector, produces the same address, so a check made later on the value, such as a list of blocked domains or a uniqueness check, sees the domain mail will reach. The local part must be ASCII: an address with other letters before the `@` (RFC 6531) is rejected. The local part is limited to 64 characters and the whole address, as delivered, to 254. A domain is written with letters, marks, digits, dots and hyphens only, and one in punycode must decode, so `ada@example.xn--zz` is rejected. Hosts that are not public domain names are rejected: `localhost`, single-label hosts, IP addresses, and special-use names that never reach a public host, which are those ending in `localhost`, `local`, `internal`, `home.arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
+`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The value is the address as mail is delivered to it: the local part as written, and the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode. So `Ada@München.DE` produces `Ada@xn--mnchen-3ya.de`, and every spelling the parser reads as one domain, such as fullwidth letters in `ada@ｅxample.com` or an invisible variation selector, produces the same address, so a check made later on the value, such as a list of blocked domains or a uniqueness check, sees the domain mail will reach. The local part must be ASCII: an address with other letters before the `@` (RFC 6531) is rejected. The local part is limited to 64 characters and the whole address, as delivered, to 254. A domain is written with letters, marks, digits, dots and hyphens only, the ideographic, fullwidth and halfwidth full stops (`。`, `．`, `｡`) counting as dots, as `url` reads them too, and one in punycode must decode, so `ada@example.xn--zz` is rejected. A percent escape such as `ex%61mple.com` is URL syntax, which `url` decodes in a host, and is not part of an email domain, so `email` rejects it. Hosts that are not public domain names are rejected: `localhost`, single-label hosts, IP addresses, and special-use names that never reach a public host, which are those ending in `localhost`, `local`, `internal`, `home.arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
 
 ```ts
 import { email, pipe, string } from "@codenhub/validation";
@@ -914,7 +915,7 @@ const call = tuple([string()], { rest: number() }); // [string, ...number[]]
 
 ### `set` and `map`
 
-`set(element, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string or a number and its position otherwise. A map key that fails is reported as `invalid_key`, as for `record`, and so is one that another entry has already taken once the key validator has changed it. Likewise a set value that `element` makes equal to an earlier one, such as `"A"` and `"a"` under `string({ lowercase: true })`, is reported as `invalid_value` with `{ unique: true }` at its position rather than merged, so the output never holds fewer values than the size options allow. Both take `min`, `max` and `length`.
+`set(element, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string and its position, a number, for any other key, so a number key and an object key never share a path. A map key that fails is reported as `invalid_key`, as for `record`, and so is one that another entry has already taken once the key validator has changed it. Likewise a set value that `element` makes equal to an earlier one, such as `"A"` and `"a"` under `string({ lowercase: true })`, is reported as `invalid_value` with `{ unique: true }` at its position rather than merged, so the output never holds fewer values than the size options allow. Both take `min`, `max` and `length`.
 
 ## Combining validators
 
@@ -947,7 +948,7 @@ const tags = withDefault(array(string()), () => []);
 
 ### `transform`
 
-`transform(validator, convert)` changes the value a validator produced into another, such as text into a `Date`. `convert` runs only when `validator` succeeded and cannot reject the value: to fail, write a validator that returns `fail(...)` and put it after this one with `pipe`. A `convert` that returns a promise, or is typed as possibly returning one, including one typed as returning `unknown` or `any`, makes the result asynchronous, and so does any value with a `then` method, as `await` would treat it, so a value that has one for another reason has to be wrapped in an object before it is returned. A `convert` that throws is a bug and propagates.
+`transform(validator, convert)` changes the value a validator produced into another, such as text into a `Date`. `convert` runs only when `validator` succeeded and cannot reject the value: to fail, write a validator that returns `fail(...)` and put it after this one with `pipe`. A `convert` that returns a promise, or is typed as possibly returning one, including one typed as returning `unknown`, makes the result asynchronous, and so does any value with a `then` method, as `await` would treat it, so a value that has one for another reason has to be wrapped in an object before it is returned. One typed as returning `any`, such as `JSON.parse`, has opted out of type checking and is typed synchronous, so `transform(string(), JSON.parse)` needs no `await`; if it can return a promise, say so in its return type. A `convert` that throws is a bug and propagates.
 
 ```ts
 import { string, transform } from "@codenhub/validation";
@@ -999,13 +1000,13 @@ event({ type: "key", key: "a" }); // { ok: true, value: { type: "key", key: "a" 
 
 **A variant must not list the tag.** Unlike some other libraries, where each variant is `object({ type: literal("click"), ... })`, a variant here is given the input without its tag, so one that lists it could never pass. Its type is rejected, so the mistake is a compile error at that variant. The record key already says which tag the variant is for.
 
-Because a variant never sees the tag, a strict `object` works as a variant. The tag is added back to the output, so the result is a proper tagged union and checking `event.type` narrows the type. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags.
+Because a variant never sees the tag, a strict `object` works as a variant, and so does a `record`, which checks every key but the tag. An output that declares the tag beside an index signature is still rejected, since the variant is never given it. The type of a record variant has an index signature beside the tag, so reading it and narrowing on the tag work, but TypeScript rejects writing such an object out by hand when the tag is not of the record's value type. The tag is added back to the output, so the result is a proper tagged union and checking `event.type` narrows the type. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags.
 
 Each variant must produce a plain object, since that is what can carry the tag. A variant typed to produce an array or a function is a compile error. One that produces any other non-plain value at runtime, such as a `Date` or a class instance from a `transform`, throws a `TypeError` naming the variant, rather than being taken apart into a plain object, because it is a mistake in the schema and not in the input.
 
 ### `intersection`
 
-`intersection(left, right)` accepts a value only when it passes both validators, reports the issues of both together, and produces the two outputs merged. Plain objects and `Map`s are merged key by key and arrays of the same length item by item, recursively, and two `Set`s must hold the same values. Any other pair must be the same value, or two dates holding the same moment: where the outputs differ otherwise, as `"  ab "` does trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path instead of one side silently winning.
+`intersection(left, right)` accepts a value only when it passes both validators, reports the issues of both together, and produces the two outputs merged. Plain objects are merged key by key and arrays of the same length item by item, recursively. Two `Map`s or two `Set`s of the same size are merged entry by entry in iteration order, which both validators keep from the input, so a map keyed by objects or a set of objects merges too, and a conflict inside one is reported at the entry's string key or, for any other key and for a set, at its position. Cyclic or shared objects in the outputs are merged once, and the merged output keeps their shape. Any other pair must be the same value, or two dates holding the same moment: where the outputs differ otherwise, as `"  ab "` does trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path instead of one side silently winning.
 
 Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` can never pass together: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 
@@ -1079,7 +1080,7 @@ The coercing validators accept text that holds a value, convert it, and then app
 
 ### Types
 
-`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `ArrayOptions`, `TupleOptions`, `SizeOptions`, `LazyOptions`, `RefineIssue`, `InferTuple`, `InferRecord`, `InferDiscriminated`, `Variants`, `PartialShape`, `LiteralValue`, `EnumLike`, `Constructor`, `Messages`, `FlattenedErrors` and `StandardSchemaV1` are exported for annotating your own code. Each is documented in the source and listed in the [API reference](docs/reference/index.md), and the ones you meet in everyday use are explained in [Custom validators](docs/custom-validators.md) and [Issues and messages](docs/errors.md).
+`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `ArrayOptions`, `TupleOptions`, `SizeOptions`, `LazyOptions`, `RefineIssue`, `InferTuple`, `InferRecord`, `InferDiscriminated`, `Variants`, `PartialShape`, `LiteralValue`, `EnumLike`, `Constructor`, `AnyFunction`, `Messages`, `FlattenedErrors` and `StandardSchemaV1` are exported for annotating your own code. Each is documented in the source and listed in the [API reference](docs/reference/index.md), and the ones you meet in everyday use are explained in [Custom validators](docs/custom-validators.md) and [Issues and messages](docs/errors.md).
 
 <!-- Source: docs/changelog/0.1.0.md -->
 
@@ -1090,7 +1091,7 @@ The coercing validators accept text that holds a value, convert it, and then app
 ## Added
 
 - Validators as plain functions, created by calling a factory and then called with the value: `email()(input)`, `number({ int: true, min: 0 })(input)`. Any function with that shape is a validator, so your own need no helper.
-- Leaves: `string`, `number`, `bigint`, `boolean`, `date`, `literal`, `oneOf`, `nativeEnum`, `unknown`, `never` and `instanceOf`. `null` and `undefined` are `literal(null)` and `literal(undefined)`.
+- Leaves: `string`, `number`, `bigint`, `boolean`, `date`, `literal`, `oneOf`, `nativeEnum`, `unknown`, `never`, `func` and `instanceOf`. `null` and `undefined` are `literal(null)` and `literal(undefined)`.
 - String formats, each its own validator: `email`, `url`, `uuid`, `ip`, `datetime`, `isoDate`, `hostname`, `hex`, `base64`, `ulid`, `nanoid` and `cuid2`.
 - Collections: `array` (with `min`, `max`, `length` and `unique`), `tuple` (with `rest`), and `record`, `set` and `map` (with `min`, `max` and `length`).
 - Combinators: `object`, with `unknownKeys` of `"strip"`, `"strict"` or `"passthrough"`, and `partial` to make every property of a shape optional; `optional`, `nullable`, `nullish`, `withDefault`, `fallback`, `pipe`, `transform` and `refine`, including rules and conversions that return a promise, and `refine` checks written as type guards, which narrow the output type.

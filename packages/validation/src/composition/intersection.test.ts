@@ -62,11 +62,39 @@ describe("intersection", () => {
     ]);
   });
 
-  it("should accept two sets that hold the same values, and report sets that differ", () => {
+  it("should merge two maps whose keys are objects entry by entry, keeping one entry per input entry", () => {
+    const keyed = map(object({ id: number() }), number());
+    const merged = valueOf(intersection(keyed, keyed)(new Map([[{ id: 1 }, 2]])));
+    expect([...merged]).toEqual([[{ id: 1 }, 2]]);
+    const shifted = map(
+      transform(object({ id: number() }), ({ id }) => ({ id: id + 1 })),
+      number(),
+    );
+    expect(issuesOf(intersection(keyed, shifted)(new Map([[{ id: 1 }, 2]])))).toEqual([
+      { code: "invalid_intersection", path: [0, "id"] },
+    ]);
+  });
+
+  it("should report maps of different sizes, which cannot hold the same entries", () => {
+    const grown = transform(map(string(), number()), (entries) => new Map([...entries, ["extra", 0]]));
+    expect(codesOf(intersection(map(string(), number()), grown)(new Map([["a", 1]])))).toEqual([
+      "invalid_intersection",
+    ]);
+  });
+
+  it("should accept two sets that hold the same values, and report sets that differ at the position", () => {
     const ids = set(number());
     expect(valueOf(intersection(ids, set(number({ int: true })))(new Set([1, 2])))).toEqual(new Set([1, 2]));
     const shifted = transform(set(number()), (values) => new Set([...values].map((value) => value + 1)));
-    expect(codesOf(intersection(ids, shifted)(new Set([1])))).toEqual(["invalid_intersection"]);
+    expect(issuesOf(intersection(ids, shifted)(new Set([1])))).toEqual([{ code: "invalid_intersection", path: [0] }]);
+  });
+
+  it("should merge two sets of objects value by value", () => {
+    const points = set(object({ x: number() }));
+    const merged = valueOf(
+      intersection(points, set(object({ x: number({ int: true }) })))(new Set([{ x: 1 }, { x: 2 }])),
+    );
+    expect([...merged]).toEqual([{ x: 1 }, { x: 2 }]);
   });
 
   it("should treat dates holding the same moment as equal", () => {
@@ -114,6 +142,20 @@ describe("intersection", () => {
     const merged = valueOf(intersection(open, open)(cyclic)) as Record<string, unknown>;
     expect(merged["self"]).toBe(cyclic);
     expect(merged["name"]).toBe("a");
+  });
+
+  it("should merge two different cyclic outputs into one cyclic output instead of walking forever", () => {
+    const cyclic = (): Record<string, unknown> => {
+      const node: Record<string, unknown> = { name: "a" };
+      node["self"] = node;
+      return node;
+    };
+    const merged = valueOf(intersection(transform(number(), cyclic), transform(number(), cyclic))(1)) as Record<
+      string,
+      unknown
+    >;
+    expect(merged["name"]).toBe("a");
+    expect(merged["self"]).toBe(merged);
   });
 
   it("should merge outputs nested far deeper than the stack allows instead of throwing", () => {

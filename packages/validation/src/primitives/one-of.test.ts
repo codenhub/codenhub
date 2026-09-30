@@ -10,6 +10,23 @@ describe("oneOf", () => {
     expect(accepts(oneOf([1, 2]), 1, 2, 3, "1")).toEqual([true, true, false, false]);
   });
 
+  it("should accept booleans, bigints, null, undefined and symbols as literal does", () => {
+    const token = Symbol("token");
+    const mixed = oneOf([true, 1n, null, undefined, token]);
+    expect(accepts(mixed, true, 1n, null, undefined, token, false, 1, Symbol("token"))).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+    ]);
+    const flag: boolean = valueOf(oneOf([true, false])(false));
+    expect(flag).toBe(false);
+  });
+
   it("should give the union of the listed values as its type", () => {
     const role: "admin" | "user" = valueOf(oneOf(["admin", "user"])("user"));
     expect(role).toBe("user");

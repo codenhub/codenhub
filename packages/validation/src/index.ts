@@ -65,6 +65,7 @@ export { flatten, formatIssue, formatPath, type FlattenedErrors, type Messages }
 export { bigint, type BigintOptions } from "./primitives/bigint";
 export { boolean } from "./primitives/boolean";
 export { date, type DateOptions } from "./primitives/date";
+export { func, type AnyFunction } from "./primitives/func";
 export { instanceOf, type Constructor } from "./primitives/instance-of";
 export { literal, type LiteralValue } from "./primitives/literal";
 export { nativeEnum, type EnumLike } from "./primitives/native-enum";

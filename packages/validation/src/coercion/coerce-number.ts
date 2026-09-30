@@ -10,7 +10,8 @@ const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
  * then applies the same constraints as {@link number}.
  *
  * @remarks
- * Surrounding whitespace is ignored. Empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and
+ * Surrounding whitespace is ignored, and a dot with no digits on one side, as in `".5"` or `"5."`,
+ * is read as people type it. Empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and
  * `"NaN"` are rejected, and so is text holding a whole number beyond `Number.MAX_SAFE_INTEGER`, which
  * could not be read exactly (use `coerceBigint` for those). So are booleans, `null`, objects and
  * arrays: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with

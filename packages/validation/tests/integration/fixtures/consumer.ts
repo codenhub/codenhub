@@ -18,6 +18,7 @@ import {
   fail,
   fallback,
   flatten,
+  func,
   formatIssue,
   intersection,
   is,
@@ -42,6 +43,7 @@ import {
   transform,
   tuple,
   union,
+  unknown,
   url,
   withDefault,
   type AsyncValidator,
@@ -113,6 +115,10 @@ export const evenCount: number | undefined = (() => {
 
 // Literals and lists of values keep their exact types.
 export const role = oneOf(["admin", "user"]);
+export const tristate = oneOf([true, false, null]);
+export const tristateValue: Infer<typeof tristate> = null;
+// @ts-expect-error only the listed values are in the type
+export const tristateWrong: Infer<typeof tristate> = "yes";
 export const roleValue: Infer<typeof role> = "admin";
 // @ts-expect-error "guest" is not in the list
 export const badRole: Infer<typeof role> = "guest";
@@ -194,6 +200,15 @@ declare const untyped: (id: string) => unknown;
 export const untypedLoaded = transform(string(), untyped);
 // @ts-expect-error a transform whose function returns unknown may be holding a promise, so must be awaited
 export const untypedLoadedOk = untypedLoaded("a").ok;
+// A function returning `any`, such as JSON.parse, opts out of checking, so the validator stays synchronous.
+export const parsed = transform(string(), (text) => JSON.parse(text));
+export const parsedSync: Validator<unknown> = parsed;
+export const parsedOk: boolean = parsed("1").ok;
+// func takes the signature it expects on trust, and without one produces a function of unknown result.
+export const handlers = object({ onChange: func<(value: string) => void>(), anything: func() });
+export const handlersValue: Infer<typeof handlers> = { onChange: (value: string) => void value, anything: () => 1 };
+// @ts-expect-error the signature given is the output type
+export const wrongHandler: Infer<typeof handlers> = { onChange: (value: number) => void value, anything: () => 1 };
 export const updates = object(partial({ name: string(), email: email() }));
 export const updateValue: Infer<typeof updates> = {};
 
@@ -223,6 +238,20 @@ export const producesArray = discriminatedUnion("type", {
   a: transform(object({}), () => [1]),
 });
 export const passthroughVariant = discriminatedUnion("type", { a: object({}, { unknownKeys: "passthrough" }) });
+// A record declares no tag, so it can be a variant, and the output still narrows on the tag.
+export const tallies = discriminatedUnion("type", { totals: record(string(), number()), none: object({}) });
+export const talliesTag = (value: Infer<typeof tallies>): number | undefined =>
+  value.type === "totals" ? value["ada"] : undefined;
+// An index signature does not excuse a tag the output also declares: the variant is never given it.
+export const indexedWithTag = discriminatedUnion("type", {
+  // @ts-expect-error the variant declares the tag beside its index signature
+  a: intersection(record(string(), unknown()), object({ type: string() })),
+});
+declare const indexedOptionalTag: Validator<{ [key: string]: unknown; type?: string }>;
+export const indexedWithOptionalTag = discriminatedUnion("type", {
+  // @ts-expect-error the variant declares the tag, even as optional, beside its index signature
+  a: indexedOptionalTag,
+});
 export const both = intersection(object({ name: string() }), object({ age: number() }));
 export const bothValue: Infer<typeof both> = { name: "Ada", age: 36 };
 export const settingsFromText = json(object({ theme: oneOf(["light", "dark"]) }));

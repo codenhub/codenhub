@@ -6,6 +6,7 @@ import { string } from "../primitives/string";
 import { accepts, codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { discriminatedUnion } from "./discriminated-union";
 import { object } from "./object";
+import { record } from "./record";
 import { transform } from "./transform";
 
 describe("discriminatedUnion", () => {
@@ -93,6 +94,12 @@ describe("discriminatedUnion", () => {
     expect(issuesOf(strict({ type: "a", x: 1, y: 2 })).map((issue) => [issue.code, issue.path])).toEqual([
       ["unrecognized_key", ["y"]],
     ]);
+  });
+
+  it("should let a record be a variant, validating every key but the tag", () => {
+    const totals = discriminatedUnion("type", { totals: record(string(), number()) });
+    expect(valueOf(totals({ type: "totals", ada: 3 }))).toEqual({ type: "totals", ada: 3 });
+    expect(issuesOf(totals({ type: "totals", ada: "3" })).map((issue) => issue.path)).toEqual([["ada"]]);
   });
 
   it("should not pass the input's own __proto__ key on as a prototype", () => {

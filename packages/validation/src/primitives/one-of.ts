@@ -1,9 +1,11 @@
 import { failIssue, pass } from "../core/result";
 import type { Validator } from "../core/types";
+import type { LiteralValue } from "./literal";
 
 /**
- * Creates a validator that accepts any one value of a list, compared with `===`. The type is the
- * union of the listed values, so `oneOf(["admin", "user"])` produces `"admin" | "user"`.
+ * Creates a validator that accepts any one value of a list, compared with `===`. The values may be any
+ * primitives, as for `literal`. The type is the union of the listed values, so
+ * `oneOf(["admin", "user"])` produces `"admin" | "user"`.
  *
  * @example
  * ```ts
@@ -13,12 +15,13 @@ import type { Validator } from "../core/types";
  * ```
  *
  * @typeParam T - The listed values.
- * @param values - The accepted strings or numbers. The list is copied, so changing it later has no effect.
+ * @param values - The accepted values: any primitive, as for `literal`, including `null` and
+ * `undefined`. The list is copied, so changing it later has no effect.
  * @returns A validator that produces one of `values`.
  * @throws {TypeError} When `values` is empty, so the validator would accept nothing.
  * @throws {RangeError} When `values` holds `NaN`, which no value equals.
  */
-export function oneOf<const T extends readonly (string | number)[]>(values: T): Validator<T[number]> {
+export function oneOf<const T extends readonly LiteralValue[]>(values: T): Validator<T[number]> {
   const options = [...values];
   if (options.length === 0) {
     throw new TypeError("oneOf() needs at least one value");
