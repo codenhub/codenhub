@@ -21,13 +21,13 @@ port("eighty"); // { ok: false, ... }, code "invalid_type"
 
 There is one for each type that commonly arrives as text. Each takes exactly the options of its strict counterpart, applies them to the converted value, and throws for a bad option when it is created, so `coerceNumber({ multipleOf: 0 })` fails at once just as `number({ multipleOf: 0 })` does.
 
-| Validator                | Produces | Accepts                                                                                                                     | Strict version |
-| ------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| `coerceString(options?)` | string   | Strings, finite numbers, bigints and booleans, converted to their string form.                                              | `string`       |
-| `coerceNumber(options?)` | number   | Numbers, and strings holding a decimal number such as `"42"`, `" 3.5 "`, `"-1"`, `".5"`.                                    | `number`       |
-| `coerceBoolean()`        | boolean  | Booleans, the numbers `1` and `0`, and the words `true`, `false`, `yes`, `no`, `on`, `off`, `1` and `0` in any letter case. | `boolean`      |
-| `coerceBigint(options?)` | bigint   | Bigints, safe integers, and strings holding a decimal integer.                                                              | `bigint`       |
-| `coerceDate(options?)`   | `Date`   | `Date`s, whole timestamps in milliseconds, and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`.             | `date`         |
+| Validator                | Produces | Accepts                                                                                                                                                  | Strict version |
+| ------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `coerceString(options?)` | string   | Strings, finite numbers, bigints and booleans, converted to their string form.                                                                           | `string`       |
+| `coerceNumber(options?)` | number   | Numbers, and strings holding a decimal number such as `"42"`, `" 3.5 "`, `"-1"`, `".5"`, `"5."`, a dot with no digits on one side being how people type. | `number`       |
+| `coerceBoolean()`        | boolean  | Booleans, the numbers `1` and `0`, and the words `true`, `false`, `yes`, `no`, `on`, `off`, `1` and `0` in any letter case.                              | `boolean`      |
+| `coerceBigint(options?)` | bigint   | Bigints, safe integers, and strings holding a decimal integer.                                                                                           | `bigint`       |
+| `coerceDate(options?)`   | `Date`   | `Date`s, whole timestamps in milliseconds, and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`.                                          | `date`         |
 
 Surrounding whitespace is ignored in the text each accepts.
 
