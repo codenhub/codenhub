@@ -19,24 +19,29 @@ export const isPublicHost = (host: string): boolean =>
 
 /**
  * Letters, combining marks and digits from any script, joined by hyphens and dots: what can be an
- * internationalized host. Marks are there because `ü` is also written as `u` and a combining diaeresis.
+ * internationalized host. Marks are there for scripts that write them even in normalized text, such as
+ * the vowel signs of Devanagari.
  */
 const UNICODE_HOST_PATTERN = /^[\p{L}\p{M}\p{N}.-]+$/u;
 /** Any character past ASCII. */
 const NON_ASCII_PATTERN = /[\u0080-\uffff]/;
-const HOST_MAX_LENGTH = 253;
+/** The longest a domain name can be, in its ASCII form. */
+export const HOST_MAX_LENGTH = 253;
 
 /**
  * The ASCII form of a host that may be internationalized, as the URL parser writes it, so `münchen.de`
- * is `xn--mnchen-3ya.de`, or undefined when it is not a host at all. Text that is already ASCII is
- * returned as it is. Only letters, digits, hyphens and dots reach the parser, so nothing in the text
- * can turn it into a port, a path or another host.
+ * is `xn--mnchen-3ya.de`, or undefined when it is not a host at all, or not written in the normalized
+ * form the parser reads it in. Text that is already ASCII is returned as it is. Only letters, digits,
+ * hyphens and dots reach the parser, so nothing in the text can turn it into a port, a path or another
+ * host.
  */
 export function toAsciiHost(host: string): string | undefined {
   if (!NON_ASCII_PATTERN.test(host)) {
     return host;
   }
-  if (!UNICODE_HOST_PATTERN.test(host) || !URL.canParse(`http://${host}`)) {
+  // The parser maps a host through NFKC before encoding it, so a host that mapping changes, such as
+  // fullwidth or decomposed letters, is a second spelling of another and would pass as a distinct string.
+  if (!UNICODE_HOST_PATTERN.test(host) || host.normalize("NFKC") !== host || !URL.canParse(`http://${host}`)) {
     return undefined;
   }
   const { hostname } = new URL(`http://${host}`);

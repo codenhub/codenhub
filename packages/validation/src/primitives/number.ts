@@ -1,4 +1,4 @@
-import { assertBounds, failWith, invalidType, pass, toIssue } from "../core/result";
+import { assertBounds, assertOrder, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { ValidationIssue, Validator } from "../core/types";
 
 /** Constraints and clean-up for {@link number}. Every option is optional. */
@@ -87,8 +87,10 @@ const isMultipleOf = (value: number, step: number): boolean => {
  * @param options - Constraints and clean-up to apply.
  * @returns A validator that produces a number.
  * @throws {RangeError} When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`,
- * no number can satisfy the bounds together, `multipleOf` is not a
- * positive finite number, or `clamp` has a `NaN` bound or a minimum above its maximum.
+ * no number can satisfy the bounds together, `multipleOf` is not a positive finite number, or `clamp`
+ * has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound. Bounds
+ * that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and
+ * reject every input.
  */
 export function number(options: NumberOptions = {}): Validator<number> {
   const { min, max, gt, lt, int, safeInt, multipleOf, nonZero, clamp } = options;
@@ -112,6 +114,11 @@ export function number(options: NumberOptions = {}): Validator<number> {
     if (clamp.min > clamp.max) {
       throw new RangeError(`clamp minimum ${clamp.min} is greater than maximum ${clamp.max}`);
     }
+    // Every value leaves the clamp inside its range, so a bound that range lies wholly outside of rejects all.
+    assertOrder("min", min, "clamp.max", clamp.max);
+    assertOrder("gt", gt, "clamp.max", clamp.max, true);
+    assertOrder("clamp.min", clamp.min, "max", max);
+    assertOrder("clamp.min", clamp.min, "lt", lt, true);
   }
 
   return (input) => {

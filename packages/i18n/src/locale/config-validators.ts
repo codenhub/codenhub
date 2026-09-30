@@ -102,9 +102,6 @@ export function assertConfig<T>(validator: Validator<T>, input: unknown, subject
     return result.value;
   }
   const [issue] = result.error.issues;
-  if (issue === undefined) {
-    throw new TypeError(subject);
-  }
   const where = issue.path.length > 0 ? `${formatPath(issue.path)}: ` : "";
   throw new TypeError(`${subject}: ${where}${formatIssue(issue, CONFIG_MESSAGES)}`);
 }

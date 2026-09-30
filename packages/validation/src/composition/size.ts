@@ -1,7 +1,7 @@
 import { assertOrder, assertSize, toIssue } from "../core/result";
 import type { ValidationIssue } from "../core/types";
 
-/** Size constraints shared by arrays, sets and maps. Every option is optional. */
+/** Size constraints shared by arrays, sets, maps and records, where the size of a record is its number of keys. Every option is optional. */
 export interface SizeOptions {
   /** Requires at least this many items. A non-negative integer. */
   min?: number;

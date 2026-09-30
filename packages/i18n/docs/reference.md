@@ -25,7 +25,7 @@ interface I18nConfig<TLocale extends string = string> {
 function createI18n<TLocale extends string>(config: I18nConfig<TLocale>): I18n<TLocale>;
 ```
 
-`locales` must be a non-empty array of conservative ASCII locale identifiers that remain unique case-insensitively after trimming. `defaultLocale` must match one of them. `loadLocale` and `getLocaleDirection` must be functions, and `isSilent`, when provided, must be boolean. Invalid configuration throws `TypeError` during `createI18n()`.
+The configuration must be a plain object, such as an object literal, and only its own properties are read: a class instance or an object built with `Object.create(defaults)` throws `TypeError`. `locales` must be a non-empty array of conservative ASCII locale identifiers that remain unique case-insensitively after trimming. `defaultLocale` must match one of them. `loadLocale` and `getLocaleDirection` must be functions, and `isSilent`, when provided, must be boolean. Invalid configuration throws `TypeError` during `createI18n()`.
 
 Configuration locale metadata is copied and frozen. Later caller mutations do not alter `defaultLocale`, `locales`, or locale matching. The loading and direction callbacks remain consumer-owned dependencies. Exceptions from `getLocaleDirection` propagate unchanged; the initial call occurs during `createI18n()`, and later calls occur before newly loaded state is applied.
 
@@ -268,7 +268,7 @@ interface LocaleRouting<TLocale extends string> {
 }
 ```
 
-`createLocaleRouting(config)` trims and snapshots locale configuration. `locales` must be non-empty, contain conservative ASCII locale identifiers that are case-insensitively unique, and contain `defaultLocale`; `prefixDefaultLocale` must be boolean. Invalid configuration throws `TypeError`.
+`createLocaleRouting(config)` trims and snapshots locale configuration. The configuration must be a plain object, such as an object literal, and only its own properties are read: a class instance or an object built with `Object.create(defaults)` throws `TypeError`. `locales` must be non-empty, contain conservative ASCII locale identifiers that are case-insensitively unique, and contain `defaultLocale`; `prefixDefaultLocale` must be boolean. Invalid configuration throws `TypeError`.
 
 ```ts
 import { createLocaleRouting } from "@codenhub/i18n/routing";

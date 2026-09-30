@@ -27,7 +27,10 @@ function isMailto(rest: string, allowLocal: boolean): boolean {
     for (const field of rest.slice(queryStart + 1).split("&")) {
       const separator = field.indexOf("=");
       if (separator !== -1 && RECIPIENT_FIELD_PATTERN.test(field.slice(0, separator))) {
-        encoded.push(...field.slice(separator + 1).split(","));
+        // One by one: spreading a long list into `push` overflows the stack, and the list is the sender's.
+        for (const address of field.slice(separator + 1).split(",")) {
+          encoded.push(address);
+        }
       }
     }
   }

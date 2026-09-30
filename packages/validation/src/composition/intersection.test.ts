@@ -45,6 +45,15 @@ describe("intersection", () => {
     expect(Object.getPrototypeOf(output)).toBe(Object.prototype);
   });
 
+  it("should keep a value both sides passed through as it is, so cyclic input does not recurse forever", () => {
+    const cyclic: Record<string, unknown> = { name: "a" };
+    cyclic["self"] = cyclic;
+    const open = object({ name: string() }, { unknownKeys: "passthrough" });
+    const merged = valueOf(intersection(open, open)(cyclic)) as Record<string, unknown>;
+    expect(merged["self"]).toBe(cyclic);
+    expect(merged["name"]).toBe("a");
+  });
+
   it("should fail with the issues of a non-object input on both sides", () => {
     expect(codesOf(both(null))).toEqual(["invalid_type", "invalid_type"]);
   });

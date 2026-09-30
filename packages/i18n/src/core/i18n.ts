@@ -286,7 +286,8 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
  * Creates an isolated runtime-neutral translation manager.
  *
  * @typeParam TLocale - Union of supported canonical locale identifiers.
- * @param config - ASCII locale metadata and injected loading/direction callbacks. Locales are trimmed,
+ * @param config - ASCII locale metadata and injected loading/direction callbacks, as a plain object whose
+ * own properties are read. Locales are trimmed,
  * case-insensitively unique, and composed of alphanumeric hyphen-separated subtags. `isSilent` defaults to false.
  * @returns An uninitialized consumer-owned manager whose initial direction has already been resolved.
  * @throws {TypeError} When configuration or the initial direction is invalid.

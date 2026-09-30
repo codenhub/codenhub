@@ -95,7 +95,8 @@ describe("lazy", () => {
                 lazy(() => heavy),
                 () => true,
               ),
-              transform(unknown(), (value) => value),
+              // Typed as the object `heavy` produces, since a function returning `unknown` may be a promise.
+              transform(unknown(), (value) => value as object),
             ),
             string(),
           ]),

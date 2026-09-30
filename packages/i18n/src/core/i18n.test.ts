@@ -34,6 +34,14 @@ afterEach(() => {
 });
 
 describe("createI18n", () => {
+  it("should require a plain configuration object, reading only its own properties", () => {
+    const inherited = Object.create(createConfig()) as I18nConfig<Locale>;
+
+    expect(() => createI18n(inherited)).toThrow(
+      "[I18n] Invalid configuration: Expected object, received non-plain object",
+    );
+  });
+
   it("exposes isolated readonly metadata and deterministic initial state", () => {
     const locales: Locale[] = ["en", "pt", "ar"];
     const i18n = createI18n(createConfig({ locales }));

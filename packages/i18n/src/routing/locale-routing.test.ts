@@ -55,6 +55,20 @@ describe("createLocaleRouting", () => {
     expect(create({ prefixDefaultLocale: "yes" })).toThrow("prefixDefaultLocale: Expected boolean, received string");
   });
 
+  it("should require a plain object, reading only its own properties", () => {
+    const inherited = Object.create({ defaultLocale: "en", locales: ["en"], prefixDefaultLocale: true }) as object;
+    class RoutingConfig {
+      readonly defaultLocale = "en";
+      readonly locales = ["en"];
+      readonly prefixDefaultLocale = true;
+    }
+
+    expect(() => createLocaleRouting(inherited as Parameters<typeof createLocaleRouting>[0])).toThrow(
+      "Invalid locale routing configuration: Expected object, received non-plain object",
+    );
+    expect(() => createLocaleRouting(new RoutingConfig())).toThrow("received RoutingConfig");
+  });
+
   it("should apply the default-locale prefix policy when parsing unprefixed paths", () => {
     const requiredPrefix = createLocaleRouting({
       defaultLocale: "en-US",

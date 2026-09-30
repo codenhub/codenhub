@@ -5,7 +5,7 @@ description: Every validator and combinator, with its options, what it produces 
 
 # Validator reference
 
-Every validator here is created by calling a function and is then called with the value to check. Every one returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`, and never throws for invalid input. The code and `params` each failure reports are listed with the validator; [Issues and messages](errors.md) explains what they mean and how to turn them into text.
+Every validator here is created by calling a function and is then called with the value to check. Every one returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`, and never throws for invalid input, unless the input runs code of its own, such as a getter or a `Proxy` trap that throws while it is read, whose exception propagates. The code and `params` each failure reports are listed with the validator; [Issues and messages](errors.md) explains what they mean and how to turn them into text.
 
 Options are read once, when the validator is created. An option that makes no sense, such as a negative length, a `NaN` bound, or limits no value can satisfy together such as `{ min: 5, max: 2 }`, throws a `RangeError` or `TypeError` at that point, because it is a mistake in your code and not in the input.
 
@@ -74,7 +74,7 @@ The options, all optional:
 | `multipleOf` | A multiple of this positive number, compared as the decimals both are written as, so `0.3` is a multiple of `0.1`.   |
 | `nonZero`    | Anything but zero.                                                                                                   |
 
-Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, non-negative is `min: 0`, negative is `lt: 0` and non-positive is `max: 0`. A `NaN` bound, or bounds no finite number can satisfy such as `{ min: 5, max: 2 }`, `{ gt: 1, lt: 1 }` or `{ min: Infinity }`, throws a `RangeError` rather than being ignored. `clamp` throws one for a `NaN` bound or a minimum above its maximum, and `multipleOf` throws one unless it is a positive finite number. `multipleOf` is exact at any size: whole numbers are compared as they are, and anything else as the decimal it is written as, which is what a number parsed from text is. A number computed in floating point is not always the decimal it looks like: `0.1 + 0.2` is `0.30000000000000004`, which is not a multiple of `0.1`.
+Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, non-negative is `min: 0`, negative is `lt: 0` and non-positive is `max: 0`. A `NaN` bound, or bounds no finite number can satisfy such as `{ min: 5, max: 2 }`, `{ gt: 1, lt: 1 }` or `{ min: Infinity }`, throws a `RangeError` rather than being ignored. `clamp` throws one for a `NaN` bound, a minimum above its maximum, or a range every value of which breaks a bound, such as `{ clamp: { min: 0, max: 10 }, min: 11 }`, and `multipleOf` throws one unless it is a positive finite number. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught when the validator is created, since checking would add to every consumer of `number`; such a validator rejects every input. `multipleOf` is exact at any size: whole numbers are compared as they are, and anything else as the decimal it is written as, which is what a number parsed from text is. A number computed in floating point is not always the decimal it looks like: `0.1 + 0.2` is `0.30000000000000004`, which is not a multiple of `0.1`.
 
 | Failure                       | `code`          | `params`                                                      |
 | ----------------------------- | --------------- | ------------------------------------------------------------- |
@@ -152,7 +152,7 @@ A non-string fails with `invalid_type` and `{ expected: "string", received }`. A
 
 ### `email`
 
-`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The local part is limited to 64 characters and the whole address to 254. The domain may be internationalized, as in `ada@münchen.de`, and is checked in its ASCII (punycode) form, in which the whole address, as delivered, must still fit in 254 characters, while the local part must be ASCII: an address with other letters before the `@` (RFC 6531) is rejected. Hosts that are not public domain names are rejected: `localhost`, single-label hosts, IP addresses, and special-use names that never reach a public host, which are those ending in `localhost`, `local`, `internal`, `home.arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
+`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The local part is limited to 64 characters and the whole address to 254. The domain may be internationalized, as in `ada@münchen.de`, and is checked in its ASCII (punycode) form, in which the whole address, as delivered, must still fit in 254 characters, while the local part must be ASCII: an address with other letters before the `@` (RFC 6531) is rejected. An internationalized domain must be written in the normalized form the URL parser reads it in (NFKC), so each address has one accepted spelling: fullwidth letters, as in `ada@ｅxample.com`, ligatures such as `ﬁ`, and a letter written as a base and a combining mark, such as `u` followed by U+0308 for `ü`, are rejected. Hosts that are not public domain names are rejected: `localhost`, single-label hosts, IP addresses, and special-use names that never reach a public host, which are those ending in `localhost`, `local`, `internal`, `home.arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
 
 ```ts
 import { email, pipe, string } from "@codenhub/validation";
@@ -164,7 +164,7 @@ address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
 
 ### `url`
 
-`url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The value is returned as it came, so text the URL parser would quietly clean up is rejected instead: surrounding or embedded whitespace, control characters such as line breaks, backslashes, and a host written without both slashes, such as `https:example.com`, which a page on the same scheme would read as a path on its own host. Trim first with `pipe(string({ trim: true }), url())` when the input may have surrounding spaces. The options are:
+`url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The value is returned as it came, so text the URL parser would quietly clean up is rejected instead: surrounding or embedded whitespace, control characters such as line breaks, backslashes, a host written without both slashes, such as `https:example.com`, which a page on the same scheme would read as a path on its own host, or with more than two, such as `https:///example.com`, an `@` before the host even with nothing in front of it, as in `https://@example.com`, a percent-escape in the host, such as `https://%65xample.com`, and a host not in the normalized form the parser reads it in, as for [`email`](#email). A host longer than 253 characters, the most a domain name can have, is rejected as well, with `allowLocal` too. Trim first with `pipe(string({ trim: true }), url())` when the input may have surrounding spaces. The options are:
 
 | Option       | Meaning                                                                                                                                                                                                                                                         |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -199,7 +199,7 @@ url({ protocols: ["urn"] })("urn:isbn:0451450523"); // ok
 
 ### `ip`
 
-`ip(options?)` takes `version`, `"v4"` or `"v6"`, to accept one address family only. Without it both are accepted. The `format` in the issue is `"ipv4"` or `"ipv6"` when a version is given, and `"ip"` otherwise.
+`ip(options?)` takes `version`, `"v4"` or `"v6"`, to accept one address family only. Without it both are accepted, and any other value throws a `TypeError` when the validator is created. The `format` in the issue is `"ipv4"` or `"ipv6"` when a version is given, and `"ip"` otherwise.
 
 IPv4 is four decimal parts from 0 to 255 without leading zeros, which some parsers read as octal. IPv6 is written as RFC 4291 allows: eight groups of one to four hex digits, one run of zero groups shortened to `::`, and an IPv4 address in place of the last two groups, as in `::ffff:192.0.2.1`, whose parts follow the IPv4 rule. A zone such as `%eth0` is accepted only after a link-local address (`fe80::/10`), the one place it means something.
 
@@ -234,13 +234,15 @@ The `unknownKeys` option decides what happens to input properties the shape does
 | `"strict"`      | Reject each with an `unrecognized_key` issue at the key's path, and `params: { key }`. |
 | `"passthrough"` | Copy them to the output unchanged and unchecked.                                       |
 
+Any other `unknownKeys` value, such as a misspelled `"Strict"`, throws a `TypeError` when the validator is created, instead of falling back to `"strip"`.
+
 See [Reusing shapes](#reusing-shapes) for extending, omitting and making properties optional.
 
 ## Collections
 
 Every collection validator takes the validator for its items, checks them all, and reports each issue with a path that leads through the item's position. A wrong size is reported at once, without validating the items, so a huge input is never worked through only to be rejected.
 
-The size options `min`, `max` and `length` are non-negative integers, and each throws a `RangeError` when created with anything else, as do limits no size can satisfy together, such as `min` above `max` or a `length` outside them. `min` and `max` are inclusive. A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"` or `"map"`, and `exact: true` is added for `length`.
+The size options `min`, `max` and `length` are non-negative integers, and each throws a `RangeError` when created with anything else, as do limits no size can satisfy together, such as `min` above `max` or a `length` outside them. `min` and `max` are inclusive. A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"`, `"map"` or `"record"`, and `exact: true` is added for `length`. A record's size is its number of keys.
 
 ### `array`
 
@@ -273,11 +275,11 @@ const call = tuple([string()], { rest: number() }); // [string, ...number[]]
 
 ### `record`
 
-`record(key, value)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it is not mistaken for a problem with the value, and a bad key still has its value checked. A key that the key validator changes, such as by lowercasing, must stay distinct: `{ A: 1, a: 2 }` under `string({ lowercase: true })` reports the second as `invalid_key` with `{ unique: true }` rather than dropping a value. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype.
+`record(key, value, options?)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it is not mistaken for a problem with the value, and a bad key still has its value checked. A key that the key validator changes, such as by lowercasing, must stay distinct: `{ A: 1, a: 2 }` under `string({ lowercase: true })` reports the second as `invalid_key` whose `params.issues` holds one `invalid_value` issue with `{ unique: true }`, rather than dropping a value. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype. It takes `min`, `max` and `length`, which count keys, so `record(string(), number(), { max: 100 })` rejects a dictionary of more than 100 keys before checking any of them.
 
 ### `set` and `map`
 
-`set(element, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string or a number and its position otherwise. A map key that fails is reported as `invalid_key`, as for `record`, and so is one that another entry has already taken once the key validator has changed it. Both take `min`, `max` and `length`.
+`set(element, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string or a number and its position otherwise. A map key that fails is reported as `invalid_key`, as for `record`, and so is one that another entry has already taken once the key validator has changed it. Likewise a set value that `element` makes equal to an earlier one, such as `"A"` and `"a"` under `string({ lowercase: true })`, is reported as `invalid_value` with `{ unique: true }` at its position rather than merged, so the output never holds fewer values than the size options allow. Both take `min`, `max` and `length`.
 
 ## Combining validators
 
@@ -310,7 +312,7 @@ const tags = withDefault(array(string()), () => []);
 
 ### `transform`
 
-`transform(validator, convert)` changes the value a validator produced into another, such as text into a `Date`. `convert` runs only when `validator` succeeded and cannot reject the value: to fail, write a validator that returns `fail(...)` and put it after this one with `pipe`. A `convert` that returns a promise makes the result asynchronous, and so does any value with a `then` method, as `await` would treat it, so a value that has one for another reason has to be wrapped in an object before it is returned. A `convert` that throws is a bug and propagates.
+`transform(validator, convert)` changes the value a validator produced into another, such as text into a `Date`. `convert` runs only when `validator` succeeded and cannot reject the value: to fail, write a validator that returns `fail(...)` and put it after this one with `pipe`. A `convert` that returns a promise, or is typed as possibly returning one, including one typed as returning `unknown` or `any`, makes the result asynchronous, and so does any value with a `then` method, as `await` would treat it, so a value that has one for another reason has to be wrapped in an object before it is returned. A `convert` that throws is a bug and propagates.
 
 ```ts
 import { string, transform } from "@codenhub/validation";
@@ -362,11 +364,13 @@ event({ type: "key", key: "a" }); // { ok: true, value: { type: "key", key: "a" 
 
 **A variant must not list the tag.** Unlike some other libraries, where each variant is `object({ type: literal("click"), ... })`, a variant here is given the input without its tag, so a variant that lists it fails with `invalid_value` at the tag's path even though the input's tag is right. The record key already says which tag the variant is for.
 
-A variant does not list the tag property itself, and does not see it, so a strict `object` works as a variant: the tag is added back to the output, so the result is a proper tagged union and checking `event.type` narrows the type. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. Each variant must produce an object.
+Because a variant never sees the tag, a strict `object` works as a variant. The tag is added back to the output, so the result is a proper tagged union and checking `event.type` narrows the type. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. Each variant must produce an object.
 
 ### `intersection`
 
 `intersection(left, right)` accepts a value only when it passes both validators, reports the issues of both together, and produces the two outputs merged. Plain objects are merged key by key, recursively, and for anything else the right validator's output wins.
+
+Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` can never pass together: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 
 ## Recursive data and JSON
 

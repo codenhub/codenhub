@@ -3,9 +3,13 @@ import { isPlainObject, setOwn } from "../core/objects";
 import { failWith, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
 
-/** Combines two validated values: plain objects are merged key by key, recursively, and anything else takes the right value. */
+/**
+ * Combines two validated values: plain objects are merged key by key, recursively, and anything else
+ * takes the right value. The same value on both sides is kept as it is, which is what a key both
+ * sides passed through unchecked holds, so a cycle in the input is never followed.
+ */
 function merge(left: unknown, right: unknown): unknown {
-  if (!isPlainObject(left) || !isPlainObject(right)) {
+  if (left === right || !isPlainObject(left) || !isPlainObject(right)) {
     return right;
   }
   const merged: Record<string, unknown> = {};
@@ -25,7 +29,9 @@ function merge(left: unknown, right: unknown): unknown {
  * @remarks
  * Both validators receive the same input and both run, so the issues of each are reported together.
  * Plain-object outputs are merged key by key, recursively; for anything else the right validator's
- * output wins. It is synchronous when both validators are, and asynchronous otherwise.
+ * output wins. Two `object`s with `unknownKeys: "strict"` never pass together, since each rejects the
+ * keys only the other lists; spread their shapes into one strict object instead. It is synchronous
+ * when both validators are, and asynchronous otherwise.
  *
  * @example
  * ```ts

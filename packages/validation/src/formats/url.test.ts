@@ -30,6 +30,35 @@ describe("url", () => {
     expect(url({ allowLocal: true })(" http://localhost").ok).toBe(false);
   });
 
+  it("should reject an authority the URL parser would rewrite: extra slashes, an empty userinfo, an escaped host", () => {
+    const rewritten = [
+      "http:///example.com",
+      "https:////example.com/a",
+      "https://@example.com",
+      "https://:@example.com",
+      "https://%65xample.com",
+      "https://ex%61mple.com/",
+    ];
+    expect(accepts(url(), ...rewritten)).toEqual(rewritten.map(() => false));
+    expect(accepts(url({ allowLocal: true }), "http:///localhost", "http://@localhost")).toEqual([false, false]);
+    expect(accepts(url(), "https://example.com/%41?b=%20#%2F", "https://example.com/@a")).toEqual([true, true]);
+  });
+
+  it("should reject a host the URL parser would rewrite before reading it, such as fullwidth or decomposed letters", () => {
+    const rewritten = ["https://\uff45xample.com", "https://mu\u0308nchen.de/", "https://\ufb01sh.com"];
+    expect(accepts(url(), ...rewritten)).toEqual([false, false, false]);
+    expect(accepts(url(), "https://m\u00fcnchen.de/", "https://example.com/\uff45")).toEqual([true, true]);
+  });
+
+  it("should reject a host longer than the 253 characters a domain name can have", () => {
+    const labels = (count: number): string => Array.from({ length: count }, () => "a".repeat(61)).join(".");
+    const longest = `${labels(4)}.abcde`;
+    expect(longest).toHaveLength(253);
+    expect(url()(`https://${longest}/`).ok).toBe(true);
+    expect(url()(`https://${longest}f/`).ok).toBe(false);
+    expect(url({ allowLocal: true })(`https://${labels(20)}/`).ok).toBe(false);
+  });
+
   it("should reject a host written without both slashes, which resolves as a path against a same-scheme base", () => {
     expect(accepts(url(), "https:example.com", "https:/example.com", "HTTP:example.com/a")).toEqual([
       false,
@@ -164,6 +193,12 @@ describe("url without a host", () => {
       "mailto:ada%E0%A4%A@example.com",
     ];
     expect(accepts(mailto, ...invalid)).toEqual(invalid.map(() => false));
+  });
+
+  it("should check a mailto with any number of recipients without throwing", () => {
+    const recipients = Array.from({ length: 200_000 }, () => "ada@example.com").join(",");
+    expect(mailto(`mailto:?to=${recipients}`).ok).toBe(true);
+    expect(mailto(`mailto:?to=${recipients},nope`).ok).toBe(false);
   });
 
   it("should accept a local mailto host only with allowLocal", () => {

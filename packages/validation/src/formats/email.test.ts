@@ -21,8 +21,10 @@ describe("email", () => {
     ]);
   });
 
-  it("should accept a domain written with combining marks, as the URL parser reads it", () => {
-    expect(accepts(email(), "ada@münchen.de", "ada@münchen.de")).toEqual([true, true]);
+  it("should reject a host the URL parser would rewrite before reading it, so one address has one spelling", () => {
+    const rewritten = ["ada@\uff45xample.com", "ada@mu\u0308nchen.de", "ada@\ufb01sh.com"];
+    expect(accepts(email(), ...rewritten)).toEqual([false, false, false]);
+    expect(accepts(email(), "ada@m\u00fcnchen.de", "ada@example.com")).toEqual([true, true]);
   });
 
   it("should measure the address as it is delivered, where an internationalized host is longer", () => {

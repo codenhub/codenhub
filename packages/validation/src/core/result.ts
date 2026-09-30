@@ -95,6 +95,10 @@ export function collectNested(
   }
 }
 
+/** The issue for an item equal to an earlier one, where a collection requires them distinct. */
+export const repeatedItem = (segment: ValidationPathSegment): ValidationIssue =>
+  toIssue({ code: "invalid_value", path: [segment], params: { unique: true } });
+
 /**
  * The issue for an entry whose key, once its validator has changed it, is one an earlier entry already
  * has. Reported as a bad key, since keeping both would silently drop one of the values.

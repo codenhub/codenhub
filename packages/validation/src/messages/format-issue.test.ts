@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { array } from "../composition/array";
 import { json } from "../composition/json";
 import { map } from "../composition/map";
+import { record } from "../composition/record";
 import { set } from "../composition/set";
 import { tuple } from "../composition/tuple";
 import { union } from "../composition/union";
@@ -183,6 +184,17 @@ describe("formatIssue", () => {
     expect(messageOf(map(string(), string(), { min: 1 })(new Map()))).toEqual(["Must contain at least 1 item"]);
   });
 
+  it("should word record sizes as a count of keys, singular for one", () => {
+    const messageOf = (result: ValidationResult<unknown>): string[] =>
+      issuesOf(result).map((found) => formatIssue(found));
+
+    expect(messageOf(record(string(), string(), { min: 2 })({ a: "x" }))).toEqual(["Must contain at least 2 keys"]);
+    expect(messageOf(record(string(), string(), { max: 1 })({ a: "x", b: "y" }))).toEqual([
+      "Must contain at most 1 key",
+    ]);
+    expect(messageOf(record(string(), string(), { length: 0 })({ a: "x" }))).toEqual(["Must contain exactly 0 keys"]);
+  });
+
   it("should describe duplicates, unions and JSON", () => {
     expect(formatIssue(issuesOf(array(string(), { unique: true })(["a", "a"]))[0] as ValidationIssue)).toBe(
       "Must be unique",
@@ -191,6 +203,12 @@ describe("formatIssue", () => {
       "Does not match any of the allowed types",
     );
     expect(formatIssue(issuesOf(json()("{"))[0] as ValidationIssue)).toBe("Invalid JSON");
+  });
+
+  it("should quote an unrecognized key as a string literal, so quotes and line breaks in it stay inside", () => {
+    expect(formatIssue(issue({ code: "unrecognized_key", params: { key: 'a"b\nc' } }))).toBe(
+      String.raw`Unrecognized key "a\"b\nc"`,
+    );
   });
 
   it("should describe unrecognized keys, coercion failures and unions", () => {
