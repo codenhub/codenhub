@@ -107,6 +107,8 @@ describe("string", () => {
   it("should refuse a pattern that is not a regular expression when the validator is created", () => {
     const pattern = "^a$" as unknown as RegExp;
     expect(() => string({ pattern })).toThrow(new TypeError("pattern must be a RegExp, received string"));
+    const lookalike = { source: "^a$", flags: "" } as unknown as RegExp;
+    expect(() => string({ pattern: lookalike })).toThrow(new TypeError("pattern must be a RegExp, received object"));
     const foreign = runInNewContext("/^a$/") as RegExp;
     expect(accepts(string({ pattern: foreign }), "a", "b")).toEqual([true, false]);
   });

@@ -1,3 +1,4 @@
+import { sourceOfRegExp } from "../core/objects";
 import { assertOrder, assertSize, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { ValidationIssue, Validator } from "../core/types";
 
@@ -89,11 +90,13 @@ export function string(options: StringOptions = {}): Validator<string> {
   if (lowercase === true && uppercase === true) {
     throw new TypeError("string() cannot lowercase and uppercase at once");
   }
-  // Read by shape, so a regular expression from another realm, such as an iframe, is one too.
-  if (pattern !== undefined && (typeof pattern.source !== "string" || typeof pattern.flags !== "string")) {
+  // Checked with the built-in getter, so a regular expression from another realm, such as an iframe, is
+  // one too, and an object that merely has `source` and `flags` is not.
+  const source = pattern === undefined ? undefined : sourceOfRegExp(pattern);
+  if (pattern !== undefined && source === undefined) {
     throw new TypeError(`pattern must be a RegExp, received ${pattern === null ? "null" : typeof pattern}`);
   }
-  const stateless = pattern && new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ""));
+  const stateless = pattern && new RegExp(source as string, pattern.flags.replace(/[gy]/g, ""));
 
   return (input) => {
     if (typeof input !== "string") {
