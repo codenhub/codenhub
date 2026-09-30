@@ -1,4 +1,4 @@
-import { invalidType, pass } from "../core/result";
+import { assertFunction, invalidType, pass } from "../core/result";
 import type { Validator } from "../core/types";
 
 /** A class a value can be checked against, including abstract ones. */
@@ -18,8 +18,10 @@ export type Constructor<T = unknown> = abstract new (...args: never[]) => T;
  * @typeParam T - The instance type.
  * @param target - The class the value must be an instance of.
  * @returns A validator that produces the instance.
+ * @throws {TypeError} When `target` is not a function.
  */
 export function instanceOf<T>(target: Constructor<T>): Validator<T> {
+  assertFunction("target", target);
   return (input) =>
     input instanceof target ? pass(input as T) : invalidType(`instance of ${target.name || "anonymous class"}`, input);
 }

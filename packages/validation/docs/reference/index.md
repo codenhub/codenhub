@@ -517,6 +517,8 @@ Creates a validator that accepts instances of a class, checked with `instanceof`
 
 **Returns** — A validator that produces the instance.
 
+**Throws** — When `target` is not a function.
+
 **Example**
 
 ```ts
