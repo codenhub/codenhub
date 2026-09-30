@@ -367,3 +367,38 @@ describe("findEmptySections", () => {
     ]);
   });
 });
+
+describe("buildReferenceModel unsupported exports", () => {
+  it("reports an unsupported kind inside a namespace by its qualified name", () => {
+    const model = buildReferenceModel(
+      {
+        id: 0,
+        kind: 1,
+        name: "@codenhub/example",
+        children: [
+          {
+            id: 1,
+            kind: 2,
+            name: "index",
+            children: [
+              {
+                id: 2,
+                kind: 4,
+                name: "Ns",
+                children: [
+                  { id: 3, kind: 2097152, name: "Alias" },
+                  // A kind the page model has no group for, such as TypeDoc's Document.
+                  { id: 4, kind: 8388608, name: "Guide" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      { index: "." },
+    );
+
+    expect(model.unsupported).toEqual([{ name: "Ns.Guide", subpath: "." }]);
+    expect(model.entrypoints[0]?.symbols[0]?.namespaceMembers.map((symbol) => symbol.name)).toEqual(["Alias"]);
+  });
+});

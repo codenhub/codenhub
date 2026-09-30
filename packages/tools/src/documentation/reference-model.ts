@@ -728,6 +728,28 @@ function unresolvedReferences(declaration: Reflection, packageName: string): { n
   return [...found].map(([name, declaredIn]) => (declaredIn === undefined ? { name } : { declaredIn, name }));
 }
 
+/**
+ * Dot-qualified names of children whose declaration kind has no page group, including
+ * those inside a namespace, whose supported children render as namespace members.
+ */
+function unsupportedNames(
+  children: readonly Reflection[],
+  resolve: (id: number) => Reflection | undefined,
+  qualifier = "",
+): string[] {
+  return children.flatMap((child) => {
+    if (typeof child.name !== "string" || typeof child.kind !== "number") {
+      return [];
+    }
+    const qualified = qualifier === "" ? child.name : `${qualifier}.${child.name}`;
+    if (child.kind !== KIND_REFERENCE && !SYMBOL_KIND_BY_REFLECTION.has(child.kind)) {
+      return [qualified];
+    }
+    const declaration = resolveChild(child, resolve)?.declaration;
+    return declaration?.kind === KIND_NAMESPACE ? unsupportedNames(declaration.children ?? [], resolve, qualified) : [];
+  });
+}
+
 function isModule(reflection: Reflection): boolean {
   return Array.isArray(reflection.children) && reflection.kind === KIND_MODULE;
 }
@@ -769,15 +791,8 @@ export function buildReferenceModel(project: unknown, subpathByModule: Record<st
   for (const [module, subpath] of Object.entries(subpathByModule)) {
     const reflection = modules.find((candidate) => candidate.name === module);
     const children = reflection?.children ?? [];
-    for (const child of children) {
-      if (
-        typeof child.name === "string" &&
-        typeof child.kind === "number" &&
-        child.kind !== KIND_REFERENCE &&
-        !SYMBOL_KIND_BY_REFLECTION.has(child.kind)
-      ) {
-        unsupported.push({ name: child.name, subpath });
-      }
+    for (const name of unsupportedNames(children, resolve)) {
+      unsupported.push({ name, subpath });
     }
     const symbols = buildSymbols(children, resolve);
     entrypoints.push({
