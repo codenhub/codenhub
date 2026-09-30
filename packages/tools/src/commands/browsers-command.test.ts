@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -8,7 +8,7 @@ import { parseArguments } from "../cli/parse-arguments.ts";
 import { createReporter } from "../reporting/reporter.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { createBrowsersCommand } from "./browsers-command.ts";
-import { EXIT_SUCCESS, type CommandContext } from "./definition.ts";
+import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext } from "./definition.ts";
 
 async function createWorkspaceFixture(location: string, installsCli: boolean): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "codenhub-browsers-command-"));
@@ -19,6 +19,29 @@ async function createWorkspaceFixture(location: string, installsCli: boolean): P
     await Promise.all(["playwright", "playwright.CMD"].map(async (name) => writeFile(join(binDirectory, name), "")));
   }
   return root;
+}
+
+/**
+ * Installs a fake Playwright CLI that fails its first `failures` calls and then succeeds, counting its
+ * calls in `attempts` beside the package so a test can read how often the install ran.
+ */
+async function installFakeCli(root: string, location: string, failures: number): Promise<string> {
+  const directory = join(root, location);
+  const binDirectory = join(directory, "node_modules", ".bin");
+  await mkdir(binDirectory, { recursive: true });
+  const script = join(binDirectory, "fake-install.cjs");
+  await writeFile(
+    script,
+    `const { existsSync, readFileSync, writeFileSync } = require("node:fs");
+const count = (existsSync("attempts") ? Number(readFileSync("attempts", "utf8")) : 0) + 1;
+writeFileSync("attempts", String(count));
+process.exit(count <= ${failures} ? 1 : 0);
+`,
+  );
+  await writeFile(join(binDirectory, "playwright.CMD"), `@node "${script}" %*\r\n`);
+  await writeFile(join(binDirectory, "playwright"), `#!/bin/sh\nexec node "${script}" "$@"\n`);
+  await chmod(join(binDirectory, "playwright"), 0o755);
+  return join(directory, "attempts");
 }
 
 function createPackage(root: string, location: string, manifest: Record<string, unknown>): WorkspacePackage {
@@ -77,6 +100,41 @@ describe("hub browsers", () => {
 
     expect(result.output).toContain("Would install browsers for 1 Playwright version(s)");
     expect(result.output).toContain("install --with-deps");
+    expect(result.exitCode).toBe(EXIT_SUCCESS);
+  });
+
+  it("retries a failed install once, so a stalled download or package mirror does not fail the run", async () => {
+    const root = await createWorkspaceFixture("packages/toast", false);
+    const attempts = await installFakeCli(root, "packages/toast", 1);
+    const packages = [createPackage(root, "packages/toast", { devDependencies: { "@playwright/test": "catalog:" } })];
+
+    const result = await runBrowsers(root, packages, []);
+
+    expect(await readFile(attempts, "utf8")).toBe("2");
+    expect(result.output).toContain("packages/toast › install failed, trying once more");
+    expect(result.exitCode).toBe(EXIT_SUCCESS);
+  });
+
+  it("fails when the second attempt fails too, without trying a third time", async () => {
+    const root = await createWorkspaceFixture("packages/toast", false);
+    const attempts = await installFakeCli(root, "packages/toast", 2);
+    const packages = [createPackage(root, "packages/toast", { devDependencies: { "@playwright/test": "catalog:" } })];
+
+    const result = await runBrowsers(root, packages, []);
+
+    expect(await readFile(attempts, "utf8")).toBe("2");
+    expect(result.exitCode).toBe(EXIT_FAILURE);
+  });
+
+  it("does not retry an install that succeeded", async () => {
+    const root = await createWorkspaceFixture("packages/toast", false);
+    const attempts = await installFakeCli(root, "packages/toast", 0);
+    const packages = [createPackage(root, "packages/toast", { devDependencies: { "@playwright/test": "catalog:" } })];
+
+    const result = await runBrowsers(root, packages, []);
+
+    expect(await readFile(attempts, "utf8")).toBe("1");
+    expect(result.output).not.toContain("trying once more");
     expect(result.exitCode).toBe(EXIT_SUCCESS);
   });
 

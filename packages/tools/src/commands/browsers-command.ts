@@ -35,12 +35,23 @@ async function runBrowsersCommand(context: CommandContext): Promise<number> {
     const label = toPosix(relative(workspace.root, spec.cwd));
     reporter.blank();
     reporter.step(`${label} › playwright install`);
-    const outcome = await execute(spec, { stdio: "inherit", timeoutMs: context.options.timeoutMs });
+    let outcome = await execute(spec, { stdio: "inherit", timeoutMs: context.options.timeoutMs });
+    let durationMs = outcome.durationMs;
+    // An install fails mostly on the network: a browser download that drops, or,
+    // with `--with-deps`, an operating system package mirror that stalls. A second
+    // attempt opens new connections and usually gets through, so one retry turns a
+    // transient outage into a slower run instead of a failed one. The install is
+    // idempotent, so a retry never redoes what the first attempt finished.
+    if (!outcome.isSuccess) {
+      reporter.warn(`${label} › install ${outcome.didTimeOut ? "timed out" : "failed"}, trying once more`);
+      outcome = await execute(spec, { stdio: "inherit", timeoutMs: context.options.timeoutMs });
+      durationMs += outcome.durationMs;
+    }
     if (outcome.didTimeOut) {
-      return { detail: formatDuration(outcome.durationMs), label, status: "timed-out" } satisfies SummaryRow;
+      return { detail: formatDuration(durationMs), label, status: "timed-out" } satisfies SummaryRow;
     }
     return {
-      detail: formatDuration(outcome.durationMs),
+      detail: formatDuration(durationMs),
       label,
       status: outcome.isSuccess ? "passed" : "failed",
     } satisfies SummaryRow;
