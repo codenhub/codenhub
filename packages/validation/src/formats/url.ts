@@ -1,6 +1,6 @@
 import type { Validator } from "../core/types";
 import { isHostlessUrl } from "./hostless-url";
-import { HOST_MAX_LENGTH, isPublicHost } from "./patterns";
+import { HOST_MAX_LENGTH, IPV4_PATTERN, isPublicHost } from "./patterns";
 import { textFormat } from "./text-format";
 
 /**
@@ -24,18 +24,27 @@ const AUTHORITY_PATTERN = /^[^:]+:\/\/([^/?#@%]+)(?:[/?#]|$)/;
 /** A URL scheme as RFC 3986 writes it, without its colon. */
 const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*$/i;
 
+/**
+ * Schemes whose URLs run script when followed. Written with a host, such as
+ * `javascript://example.com/%0aalert(1)`, one passes every host check and still runs, so none is ever
+ * safe to accept.
+ */
+const SCRIPT_SCHEMES = ["javascript", "vbscript", "data"];
+
 /** Options for {@link url}. */
 export interface UrlOptions {
   /**
    * Accepted protocols, without the colon, in any letter case. Of the schemes without a host, `mailto`, `tel` and `urn`
-   * are accepted, each checked by its own rules; any other is always rejected.
+   * are accepted, each checked by its own rules; any other is always rejected. `javascript`, `vbscript`
+   * and `data` cannot be listed, since their URLs run script.
    *
    * @defaultValue ["http", "https"]
    */
   protocols?: readonly string[];
   /**
    * Accepts hosts that are not public domain names: `localhost`, single-label hosts, every IP address,
-   * public ones included and with no check of ranges, and special-use names such as `app.localhost`,
+   * public ones included and with no check of ranges, an IPv4 one only as four decimal parts, and
+   * special-use names such as `app.localhost`,
    * `db.internal` or `printer.local`. It means "any host", not "only private ones".
    *
    * @defaultValue false
@@ -52,9 +61,10 @@ export interface UrlOptions {
  * Text the URL parser would have to clean up is rejected rather than accepted as written:
  * surrounding or embedded whitespace, control characters such as line breaks, backslashes, a host
  * without both slashes before it, as in `https:example.com`, or with more than two, an `@` before the
- * host even with nothing in front of it, a percent-escape in the host, and a host not in the NFKC form
- * the parser reads it in, such as one with fullwidth or decomposed letters. A host longer than 253
- * characters is rejected too, with `allowLocal` as well.
+ * host even with nothing in front of it, a percent-escape in the host, a host not in the NFKC form
+ * the parser reads it in, such as one with fullwidth or decomposed letters, and an IPv4 host in any form
+ * but four decimal parts without leading zeros, such as `0x7f.1` or `127.1`, which it reads as
+ * `127.0.0.1`. A host longer than 253 characters is rejected too, with `allowLocal` as well.
  *
  * @example
  * ```ts
@@ -65,14 +75,19 @@ export interface UrlOptions {
  *
  * @param options - Accepted protocols, and whether local hosts are allowed.
  * @returns A validator that produces the URL as a string.
- * @throws {TypeError} When a protocol is not a scheme name, for instance `"https:"` with its colon.
+ * @throws {TypeError} When a protocol is not a scheme name, for instance `"https:"` with its colon, or is
+ * `javascript`, `vbscript` or `data`, whose URLs run script.
  */
 export function url(options: UrlOptions = {}): Validator<string> {
   const protocols = (options.protocols ?? ["http", "https"]).map((protocol) => {
     if (!SCHEME_PATTERN.test(protocol)) {
       throw new TypeError(`Protocols are scheme names without the colon, such as "https", received "${protocol}"`);
     }
-    return protocol.toLowerCase();
+    const scheme = protocol.toLowerCase();
+    if (SCRIPT_SCHEMES.includes(scheme)) {
+      throw new TypeError(`${scheme} URLs can run script and cannot be accepted`);
+    }
+    return scheme;
   });
   const allowLocal = options.allowLocal ?? false;
   return textFormat("url", (text) => {
@@ -91,6 +106,9 @@ export function url(options: UrlOptions = {}): Validator<string> {
     return (
       authority !== undefined &&
       authority.normalize("NFKC") === authority &&
+      // A host of digits and dots is an IPv4 address to the parser, which reads `0x7f.1`, `127.1` and
+      // `0177.0.0.1` all as 127.0.0.1. Only the form it writes back is accepted, as written.
+      (!/^[\d.]+$/.test(parsed.hostname) || IPV4_PATTERN.test(authority.replace(/:\d*$/, ""))) &&
       parsed.hostname.length <= HOST_MAX_LENGTH &&
       (allowLocal || isPublicHost(parsed.hostname))
     );

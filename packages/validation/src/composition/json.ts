@@ -1,4 +1,4 @@
-import { failIssue, invalidType, pass } from "../core/result";
+import { assertFunction, failIssue, invalidType, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer, Validator } from "../core/types";
 
 /**
@@ -21,10 +21,14 @@ import type { AnyValidator, Composed, Infer, Validator } from "../core/types";
  * @typeParam TValidator - The validator for the parsed value.
  * @param validator - Validates the parsed value.
  * @returns A validator that produces what `validator` produces, or `unknown` without one.
+ * @throws {TypeError} When `validator` is given and is not a function.
  */
 export function json(): Validator<unknown>;
 export function json<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, Infer<TValidator>>;
 export function json(validator?: AnyValidator): AnyValidator {
+  if (validator !== undefined) {
+    assertFunction("validator", validator);
+  }
   return (input) => {
     if (typeof input !== "string") {
       return invalidType("string", input);

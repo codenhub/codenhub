@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { invalidObject, isPlainObject, setOwn } from "../core/objects";
-import { collectNested, failWith, pass, toIssue } from "../core/result";
+import { assertFunction, collectNested, failWith, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 
 /** Maps property names to the validators of their values. */
@@ -57,13 +57,20 @@ export interface ObjectOptions {
  * @param shape - Validator of each property.
  * @param options - How to treat properties the shape does not list.
  * @returns A validator that produces an object.
- * @throws {TypeError} When `unknownKeys` is not `"strip"`, `"strict"` or `"passthrough"`.
+ * @throws {TypeError} When a property validator is not a function, or `unknownKeys` is not `"strip"`,
+ * `"strict"` or `"passthrough"`.
  */
 export function object<TShape extends Shape>(
   shape: TShape,
   options: ObjectOptions = {},
 ): Composed<TShape[keyof TShape], InferShape<TShape>> {
+  // The shape is read once, so changing it after the validator is made changes nothing.
   const keys = Object.keys(shape);
+  const validators = keys.map((key) => {
+    assertFunction(`shape.${key}`, shape[key]);
+    return shape[key] as AnyValidator;
+  });
+  const known = new Set(keys);
   const unknownKeys = options.unknownKeys ?? "strip";
   if (unknownKeys !== "strip" && unknownKeys !== "strict" && unknownKeys !== "passthrough") {
     throw new TypeError(`unknownKeys must be "strip", "strict" or "passthrough", received "${String(unknownKeys)}"`);
@@ -77,13 +84,15 @@ export function object<TShape extends Shape>(
     const issues: ValidationIssue[] = [];
     if (unknownKeys === "strict") {
       for (const key of Object.keys(input)) {
-        if (!Object.hasOwn(shape, key)) {
+        if (!known.has(key)) {
           issues.push(toIssue({ code: "unrecognized_key", path: [key], params: { key } }));
         }
       }
     }
 
-    const results = keys.map((key) => (shape[key] as AnyValidator)(Object.hasOwn(input, key) ? input[key] : undefined));
+    const results = keys.map((key, index) =>
+      (validators[index] as AnyValidator)(Object.hasOwn(input, key) ? input[key] : undefined),
+    );
     return chain(collect(results), (settled) => {
       const output: Record<string, unknown> = {};
       settled.forEach((result, index) => {
@@ -99,7 +108,7 @@ export function object<TShape extends Shape>(
       }
       if (unknownKeys === "passthrough") {
         for (const key of Object.keys(input)) {
-          if (!Object.hasOwn(shape, key)) {
+          if (!known.has(key)) {
             setOwn(output, key, input[key]);
           }
         }

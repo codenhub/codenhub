@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { Validator } from "../core/types";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { accepts, codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
@@ -55,6 +56,22 @@ describe("tuple", () => {
     const sparse: unknown[] = [1];
     sparse.length = 2;
     expect(tuple([number(), number()])(sparse).ok).toBe(false);
+  });
+
+  it("should read items by index, ignoring an iterator the array carries", () => {
+    const tampered = Object.defineProperty([1], Symbol.iterator, {
+      value: function* () {
+        yield* ["x", "y"];
+      },
+    });
+    expect(tuple([number()])(tampered)).toEqual({ ok: true, value: [1] });
+  });
+
+  it("should read the items once, when the validator is created", () => {
+    const items: [Validator<unknown>, ...Validator<unknown>[]] = [number()];
+    const single = tuple(items);
+    items[0] = string();
+    expect(single([1]).ok).toBe(true);
   });
 
   it("should give a tuple type", () => {

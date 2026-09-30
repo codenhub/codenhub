@@ -52,6 +52,12 @@ describe("number", () => {
       expect(issuesOf(number({ int: true })(1.5))[0]?.params).toEqual({ type: "number", format: "int" });
     });
 
+    it("should report a fraction once when both int and safeInt are set, and an unsafe integer as safeInt", () => {
+      const whole = number({ int: true, safeInt: true });
+      expect(issuesOf(whole(1.5)).map((found) => found.params?.["format"])).toEqual(["int"]);
+      expect(issuesOf(whole(2 ** 60)).map((found) => found.params?.["format"])).toEqual(["safeInt"]);
+    });
+
     it("should reject zero with nonZero, negative zero included", () => {
       expect(accepts(number({ nonZero: true }), 0, -0, 1, -1)).toEqual([false, false, true, true]);
     });
@@ -64,7 +70,7 @@ describe("number", () => {
       // A value computed in floating point is not the decimal it looks like.
       expect(number({ multipleOf: 0.1 })(0.1 + 0.2).ok).toBe(false);
       expect(accepts(number({ multipleOf: 5 }), 10, 0, -15, 7)).toEqual([true, true, true, false]);
-      expect(issuesOf(number({ multipleOf: 5 })(7))[0]?.params).toEqual({ multipleOf: 5 });
+      expect(issuesOf(number({ multipleOf: 5 })(7))[0]?.params).toEqual({ type: "number", multipleOf: 5 });
     });
 
     it("should check multipleOf exactly for whole numbers, however large", () => {
@@ -83,6 +89,13 @@ describe("number", () => {
     it("should move the value into the range instead of rejecting it", () => {
       const clamped = number({ clamp: { min: 0, max: 10 } });
       expect([-5, 5, 50].map((input) => valueOf(clamped(input)))).toEqual([0, 5, 10]);
+    });
+
+    it("should read the range once, when the validator is created", () => {
+      const range = { min: 0, max: 10 };
+      const clamped = number({ clamp: range });
+      range.max = 1;
+      expect(valueOf(clamped(5))).toBe(5);
     });
 
     it("should run before the constraints, so they see the clamped number", () => {

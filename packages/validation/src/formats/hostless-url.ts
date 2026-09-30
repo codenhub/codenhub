@@ -18,7 +18,11 @@ const URN_PATTERN =
 /** The header fields of a mailto URL that hold recipients, which must pass as addresses too. */
 const RECIPIENT_FIELD_PATTERN = /^(?:to|cc|bcc)$/i;
 
-/** Tests the part of a mailto URL after the colon: every recipient, in the path or the query. */
+/**
+ * Tests the part of a mailto URL after the colon: every recipient, in the path or the query. Other
+ * fields, such as `subject` or `body`, are not checked, since RFC 6068 lets `body` hold encoded line
+ * breaks, and the docs say so.
+ */
 function isMailto(rest: string, allowLocal: boolean): boolean {
   const queryStart = rest.indexOf("?");
   const path = queryStart === -1 ? rest : rest.slice(0, queryStart);

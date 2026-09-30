@@ -86,6 +86,16 @@ export const asyncResult: Promise<Awaited<ReturnType<typeof asyncSignup>>> = Pro
 export const notSync: Validator<unknown> = asyncSignup;
 export const stillAsync: AsyncValidator<{ username: string; email: string }> = asyncSignup;
 
+// A check written as a type guard narrows what the validator produces, synchronous or not.
+export const onlyText = refine(union([string(), number()]), (value): value is string => typeof value === "string");
+export const onlyTextValue: Infer<typeof onlyText> = "a";
+// @ts-expect-error the guard narrowed the output to string
+export const badOnlyTextValue: Infer<typeof onlyText> = 1;
+export const onlyTextLater = refine(union([username, number()]), (value): value is string => typeof value === "string");
+export const onlyTextLaterValue: AsyncValidator<string> = onlyTextLater;
+// @ts-expect-error a guard on an asynchronous validator is still asynchronous
+export const onlyTextLaterSync: Validator<string> = onlyTextLater;
+
 // Guards accept only synchronous validators.
 export const raw: unknown = "text";
 export const narrowed: string = is(string(), raw) ? raw : "";
@@ -203,6 +213,16 @@ export const clickX: number | undefined = (() => {
   const result = event(raw);
   return result.ok && result.value.type === "click" ? result.value.x : undefined;
 })();
+// A variant must not list the tag, which it is never given, and must produce an object that can carry it.
+export const listsTag = discriminatedUnion("type", {
+  // @ts-expect-error the variant lists the tag it is never given
+  a: object({ type: literal("a"), x: number() }),
+});
+export const producesArray = discriminatedUnion("type", {
+  // @ts-expect-error a variant must produce an object that can carry the tag, not an array
+  a: transform(object({}), () => [1]),
+});
+export const passthroughVariant = discriminatedUnion("type", { a: object({}, { unknownKeys: "passthrough" }) });
 export const both = intersection(object({ name: string() }), object({ age: number() }));
 export const bothValue: Infer<typeof both> = { name: "Ada", age: 36 };
 export const settingsFromText = json(object({ theme: oneOf(["light", "dark"]) }));

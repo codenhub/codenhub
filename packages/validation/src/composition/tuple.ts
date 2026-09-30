@@ -1,5 +1,5 @@
 import type { Maybe } from "../core/async";
-import { failWith, invalidType, pass, toIssue } from "../core/result";
+import { assertFunction, failWith, invalidType, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
 import { settle } from "./settle";
 
@@ -44,6 +44,7 @@ export interface TupleOptions<TRest extends AnyValidator | undefined = undefined
  * @param items - One validator per position.
  * @param options - The validator for extra positions.
  * @returns A validator that produces a tuple.
+ * @throws {TypeError} When an item or `rest` is not a function.
  */
 export function tuple<
   const TItems extends readonly [AnyValidator, ...AnyValidator[]],
@@ -53,14 +54,21 @@ export function tuple<
   options: TupleOptions<TRest> = {},
 ): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>> {
   const { rest } = options;
-  const { length } = items;
+  // Copied, so changing the list after the validator is made changes nothing.
+  const fixed = [...items];
+  fixed.forEach((item, index) => assertFunction(`items[${index}]`, item));
+  if (rest !== undefined) {
+    assertFunction("rest", rest);
+  }
+  const { length } = fixed;
 
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!Array.isArray(input)) {
       return invalidType("array", input);
     }
-    if (input.length < length || (rest === undefined && input.length > length)) {
-      const isShort = input.length < length;
+    const size = input.length;
+    if (size < length || (rest === undefined && size > length)) {
+      const isShort = size < length;
       return failWith([
         toIssue({
           code: isShort ? "too_small" : "too_big",
@@ -73,7 +81,10 @@ export function tuple<
       ]);
     }
     return settle(
-      Array.from(input, (item, index) => ((index < length ? items[index] : rest) as AnyValidator)(item)),
+      // By index up to the length that was checked, never through the array's own iterator, as in `array`.
+      Array.from({ length: size }, (_, index) =>
+        ((index < length ? fixed[index] : rest) as AnyValidator)(input[index]),
+      ),
       pass,
     );
   };

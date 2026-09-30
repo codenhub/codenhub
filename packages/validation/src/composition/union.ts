@@ -1,5 +1,5 @@
 import { chain, type Maybe } from "../core/async";
-import { failIssue } from "../core/result";
+import { assertFunction, failIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 
 /**
@@ -24,16 +24,20 @@ import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult }
  * @typeParam TOptions - The validators to try, at least one.
  * @param options - The validators to try, in order.
  * @returns A validator that produces what the first accepting option produces.
+ * @throws {TypeError} When an option is not a function.
  */
 export function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(
   options: TOptions,
 ): Composed<TOptions[number], Infer<TOptions[number]>> {
+  // Copied, so changing the list after the validator is made changes nothing.
+  const tried = [...options];
+  tried.forEach((option, index) => assertFunction(`options[${index}]`, option));
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     const found: (readonly ValidationIssue[])[] = [];
     const attempt = (index: number): Maybe<ValidationResult<unknown>> =>
-      index === options.length
+      index === tried.length
         ? failIssue("invalid_union", { issues: found })
-        : chain((options[index] as AnyValidator)(input), (result) => {
+        : chain((tried[index] as AnyValidator)(input), (result) => {
             if (result.ok) {
               return result;
             }

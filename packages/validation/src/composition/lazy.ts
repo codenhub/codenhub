@@ -1,11 +1,13 @@
-import { failIssue } from "../core/result";
+import { assertFunction, failIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer } from "../core/types";
 
 /** Options for {@link lazy}. */
 export interface LazyOptions {
   /**
    * The most levels of `lazy` that may be open at once, counting every `lazy` validator, not only this
-   * one. Input nested deeper fails with `too_big` instead of exhausting the stack.
+   * one. Input nested deeper fails with `too_big` instead of exhausting the stack. Since the levels of
+   * every `lazy` count, a `maxDepth` of 1 inside another `lazy` fails at once: set it for the whole
+   * nesting.
    *
    * @defaultValue 128
    */
@@ -34,7 +36,9 @@ let openDepth = 0;
  * fails with `too_big` and `{ maximum, type: "depth" }` at its own path, so untrusted input can be
  * checked without a size cap tuned to the stack. The count is of calls on the stack, so it bounds
  * recursion that happens in one synchronous run, which is where the stack can overflow; a rule that
- * awaits between levels starts the next from a fresh stack, and is not counted.
+ * awaits between levels starts the next from a fresh stack, and is not counted. So `maxDepth` does not
+ * bound an asynchronous recursive schema: it follows input of any depth, and a cyclic object until
+ * memory runs out. Give such a schema a bound of its own.
  *
  * @example
  * ```ts
@@ -53,12 +57,14 @@ let openDepth = 0;
  * @param getter - Returns the validator. Called once, on first use.
  * @param options - The depth limit.
  * @returns A validator that behaves as the one the getter returns.
+ * @throws {TypeError} When `getter` is not a function.
  * @throws {RangeError} When `maxDepth` is not a positive integer.
  */
 export function lazy<TValidator extends AnyValidator>(
   getter: () => TValidator,
   options: LazyOptions = {},
 ): Composed<TValidator, Infer<TValidator>> {
+  assertFunction("getter", getter);
   const { maxDepth = DEFAULT_MAX_DEPTH } = options;
   if (!Number.isInteger(maxDepth) || maxDepth < 1) {
     throw new RangeError(`maxDepth must be a positive integer, received ${maxDepth}`);

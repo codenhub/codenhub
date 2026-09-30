@@ -93,7 +93,9 @@ const isMultipleOf = (value: number, step: number): boolean => {
  * reject every input.
  */
 export function number(options: NumberOptions = {}): Validator<number> {
-  const { min, max, gt, lt, int, safeInt, multipleOf, nonZero, clamp } = options;
+  const { min, max, gt, lt, int, safeInt, multipleOf, nonZero } = options;
+  // Copied, so changing the range after the validator is made changes nothing.
+  const clamp = options.clamp && { min: options.clamp.min, max: options.clamp.max };
   if (multipleOf !== undefined && (!Number.isFinite(multipleOf) || multipleOf <= 0)) {
     throw new RangeError(`multipleOf must be a positive finite number, received ${multipleOf}`);
   }
@@ -143,15 +145,15 @@ export function number(options: NumberOptions = {}): Validator<number> {
     }
     if (int === true && !Number.isInteger(value)) {
       issues.push(invalidValue("int"));
-    }
-    if (safeInt === true && !Number.isSafeInteger(value)) {
+    } else if (safeInt === true && !Number.isSafeInteger(value)) {
+      // A fraction that int already reported is not reported again as an unsafe integer.
       issues.push(invalidValue("safeInt"));
     }
     if (nonZero === true && value === 0) {
       issues.push(invalidValue("nonZero"));
     }
     if (multipleOf !== undefined && !isMultipleOf(value, multipleOf)) {
-      issues.push(toIssue({ code: "invalid_value", params: { multipleOf } }));
+      issues.push(toIssue({ code: "invalid_value", params: { type: "number", multipleOf } }));
     }
     return issues.length > 0 ? failWith(issues) : pass(value);
   };

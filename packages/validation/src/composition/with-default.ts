@@ -1,4 +1,4 @@
-import { pass } from "../core/result";
+import { assertFunction, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer } from "../core/types";
 
 /**
@@ -24,11 +24,13 @@ import type { AnyValidator, Composed, Infer } from "../core/types";
  * @param validator - The validator for values that are present.
  * @param value - The default, or a function that returns it.
  * @returns A validator that produces the wrapped type, never `undefined`.
+ * @throws {TypeError} When `validator` is not a function.
  */
 export function withDefault<TValidator extends AnyValidator>(
   validator: TValidator,
   value: Exclude<Infer<TValidator>, undefined> | (() => Exclude<Infer<TValidator>, undefined>),
 ): Composed<TValidator, Exclude<Infer<TValidator>, undefined>> {
+  assertFunction("validator", validator);
   const validate = (input: unknown) =>
     input === undefined ? pass(typeof value === "function" ? (value as () => unknown)() : value) : validator(input);
   return validate as Composed<TValidator, Exclude<Infer<TValidator>, undefined>>;

@@ -43,6 +43,15 @@ describe("array", () => {
     expect(numbers(sparse).ok).toBe(false);
   });
 
+  it("should read items by index, ignoring an iterator the array carries", () => {
+    const tampered = Object.defineProperty([1, 2], Symbol.iterator, {
+      value: function* () {
+        yield* ["x", "y", "z"];
+      },
+    });
+    expect(array(number(), { max: 2 })(tampered)).toEqual({ ok: true, value: [1, 2] });
+  });
+
   describe("size", () => {
     it("should treat min and max as inclusive and length as exact", () => {
       expect(accepts(array(string(), { min: 2 }), [], ["a"], ["a", "b"])).toEqual([false, false, true]);

@@ -1,5 +1,5 @@
 import type { Maybe } from "../core/async";
-import { failWith, invalidType, pass, repeatedItem } from "../core/result";
+import { assertFunction, failWith, invalidType, pass, repeatedItem } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
 import { settle } from "./settle";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
@@ -39,12 +39,14 @@ export interface ArrayOptions<TItem = unknown> extends SizeOptions {
  * @param element - Validator applied to every item.
  * @param options - Size limits and uniqueness.
  * @returns A validator that produces an array of what `element` produces.
+ * @throws {TypeError} When `element` is not a function.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function array<TElement extends AnyValidator>(
   element: TElement,
   options: ArrayOptions<Infer<TElement>> = {},
 ): Composed<TElement, Infer<TElement>[]> {
+  assertFunction("element", element);
   assertSizeOptions(options);
   const { unique } = options;
   const keyOf = typeof unique === "function" ? (unique as (item: unknown) => unknown) : (item: unknown) => item;
@@ -53,12 +55,15 @@ export function array<TElement extends AnyValidator>(
     if (!Array.isArray(input)) {
       return invalidType("array", input);
     }
-    const oversize = sizeIssues(input.length, "array", options);
+    const { length } = input;
+    const oversize = sizeIssues(length, "array", options);
     if (oversize.length > 0) {
       return failWith(oversize);
     }
     return settle(
-      Array.from(input, (item) => element(item)),
+      // Read by index up to the length that was checked, never through the array's own iterator, which
+      // the input can replace to yield other items or never stop.
+      Array.from({ length }, (_, index) => element(input[index])),
       (items) => {
         if (unique === undefined || unique === false) {
           return pass(items);

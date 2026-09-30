@@ -7,7 +7,7 @@ description: Every validator and combinator, with its options, what it produces 
 
 Every validator here is created by calling a function and is then called with the value to check. Every one returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`, and never throws for invalid input, unless the input runs code of its own, such as a getter or a `Proxy` trap that throws while it is read, whose exception propagates. The code and `params` each failure reports are listed with the validator; [Issues and messages](errors.md) explains what they mean and how to turn them into text.
 
-Options are read once, when the validator is created. An option that makes no sense, such as a negative length, a `NaN` bound, or limits no value can satisfy together such as `{ min: 5, max: 2 }`, throws a `RangeError` or `TypeError` at that point, because it is a mistake in your code and not in the input.
+Options are read once, when the validator is created. An option that makes no sense, such as a negative length, a `NaN` bound, or limits no value can satisfy together such as `{ min: 5, max: 2 }`, throws a `RangeError` or `TypeError` at that point, because it is a mistake in your code and not in the input. So does a child that is not a function, such as `object({ name: undefined })` after an import that resolved to nothing: every combinator checks the validators and callbacks it is given, and names the one that is wrong.
 
 ## Strings
 
@@ -82,7 +82,7 @@ Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, no
 | Below `min` or `gt`           | `too_small`     | `{ minimum, inclusive, type: "number" }`                      |
 | Above `max` or `lt`           | `too_big`       | `{ maximum, inclusive, type: "number" }`                      |
 | `int`, `safeInt` or `nonZero` | `invalid_value` | `{ type: "number", format: "int" \| "safeInt" \| "nonZero" }` |
-| `multipleOf`                  | `invalid_value` | `{ multipleOf }`                                              |
+| `multipleOf`                  | `invalid_value` | `{ type: "number", multipleOf }`                              |
 
 ## Booleans
 
@@ -133,26 +133,26 @@ A format is a validator for a string of a particular shape. Each accepts a strin
 
 A non-string fails with `invalid_type` and `{ expected: "string", received }`. A string that does not match fails with `invalid_format` and `{ format }`, and `format` names it as the table shows.
 
-| Validator    | Accepts                                                                                                | `format`                     |
-| ------------ | ------------------------------------------------------------------------------------------------------ | ---------------------------- |
-| `email()`    | An email address with a public domain name.                                                            | `"email"`                    |
-| `url()`      | An absolute URL with an allowed protocol and a public host.                                            | `"url"`                      |
-| `uuid()`     | A UUID of version 1 to 8, or the nil or max UUID, hyphenated, in any case.                             | `"uuid"`                     |
-| `ip()`       | An IPv4 or IPv6 address.                                                                               | `"ip"`, `"ipv4"` or `"ipv6"` |
-| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists.                            | `"datetime"`                 |
-| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.                                  | `"date"`                     |
-| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens, the last not all digits.              | `"hostname"`                 |
-| `hex()`      | One or more hexadecimal digits of any case.                                                            | `"hex"`                      |
-| `base64()`   | Standard base64 with correct padding, as an encoder writes it. The empty string is base64 of no bytes. | `"base64"`                   |
-| `ulid()`     | A ULID, in any case.                                                                                   | `"ulid"`                     |
-| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.                                         | `"nanoid"`                   |
-| `cuid2()`    | A CUID2 identifier.                                                                                    | `"cuid2"`                    |
+| Validator    | Accepts                                                                                                                             | `format`                     |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `email()`    | An email address with a public domain name.                                                                                         | `"email"`                    |
+| `url()`      | An absolute URL with an allowed protocol and a public host.                                                                         | `"url"`                      |
+| `uuid()`     | A UUID of version 1 to 8, or the nil or max UUID, hyphenated, in any case.                                                          | `"uuid"`                     |
+| `ip()`       | An IPv4 or IPv6 address.                                                                                                            | `"ip"`, `"ipv4"` or `"ipv6"` |
+| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists.                                                         | `"datetime"`                 |
+| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.                                                               | `"date"`                     |
+| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens, the last not all digits, and punycode (`xn--`) labels that decode. | `"hostname"`                 |
+| `hex()`      | One or more hexadecimal digits of any case.                                                                                         | `"hex"`                      |
+| `base64()`   | Standard base64 with correct padding, as an encoder writes it. The empty string is base64 of no bytes.                              | `"base64"`                   |
+| `ulid()`     | A ULID, in any case.                                                                                                                | `"ulid"`                     |
+| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.                                                                      | `"nanoid"`                   |
+| `cuid2()`    | A CUID2 identifier.                                                                                                                 | `"cuid2"`                    |
 
 `isoDate()` produces a string. To get a `Date`, use `date()` on a `Date` you built yourself.
 
 ### `email`
 
-`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The local part is limited to 64 characters and the whole address to 254. The domain may be internationalized, as in `ada@münchen.de`, and is checked in its ASCII (punycode) form, in which the whole address, as delivered, must still fit in 254 characters, while the local part must be ASCII: an address with other letters before the `@` (RFC 6531) is rejected. An internationalized domain must be written in the normalized form the URL parser reads it in (NFKC), so each address has one accepted spelling: fullwidth letters, as in `ada@ｅxample.com`, ligatures such as `ﬁ`, and a letter written as a base and a combining mark, such as `u` followed by U+0308 for `ü`, are rejected. Hosts that are not public domain names are rejected: `localhost`, single-label hosts, IP addresses, and special-use names that never reach a public host, which are those ending in `localhost`, `local`, `internal`, `home.arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
+`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The local part is limited to 64 characters and the whole address to 254. The domain may be internationalized, as in `ada@münchen.de`, and is checked in its ASCII (punycode) form, in which the whole address, as delivered, must still fit in 254 characters, while the local part must be ASCII: an address with other letters before the `@` (RFC 6531) is rejected. An internationalized domain must be written in the normalized form the URL parser reads it in (NFKC), so each address has one accepted spelling: fullwidth letters, as in `ada@ｅxample.com`, ligatures such as `ﬁ`, and a letter written as a base and a combining mark, such as `u` followed by U+0308 for `ü`, are rejected. A domain written in punycode must decode, so `ada@example.xn--zz` is rejected while `ada@xn--mnchen-3ya.de` is accepted. Hosts that are not public domain names are rejected: `localhost`, single-label hosts, IP addresses, and special-use names that never reach a public host, which are those ending in `localhost`, `local`, `internal`, `home.arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
 
 ```ts
 import { email, pipe, string } from "@codenhub/validation";
@@ -164,12 +164,12 @@ address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
 
 ### `url`
 
-`url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The value is returned as it came, so text the URL parser would quietly clean up is rejected instead: surrounding or embedded whitespace, control characters such as line breaks, backslashes, a host written without both slashes, such as `https:example.com`, which a page on the same scheme would read as a path on its own host, or with more than two, such as `https:///example.com`, an `@` before the host even with nothing in front of it, as in `https://@example.com`, a percent-escape in the host, such as `https://%65xample.com`, and a host not in the normalized form the parser reads it in, as for [`email`](#email). A host longer than 253 characters, the most a domain name can have, is rejected as well, with `allowLocal` too. Trim first with `pipe(string({ trim: true }), url())` when the input may have surrounding spaces. The options are:
+`url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The value is returned as it came, so text the URL parser would quietly clean up is rejected instead: surrounding or embedded whitespace, control characters such as line breaks, backslashes, a host written without both slashes, such as `https:example.com`, which a page on the same scheme would read as a path on its own host, or with more than two, such as `https:///example.com`, an `@` before the host even with nothing in front of it, as in `https://@example.com`, a percent-escape in the host, such as `https://%65xample.com`, a host not in the normalized form the parser reads it in, as for [`email`](#email), and an IPv4 host written other than as four decimal parts without leading zeros, as [`ip`](#ip) requires: `http://0x7f.1`, `http://127.1` and `http://0177.0.0.1` all name `127.0.0.1` to the parser, so a check made later on the text, such as a list of blocked hosts, would miss them. A host longer than 253 characters, the most a domain name can have, is rejected as well, with `allowLocal` too. Trim first with `pipe(string({ trim: true }), url())` when the input may have surrounding spaces. The options are:
 
-| Option       | Meaning                                                                                                                                                                                                                                                         |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `protocols`  | Accepted protocols without the colon, in any letter case. Default `["http", "https"]`. The list is copied when the validator is created, and a protocol that is not a scheme name, such as `"https:"`, throws a `TypeError` then, since it would match nothing. |
-| `allowLocal` | Accept `localhost`, single-label hosts, every IP address and special-use names such as `db.internal`, which are rejected by default, as for `email`. Default `false`.                                                                                           |
+| Option       | Meaning                                                                                                                                                                                                                                                                                                                           |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `protocols`  | Accepted protocols without the colon, in any letter case. Default `["http", "https"]`. The list is copied when the validator is created, and a protocol that is not a scheme name, such as `"https:"`, throws a `TypeError` then, since it would match nothing. So do `javascript`, `vbscript` and `data`, whose URLs run script. |
+| `allowLocal` | Accept `localhost`, single-label hosts, every IP address (an IPv4 one only as four decimal parts) and special-use names such as `db.internal`, which are rejected by default, as for `email`. Default `false`.                                                                                                                    |
 
 ```ts
 import { url } from "@codenhub/validation";
@@ -182,13 +182,15 @@ url({ protocols: ["ftp"] })("ftp://example.com"); // ok
 
 Three schemes have no host, and each is checked by its own rules when listed in `protocols`:
 
-| Scheme   | Accepted when                                                                                                                                                                                             |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mailto` | It names at least one recipient, and every recipient, in the path and in `to`, `cc` or `bcc`, is an address `email()` accepts. With `allowLocal`, an address may be on any hostname, such as `localhost`. |
-| `tel`    | It is a global number: `+`, digits with `-`, `.`, `(` or `)` between them, then optional `;name=value` parameters. A local number with `phone-context` is rejected.                                       |
-| `urn`    | It follows RFC 8141: a namespace of 2 to 32 letters, digits and inner hyphens, a colon, and a non-empty name.                                                                                             |
+| Scheme   | Accepted when                                                                                                                                                                                                                                                                                                                                                     |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mailto` | It names at least one recipient, and every recipient, in the path and in `to`, `cc` or `bcc`, is an address `email()` accepts. With `allowLocal`, an address may be on any hostname, such as `localhost`. Only recipients are checked: other fields, such as `subject` or `body`, pass as written, encoded line breaks included, which RFC 6068 allows in `body`. |
+| `tel`    | It is a global number: `+`, digits with `-`, `.`, `(` or `)` between them, then optional `;name=value` parameters. A local number with `phone-context` is rejected.                                                                                                                                                                                               |
+| `urn`    | It follows RFC 8141: a namespace of 2 to 32 letters, digits and inner hyphens, a colon, and a non-empty name.                                                                                                                                                                                                                                                     |
 
-Any other scheme without a host, such as `data`, `file` or `javascript`, is rejected even when listed and even with `allowLocal`, so listing a protocol never lets a URL through unchecked.
+Any other scheme without a host, such as `file:///etc/passwd` or `about:blank`, is rejected even when listed and even with `allowLocal`, so listing a protocol never lets a hostless URL through unchecked. A listed scheme written with a host, such as `file://server/share` or `ftp://example.com`, gets the host checks every URL does.
+
+`javascript`, `vbscript` and `data` cannot be listed at all: `url` throws a `TypeError` when created with one. A host does not make them safe, since `javascript://example.com/%0aalert(1)` has a public host and still runs as script when followed.
 
 ```ts
 url({ protocols: ["mailto"] })("mailto:ada@example.com?cc=bob@example.org"); // ok
@@ -304,7 +306,7 @@ const tags = withDefault(array(string()), () => []);
 
 ### `fallback`
 
-`fallback(validator, value)` replaces a value that fails `validator` with a fallback, so the result never fails. The fallback is trusted and is not validated, and a function receives the issues that were found, which is the place to log them. A function is called with the issues, so a fallback that is itself a function has to be returned from one: `fallback(validator, () => callback)`. This turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
+`fallback(validator, value)` replaces a value that fails `validator` with a fallback, so the result never fails. The fallback is trusted and is not validated, and a function receives the issues that were found, which is the place to log them. A fallback that is not a function is the same value in every result, so pass a function for an array or object, such as `fallback(array(string()), () => [])`, or a change to one result shows up in the next. A function is called with the issues, so a fallback that is itself a function has to be returned from one: `fallback(validator, () => callback)`. This turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
 
 ### `pipe`
 
@@ -322,7 +324,7 @@ const length = transform(string(), (text) => text.length);
 
 ### `refine`
 
-`refine(validator, check, issue?)` adds a rule that `validator` cannot express. It runs only when `validator` succeeded, and receives the value `validator` produced. `check` returns `true` for an acceptable value. The optional `issue` says how a rejection is reported: a string is the message, and an object can set a `code`, `path`, `params` and `message`. Without it the issue has code `custom`.
+`refine(validator, check, issue?)` adds a rule that `validator` cannot express. It runs only when `validator` succeeded, and receives the value `validator` produced. `check` returns `true` for an acceptable value. The optional `issue` says how a rejection is reported: a string is the message, and an object can set a `code`, `path`, `params` and `message`. Without it the issue has code `custom`. A `check` written as a type guard, such as `(value): value is string => typeof value === "string"`, narrows the output type to what it guards.
 
 ```ts
 import { object, refine, string } from "@codenhub/validation";
@@ -362,13 +364,15 @@ type Event = Infer<typeof event>;
 event({ type: "key", key: "a" }); // { ok: true, value: { type: "key", key: "a" } }
 ```
 
-**A variant must not list the tag.** Unlike some other libraries, where each variant is `object({ type: literal("click"), ... })`, a variant here is given the input without its tag, so a variant that lists it fails with `invalid_value` at the tag's path even though the input's tag is right. The record key already says which tag the variant is for.
+**A variant must not list the tag.** Unlike some other libraries, where each variant is `object({ type: literal("click"), ... })`, a variant here is given the input without its tag, so one that lists it could never pass. Its type is rejected, so the mistake is a compile error at that variant. The record key already says which tag the variant is for.
 
-Because a variant never sees the tag, a strict `object` works as a variant. The tag is added back to the output, so the result is a proper tagged union and checking `event.type` narrows the type. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. Each variant must produce an object.
+Because a variant never sees the tag, a strict `object` works as a variant. The tag is added back to the output, so the result is a proper tagged union and checking `event.type` narrows the type. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags.
+
+Each variant must produce a plain object, since that is what can carry the tag. A variant typed to produce an array or a function is a compile error. One that produces any other non-plain value at runtime, such as a `Date` or a class instance from a `transform`, throws a `TypeError` naming the variant, rather than being taken apart into a plain object, because it is a mistake in the schema and not in the input.
 
 ### `intersection`
 
-`intersection(left, right)` accepts a value only when it passes both validators, reports the issues of both together, and produces the two outputs merged. Plain objects are merged key by key, recursively, and for anything else the right validator's output wins.
+`intersection(left, right)` accepts a value only when it passes both validators, reports the issues of both together, and produces the two outputs merged. Plain objects are merged key by key and arrays of the same length item by item, recursively. Any other pair must be the same value, or two dates holding the same moment: where the outputs differ otherwise, as `"  ab "` does trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path instead of one side silently winning.
 
 Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` can never pass together: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 
@@ -392,7 +396,7 @@ const category: Validator<Category> = object({
 });
 ```
 
-Each level of nesting is one level of recursion, which the JavaScript stack can only hold so many of, so `lazy` counts them. `lazy(getter, { maxDepth })` takes the most levels of `lazy` that may be open at once, 128 by default, counting every `lazy` validator and not only that one, and a value found deeper fails with `too_big` and `{ maximum, type: "depth" }` at its own path. A request body of thousands of nested arrays and a cyclic object, which a recursive validator would follow forever, both come back as that failure and never throw. The count is of `lazy` calls on the stack, so it bounds recursion that happens in one synchronous run, where the stack can overflow. A rule that awaits before it reaches the next level starts that level from a fresh stack and is not counted, so an asynchronous schema over a cyclic object needs its own bound. Raise `maxDepth` only for data you know is deeper, and only as far as the stack of your runtime holds for the validators you wrote. `maxDepth` must be a positive integer, or `lazy` throws a `RangeError` when created.
+Each level of nesting is one level of recursion, which the JavaScript stack can only hold so many of, so `lazy` counts them. `lazy(getter, { maxDepth })` takes the most levels of `lazy` that may be open at once, 128 by default, counting every `lazy` validator and not only that one, and a value found deeper fails with `too_big` and `{ maximum, type: "depth" }` at its own path. One count for every `lazy` is what bounds the stack when two recursive validators call each other, and it means a limit is checked against every level already open: `lazy(getter, { maxDepth: 1 })` used inside any other `lazy` fails at once, because the outer one is already one level deep. Set `maxDepth` for the whole nesting, not for one validator's share of it. A request body of thousands of nested arrays and a cyclic object, which a recursive validator would follow forever, both come back as that failure and never throw. The count is of `lazy` calls on the stack, so it bounds recursion that happens in one synchronous run, where the stack can overflow. A rule that awaits before it reaches the next level starts that level from a fresh stack and is not counted, so `maxDepth` does not bound an asynchronous recursive schema at all: it follows input nested to any depth, and a cyclic object forever, until the process runs out of memory, while it keeps other work from running. Give such a schema a bound of its own. Input parsed from JSON cannot be cyclic, so a schema that only ever sees parsed JSON needs a size cap on the text, below; one that can be handed live objects needs a cycle check before it runs. Raise `maxDepth` only for data you know is deeper, and only as far as the stack of your runtime holds for the validators you wrote. `maxDepth` must be a positive integer, or `lazy` throws a `RangeError` when created.
 
 The limit is about the stack and not about size, so it does not stop a large flat input: cap the size of untrusted input, for instance with `pipe(string({ max: 100_000 }), json(category))`, and give `array` a `max`.
 
@@ -442,4 +446,4 @@ The coercing validators accept text that holds a value, convert it, and then app
 
 ### Types
 
-`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `ArrayOptions`, `TupleOptions`, `SizeOptions`, `RefineIssue`, `InferTuple`, `InferRecord`, `InferDiscriminated`, `Variants`, `PartialShape`, `LiteralValue`, `EnumLike`, `Constructor`, `Messages`, `FlattenedErrors` and `StandardSchemaV1` are exported for annotating your own code. Each is documented in the source, and the ones you meet in everyday use are explained in [Custom validators](custom-validators.md) and [Issues and messages](errors.md).
+`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `ArrayOptions`, `TupleOptions`, `SizeOptions`, `LazyOptions`, `RefineIssue`, `InferTuple`, `InferRecord`, `InferDiscriminated`, `Variants`, `PartialShape`, `LiteralValue`, `EnumLike`, `Constructor`, `Messages`, `FlattenedErrors` and `StandardSchemaV1` are exported for annotating your own code. Each is documented in the source, and the ones you meet in everyday use are explained in [Custom validators](custom-validators.md) and [Issues and messages](errors.md).

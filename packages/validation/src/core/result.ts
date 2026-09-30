@@ -187,6 +187,16 @@ export function assertBounds<T extends number | bigint>({
   assertOrder("gt", gt, "lt", lt, true);
 }
 
+/**
+ * Rejects a child validator or callback that is not a function, such as an import that resolved to
+ * nothing, since it is a mistake in the schema and would otherwise throw on the first input instead.
+ */
+export function assertFunction(name: string, value: unknown): void {
+  if (typeof value !== "function") {
+    throw new TypeError(`${name} must be a function, received ${value === null ? "null" : typeof value}`);
+  }
+}
+
 /** Rejects a size limit that is not a non-negative integer, since it is a mistake in the schema and not in the input. */
 export function assertSize(name: string, value: number): void {
   if (!Number.isInteger(value) || value < 0) {

@@ -1,5 +1,5 @@
 import type { ValidationIssue } from "../core/types";
-import type { Messages } from "./format-issue";
+import { formatIssue, type Messages } from "./format-issue";
 
 const FORMAT_NAMES: Readonly<Record<string, string>> = {
   email: "email address",
@@ -131,9 +131,14 @@ export const englishMessages: Messages = {
   too_big: describeLimit,
   invalid_format: describeFormat,
   invalid_value: (issue) => (issue.params?.unique === true ? "Must be unique" : describeValue(issue)),
-  invalid_key: "Invalid key",
+  // Worded with what the key validator found first, so a form says why the key is wrong, not only that it is.
+  invalid_key: (issue) => {
+    const [found] = (issue.params?.issues ?? []) as readonly ValidationIssue[];
+    return found === undefined ? "Invalid key" : `Invalid key: ${formatIssue(found, englishMessages)}`;
+  },
   // Quoted as a literal, since the key is text the sender chose and may hold quotes or line breaks.
   unrecognized_key: (issue) => `Unrecognized key ${formatValue(issue.params?.key)}`,
+  invalid_intersection: "Conflicting values",
   invalid_union: (issue) =>
     Array.isArray(issue.params?.options)
       ? `Expected ${param(issue, "discriminator")} to be one of ${issue.params.options.map(formatValue).join(", ")}`
