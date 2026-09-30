@@ -47,7 +47,7 @@ const readIso = (text: string): Date | undefined => {
  *
  * @param options - Earliest and latest accepted moments, exactly as for `date`.
  * @returns A validator that produces a `Date`.
- * @throws {RangeError} When `min` or `max` is an invalid `Date`, or `min` is after `max`.
+ * @throws {RangeError} When `min` or `max` is not a valid `Date`, or `min` is after `max`.
  */
 export function coerceDate(options: DateOptions = {}): Validator<Date> {
   const strict = date(options);

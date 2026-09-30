@@ -10,10 +10,20 @@ export interface DateOptions {
   max?: Date;
 }
 
-const assertValidDate = (name: string, bound: Date | undefined): void => {
-  if (bound !== undefined && Number.isNaN(bound.getTime())) {
+/**
+ * Reads a bound as the moment it holds, rejecting one that is not a valid `Date`, such as a string
+ * passed where the types were not checked. It is read as `timeOf` reads input, so a `Date` from another
+ * realm is one too.
+ */
+const readBound = (name: string, bound: Date | undefined): number | undefined => {
+  if (bound === undefined) {
+    return undefined;
+  }
+  const time = timeOf(bound);
+  if (time === undefined || Number.isNaN(time)) {
     throw new RangeError(`${name} must be a valid Date`);
   }
+  return time;
 };
 
 /**
@@ -29,15 +39,13 @@ const assertValidDate = (name: string, bound: Date | undefined): void => {
  *
  * @param options - Earliest and latest accepted moments, both inclusive.
  * @returns A validator that produces a `Date`.
- * @throws {RangeError} When `min` or `max` is an invalid `Date`, or `min` is after `max`.
+ * @throws {RangeError} When `min` or `max` is not a valid `Date`, or `min` is after `max`.
  */
 export function date(options: DateOptions = {}): Validator<Date> {
-  assertValidDate("Minimum date", options.min);
-  assertValidDate("Maximum date", options.max);
   // Bounds are read as times now and reported as new Dates, so neither changing the options later
   // nor changing a reported bound can move them.
-  const min = options.min?.getTime();
-  const max = options.max?.getTime();
+  const min = readBound("Minimum date", options.min);
+  const max = readBound("Maximum date", options.max);
   assertOrder("min", min, "max", max);
   return (input) => {
     const time = timeOf(input);

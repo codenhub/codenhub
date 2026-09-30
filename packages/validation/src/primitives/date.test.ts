@@ -48,6 +48,10 @@ describe("date", () => {
   it("should reject an invalid bound when the validator is created", () => {
     expect(() => date({ min: new Date("nope") })).toThrow(RangeError);
     expect(() => date({ max: new Date("nope") })).toThrow(RangeError);
+    expect(() => date({ min: "2026-01-01" as unknown as Date })).toThrow(
+      new RangeError("Minimum date must be a valid Date"),
+    );
+    expect(() => date({ max: {} as Date })).toThrow(new RangeError("Maximum date must be a valid Date"));
     expect(() => date({ min: day("2027-01-01"), max: day("2026-01-01") })).toThrow(RangeError);
     expect(() => date({ min: day("2026-01-01"), max: day("2026-01-01") })).not.toThrow();
   });

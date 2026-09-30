@@ -98,7 +98,7 @@ Bounds appear in `params` as bigints, which `JSON.stringify` cannot serialize. C
 
 `date(options?)` accepts valid `Date` objects and produces the same `Date`. An invalid date such as `new Date("nope")`, a timestamp or a string fails with `invalid_type` and `{ expected: "valid date", received }`. To check date text, use [`isoDate` or `datetime`](#formats).
 
-The options `min` and `max` are `Date`s, both inclusive, and throw a `RangeError` when created with an invalid `Date` or with `min` after `max`. They are read when the validator is created, so changing the `Date` objects later has no effect. A date before `min` fails with `too_small` and `{ minimum, inclusive: true, type: "date" }`, and one after `max` with `too_big` and `{ maximum, inclusive: true, type: "date" }`, the bound being a `Date`.
+The options `min` and `max` are `Date`s, both inclusive, and throw a `RangeError` when created with anything but a valid `Date`, such as an invalid one or a date string, or with `min` after `max`. They are read when the validator is created, so changing the `Date` objects later has no effect. A date before `min` fails with `too_small` and `{ minimum, inclusive: true, type: "date" }`, and one after `max` with `too_big` and `{ maximum, inclusive: true, type: "date" }`, the bound being a `Date`.
 
 ## Fixed values
 
