@@ -24,11 +24,19 @@ const AUTHORITY_PATTERN = /^[^:]+:\/\/([^/?#@%]+)(?:[/?#]|$)/;
 /** A URL scheme as RFC 3986 writes it, without its colon. */
 const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*$/i;
 
+/**
+ * Schemes whose URLs run script when followed. Written with a host, such as
+ * `javascript://example.com/%0aalert(1)`, one passes every host check and still runs, so none is ever
+ * safe to accept.
+ */
+const SCRIPT_SCHEMES = ["javascript", "vbscript", "data"];
+
 /** Options for {@link url}. */
 export interface UrlOptions {
   /**
    * Accepted protocols, without the colon, in any letter case. Of the schemes without a host, `mailto`, `tel` and `urn`
-   * are accepted, each checked by its own rules; any other is always rejected.
+   * are accepted, each checked by its own rules; any other is always rejected. `javascript`, `vbscript`
+   * and `data` cannot be listed, since their URLs run script.
    *
    * @defaultValue ["http", "https"]
    */
@@ -65,14 +73,19 @@ export interface UrlOptions {
  *
  * @param options - Accepted protocols, and whether local hosts are allowed.
  * @returns A validator that produces the URL as a string.
- * @throws {TypeError} When a protocol is not a scheme name, for instance `"https:"` with its colon.
+ * @throws {TypeError} When a protocol is not a scheme name, for instance `"https:"` with its colon, or is
+ * `javascript`, `vbscript` or `data`, whose URLs run script.
  */
 export function url(options: UrlOptions = {}): Validator<string> {
   const protocols = (options.protocols ?? ["http", "https"]).map((protocol) => {
     if (!SCHEME_PATTERN.test(protocol)) {
       throw new TypeError(`Protocols are scheme names without the colon, such as "https", received "${protocol}"`);
     }
-    return protocol.toLowerCase();
+    const scheme = protocol.toLowerCase();
+    if (SCRIPT_SCHEMES.includes(scheme)) {
+      throw new TypeError(`${scheme} URLs can run script and cannot be accepted`);
+    }
+    return scheme;
   });
   const allowLocal = options.allowLocal ?? false;
   return textFormat("url", (text) => {

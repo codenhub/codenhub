@@ -138,6 +138,21 @@ describe("url", () => {
     }
   });
 
+  it("should refuse the schemes that run script, since no URL of theirs is safe to accept", () => {
+    for (const protocol of ["javascript", "JavaScript", "vbscript", "data"]) {
+      expect(() => url({ protocols: ["https", protocol] })).toThrow(
+        new TypeError(`${protocol.toLowerCase()} URLs can run script and cannot be accepted`),
+      );
+    }
+  });
+
+  it("should accept a listed scheme with a host, such as file or ftp", () => {
+    expect(accepts(url({ protocols: ["file", "ftp"] }), "file://example.com/share", "ftp://example.com/a")).toEqual([
+      true,
+      true,
+    ]);
+  });
+
   it("should accept any IP address with allowLocal, public or not, and does not check ranges", () => {
     expect(accepts(url(), "http://8.8.8.8/", "http://169.254.169.254/")).toEqual([false, false]);
     expect(accepts(url({ allowLocal: true }), "http://8.8.8.8/", "http://169.254.169.254/", "http://[::1]/")).toEqual([
@@ -224,8 +239,8 @@ describe("url without a host", () => {
   });
 
   it("should reject every other scheme without a host, even with allowLocal, rather than check nothing", () => {
-    const anything = url({ protocols: ["data", "file", "javascript"], allowLocal: true });
-    expect(accepts(anything, "data:text/plain,hi", "file:///etc/passwd", "javascript:alert(1)")).toEqual([
+    const anything = url({ protocols: ["file", "about", "blob"], allowLocal: true });
+    expect(accepts(anything, "file:///etc/passwd", "about:blank", "blob:https://example.com/a")).toEqual([
       false,
       false,
       false,

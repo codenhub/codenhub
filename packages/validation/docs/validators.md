@@ -166,10 +166,10 @@ address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
 
 `url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The value is returned as it came, so text the URL parser would quietly clean up is rejected instead: surrounding or embedded whitespace, control characters such as line breaks, backslashes, a host written without both slashes, such as `https:example.com`, which a page on the same scheme would read as a path on its own host, or with more than two, such as `https:///example.com`, an `@` before the host even with nothing in front of it, as in `https://@example.com`, a percent-escape in the host, such as `https://%65xample.com`, and a host not in the normalized form the parser reads it in, as for [`email`](#email). A host longer than 253 characters, the most a domain name can have, is rejected as well, with `allowLocal` too. Trim first with `pipe(string({ trim: true }), url())` when the input may have surrounding spaces. The options are:
 
-| Option       | Meaning                                                                                                                                                                                                                                                         |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `protocols`  | Accepted protocols without the colon, in any letter case. Default `["http", "https"]`. The list is copied when the validator is created, and a protocol that is not a scheme name, such as `"https:"`, throws a `TypeError` then, since it would match nothing. |
-| `allowLocal` | Accept `localhost`, single-label hosts, every IP address and special-use names such as `db.internal`, which are rejected by default, as for `email`. Default `false`.                                                                                           |
+| Option       | Meaning                                                                                                                                                                                                                                                                                                                           |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `protocols`  | Accepted protocols without the colon, in any letter case. Default `["http", "https"]`. The list is copied when the validator is created, and a protocol that is not a scheme name, such as `"https:"`, throws a `TypeError` then, since it would match nothing. So do `javascript`, `vbscript` and `data`, whose URLs run script. |
+| `allowLocal` | Accept `localhost`, single-label hosts, every IP address and special-use names such as `db.internal`, which are rejected by default, as for `email`. Default `false`.                                                                                                                                                             |
 
 ```ts
 import { url } from "@codenhub/validation";
@@ -188,7 +188,9 @@ Three schemes have no host, and each is checked by its own rules when listed in 
 | `tel`    | It is a global number: `+`, digits with `-`, `.`, `(` or `)` between them, then optional `;name=value` parameters. A local number with `phone-context` is rejected.                                       |
 | `urn`    | It follows RFC 8141: a namespace of 2 to 32 letters, digits and inner hyphens, a colon, and a non-empty name.                                                                                             |
 
-Any other scheme without a host, such as `data`, `file` or `javascript`, is rejected even when listed and even with `allowLocal`, so listing a protocol never lets a URL through unchecked.
+Any other scheme without a host, such as `file:///etc/passwd` or `about:blank`, is rejected even when listed and even with `allowLocal`, so listing a protocol never lets a hostless URL through unchecked. A listed scheme written with a host, such as `file://server/share` or `ftp://example.com`, gets the host checks every URL does.
+
+`javascript`, `vbscript` and `data` cannot be listed at all: `url` throws a `TypeError` when created with one. A host does not make them safe, since `javascript://example.com/%0aalert(1)` has a public host and still runs as script when followed.
 
 ```ts
 url({ protocols: ["mailto"] })("mailto:ada@example.com?cc=bob@example.org"); // ok
