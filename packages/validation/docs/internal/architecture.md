@@ -1,5 +1,5 @@
 ---
-status: APPROVED
+status: IMPLEMENTED
 last_updated: 2026-09-30
 scope: How the validation package is built and why, for whoever changes it next.
 ---
@@ -7,8 +7,6 @@ scope: How the validation package is built and why, for whoever changes it next.
 # Validation architecture
 
 This records the invariants of `@codenhub/validation` and the reasoning behind decisions that are not obvious from the code. Public behavior lives in the package docs; this is for changing the package without breaking what it relies on. The release conditions and the path to 0.2.0 live in [roadmap.md](roadmap.md).
-
-This document describes the 0.2.0 design. Until 0.2.0 lands, the code still follows 0.1.0 where the two differ, and is legacy in those places.
 
 ## What the package is for
 

@@ -47,7 +47,7 @@ Everything follows the [architecture](architecture.md): a factory with the signa
 - `README.md` and every public page describe 0.2.0 only, with examples that compile against the built declarations.
 - A page on checks and custom validators built with `check`, `format` and `guard`, and a page on URL and email parts and `searchParams`.
 - A migration table from 0.1.0 to 0.2.0, the changelog entry, and current `llms.txt` and `llms-full.txt`.
-- `docs/internal/` matches the code, and the note at the top of [architecture.md](architecture.md) that the code is legacy is removed.
+- `docs/internal/` matches the code (done).
 
 ### Adoption
 
@@ -59,7 +59,7 @@ Every workspace package that uses the package is moved to 0.2.0 in the same chan
 
 ## The path
 
-Each step ends with the tree green (`pnpm verify validation`) and lands as its own commits.
+Each step ends with the tree green (`pnpm verify validation`) and lands as its own commits. All nine have landed; what remains is the release.
 
 1. **The design in these docs**, reviewed before any code.
 2. **The core.** The slimmer received-type naming and issue constructor, the `Check` type and the helper that runs checks, the `message` option, and the builders. Measured before the next step builds on it.

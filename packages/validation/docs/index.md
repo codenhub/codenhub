@@ -34,6 +34,8 @@ port(70000); // { ok: false, error: { issues: [...] } }
 string({ min: 3 })("ab"); // { ok: false, ... }
 ```
 
+Every validator takes its arguments in the same order: its own, such as the shape of an object, then options, then checks, which are rules for the rarer cases, such as `string({ min: 3 }, startsWith("a"))`. Options and checks can both be left out.
+
 The first line of that example runs once, when the module loads, and produces a function you can reuse for every value. When you only need to check a single value once, call both at once: `number({ int: true })(input)`.
 
 Because a validator is only a function, you can write your own with no helper at all, and you can pass any validator wherever another expects one. [Custom validators](custom-validators.md) shows how.
@@ -58,9 +60,9 @@ if (result.ok) {
 
 A validator never throws for invalid input, because invalid input is an expected outcome and not a bug. The one exception is input that runs code of its own while it is read, a getter or a `Proxy` trap that throws: that exception propagates, as one from your own callback does. Data parsed from JSON has no such code. If you would rather stop the program, that is one line: `if (!result.ok) throw new Error(...)`.
 
-`result.value` is not necessarily the input you passed in. It is the value after the validator has run, with any clean-up you asked for applied (`trim`, `lowercase`, `clamp`) and, for an object, unlisted properties dropped. `email` and `url` produce what the URL parser reads, such as a lowercase domain, so a check made later on the value sees what a mail server or a request will. The input is never modified.
+`result.value` is not necessarily the input you passed in. It is the value after the validator has run, with any clean-up you asked for applied (`trim`, `case`, `clamp`) and, for an object, unlisted properties dropped. A format with several spellings produces one: `email` and `url` produce what the URL parser reads, such as a lowercase domain, and `phone` produces `+` and the digits, so a check made later on the value sees what a mail server or a request will, and one value is one string. The input is never modified.
 
-When something is wrong, the validator reports every problem it can find and not just the first, so a form can show all its errors at once. Each issue has a stable `code` to branch on, the `path` to the offending value, and `params` describing what was wrong. [Issues and messages](errors.md) has the details.
+When something is wrong, the validator reports every problem it can find and not just the first, so a form can show all its errors at once. Each issue has a stable `code` to branch on, the `path` to the offending value, and `params` describing what was wrong. Give a validator a `message` option for a sentence of its own, as in `string({ min: 2, message: "Enter your full name" })`, or word every issue at once with a message map. [Issues and messages](errors.md) has the details.
 
 ## Objects
 
@@ -88,11 +90,11 @@ Issue paths lead down to the offending value, so a problem with `email` has the 
 
 A few functions combine validators into new ones:
 
-- `optional(validator)`, `nullable(validator)` and `nullish(validator)` accept `undefined`, `null` or both as well.
-- `withDefault(validator, value)` replaces a missing value with a default.
-- `pipe(a, b, c)` runs validators in order, feeding each the value the previous one produced. This is how you clean a string before checking a format: `pipe(string({ trim: true, lowercase: true }), email())`.
-- `refine(validator, check, issue)` adds a rule the validator cannot express, such as two fields having to match, and `transform(validator, convert)` changes the value into another.
-- `array`, `tuple`, `record`, `set` and `map` validate collections, and `union`, `discriminatedUnion` and `intersection` choose between or merge validators.
+- `optional(validator)`, `nullable(validator)` and `nullish(validator)` accept `undefined`, `null` or both as well, and `optional(validator, value)` replaces a missing value with a default.
+- `pipe(a, b, c)` runs validators in order, feeding each the value the previous one produced. This is how you clean a string before checking a format: `pipe(string({ trim: true, case: "lower" }), email())`.
+- `check(test, issue)` adds a rule the validator cannot express, such as two fields having to match, given to the validator after its options, and `transform(validator, convert)` changes the value into another.
+- `array`, `tuple`, `record`, `set` and `map` validate collections, and `union`, `tagged` and `intersection` choose between or merge validators.
+- `url` and `email` take validators for their parts, such as `url({ host: hostname() })` to accept local hosts, and `searchParams` reads a query string into typed values.
 
 The [validator reference](validators.md) covers every one.
 
@@ -115,9 +117,9 @@ const isPort = (input: unknown): input is number => is(number({ int: true, min: 
 ## Next steps
 
 - [Validator reference](validators.md): every validator and combinator, with its options and the issue it reports.
-- [Custom validators](custom-validators.md): write your own, add rules with `refine`, and validate asynchronously.
+- [Custom validators](custom-validators.md): add rules with `check`, build validators with `format` and `guard`, and validate asynchronously.
 - [Coercion](coercion.md): validate text input such as environment variables, query strings and form fields by converting it.
 - [Standard Schema](standard-schema.md): use a validator wherever a library accepts a Standard Schema.
 - [Issues and messages](errors.md): the shape of an issue, the built-in codes, message text, localization and form errors.
 - [API reference](reference/index.md): every export with its signature and documentation, generated from the source.
-- [Changelog](changelog/index.md): release notes and the migration from 0.0.1.
+- [Changelog](changelog/index.md): release notes, and the migrations from 0.1.0 and from 0.0.1.

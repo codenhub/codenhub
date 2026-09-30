@@ -4,9 +4,9 @@
 
 Checks that a value is what you need it to be, and gives you either the typed value or every reason it is not. Each validator is a small function you import on its own, so a package or app ships only the checks it uses. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies.
 
-> **Experimental:** pre-1.0. The API of 0.1.0 is meant to hold for every 0.1.x release; a change that breaks callers, if one proves necessary, ships as 0.2.0 and is listed in the [changelog](docs/changelog/index.md).
+> **Experimental:** pre-1.0. The API of 0.2.0 is meant to hold for every 0.2.x release; a change that breaks callers, if one proves necessary, ships as 0.3.0 and is listed in the [changelog](docs/changelog/index.md).
 >
-> **Migrating from 0.0.1:** 0.1.0 is a rewrite and no call carries over unchanged. The [0.1.0 changelog](docs/changelog/0.1.0.md) maps each old call to its replacement.
+> **Migrating from 0.1.0:** the [0.2.0 changelog](docs/changelog/0.2.0.md) maps each changed call to its replacement. From 0.0.1, start with the [0.1.0 changelog](docs/changelog/0.1.0.md).
 
 ## Installation
 
@@ -48,7 +48,22 @@ const result = signup(requestBody);
 
 Invalid input never throws, with one exception noted below. Every problem is in `result.error.issues`, each with a `code`, a `path` to the offending value and `params` describing the failure. Turn an issue into text with `formatIssue`, or group them by field for a form with `flatten`, passing `englishMessages` or a map of your own.
 
-Write your own validator by returning `pass(value)` or `fail(...)` from any function, and add rules to an existing one with `refine`, including rules that need to `await` something.
+Every validator takes options, then checks, which are rules for the rarer cases, and a `message` option for a sentence of its own:
+
+```ts
+import { check, object, pattern, string } from "@codenhub/validation";
+
+const account = object(
+  {
+    handle: string({ trim: true, min: 3, message: "At least 3 characters" }, pattern(/^[a-z0-9_]+$/)),
+    password: string({ min: 12 }),
+    confirm: string(),
+  },
+  check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
+);
+```
+
+Write a rule of your own with `check`, including one that needs to `await` something, a format with `format`, and a validator for any type with `guard`; what they make behaves exactly as the built-in ones do.
 
 ## Documentation
 
@@ -72,9 +87,9 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 
 - A validator returns `{ ok: true, value }` or `{ ok: false, error }`. Bad input is never thrown, except by code the input carries, below; a bad option, such as `string({ min: -1 })`, throws when the validator is created.
 - Issues never contain an input value, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English, which is a separate import so a program that words its own issues does not bundle it, or your own to reword or localize. Keys are another matter: a path leads through the input's own keys, and a strict `object` names each key it does not recognize.
-- Rules never rewrite the value unless you ask: `trim`, `lowercase`, `uppercase` and `clamp` are the options that do. `email()` and `url()` are the exception, because the URL parser decides what they name: they produce what it reads, such as `https://example.com/admin` for `https://Example.com/public/../admin`, so a check made later on the value sees what a request or a mail server will.
+- Rules never rewrite the value unless you ask: `trim`, `case` and `clamp` are the options that do. Formats with several spellings are the exception, and produce one: `email()` and `url()` produce what the URL parser reads, such as `https://example.com/admin` for `https://Example.com/public/../admin`, so a check made later on the value sees what a request or a mail server will, and `ip()`, `phone()`, `mac()` and `creditCard()` produce a canonical spelling.
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
-- `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal` and `printer.local`. `url({ allowLocal: true })` accepts them, and means "any host": it accepts every IP address, public ones included, and does not check ranges. Neither resolves the name, so a public name can still point at a private address.
+- `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal` and `printer.local`. A validator for the host replaces that rule: `url({ host: hostname() })` accepts any hostname and `url({ host: union([domain(), ip()]) })` any public domain or IP address, of any range. Neither resolves the name, so a public name can still point at a private address.
 - Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input. So do exceptions from code inside the input itself: a getter or a `Proxy` trap that throws while a validator reads the value. Data parsed from JSON holds neither.
 - A recursive `lazy` validator stops at `maxDepth` levels, 128 by default, and fails with `too_big` instead of exhausting the stack, so deeply nested or cyclic input is reported like any other bad input, as long as the recursion is synchronous. An asynchronous rule inside a recursive schema starts each level it awaits before from a fresh stack, which `maxDepth` does not count: such a schema follows input of any depth, and a cyclic object until memory runs out. Give it a bound of its own, such as rejecting input that is not parsed from JSON, which cannot be cyclic. Nothing else limits how much input is checked: every issue found is kept, so a large list of wrong items is as many issues, and asynchronous rules of every item start at once. Cap the size of untrusted input, and give `array`, `set`, `map` and `record` a `max`, before validating it.
 
@@ -115,6 +130,8 @@ port(70000); // { ok: false, error: { issues: [...] } }
 string({ min: 3 })("ab"); // { ok: false, ... }
 ```
 
+Every validator takes its arguments in the same order: its own, such as the shape of an object, then options, then checks, which are rules for the rarer cases, such as `string({ min: 3 }, startsWith("a"))`. Options and checks can both be left out.
+
 The first line of that example runs once, when the module loads, and produces a function you can reuse for every value. When you only need to check a single value once, call both at once: `number({ int: true })(input)`.
 
 Because a validator is only a function, you can write your own with no helper at all, and you can pass any validator wherever another expects one. [Custom validators](docs/custom-validators.md) shows how.
@@ -139,9 +156,9 @@ if (result.ok) {
 
 A validator never throws for invalid input, because invalid input is an expected outcome and not a bug. The one exception is input that runs code of its own while it is read, a getter or a `Proxy` trap that throws: that exception propagates, as one from your own callback does. Data parsed from JSON has no such code. If you would rather stop the program, that is one line: `if (!result.ok) throw new Error(...)`.
 
-`result.value` is not necessarily the input you passed in. It is the value after the validator has run, with any clean-up you asked for applied (`trim`, `lowercase`, `clamp`) and, for an object, unlisted properties dropped. `email` and `url` produce what the URL parser reads, such as a lowercase domain, so a check made later on the value sees what a mail server or a request will. The input is never modified.
+`result.value` is not necessarily the input you passed in. It is the value after the validator has run, with any clean-up you asked for applied (`trim`, `case`, `clamp`) and, for an object, unlisted properties dropped. A format with several spellings produces one: `email` and `url` produce what the URL parser reads, such as a lowercase domain, and `phone` produces `+` and the digits, so a check made later on the value sees what a mail server or a request will, and one value is one string. The input is never modified.
 
-When something is wrong, the validator reports every problem it can find and not just the first, so a form can show all its errors at once. Each issue has a stable `code` to branch on, the `path` to the offending value, and `params` describing what was wrong. [Issues and messages](docs/errors.md) has the details.
+When something is wrong, the validator reports every problem it can find and not just the first, so a form can show all its errors at once. Each issue has a stable `code` to branch on, the `path` to the offending value, and `params` describing what was wrong. Give a validator a `message` option for a sentence of its own, as in `string({ min: 2, message: "Enter your full name" })`, or word every issue at once with a message map. [Issues and messages](docs/errors.md) has the details.
 
 ## Objects
 
@@ -169,11 +186,11 @@ Issue paths lead down to the offending value, so a problem with `email` has the 
 
 A few functions combine validators into new ones:
 
-- `optional(validator)`, `nullable(validator)` and `nullish(validator)` accept `undefined`, `null` or both as well.
-- `withDefault(validator, value)` replaces a missing value with a default.
-- `pipe(a, b, c)` runs validators in order, feeding each the value the previous one produced. This is how you clean a string before checking a format: `pipe(string({ trim: true, lowercase: true }), email())`.
-- `refine(validator, check, issue)` adds a rule the validator cannot express, such as two fields having to match, and `transform(validator, convert)` changes the value into another.
-- `array`, `tuple`, `record`, `set` and `map` validate collections, and `union`, `discriminatedUnion` and `intersection` choose between or merge validators.
+- `optional(validator)`, `nullable(validator)` and `nullish(validator)` accept `undefined`, `null` or both as well, and `optional(validator, value)` replaces a missing value with a default.
+- `pipe(a, b, c)` runs validators in order, feeding each the value the previous one produced. This is how you clean a string before checking a format: `pipe(string({ trim: true, case: "lower" }), email())`.
+- `check(test, issue)` adds a rule the validator cannot express, such as two fields having to match, given to the validator after its options, and `transform(validator, convert)` changes the value into another.
+- `array`, `tuple`, `record`, `set` and `map` validate collections, and `union`, `tagged` and `intersection` choose between or merge validators.
+- `url` and `email` take validators for their parts, such as `url({ host: hostname() })` to accept local hosts, and `searchParams` reads a query string into typed values.
 
 The [validator reference](docs/validators.md) covers every one.
 
@@ -196,12 +213,12 @@ const isPort = (input: unknown): input is number => is(number({ int: true, min: 
 ## Next steps
 
 - [Validator reference](docs/validators.md): every validator and combinator, with its options and the issue it reports.
-- [Custom validators](docs/custom-validators.md): write your own, add rules with `refine`, and validate asynchronously.
+- [Custom validators](docs/custom-validators.md): add rules with `check`, build validators with `format` and `guard`, and validate asynchronously.
 - [Coercion](docs/coercion.md): validate text input such as environment variables, query strings and form fields by converting it.
 - [Standard Schema](docs/standard-schema.md): use a validator wherever a library accepts a Standard Schema.
 - [Issues and messages](docs/errors.md): the shape of an issue, the built-in codes, message text, localization and form errors.
 - [API reference](docs/reference/index.md): every export with its signature and documentation, generated from the source.
-- [Changelog](docs/changelog/index.md): release notes and the migration from 0.0.1.
+- [Changelog](docs/changelog/index.md): release notes, and the migrations from 0.1.0 and from 0.0.1.
 
 <!-- Source: docs/coercion.md -->
 
@@ -221,7 +238,7 @@ port("eighty"); // { ok: false, ... }, code "invalid_type"
 
 ## The validators
 
-There is one for each type that commonly arrives as text. Each takes exactly the options of its strict counterpart, applies them to the converted value, and throws for a bad option when it is created, so `coerceNumber({ multipleOf: 0 })` fails at once just as `number({ multipleOf: 0 })` does.
+There is one for each type that commonly arrives as text. Each takes exactly the options of its strict counterpart, applies them to the converted value, and throws for a bad option when it is created, so `coerceNumber({ min: Number.NaN })` fails at once just as `number({ min: Number.NaN })` does. They take checks and a `message` option too, and the message also words input that cannot be converted.
 
 | Validator                | Produces | Accepts                                                                                                                                                  | Strict version |
 | ------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
@@ -251,15 +268,15 @@ Date text is read in these ISO 8601 forms: a date `YYYY-MM-DD` alone, or followe
 
 ## Reading a whole environment
 
-Combine coercion with `object` and `withDefault` to turn an environment, a query string or a form into typed configuration, and to report every problem in it at once:
+Combine coercion with `object` and `optional` with a default to turn an environment, a query string or a form into typed configuration, and to report every problem in it at once:
 
 ```ts
-import { coerceBoolean, coerceNumber, object, string, transform, withDefault } from "@codenhub/validation";
+import { coerceBoolean, coerceNumber, object, optional, string, transform } from "@codenhub/validation";
 
 const env = object({
   PORT: coerceNumber({ int: true, min: 1, max: 65535 }),
-  DEBUG: withDefault(coerceBoolean(), false),
-  RETRIES: withDefault(coerceNumber({ int: true, min: 0 }), 3),
+  DEBUG: optional(coerceBoolean(), false),
+  RETRIES: optional(coerceNumber({ int: true, min: 0 }), 3),
   ORIGINS: transform(string(), (text) => text.split(",")),
 });
 
@@ -267,7 +284,7 @@ const result = env({ PORT: "8080", ORIGINS: "https://a.example,https://b.example
 // { ok: true, value: { PORT: 8080, DEBUG: false, RETRIES: 3, ORIGINS: [...] } }
 ```
 
-In Node.js, pass a copy of the environment: `env({ ...process.env })`. `process.env` itself is not a plain object, since its prototype is not `Object.prototype`, and `object` rejects it as it rejects a class instance. A missing variable is `undefined`, which `withDefault` replaces and everything else rejects. A value that repeats, as in `?id=1&id=2`, arrives as an array, so validate it with `array(coerceNumber())`.
+In Node.js, pass a copy of the environment: `env({ ...process.env })`. `process.env` itself is not a plain object, since its prototype is not `Object.prototype`, and `object` rejects it as it rejects a class instance. A missing variable is `undefined`, which a default replaces and everything else rejects. For a query string, [`searchParams`](docs/validators.md#searchparams) reads the text into an object first, and gives a repeated key, as in `?id=1&id=2`, as an array when you ask for it with `repeated: true`, so validate it with `array(coerceNumber())`.
 
 To clean text before converting it, put a strict validator in front with `pipe`: `pipe(string({ trim: true }), coerceNumber())`. For text that holds JSON, use `json`, which parses it and validates the result.
 
@@ -275,33 +292,118 @@ To clean text before converting it, put a strict validator in front with `pipe`:
 
 # Custom validators
 
-The built-in validators cover common cases. For everything else you write a validator yourself, and it takes no helper and no registration: a validator is any function that takes an input and returns a result.
+The built-in validators cover common cases. For everything else there are two things to write, and neither needs registration:
 
-## Writing a validator
+- A **check** adds a rule to a validator you already have, such as two fields having to match or a name not being taken.
+- A **validator** checks a type or a format of your own, such as a `File` or a postcode.
 
-Return `pass(value)` when the input is acceptable and `fail(...)` when it is not:
+The helpers `check`, `format` and `guard` build both on the same internals as the built-in ones, so what you build behaves exactly as they do: the same issue shapes, a `message` option, and checks of its own.
+
+## Adding a rule with `check`
+
+`check(test, issue?)` makes a check from a test of a typed value. Give it to a validator after its options:
+
+```ts
+import { check, number, string } from "@codenhub/validation";
+
+const even = check((n: number) => n % 2 === 0, "Must be even");
+
+number({ int: true }, even);
+string(
+  { trim: true },
+  check((name) => name !== "admin", { code: "reserved_name", message: "That name is reserved" }),
+);
+```
+
+The test receives the value the validator produced, after its clean-up, and returns `true` when the value is acceptable. The second argument is the issue to report when it returns `false`: a string is its message, and an object can set a `code`, `path`, `params` and `message`. Without it the issue has code `custom` at the value's own location.
+
+A check runs once the value has its type. For an object that means once every property has passed, so a check can compare them and rely on their types. Point the issue at the field the user should fix with `path`:
+
+```ts
+import { check, object, string } from "@codenhub/validation";
+
+const signup = object(
+  { password: string({ min: 8 }), confirm: string() },
+  check((data) => data.password === data.confirm, { code: "mismatch", path: ["confirm"], message: "Passwords must match" }),
+);
+```
+
+`data` needs no annotation: its type comes from the object. A check of the wrong type, such as a number check given to `string`, is a compile error.
+
+A check can also be written by hand, as a function that returns nothing for a value it accepts or the issues it found. Type it as `Check<T>`, which is how it reports several issues at once or chooses a path per failure:
+
+```ts
+import { string, type Check } from "@codenhub/validation";
+
+const strongPassword: Check<string> = (password) => {
+  const issues = [];
+  if (!/\d/.test(password)) {
+    issues.push({ code: "missing_digit", path: [] });
+  }
+  if (!/[A-Z]/.test(password)) {
+    issues.push({ code: "missing_uppercase", path: [] });
+  }
+  return issues.length > 0 ? issues : undefined;
+};
+
+const password = string({ min: 12 }, strongPassword);
+```
+
+## Making a validator
+
+### A format with `format`
+
+`format(name, test)` makes the factory of a string format, which behaves as `email()` or `uuid()` do: a non-string fails with `invalid_type`, and a string the test rejects with `invalid_format` and `params.format` set to `name`. The string is produced as written.
+
+```ts
+import { format } from "@codenhub/validation";
+
+export const postcode = format("postcode", (text) => /^\d{5}(?:-\d{4})?$/.test(text));
+
+postcode()("12345"); // { ok: true, value: "12345" }
+postcode({ message: "Enter a ZIP code" })("abc"); // { ok: false, ... }
+```
+
+`name` is part of the format's contract: callers branch on it and message maps word it, so choose it once.
+
+### A type with `guard`
+
+`guard(expected, typeGuard)` makes the factory of a validator for any type from a type guard. A value the guard rejects fails with `invalid_type` and `params.expected` set to `expected`:
+
+```ts
+import { guard, object } from "@codenhub/validation";
+
+export const file = guard("File", (input): input is File => input instanceof File);
+
+const upload = object({ avatar: file({ message: "Choose an image" }) });
+```
+
+### A validator with options of its own
+
+A validator with options is a function that checks its options and returns what a builder or a built-in makes. Check the options when it is called, not when the validator runs, so a mistake in a schema is found at once:
+
+```ts
+import { check, string, type Validator } from "@codenhub/validation";
+
+export function sku(prefix: string): Validator<string> {
+  if (!/^[A-Z]{2,4}$/.test(prefix)) {
+    throw new RangeError(`prefix must be 2 to 4 capital letters, received "${prefix}"`);
+  }
+  return string(check((text) => new RegExp(`^${prefix}-\\d{6}$`).test(text), { code: "invalid_sku", params: { prefix } }));
+}
+```
+
+### By hand
+
+A validator is any function that takes an input and returns a result. Return `pass(value)` when the input is acceptable and `fail(...)` when it is not:
 
 ```ts
 import { fail, pass, type Validator } from "@codenhub/validation";
 
 const even: Validator<number> = (input) => (typeof input === "number" && input % 2 === 0 ? pass(input) : fail({ code: "not_even" }));
-
-even(4); // { ok: true, value: 4 }
-even(3); // { ok: false, error: { issues: [{ code: "not_even", path: [] }] } }
 ```
 
-The parameter is `unknown` because a validator exists to check data you do not trust yet, so check the type before you use it. The `Validator<number>` annotation is optional, but it makes the compiler check your function against the contract and tells `Infer` what the validator produces.
-
-Because a validator is only a function, yours works everywhere a built-in does: inside `object`, `optional` and `pipe`, and as the first argument of `refine`.
-
-```ts
-import { object } from "@codenhub/validation";
-
-// `even` is the validator written above.
-const pairs = object({ count: even });
-```
-
-### Reporting failures
+The parameter is `unknown` because a validator exists to check data you do not trust yet. The `Validator<number>` annotation makes the compiler check your function against the contract and tells `Infer` what it produces. A hand-written validator works everywhere a built-in does, inside `object`, `optional` and `pipe`, but has no `message` option or checks unless you write them, which is what the builders are for.
 
 `fail` takes one or more issues, and throws a `TypeError` for none, since a failure with no issue says nothing. Each can set:
 
@@ -312,44 +414,9 @@ const pairs = object({ count: even });
 | `params`  | Facts about the failure, for building a message or for callers to inspect. Never put the input in here: an issue is something callers log. |
 | `message` | Fixed message text. Without it, [`formatIssue`](docs/errors.md#turning-an-issue-into-text) builds text from the `code` and `params`.            |
 
-To report several problems at once, pass several issues:
+## Converting a value
 
-```ts
-import { fail, pass, type IssueInput, type Validator } from "@codenhub/validation";
-
-const strongPassword: Validator<string> = (input) => {
-  if (typeof input !== "string") {
-    return fail({ code: "invalid_type", params: { expected: "string", received: typeof input } });
-  }
-  const issues: IssueInput[] = [];
-  if (!/\d/.test(input)) {
-    issues.push({ code: "missing_digit" });
-  }
-  if (!/[A-Z]/.test(input)) {
-    issues.push({ code: "missing_uppercase" });
-  }
-  const [first, ...rest] = issues;
-  return first ? fail(first, ...rest) : pass(input);
-};
-```
-
-### Building on an existing validator
-
-To reuse a built-in validator and add to it, call it and look at the result. Return its failure unchanged, or continue with the value it produced:
-
-```ts
-import { email, fail, pass, type Validator } from "@codenhub/validation";
-
-const workEmail: Validator<string> = (input) => {
-  const result = email()(input);
-  if (!result.ok) {
-    return result;
-  }
-  return result.value.endsWith("@example.com") ? pass(result.value) : fail({ code: "not_work_email" });
-};
-```
-
-For a single extra rule, `refine` does this for you, and `transform` changes the value. A `transform` cannot reject, so a conversion that can fail, such as turning a day into a `Date`, is a validator of your own placed after the wrapped one with `pipe`:
+`transform(validator, convert)` changes the value a validator produced into another, and cannot reject it. A conversion that can fail, such as reading a day as a `Date`, is a validator of its own placed after the first with `pipe`:
 
 ```ts
 import { fail, isoDate, pass, pipe, type Validator } from "@codenhub/validation";
@@ -366,48 +433,24 @@ const birthday = pipe(isoDate(), startOfDay);
 
 For dates in general, [`coerceDate`](docs/coercion.md) already does this conversion.
 
-## Adding a rule with `refine`
-
-`refine(validator, check, issue?)` runs `check` on the value `validator` produced, and only when `validator` succeeded. It returns a validator of the same type.
-
-```ts
-import { refine, string } from "@codenhub/validation";
-
-const notReserved = refine(string({ trim: true }), (name) => name !== "admin", {
-  code: "reserved_name",
-  message: "That name is reserved",
-});
-```
-
-The third argument is the issue reported when `check` returns `false`. A string is shorthand for `{ message }`. Without it the issue has code `custom`.
-
-Use `refine` for rules that involve several fields as well, and point the issue at the field the user should fix with `path`:
-
-```ts
-import { object, refine, string } from "@codenhub/validation";
-
-const signup = refine(object({ password: string({ min: 8 }), confirm: string() }), (data) => data.password === data.confirm, { code: "mismatch", path: ["confirm"] });
-```
-
-`check` only runs when the whole object is valid, so it can rely on `data.password` being a string.
-
 ## Asynchronous rules
 
-A rule that needs to wait, such as checking a username against a database, is a function that returns a promise. A `refine` check may return one:
+A rule that needs to wait, such as checking a username against a database, is a check whose test returns a promise:
 
 ```ts
-import { email, object, refine, string } from "@codenhub/validation";
+import { check, email, object, string } from "@codenhub/validation";
 
-const username = refine(string({ trim: true, min: 3 }), async (name) => !(await isTaken(name)), {
-  code: "username_taken",
-});
+const username = string(
+  { trim: true, min: 3 },
+  check(async (name) => !(await isTaken(name)), { code: "username_taken" }),
+);
 
 const signup = object({ username, email: email() });
 
 const result = await signup(input);
 ```
 
-Nothing else changes. A validator that holds an asynchronous rule becomes an `AsyncValidator`, and so does everything that contains it: `signup` above is one because `username` is. The type tells the compiler the result must be awaited, so reading `signup(input).ok` without `await` is an error you find while writing, not a bug you find in production.
+Nothing else changes. A validator given an asynchronous check becomes an `AsyncValidator`, and so does everything that contains it: `signup` above is one because `username` is. The type tells the compiler the result must be awaited, so reading `signup(input).ok` without `await` is an error you find while writing, not a bug you find in production. A hand-written check that may wait is typed `AsyncCheck<T>`; typing it `Check<T>` keeps its validators synchronous, and the compiler holds you to it.
 
 You can also write an asynchronous validator directly:
 
@@ -424,15 +467,16 @@ Things to know about asynchronous validation:
 
 - **Always `await` the result of an `AsyncValidator`.** It may be a promise, or a plain result when the validator could answer without waiting, for instance `optional(existingUser)` given `undefined`. `await` handles both.
 - **Independent properties and items run their rules concurrently.** In `signup` above, the username lookup and the email check start together, and so does the rule of every item of an array, with no limit. Give the array a `max` before validating a list you did not write, so it cannot start thousands of lookups at once.
-- **Issues stay in a fixed order.** They follow the order of the shape, not the order in which the promises finished.
+- **Issues stay in a fixed order.** They follow the order of the shape and of the checks, not the order in which the promises finished.
 - **`is` needs a synchronous validator.** It throws a `TypeError` for one that turns out to return a promise.
-- **A rejected promise is a bug, not invalid input.** If your callback throws or rejects, the exception propagates. Report invalid input with `fail`.
+- **A rejected promise is a bug, not invalid input.** If your test throws or rejects, the exception propagates. Report invalid input by returning `false` or an issue.
 
 ## What you must not do
 
 - **Do not put the input in an issue.** No `params` value, no `message` built from the input. Issues are logged, and inputs are passwords and tokens.
-- **Do not throw for bad input.** Return `fail`. Throw only for a mistake in how the validator was set up, and do it when it is created, not when it runs.
+- **Do not throw for bad input.** Return `false` from a test, issues from a check, or `fail` from a validator. Throw only for a mistake in how a validator was set up, and do it when it is created, not when it runs.
 - **Do not modify the input.** Return a new value from `pass` when a validator changes it.
+- **Do not make a validator when a module loads unless the call is marked pure.** `export const postcode = format(...)` runs when the module loads, so a bundler keeps it even in a program that never uses it. That is harmless in an app, but a library of validators that wants each to be dropped when unused writes `export const postcode = /* @__PURE__ */ format(...)`.
 
 ## Testing a validator
 
@@ -513,10 +557,10 @@ The code set is open: a custom validator reports whatever code it likes. These a
 | `unrecognized_key`     | An object has a property its shape does not list, in strict mode.                                                              | `key`. The issue's path ends at the key.                                                                                                                                                                                                 |
 | `invalid_key`          | A key of a `record` or `map` failed its key validator, or its key validator turned it into a key an earlier entry already has. | `issues`: what the key validator found, with paths relative to the key, or for a repeated key one `invalid_value` issue with `unique: true`. The issue's path ends at the key, so it is not mistaken for a problem with the value there. |
 | `invalid_intersection` | Both validators of an `intersection` passed, but produced values that cannot be merged into one.                               | None. The issue's path is where the two outputs differ.                                                                                                                                                                                  |
-| `invalid_union`        | A value matched none of the options of a `union`, or a tagged union got a missing or unknown tag.                              | For `union`, `issues`: the issues each option found, in order, with paths relative to the union's value. For `discriminatedUnion`, `discriminator` and `options`, and the issue's path is the tag's.                                     |
-| `custom`               | The default code of a `refine` check or `fail` call that names no code.                                                        | Whatever the reporter set.                                                                                                                                                                                                               |
+| `invalid_union`        | A value matched none of the options of a `union`, or a tagged union got a missing or unknown tag.                              | For `union`, `issues`: the issues each option found, in order, with paths relative to the union's value. For `tagged`, `discriminator` and `options`, and the issue's path is the tag's.                                                 |
+| `custom`               | The default code of a `check` or `fail` call that names no code.                                                               | Whatever the reporter set.                                                                                                                                                                                                               |
 
-`received` names types the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `invalid date` for a `Date` holding no moment, `map`, `set`, the class name of an instance, `object` for a plain object or anything that cannot be inspected without throwing, or the `typeof` of anything else. Where a plain object is expected (`object`, `record`, `discriminatedUnion`), one made with a prototype of its own, such as `Object.create({ a: 1 })`, is `non-plain object`.
+`received` names kinds of value the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `invalid date` for a `Date` holding no moment, `object` for any other object, a `Map`, a `Set` or a class instance included, or the `typeof` of anything else. It never names a class, since that would take reading the prototype of the input. Where a plain object is expected (`object`, `record`, `tagged`), any other object is `non-plain object`.
 
 The validator reference lists the exact code and `params` each validator reports.
 
@@ -537,7 +581,7 @@ The English wording is a separate value you import, and `formatIssue` does not c
 
 The text comes from the first of these that exists:
 
-1. The issue's own `message`.
+1. The issue's own `message`, which a validator's [`message` option](docs/validators.md#wording-one-validator) or a check's message sets.
 2. An entry for its `code` in the message map you pass as the second argument.
 3. The generic "Invalid value".
 
@@ -640,6 +684,8 @@ A validator here is a function, and `standard` attaches `~standard` to a functio
 
 Every validator here is created by calling a function and is then called with the value to check. Every one returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`, and never throws for invalid input, unless the input runs code of its own, such as a getter or a `Proxy` trap that throws while it is read, whose exception propagates. The code and `params` each failure reports are listed with the validator; [Issues and messages](docs/errors.md) explains what they mean and how to turn them into text.
 
+Every validator takes its arguments in the same order: its own, such as the shape of `object` or the item of `array`, then an options object, then any number of [checks](#checks). The options can be left out when there are checks: `string(startsWith("a"))`. Every validator that reports an issue of its own takes a `message` option, [below](#wording-one-validator).
+
 Options are read once, when the validator is created. An option that makes no sense, such as a negative length, a `NaN` bound, or limits no value can satisfy together such as `{ min: 5, max: 2 }`, throws a `RangeError` or `TypeError` at that point, because it is a mistake in your code and not in the input. So does a child that is not a function, such as `object({ name: undefined })` after an import that resolved to nothing: every combinator checks the validators and callbacks it is given, and names the one that is wrong.
 
 ## Strings
@@ -657,30 +703,32 @@ username("ab"); // { ok: false, ... }, code "too_small"
 
 The options, all optional:
 
-| Option       | Meaning                                                                                                                       |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `trim`       | Remove leading and trailing whitespace before the constraints run, and from the output.                                       |
-| `lowercase`  | Lowercase the string before the constraints run, and in the output. Cannot be combined with `uppercase`.                      |
-| `uppercase`  | Uppercase the string before the constraints run, and in the output. Cannot be combined with `lowercase`.                      |
-| `min`        | At least this many characters. Counted in UTF-16 code units, as `String.length` counts them, so an emoji can count as two.    |
-| `max`        | At most this many characters.                                                                                                 |
-| `length`     | Exactly this many characters.                                                                                                 |
-| `pattern`    | Must match this regular expression. The `g` and `y` flags are ignored, so the same validator gives the same answer each time. |
-| `startsWith` | Must start with this text.                                                                                                    |
-| `endsWith`   | Must end with this text.                                                                                                      |
-| `includes`   | Must contain this text.                                                                                                       |
+| Option    | Meaning                                                                                                                    |
+| --------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `trim`    | Remove leading and trailing whitespace before the constraints run, and from the output.                                    |
+| `case`    | `"lower"` or `"upper"`: convert the string before the constraints run, and in the output.                                  |
+| `min`     | At least this many characters. Counted in UTF-16 code units, as `String.length` counts them, so an emoji can count as two. |
+| `max`     | At most this many characters.                                                                                              |
+| `length`  | Exactly this many characters.                                                                                              |
+| `message` | Wording for the issues it reports itself.                                                                                  |
 
-Clean-up (`trim`, `lowercase`, `uppercase`) always happens first, and every constraint is then checked against the cleaned string, so `string({ trim: true, min: 1 })` rejects a string of spaces. Every constraint that fails reports its own issue.
+Rarer rules are [checks](#checks): `pattern`, `startsWith`, `endsWith`, `includes`, and `lowercase` and `uppercase`, which require a case where the `case` option converts to one.
 
-| Failure                                      | `code`           | `params`                                                      |
-| -------------------------------------------- | ---------------- | ------------------------------------------------------------- |
-| Not a string                                 | `invalid_type`   | `{ expected: "string", received }`                            |
-| Shorter than `min`                           | `too_small`      | `{ minimum, type: "string" }`                                 |
-| Longer than `max`                            | `too_big`        | `{ maximum, type: "string" }`                                 |
-| Shorter than `length`                        | `too_small`      | `{ minimum, exact: true, type: "string" }`                    |
-| Longer than `length`                         | `too_big`        | `{ maximum, exact: true, type: "string" }`                    |
-| Does not match `pattern`                     | `invalid_format` | `{ format: "regex", pattern }`                                |
-| Wrong `startsWith`, `endsWith` or `includes` | `invalid_format` | `{ format: "startsWith" \| "endsWith" \| "includes", value }` |
+```ts
+import { pattern, string } from "@codenhub/validation";
+
+const handle = string({ trim: true, min: 3, max: 30 }, pattern(/^[a-z0-9_]+$/));
+```
+
+Clean-up (`trim`, `case`) always happens first, and every constraint and check then sees the cleaned string, so `string({ trim: true, min: 1 })` rejects a string of spaces. Every constraint that fails reports its own issue.
+
+| Failure               | `code`         | `params`                                   |
+| --------------------- | -------------- | ------------------------------------------ |
+| Not a string          | `invalid_type` | `{ expected: "string", received }`         |
+| Shorter than `min`    | `too_small`    | `{ minimum, type: "string" }`              |
+| Longer than `max`     | `too_big`      | `{ maximum, type: "string" }`              |
+| Shorter than `length` | `too_small`    | `{ minimum, exact: true, type: "string" }` |
+| Longer than `length`  | `too_big`      | `{ maximum, exact: true, type: "string" }` |
 
 ## Numbers
 
@@ -704,22 +752,22 @@ The options, all optional:
 | `gt`, `lt`   | Strictly greater than or less than this value.                                                                       |
 | `int`        | A whole number.                                                                                                      |
 | `safeInt`    | A whole number a double can represent exactly, that is within `Number.MAX_SAFE_INTEGER`.                             |
-| `multipleOf` | A multiple of this positive number, compared as the decimals both are written as, so `0.3` is a multiple of `0.1`.   |
-| `nonZero`    | Anything but zero.                                                                                                   |
+| `message`    | Wording for the issues it reports itself.                                                                            |
 
-Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, non-negative is `min: 0`, negative is `lt: 0` and non-positive is `max: 0`. A `NaN` bound, or bounds no finite number can satisfy such as `{ min: 5, max: 2 }`, `{ gt: 1, lt: 1 }` or `{ min: Infinity }`, throws a `RangeError` rather than being ignored. `clamp` throws one for a `NaN` bound, a minimum above its maximum, or a range every value of which breaks a bound, such as `{ clamp: { min: 0, max: 10 }, min: 11 }`, and `multipleOf` throws one unless it is a positive finite number. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught when the validator is created, since checking would add to every consumer of `number`; such a validator rejects every input. `multipleOf` is exact at any size: whole numbers are compared as they are, and anything else as the decimal it is written as, which is what a number parsed from text is. A number computed in floating point is not always the decimal it looks like: `0.1 + 0.2` is `0.30000000000000004`, which is not a multiple of `0.1`.
+`multipleOf(step)` and `nonZero()` are [checks](#checks): `number({ min: 0 }, multipleOf(0.01))`.
 
-| Failure                       | `code`          | `params`                                                      |
-| ----------------------------- | --------------- | ------------------------------------------------------------- |
-| Not a finite number           | `invalid_type`  | `{ expected: "number", received }`                            |
-| Below `min` or `gt`           | `too_small`     | `{ minimum, inclusive, type: "number" }`                      |
-| Above `max` or `lt`           | `too_big`       | `{ maximum, inclusive, type: "number" }`                      |
-| `int`, `safeInt` or `nonZero` | `invalid_value` | `{ type: "number", format: "int" \| "safeInt" \| "nonZero" }` |
-| `multipleOf`                  | `invalid_value` | `{ type: "number", multipleOf }`                              |
+Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, non-negative is `min: 0`, negative is `lt: 0` and non-positive is `max: 0`. A `NaN` bound, or bounds no finite number can satisfy such as `{ min: 5, max: 2 }`, `{ gt: 1, lt: 1 }` or `{ min: Infinity }`, throws a `RangeError` rather than being ignored. `clamp` throws one for a `NaN` bound, a minimum above its maximum, or a range every value of which breaks a bound, such as `{ clamp: { min: 0, max: 10 }, min: 11 }`. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught when the validator is created, since checking would add to every consumer of `number`; such a validator rejects every input.
 
-## Booleans
+| Failure             | `code`          | `params`                                         |
+| ------------------- | --------------- | ------------------------------------------------ |
+| Not a finite number | `invalid_type`  | `{ expected: "number", received }`               |
+| Below `min` or `gt` | `too_small`     | `{ minimum, inclusive, type: "number" }`         |
+| Above `max` or `lt` | `too_big`       | `{ maximum, inclusive, type: "number" }`         |
+| `int` or `safeInt`  | `invalid_value` | `{ type: "number", format: "int" \| "safeInt" }` |
 
-`boolean()` accepts `true` and `false` and produces a boolean. Truthy and falsy values, and text such as `"true"`, fail with `invalid_type` and `{ expected: "boolean", received }`.
+## Booleans and symbols
+
+`boolean()` accepts `true` and `false` and produces a boolean. Truthy and falsy values, and text such as `"true"`, fail with `invalid_type` and `{ expected: "boolean", received }`. `symbol()` accepts symbols and fails likewise with `expected: "symbol"`; to accept one symbol only, use `literal`.
 
 ## Bigints
 
@@ -736,57 +784,68 @@ The options `min` and `max` are `Date`s, both inclusive, and throw a `RangeError
 ## Fixed values
 
 - `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`. The one exception is `NaN`: `NaN === NaN` is false, so `literal(NaN)` could accept nothing, and it throws a `RangeError` when created.
-- `oneOf(values)` accepts any one value of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The values may be any primitives `literal` accepts, so `oneOf([true, false, null])` is a three-state flag. The list is copied when the validator is created. An empty list throws a `TypeError` and one holding `NaN`, which no value equals, a `RangeError`, since either is a mistake in the schema.
-- `nativeEnum(enumObject)` accepts any value of a TypeScript `enum`. It ignores the reverse-mapping names TypeScript adds to a numeric enum, so only the numbers are values. An enum with no values throws a `TypeError`.
+- `oneOf(values)` accepts any one value of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The values may be any primitives `literal` accepts, so `oneOf([true, false, null])` is a three-state flag. It also takes a TypeScript `enum`, and then ignores the reverse-mapping names TypeScript adds to a numeric enum, so only the numbers are values. The values are copied when the validator is created. No values throws a `TypeError` and one holding `NaN`, which no value equals, a `RangeError`, since either is a mistake in the schema.
 
-All three fail with `invalid_value`. `literal` reports `{ expected }` and the other two report `{ options }`, the list of accepted values.
+Both fail with `invalid_value`. `literal` reports `{ expected }` and `oneOf` reports `{ options }`, the list of accepted values.
 
 ```ts
-import { literal, nativeEnum, oneOf } from "@codenhub/validation";
+import { literal, oneOf } from "@codenhub/validation";
 
 const role = oneOf(["admin", "user"]);
-const version = literal("v1");
+const version = literal("v1", { message: "Only v1 is supported" });
 
 enum Status {
   Active = "active",
   Archived = "archived",
 }
-const status = nativeEnum(Status);
+const status = oneOf(Status);
 ```
 
 ## Any value, no value, functions and instances
 
-- `unknown()` accepts every value and passes it through unchanged. Use it for a property you do not check.
+- `unknown()` accepts every value and passes it through unchanged. Use it for a property you do not check, or as the base for checks on a value of no particular type: `unknown(check((value) => JSON.stringify(value) !== undefined))`.
 - `never()` rejects every value with `invalid_type` and `{ expected: "never", received }`. Use it to forbid a property, or for a branch that must never match.
 - `func()` accepts any function, from any realm, classes and async and generator functions included, and produces it unchanged. It fails with `invalid_type` and `{ expected: "function", received }`. Only that the value is a function can be checked, not the parameters it takes or what it returns, so name the signature you expect as the type argument, `func<(value: string) => void>()`, and it becomes the output type on trust, as a cast would; without one the output takes any arguments and returns `unknown`.
 - `instanceOf(Class)` accepts instances of a class, subclasses and abstract classes included, checked with `instanceof`, so an instance from another realm such as an iframe is not recognized. `date`, `map`, `set` and `object` do not have that limit and accept values from any realm. It fails with `invalid_type` and `{ expected: "instance of Class", received }`. A target that is not a function, such as an import that resolved to nothing, throws a `TypeError` when the validator is created.
 
 ## Formats
 
-A format is a validator for a string of a particular shape. Most accept a string and produce it unchanged, so trim or lowercase first with `pipe` when the input may need it. `email` and `url` are the exception: the URL parser, not the text, decides what they name, so they produce what the parser reads, as their sections say. Each is imported on its own, so you only ship the ones you use.
+A format is a validator for a string of a particular shape. Each is imported on its own, so you only ship the ones you use, and each takes a `message` option and checks. Most produce the string unchanged, so trim or lowercase first with `pipe` when the input may need it. A format whose meaning has several spellings produces one canonical spelling instead, so one value is one string however it was written: the table says which. For `email`, `url` and `domain`, the URL parser, not the text, decides what they name, so they produce what the parser reads.
 
 A non-string fails with `invalid_type` and `{ expected: "string", received }`. A string that does not match fails with `invalid_format` and `{ format }`, and `format` names it as the table shows.
 
-| Validator    | Accepts                                                                                                                                                                                                                                                                   | `format`                     |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `email()`    | An email address with a public domain name.                                                                                                                                                                                                                               | `"email"`                    |
-| `url()`      | An absolute URL with an allowed protocol and a public host.                                                                                                                                                                                                               | `"url"`                      |
-| `uuid()`     | A UUID of version 1 to 8, or the nil or max UUID, hyphenated, in any case.                                                                                                                                                                                                | `"uuid"`                     |
-| `ip()`       | An IPv4 or IPv6 address.                                                                                                                                                                                                                                                  | `"ip"`, `"ipv4"` or `"ipv6"` |
-| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists.                                                                                                                                                                                               | `"datetime"`                 |
-| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.                                                                                                                                                                                                     | `"date"`                     |
-| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens, the last not a number (all digits, or `0x` and hex digits, which the URL parser reads as an IPv4 address), and punycode (`xn--`) labels that decode. One trailing dot, as in `example.com.`, is allowed. | `"hostname"`                 |
-| `hex()`      | One or more hexadecimal digits of any case.                                                                                                                                                                                                                               | `"hex"`                      |
-| `base64()`   | Standard base64 with correct padding, as an encoder writes it. The empty string is base64 of no bytes.                                                                                                                                                                    | `"base64"`                   |
-| `ulid()`     | A ULID, in any case.                                                                                                                                                                                                                                                      | `"ulid"`                     |
-| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.                                                                                                                                                                                                            | `"nanoid"`                   |
-| `cuid2()`    | A CUID2 identifier.                                                                                                                                                                                                                                                       | `"cuid2"`                    |
+| Validator      | Accepts                                                                                                                                                                                                                                                                   | Produces                                              | `format`                           |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------- |
+| `email()`      | An email address with a public domain name. [Below](#email).                                                                                                                                                                                                              | The domain as the parser reads it                     | `"email"`                          |
+| `url()`        | An absolute URL with an allowed protocol and a public host. [Below](#url).                                                                                                                                                                                                | The URL as the parser writes it                       | `"url"`                            |
+| `domain()`     | A public domain name: two or more labels, a real top-level domain, and no special-use name such as `localhost`, `.local`, `.internal` or `.test`. The rule `email` and `url` apply by default.                                                                            | Lowercase ASCII, internationalized labels in punycode | `"domain"`                         |
+| `hostname()`   | A hostname: dot-separated labels of letters, digits and hyphens, the last not a number (all digits, or `0x` and hex digits, which the URL parser reads as an IPv4 address), and punycode (`xn--`) labels that decode. One trailing dot, as in `example.com.`, is allowed. | As written                                            | `"hostname"`                       |
+| `ip()`         | An IPv4 or IPv6 address. [Below](#ip).                                                                                                                                                                                                                                    | IPv6 in its canonical form                            | `"ip"`, `"ipv4"` or `"ipv6"`       |
+| `cidr()`       | An address and a prefix length, such as `10.0.0.0/8`, the prefix at most 32 for IPv4 and 128 for IPv6. Takes `version` as `ip` does. Bits set past the prefix are accepted.                                                                                               | The address as `ip` produces it                       | `"cidr"`, `"cidrv4"` or `"cidrv6"` |
+| `mac()`        | A MAC address: six pairs of hex digits separated by colons throughout or by hyphens throughout.                                                                                                                                                                           | Lowercase, with colons                                | `"mac"`                            |
+| `phone()`      | An international number in E.164 form: `+`, a country code and the number, 7 to 15 digits, with optional spaces, hyphens, dots or parentheses between digits. Whether it exists is not checked.                                                                           | `+` and the digits                                    | `"phone"`                          |
+| `creditCard()` | A payment card number: 12 to 19 digits passing the Luhn checksum, optionally grouped by spaces or by hyphens. Whether it was issued is not checked.                                                                                                                       | The digits alone                                      | `"creditCard"`                     |
+| `uuid()`       | A UUID of version 1 to 8, or the nil or max UUID, hyphenated, in any case. `uuid({ version: 7 })` requires one version, and then rejects the nil and max UUIDs.                                                                                                           | As written                                            | `"uuid"`                           |
+| `datetime()`   | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists. [Below](#datetime-and-time).                                                                                                                                                                  | As written                                            | `"datetime"`                       |
+| `isoDate()`    | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.                                                                                                                                                                                                     | As written                                            | `"date"`                           |
+| `time()`       | A time of day such as `14:30`, `14:30:00` or `14:30:00.250`, without an offset. [Below](#datetime-and-time).                                                                                                                                                              | As written                                            | `"time"`                           |
+| `duration()`   | An ISO 8601 duration such as `P1Y2M`, `PT30M` or `P1DT12H`, with at least one component; only the seconds may have a fraction.                                                                                                                                            | As written                                            | `"duration"`                       |
+| `semver()`     | A Semantic Versioning 2.0.0 version such as `1.4.0-beta.2`, without a leading `v`.                                                                                                                                                                                        | As written                                            | `"semver"`                         |
+| `slug()`       | Lowercase ASCII letters and digits in words joined by single hyphens, such as `hello-world-2`.                                                                                                                                                                            | As written                                            | `"slug"`                           |
+| `jwt()`        | A JSON Web Token in compact form: three base64url segments whose header and payload are JSON objects, the header naming `alg`. The signature is not verified and the claims are not read, so a token that passes may be forged or expired.                                | As written                                            | `"jwt"`                            |
+| `hex()`        | One or more hexadecimal digits of any case.                                                                                                                                                                                                                               | As written                                            | `"hex"`                            |
+| `base64()`     | Standard base64 with correct padding, as an encoder writes it. The empty string is base64 of no bytes. `base64({ url: true })` requires the URL-safe alphabet, `-` and `_`, with the padding optional.                                                                    | As written                                            | `"base64"` or `"base64url"`        |
+| `ulid()`       | A ULID, in any case.                                                                                                                                                                                                                                                      | As written                                            | `"ulid"`                           |
+| `nanoid()`     | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.                                                                                                                                                                                                            | As written                                            | `"nanoid"`                         |
+| `cuid2()`      | A CUID2 identifier.                                                                                                                                                                                                                                                       | As written                                            | `"cuid2"`                          |
+
+`port()` is a format of numbers rather than text: a whole number from 1 to 65535. Port 0, which asks a system for any free port, cannot be connected to and is rejected. A non-number fails with `invalid_type`, and a number that is not a port with `invalid_format` and `{ format: "port" }`. Read a port from text with `pipe(coerceNumber(), port())`.
 
 `isoDate()` produces a string. To get a `Date`, use `date()` on a `Date` you built yourself.
 
 ### `email`
 
-`email(options?)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`. The value is the address as mail is delivered to it: the local part as written, and the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode. So `Ada@München.DE` produces `Ada@xn--mnchen-3ya.de`, and every spelling the parser reads as one domain, such as fullwidth letters in `ada@ｅxample.com` or an invisible variation selector, produces the same address, so a check made later on the value, such as a list of blocked domains or a uniqueness check, sees the domain mail will reach. The local part must be ASCII: an address with other letters before the `@` (RFC 6531) is rejected. The local part is limited to 64 characters and the whole address, as delivered, to 254. A domain is written with letters, marks, digits, dots and hyphens only, the ideographic, fullwidth and halfwidth full stops (`。`, `．`, `｡`) counting as dots, as `url` reads them too, and one in punycode must decode, so `ada@example.xn--zz` is rejected. A percent escape such as `ex%61mple.com` is URL syntax, which `url` decodes in a host, and is not part of an email domain, so `email` rejects it. Hosts that are not public domain names are rejected: `localhost`, single-label hosts, IP addresses, and special-use names that never reach a public host, which are those ending in `localhost`, `local`, `internal`, `home.arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
+`email(options?, ...checks)` takes `allowPlus`, default `true`, which controls whether `+` is accepted before the `@`, as in `ada+news@example.com`, and the parts described [below](#parts-of-an-email-or-a-url). The value is the address as mail is delivered to it: the local part as written, and the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode. So `Ada@München.DE` produces `Ada@xn--mnchen-3ya.de`, and every spelling the parser reads as one domain, such as fullwidth letters in `ada@ｅxample.com` or an invisible variation selector, produces the same address, so a check made later on the value, such as a list of blocked domains or a uniqueness check, sees the domain mail will reach. The local part must be ASCII: an address with other letters before the `@` (RFC 6531) is rejected. The local part is limited to 64 characters and the whole address, as delivered, to 254. A domain is written with letters, marks, digits, dots and hyphens only, the ideographic, fullwidth and halfwidth full stops (`。`, `．`, `｡`) counting as dots, as `url` reads them too, and one in punycode must decode, so `ada@example.xn--zz` is rejected. A percent escape such as `ex%61mple.com` is URL syntax, which `url` decodes in a host, and is not part of an email domain, so `email` rejects it. Hosts that are not public domain names are rejected: `localhost`, single-label hosts, IP addresses, and special-use names that never reach a public host, which are those ending in `localhost`, `local`, `internal`, `home.arpa`, `test`, `example`, `invalid`, `alt` or `onion`.
 
 ```ts
 import { email, pipe, string } from "@codenhub/validation";
@@ -798,31 +857,30 @@ address("  Ada@Example.com "); // { ok: true, value: "Ada@example.com" }
 
 ### `url`
 
-`url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The text is read by the standard URL parser, every check is made on what it read (the scheme, the credentials and the host), and the value is that reading, written back as the parser writes it. So a check made later on the value, such as an allowed path prefix or a list of blocked hosts, sees the URL a request will reach: `https://Example.com/public/../admin` produces `https://example.com/admin`, a host spelled with fullwidth letters or invisible characters produces the host they spell, an internationalized host is in punycode, an IPv4 host written as `0x7f.1` or `127.1` is `127.0.0.1`, and characters such as `"` and `<` in the path are percent-encoded. That is URL encoding, not HTML escaping: others, such as `'` and `&`, are kept, so escape the value for the context you write it into, as any text, before putting it in HTML. Text holding whitespace or control characters, such as a line break, is rejected rather than cleaned, since a written URL never contains them: trim first with `pipe(string({ trim: true }), url())` when the input may have surrounding spaces. A host longer than 253 characters, the most a domain name can have, is rejected as well, with `allowLocal` too. The options are:
+`url(options?)` requires an absolute URL, so `example.com` and `//example.com` are rejected and no scheme is guessed. It rejects embedded credentials such as `https://user:password@example.com`, always. The text is read by the standard URL parser, every check is made on what it read (the scheme, the credentials and the host), and the value is that reading, written back as the parser writes it. So a check made later on the value, such as an allowed path prefix or a list of blocked hosts, sees the URL a request will reach: `https://Example.com/public/../admin` produces `https://example.com/admin`, a host spelled with fullwidth letters or invisible characters produces the host they spell, an internationalized host is in punycode, an IPv4 host written as `0x7f.1` or `127.1` is `127.0.0.1`, and characters such as `"` and `<` in the path are percent-encoded. That is URL encoding, not HTML escaping: others, such as `'` and `&`, are kept, so escape the value for the context you write it into, as any text, before putting it in HTML. Text holding whitespace or control characters, such as a line break, is rejected rather than cleaned, since a written URL never contains them: trim first with `pipe(string({ trim: true }), url())` when the input may have surrounding spaces. A host longer than 253 characters, the most a domain name can have, is rejected as well, whatever the host validator. The options, besides the parts described [below](#parts-of-an-email-or-a-url), are:
 
-| Option       | Meaning                                                                                                                                                                                                                                                                                                                           |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `protocols`  | Accepted protocols without the colon, in any letter case. Default `["http", "https"]`. The list is copied when the validator is created, and a protocol that is not a scheme name, such as `"https:"`, throws a `TypeError` then, since it would match nothing. So do `javascript`, `vbscript` and `data`, whose URLs run script. |
-| `allowLocal` | Accept `localhost`, single-label hosts, every IP address and special-use names such as `db.internal`, which are rejected by default, as for `email`. Default `false`.                                                                                                                                                             |
+| Option      | Meaning                                                                                                                                                                                                                                                                                                                           |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `protocols` | Accepted protocols without the colon, in any letter case. Default `["http", "https"]`. The list is copied when the validator is created, and a protocol that is not a scheme name, such as `"https:"`, throws a `TypeError` then, since it would match nothing. So do `javascript`, `vbscript` and `data`, whose URLs run script. |
 
 ```ts
-import { url } from "@codenhub/validation";
+import { hostname, url } from "@codenhub/validation";
 
 url()("https://example.com/a?b=1"); // ok
 url()("http://localhost:3000"); // fails: not a public host
-url({ allowLocal: true })("http://localhost:3000"); // ok
+url({ host: hostname() })("http://localhost:3000"); // ok
 url({ protocols: ["ftp"] })("ftp://example.com"); // ok
 ```
 
 Three schemes have no host, and each is checked by its own rules when listed in `protocols`, even when the URL is written with one, as in `mailto://example.com`, which names no recipient:
 
-| Scheme   | Accepted when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `mailto` | It names at least one recipient, and every recipient, in the path and in `to`, `cc` or `bcc`, is an address `email()` accepts. With `allowLocal`, an address may be on any hostname, such as `localhost`. Each recipient is produced as `email()` produces it, with its local part escaped where a mailto needs it, so `mailto:Ada@EXAMPLE.com` produces `mailto:Ada@example.com` and `mailto:ada@exa%6dple.com` produces `mailto:ada@example.com`; field names are produced in lowercase. The query may hold only `to`, `cc`, `bcc`, `subject` and `body`, each as `name=value`: any other field, such as `from` or `reply-to`, fails. `subject` and `body` hold what RFC 6068 allows, letters, digits, `-._~!$'()*+,;:@` and `%` escapes, so a line break is `%0D%0A`, and also `/` and `?`, which a URL query allows, so `body=https://example.com/a?b` passes. `&`, `=`, `#` and a malformed escape such as `%zz` fail. They are produced as written. |
-| `tel`    | It is a global number: `+`, digits with `-`, `.`, `(` or `)` between them, then optional `;name=value` parameters whose value holds only the characters RFC 3966 allows (letters, digits, `-_.!~*'()[]/:&+$` and `%` escapes), so never `"` or `<`. A local number with `phone-context` is rejected.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `urn`    | It follows RFC 8141: a namespace of 2 to 32 letters, digits and inner hyphens, a colon, and a non-empty name.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Scheme   | Accepted when                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mailto` | It names at least one recipient, and every recipient, in the path and in `to`, `cc` or `bcc`, is an address `email()` accepts, on a public domain whatever `host` is, since `host` checks a URL's host and a mailto has none. Each recipient is produced as `email()` produces it, with its local part escaped where a mailto needs it, so `mailto:Ada@EXAMPLE.com` produces `mailto:Ada@example.com` and `mailto:ada@exa%6dple.com` produces `mailto:ada@example.com`; field names are produced in lowercase. The query may hold only `to`, `cc`, `bcc`, `subject` and `body`, each as `name=value`: any other field, such as `from` or `reply-to`, fails. `subject` and `body` hold what RFC 6068 allows, letters, digits, `-._~!$'()*+,;:@` and `%` escapes, so a line break is `%0D%0A`, and also `/` and `?`, which a URL query allows, so `body=https://example.com/a?b` passes. `&`, `=`, `#` and a malformed escape such as `%zz` fail. They are produced as written. |
+| `tel`    | It is a global number: `+`, digits with `-`, `.`, `(` or `)` between them, then optional `;name=value` parameters whose value holds only the characters RFC 3966 allows (letters, digits, `-_.!~*'()[]/:&+$` and `%` escapes), so never `"` or `<`. A local number with `phone-context` is rejected.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `urn`    | It follows RFC 8141: a namespace of 2 to 32 letters, digits and inner hyphens, a colon, and a non-empty name.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
-Any other scheme without a host, such as `file:///etc/passwd` or `about:blank`, is rejected even when listed and even with `allowLocal`, so listing a protocol never lets a hostless URL through unchecked. Any other listed scheme written with a host, such as `file://server/share` or `ftp://example.com`, gets the host checks every URL does.
+Any other scheme without a host, such as `file:///etc/passwd` or `about:blank`, is rejected even when listed and whatever `host` is, so listing a protocol never lets a hostless URL through unchecked. Any other listed scheme written with a host, such as `file://server/share` or `ftp://example.com`, gets the host checks every URL does.
 
 `javascript`, `vbscript` and `data` cannot be listed at all: `url` throws a `TypeError` when created with one. A host does not make them safe, since `javascript://example.com/%0aalert(1)` has a public host and still runs as script when followed.
 
@@ -835,17 +893,63 @@ url({ protocols: ["urn"] })("urn:isbn:0451450523"); // ok
 
 ### `ip`
 
-`ip(options?)` takes `version`, `"v4"` or `"v6"`, to accept one address family only. Without it both are accepted, and any other value throws a `TypeError` when the validator is created. The `format` in the issue is `"ipv4"` or `"ipv6"` when a version is given, and `"ip"` otherwise.
+`ip(options?)` takes `version`, `"v4"` or `"v6"`, to accept one address family only, and produces an IPv6 address in its canonical form: lowercase, with the longest run of zero groups shortened to `::`, as RFC 5952 and the URL parser write it, so `0:0:0:0:0:0:0:1` produces `::1` and one address is one string. An IPv6 address embedding an IPv4 one comes out in hex groups, as the parser writes it: `::ffff:192.0.2.1` produces `::ffff:c000:201`. An IPv4 address has one spelling and is produced as written. Without it both are accepted, and any other value throws a `TypeError` when the validator is created. The `format` in the issue is `"ipv4"` or `"ipv6"` when a version is given, and `"ip"` otherwise.
 
 IPv4 is four decimal parts from 0 to 255 without leading zeros, which some parsers read as octal. IPv6 is written as RFC 4291 allows: eight groups of one to four hex digits, one run of zero groups shortened to `::`, and an IPv4 address in place of the last two groups, as in `::ffff:192.0.2.1`, whose parts follow the IPv4 rule. A zone such as `%eth0` is accepted only after a link-local address (`fe80::/10`), the one place it means something.
 
-### `datetime`
+### `datetime` and `time`
 
 `datetime(options?)` requires the `T` separator, a time, and `Z`, and rejects days that do not exist, so `2026-02-30T00:00:00Z` fails. The options are `offset`, default `false`, which accepts a UTC offset such as `+02:00` instead of only `Z`, and `precision`, an integer from 0 to 9, which requires exactly that many fractional-second digits (`0` forbids them; without it they are optional). A `precision` outside that throws a `RangeError` when the validator is created. Leap seconds (`23:59:60`) are rejected. `coerceDate` reads more spellings than this, such as a space for the `T`, an offset without its colon or no zone at all, because it converts text rather than checks its form; [Coercion](docs/coercion.md) lists them.
 
+`time(options?)` accepts `HH:MM`, as an HTML time input writes it, and `HH:MM:SS` with an optional fraction. It takes `precision` as `datetime` does, which also makes the seconds required.
+
+### Parts of an email or a URL
+
+`url` and `email` are built from parts, and each part can be checked with a validator of your own. A part validator receives what the parser read, not the text, and replaces the format's default rule for that part, never its syntax:
+
+| Option              | Receives                                                                                                                                                         | Default rule               |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `url({ host })`     | The host: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. | A public domain name       |
+| `url({ port })`     | The port as a number, or `undefined` when the URL names none or names its scheme's default, which the parser drops.                                              | Any port                   |
+| `url({ path })`     | The path as the parser writes it, dot segments resolved and characters such as spaces percent-encoded, always starting with `/`.                                 | Any path                   |
+| `url({ query })`    | The query as an object of its decoded parameters, each key's value a string, or with `repeated: true` every value of every key as an array.                      | Any query                  |
+| `email({ domain })` | The domain as `email` produces it, lowercase ASCII with internationalized labels in punycode. It must still be a hostname.                                       | A public domain name       |
+| `email({ local })`  | The local part, before the `@`, as written.                                                                                                                      | The syntax of a local part |
+
+```ts
+import { domain, email, hostname, ip, object, oneOf, optional, port, startsWith, string, union, url } from "@codenhub/validation";
+
+url({ host: hostname() }); // any hostname, localhost included
+url({ host: union([domain(), ip()]) }); // IP addresses too, but not localhost
+url({ host: oneOf(["api.example.com"]), port: optional(port()) });
+url({ protocols: ["https"], path: string(startsWith("/api/")) });
+url({ query: object({ page: optional(string()) }, { unknownKeys: "strict" }) }); // no other parameters
+email({ domain: oneOf(["company.com"]), message: "Use your company address" });
+```
+
+A part's issues are placed under its name, such as `["host"]` or `["query", "page"]`, and are worded by the part validator, never by the format's `message`. A part only decides: the value is still the whole URL or address, so a part that converts its value, such as `coerceNumber` inside `query`, changes nothing in the output. To read typed values from a query, use [`searchParams`](#searchparams). A part validator that is asynchronous makes the format asynchronous.
+
+The parts apply to a URL with a host. A `mailto`, `tel` or `urn` URL keeps its own rules above.
+
+A query key given more than once, as in `?id=1&id=2`, fails with `invalid_key` at `["query", key]` unless `repeated` is set. A check that saw one of the two values while a server read the other would pass a value nobody checked, so repeated keys are accepted only when you ask for every value.
+
+### `searchParams`
+
+`searchParams(validator, options?, ...checks)` reads a query string, with or without its `?`, or a `URLSearchParams`, into an object of its decoded parameters, and produces what `validator` makes of it. It reads the parameters as `url`'s `query` part does, `+` as a space and escapes decoded, and rejects a repeated key the same way unless `repeated` is set. Anything else fails with `invalid_type` and `{ expected: "query string", received }`.
+
+```ts
+import { array, coerceNumber, object, optional, searchParams, string } from "@codenhub/validation";
+
+const filters = searchParams(object({ page: coerceNumber({ int: true, min: 1 }), q: optional(string()) }));
+filters("?page=2&q=red+shoes"); // { ok: true, value: { page: 2, q: "red shoes" } }
+
+const tags = searchParams(object({ tag: array(string()) }), { repeated: true });
+tags("tag=a&tag=b"); // { ok: true, value: { tag: ["a", "b"] } }
+```
+
 ## Objects
 
-`object(shape, options?)` takes a shape, an object whose values are validators, and produces an object with the same keys and the output of each validator.
+`object(shape, options?, ...checks)` takes a shape, an object whose values are validators, and produces an object with the same keys and the output of each validator.
 
 ```ts
 import { number, object, optional, string } from "@codenhub/validation";
@@ -872,27 +976,35 @@ The `unknownKeys` option decides what happens to input properties the shape does
 
 Any other `unknownKeys` value, such as a misspelled `"Strict"`, throws a `TypeError` when the validator is created, instead of falling back to `"strip"`.
 
+A check given to `object` runs once every property has passed, and sees the whole object, so it can compare fields. Point its issue at the field to fix with `path`:
+
+```ts
+import { check, object, string } from "@codenhub/validation";
+
+const signup = object(
+  { password: string({ min: 8 }), confirm: string() },
+  check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
+);
+```
+
 See [Reusing shapes](#reusing-shapes) for extending, omitting and making properties optional.
 
 ## Collections
 
-Every collection validator takes the validator for its items, checks them all, and reports each issue with a path that leads through the item's position. A wrong size is reported at once, without validating the items, so a huge input is never worked through only to be rejected.
+Every collection validator takes the validator for its items, then options and checks, checks every item, and reports each issue with a path that leads through the item's position. A wrong size is reported at once, without validating the items, so a huge input is never worked through only to be rejected.
 
 The size options `min`, `max` and `length` are non-negative integers, and each throws a `RangeError` when created with anything else, as do limits no size can satisfy together, such as `min` above `max` or a `length` outside them. `min` and `max` are inclusive. A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"`, `"map"` or `"record"`, and `exact: true` is added for `length`. A record's size is its number of keys.
 
 ### `array`
 
-`array(element, options?)` accepts arrays whose every item passes `element` and produces a new array of what it produced. It takes `min`, `max` and `length`, and `unique`:
+`array(item, options?, ...checks)` accepts arrays whose every item passes `item` and produces a new array of what it produced. It takes `min`, `max` and `length`. A sparse array's holes are validated as `undefined`.
 
-- `unique: true` rejects repeats, comparing the validated items the way a `Set` does. Each repeat is reported at its own index as `invalid_value` with `{ unique: true }`, and the first occurrence is kept.
-- `unique: (item) => key` compares the key the function returns, so `unique: (user) => user.id` makes ids unique.
-
-Repeats are checked only once every item is valid. A sparse array's holes are validated as `undefined`.
+The `unique(by?, message?)` check rejects repeats, comparing the validated items the way a `Set` does, or the key `by` returns for each, so `unique((user) => user.id)` makes ids unique. Each repeat is reported at its own index as `invalid_value` with `{ unique: true }`, and the first occurrence is kept. Like every check, it runs only once every item is valid.
 
 ```ts
-import { array, string } from "@codenhub/validation";
+import { array, string, unique } from "@codenhub/validation";
 
-const tags = array(string({ trim: true, min: 1 }), { max: 5, unique: true });
+const tags = array(string({ trim: true, min: 1 }), { max: 5 }, unique());
 
 tags(["a", "b"]); // ok
 tags(["a", "a"]); // fails: invalid_value at path [1]
@@ -911,31 +1023,31 @@ const call = tuple([string()], { rest: number() }); // [string, ...number[]]
 
 ### `record`
 
-`record(key, value, options?)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it is not mistaken for a problem with the value, and a bad key still has its value checked. A key that the key validator changes, such as by lowercasing, must stay distinct: `{ A: 1, a: 2 }` under `string({ lowercase: true })` reports the second as `invalid_key` whose `params.issues` holds one `invalid_value` issue with `{ unique: true }`, rather than dropping a value. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype. It takes `min`, `max` and `length`, which count keys, so `record(string(), number(), { max: 100 })` rejects a dictionary of more than 100 keys before checking any of them.
+`record(key, value, options?)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it is not mistaken for a problem with the value, and a bad key still has its value checked. A key that the key validator changes, such as by lowercasing, must stay distinct: `{ A: 1, a: 2 }` under `string({ case: "lower" })` reports the second as `invalid_key` whose `params.issues` holds one `invalid_value` issue with `{ unique: true }`, rather than dropping a value. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype. It takes `min`, `max` and `length`, which count keys, so `record(string(), number(), { max: 100 })` rejects a dictionary of more than 100 keys before checking any of them.
 
 ### `set` and `map`
 
-`set(element, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string and its position, a number, for any other key, so a number key and an object key never share a path. A map key that fails is reported as `invalid_key`, as for `record`, and so is one that another entry has already taken once the key validator has changed it. Likewise a set value that `element` makes equal to an earlier one, such as `"A"` and `"a"` under `string({ lowercase: true })`, is reported as `invalid_value` with `{ unique: true }` at its position rather than merged, so the output never holds fewer values than the size options allow. Both take `min`, `max` and `length`.
+`set(item, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string and its position, a number, for any other key, so a number key and an object key never share a path. A map key that fails is reported as `invalid_key`, as for `record`, and so is one that another entry has already taken once the key validator has changed it. Likewise a set value that `element` makes equal to an earlier one, such as `"A"` and `"a"` under `string({ case: "lower" })`, is reported as `invalid_value` with `{ unique: true }` at its position rather than merged, so the output never holds fewer values than the size options allow. Both take `min`, `max` and `length`.
 
 ## Combining validators
 
 ### `optional`, `nullable` and `nullish`
 
-- `optional(validator)` accepts `undefined`.
+- `optional(validator)` accepts `undefined`, and `optional(validator, value)` replaces it with a default, [below](#defaults).
 - `nullable(validator)` accepts `null`.
 - `nullish(validator)` accepts both.
 
-The accepted value is passed through, and every other value goes to `validator`, so `null` and the empty string are not treated as absent by `optional`. Inside an `object`, a property whose validator can produce `undefined` becomes optional in the inferred type, and is left out of the output when absent from the input.
+The accepted value is passed through, and every other value goes to `validator`, so `null` and the empty string are not treated as absent by `optional`. These wrappers report no issue of their own, so they take no options or checks; give those to the validator they wrap. Inside an `object`, a property whose validator can produce `undefined` becomes optional in the inferred type, and is left out of the output when absent from the input.
 
-### `withDefault`
+### Defaults
 
-`withDefault(validator, value)` replaces `undefined` with a default, and gives every other value to `validator`, so an invalid value is still rejected and only a missing one is replaced. The default is trusted and is not validated. A function is called every time to produce the default, so pass one for an array or object, which would otherwise be shared by every result. Inside an `object`, the property is then always present in the output type.
+`optional(validator, value)` replaces `undefined` with a default, and gives every other value to `validator`, so an invalid value is still rejected and only a missing one is replaced. The default is trusted and is not validated. A function is called every time to produce the default, so pass one for an array or object, which would otherwise be shared by every result. Inside an `object`, the property is then always present in the output type.
 
 ```ts
-import { array, oneOf, string, withDefault } from "@codenhub/validation";
+import { array, oneOf, optional, string } from "@codenhub/validation";
 
-const role = withDefault(oneOf(["admin", "user"]), "user");
-const tags = withDefault(array(string()), () => []);
+const role = optional(oneOf(["admin", "user"]), "user");
+const tags = optional(array(string()), () => []);
 ```
 
 ### `fallback`
@@ -948,7 +1060,7 @@ const tags = withDefault(array(string()), () => []);
 
 ### `transform`
 
-`transform(validator, convert)` changes the value a validator produced into another, such as text into a `Date`. `convert` runs only when `validator` succeeded and cannot reject the value: to fail, write a validator that returns `fail(...)` and put it after this one with `pipe`. A `convert` that returns a promise, or is typed as possibly returning one, including one typed as returning `unknown`, makes the result asynchronous, and so does any value with a `then` method, as `await` would treat it, so a value that has one for another reason has to be wrapped in an object before it is returned. One typed as returning `any`, such as `JSON.parse`, has opted out of type checking and is typed synchronous, so `transform(string(), JSON.parse)` needs no `await`; if it can return a promise, say so in its return type. A `convert` that throws is a bug and propagates.
+`transform(validator, convert)` changes the value a validator produced into another, such as text into a `Date`. `convert` runs only when `validator` succeeded and cannot reject the value: to reject what it produced, put a validator with checks after it with `pipe`. A `convert` that returns a promise, or is typed as possibly returning one, including one typed as returning `unknown`, makes the result asynchronous, and so does any value with a `then` method, as `await` would treat it, so a value that has one for another reason has to be wrapped in an object before it is returned. One typed as returning `any`, such as `JSON.parse`, has opted out of type checking and is typed synchronous, so `transform(string(), JSON.parse)` needs no `await`; if it can return a promise, say so in its return type. A `convert` that throws is a bug and propagates.
 
 ```ts
 import { string, transform } from "@codenhub/validation";
@@ -956,17 +1068,34 @@ import { string, transform } from "@codenhub/validation";
 const length = transform(string(), (text) => text.length);
 ```
 
-### `refine`
+## Checks
 
-`refine(validator, check, issue?)` adds a rule that `validator` cannot express. It runs only when `validator` succeeded, and receives the value `validator` produced. `check` returns `true` for an acceptable value. The optional `issue` says how a rejection is reported: a string is the message, and an object can set a `code`, `path`, `params` and `message`. Without it the issue has code `custom`. A `check` written as a type guard, such as `(value): value is string => typeof value === "string"`, narrows the output type to what it guards.
+A check is a rule about a value that already has its type, given to a validator after its options. It runs once the value has its type: for a leaf, right after the type test, beside the options; for an object or a collection, once every child has passed, since before that there is no value of the type to check. Every check runs and every issue is reported.
 
 ```ts
-import { object, refine, string } from "@codenhub/validation";
+import { check, number, string, startsWith, uppercase } from "@codenhub/validation";
 
-const signup = refine(object({ password: string({ min: 8 }), confirm: string() }), (data) => data.password === data.confirm, { code: "mismatch", path: ["confirm"], message: "Passwords must match" });
+string({ min: 2 }, startsWith("A"), uppercase());
+number(check((n: number) => n % 2 === 0, "Must be even"));
 ```
 
-A `check` that returns a promise makes the result asynchronous; see [Custom validators](docs/custom-validators.md#asynchronous-rules).
+The built-in checks, each its own import, take their message last:
+
+| Check              | For     | Requires                                                                                                            | `code` and `params`                                         |
+| ------------------ | ------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `pattern(regex)`   | strings | A match. The `g` and `y` flags are ignored, so the same check gives the same answer each time.                      | `invalid_format`, `{ format: "regex", pattern }`            |
+| `startsWith(text)` | strings | This prefix.                                                                                                        | `invalid_format`, `{ format: "startsWith", value }`         |
+| `endsWith(text)`   | strings | This suffix.                                                                                                        | `invalid_format`, `{ format: "endsWith", value }`           |
+| `includes(text)`   | strings | This text anywhere.                                                                                                 | `invalid_format`, `{ format: "includes", value }`           |
+| `lowercase()`      | strings | No uppercase letters, so a string with no letters passes. It changes nothing; `string({ case: "lower" })` converts. | `invalid_format`, `{ format: "lowercase" }`                 |
+| `uppercase()`      | strings | No lowercase letters.                                                                                               | `invalid_format`, `{ format: "uppercase" }`                 |
+| `multipleOf(step)` | numbers | A multiple of the step, compared as the decimals both are written as, so `0.3` is a multiple of `0.1` at any size.  | `invalid_value`, `{ type: "number", multipleOf }`           |
+| `nonZero()`        | numbers | Anything but zero.                                                                                                  | `invalid_value`, `{ type: "number", format: "nonZero" }`    |
+| `unique(by?)`      | arrays  | Distinct items, [above](#array).                                                                                    | `invalid_value`, `{ unique: true }`, at each repeat's index |
+
+A `pattern` that is not a regular expression, and a `multipleOf` step that is not a positive finite number, throw when the check is made. `multipleOf` is exact at any size, but a number computed in floating point is not always the decimal it looks like: `0.1 + 0.2` is `0.30000000000000004`, which is not a multiple of `0.1`.
+
+`check(test, issue?)` makes a check of your own; [Custom validators](docs/custom-validators.md) covers it and the other builders. A check that returns a promise makes its validator asynchronous.
 
 ## Choosing between validators
 
@@ -980,14 +1109,14 @@ import { number, string, union } from "@codenhub/validation";
 const id = union([string({ min: 1 }), number({ int: true })]);
 ```
 
-### `discriminatedUnion`
+### `tagged`
 
-`discriminatedUnion(key, variants)` is for objects that share a tag property and differ in the rest, such as events with a `type`. It takes the name of the tag property and a record with a validator for each tag value. The input's tag chooses the variant, the variant validates the rest of the input, and a failure reports that variant's own issues instead of a list of everything that did not match.
+`tagged(key, variants, options?, ...checks)` is for objects that share a tag property and differ in the rest, such as events with a `type`. It takes the name of the tag property and a record with a validator for each tag value. The input's tag chooses the variant, the variant validates the rest of the input, and a failure reports that variant's own issues instead of a list of everything that did not match.
 
 ```ts
-import { discriminatedUnion, number, object, string, type Infer } from "@codenhub/validation";
+import { number, object, string, tagged, type Infer } from "@codenhub/validation";
 
-const event = discriminatedUnion("type", {
+const event = tagged("type", {
   click: object({ x: number(), y: number() }),
   key: object({ key: string({ min: 1 }) }),
 });
@@ -1014,7 +1143,7 @@ Both validators see the whole input, so two `object`s with `unknownKeys: "strict
 
 ### `lazy`
 
-`lazy(getter)` looks up another validator the first time it runs, so a validator can refer to itself. TypeScript cannot infer a type that refers to itself, so annotate the variable with the type it produces:
+`lazy(getter, options?, ...checks)` looks up another validator the first time it runs, so a validator can refer to itself. TypeScript cannot infer a type that refers to itself, so annotate the variable with the type it produces:
 
 ```ts
 import { array, lazy, object, string, type Validator } from "@codenhub/validation";
@@ -1036,7 +1165,7 @@ The limit is about the stack and not about size, so it does not stop a large fla
 
 ### `json`
 
-`json(validator?)` accepts text that holds JSON, parses it, and then gives the parsed value to `validator` when there is one. A non-string fails with `invalid_type`, and text that is not JSON fails with `invalid_format` and `{ format: "json" }`. Without a validator the result is `unknown`. Paths of issues from `validator` are relative to the parsed value.
+`json(validator?, options?, ...checks)` accepts text that holds JSON, parses it, and then gives the parsed value to `validator` when there is one. A non-string fails with `invalid_type`, and text that is not JSON fails with `invalid_format` and `{ format: "json" }`. Without a validator the result is `unknown`. Paths of issues from `validator` are relative to the parsed value. A function in first place is the validator, so checks need one: `json(object(shape), {}, check(...))`.
 
 ## Reusing shapes
 
@@ -1060,6 +1189,22 @@ The coercing validators accept text that holds a value, convert it, and then app
 
 `standard(validator, messages)` returns the validator with the `~standard` property that [Standard Schema](docs/standard-schema.md) asks for, so libraries that accept one can take it directly. Its `messages` map, such as `englishMessages`, supplies the text that specification requires on every issue.
 
+## Wording one validator
+
+Every validator that reports an issue of its own takes a `message` option: the text, or a function that words an issue from its `code` and `params`. It words every issue that validator reports itself, and none a child reports, so `object(shape, { message })` words an input that is not an object and leaves each property's issues to that property. Every built-in check takes a message as its last argument.
+
+```ts
+import { email, object, startsWith, string } from "@codenhub/validation";
+
+const form = object({
+  name: string({ min: 2, message: "Enter your full name" }),
+  email: email({ message: (issue) => t(`errors.${issue.code}`) }),
+  code: string(startsWith("INV-", "Invoice codes start with INV-")),
+});
+```
+
+An issue that carries a message is worded by it first, before any message map, so this is how one field gets its own sentence while a map words the rest. [Issues and messages](docs/errors.md) has the order.
+
 ## Working with results
 
 ### `formatIssue`, `flatten`, `formatPath` and `englishMessages`
@@ -1080,7 +1225,67 @@ The coercing validators accept text that holds a value, convert it, and then app
 
 ### Types
 
-`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `ArrayOptions`, `TupleOptions`, `SizeOptions`, `LazyOptions`, `RefineIssue`, `InferTuple`, `InferRecord`, `InferDiscriminated`, `Variants`, `PartialShape`, `LiteralValue`, `EnumLike`, `Constructor`, `AnyFunction`, `Messages`, `FlattenedErrors` and `StandardSchemaV1` are exported for annotating your own code. Each is documented in the source and listed in the [API reference](docs/reference/index.md), and the ones you meet in everyday use are explained in [Custom validators](docs/custom-validators.md) and [Issues and messages](docs/errors.md).
+The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, `Check<T>` and `AsyncCheck<T>`, `Infer`, `ValidationResult<T>`, `ValidationIssue`, `Message`, `Messages` and the options interface of each validator, such as `StringOptions` or `UrlOptions`. The others exported, such as `Composed`, `Factory`, `Rest`, `InferShape` and `InferTagged`, are the machinery of the signatures: they are exported so that a validator you export from a library of your own can be named in its declarations. Each is documented in the source and listed in the [API reference](docs/reference/index.md).
+
+<!-- Source: docs/changelog/0.2.0.md -->
+
+# 0.2.0
+
+0.2.0 settles the API that 0.1.0 introduced. Every validator now takes its arguments in one order, its own, then options, then checks, and every one that reports an issue takes a `message`. The rarer constraints moved from options into checks you import only when you use them, and the helpers that build the built-in validators are public, so your own behave exactly as they do. Some 0.1.0 calls change; the [migration table](#migrating-from-010) maps each one.
+
+## Added
+
+- Checks: rules about a value that already has its type, given to a validator after its options, as in `string({ min: 3 }, startsWith("a"))`. A check runs once the value has its type, for an object once every property has passed, so it can compare fields, and every check's issue is reported. The built-in ones are `pattern`, `startsWith`, `endsWith`, `includes`, `lowercase`, `uppercase`, `multipleOf`, `nonZero` and `unique`.
+- `check(test, issue?)`, `format(name, test)` and `guard(expected, typeGuard)`, which build checks, string formats and validators for any type on the same internals as the built-in ones, with the same issue shapes, `message` option and checks. The `Check`, `AsyncCheck` and `Message` types.
+- A `message` option on every validator that reports an issue of its own, as text or a function of the issue, and a message argument on every built-in check, so one field can have its own sentence without a message map.
+- Parts of `url` and `email`: `url({ host, port, path, query, repeated })` and `email({ domain, local })` take validators that check what the parser read. `domain()` and `port()` validate those parts on their own, and `searchParams(validator)` reads a query string into typed values. A repeated query key fails unless `repeated` is set.
+- Formats: `phone` (E.164), `slug`, `semver`, `jwt` (its structure), `creditCard` (the Luhn checksum), `cidr`, `mac`, `time` and `duration`, with `base64({ url: true })` for base64url and `uuid({ version })` for one version.
+- `symbol()`, and `oneOf` over a TypeScript `enum`.
+- `optional(validator, value)`, which replaces a missing value with a default.
+- English wording for every new format and check in `englishMessages`.
+
+## Changed
+
+- **Breaking.** `string`'s `pattern`, `startsWith`, `endsWith` and `includes` options are checks of the same names, and `number`'s `multipleOf` and `nonZero` are checks too. Their issues are unchanged.
+- **Breaking.** `string`'s `lowercase: true` and `uppercase: true` options are `case: "lower"` and `case: "upper"`. The `lowercase()` and `uppercase()` checks now require a case without changing the string.
+- **Breaking.** `array`'s `unique` option is the `unique(by?)` check, and its callback is its first argument.
+- **Breaking.** `url`'s `allowLocal` option is gone. A host validator replaces the rule that the host is a public domain: `url({ host: hostname() })` accepts any hostname, and `url({ host: unknown() })` any host the parser reads, as `allowLocal: true` did. A `mailto` recipient must now have a public domain whatever the options, where `allowLocal` accepted any hostname.
+- **Breaking.** `ip()` produces an IPv6 address in its canonical form, lowercase with the longest run of zero groups shortened, so `0:0:0:0:0:0:0:1` is `::1`. An IPv4 address is produced as written, as before.
+- **Breaking.** `invalid_type` names kinds of value and never a class: a class instance, a `Map` and a `Set` are `object`, where 0.1.0 named the class, `map` or `set`. A `Date` from another realm is `object` too.
+- **Breaking.** `array` and `set` report a child that is not a function as `item`, where 0.1.0 named it `element`.
+
+## Removed
+
+- **Breaking.** `refine`: a check given to the validator does the same and reports its issue with the others. `refine` checks written as type guards narrowed the output type, which a check does not.
+- **Breaking.** `withDefault`: use `optional(validator, value)`.
+- **Breaking.** `nativeEnum`: use `oneOf(Enum)`.
+- **Breaking.** `discriminatedUnion` is renamed `tagged`, with the same behavior, and its type `InferDiscriminated` is `InferTagged`.
+
+## Migrating from 0.1.0
+
+Everything not listed carries over unchanged.
+
+| 0.1.0                                                       | 0.2.0                                                                           |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `string({ pattern: re })`                                   | `string(pattern(re))`                                                           |
+| `string({ min: 3, startsWith: "a" })`                       | `string({ min: 3 }, startsWith("a"))`                                           |
+| `string({ endsWith: s })`, `string({ includes: s })`        | `string(endsWith(s))`, `string(includes(s))`                                    |
+| `string({ lowercase: true })`                               | `string({ case: "lower" })`                                                     |
+| `string({ uppercase: true })`                               | `string({ case: "upper" })`                                                     |
+| `number({ multipleOf: 5 })`                                 | `number(multipleOf(5))`                                                         |
+| `number({ int: true, nonZero: true })`                      | `number({ int: true }, nonZero())`                                              |
+| `array(item, { max: 5, unique: true })`                     | `array(item, { max: 5 }, unique())`                                             |
+| `array(item, { unique: (user) => user.id })`                | `array(item, unique((user) => user.id))`                                        |
+| `refine(validator, test, issue)`                            | `validator(check(test, issue))`, such as `string(check(test, issue))`           |
+| `refine(object(shape), test, issue)`                        | `object(shape, check(test, issue))`                                             |
+| `refine(object(shape, options), test, issue)`               | `object(shape, options, check(test, issue))`                                    |
+| `withDefault(validator, value)`                             | `optional(validator, value)`                                                    |
+| `nativeEnum(Enum)`                                          | `oneOf(Enum)`                                                                   |
+| `discriminatedUnion(key, variants)`                         | `tagged(key, variants)`                                                         |
+| `url({ allowLocal: true })`                                 | `url({ host: hostname() })`, or `url({ host: unknown() })` for IP addresses too |
+| `refine(unknown(), (value) => typeof value === "function")` | `func()`                                                                        |
+
+A `refine` that wrapped a validator which had no place for checks, such as `refine(optional(string()), test)`, moves the check onto the inner validator: `optional(string(check(test)))`. A check runs only on a value of its type, so it never sees the `undefined` that `optional` lets through.
 
 <!-- Source: docs/changelog/0.1.0.md -->
 

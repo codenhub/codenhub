@@ -19,7 +19,7 @@ port("eighty"); // { ok: false, ... }, code "invalid_type"
 
 ## The validators
 
-There is one for each type that commonly arrives as text. Each takes exactly the options of its strict counterpart, applies them to the converted value, and throws for a bad option when it is created, so `coerceNumber({ multipleOf: 0 })` fails at once just as `number({ multipleOf: 0 })` does.
+There is one for each type that commonly arrives as text. Each takes exactly the options of its strict counterpart, applies them to the converted value, and throws for a bad option when it is created, so `coerceNumber({ min: Number.NaN })` fails at once just as `number({ min: Number.NaN })` does. They take checks and a `message` option too, and the message also words input that cannot be converted.
 
 | Validator                | Produces | Accepts                                                                                                                                                  | Strict version |
 | ------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
@@ -49,15 +49,15 @@ Date text is read in these ISO 8601 forms: a date `YYYY-MM-DD` alone, or followe
 
 ## Reading a whole environment
 
-Combine coercion with `object` and `withDefault` to turn an environment, a query string or a form into typed configuration, and to report every problem in it at once:
+Combine coercion with `object` and `optional` with a default to turn an environment, a query string or a form into typed configuration, and to report every problem in it at once:
 
 ```ts
-import { coerceBoolean, coerceNumber, object, string, transform, withDefault } from "@codenhub/validation";
+import { coerceBoolean, coerceNumber, object, optional, string, transform } from "@codenhub/validation";
 
 const env = object({
   PORT: coerceNumber({ int: true, min: 1, max: 65535 }),
-  DEBUG: withDefault(coerceBoolean(), false),
-  RETRIES: withDefault(coerceNumber({ int: true, min: 0 }), 3),
+  DEBUG: optional(coerceBoolean(), false),
+  RETRIES: optional(coerceNumber({ int: true, min: 0 }), 3),
   ORIGINS: transform(string(), (text) => text.split(",")),
 });
 
@@ -65,6 +65,6 @@ const result = env({ PORT: "8080", ORIGINS: "https://a.example,https://b.example
 // { ok: true, value: { PORT: 8080, DEBUG: false, RETRIES: 3, ORIGINS: [...] } }
 ```
 
-In Node.js, pass a copy of the environment: `env({ ...process.env })`. `process.env` itself is not a plain object, since its prototype is not `Object.prototype`, and `object` rejects it as it rejects a class instance. A missing variable is `undefined`, which `withDefault` replaces and everything else rejects. A value that repeats, as in `?id=1&id=2`, arrives as an array, so validate it with `array(coerceNumber())`.
+In Node.js, pass a copy of the environment: `env({ ...process.env })`. `process.env` itself is not a plain object, since its prototype is not `Object.prototype`, and `object` rejects it as it rejects a class instance. A missing variable is `undefined`, which a default replaces and everything else rejects. For a query string, [`searchParams`](validators.md#searchparams) reads the text into an object first, and gives a repeated key, as in `?id=1&id=2`, as an array when you ask for it with `repeated: true`, so validate it with `array(coerceNumber())`.
 
 To clean text before converting it, put a strict validator in front with `pipe`: `pipe(string({ trim: true }), coerceNumber())`. For text that holds JSON, use `json`, which parses it and validates the result.
