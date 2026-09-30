@@ -49,7 +49,8 @@ function isIpv6(text: string): boolean {
   if (zone === undefined) {
     return true;
   }
-  const first = Number.parseInt(groups[0] ?? "", 16);
+  // A leading `::` stands for zero groups, so the address starts with 0 whatever group is written next.
+  const first = head === "" && isCompressed ? 0 : Number.parseInt(groups[0] ?? "", 16);
   return IPV6_ZONE_PATTERN.test(zone) && (first & LINK_LOCAL_MASK) === LINK_LOCAL_PREFIX;
 }
 
