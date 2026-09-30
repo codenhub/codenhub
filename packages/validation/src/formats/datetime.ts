@@ -1,13 +1,32 @@
+import { split } from "../core/checks";
 import { assertSize } from "../core/result";
-import type { Validator } from "../core/types";
+import type { Factory, MessageOptions } from "../core/types";
 import { isCalendarDate } from "./calendar";
-import { textFormat } from "./text-format";
+import { stringFormat } from "./text-format";
 
 /** Nanoseconds, the finest a timestamp is written in; more digits would build a pattern nobody meant. */
 const MAX_PRECISION = 9;
 
+/** Hours, minutes and seconds of a day, as ISO 8601 writes them. */
+export const TIME = "(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d";
+
+/**
+ * The fractional seconds a precision allows: any number of digits, optionally, when it is omitted, none
+ * for 0, and exactly that many otherwise.
+ */
+export function fractionPattern(precision: number | undefined): string {
+  if (precision === undefined) {
+    return "(?:\\.\\d+)?";
+  }
+  assertSize("precision", precision);
+  if (precision > MAX_PRECISION) {
+    throw new RangeError(`precision is at most ${MAX_PRECISION} digits, received ${precision}`);
+  }
+  return precision === 0 ? "" : `\\.\\d{${precision}}`;
+}
+
 /** Options for {@link datetime}. */
-export interface DatetimeOptions {
+export interface DatetimeOptions extends MessageOptions {
   /**
    * Accepts a UTC offset such as `+02:00` instead of only `Z`.
    *
@@ -29,22 +48,20 @@ export interface DatetimeOptions {
  * datetime({ offset: true })("2026-09-28T14:30:00+02:00"); // { ok: true, ... }
  * ```
  *
- * @param options - Whether offsets are allowed, and the fractional-second precision.
- * @returns A validator that produces the text as a string.
  * @throws {RangeError} When `precision` is not an integer from 0 to 9.
  */
-export function datetime({ offset, precision }: DatetimeOptions = {}): Validator<string> {
-  if (precision !== undefined) {
-    assertSize("Datetime precision", precision);
-    if (precision > MAX_PRECISION) {
-      throw new RangeError(`Datetime precision is at most ${MAX_PRECISION} digits, received ${precision}`);
-    }
-  }
-  const fraction = precision === undefined ? "(?:\\.\\d+)?" : precision === 0 ? "" : `\\.\\d{${precision}}`;
+export const datetime = ((...args: unknown[]) => {
+  const [{ offset, precision, message }, checks] = split<DatetimeOptions, string>(args);
+  const fraction = fractionPattern(precision);
   const zone = offset === true ? "(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)" : "Z";
-  const pattern = new RegExp(`^(\\d{4}-\\d{2}-\\d{2})T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d${fraction}${zone}$`);
-  return textFormat("datetime", (text) => {
-    const date = pattern.exec(text)?.[1];
-    return date !== undefined && isCalendarDate(date);
-  });
-}
+  const pattern = new RegExp(`^(\\d{4}-\\d{2}-\\d{2})T${TIME}${fraction}${zone}$`);
+  return stringFormat(
+    "datetime",
+    (text) => {
+      const date = pattern.exec(text)?.[1];
+      return date !== undefined && isCalendarDate(date) ? text : undefined;
+    },
+    message,
+    checks,
+  );
+}) as Factory<string, DatetimeOptions>;

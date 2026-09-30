@@ -1,6 +1,7 @@
-import type { Validator } from "../core/types";
+import { split } from "../core/checks";
+import type { Factory, MessageOptions } from "../core/types";
 import { IPV4_PATTERN } from "./patterns";
-import { textFormat } from "./text-format";
+import { stringFormat } from "./text-format";
 
 const IPV6_GROUP_PATTERN = /^[0-9a-f]{1,4}$/i;
 /** A zone names a network interface, such as `eth0`. */
@@ -55,31 +56,56 @@ function isIpv6(text: string): boolean {
 }
 
 /** Options for {@link ip}. */
-export interface IpOptions {
+export interface IpOptions extends MessageOptions {
   /** Restricts the address family. Both are accepted when omitted. */
   version?: "v4" | "v6";
 }
 
 /**
- * Creates a validator for IPv4 and IPv6 addresses. The value is not modified.
+ * The canonical spelling of an IP address the family allows, or undefined when the text is not one:
+ * an IPv4 address as written, which has one spelling, and an IPv6 address as the URL parser writes it,
+ * lowercase with the longest run of zero groups shortened (RFC 5952), and its zone as written.
+ */
+export function toIpAddress(text: string, version: "v4" | "v6" | undefined): string | undefined {
+  if (version !== "v6" && IPV4_PATTERN.test(text)) {
+    return text;
+  }
+  if (version === "v4" || !isIpv6(text)) {
+    return undefined;
+  }
+  const zoneStart = text.indexOf("%");
+  const address = zoneStart === -1 ? text : text.slice(0, zoneStart);
+  const zone = zoneStart === -1 ? "" : text.slice(zoneStart);
+  return `${new URL(`http://[${address}]`).hostname.slice(1, -1)}${zone}`;
+}
+
+/**
+ * Creates a validator for IPv4 and IPv6 addresses. The value is the canonical spelling, so one address
+ * is one value however it was written: an IPv4 address as written, and an IPv6 address lowercase with
+ * the longest run of zero groups shortened to `::`, as RFC 5952 and the URL parser write it.
+ *
+ * @remarks
+ * An IPv6 address that embeds an IPv4 one, such as `::ffff:192.0.2.1`, is written in hex groups,
+ * `::ffff:c000:201`, as the URL parser writes it.
  *
  * @example
  * ```ts
- * ip()("192.168.0.1"); // { ok: true, ... }
+ * ip()("192.168.0.1"); // { ok: true, value: "192.168.0.1" }
+ * ip()("0:0:0:0:0:0:0:1"); // { ok: true, value: "::1" }
  * ip({ version: "v6" })("192.168.0.1"); // { ok: false, ... }, params { format: "ipv6" }
  * ```
  *
- * @param options - Restricts the address family.
- * @returns A validator that produces the address as a string.
  * @throws {TypeError} When `version` is given and is not `"v4"` or `"v6"`.
  */
-export function ip(options: IpOptions = {}): Validator<string> {
-  const { version } = options;
+export const ip = ((...args: unknown[]) => {
+  const [{ version, message }, checks] = split<IpOptions, string>(args);
   if (version !== undefined && version !== "v4" && version !== "v6") {
     throw new TypeError(`version must be "v4" or "v6", received "${String(version)}"`);
   }
-  return textFormat(
+  return stringFormat(
     version === undefined ? "ip" : `ip${version}`,
-    (text) => (version !== "v6" && IPV4_PATTERN.test(text)) || (version !== "v4" && isIpv6(text)),
+    (text) => toIpAddress(text, version),
+    message,
+    checks,
   );
-}
+}) as Factory<string, IpOptions>;

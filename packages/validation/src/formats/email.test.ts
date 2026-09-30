@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
 import { email } from "./email";
+import { hostname } from "./hostname";
 import { url } from "./url";
 
 describe("email", () => {
@@ -26,8 +27,8 @@ describe("email", () => {
     const invalid = ["a@example.xn--zz", "a@xn--zz.com", "a@XN--ZZ.example.com", "a@a.xn--a"];
     expect(accepts(email(), ...invalid)).toEqual(invalid.map(() => false));
     expect(accepts(email(), "a@a.xn--ls8h", "a@XN--MNCHEN-3YA.de")).toEqual([true, true]);
-    const local = url({ protocols: ["mailto"], allowLocal: true });
-    expect(accepts(local, "mailto:a@xn--zz", "mailto:a@xn--mnchen-3ya")).toEqual([false, true]);
+    const local = email({ domain: hostname() });
+    expect(accepts(local, "a@xn--zz", "a@xn--mnchen-3ya")).toEqual([false, true]);
   });
 
   it("should return the domain the parser reads when the text spells it another way, so one address has one spelling", () => {

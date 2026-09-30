@@ -36,23 +36,6 @@ tags(["a", "b"]); // { ok: true, value: ["a", "b"] }
 tags(["a", "a"]); // { ok: false, ... }, code "invalid_value" at path [1]
 ```
 
-### base64
-
-```ts
-export declare function base64(): Validator<string>;
-```
-
-Creates a validator for standard base64 with correct padding, as an encoder writes it: the bits past the last byte are zero. The value is not modified.
-
-**Returns** — A validator that produces the string.
-
-**Example**
-
-```ts
-base64()("aGVsbG8="); // { ok: true, value: "aGVsbG8=" }
-base64()("aGVsbG8"); // { ok: false, ... }, code "invalid_format"
-```
-
 ### check
 
 ```ts
@@ -89,60 +72,18 @@ const signup = object(
 );
 ```
 
-### cuid2
-
-```ts
-export declare function cuid2(): Validator<string>;
-```
-
-Creates a validator for CUID2 identifiers. The value is not modified.
-
-**Returns** — A validator that produces the identifier as a string.
-
-**Example**
-
-```ts
-cuid2()("tz4a98xxat96iws9zmbrgj3a"); // { ok: true, value: "tz4a98xxat96iws9zmbrgj3a" }
-cuid2()("1bad"); // { ok: false, ... }, code "invalid_format"
-```
-
-### datetime
-
-```ts
-export declare function datetime({ offset, precision }?: DatetimeOptions): Validator<string>;
-```
-
-Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a day that exists. The value is not modified.
-
-**Parameters**
-
-- `options` — Whether offsets are allowed, and the fractional-second precision.
-
-**Returns** — A validator that produces the text as a string.
-
-**Throws** — When `precision` is not an integer from 0 to 9.
-
-**Example**
-
-```ts
-datetime()("2026-09-28T14:30:00Z"); // { ok: true, ... }
-datetime()("2026-02-30T00:00:00Z"); // { ok: false, ... }: February has no 30th
-datetime({ offset: true })("2026-09-28T14:30:00+02:00"); // { ok: true, ... }
-```
-
 ### email
 
 ```ts
-export declare function email(options?: EmailOptions): Validator<string>;
+export declare function email(...checks: Check<string>[]): Validator<string>;
+export declare function email<const TOptions extends EmailOptions>(options: TOptions, ...checks: Check<string>[]): Composed<EmailParts<TOptions>, string>;
+export declare function email(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
+export declare function email(options: EmailOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 ```
 
 Creates a validator for email addresses with a public domain name, which may be internationalized.
 
-The value is the address as mail is delivered to it: the local part as written, and the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode. So `Ada@München.DE` is `Ada@xn--mnchen-3ya.de`, and every spelling that names one domain, such as fullwidth letters or an invisible variation selector, gives one address. The local part must be ASCII: addresses with letters beyond it (RFC 6531) are rejected. Surrounding whitespace is not trimmed; trim first with `pipe` when the input may need it.
-
-**Parameters**
-
-- `options` — Whether `+` is allowed in the local part.
+The value is the address as mail is delivered to it: the local part as written, and the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode. So `Ada@München.DE` is `Ada@xn--mnchen-3ya.de`, and every spelling that names one domain, such as fullwidth letters or an invisible variation selector, gives one address. The local part must be ASCII: addresses with letters beyond it (RFC 6531) are rejected. Surrounding whitespace is not trimmed; trim first with `pipe` when the input may need it. The `domain` and `local` options check those parts with validators of your own, which make the validator asynchronous when one is.
 
 **Returns** — A validator that produces the address, its domain as the parser reads it.
 
@@ -151,6 +92,7 @@ The value is the address as mail is delivered to it: the local part as written, 
 ```ts
 email()("Ada@Example.COM"); // { ok: true, value: "Ada@example.com" }
 email()("ada@localhost"); // { ok: false, error: { issues: [{ code: "invalid_format", ... }] } }
+email({ domain: oneOf(["company.com"]), message: "Use your company address" });
 ```
 
 ### endsWith
@@ -372,40 +314,6 @@ const file = guard("File", (input): input is File => input instanceof File);
 const upload = object({ avatar: file({ message: "Choose an image" }) });
 ```
 
-### hex
-
-```ts
-export declare function hex(): Validator<string>;
-```
-
-Creates a validator for one or more hexadecimal digits of any letter case. The value is not modified.
-
-**Returns** — A validator that produces the string.
-
-**Example**
-
-```ts
-hex()("deadBEEF01"); // { ok: true, value: "deadBEEF01" }
-hex()("xyz"); // { ok: false, ... }, code "invalid_format"
-```
-
-### hostname
-
-```ts
-export declare function hostname(): Validator<string>;
-```
-
-Creates a validator for hostnames: dot-separated labels of letters, digits and hyphens, at most 253 characters, whose last label is not a number, all digits or `0x` and hex digits, since the URL parser reads a name that ends that way as an IPv4 address (`0x7f000001` is `127.0.0.1`), and whose punycode labels, such as `xn--mnchen-3ya`, decode. An absolute name ending in one dot, such as `example.com.`, is accepted. Unlike `url`, single-label hosts such as `localhost` are accepted. The value is not modified.
-
-**Returns** — A validator that produces the hostname as a string.
-
-**Example**
-
-```ts
-hostname()("localhost"); // { ok: true, value: "localhost" }
-hostname()("-bad.com"); // { ok: false, ... }, code "invalid_format"
-```
-
 ### includes
 
 ```ts
@@ -490,29 +398,6 @@ const aged = object({ age: number() });
 intersection(named, aged)({ name: "Ada", age: 36 }); // { ok: true, value: { name: "Ada", age: 36 } }
 ```
 
-### ip
-
-```ts
-export declare function ip(options?: IpOptions): Validator<string>;
-```
-
-Creates a validator for IPv4 and IPv6 addresses. The value is not modified.
-
-**Parameters**
-
-- `options` — Restricts the address family.
-
-**Returns** — A validator that produces the address as a string.
-
-**Throws** — When `version` is given and is not `"v4"` or `"v6"`.
-
-**Example**
-
-```ts
-ip()("192.168.0.1"); // { ok: true, ... }
-ip({ version: "v6" })("192.168.0.1"); // { ok: false, ... }, params { format: "ipv6" }
-```
-
 ### is
 
 ```ts
@@ -540,23 +425,6 @@ The narrowing is only accurate for a validator that does not change the value. A
 
 ```ts
 const isPort = (input: unknown): input is number => is(number({ int: true, min: 1, max: 65535 }), input);
-```
-
-### isoDate
-
-```ts
-export declare function isoDate(): Validator<string>;
-```
-
-Creates a validator for ISO 8601 calendar dates such as `2026-09-28`, on a day that exists. The value is a string and is not modified; to get a `Date`, use `date`.
-
-**Returns** — A validator that produces the date as a string.
-
-**Example**
-
-```ts
-isoDate()("2024-02-29"); // { ok: true, ... }
-isoDate()("2026-02-29"); // { ok: false, ... }: 2026 is not a leap year
 ```
 
 ### json
@@ -742,23 +610,6 @@ Both are compared as the decimals they are written as, so `0.3` is a multiple of
 
 ```ts
 number(multipleOf(0.01, "At most two decimals"));
-```
-
-### nanoid
-
-```ts
-export declare function nanoid(): Validator<string>;
-```
-
-Creates a validator for Nano IDs in their default form: 21 characters of `A-Za-z0-9_-`. The value is not modified.
-
-**Returns** — A validator that produces the identifier as a string.
-
-**Example**
-
-```ts
-nanoid()("V1StGXR8_Z5jdHi6B-myT"); // { ok: true, value: "V1StGXR8_Z5jdHi6B-myT" }
-nanoid()("short"); // { ok: false, ... }, code "invalid_format"
 ```
 
 ### nonZero
@@ -1088,6 +939,39 @@ scores({ ada: 3, alan: 5 }); // { ok: true, value: { ada: 3, alan: 5 } }
 scores({ ada: "3" }); // { ok: false, ... }, code "invalid_type" at path ["ada"]
 ```
 
+### searchParams
+
+```ts
+export declare function searchParams<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, SearchParamsOptions>): Composed<TValidator, Infer<TValidator>>;
+export declare function searchParams<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, SearchParamsOptions>): AsyncValidator<Infer<TValidator>>;
+```
+
+Creates a validator that reads a query string, or a `URLSearchParams`, into an object of its decoded parameters, and validates that object: each key's value as a string, or with `repeated` every value of every key as an array. The value is what the validator produces, so values can be converted as they are read.
+
+The parameters are read as `URLSearchParams` reads them, `+` as a space and escapes decoded, and a leading `?` is ignored. A key given more than once fails, at its path with `invalid_key`, unless `repeated` is set: a check that saw one of two values while a server read the other would pass a value nobody checked. It is the reading `url` gives its `query` option.
+
+**Parameters**
+
+- `validator` — Validates the object of parameters.
+- `rest` — Options, then checks, which run on what the validator produced.
+
+**Type parameters**
+
+- `TValidator` — The validator of the parameters.
+
+**Returns** — A validator that produces what `validator` produces.
+
+**Throws** — When `validator` or a check is not a function.
+
+**Example**
+
+```ts
+const filters = searchParams(object({ page: coerceNumber({ int: true, min: 1 }), q: optional(string()) }));
+filters("?page=2&q=shoes"); // { ok: true, value: { page: 2, q: "shoes" } }
+filters("page=1&page=2"); // { ok: false, ... }, a repeated key
+searchParams(object({ tag: array(string()) }), { repeated: true })("tag=a&tag=b"); // { tag: ["a", "b"] }
+```
+
 ### set
 
 ```ts
@@ -1275,23 +1159,6 @@ const args = tuple([string()], { rest: number() });
 args(["sum", 1, 2, 3]); // { ok: true, ... }
 ```
 
-### ulid
-
-```ts
-export declare function ulid(): Validator<string>;
-```
-
-Creates a validator for ULIDs in any letter case. The value is not modified.
-
-**Returns** — A validator that produces the identifier as a string.
-
-**Example**
-
-```ts
-ulid()("01ARZ3NDEKTSV4RRFFQ69G5FAV"); // { ok: true, value: "01ARZ3NDEKTSV4RRFFQ69G5FAV" }
-ulid()("01ARZ3NDEKTSV4RRFFQ69G5FAU!"); // { ok: false, ... }, code "invalid_format"
-```
-
 ### union
 
 ```ts
@@ -1375,16 +1242,17 @@ string(uppercase("Must be uppercase"));
 ### url
 
 ```ts
-export declare function url(options?: UrlOptions): Validator<string>;
+export declare function url(...checks: Check<string>[]): Validator<string>;
+export declare function url<const TOptions extends UrlOptions>(options: TOptions, ...checks: Check<string>[]): Composed<UrlParts<TOptions>, string>;
+export declare function url(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
+export declare function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 ```
 
 Creates a validator for absolute URLs with an allowed protocol and a public domain name, and without embedded credentials. The value is the URL as the URL parser writes it, which is what a request made with it will use.
 
-The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected, with `allowLocal` as well.
+The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected.
 
-**Parameters**
-
-- `options` — Accepted protocols, and whether local hosts are allowed.
+The `host`, `port`, `path` and `query` options check those parts with validators of your own, which only decide: the value is still the whole URL, and one that is asynchronous makes the validator asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules.
 
 **Returns** — A validator that produces the URL as the parser writes it.
 
@@ -1395,25 +1263,8 @@ The text is read by the standard URL parser, and every check is made on what it 
 ```ts
 url()("https://Example.com/a?b=1"); // { ok: true, value: "https://example.com/a?b=1" }
 url()("http://localhost:3000"); // { ok: false, ... }
-url({ allowLocal: true })("http://localhost:3000"); // { ok: true, value: "http://localhost:3000/" }
-```
-
-### uuid
-
-```ts
-export declare function uuid(): Validator<string>;
-```
-
-Creates a validator for UUIDs of version 1 to 8 in hyphenated form, in any letter case, and the nil and max UUIDs. The value is not modified.
-
-**Returns** — A validator that produces the UUID as a string.
-
-**Example**
-
-```ts
-uuid()("123e4567-e89b-12d3-a456-426614174000"); // { ok: true, value: "123e4567-e89b-12d3-a456-426614174000" }
-uuid()("00000000-0000-0000-0000-000000000000"); // { ok: true, ... }, the nil UUID
-uuid()("not-a-uuid"); // { ok: false, ... }, code "invalid_format"
+url({ host: hostname() })("http://localhost:3000"); // { ok: true, value: "http://localhost:3000/" }
+url({ protocols: ["https"], path: string(startsWith("/api/")), query: object({ page: optional(string()) }) });
 ```
 
 ## Interfaces
@@ -1441,6 +1292,26 @@ Inherited from [MessageOptions](#messageoptions).
 #### min
 
 Inherited from [SizeOptions](#sizeoptions).
+
+### Base64Options
+
+```ts
+export interface Base64Options extends MessageOptions
+```
+
+Options for [base64](#base64).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+#### url
+
+```ts
+url?: boolean;
+```
+
+Requires the URL-safe alphabet of RFC 4648, with `-` and `_` for `+` and `/` and the padding optional, and reports the format as `base64url`.
 
 ### BigintOptions
 
@@ -1517,10 +1388,14 @@ Requires this moment or a later one. Must be a valid `Date`.
 ### DatetimeOptions
 
 ```ts
-export interface DatetimeOptions
+export interface DatetimeOptions extends MessageOptions
 ```
 
 Options for [datetime](#datetime).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
 
 #### offset
 
@@ -1541,7 +1416,7 @@ Exact number of fractional-second digits, an integer from 0 to 9. `0` forbids th
 ### EmailOptions
 
 ```ts
-export interface EmailOptions
+export interface EmailOptions extends MessageOptions
 ```
 
 Options for [email](#email).
@@ -1553,6 +1428,26 @@ allowPlus?: boolean;
 ```
 
 Accepts `+` in the local part, as in `me+tag@example.com`.
+
+#### domain
+
+```ts
+domain?: AnyValidator;
+```
+
+Validates the domain instead of the default rule, that it is a public domain name. It receives the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode, and the domain must still be a hostname: `email({ domain: hostname() })` accepts `ada@localhost`, and `email({ domain: oneOf(["example.com"]) })` accepts that domain alone. Its issues are placed under `["domain"]`.
+
+#### local
+
+```ts
+local?: AnyValidator;
+```
+
+Validates the local part, the text before the `@`, as written. Its issues are placed under `["local"]`.
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
 
 ### Factory
 
@@ -1589,10 +1484,14 @@ Messages of issues at the root, which belong to no field.
 ### IpOptions
 
 ```ts
-export interface IpOptions
+export interface IpOptions extends MessageOptions
 ```
 
 Options for [ip](#ip).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
 
 #### version
 
@@ -1765,6 +1664,26 @@ unknownKeys?: "strip" | "strict" | "passthrough";
 ```
 
 What to do with input properties the shape does not list. `"strip"` drops them from the output, `"strict"` rejects each with an `unrecognized_key` issue, and `"passthrough"` copies them to the output unchecked.
+
+### SearchParamsOptions
+
+```ts
+export interface SearchParamsOptions extends MessageOptions
+```
+
+Options for [searchParams](#searchparams).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+#### repeated
+
+```ts
+repeated?: boolean;
+```
+
+Gives the validator every value of every key as an array, and accepts a key given more than once.
 
 ### SizeOptions
 
@@ -2076,6 +1995,26 @@ trim?: boolean;
 
 Removes leading and trailing whitespace before the constraints run, and from the output.
 
+### TimeOptions
+
+```ts
+export interface TimeOptions extends MessageOptions
+```
+
+Options for [time](#time).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+#### precision
+
+```ts
+precision?: number;
+```
+
+Exact number of fractional-second digits, an integer from 0 to 9, which also makes the seconds required. Without it, the seconds and their fraction are optional and the fraction unbounded.
+
 ### TupleOptions
 
 ```ts
@@ -2099,18 +2038,38 @@ Validator for every position after the fixed ones. Without it the array must be 
 ### UrlOptions
 
 ```ts
-export interface UrlOptions
+export interface UrlOptions extends MessageOptions
 ```
 
 Options for [url](#url).
 
-#### allowLocal
+#### host
 
 ```ts
-allowLocal?: boolean;
+host?: AnyValidator;
 ```
 
-Accepts hosts that are not public domain names: `localhost`, single-label hosts, every IP address, public ones included and with no check of ranges, and special-use names such as `app.localhost`, `db.internal` or `printer.local`. It means "any host", not "only private ones".
+Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its issues are placed under `["host"]`.
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+#### path
+
+```ts
+path?: AnyValidator;
+```
+
+Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, always starting with `/`. Its issues are placed under `["path"]`.
+
+#### port
+
+```ts
+port?: AnyValidator;
+```
+
+Validates the port, a number, or `undefined` when the URL names none or names its scheme's default, which the parser drops. So `port: optional(port())` accepts either, and `port: literal(8080)` requires it. Its issues are placed under `["port"]`.
 
 #### protocols
 
@@ -2119,6 +2078,42 @@ protocols?: readonly string[];
 ```
 
 Accepted protocols, without the colon, in any letter case. Of the schemes without a host, `mailto`, `tel` and `urn` are accepted, each checked by its own rules even when written with a host; any other is always rejected. `javascript`, `vbscript` and `data` cannot be listed, since their URLs run script.
+
+#### query
+
+```ts
+query?: AnyValidator;
+```
+
+Validates the query, as an object of its decoded parameters: each key's value as a string, or with `repeated` every value of every key as an array. A key given twice fails at `["query", key]` unless `repeated` is set. Its issues are placed under `["query"]`. To reject parameters it does not list, give it `object(shape, { unknownKeys: "strict" })`.
+
+#### repeated
+
+```ts
+repeated?: boolean;
+```
+
+Gives `query` every value of every key as an array, and accepts a key given more than once.
+
+### UuidOptions
+
+```ts
+export interface UuidOptions extends MessageOptions
+```
+
+Options for [uuid](#uuid).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+#### version
+
+```ts
+version?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+```
+
+Requires this version, from 1 to 8. The nil and max UUIDs have no version and are then rejected. Any version when omitted.
 
 ### ValidationErr
 
@@ -2499,6 +2494,22 @@ The variants of a tagged union: a validator for each value the tag can have.
 
 ## Variables
 
+### base64
+
+```ts
+export declare const base64: Factory<string, Base64Options>;
+```
+
+Creates a validator for base64 as an encoder writes it: the bits past the last byte are zero, and the standard alphabet is correctly padded. The value is not modified.
+
+**Example**
+
+```ts
+base64()("aGVsbG8="); // { ok: true, value: "aGVsbG8=" }
+base64()("aGVsbG8"); // { ok: false, ... }, code "invalid_format"
+base64({ url: true })("aGVsbG8"); // { ok: true, ... }, padding is optional in the URL-safe alphabet
+```
+
 ### bigint
 
 ```ts
@@ -2531,6 +2542,26 @@ Creates a validator for booleans. Only `true` and `false` pass; to accept text s
 boolean()(true); // { ok: true, value: true }
 boolean()("true"); // { ok: false, error: { issues: [{ code: "invalid_type", ... }] } }
 boolean({ message: "Choose yes or no" });
+```
+
+### cidr
+
+```ts
+export declare const cidr: Factory<string, IpOptions>;
+```
+
+Creates a validator for IP address blocks in CIDR notation, an address and a prefix length, such as `192.168.0.0/24` or `2001:db8::/32`. The prefix is at most 32 for IPv4 and 128 for IPv6. The value is the address in the canonical spelling `ip` gives it and the prefix, so one block is one value.
+
+Bits set past the prefix are accepted, as in `192.168.0.5/24`, which names an address and its network.
+
+**Throws** — When `version` is given and is not `"v4"` or `"v6"`.
+
+**Example**
+
+```ts
+cidr()("10.0.0.0/8"); // { ok: true, value: "10.0.0.0/8" }
+cidr()("2001:DB8:0::/32"); // { ok: true, value: "2001:db8::/32" }
+cidr({ version: "v4" })("10.0.0.0/33"); // { ok: false, ... }, params { format: "cidrv4" }
 ```
 
 ### coerceBigint
@@ -2643,6 +2674,38 @@ coerceString({ min: 2 })(12); // { ok: true, value: "12" }
 coerceString()(null); // { ok: false, ... }, code "invalid_type"
 ```
 
+### creditCard
+
+```ts
+export declare const creditCard: Factory<string, MessageOptions>;
+```
+
+Creates a validator for payment card numbers: 12 to 19 digits whose Luhn checksum holds, optionally grouped by spaces or hyphens as people type them. The value is the digits alone, so one card is one value however it was grouped.
+
+Only the structure is checked: whether the number was issued, and by which network, is not known from the number alone. Card numbers are sensitive, and like every value they never appear in an issue.
+
+**Example**
+
+```ts
+creditCard()("4242 4242 4242 4242"); // { ok: true, value: "4242424242424242" }
+creditCard()("4242 4242 4242 4241"); // { ok: false, ... }: the checksum fails
+```
+
+### cuid2
+
+```ts
+export declare const cuid2: Factory<string, MessageOptions>;
+```
+
+Creates a validator for CUID2 identifiers. The value is not modified.
+
+**Example**
+
+```ts
+cuid2()("tz4a98xxat96iws9zmbrgj3a"); // { ok: true, value: "tz4a98xxat96iws9zmbrgj3a" }
+cuid2()("1bad"); // { ok: false, ... }, code "invalid_format"
+```
+
 ### date
 
 ```ts
@@ -2663,6 +2726,56 @@ birthday(new Date("1990-04-01")); // { ok: true, ... }
 birthday(new Date("nope")); // { ok: false, ... }, code "invalid_type"
 ```
 
+### datetime
+
+```ts
+export declare const datetime: Factory<string, DatetimeOptions>;
+```
+
+Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a day that exists. The value is not modified.
+
+**Throws** — When `precision` is not an integer from 0 to 9.
+
+**Example**
+
+```ts
+datetime()("2026-09-28T14:30:00Z"); // { ok: true, ... }
+datetime()("2026-02-30T00:00:00Z"); // { ok: false, ... }: February has no 30th
+datetime({ offset: true })("2026-09-28T14:30:00+02:00"); // { ok: true, ... }
+```
+
+### domain
+
+```ts
+export declare const domain: Factory<string, MessageOptions>;
+```
+
+Creates a validator for public domain names, such as `example.com` or `münchen.de`: at least two labels, a real top-level domain, and none of the special-use names that never name a public host, such as `localhost`, `.local`, `.internal` or `.test`. This is the rule `email` and `url` apply to their host by default. The value is the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
+
+To accept any hostname, such as `localhost` or `intranet`, use `hostname`. Whether the domain resolves, or is registered, is not checked.
+
+**Example**
+
+```ts
+domain()("Example.COM"); // { ok: true, value: "example.com" }
+domain()("localhost"); // { ok: false, ... }, code "invalid_format"
+```
+
+### duration
+
+```ts
+export declare const duration: Factory<string, MessageOptions>;
+```
+
+Creates a validator for ISO 8601 durations such as `P1Y2M`, `PT30M` or `P1DT12H`. The value is not modified.
+
+**Example**
+
+```ts
+duration()("PT1H30M"); // { ok: true, value: "PT1H30M" }
+duration()("P"); // { ok: false, ... }, code "invalid_format"
+```
+
 ### englishMessages
 
 ```ts
@@ -2680,6 +2793,118 @@ const result = number({ min: 18 })(15);
 if (!result.ok) {
   formatIssue(result.error.issues[0], englishMessages); // "Must be at least 18"
 }
+```
+
+### hex
+
+```ts
+export declare const hex: Factory<string, MessageOptions>;
+```
+
+Creates a validator for one or more hexadecimal digits of any letter case. The value is not modified.
+
+**Example**
+
+```ts
+hex()("deadBEEF01"); // { ok: true, value: "deadBEEF01" }
+hex()("xyz"); // { ok: false, ... }, code "invalid_format"
+```
+
+### hostname
+
+```ts
+export declare const hostname: Factory<string, MessageOptions>;
+```
+
+Creates a validator for hostnames: dot-separated labels of letters, digits and hyphens, at most 253 characters, whose last label is not a number, all digits or `0x` and hex digits, since the URL parser reads a name that ends that way as an IPv4 address (`0x7f000001` is `127.0.0.1`), and whose punycode labels, such as `xn--mnchen-3ya`, decode. An absolute name ending in one dot, such as `example.com.`, is accepted. Unlike `url`, single-label hosts such as `localhost` are accepted. The value is not modified.
+
+**Example**
+
+```ts
+hostname()("localhost"); // { ok: true, value: "localhost" }
+hostname()("-bad.com"); // { ok: false, ... }, code "invalid_format"
+```
+
+### ip
+
+```ts
+export declare const ip: Factory<string, IpOptions>;
+```
+
+Creates a validator for IPv4 and IPv6 addresses. The value is the canonical spelling, so one address is one value however it was written: an IPv4 address as written, and an IPv6 address lowercase with the longest run of zero groups shortened to `::`, as RFC 5952 and the URL parser write it.
+
+An IPv6 address that embeds an IPv4 one, such as `::ffff:192.0.2.1`, is written in hex groups, `::ffff:c000:201`, as the URL parser writes it.
+
+**Throws** — When `version` is given and is not `"v4"` or `"v6"`.
+
+**Example**
+
+```ts
+ip()("192.168.0.1"); // { ok: true, value: "192.168.0.1" }
+ip()("0:0:0:0:0:0:0:1"); // { ok: true, value: "::1" }
+ip({ version: "v6" })("192.168.0.1"); // { ok: false, ... }, params { format: "ipv6" }
+```
+
+### isoDate
+
+```ts
+export declare const isoDate: Factory<string, MessageOptions>;
+```
+
+Creates a validator for ISO 8601 calendar dates such as `2026-09-28`, on a day that exists. The value is a string and is not modified; to get a `Date`, use `date`.
+
+**Example**
+
+```ts
+isoDate()("2024-02-29"); // { ok: true, ... }
+isoDate()("2026-02-29"); // { ok: false, ... }: 2026 is not a leap year
+```
+
+### jwt
+
+```ts
+export declare const jwt: Factory<string, MessageOptions>;
+```
+
+Creates a validator for JSON Web Tokens in compact form: three base64url segments separated by dots, whose header and payload decode to JSON objects, and whose header names an algorithm in `alg`. The value is not modified.
+
+Only the structure is checked. The signature is not verified and the claims, such as the expiry, are not read: a token that passes may be forged or expired. Verify it with the key before trusting it.
+
+**Example**
+
+```ts
+jwt()("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl"); // { ok: true, ... }
+jwt()("not.a.token"); // { ok: false, ... }, code "invalid_format"
+```
+
+### mac
+
+```ts
+export declare const mac: Factory<string, MessageOptions>;
+```
+
+Creates a validator for MAC addresses (EUI-48) written as six pairs of hex digits separated by colons or by hyphens, such as `00:1A:2b:3c:4d:5e` or `00-1a-2b-3c-4d-5e`. The value is the canonical spelling, lowercase with colons, so one address is one value however it was written.
+
+**Example**
+
+```ts
+mac()("00-1A-2B-3C-4D-5E"); // { ok: true, value: "00:1a:2b:3c:4d:5e" }
+mac()("00:1a-2b:3c:4d:5e"); // { ok: false, ... }: mixed separators
+```
+
+### nanoid
+
+```ts
+export declare const nanoid: Factory<string, MessageOptions>;
+```
+
+Creates a validator for Nano IDs in their default form: 21 characters of `A-Za-z0-9_-`. The value is not modified.
+
+**Example**
+
+```ts
+nanoid()("V1StGXR8_Z5jdHi6B-myT"); // { ok: true, value: "V1StGXR8_Z5jdHi6B-myT" }
+nanoid()("short"); // { ok: false, ... }, code "invalid_format"
 ```
 
 ### never
@@ -2715,6 +2940,69 @@ const age = number({ int: true, min: 0, max: 130 });
 age(42); // { ok: true, value: 42 }
 age(-1); // { ok: false, error: { issues: [{ code: "too_small", ... }] } }
 number({ min: 0 }, multipleOf(0.01)); // money
+```
+
+### phone
+
+```ts
+export declare const phone: Factory<string, MessageOptions>;
+```
+
+Creates a validator for international phone numbers in E.164 form: a `+`, the country code and the number, 7 to 15 digits in all, optionally with spaces, hyphens, dots or parentheses between digits. The value is the canonical E.164 spelling, `+` and the digits alone, so one number is one value however it was written.
+
+Only the international form is accepted, since a national number means nothing without knowing its country. Whether the number exists, and whether it fits its country's numbering plan, is not checked.
+
+**Example**
+
+```ts
+phone()("+55 (11) 98765-4321"); // { ok: true, value: "+5511987654321" }
+phone()("(11) 98765-4321"); // { ok: false, ... }: no country code
+```
+
+### port
+
+```ts
+export declare const port: Factory<number, MessageOptions>;
+```
+
+Creates a validator for network ports: whole numbers from 1 to 65535. Port 0, which asks a system for any free port, cannot be connected to and is rejected. A number that is not a port fails with `invalid_format` and `params` `{ format: "port" }`; text is not a port, so read a port from text with `pipe(coerceNumber(), port())`.
+
+**Example**
+
+```ts
+port()(8080); // { ok: true, value: 8080 }
+port()(70_000); // { ok: false, ... }, code "invalid_format"
+url({ port: optional(port()) }); // a URL's port is a number, or absent
+```
+
+### semver
+
+```ts
+export declare const semver: Factory<string, MessageOptions>;
+```
+
+Creates a validator for Semantic Versioning 2.0.0 versions, such as `1.2.3`, `1.0.0-rc.1` or `1.0.0+build.5`. A leading `v` is not part of a version and is rejected. The value is not modified.
+
+**Example**
+
+```ts
+semver()("1.4.0-beta.2"); // { ok: true, value: "1.4.0-beta.2" }
+semver()("v1.4.0"); // { ok: false, ... }, code "invalid_format"
+```
+
+### slug
+
+```ts
+export declare const slug: Factory<string, MessageOptions>;
+```
+
+Creates a validator for URL slugs: lowercase ASCII letters and digits in words joined by single hyphens, such as `hello-world-2`. The value is not modified.
+
+**Example**
+
+```ts
+slug()("hello-world"); // { ok: true, value: "hello-world" }
+slug()("Hello World"); // { ok: false, ... }, code "invalid_format"
 ```
 
 ### string
@@ -2756,6 +3044,39 @@ symbol()(Symbol("id")); // { ok: true, ... }
 symbol()("id"); // { ok: false, ... }, code "invalid_type"
 ```
 
+### time
+
+```ts
+export declare const time: Factory<string, TimeOptions>;
+```
+
+Creates a validator for ISO 8601 times of day without an offset, such as `14:30`, `14:30:00` or `14:30:00.250`, as an HTML time input writes them. The value is not modified.
+
+**Throws** — When `precision` is not an integer from 0 to 9.
+
+**Example**
+
+```ts
+time()("09:15"); // { ok: true, value: "09:15" }
+time()("24:00"); // { ok: false, ... }, code "invalid_format"
+time({ precision: 0 })("09:15"); // { ok: false, ... }: the seconds are required
+```
+
+### ulid
+
+```ts
+export declare const ulid: Factory<string, MessageOptions>;
+```
+
+Creates a validator for ULIDs in any letter case. The value is not modified.
+
+**Example**
+
+```ts
+ulid()("01ARZ3NDEKTSV4RRFFQ69G5FAV"); // { ok: true, value: "01ARZ3NDEKTSV4RRFFQ69G5FAV" }
+ulid()("01ARZ3NDEKTSV4RRFFQ69G5FAU!"); // { ok: false, ... }, code "invalid_format"
+```
+
 ### unknown
 
 ```ts
@@ -2769,6 +3090,24 @@ Creates a validator that accepts every value, unchanged. Checks given to it run 
 ```ts
 const metadata = object({ id: string(), extra: unknown() });
 const serializable = unknown(check((value) => JSON.stringify(value) !== undefined, "Must be serializable"));
+```
+
+### uuid
+
+```ts
+export declare const uuid: Factory<string, UuidOptions>;
+```
+
+Creates a validator for UUIDs of version 1 to 8 in hyphenated form, in any letter case, and the nil and max UUIDs. The value is not modified.
+
+**Throws** — When `version` is not an integer from 1 to 8.
+
+**Example**
+
+```ts
+uuid()("123e4567-e89b-12d3-a456-426614174000"); // { ok: true, value: "123e4567-e89b-12d3-a456-426614174000" }
+uuid()("00000000-0000-0000-0000-000000000000"); // { ok: true, ... }, the nil UUID
+uuid({ version: 7 })("123e4567-e89b-12d3-a456-426614174000"); // { ok: false, ... }, a version 1 UUID
 ```
 
 ## Internal types

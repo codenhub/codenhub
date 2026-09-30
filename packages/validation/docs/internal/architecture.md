@@ -93,7 +93,7 @@ Checks replace `refine`, which wrapped a validator to add one rule. A check atta
 
 ### Builders
 
-Three public helpers make validators and checks on the same internals as the built-in ones, `leaf` and `split` in `core/checks.ts`, so a custom one behaves exactly as a built-in does, with the same issue shapes, the same `message` option and the same checks. The built-ins call those internals rather than the helpers, because `export const boolean = guard(...)` is a call made when the module loads, which a bundler cannot drop, and every consumer would carry every such validator:
+Three public helpers make validators and checks on the same internals as the built-in ones, `leaf` and `split` in `core/checks.ts`, so a custom one behaves exactly as a built-in does, with the same issue shapes, the same `message` option and the same checks. A built-in made by a call when its module loads, such as `export const hex = /* @__PURE__ */ formatFactory(...)`, carries the pure annotation, without which a bundler keeps the call and every consumer carries the validator (see [Tree-shaking is a contract](#tree-shaking-is-a-contract)):
 
 - `check(predicate, issue?)` makes a check of any type. The issue is an issue to report, or a string as its message, and defaults to code `custom`.
 - `format(name, predicate)` makes a factory for a string format, such as `slug()`: a non-string fails with `invalid_type`, and a string the predicate rejects with `invalid_format` and `params.format` set to `name`.
@@ -107,7 +107,12 @@ A format accepts text that matches a complete, positive description of it, a pat
 
 Where a standard parser decides what the text means, the parser is the description. `url` hands the text to the URL parser, checks what it read (the scheme against a list, the absence of credentials, the host against the public-host rule), and returns that reading serialized, never the text it was given. `email` does the same for its domain, and a `mailto` URL gives each recipient as `email` does. The value then cannot mean one thing to the validator and another to the request or mail server that uses it, whatever spelling the text used: dot segments, fullwidth or invisible characters, IPv4 shorthand, escapes. The rules these validators apply to raw text are positive descriptions too: a written URL holds only visible characters, and a domain is written with letters, marks, digits, dots and hyphens, none of which can end a host. Text a format checks without a parser, such as a UUID, is described completely by its pattern and is returned as written.
 
-A format whose meaning has more than one spelling returns one canonical spelling, so a later comparison or lookup on the value treats one meaning as one value: `url` and `email` return what the parser read, `ip` returns an IPv4 address as written, which has one spelling, and an IPv6 address in the shortest lowercase form of RFC 5952, and `phone` returns E.164 (`+5511987654321`).
+A format whose meaning has more than one spelling returns one canonical spelling, so a later comparison or lookup on the value treats one meaning as one value:
+
+- `url`, `email` and `domain` return what the URL parser read.
+- `ip` returns an IPv4 address as written, which has one spelling, and an IPv6 address as the URL parser writes it, lowercase with the longest run of zero groups shortened (RFC 5952), and its zone as written. An IPv6 address that embeds an IPv4 one is written in hex groups, `::ffff:c000:201`, where RFC 5952 would keep the dotted form, since the parser's reading is the rule. `cidr` returns its address as `ip` does.
+- `mac` returns lowercase pairs separated by colons.
+- `phone` returns E.164, `+` and the digits (`+5511987654321`), and `creditCard` the digits alone, however either was grouped.
 
 ### Formats are made of parts
 
@@ -119,7 +124,10 @@ email({ domain, local, allowPlus });
 ```
 
 - Without a part option the format applies its own default rule: `url` and `email` require a public domain name, and a URL with no port or path passes those. The default rule is the shared predicate, never the public validator, so a default `url()` builds no issue it throws away and costs what it did without parts.
-- A part given as an option replaces the default rule: `url({ host: hostname() })` accepts any hostname, `localhost` included, which is what `allowLocal` did, and `url({ host: union([domain(), ip()]) })` accepts IP addresses but not `localhost`. The protocol is not a part: a list, `protocols`, says it better than a validator would.
+- A part given as an option replaces the default rule, never the syntax: `url({ host: hostname() })` accepts any hostname, `localhost` included, `url({ host: unknown() })` accepts any host the parser reads, which is what `allowLocal` did, and `url({ host: union([domain(), ip()]) })` accepts IP addresses but not `localhost`. `email({ domain })` still requires a hostname. The protocol is not a part: a list, `protocols`, says it better than a validator would.
+- The parts apply to a URL with a host. A `mailto`, `tel` or `urn` URL keeps its own rules, and a `mailto` recipient's domain must be public, as for `email()`: `host` checks a URL's host, and a `mailto` has none.
+- The port is given as a number, or as `undefined` when the URL names none or names its scheme's default, which the parser drops. `port()` accepts 1 to 65535: 0 asks a system for any port and cannot be connected to.
+- A repeated query key is structure, checked before content: it fails before any part runs, and the `url` reports it as its own issue.
 - A part validator receives what the parser read, not the text: the host in its ASCII form, the path after dot segments are resolved, the port as a number.
 - An issue a part reports is placed under the part's name, such as `["host"]` or `["query", "page"]`, as a composer places a child's issues.
 - A part validator only decides; the format still returns the URL or address as the parser writes it, and a part that transforms its value changes nothing in the output. To read typed values out of a URL, validate the part itself.
@@ -213,7 +221,7 @@ The package is `sideEffects: false`, every module is side-effect free at load, a
 - One validator or check per module; a module imports only `core/` helpers and other validators it truly composes.
 - No shared mutable state, no module-level registries, no `Object.assign`-style attachment of properties to functions at load. The one piece of module-level state is the depth counter of `lazy`, described under [Results, not exceptions](#results-not-exceptions): it is created at load without a side effect and is back at zero whenever no validator is running.
 - Options are read once when a validator is created, not per call, and defaults are resolved there.
-- No export is the result of a call made at load, such as `export const boolean = guard(...)`: a bundler keeps a call it cannot prove pure, so every consumer would carry it. An export is a function or a constant.
+- An export made by a call at load, such as `export const hex = /* @__PURE__ */ formatFactory(...)`, carries the pure annotation on the outermost call, and its arguments make no call of their own: a bundler keeps a call it cannot prove pure, so every consumer would carry it. Rolldown and esbuild both drop an annotated call nothing uses, and the size budgets would catch one that stayed. Any other export is a function or a constant.
 - The English wording lives in `messages/english-messages.ts` and is reachable only through the `englishMessages` export, so `formatIssue` itself carries none of it.
 
 `tests/integration/bundle-size.test.ts` bundles small consumer-shaped modules against the built `dist/` and asserts a gzip ceiling for each: one leaf validator, an object of a few fields, messages alone, and everything. A budget that fails means something made a validator a tenth heavier. The shared core, the code every validator carries, is where a byte costs most: it is paid once per validator family a consumer uses, so a helper there earns its place only if nearly every validator needs it. Each budget is what its scenario measured plus 10%, rounded up to ten bytes, so a fix that adds a few bytes passes without touching the test. When one fails on purpose, every scenario is measured again and every budget reset by the same rule, and the commit says what grew and why.

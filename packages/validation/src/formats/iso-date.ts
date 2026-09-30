@@ -1,6 +1,5 @@
-import type { Validator } from "../core/types";
 import { isCalendarDate } from "./calendar";
-import { textFormat } from "./text-format";
+import { formatFactory } from "./text-format";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -13,9 +12,7 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
  * isoDate()("2024-02-29"); // { ok: true, ... }
  * isoDate()("2026-02-29"); // { ok: false, ... }: 2026 is not a leap year
  * ```
- *
- * @returns A validator that produces the date as a string.
  */
-export function isoDate(): Validator<string> {
-  return textFormat("date", (text) => DATE_PATTERN.test(text) && isCalendarDate(text));
-}
+export const isoDate = /* @__PURE__ */ formatFactory("date", (text) =>
+  DATE_PATTERN.test(text) && isCalendarDate(text) ? text : undefined,
+);

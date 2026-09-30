@@ -1,7 +1,6 @@
-import { split } from "../core/checks";
 import { assertFunction } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
-import { stringFormat } from "../formats/text-format";
+import { formatFactory } from "../formats/text-format";
 
 /**
  * Makes the factory of a validator for a string format, which behaves exactly as `email()` or
@@ -26,8 +25,5 @@ import { stringFormat } from "../formats/text-format";
  */
 export function format(name: string, test: (text: string) => boolean): Factory<string, MessageOptions> {
   assertFunction("test", test);
-  return ((...args: unknown[]) => {
-    const [{ message }, checks] = split<MessageOptions, string>(args);
-    return stringFormat(name, (text) => (test(text) ? text : undefined), message, checks);
-  }) as Factory<string, MessageOptions>;
+  return formatFactory(name, (text) => (test(text) ? text : undefined));
 }

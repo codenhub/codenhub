@@ -63,18 +63,30 @@ export type {
   ValidationResult,
   Validator,
 } from "./core/types";
-export { base64 } from "./formats/base64";
+export { base64, type Base64Options } from "./formats/base64";
+export { cidr } from "./formats/cidr";
+export { creditCard } from "./formats/credit-card";
 export { cuid2 } from "./formats/cuid2";
 export { datetime, type DatetimeOptions } from "./formats/datetime";
+export { domain } from "./formats/domain";
+export { duration } from "./formats/duration";
 export { email, type EmailOptions } from "./formats/email";
 export { hex } from "./formats/hex";
 export { hostname } from "./formats/hostname";
 export { ip, type IpOptions } from "./formats/ip";
 export { isoDate } from "./formats/iso-date";
+export { jwt } from "./formats/jwt";
+export { mac } from "./formats/mac";
 export { nanoid } from "./formats/nanoid";
+export { phone } from "./formats/phone";
+export { port } from "./formats/port";
+export { searchParams, type SearchParamsOptions } from "./formats/search-params";
+export { semver } from "./formats/semver";
+export { slug } from "./formats/slug";
+export { time, type TimeOptions } from "./formats/time";
 export { ulid } from "./formats/ulid";
 export { url, type UrlOptions } from "./formats/url";
-export { uuid } from "./formats/uuid";
+export { uuid, type UuidOptions } from "./formats/uuid";
 export { standard } from "./interop/standard";
 export { type StandardSchemaV1 } from "./interop/standard-schema";
 export { englishMessages } from "./messages/english-messages";

@@ -41,27 +41,27 @@ const scenarios: Scenario[] = [
     source: `import { string } from "DIST"; export const check = string({ min: 2, trim: true });`,
     budget: 1200,
   },
-  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 1200 },
+  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 1450 },
   {
     name: "object of three fields",
     source: `import { email, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });`,
-    budget: 2890,
+    budget: 3080,
   },
   {
     name: "object of three fields with messages",
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 4060,
+    budget: 4250,
   },
-  { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 830 },
-  { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 2050 },
-  { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 1210 },
+  { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 1010 },
+  { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 2580 },
+  { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 1350 },
   {
     name: "datetime",
     source: `import { datetime } from "DIST"; export const check = datetime({ offset: true });`,
-    budget: 1100,
+    budget: 1170,
   },
   {
     name: "date",
@@ -149,7 +149,7 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 11180,
+    budget: 12820,
   },
 ];
 

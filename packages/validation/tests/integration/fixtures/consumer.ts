@@ -23,6 +23,7 @@ import {
   func,
   formatIssue,
   guard,
+  hostname,
   intersection,
   is,
   json,
@@ -40,7 +41,9 @@ import {
   partial,
   pass,
   pipe,
+  port as portNumber,
   record,
+  searchParams,
   set,
   standard,
   string,
@@ -156,7 +159,7 @@ export const statusValue: Infer<typeof status> = Status.Active;
 
 // Formats produce strings; date and bigint produce their own types.
 export const site: string | undefined = (() => {
-  const result = url({ allowLocal: true })(raw);
+  const result = url({ host: hostname() })(raw);
   return result.ok ? result.value : undefined;
 })();
 export const stamp = datetime();
@@ -356,3 +359,16 @@ export const prefixed: Validator<string> = string({ min: 1 }, startsWith("a"));
 export const wrongPrefixed = number(startsWith("a"));
 export const handler = func<(value: string) => void>(check((fn) => fn.length === 1));
 export const handlerValue: Infer<typeof handler> = (value: string) => void value;
+
+// Parts make a format asynchronous exactly when one of them is, and a URL is still a string.
+export const localUrl: Validator<string> = url({ host: hostname(), port: optional(portNumber()) });
+export const apiUrl: Validator<string> = url({ protocols: ["https"], path: string(startsWith("/api/")) });
+export const remoteHost: AsyncValidator<string> = url({ host: username });
+// @ts-expect-error an asynchronous part makes an asynchronous validator
+export const remoteHostSync: Validator<string> = url({ host: username });
+export const companyEmail: Validator<string> = email({ domain: oneOf(["company.com"]), allowPlus: false });
+export const takenEmail: AsyncValidator<string> = email({ local: username });
+export const query = searchParams(object({ page: coerceNumber({ int: true }), tags: array(string()) }), {
+  repeated: true,
+});
+export const queryValue: Infer<typeof query> = { page: 1, tags: ["a"] };
