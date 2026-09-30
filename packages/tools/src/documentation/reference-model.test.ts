@@ -314,6 +314,7 @@ describe("findEmptySections", () => {
       entrypoints: [
         {
           module: "index",
+          internalTypes: [],
           subpath: ".",
           symbols: [
             symbolFixture({ kind: "function", name: "complete" }),

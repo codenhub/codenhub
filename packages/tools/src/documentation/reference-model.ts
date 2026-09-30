@@ -137,6 +137,21 @@ export interface ReferenceSymbol extends ReferenceProse {
   signature?: string;
 }
 
+/**
+ * An unexported type that a documented declaration names. It has no import path, so
+ * it is listed for reading only, with its declaration text from the emitted `.d.ts`.
+ */
+export interface ReferenceInternalType {
+  /** The type's name in its declaring file. */
+  name: string;
+  /** Its declaration text from the emitted `.d.ts`. */
+  signature: string;
+  /** Rendered Markdown from its TSDoc summary, when it has one. */
+  doc?: string;
+  /** Package-relative source files declaring it with this same text, such as `src/composition/object.ts`. */
+  declaredIn: string[];
+}
+
 /** One documented entrypoint and its ordered symbols. */
 export interface ReferenceEntrypoint {
   /** `package.json` `exports` subpath key, such as `"."` or `"./registries/browser"`. */
@@ -155,6 +170,8 @@ export interface ReferenceEntrypoint {
   since?: string;
   /** Symbols ordered by kind group, then alphabetically within a group. */
   symbols: ReferenceSymbol[];
+  /** Unexported types this entrypoint's declarations name, alphabetically; attached after the model is built. */
+  internalTypes: ReferenceInternalType[];
 }
 
 /** An export the page model has no group for, so it was left undocumented. */
@@ -195,7 +212,10 @@ export interface ReferenceModel {
   entrypoints: ReferenceEntrypoint[];
   /** Exports skipped because their declaration kind has no page group. */
   unsupported: UnsupportedExport[];
-  /** Same-package types named by documented declarations but documented nowhere, in page order. */
+  /**
+   * Same-package types named by documented declarations but documented nowhere, in page
+   * order. Those later found as unexported declarations move to `internalTypes`.
+   */
   unresolved: UnresolvedTypeReference[];
 }
 
@@ -760,6 +780,7 @@ export function buildReferenceModel(project: unknown, subpathByModule: Record<st
     const symbols = buildSymbols(children, resolve);
     entrypoints.push({
       description: moduleSummary(reflection?.comment),
+      internalTypes: [],
       module,
       since: optionalBlockTagText(reflection?.comment, "@since"),
       subpath,

@@ -246,7 +246,8 @@ function symbolBlocks(
  *
  * The page carries the closed frontmatter schema from
  * `docs/specs/packages-documentation.md`, a generated-file notice, a single H1,
- * and one H2 section per non-empty symbol group in spec order. Signature text is
+ * one H2 section per non-empty symbol group in spec order, and, last, the
+ * unexported types those symbols' declarations name. Signature text is
  * taken from whatever `attachSignatures` filled in; `{@link}` references resolve
  * against this page and `options.resolveLink`, falling back to inline code.
  * @param entrypoint Entrypoint from the reference model, with signatures attached.
@@ -271,6 +272,18 @@ export function renderReferencePage(entrypoint: ReferenceEntrypoint, options: Re
     sections.push(`## ${heading}`);
     for (const symbol of group) {
       sections.push(...symbolBlocks(symbol, options.prose, link));
+    }
+  }
+
+  if (entrypoint.internalTypes.length > 0) {
+    sections.push("## Internal types");
+    for (const type of entrypoint.internalTypes) {
+      sections.push(`### ${type.name}`, codeBlock(type.signature));
+      if (options.prose && type.doc !== undefined) {
+        sections.push(link(type.doc));
+      }
+      const files = type.declaredIn.map((file) => `\`${file}\``).join(", ");
+      sections.push(`Not exported; declared in ${files}.`);
     }
   }
 

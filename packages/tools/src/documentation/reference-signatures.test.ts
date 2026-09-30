@@ -94,6 +94,7 @@ describe("attachSignatures", () => {
         {
           subpath: ".",
           module: "index",
+          internalTypes: [],
           symbols: [
             {
               name: "AppError",

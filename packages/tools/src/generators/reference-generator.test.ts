@@ -241,6 +241,76 @@ describe("analyzeReference", () => {
     );
   });
 
+  it("lists unexported types that public declarations name as internal types", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-internal", {
+      "index.ts": [
+        "type Deeper = { readonly depth: number };",
+        "",
+        "/** What {@link wrap} returns. */",
+        "type Hidden<T> = { readonly inner: T; readonly deeper: Deeper };",
+        "",
+        "/** A public shape. */",
+        "export interface Shown {",
+        "  /** A value. */",
+        "  readonly value: string;",
+        "}",
+        "",
+        "/**",
+        " * Wraps a value.",
+        " * @typeParam T - The wrapped type.",
+        " * @param value - The value.",
+        " * @returns The wrapper.",
+        " */",
+        "export function wrap<T>(value: T): Hidden<T> & Shown {",
+        '  return { inner: value, deeper: { depth: 0 }, value: "" };',
+        "}",
+        "",
+        "/** Keys of a record. */",
+        "export type Keys<T> = { [K in keyof T]: K }[keyof T];",
+        "",
+        "/** The element type of an array. */",
+        "export type Element<T> = T extends readonly (infer E)[] ? E : never;",
+        "",
+      ].join("\n"),
+    });
+
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    const page = files[0]?.contents ?? "";
+
+    // Type parameters, mapped-type keys, and `infer` bindings are in scope, not
+    // missing; `Shown` is documented; `Hidden`, and `Deeper` through it, are internal.
+    expect(model.unresolved).toEqual([]);
+    expect(model.entrypoints[0]?.internalTypes.map((type) => type.name)).toEqual(["Deeper", "Hidden"]);
+    expect(page).toContain(
+      [
+        "## Internal types",
+        "",
+        "### Deeper",
+        "",
+        "```ts",
+        "type Deeper = {",
+        "  readonly depth: number;",
+        "};",
+        "```",
+        "",
+        "Not exported; declared in `src/index.ts`.",
+        "",
+        "### Hidden",
+        "",
+        "```ts",
+        "type Hidden<T> = {",
+        "  readonly inner: T;",
+        "  readonly deeper: Deeper;",
+        "};",
+        "```",
+        "",
+        "What [wrap](#wrap) returns.",
+        "",
+        "Not exported; declared in `src/index.ts`.",
+      ].join("\n"),
+    );
+  });
+
   it("reports a same-package type that the reference cannot find anywhere", { timeout: 30_000 }, async () => {
     const workspacePackage = await createReferenceFixture("fixture-unresolved", {
       // A global type from a hand-written declaration file is never emitted, so there

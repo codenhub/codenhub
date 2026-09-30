@@ -2,7 +2,13 @@ import { posix } from "node:path";
 
 import ts from "typescript";
 
-import type { ReferenceEntrypoint, ReferenceModel, ReferenceSymbol } from "./reference-model.ts";
+import type {
+  ReferenceEntrypoint,
+  ReferenceInternalType,
+  ReferenceModel,
+  ReferenceSymbol,
+  UnresolvedTypeReference,
+} from "./reference-model.ts";
 
 /** Declaration text sliced from one emitted `.d.ts` for a single exported symbol. */
 export interface SymbolSignature {
@@ -572,4 +578,134 @@ export function attachSignatures(
     symbols: entrypoint.symbols.map((symbol) => withSignature(symbol, signaturesByModule.get(entrypoint.module))),
   }));
   return { ...model, entrypoints };
+}
+
+/** An unexported declaration found in an emitted `.d.ts`. */
+interface InternalDeclaration {
+  text: string;
+  doc?: string;
+  /** Other unexported declarations of the same file that this one names. */
+  references: string[];
+}
+
+function isLocalTypeDeclaration(
+  statement: ts.Statement,
+): statement is ts.TypeAliasDeclaration | ts.InterfaceDeclaration | ts.EnumDeclaration | ts.ClassDeclaration {
+  return (
+    (ts.isTypeAliasDeclaration(statement) ||
+      ts.isInterfaceDeclaration(statement) ||
+      ts.isEnumDeclaration(statement) ||
+      ts.isClassDeclaration(statement)) &&
+    statement.name !== undefined &&
+    !hasModifier(statement, ts.SyntaxKind.ExportKeyword)
+  );
+}
+
+function jsDocSummary(node: ts.Node): string | undefined {
+  const docs = ts.getJSDocCommentsAndTags(node).filter(ts.isJSDoc);
+  const text = ts.getTextOfJSDocComment(docs.at(-1)?.comment)?.trim();
+  return text === undefined || text === "" ? undefined : text;
+}
+
+function internalDeclarations(source: ts.SourceFile): Map<string, InternalDeclaration> {
+  const locals = new Map(
+    source.statements.filter(isLocalTypeDeclaration).map((statement) => [statement.name?.text ?? "", statement]),
+  );
+  const found = new Map<string, InternalDeclaration>();
+  for (const [name, statement] of locals) {
+    const references = new Set<string>();
+    const visit = (node: ts.Node): void => {
+      if (ts.isTypeReferenceNode(node) && ts.isIdentifier(node.typeName) && locals.has(node.typeName.text)) {
+        references.add(node.typeName.text);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(statement);
+    references.delete(name);
+    const doc = jsDocSummary(statement);
+    const text = tidy(statement.getText(source), ts.isTypeAliasDeclaration(statement));
+    found.set(
+      name,
+      doc === undefined ? { references: [...references], text } : { doc, references: [...references], text },
+    );
+  }
+  return found;
+}
+
+/** `src/composition/object.ts` → `composition/object.d.ts`; `undefined` for a source with no emitted declaration. */
+function emittedDeclarationPath(declaredIn: string): string | undefined {
+  const match = /^src\/(.+)\.([cm]?)tsx?$/.exec(declaredIn);
+  return match === null || declaredIn.endsWith(".d.ts") || /\.d\.[cm]ts$/.test(declaredIn)
+    ? undefined
+    : `${match[1]}.d.${match[2]}ts`;
+}
+
+/**
+ * Moves unresolved references that are unexported declarations into their entrypoint's
+ * `internalTypes`, following the unexported types those declarations name in turn.
+ *
+ * TypeDoc reflects only exports, so an unexported type a public declaration names is
+ * found in the emitted `.d.ts`, which keeps it for the export that needs it. A
+ * reference with no such declaration, such as a global type from a hand-written
+ * `.d.ts`, stays in `unresolved`.
+ * @param model Model produced by `buildReferenceModel`.
+ * @param files Emitted declaration contents keyed relative to `src/`, as `emitDeclarations` returns them.
+ * @returns A new model with `internalTypes` filled and `unresolved` narrowed to what is still missing.
+ */
+export function attachInternalTypes(model: ReferenceModel, files: ReadonlyMap<string, string>): ReferenceModel {
+  const parsed = new Map<string, Map<string, InternalDeclaration>>();
+  const declarationsIn = (path: string) => {
+    let found = parsed.get(path);
+    if (found === undefined) {
+      const text = files.get(path);
+      found =
+        text === undefined
+          ? new Map()
+          : internalDeclarations(ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS));
+      parsed.set(path, found);
+    }
+    return found;
+  };
+
+  const unresolved: UnresolvedTypeReference[] = [];
+  const entrypoints = model.entrypoints.map((entrypoint): ReferenceEntrypoint => {
+    const internal: ReferenceInternalType[] = [];
+    const queue = model.unresolved.filter((reference) => reference.subpath === entrypoint.subpath);
+    const visited = new Set<string>();
+    while (queue.length > 0) {
+      const reference = queue.shift() as UnresolvedTypeReference;
+      const path = reference.declaredIn === undefined ? undefined : emittedDeclarationPath(reference.declaredIn);
+      const declaration = path === undefined ? undefined : declarationsIn(path).get(reference.name);
+      if (declaration === undefined || reference.declaredIn === undefined || path === undefined) {
+        unresolved.push(reference);
+        continue;
+      }
+      const key = JSON.stringify([reference.declaredIn, reference.name]);
+      if (visited.has(key)) {
+        continue;
+      }
+      visited.add(key);
+      // The same helper copied into two files is one entry that names both.
+      const same = internal.find((type) => type.name === reference.name && type.signature === declaration.text);
+      if (same === undefined) {
+        internal.push({
+          declaredIn: [reference.declaredIn],
+          name: reference.name,
+          signature: declaration.text,
+          ...(declaration.doc === undefined ? {} : { doc: declaration.doc }),
+        });
+      } else if (!same.declaredIn.includes(reference.declaredIn)) {
+        same.declaredIn.push(reference.declaredIn);
+      }
+      for (const name of declaration.references) {
+        queue.push({ declaredIn: reference.declaredIn, name, subpath: reference.subpath, symbol: reference.name });
+      }
+    }
+    internal.sort((left, right) => left.name.localeCompare(right.name));
+    for (const type of internal) {
+      type.declaredIn.sort();
+    }
+    return { ...entrypoint, internalTypes: internal };
+  });
+  return { ...model, entrypoints, unresolved };
 }

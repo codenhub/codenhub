@@ -20,6 +20,7 @@ function symbol(partial: Partial<ReferenceSymbol> & Pick<ReferenceSymbol, "name"
 const entrypoint: ReferenceEntrypoint = {
   subpath: ".",
   module: "index",
+  internalTypes: [],
   symbols: [
     symbol({
       name: "createAppError",
@@ -143,6 +144,7 @@ describe("renderReferencePage", () => {
       {
         subpath: ".",
         module: "index",
+        internalTypes: [],
         symbols: [
           symbol({
             name: "unwrap",

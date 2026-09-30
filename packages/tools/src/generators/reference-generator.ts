@@ -8,6 +8,7 @@ import { emitDeclarations, resolveEntrypoints, type EntrypointPlan } from "../do
 import { renderReferencePage, symbolSlug } from "../documentation/reference-markdown.ts";
 import { buildReferenceModel, walkSymbols, type ReferenceModel } from "../documentation/reference-model.ts";
 import {
+  attachInternalTypes,
   attachSignatures,
   buildSignatureResolver,
   type SignatureIndex,
@@ -137,10 +138,10 @@ export async function analyzeReference(
   assertKebabEntrypoints(plans);
 
   const subpathByModule = Object.fromEntries(plans.map((plan) => [plan.module, plan.subpath]));
-  const model = withSignatures(
-    buildReferenceModel(await convertProject(pkgDir, plans), subpathByModule),
-    plans,
-    emitDeclarations(pkgDir, plans),
+  const declarations = emitDeclarations(pkgDir, plans);
+  const model = attachInternalTypes(
+    withSignatures(buildReferenceModel(await convertProject(pkgDir, plans), subpathByModule), plans, declarations),
+    declarations,
   );
 
   const allSubpaths = plans.map((plan) => plan.subpath);
