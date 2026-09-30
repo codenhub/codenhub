@@ -17,6 +17,20 @@ const FORMAT_NAMES: Readonly<Record<string, string>> = {
   ulid: "ULID",
   nanoid: "Nano ID",
   json: "JSON",
+  base64url: "base64url string",
+  domain: "domain name",
+  port: "port",
+  phone: "phone number",
+  slug: "slug",
+  semver: "version",
+  jwt: "token",
+  creditCard: "card number",
+  cidr: "CIDR block",
+  cidrv4: "IPv4 CIDR block",
+  cidrv6: "IPv6 CIDR block",
+  mac: "MAC address",
+  time: "time",
+  duration: "duration",
 };
 
 /** Singular and plural of what a string limit counts. */
@@ -73,6 +87,10 @@ const describeFormat = (issue: ValidationIssue): string => {
       return `Must end with ${formatValue(issue.params?.["value"])}`;
     case "includes":
       return `Must include ${formatValue(issue.params?.["value"])}`;
+    case "lowercase":
+      return "Must be lowercase";
+    case "uppercase":
+      return "Must be uppercase";
     default:
       return `Invalid ${FORMAT_NAMES[format] ?? format}`;
   }

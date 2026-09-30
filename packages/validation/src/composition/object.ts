@@ -1,7 +1,18 @@
 import { chain, collect, type Maybe } from "../core/async";
-import { invalidObject, isPlainObject, setOwn } from "../core/objects";
-import { assertFunction, collectNested, failWith, pass, toIssue } from "../core/result";
-import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
+import { tail, word } from "../core/checks";
+import { isPlainObject, objectIssue, setOwn } from "../core/objects";
+import { assertFunction, collectNested, failWith, issue } from "../core/result";
+import type {
+  AnyValidator,
+  AsyncRest,
+  AsyncValidator,
+  Composed,
+  Infer,
+  MessageOptions,
+  Rest,
+  ValidationIssue,
+  ValidationResult,
+} from "../core/types";
 
 /** Maps property names to the validators of their values. */
 export type Shape = Record<string, AnyValidator>;
@@ -24,7 +35,7 @@ export type InferShape<TShape extends Shape> = Simplify<
 >;
 
 /** Options for {@link object}. */
-export interface ObjectOptions {
+export interface ObjectOptions extends MessageOptions {
   /**
    * What to do with input properties the shape does not list. `"strip"` drops them from the output,
    * `"strict"` rejects each with an `unrecognized_key` issue, and `"passthrough"` copies them to the
@@ -51,19 +62,30 @@ export interface ObjectOptions {
  * const user = object({ name: string({ min: 2 }), age: optional(number({ int: true })) });
  * user({ name: "Ada" }); // { ok: true, value: { name: "Ada" } }
  * user({ name: "A" }); // { ok: false, error: { issues: [{ code: "too_small", path: ["name"], ... }] } }
+ *
+ * const signup = object(
+ *   { password: string({ min: 8 }), confirm: string() },
+ *   check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
+ * );
  * ```
  *
  * @typeParam TShape - Property validators.
  * @param shape - Validator of each property.
- * @param options - How to treat properties the shape does not list.
+ * @param rest - Options, including how to treat properties the shape does not list, then checks,
+ * which run once every property has passed and see the whole object.
  * @returns A validator that produces an object.
  * @throws {TypeError} When a property validator is not a function, or `unknownKeys` is not `"strip"`,
  * `"strict"` or `"passthrough"`.
  */
 export function object<TShape extends Shape>(
   shape: TShape,
-  options: ObjectOptions = {},
-): Composed<TShape[keyof TShape], InferShape<TShape>> {
+  ...rest: Rest<InferShape<TShape>, ObjectOptions>
+): Composed<TShape[keyof TShape], InferShape<TShape>>;
+export function object<TShape extends Shape>(
+  shape: TShape,
+  ...rest: AsyncRest<InferShape<TShape>, ObjectOptions>
+): AsyncValidator<InferShape<TShape>>;
+export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
   // The shape is read once, so changing it after the validator is made changes nothing.
   const keys = Object.keys(shape);
   const validators = keys.map((key) => {
@@ -71,23 +93,25 @@ export function object<TShape extends Shape>(
     return shape[key] as AnyValidator;
   });
   const known = new Set(keys);
+  const [options, reject, accept] = tail<ObjectOptions, Record<string, unknown>>(rest);
   const unknownKeys = options.unknownKeys ?? "strip";
   if (unknownKeys !== "strip" && unknownKeys !== "strict" && unknownKeys !== "passthrough") {
     throw new TypeError(`unknownKeys must be "strip", "strict" or "passthrough", received "${String(unknownKeys)}"`);
   }
 
-  const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
-      return invalidObject(input);
+      return reject([objectIssue(input)]);
     }
 
     const issues: ValidationIssue[] = [];
     if (unknownKeys === "strict") {
       for (const key of Object.keys(input)) {
         if (!known.has(key)) {
-          issues.push(toIssue({ code: "unrecognized_key", path: [key], params: { key } }));
+          issues.push(issue("unrecognized_key", { key }, [key]));
         }
       }
+      word(issues, options.message);
     }
 
     const results = keys.map((key, index) =>
@@ -113,9 +137,7 @@ export function object<TShape extends Shape>(
           }
         }
       }
-      return pass(output);
+      return accept(output);
     });
   };
-
-  return validate as unknown as Composed<TShape[keyof TShape], InferShape<TShape>>;
 }

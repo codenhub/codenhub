@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { unknown } from "../primitives/unknown";
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
 import { url } from "./url";
 
@@ -28,7 +29,7 @@ describe("url", () => {
         "https://example.com/\u007f",
       ),
     ).toEqual(Array(8).fill(false));
-    expect(url({ allowLocal: true })(" http://localhost").ok).toBe(false);
+    expect(url({ host: unknown() })(" http://localhost").ok).toBe(false);
   });
 
   it("should return the path the parser reads, so dot segments cannot hide where it leads", () => {
@@ -66,7 +67,7 @@ describe("url", () => {
     expect(longest).toHaveLength(253);
     expect(url()(`https://${longest}/`).ok).toBe(true);
     expect(url()(`https://${longest}f/`).ok).toBe(false);
-    expect(url({ allowLocal: true })(`https://${labels(20)}/`).ok).toBe(false);
+    expect(url({ host: unknown() })(`https://${labels(20)}/`).ok).toBe(false);
   });
 
   it("should reject a punycode host that does not decode", () => {
@@ -102,7 +103,7 @@ describe("url", () => {
       "http://router.home.arpa",
     ];
     expect(accepts(url(), ...reserved)).toEqual(Array(reserved.length).fill(false));
-    expect(accepts(url({ allowLocal: true }), ...reserved)).toEqual(Array(reserved.length).fill(true));
+    expect(accepts(url({ host: unknown() }), ...reserved)).toEqual(Array(reserved.length).fill(true));
   });
 
   it("should still accept public names that only contain a reserved word", () => {
@@ -113,15 +114,15 @@ describe("url", () => {
     ]);
   });
 
-  it("should accept local hosts only with allowLocal", () => {
-    const local = url({ allowLocal: true });
+  it("should accept local hosts only with a host validator that does", () => {
+    const local = url({ host: unknown() });
     expect(accepts(local, "http://localhost:3000", "http://127.0.0.1", "http://[::1]:8080", "http://intranet")).toEqual(
       [true, true, true, true],
     );
   });
 
-  it("should still refuse credentials with allowLocal", () => {
-    expect(url({ allowLocal: true })("http://user:pw@localhost").ok).toBe(false);
+  it("should still refuse credentials with a host validator", () => {
+    expect(url({ host: unknown() })("http://user:pw@localhost").ok).toBe(false);
   });
 
   it("should accept other protocols when listed, and stop accepting http and https", () => {
@@ -157,9 +158,9 @@ describe("url", () => {
     ]);
   });
 
-  it("should accept any IP address with allowLocal, public or not, and does not check ranges", () => {
+  it("should give any IP address to a host validator, public or not, checking no ranges itself", () => {
     expect(accepts(url(), "http://8.8.8.8/", "http://169.254.169.254/")).toEqual([false, false]);
-    expect(accepts(url({ allowLocal: true }), "http://8.8.8.8/", "http://169.254.169.254/", "http://[::1]/")).toEqual([
+    expect(accepts(url({ host: unknown() }), "http://8.8.8.8/", "http://169.254.169.254/", "http://[::1]/")).toEqual([
       true,
       true,
       true,
@@ -167,7 +168,7 @@ describe("url", () => {
   });
 
   it("should return an IPv4 host in the one form the parser reads it, however it was written", () => {
-    const local = url({ allowLocal: true });
+    const local = url({ host: unknown() });
     const spellings = ["http://0x7f.1", "http://0X7F.0.0.1", "http://127.1", "http://0177.0.0.1", "http://2130706433"];
     for (const spelling of spellings) {
       expect(valueOf(local(spelling))).toBe("http://127.0.0.1/");
@@ -291,9 +292,13 @@ describe("url without a host", () => {
     expect(mailto(`mailto:?to=${recipients},nope`).ok).toBe(false);
   });
 
-  it("should accept a local mailto host only with allowLocal", () => {
-    const local = url({ protocols: ["mailto"], allowLocal: true });
-    expect(accepts(local, "mailto:ada@localhost", "mailto:ada@intranet", "mailto:nope")).toEqual([true, true, false]);
+  it("should require a public domain for a mailto recipient, since host validates a URL's host and a mailto has none", () => {
+    const local = url({ protocols: ["mailto"], host: unknown() });
+    expect(accepts(local, "mailto:ada@localhost", "mailto:ada@intranet", "mailto:ada@example.com")).toEqual([
+      false,
+      false,
+      true,
+    ]);
   });
 
   it("should accept global tel numbers with separators and parameters, and nothing else", () => {
@@ -325,8 +330,8 @@ describe("url without a host", () => {
     expect(accepts(urn, ...invalid)).toEqual(invalid.map(() => false));
   });
 
-  it("should reject every other scheme without a host, even with allowLocal, rather than check nothing", () => {
-    const anything = url({ protocols: ["file", "about", "blob"], allowLocal: true });
+  it("should reject every other scheme without a host, even with a host validator, rather than check nothing", () => {
+    const anything = url({ protocols: ["file", "about", "blob"], host: unknown() });
     expect(accepts(anything, "file:///etc/passwd", "about:blank", "blob:https://example.com/a")).toEqual([
       false,
       false,

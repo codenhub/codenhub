@@ -3,11 +3,11 @@ import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 
 import { coerceDate } from "../coercion/coerce-date";
-import { discriminatedUnion } from "../composition/discriminated-union";
 import { map } from "../composition/map";
 import { object } from "../composition/object";
 import { record } from "../composition/record";
 import { set } from "../composition/set";
+import { tagged } from "../composition/tagged";
 import { date } from "../primitives/date";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
@@ -69,7 +69,7 @@ describe("values from another realm", () => {
   it("should be accepted by object and record, and copied into this realm", () => {
     expect(valueOf(object({ a: number() })(foreign("({ a: 1 })")))).toEqual({ a: 1 });
     expect(valueOf(record(string(), number())(foreign("({ a: 1 })")))).toEqual({ a: 1 });
-    expect(valueOf(discriminatedUnion("t", { x: object({ n: number() }) })(foreign("({ t: 'x', n: 1 })")))).toEqual({
+    expect(valueOf(tagged("t", { x: object({ n: number() }) })(foreign("({ t: 'x', n: 1 })")))).toEqual({
       t: "x",
       n: 1,
     });
@@ -92,7 +92,7 @@ describe("values from another realm", () => {
       describeType(foreign("new Map()")),
       describeType(foreign("new Set()")),
       describeType(foreign("({})")),
-    ]).toEqual(["map", "set", "object"]);
+    ]).toEqual(["object", "object", "object"]);
   });
 });
 
@@ -102,9 +102,8 @@ describe("an object with a prototype of its own", () => {
     expect(issue?.params).toEqual({ expected: "object", received: "non-plain object" });
   });
 
-  it("should keep the class name of an instance, and fall back to object for a nameless class", () => {
-    expect(describeType(new (class Widget {})())).toBe("Widget");
-    expect(describeType(new (class {})())).toBe("object");
+  it("should be named object, never by its class, which would take reading its prototype", () => {
+    expect(describeType(new (class Widget {})())).toBe("object");
   });
 });
 

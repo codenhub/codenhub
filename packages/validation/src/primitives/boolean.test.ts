@@ -16,3 +16,14 @@ describe("boolean", () => {
     expect(issuesOf(boolean()("true"))[0]?.params).toEqual({ expected: "boolean", received: "string" });
   });
 });
+
+describe("boolean options and checks", () => {
+  it("should word its own issues", () => {
+    expect(issuesOf(boolean({ message: "Yes or no" })(1))[0]?.message).toBe("Yes or no");
+  });
+
+  it("should run checks after the type", () => {
+    const mustAgree = (value: boolean) => (value ? undefined : [{ code: "must_agree", path: [] }]);
+    expect(accepts(boolean(mustAgree), true, false, "true")).toEqual([true, false, false]);
+  });
+});

@@ -1,6 +1,6 @@
-import { invalidCoercion } from "../core/result";
-import type { Validator } from "../core/types";
+import type { Factory } from "../core/types";
 import { bigint, type BigintOptions } from "../primitives/bigint";
+import { coercing } from "./coerce";
 
 const DECIMAL_INTEGER_PATTERN = /^[+-]?\d+$/;
 
@@ -23,17 +23,13 @@ const DECIMAL_INTEGER_PATTERN = /^[+-]?\d+$/;
  * @returns A validator that produces a bigint.
  * @throws {RangeError} When no bigint can satisfy the bounds together.
  */
-export function coerceBigint(options: BigintOptions = {}): Validator<bigint> {
-  const strict = bigint(options);
-  return (input) => {
+export const coerceBigint = ((...args: unknown[]) =>
+  coercing("bigint", bigint(...(args as [])), args, (input) => {
     if (typeof input === "bigint") {
-      return strict(input);
+      return [input];
     }
     if (typeof input === "number" && Number.isSafeInteger(input)) {
-      return strict(BigInt(input));
+      return [BigInt(input)];
     }
-    return typeof input === "string" && DECIMAL_INTEGER_PATTERN.test(input.trim())
-      ? strict(BigInt(input.trim()))
-      : invalidCoercion("bigint", input);
-  };
-}
+    return typeof input === "string" && DECIMAL_INTEGER_PATTERN.test(input.trim()) ? [BigInt(input.trim())] : undefined;
+  })) as Factory<bigint, BigintOptions>;

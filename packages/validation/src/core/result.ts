@@ -76,9 +76,16 @@ export function toIssue({ code = "custom", path = ROOT_PATH, params, message }: 
   return issue;
 }
 
+/** Builds a built-in issue: a code, the facts behind it, and where it is, the value's own location by default. */
+export const issue = (
+  code: ValidationIssueCode,
+  params?: Readonly<Record<string, unknown>>,
+  path: readonly ValidationPathSegment[] = ROOT_PATH,
+): ValidationIssue => (params === undefined ? { code, path } : { code, path, params });
+
 /** Fails with one built-in issue at the value's own location. */
 export const failIssue = (code: ValidationIssueCode, params?: Readonly<Record<string, unknown>>): ValidationErr =>
-  failWith([toIssue(params === undefined ? { code } : { code, params })]);
+  failWith([issue(code, params)]);
 
 /**
  * Adds the issues a child found to its parent's list, one level down under `segment`. It pushes one
@@ -97,60 +104,53 @@ export function collectNested(
 
 /** The issue for an item equal to an earlier one, where a collection requires them distinct. */
 export const repeatedItem = (segment: ValidationPathSegment): ValidationIssue =>
-  toIssue({ code: "invalid_value", path: [segment], params: { unique: true } });
+  issue("invalid_value", { unique: true }, [segment]);
 
 /**
  * The issue for an entry whose key, once its validator has changed it, is one an earlier entry already
  * has. Reported as a bad key, since keeping both would silently drop one of the values.
  */
 export const repeatedKey = (segment: ValidationPathSegment): ValidationIssue =>
-  toIssue({
-    code: "invalid_key",
-    path: [segment],
-    params: { issues: [toIssue({ code: "invalid_value", params: { unique: true } })] },
-  });
+  issue("invalid_key", { issues: [issue("invalid_value", { unique: true })] }, [segment]);
 
-/** Names the runtime type of a value for messages without echoing the value. */
+/**
+ * Names the kind of a value for messages without echoing the value: its `typeof`, or `null`, `array`,
+ * `date`, `invalid date`, `nan` or `infinity`. It never names a class, which would take reading the
+ * prototype, and it reads nothing a getter or a proxy trap runs for, so naming a value never throws.
+ */
 export function describeType(value: unknown): string {
-  if (value === null) {
-    return "null";
-  }
   if (typeof value === "number" && !Number.isFinite(value)) {
     return Number.isNaN(value) ? "nan" : "infinity";
   }
   if (typeof value !== "object") {
     return typeof value;
   }
+  if (value === null) {
+    return "null";
+  }
   try {
-    return describeObject(value);
+    // `getTime` reads the value's own slot, so a Date from another realm or without its prototype is
+    // named too; it throws for anything else. `isArray` throws only for a revoked proxy.
+    return Array.isArray(value) ? "array" : Number.isNaN(Date.prototype.getTime.call(value)) ? "invalid date" : "date";
   } catch {
-    // A proxy trap or a constructor getter threw. Naming the type must never fail validation.
     return "object";
   }
 }
 
-/** Names an object by its kind, or by its class for an instance, reading its prototype. */
-function describeObject(value: object): string {
-  // The tag names the kind in any realm, which `instanceof` cannot. Only a name is at stake here, so a
-  // value that fakes its tag is named wrongly at worst, where the validators that accept a kind check it.
-  const kind = Object.prototype.toString.call(value).slice(8, -1);
-  if (kind === "Date") {
-    return Number.isNaN((value as Date).getTime()) ? "invalid date" : "date";
-  }
-  if (kind === "Array" || kind === "Map" || kind === "Set") {
-    return kind.toLowerCase();
-  }
-  const name = (Object.getPrototypeOf(value) as { constructor?: { name?: string } } | null)?.constructor?.name;
-  return name === undefined || name === "" || name === "Object" ? "object" : name;
-}
+/** The issue for an input that is not the type a validator accepts, naming both types and never the value. */
+export const typeIssue = (expected: string, input: unknown): ValidationIssue =>
+  issue("invalid_type", { expected, received: describeType(input) });
 
 /** Fails because the input is not the type a validator accepts, naming both types and never the value. */
-export const invalidType = (expected: string, input: unknown): ValidationErr =>
-  failIssue("invalid_type", { expected, received: describeType(input) });
+export const invalidType = (expected: string, input: unknown): ValidationErr => failWith([typeIssue(expected, input)]);
 
 /** Fails because coercion could not convert the input, naming both types and never the value. */
 export const invalidCoercion = (expected: string, input: unknown): ValidationErr =>
-  failIssue("invalid_type", { expected, received: describeType(input), coerced: true });
+  failIssue("invalid_type", {
+    expected,
+    received: describeType(input),
+    coerced: true,
+  });
 
 /**
  * Rejects a lower and an upper bound that no value can satisfy, since that is a mistake in the schema

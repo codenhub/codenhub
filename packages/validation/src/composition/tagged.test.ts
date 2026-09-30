@@ -4,13 +4,13 @@ import type { Validator } from "../core/types";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { accepts, codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
-import { discriminatedUnion } from "./discriminated-union";
 import { object } from "./object";
 import { record } from "./record";
+import { tagged } from "./tagged";
 import { transform } from "./transform";
 
-describe("discriminatedUnion", () => {
-  const event = discriminatedUnion("type", {
+describe("tagged", () => {
+  const event = tagged("type", {
     click: object({ x: number(), y: number() }),
     key: object({ key: string({ min: 1 }) }),
   });
@@ -22,11 +22,11 @@ describe("discriminatedUnion", () => {
 
   it("should read the variants once, when the validator is created", () => {
     const variants: Record<string, Validator<object>> = { a: object({ a: number() }) };
-    const tagged = discriminatedUnion("type", variants);
+    const validate = tagged("type", variants);
     variants["a"] = object({ a: string() });
     variants["b"] = object({});
-    expect(tagged({ type: "a", a: 1 }).ok).toBe(true);
-    expect(codesOf(tagged({ type: "b" }))).toEqual(["invalid_union"]);
+    expect(validate({ type: "a", a: 1 }).ok).toBe(true);
+    expect(codesOf(validate({ type: "b" }))).toEqual(["invalid_union"]);
   });
 
   it("should give a tagged union type that narrows on the tag", () => {
@@ -69,9 +69,9 @@ describe("discriminatedUnion", () => {
 
   it("should keep the tag first in the output and not let the variant override it", () => {
     expect(Object.keys(valueOf(event({ type: "key", key: "a" })))).toEqual(["type", "key"]);
-    const passthrough = discriminatedUnion("type", { a: object({}, { unknownKeys: "passthrough" }) });
+    const passthrough = tagged("type", { a: object({}, { unknownKeys: "passthrough" }) });
     expect(valueOf(passthrough({ type: "a", extra: 1 }))).toEqual({ type: "a", extra: 1 });
-    const retagged = discriminatedUnion("type", {
+    const retagged = tagged("type", {
       a: transform(object({}), () => ({ type: "b", extra: 1 })) as never,
     });
     const value = valueOf(retagged({ type: "a" }));
@@ -80,16 +80,16 @@ describe("discriminatedUnion", () => {
   });
 
   it("should throw when a variant produces something other than a plain object, instead of flattening it", async () => {
-    const dated = discriminatedUnion("type", { a: transform(object({}), () => new Date(0)) as never });
+    const dated = tagged("type", { a: transform(object({}), () => new Date(0)) as never });
     expect(() => dated({ type: "a" })).toThrow(new TypeError("variants.a must produce a plain object, received date"));
-    const listed = discriminatedUnion("type", { a: transform(object({}), async () => [1]) as never });
+    const listed = tagged("type", { a: transform(object({}), async () => [1]) as never });
     await expect(listed({ type: "a" })).rejects.toThrow(
       new TypeError("variants.a must produce a plain object, received array"),
     );
   });
 
   it("should let a strict object be a variant, since the variant does not see the tag", () => {
-    const strict = discriminatedUnion("type", { a: object({ x: number() }, { unknownKeys: "strict" }) });
+    const strict = tagged("type", { a: object({ x: number() }, { unknownKeys: "strict" }) });
     expect(valueOf(strict({ type: "a", x: 1 }))).toEqual({ type: "a", x: 1 });
     expect(issuesOf(strict({ type: "a", x: 1, y: 2 })).map((issue) => [issue.code, issue.path])).toEqual([
       ["unrecognized_key", ["y"]],
@@ -97,13 +97,13 @@ describe("discriminatedUnion", () => {
   });
 
   it("should let a record be a variant, validating every key but the tag", () => {
-    const totals = discriminatedUnion("type", { totals: record(string(), number()) });
+    const totals = tagged("type", { totals: record(string(), number()) });
     expect(valueOf(totals({ type: "totals", ada: 3 }))).toEqual({ type: "totals", ada: 3 });
     expect(issuesOf(totals({ type: "totals", ada: "3" })).map((issue) => issue.path)).toEqual([["ada"]]);
   });
 
   it("should not pass the input's own __proto__ key on as a prototype", () => {
-    const passthrough = discriminatedUnion("type", { a: object({}, { unknownKeys: "passthrough" }) });
+    const passthrough = tagged("type", { a: object({}, { unknownKeys: "passthrough" }) });
     const value = valueOf(passthrough(JSON.parse('{"type":"a","__proto__":{"admin":true}}')));
     expect(Object.getPrototypeOf(value)).toBe(Object.prototype);
     expect((value as { admin?: boolean }).admin).toBeUndefined();
@@ -120,7 +120,7 @@ describe("discriminatedUnion", () => {
   });
 
   it("should be asynchronous when a variant is, and answer at once for a bad tag", async () => {
-    const asynchronous = discriminatedUnion("kind", { user: object({ name: isFree }), guest: object({}) });
+    const asynchronous = tagged("kind", { user: object({ name: isFree }), guest: object({}) });
     expect(isPending(asynchronous({ kind: "nope" }))).toBe(false);
     const result = asynchronous({ kind: "user", name: "taken" });
     expect(isPending(result)).toBe(true);

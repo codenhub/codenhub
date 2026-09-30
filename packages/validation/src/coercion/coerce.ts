@@ -1,0 +1,26 @@
+import type { Maybe } from "../core/async";
+import { word } from "../core/checks";
+import { describeType, failWith, issue } from "../core/result";
+import type { AnyValidator, Message, ValidationResult } from "../core/types";
+
+/**
+ * Builds a coercing validator: `convert` returns the converted input in a one-item list, or undefined
+ * when it cannot convert it, and `strict`, the strict validator made from the same arguments, checks
+ * what it converted. Input it cannot convert fails with `invalid_type` and `coerced: true`, worded by
+ * the options' `message`.
+ */
+export function coercing<T>(
+  expected: string,
+  strict: AnyValidator<T>,
+  args: readonly unknown[],
+  convert: (input: unknown) => [unknown] | undefined,
+): (input: unknown) => Maybe<ValidationResult<T>> {
+  const [first] = args;
+  const message = typeof first === "object" ? (first as { message?: Message } | null)?.message : undefined;
+  return (input) => {
+    const converted = convert(input);
+    return converted === undefined
+      ? failWith(word([issue("invalid_type", { expected, received: describeType(input), coerced: true })], message))
+      : strict(converted[0]);
+  };
+}

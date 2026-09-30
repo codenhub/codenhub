@@ -1,6 +1,16 @@
 import type { Maybe } from "../core/async";
-import { assertFunction, failWith, invalidType, pass, toIssue } from "../core/result";
-import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
+import { tail } from "../core/checks";
+import { assertFunction, issue, typeIssue } from "../core/result";
+import type {
+  AnyValidator,
+  AsyncRest,
+  AsyncValidator,
+  Composed,
+  Infer,
+  MessageOptions,
+  Rest,
+  ValidationResult,
+} from "../core/types";
 import { settle } from "./settle";
 
 type InferItems<TItems extends readonly AnyValidator[]> = { -readonly [K in keyof TItems]: Infer<TItems[K]> };
@@ -17,7 +27,7 @@ export type InferTuple<
 > = TRest extends AnyValidator ? [...InferItems<TItems>, ...Infer<TRest>[]] : InferItems<TItems>;
 
 /** Options for {@link tuple}. */
-export interface TupleOptions<TRest extends AnyValidator | undefined = undefined> {
+export interface TupleOptions<TRest extends AnyValidator | undefined = undefined> extends MessageOptions {
   /** Validator for every position after the fixed ones. Without it the array must be exactly as long as the tuple. */
   rest?: TRest;
 }
@@ -51,8 +61,17 @@ export function tuple<
   TRest extends AnyValidator | undefined = undefined,
 >(
   items: TItems,
-  options: TupleOptions<TRest> = {},
-): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>> {
+  ...rest: Rest<InferTuple<TItems, TRest>, TupleOptions<TRest>>
+): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>>;
+export function tuple<
+  const TItems extends readonly [AnyValidator, ...AnyValidator[]],
+  TRest extends AnyValidator | undefined = undefined,
+>(
+  items: TItems,
+  ...rest: AsyncRest<InferTuple<TItems, TRest>, TupleOptions<TRest>>
+): AsyncValidator<InferTuple<TItems, TRest>>;
+export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyValidator {
+  const [options, reject, accept] = tail<TupleOptions<AnyValidator | undefined>, unknown[]>(args);
   const { rest } = options;
   // Copied, so changing the list after the validator is made changes nothing.
   const fixed = [...items];
@@ -62,21 +81,18 @@ export function tuple<
   }
   const { length } = fixed;
 
-  const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!Array.isArray(input)) {
-      return invalidType("array", input);
+      return reject([typeIssue("array", input)]);
     }
     const size = input.length;
     if (size < length || (rest === undefined && size > length)) {
       const isShort = size < length;
-      return failWith([
-        toIssue({
-          code: isShort ? "too_small" : "too_big",
-          params: {
-            [isShort ? "minimum" : "maximum"]: length,
-            type: "array",
-            ...(rest === undefined && { exact: true }),
-          },
+      return reject([
+        issue(isShort ? "too_small" : "too_big", {
+          [isShort ? "minimum" : "maximum"]: length,
+          type: "array",
+          ...(rest === undefined && { exact: true }),
         }),
       ]);
     }
@@ -85,8 +101,7 @@ export function tuple<
       Array.from({ length: size }, (_, index) =>
         ((index < length ? fixed[index] : rest) as AnyValidator)(input[index]),
       ),
-      pass,
+      accept,
     );
   };
-  return validate as unknown as Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>>;
 }

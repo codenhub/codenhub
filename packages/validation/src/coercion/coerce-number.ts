@@ -1,6 +1,6 @@
-import { invalidCoercion } from "../core/result";
-import type { Validator } from "../core/types";
+import type { Factory } from "../core/types";
 import { number, type NumberOptions } from "../primitives/number";
+import { coercing } from "./coerce";
 
 // The fraction is one optional group so no two digit runs are adjacent, which keeps matching linear.
 const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
@@ -31,21 +31,19 @@ const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
  * no number can satisfy the bounds together, `multipleOf` is not a positive finite number, or `clamp`
  * has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
  */
-export function coerceNumber(options: NumberOptions = {}): Validator<number> {
-  const strict = number(options);
-  return (input) => {
+export const coerceNumber = ((...args: unknown[]) =>
+  coercing("number", number(...(args as [])), args, (input) => {
     if (typeof input === "number") {
-      return strict(input);
+      return [input];
     }
     if (typeof input !== "string" || !DECIMAL_NUMBER_PATTERN.test(input.trim())) {
-      return invalidCoercion("number", input);
+      return undefined;
     }
     const converted = Number(input.trim());
     // A whole number past Number.MAX_SAFE_INTEGER has already lost digits, so reading it would
-    // produce a different number than the text says.
+    // produce a different number than the text says. "-0" is read as 0, since a minus sign in front of
+    // nothing is not a value anyone meant.
     return Number.isFinite(converted) && (!Number.isInteger(converted) || Number.isSafeInteger(converted))
-      ? // "-0" is read as 0, since a minus sign in front of nothing is not a value anyone meant.
-        strict(converted === 0 ? 0 : converted)
-      : invalidCoercion("number", input);
-  };
-}
+      ? [converted === 0 ? 0 : converted]
+      : undefined;
+  })) as Factory<number, NumberOptions>;

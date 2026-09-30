@@ -38,6 +38,6 @@ describe("coerceString", () => {
 
   it("should reject bad options when the validator is created, as string does", () => {
     expect(() => coerceString({ min: -1 })).toThrow(RangeError);
-    expect(() => coerceString({ lowercase: true, uppercase: true })).toThrow(TypeError);
+    expect(() => coerceString({ case: "title" as never })).toThrow(TypeError);
   });
 });

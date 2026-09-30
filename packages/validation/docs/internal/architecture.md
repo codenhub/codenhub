@@ -1,12 +1,12 @@
 ---
-status: APPROVED
-last_updated: 2026-09-29
+status: IMPLEMENTED
+last_updated: 2026-09-30
 scope: How the validation package is built and why, for whoever changes it next.
 ---
 
 # Validation architecture
 
-This records the invariants of `@codenhub/validation` and the reasoning behind decisions that are not obvious from the code. Public behavior lives in the package docs; this is for changing the package without breaking what it relies on. The release conditions and the path to 0.1.0 live in [roadmap.md](roadmap.md).
+This records the invariants of `@codenhub/validation` and the reasoning behind decisions that are not obvious from the code. Public behavior lives in the package docs; this is for changing the package without breaking what it relies on. The release conditions and the path to 0.2.0 live in [roadmap.md](roadmap.md).
 
 ## What the package is for
 
@@ -55,15 +55,49 @@ The reasons, in order of weight:
 
 ### Factories, always
 
-Every pre-made validator is created by calling a function, options optional: `email()`, `string({ min: 2 })`, `url({ allowLocal: true })`. There is no validator that is used bare, because a bare validator cannot grow an option without a breaking change, and because one rule with no exceptions is easier to remember than two. A single value therefore reads `email()(input)`.
+Every pre-made validator is created by calling a function, options optional: `email()`, `string({ min: 2 })`, `url({ host: hostname() })`. There is no validator that is used bare, because a bare validator cannot grow an option without a breaking change, and because one rule with no exceptions is easier to remember than two. A single value therefore reads `email()(input)`.
 
-### Constraints are options, formats are validators, meaning is composition
+Every factory has the same signature: `validator(options?, ...checks)`, where a composer's own arguments, such as the shape of `object` or the item of `array`, come first. Options are an object and checks are functions, so the factory tells them apart with `typeof` and `string(startsWith("a"))` needs no empty options. Every factory that reports an issue of its own accepts a `message` option, so its validators have an options object that can grow without a breaking change.
 
-- **Options** carry the constraints of one type: `string({ min, max, pattern, trim })`, `number({ int, min })`. They cost nothing to write and one small function to support.
+The wrappers are the exception: `optional`, `nullable`, `nullish`, `fallback`, `transform`, `pipe` and `partial` report no issue of their own, only their child's, so they take neither options nor checks. `optional` could not take checks in any case, since its second argument is a default, which may itself be a function. `json` takes the validator of the parsed value first and optionally, so its checks follow options and need the validator: `json(object(shape), {}, check(...))`.
+
+### Options, checks, formats and composition
+
+- **Options** carry the common constraints and the clean-up of one type: `string({ min, max, length, trim, case })`, `number({ min, max, gt, lt, int, safeInt, clamp })`, and `min`, `max` and `length` on collections. They are the short way to say the usual thing, and each costs one small branch in its validator.
+- **Checks** carry the rarer constraints, each in its own module: `pattern`, `startsWith`, `endsWith`, `includes`, `lowercase`, `uppercase`, `multipleOf`, `nonZero`, `unique`. Each takes its message last; `unique(by?, message?)` takes what to compare first, since a function in first place is what to compare, not a message. A consumer that never requires a prefix does not bundle the code that checks one. See [Checks](#checks).
 - **Formats** are separate validators: `email()`, `url()`, `uuid()`. Each is its own module, so a consumer that wants `email` does not pay for `uuid`.
-- **Composition** carries everything else, by function: `object`, `optional`, `pipe`, `refine`. Cleaning a string before checking a format is `pipe(string({ trim: true }), email())`, not an option on `email`.
+- **Composition** carries everything else, by function: `object`, `optional`, `pipe`, `transform`. Cleaning a string before checking a format is `pipe(string({ trim: true }), email())`, not an option on `email`.
 
-Options are applied in a fixed order that the docs state: clean-up (`trim`, `lowercase`, `clamp`) first, then every constraint on the cleaned value. Every failing constraint reports its own issue.
+Which constraints are options is a judgment of how often they are used, weighed against what they add to every use of their validator. A constraint moves between the two only in a breaking release.
+
+Options that change the value are named as changes, and checks never change it: `string({ case: "lower" })` lowercases, where the `lowercase()` check requires lowercase and changes nothing. Clean-up (`trim`, `case`, `clamp`) runs first, then every option constraint and every check on the cleaned value. Every failing constraint reports its own issue.
+
+### Checks
+
+A check is a rule about a value that already has its type. It is not a validator: it receives the typed value, and returns nothing when the value passes, or the issues it found.
+
+```ts
+type Check<T> = (value: T) => readonly ValidationIssue[] | undefined;
+type AsyncCheck<T> = (value: T) => readonly ValidationIssue[] | undefined | PromiseLike<readonly ValidationIssue[] | undefined>;
+```
+
+The two mirror `Validator` and `AsyncValidator`: a check a consumer writes and types as `Check` keeps its validator synchronous, where one typed as the broader `AsyncCheck` would make every validator given it asynchronous.
+
+A check is given to a validator after its options: `string({ min: 3 }, startsWith("ab"))`, `object(shape, check((data) => data.password === data.confirm, { path: ["confirm"] }))`. It runs once the value has its type: for a leaf, as soon as the input has passed the type test, next to the option constraints; for a composer, once every child has passed, since before that there is no value of the type to check. A check on an object therefore reports nothing while a property fails, which is the price of giving it a typed value.
+
+Every check of a validator runs and every issue is reported, as for options. A check that returns a promise makes its validator asynchronous, and the types say so: each factory has overloads for synchronous checks, which return `Validator<T>`, and for any checks, which return `AsyncValidator<T>`. Overloads, not a generic list of checks, because a generic rest parameter loses the contextual type that lets `check((data) => …)` infer `data`. One shared helper runs the checks of every validator, so this costs each validator one call.
+
+Checks replace `refine`, which wrapped a validator to add one rule. A check attaches to the validator instead, reports every issue with the others, and needs no second concept.
+
+### Builders
+
+Three public helpers make validators and checks on the same internals as the built-in ones, `leaf` and `split` in `core/checks.ts`, so a custom one behaves exactly as a built-in does, with the same issue shapes, the same `message` option and the same checks. A built-in made by a call when its module loads, such as `export const hex = /* @__PURE__ */ formatFactory(...)`, carries the pure annotation, without which a bundler keeps the call and every consumer carries the validator (see [Tree-shaking is a contract](#tree-shaking-is-a-contract)):
+
+- `check(predicate, issue?)` makes a check of any type. The issue is an issue to report, or a string as its message, and defaults to code `custom`.
+- `format(name, predicate)` makes a factory for a string format, such as `slug()`: a non-string fails with `invalid_type`, and a string the predicate rejects with `invalid_format` and `params.format` set to `name`.
+- `guard(expected, typeGuard)` makes a factory for a validator of any type from a type guard: `const file = guard("File", (value): value is File => value instanceof File)`, used as `file()`. A value the guard rejects fails with `invalid_type` and `params.expected` set to `expected`.
+
+A validator with options of its own is a function that checks its options and returns one of these. No further helper exists for it, because a function already does it.
 
 ### Formats are allowlists
 
@@ -71,11 +105,51 @@ A format accepts text that matches a complete, positive description of it, a pat
 
 Where a standard parser decides what the text means, the parser is the description. `url` hands the text to the URL parser, checks what it read (the scheme against a list, the absence of credentials, the host against the public-host rule), and returns that reading serialized, never the text it was given. `email` does the same for its domain, and a `mailto` URL gives each recipient as `email` does. The value then cannot mean one thing to the validator and another to the request or mail server that uses it, whatever spelling the text used: dot segments, fullwidth or invisible characters, IPv4 shorthand, escapes. The rules these validators apply to raw text are positive descriptions too: a written URL holds only visible characters, and a domain is written with letters, marks, digits, dots and hyphens, none of which can end a host. Text a format checks without a parser, such as a UUID, is described completely by its pattern and is returned as written.
 
+A format whose meaning has more than one spelling returns one canonical spelling, so a later comparison or lookup on the value treats one meaning as one value:
+
+- `url`, `email` and `domain` return what the URL parser read.
+- `ip` returns an IPv4 address as written, which has one spelling, and an IPv6 address as the URL parser writes it, lowercase with the longest run of zero groups shortened (RFC 5952), and its zone as written. An IPv6 address that embeds an IPv4 one is written in hex groups, `::ffff:c000:201`, where RFC 5952 would keep the dotted form, since the parser's reading is the rule. `cidr` returns its address as `ip` does.
+- `mac` returns lowercase pairs separated by colons.
+- `phone` returns E.164, `+` and the digits (`+5511987654321`), and `creditCard` the digits alone, however either was grouped.
+
+### Formats are made of parts
+
+A composite format is built from parts that are validators on their own. `hostname()`, `domain()` (a public domain name), `ip()` and `port()` each validate a value alone, and `url` and `email` take them as options that check what the parser read:
+
+```ts
+url({ protocols, host, path, port, query, repeated });
+email({ domain, local, allowPlus });
+```
+
+- Without a part option the format applies its own default rule: `url` and `email` require a public domain name, and a URL with no port or path passes those. The default rule is the shared predicate, never the public validator, so a default `url()` builds no issue it throws away and costs what it did without parts.
+- A part given as an option replaces the default rule, never the syntax: `url({ host: hostname() })` accepts any hostname, `localhost` included, `url({ host: unknown() })` accepts any host the parser reads, which is what `allowLocal` did, and `url({ host: union([domain(), ip()]) })` accepts IP addresses but not `localhost`. `email({ domain })` still requires a hostname. The protocol is not a part: a list, `protocols`, says it better than a validator would.
+- The parts apply to a URL with a host. A `mailto`, `tel` or `urn` URL keeps its own rules, and a `mailto` recipient's domain must be public, as for `email()`: `host` checks a URL's host, and a `mailto` has none.
+- The port is given as a number, or as `undefined` when the URL names none or names its scheme's default, which the parser drops. `port()` accepts 1 to 65535: 0 asks a system for any port and cannot be connected to.
+- A repeated query key is structure, checked before content: it fails before any part runs, and the `url` reports it as its own issue.
+- A part validator receives what the parser read, not the text: the host in its ASCII form, the path after dot segments are resolved, the port as a number.
+- An issue a part reports is placed under the part's name, such as `["host"]` or `["query", "page"]`, as a composer places a child's issues.
+- A part validator only decides; the format still returns the URL or address as the parser writes it, and a part that transforms its value changes nothing in the output. To read typed values out of a URL, validate the part itself.
+- An asynchronous part makes the format asynchronous, as a child makes a composer asynchronous.
+
+`query` is given an object built from the decoded search parameters, the values a server reading them with `URLSearchParams` sees. A key that appears more than once fails at `["query", key]` unless `repeated` is set, in which case every value of every key is given as an array. The default is the defense against parameter pollution: a validator that saw one of two values while the server read the other would pass a value nobody checked. `repeated` is an option, so the type a validator receives is one or the other and never depends on the input. `searchParams(validator, { repeated })` is the same reading on its own: it takes a query string or a `URLSearchParams` and returns what the validator produces, so `searchParams(object({ page: coerceNumber() }))` reads a typed query.
+
+`email` has no `query`: the `+tag` of `me+tag@example.com` is part of the local part, and `allowPlus: false` rejects it, since refusing `+` aliases is the one common restriction on a local part and is clumsy to write as a `local` validator.
+
+### Compatibility of a format
+
+A format is a contract with three parts, and changing any of them breaks a caller even when the module around it is untouched:
+
+- **Its issue.** `invalid_format` with `params.format` set to its name. The name is frozen once released; params may be added.
+- **What it returns.** As written or canonical, and which canonical form. Changing it changes values callers have stored and compare.
+- **What it accepts.** Accepting more can let through a value a caller relied on being rejected, and accepting less rejects values that were valid. The accepted set changes only to fix a bug by the rules of [When a finding is a blocker](#when-a-finding-is-a-blocker). New leniency comes behind an option that is off by default, such as a `country` for national phone numbers.
+
+A new format, and a new option on one, are additive. A format that needs data too large for every consumer, such as per-country phone rules, keeps it in a module of its own, so plain use never bundles it.
+
 ## Results, not exceptions
 
 Invalid input is a normal outcome, so it is a return value: `{ ok: true, value }` or `{ ok: false, error: { issues } }`. The shape matches the `Result<T>` used elsewhere in the repository on purpose, and is defined locally so the package depends on nothing. `docs/specs/errors.md` asks packages without an error dependency to return a package-local result, and asks that throwing and returning not be mixed for the same failure, which is why there is no `parse` or `assert`.
 
-Two things do throw, and both are programmer errors: an invalid option when a validator is created (`string({ min: -1 })` is a `RangeError`, `string({ lowercase: true, uppercase: true })` is a `TypeError`), and a callback the consumer wrote that throws, which propagates as the bug it is. Code inside the input is treated as a callback too: reading a property runs a getter, and a `Proxy` runs a trap, and an exception from either propagates rather than being reported, which would take a `try` around every read in `object`, `record` and `discriminatedUnion`. Data parsed from JSON carries no code, so validation never throws for it. The one place it could is recursion, since each level of nesting is a level of the JavaScript stack: `lazy` is the only way a schema refers to itself, so `lazy` alone counts. It keeps one module-level counter of the `lazy` calls open on the stack, incremented on entry and decremented in a `finally`, and fails with `too_big` and `{ type: "depth" }` past `maxDepth`. A counter of calls still on the stack is the right measure of what can overflow, because a promise's continuation runs from a shallow stack. It is not a bound on recursion itself: an asynchronous recursive schema resets it at every await, so it follows input of any depth, and a cyclic object until memory runs out. Bounding that would take a depth carried from one level to the next, which a validator cannot receive without a second parameter in the `(input) => result` contract; the docs say so, and leave the bound to the consumer. No composer takes a depth parameter or holds state. Size is a separate matter that the docs leave to the consumer: nothing here caps how much flat input is checked.
+Two things do throw, and both are programmer errors: an invalid option when a validator is created (`string({ min: -1 })` is a `RangeError`, `object(shape, { unknownKeys: "loose" })` is a `TypeError`), and a callback the consumer wrote that throws, which propagates as the bug it is. Code inside the input is treated as a callback too: reading a property runs a getter, and a `Proxy` runs a trap, and an exception from either propagates rather than being reported, which would take a `try` around every read in `object`, `record` and `tagged`. Data parsed from JSON carries no code, so validation never throws for it. The one place it could is recursion, since each level of nesting is a level of the JavaScript stack: `lazy` is the only way a schema refers to itself, so `lazy` alone counts. It keeps one module-level counter of the `lazy` calls open on the stack, incremented on entry and decremented in a `finally`, and fails with `too_big` and `{ type: "depth" }` past `maxDepth`. A counter of calls still on the stack is the right measure of what can overflow, because a promise's continuation runs from a shallow stack. It is not a bound on recursion itself: an asynchronous recursive schema resets it at every await, so it follows input of any depth, and a cyclic object until memory runs out. Bounding that would take a depth carried from one level to the next, which a validator cannot receive without a second parameter in the `(input) => result` contract; the docs say so, and leave the bound to the consumer. No composer takes a depth parameter or holds state. Size is a separate matter that the docs leave to the consumer: nothing here caps how much flat input is checked.
 
 `is(validator, input)` is the boolean projection, for hooks that need a type guard. Its narrowing is exact only for a validator that does not change the value, and the docs say so.
 
@@ -86,7 +160,8 @@ An issue is `{ code, path, params?, message? }` and nothing else.
 - `code` is an open set of strings. The built-in codes are `invalid_type`, `invalid_value`, `invalid_format`, `too_small`, `too_big`, `unrecognized_key`, `invalid_key`, `invalid_union` and `invalid_intersection`; a custom validator adds its own, such as `username_taken`, and callers branch on them.
 - `path` is absolute: from the root of what was validated down to the offending value. A validator reports an issue at its own location (an empty path, or a path relative to its value), and each composer prefixes the segment it descended through with `collectNested`. Nothing else edits paths, which is what keeps them predictable.
 - `params` holds the facts behind the failure (`{ minimum: 3, type: "string" }`, `{ expected: "string", received: "number" }`), enough to build a message and to branch on.
-- `message` is optional and never set by a built-in validator. A custom validator can set it when it wants fixed text.
+- `message` is optional. A built-in validator sets it only when the consumer passed a `message` option, and a check only when it was given one. A custom validator can set it when it wants fixed text.
+- `params.received` of `invalid_type` names the kind of value, from `typeof` plus `null`, `array`, `date`, `invalid date` and `nan`, and never a class name: naming a class takes reading the prototype, which every validator would pay for, for a message that tells the reader little.
 
 **Issues never contain an input value.** No `input` field exists, and `params` carries type names and constraint values, never the value under test. Keys are the exception by necessity: a path is made of the input's keys, and `unrecognized_key` names the key in `params.key` as well. This is a privacy invariant, not a default: inputs are passwords and tokens, and an issue is something callers log. Any new rule must keep it, and the unit tests check it per validator.
 
@@ -96,7 +171,19 @@ Text is not built when an issue is created. `formatIssue(issue, messages?)` buil
 
 The built-in English wording is not inside `formatIssue`. It is `englishMessages`, a map in its own module that a consumer imports and passes in. That is what keeps a program that words its own issues from bundling about 1 kB gzipped of English it never shows, and it makes rewording and localization the same operation: spread `englishMessages` and override some codes, or write a whole map. It also means a bare `formatIssue(issue)` is deliberately unhelpful, so `standard`, which the specification obliges to produce text, takes the map as a required argument instead of falling back silently.
 
-That split is what keeps validators small (no string per rule) and makes localization a data problem: a map keyed by code. A consumer that never asks for text never bundles any. `message` on the issue exists so a custom rule can carry its own wording without a map.
+That split is what keeps validators small (no string per rule) and makes localization a data problem: a map keyed by code. A consumer that never asks for text never bundles any.
+
+### One validator's own wording
+
+A map words every issue of a code alike, which is wrong for a form where one field needs its own sentence. So every validator takes a `message` option, a string or a function of the issue returning one, and every built-in check takes a message as its last argument:
+
+```ts
+string({ min: 3, message: "Pick a longer name" });
+email({ message: (issue) => t("errors.email") });
+startsWith("ab", "Must start with ab");
+```
+
+The option words every issue the validator reports itself, and none a child reports, so `object({...}, { message })` words an object that is not an object and leaves each property's issues to that property. A function is called when the issue is reported, so the issue carries text and stays plain data. The order of [`formatIssue`](#messages-are-on-demand-and-the-english-is-separate) is unchanged, since an issue that carries a message is worded by it first. There is no message per option, such as `min: [3, "Too short"]`: it would make every option a union and every validator heavier, and a constraint that needs its own wording can be written as a check, which takes one.
 
 ## Sync until proven async
 
@@ -118,8 +205,9 @@ Results keep the order of the children, never the order in which promises settle
 
 A validator is opaque: a combinator can call it and read its result, and nothing else. Three things the previous, class-based design did follow from that, and are done differently here:
 
-- **Tagged unions take a record.** `discriminatedUnion(key, { click: object(...), key: object(...) })` reads the tag from the input and routes by it, because a variant cannot be asked which tag it accepts. The tag is added back to the output so the type is a proper tagged union, and the variants do not repeat it.
+- **Tagged unions take a record.** `tagged(key, { click: object(...), key: object(...) })` reads the tag from the input and routes by it, because a variant cannot be asked which tag it accepts. The tag is added back to the output so the type is a proper tagged union, and the variants do not repeat it.
 - **Shapes are plain objects.** Extending is spread and omitting is destructuring. `partial(shape)` wraps each property in `optional` and returns a new shape. There is no `required`, since it would have to unwrap `optional`.
+- **Defaults belong to `optional`.** `optional(validator, value)` replaces `undefined` with the value, and the output type loses `undefined`. There is no separate `withDefault`: a default is what an optional value is when it is absent.
 - **Recursion names its own type.** `lazy` looks a validator up on first use, and the variable that holds a recursive validator carries an explicit type annotation, because TypeScript cannot infer a type that refers to itself.
 
 Structure is checked before content. A collection whose size is wrong fails at once without validating its items, and a tagged union with a missing tag fails without running any variant, so hostile input is rejected before it is worked through. Every other check still reports every problem it can find.
@@ -128,16 +216,19 @@ Structure is checked before content. A collection whose size is wrong fails at o
 
 The package is `sideEffects: false`, every module is side-effect free at load, and nothing registers itself anywhere. To keep it that way:
 
-- One validator per module; a module imports only `core/` helpers and other validators it truly composes.
+- One validator or check per module; a module imports only `core/` helpers and other validators it truly composes.
 - No shared mutable state, no module-level registries, no `Object.assign`-style attachment of properties to functions at load. The one piece of module-level state is the depth counter of `lazy`, described under [Results, not exceptions](#results-not-exceptions): it is created at load without a side effect and is back at zero whenever no validator is running.
 - Options are read once when a validator is created, not per call, and defaults are resolved there.
+- An export made by a call at load, such as `export const hex = /* @__PURE__ */ formatFactory(...)`, carries the pure annotation on the outermost call, and its arguments make no call of their own: a bundler keeps a call it cannot prove pure, so every consumer would carry it. Rolldown and esbuild both drop an annotated call nothing uses, and the size budgets would catch one that stayed. Any other export is a function or a constant.
 - The English wording lives in `messages/english-messages.ts` and is reachable only through the `englishMessages` export, so `formatIssue` itself carries none of it.
 
-`tests/integration/bundle-size.test.ts` bundles small consumer-shaped modules against the built `dist/` and asserts a gzip ceiling for each: one leaf validator, an object of a few fields, messages alone, and everything. A budget that fails means something made a validator a tenth heavier. Each budget is what its scenario measured plus 10%, rounded up to ten bytes, so a fix that adds a few bytes passes without touching the test. When one fails on purpose, every scenario is measured again and every budget reset by the same rule, and the commit says what grew and why.
+`tests/integration/bundle-size.test.ts` bundles small consumer-shaped modules against the built `dist/` and asserts a gzip ceiling for each: one leaf validator, an object of a few fields, messages alone, and everything. A budget that fails means something made a validator a tenth heavier. The shared core, the code every validator carries, is where a byte costs most: it is paid once per validator family a consumer uses, so a helper there earns its place only if nearly every validator needs it. Each budget is what its scenario measured plus 10%, rounded up to ten bytes, so a fix that adds a few bytes passes without touching the test. When one fails on purpose, every scenario is measured again and every budget reset by the same rule, and the commit says what grew and why.
 
 ## Types
 
 There is no input-type parameter. Every validator accepts `unknown`, and that is the honest input type of a function that exists to check unknown data. `Infer<typeof validator>` reads the output type from either flavor.
+
+Every type a public signature names is exported, since `hub check` requires it and a consumer that exports a validator from a library must be able to name its type in declarations. So the types that compute a composer's return type, such as `Composed`, `AnyValidator` and `InferShape`, are public too. The ones a consumer is expected to write are `Validator`, `AsyncValidator`, `Check`, `AsyncCheck`, `Message`, `Infer`, `ValidationResult`, `ValidationIssue`, `Messages` and the options interface of each validator; the docs present the rest as the machinery of signatures, and a change to them is still a change to the API.
 
 An `object` output type is built with `Simplify`, so hover text shows one object, and a property whose validator can produce `undefined` becomes optional in it.
 
@@ -151,7 +242,7 @@ Packages inside this repository that validate are meant to take it as a `devDepe
 
 ## What adopting costs
 
-The claim that a consumer pays only for what it uses was measured on a real workspace package that validates its own configuration. It took the package as a bundled devDependency and replaced about 80 lines of hand-written checks with eight validators (`array`, `boolean`, `object`, `optional`, `pipe`, `refine`, `string`, `unknown`) and `formatIssue` and `formatPath`. Minified and gzipped, across every entry point and chunk, it went from 5.6 kB to 8.3 kB: +2.7 kB, about +48%. The hand-written checks were about 0.5 kB.
+The claim that a consumer pays only for what it uses was measured, for 0.1.0, on a real workspace package that validates its own configuration. It took the package as a bundled devDependency and replaced about 80 lines of hand-written checks with eight validators (`array`, `boolean`, `object`, `optional`, `pipe`, `refine`, `string`, `unknown`) and `formatIssue` and `formatPath`. Minified and gzipped, across every entry point and chunk, it went from 5.6 kB to 8.3 kB: +2.7 kB, about +48%. The hand-written checks were about 0.5 kB.
 
 The claim held in the sense that matters for correctness: the built output contained none of the validators the package did not use, no coercion code and no Standard Schema adapter, and `hub check` found no leak. It did not hold in the sense of being small for a package that only checks a few options. Where the bytes went:
 
@@ -161,7 +252,35 @@ The claim held in the sense that matters for correctness: the built output conta
 
 Two consequences follow. First, hand-written checks are still cheaper in bytes for a handful of options, and the package earns its place through consistency and shared behavior rather than size, so "lightweight" holds per validator and not for a package that validates little. Second, inlining copies the shared core into every package that inlines it: an application that installs several such packages carries one copy per package, where a regular dependency would be deduplicated by the application's bundler. Inlining buys isolation from this package's version, and that is worth revisiting once the API is 1.0.
 
-Gaps the migration exposed that remain, none of them needed by the 0.1.0 release conditions: there is no leaf for function-valued options, which are common in configuration, so the consumer wrote one with `refine`; a validator cannot carry a fixed message of its own, so per-field wording goes through `refine`'s issue or a message map keyed by code; and a message that needs the offending value or a sibling name cannot be built by a validator.
+The measurements above are of 0.1.0. The migration also exposed three gaps, which 0.2.0 closes: there was no leaf for function-valued options, which `func()` now is; a validator could not carry a fixed message of its own, which the `message` option now does; and the shared core was about 0.6 kB in every consumer. One gap remains by design: a message that needs the offending value cannot be built by a validator, since issues never hold it.
+
+### 0.2.0, measured again
+
+The same package, moved to checks, `func` and `unique`, measures 7.88 kB against 8.04 kB for the same package on 0.1.0, each built file minified with esbuild and gzipped, then summed. So 0.2.0 costs this adopter 0.16 kB less while adding checks, messages per validator and asynchronous checks to everything it uses: the slimmer type naming and the rare constraints leaving `string` pay for the argument handling and check running every validator now shares. That shared core is about 0.65 kB in a bundle with one leaf in it.
+
+### Compared with valibot
+
+The same schemas, bundled the same way (tsdown, minified, gzipped), against valibot 1.5.0 with `safeParse`, in bytes:
+
+| Scenario                                             | This package | valibot |
+| ---------------------------------------------------- | ------------ | ------- |
+| `boolean()`                                          | 688          | 689     |
+| `string()`                                           | 1078         | 689     |
+| `string({ min: 2, trim: true })`                     | 1087         | 911     |
+| `number({ int: true })`                              | 1223         | 873     |
+| `object` of two strings                              | 1620         | 1059    |
+| `email()`                                            | 1323         | 914     |
+| `url()`                                              | 2335         | 898     |
+| `object` of a name, an email and an optional integer | 2799         | 1491    |
+| the same, with English messages                      | 3979         | 1514    |
+
+Valibot's issues always carry an English message, so its last two rows are the same code; here the English is a separate import a consumer that words its own issues never bundles.
+
+The shared core costs the same in both. The difference is in the validators, and three things account for most of it:
+
+- **Options are carried whole.** `string()` bundles the code for `min`, `max`, `length`, `trim` and `case`, and the checks at creation that reject impossible combinations, with their error text, even when none is used. Valibot bundles only the actions a pipe names. This is the cost of the hybrid: the common constraints are short to write and paid for together.
+- **`email` and `url` are not patterns.** Valibot's `email` is a regular expression and its `url` asks whether `new URL` accepts the text. These read the text with the URL parser and return its reading, reject credentials, script schemes, special-use and single-label hosts, and whitespace the parser would drop, and give `mailto`, `tel` and `urn` their own rules. That is [what the formats defend against](#formats-are-allowlists), and it is most of their weight.
+- **Objects defend against their input.** `object` accepts plain objects from any realm and never a class instance, defines every key as own data so `__proto__` cannot reach a prototype, and supports strict and passthrough keys.
 
 ## Coercion
 
@@ -178,9 +297,11 @@ A validator is a function and not a schema object, so Standard Schema v1 support
 ## Adding a validator
 
 1. One module, one exported factory, options in one interface, all with TSDoc per `docs/guidelines/code.md`. Throw `RangeError` or `TypeError` from the factory for options that make no sense.
-2. Describe what is accepted, never what is rejected, per [Formats are allowlists](#formats-are-allowlists). When a standard parser gives the input its meaning, check what the parser read and return it.
-3. Non-matching type: `invalidType(expected, input)`. Failed constraint: `invalid_format`, `invalid_value`, `too_small` or `too_big` with `params` that name the facts and never the value.
-4. Report every failing constraint, not the first.
-5. Tests beside it: accepted values, rejected values, edge cases, the exact issue shape, and that no issue contains the input. A format that returns a parser's reading also gets a case in `src/formats/parser-agreement.test.ts`.
-6. Add it to the size budgets if it adds a scenario a consumer would plausibly bundle alone.
-7. Document it in `docs/validators.md`, and the wording for its issue shape in `messages/english-messages.ts`.
+2. Build it with the [builders](#builders) where one fits: `format` for a string format, `guard` for a type, `check` for a rule on a typed value. The signature is `validator(options?, ...checks)`, and the options include `message`.
+3. Decide whether a constraint is an option or a check by [how often it is used](#options-checks-formats-and-composition).
+4. Describe what is accepted, never what is rejected, per [Formats are allowlists](#formats-are-allowlists). When a standard parser gives the input its meaning, check what the parser read and return it. Decide whether it returns the text as written or a canonical form before it is released, since that is [part of its contract](#compatibility-of-a-format).
+5. Non-matching type: `invalid_type`. Failed constraint: `invalid_format`, `invalid_value`, `too_small` or `too_big` with `params` that name the facts and never the value.
+6. Report every failing constraint, not the first.
+7. Tests beside it: accepted values, rejected values, edge cases, the exact issue shape, the `message` option, and that no issue contains the input. A format that returns a parser's reading also gets a case in `src/formats/parser-agreement.test.ts`.
+8. Add it to the size budgets if it adds a scenario a consumer would plausibly bundle alone.
+9. Document it in `docs/validators.md`, and the wording for its issue shape in `messages/english-messages.ts`.

@@ -71,9 +71,9 @@ describe("describeType", () => {
     [Number.POSITIVE_INFINITY, "infinity"],
     [new Date(), "date"],
     [new Date(Number.NaN), "invalid date"],
-    [new Map(), "map"],
-    [new Set(), "set"],
-    [new (class Widget {})(), "Widget"],
+    [new Map(), "object"],
+    [new Set(), "object"],
+    [new (class Widget {})(), "object"],
     [{}, "object"],
     [Object.create(null), "object"],
     ["text", "string"],
@@ -81,6 +81,10 @@ describe("describeType", () => {
     [1n, "bigint"],
   ])("should name %s as %s", (value, expected) => {
     expect(describeType(value)).toBe(expected);
+  });
+
+  it("should name a date that lost its prototype, by what it holds", () => {
+    expect(describeType(Object.setPrototypeOf(new Date(0), null))).toBe("date");
   });
 
   it("should say object for an input that throws when inspected, instead of throwing", () => {

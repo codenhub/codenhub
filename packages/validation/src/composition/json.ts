@@ -1,5 +1,17 @@
-import { assertFunction, failIssue, invalidType, pass } from "../core/result";
-import type { AnyValidator, Composed, Infer, Validator } from "../core/types";
+import { chain } from "../core/async";
+import { tail } from "../core/checks";
+import { assertFunction, issue, pass, typeIssue } from "../core/result";
+import type {
+  AnyValidator,
+  AsyncRest,
+  AsyncValidator,
+  Composed,
+  Infer,
+  MessageOptions,
+  Rest,
+  ValidationResult,
+  Validator,
+} from "../core/types";
 
 /**
  * Creates a validator for text that holds JSON: it parses the text, then optionally validates what
@@ -23,22 +35,33 @@ import type { AnyValidator, Composed, Infer, Validator } from "../core/types";
  * @returns A validator that produces what `validator` produces, or `unknown` without one.
  * @throws {TypeError} When `validator` is given and is not a function.
  */
-export function json(): Validator<unknown>;
-export function json<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, Infer<TValidator>>;
-export function json(validator?: AnyValidator): AnyValidator {
-  if (validator !== undefined) {
-    assertFunction("validator", validator);
-  }
+export function json(options?: MessageOptions): Validator<unknown>;
+export function json<TValidator extends AnyValidator>(
+  validator: TValidator,
+  ...rest: Rest<Infer<TValidator>, MessageOptions>
+): Composed<TValidator, Infer<TValidator>>;
+export function json<TValidator extends AnyValidator>(
+  validator: TValidator,
+  ...rest: AsyncRest<Infer<TValidator>, MessageOptions>
+): AsyncValidator<Infer<TValidator>>;
+export function json(...args: unknown[]): AnyValidator {
+  // A function in first place is the validator of the parsed value, and an object or nothing is the
+  // options. Anything else, such as an import that resolved to null, is a mistake in the schema.
+  const [first] = args;
+  const isOptions = first === undefined || (typeof first === "object" && first !== null);
+  const [validator, rest] = isOptions ? [pass as AnyValidator, args] : [first as AnyValidator, args.slice(1)];
+  assertFunction("validator", validator);
+  const [, reject, accept] = tail<MessageOptions, unknown>(rest);
   return (input) => {
     if (typeof input !== "string") {
-      return invalidType("string", input);
+      return reject([typeIssue("string", input)]);
     }
     let parsed: unknown;
     try {
       parsed = JSON.parse(input);
     } catch {
-      return failIssue("invalid_format", { format: "json" });
+      return reject([issue("invalid_format", { format: "json" })]);
     }
-    return validator === undefined ? pass(parsed) : validator(parsed);
+    return chain(validator(parsed), (result: ValidationResult<unknown>) => (result.ok ? accept(result.value) : result));
   };
 }

@@ -65,10 +65,10 @@ The code set is open: a custom validator reports whatever code it likes. These a
 | `unrecognized_key`     | An object has a property its shape does not list, in strict mode.                                                              | `key`. The issue's path ends at the key.                                                                                                                                                                                                 |
 | `invalid_key`          | A key of a `record` or `map` failed its key validator, or its key validator turned it into a key an earlier entry already has. | `issues`: what the key validator found, with paths relative to the key, or for a repeated key one `invalid_value` issue with `unique: true`. The issue's path ends at the key, so it is not mistaken for a problem with the value there. |
 | `invalid_intersection` | Both validators of an `intersection` passed, but produced values that cannot be merged into one.                               | None. The issue's path is where the two outputs differ.                                                                                                                                                                                  |
-| `invalid_union`        | A value matched none of the options of a `union`, or a tagged union got a missing or unknown tag.                              | For `union`, `issues`: the issues each option found, in order, with paths relative to the union's value. For `discriminatedUnion`, `discriminator` and `options`, and the issue's path is the tag's.                                     |
-| `custom`               | The default code of a `refine` check or `fail` call that names no code.                                                        | Whatever the reporter set.                                                                                                                                                                                                               |
+| `invalid_union`        | A value matched none of the options of a `union`, or a tagged union got a missing or unknown tag.                              | For `union`, `issues`: the issues each option found, in order, with paths relative to the union's value. For `tagged`, `discriminator` and `options`, and the issue's path is the tag's.                                                 |
+| `custom`               | The default code of a `check` or `fail` call that names no code.                                                               | Whatever the reporter set.                                                                                                                                                                                                               |
 
-`received` names types the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `invalid date` for a `Date` holding no moment, `map`, `set`, the class name of an instance, `object` for a plain object or anything that cannot be inspected without throwing, or the `typeof` of anything else. Where a plain object is expected (`object`, `record`, `discriminatedUnion`), one made with a prototype of its own, such as `Object.create({ a: 1 })`, is `non-plain object`.
+`received` names kinds of value the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `invalid date` for a `Date` holding no moment, `object` for any other object, a `Map`, a `Set` or a class instance included, or the `typeof` of anything else. It never names a class, since that would take reading the prototype of the input. Where a plain object is expected (`object`, `record`, `tagged`), any other object is `non-plain object`.
 
 The validator reference lists the exact code and `params` each validator reports.
 
@@ -89,7 +89,7 @@ The English wording is a separate value you import, and `formatIssue` does not c
 
 The text comes from the first of these that exists:
 
-1. The issue's own `message`.
+1. The issue's own `message`, which a validator's [`message` option](validators.md#wording-one-validator) or a check's message sets.
 2. An entry for its `code` in the message map you pass as the second argument.
 3. The generic "Invalid value".
 

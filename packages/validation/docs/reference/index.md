@@ -13,21 +13,13 @@ group: Reference
 ### array
 
 ```ts
-export declare function array<TElement extends AnyValidator>(element: TElement, options?: ArrayOptions<Infer<TElement>>): Composed<TElement, Infer<TElement>[]>;
+export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: Rest<Infer<TItem>[], ArrayOptions>): Composed<TItem, Infer<TItem>[]>;
+export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Infer<TItem>[], ArrayOptions>): AsyncValidator<Infer<TItem>[]>;
 ```
 
 Creates a validator for arrays whose every item passes `element`.
 
 A wrong size is reported at once, without validating the items, so a huge array is never worked through only to be rejected. Otherwise every item is validated, and each issue's path leads through the item's index. `unique` is checked on the validated items, after the others pass. The output is a new array; the input is never modified. It is synchronous when `element` is, and asynchronous otherwise.
-
-**Parameters**
-
-- `element` — Validator applied to every item.
-- `options` — Size limits and uniqueness.
-
-**Type parameters**
-
-- `TElement` — The validator for each item.
 
 **Returns** — A validator that produces an array of what `element` produces.
 
@@ -44,305 +36,54 @@ tags(["a", "b"]); // { ok: true, value: ["a", "b"] }
 tags(["a", "a"]); // { ok: false, ... }, code "invalid_value" at path [1]
 ```
 
-### base64
+### check
 
 ```ts
-export declare function base64(): Validator<string>;
+export declare function check<T>(test: (value: T) => boolean, issue?: IssueInput | string): Check<T>;
+export declare function check<T>(test: (value: T) => boolean | PromiseLike<boolean>, issue?: IssueInput | string): AsyncCheck<T>;
 ```
 
-Creates a validator for standard base64 with correct padding, as an encoder writes it: the bits past the last byte are zero. The value is not modified.
+Makes a check from a test of a typed value, for a rule a validator's options do not express.
 
-**Returns** — A validator that produces the string.
-
-**Example**
-
-```ts
-base64()("aGVsbG8="); // { ok: true, value: "aGVsbG8=" }
-base64()("aGVsbG8"); // { ok: false, ... }, code "invalid_format"
-```
-
-### bigint
-
-```ts
-export declare function bigint(options?: BigintOptions): Validator<bigint>;
-```
-
-Creates a validator for bigints. Numbers are rejected, including whole ones.
+Give it to a validator after its options. It runs once the value has its type: for an object, once every property has passed, so it can compare them. A test that returns a promise makes an [AsyncCheck](#asynccheck), and the validator given it asynchronous.
 
 **Parameters**
 
-- `options` — Bounds to apply. Positive is `gt: 0n`, non-negative is `min: 0n`, negative is `lt: 0n`.
-
-**Returns** — A validator that produces a bigint.
-
-**Throws** — When no bigint can satisfy the bounds together.
-
-**Example**
-
-```ts
-const id = bigint({ gt: 0n });
-id(10n); // { ok: true, value: 10n }
-id(0n); // { ok: false, ... }, code "too_small"
-```
-
-### boolean
-
-```ts
-export declare function boolean(): Validator<boolean>;
-```
-
-Creates a validator for booleans. Only `true` and `false` pass; to accept text such as `"yes"`, use the coercing variant.
-
-**Returns** — A validator that produces a boolean.
-
-**Example**
-
-```ts
-boolean()(true); // { ok: true, value: true }
-boolean()("true"); // { ok: false, error: { issues: [{ code: "invalid_type", ... }] } }
-```
-
-### coerceBigint
-
-```ts
-export declare function coerceBigint(options?: BigintOptions): Validator<bigint>;
-```
-
-Creates a validator for bigints that also accepts safe integers and text holding a decimal integer, converting them, then applies the same constraints as [bigint](#bigint).
-
-Fractions, numbers beyond `Number.MAX_SAFE_INTEGER` (which have already lost precision), other text, booleans and `null` are rejected. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
-
-**Parameters**
-
-- `options` — Bounds, exactly as for `bigint`.
-
-**Returns** — A validator that produces a bigint.
-
-**Throws** — When no bigint can satisfy the bounds together.
-
-**Example**
-
-```ts
-coerceBigint({ gt: 0n })("12345678901234567890"); // { ok: true, value: 12345678901234567890n }
-coerceBigint()(1.5); // { ok: false, ... }, code "invalid_type"
-```
-
-### coerceBoolean
-
-```ts
-export declare function coerceBoolean(): Validator<boolean>;
-```
-
-Creates a validator for booleans that also accepts the words `true`/`false`, `yes`/`no`, `on`/`off` and `1`/`0`, in any letter case and ignoring surrounding whitespace, and the numbers `1` and `0`.
-
-Anything else is rejected, so a typo such as `"ture"` is an error and not `false`. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`. Combine with `withDefault` for an environment variable that may be missing.
-
-**Returns** — A validator that produces a boolean.
-
-**Example**
-
-```ts
-coerceBoolean()("yes"); // { ok: true, value: true }
-coerceBoolean()("Off"); // { ok: true, value: false }
-coerceBoolean()("maybe"); // { ok: false, ... }, code "invalid_type"
-```
-
-### coerceDate
-
-```ts
-export declare function coerceDate(options?: DateOptions): Validator<Date>;
-```
-
-Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [date](#date).
-
-Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM:SS`, an optional fraction and an optional zone: `Z`, or an offset written `+HH`, `+HHMM` or `+HH:MM`. That is wider than `datetime`, which checks one exact spelling. Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`. Fractions of a second beyond milliseconds are cut, not rounded. A date without a time and a date-time without an offset are both read as UTC, so the result never depends on the timezone of the machine. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
-
-**Parameters**
-
-- `options` — Earliest and latest accepted moments, exactly as for `date`.
-
-**Returns** — A validator that produces a `Date`.
-
-**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
-
-**Example**
-
-```ts
-coerceDate()("2026-09-28"); // { ok: true, value: Date 2026-09-28T00:00:00.000Z }
-coerceDate()(0); // { ok: true, value: Date 1970-01-01T00:00:00.000Z }
-coerceDate()("yesterday"); // { ok: false, ... }, code "invalid_type"
-```
-
-### coerceNumber
-
-```ts
-export declare function coerceNumber(options?: NumberOptions): Validator<number>;
-```
-
-Creates a validator for numbers that also accepts text holding a decimal number, converting it, then applies the same constraints as [number](#number).
-
-Surrounding whitespace is ignored, and a dot with no digits on one side, as in `".5"` or `"5."`, is read as people type it. Empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and `"NaN"` are rejected, and so is text holding a whole number beyond `Number.MAX_SAFE_INTEGER`, which could not be read exactly (use `coerceBigint` for those). So are booleans, `null`, objects and arrays: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
-
-**Parameters**
-
-- `options` — Constraints and clean-up, exactly as for `number`.
-
-**Returns** — A validator that produces a number.
-
-**Throws** — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, `multipleOf` is not a positive finite number, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
-
-**Example**
-
-```ts
-const port = coerceNumber({ int: true, min: 1, max: 65535 });
-port("8080"); // { ok: true, value: 8080 }
-port("0"); // { ok: false, ... }, code "too_small"
-port("abc"); // { ok: false, ... }, code "invalid_type"
-```
-
-### coerceString
-
-```ts
-export declare function coerceString(options?: StringOptions): Validator<string>;
-```
-
-Creates a validator for text that also accepts finite numbers, bigints and booleans, converting them to their string form, then applies the same constraints as [string](#string).
-
-`NaN` and `Infinity`, `null`, `undefined`, objects, arrays, functions and symbols are not converted: guessing what an object should look like as text would hide bugs. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
-
-**Parameters**
-
-- `options` — Constraints and clean-up, exactly as for `string`.
-
-**Returns** — A validator that produces a string.
-
-**Throws**
-
-- When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
-- When both `lowercase` and `uppercase` are set, or `pattern` is not a regular expression.
-
-**Example**
-
-```ts
-coerceString({ min: 2 })(12); // { ok: true, value: "12" }
-coerceString()(null); // { ok: false, ... }, code "invalid_type"
-```
-
-### cuid2
-
-```ts
-export declare function cuid2(): Validator<string>;
-```
-
-Creates a validator for CUID2 identifiers. The value is not modified.
-
-**Returns** — A validator that produces the identifier as a string.
-
-**Example**
-
-```ts
-cuid2()("tz4a98xxat96iws9zmbrgj3a"); // { ok: true, value: "tz4a98xxat96iws9zmbrgj3a" }
-cuid2()("1bad"); // { ok: false, ... }, code "invalid_format"
-```
-
-### date
-
-```ts
-export declare function date(options?: DateOptions): Validator<Date>;
-```
-
-Creates a validator for valid `Date` objects. An invalid `Date` such as `new Date("nope")`, a timestamp and a date string are all rejected; parse text with `isoDate` or convert it first.
-
-**Parameters**
-
-- `options` — Earliest and latest accepted moments, both inclusive.
-
-**Returns** — A validator that produces a `Date`.
-
-**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
-
-**Example**
-
-```ts
-const birthday = date({ max: new Date() });
-birthday(new Date("1990-04-01")); // { ok: true, ... }
-birthday(new Date("nope")); // { ok: false, ... }, code "invalid_type"
-```
-
-### datetime
-
-```ts
-export declare function datetime({ offset, precision }?: DatetimeOptions): Validator<string>;
-```
-
-Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a day that exists. The value is not modified.
-
-**Parameters**
-
-- `options` — Whether offsets are allowed, and the fractional-second precision.
-
-**Returns** — A validator that produces the text as a string.
-
-**Throws** — When `precision` is not an integer from 0 to 9.
-
-**Example**
-
-```ts
-datetime()("2026-09-28T14:30:00Z"); // { ok: true, ... }
-datetime()("2026-02-30T00:00:00Z"); // { ok: false, ... }: February has no 30th
-datetime({ offset: true })("2026-09-28T14:30:00+02:00"); // { ok: true, ... }
-```
-
-### discriminatedUnion
-
-```ts
-export declare function discriminatedUnion<const TKey extends string, const TVariants extends Variants>(key: TKey, variants: TVariants & CheckedVariants<TKey, TVariants>): Composed<TVariants[keyof TVariants], InferDiscriminated<TKey, TVariants>>;
-```
-
-Creates a validator for objects that share a tag property and differ in the rest, such as events with a `type`. The tag chooses the variant, so a failure reports that variant's own issues instead of a list of everything that did not match.
-
-The input's tag must be one of the keys of `variants`, and the variant validates the rest of the input, without the tag. The variant must not list the tag property: one that does, such as `object({ type: literal("click"), ... })`, never sees it and fails, so its type is rejected. That is also why a strict object works as a variant, and a `record` does too, checking every key but the tag. The tag is added back to the output, so the result is a proper tagged union. Each variant must produce a plain object: an array, a `Date`, a class instance or anything else would be taken apart by adding the tag, so a variant whose output type is an array or a function is a compile error, and one that produces any non-plain value throws a `TypeError` when it does, as a callback's bug does. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. It is synchronous when every variant is, and asynchronous otherwise. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
-
-**Parameters**
-
-- `key` — The name of the tag property.
-- `variants` — A validator for each tag value. Each must produce a plain object.
+- `test` — Returns `true` when the value is acceptable.
+- `issue` — What to report when it is not: an issue, or a string as its message. Defaults to code `"custom"` at the value's own location.
 
 **Type parameters**
 
-- `TKey` — The name of the tag property.
-- `TVariants` — The variants, keyed by tag.
+- `T` — The type of the value it checks.
 
-**Returns** — A validator that produces one of the variants' objects, tagged.
+**Returns** — A check that reports the issue when `test` returns `false`.
 
-**Throws** — When a variant is not a function, and, from the returned validator, when a variant produces something other than a plain object.
+**Throws** — When `test` is not a function.
 
 **Example**
 
 ```ts
-const event = discriminatedUnion("type", {
-  click: object({ x: number(), y: number() }),
-  key: object({ key: string({ min: 1 }) }),
-});
+const even = check((n: number) => n % 2 === 0, "Must be even");
+number({ int: true }, even);
 
-event({ type: "key", key: "a" }); // { ok: true, value: { type: "key", key: "a" } }
-event({ type: "scroll" }); // { ok: false, ... }, code "invalid_union" at path ["type"]
-event({ type: "click", x: 1 }); // { ok: false, ... }, code "invalid_type" at path ["y"]
+const signup = object(
+  { password: string({ min: 8 }), confirm: string() },
+  check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
+);
 ```
 
 ### email
 
 ```ts
-export declare function email(options?: EmailOptions): Validator<string>;
+export declare function email(...checks: Check<string>[]): Validator<string>;
+export declare function email<const TOptions extends EmailOptions>(options: TOptions, ...checks: Check<string>[]): Composed<EmailParts<TOptions>, string>;
+export declare function email(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
+export declare function email(options: EmailOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 ```
 
 Creates a validator for email addresses with a public domain name, which may be internationalized.
 
-The value is the address as mail is delivered to it: the local part as written, and the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode. So `Ada@München.DE` is `Ada@xn--mnchen-3ya.de`, and every spelling that names one domain, such as fullwidth letters or an invisible variation selector, gives one address. The local part must be ASCII: addresses with letters beyond it (RFC 6531) are rejected. Surrounding whitespace is not trimmed; trim first with `pipe` when the input may need it.
-
-**Parameters**
-
-- `options` — Whether `+` is allowed in the local part.
+The value is the address as mail is delivered to it: the local part as written, and the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode. So `Ada@München.DE` is `Ada@xn--mnchen-3ya.de`, and every spelling that names one domain, such as fullwidth letters or an invisible variation selector, gives one address. The local part must be ASCII: addresses with letters beyond it (RFC 6531) are rejected. Surrounding whitespace is not trimmed; trim first with `pipe` when the input may need it. The `domain` and `local` options check those parts with validators of your own, which make the validator asynchronous when one is.
 
 **Returns** — A validator that produces the address, its domain as the parser reads it.
 
@@ -351,6 +92,28 @@ The value is the address as mail is delivered to it: the local part as written, 
 ```ts
 email()("Ada@Example.COM"); // { ok: true, value: "Ada@example.com" }
 email()("ada@localhost"); // { ok: false, error: { issues: [{ code: "invalid_format", ... }] } }
+email({ domain: oneOf(["company.com"]), message: "Use your company address" });
+```
+
+### endsWith
+
+```ts
+export declare function endsWith(value: string, message?: Message): Check<string>;
+```
+
+Requires a string to end with a suffix. It fails with `invalid_format` and `params` `{ format: "endsWith", value }`.
+
+**Parameters**
+
+- `value` — The text required.
+- `message` — Wording for the issue.
+
+**Returns** — A check of strings.
+
+**Example**
+
+```ts
+string(endsWith(".pdf", "Upload a PDF"));
 ```
 
 ### fail
@@ -415,6 +178,33 @@ Groups the messages of a failure for display: issues at the root go to `formErro
 
 **Returns** — The grouped messages.
 
+### format
+
+```ts
+export declare function format(name: string, test: (text: string) => boolean): Factory<string, MessageOptions>;
+```
+
+Makes the factory of a validator for a string format, which behaves exactly as `email()` or `uuid()` do.
+
+A value that is not a string fails with `invalid_type`, and a string the test rejects with `invalid_format` and `params.format` set to `name`. An accepted string is returned as written. The validators it makes take a `message` option and checks.
+
+**Parameters**
+
+- `name` — The name of the format, for the issue. Treat it as part of the format's contract.
+- `test` — Returns `true` for a string of the format.
+
+**Returns** — The factory of the validator.
+
+**Throws** — When `test` is not a function.
+
+**Example**
+
+```ts
+const slug = format("slug", (text) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text));
+slug()("hello-world"); // { ok: true, value: "hello-world" }
+slug({ message: "Use lowercase words and hyphens" })("Hello World"); // { ok: false, ... }
+```
+
 ### formatIssue
 
 ```ts
@@ -468,12 +258,17 @@ formatPath(["a.b"]); // '["a.b"]'
 ### func
 
 ```ts
-export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(): Validator<T>;
+export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(...rest: Rest<T, MessageOptions>): Validator<T>;
+export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
 ```
 
 Creates a validator for functions, such as a callback in a configuration object. Classes, arrow, async and generator functions are all functions, and a function from another realm is one too.
 
 Only that the value is a function can be checked at runtime: the parameters it takes and what it returns cannot. Name the signature you expect as the type argument, and it is the type of the output, taken on trust as a cast would be. Without one, the output is a function that takes any arguments and returns `unknown`.
+
+**Parameters**
+
+- `rest` — Options, then checks.
 
 **Type parameters**
 
@@ -489,44 +284,62 @@ config({ onChange: (value: string) => console.log(value) }); // { ok: true, ... 
 config({ onChange: "log" }); // { ok: false, ... }, params { expected: "function", received: "string" }
 ```
 
-### hex
+### guard
 
 ```ts
-export declare function hex(): Validator<string>;
+export declare function guard<T>(expected: string, accepts: (input: unknown) => input is T): Factory<T, MessageOptions>;
 ```
 
-Creates a validator for one or more hexadecimal digits of any letter case. The value is not modified.
+Makes the factory of a validator for any type, from a type guard.
 
-**Returns** — A validator that produces the string.
+A value the guard rejects fails with `invalid_type` and `params.expected` set to `expected`. The validators it makes take a `message` option and checks, as every built-in one does.
+
+**Parameters**
+
+- `expected` — The name of the type, for the issue.
+- `accepts` — Returns `true` for a value of the type.
+
+**Type parameters**
+
+- `T` — The type the guard accepts.
+
+**Returns** — The factory of the validator.
+
+**Throws** — When `accepts` is not a function.
 
 **Example**
 
 ```ts
-hex()("deadBEEF01"); // { ok: true, value: "deadBEEF01" }
-hex()("xyz"); // { ok: false, ... }, code "invalid_format"
+const file = guard("File", (input): input is File => input instanceof File);
+const upload = object({ avatar: file({ message: "Choose an image" }) });
 ```
 
-### hostname
+### includes
 
 ```ts
-export declare function hostname(): Validator<string>;
+export declare function includes(value: string, message?: Message): Check<string>;
 ```
 
-Creates a validator for hostnames: dot-separated labels of letters, digits and hyphens, at most 253 characters, whose last label is not a number, all digits or `0x` and hex digits, since the URL parser reads a name that ends that way as an IPv4 address (`0x7f000001` is `127.0.0.1`), and whose punycode labels, such as `xn--mnchen-3ya`, decode. An absolute name ending in one dot, such as `example.com.`, is accepted. Unlike `url`, single-label hosts such as `localhost` are accepted. The value is not modified.
+Requires a string to contain a substring. It fails with `invalid_format` and `params` `{ format: "includes", value }`.
 
-**Returns** — A validator that produces the hostname as a string.
+**Parameters**
+
+- `value` — The text required.
+- `message` — Wording for the issue.
+
+**Returns** — A check of strings.
 
 **Example**
 
 ```ts
-hostname()("localhost"); // { ok: true, value: "localhost" }
-hostname()("-bad.com"); // { ok: false, ... }, code "invalid_format"
+string(includes("@"));
 ```
 
 ### instanceOf
 
 ```ts
-export declare function instanceOf<T>(target: Constructor<T>): Validator<T>;
+export declare function instanceOf<T>(target: Constructor<T>, ...rest: Rest<T, MessageOptions>): Validator<T>;
+export declare function instanceOf<T>(target: Constructor<T>, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
 ```
 
 Creates a validator that accepts instances of a class, checked with `instanceof`. An instance from another realm, such as an iframe, is not recognized.
@@ -534,6 +347,7 @@ Creates a validator that accepts instances of a class, checked with `instanceof`
 **Parameters**
 
 - `target` — The class the value must be an instance of.
+- `rest` — Options, then checks.
 
 **Type parameters**
 
@@ -554,7 +368,8 @@ upload("a.txt"); // { ok: false, ... }, params { expected: "instance of File", r
 ### intersection
 
 ```ts
-export declare function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(left: TLeft, right: TRight): Composed<TLeft | TRight, Infer<TLeft> & Infer<TRight>>;
+export declare function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(left: TLeft, right: TRight, ...rest: Rest<Infer<TLeft> & Infer<TRight>, MessageOptions>): Composed<TLeft | TRight, Infer<TLeft> & Infer<TRight>>;
+export declare function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(left: TLeft, right: TRight, ...rest: AsyncRest<Infer<TLeft> & Infer<TRight>, MessageOptions>): AsyncValidator<Infer<TLeft> & Infer<TRight>>;
 ```
 
 Creates a validator that accepts a value only when it passes both validators, and produces the two results merged.
@@ -581,29 +396,6 @@ Both validators receive the same input and both run, so the issues of each are r
 const named = object({ name: string() });
 const aged = object({ age: number() });
 intersection(named, aged)({ name: "Ada", age: 36 }); // { ok: true, value: { name: "Ada", age: 36 } }
-```
-
-### ip
-
-```ts
-export declare function ip(options?: IpOptions): Validator<string>;
-```
-
-Creates a validator for IPv4 and IPv6 addresses. The value is not modified.
-
-**Parameters**
-
-- `options` — Restricts the address family.
-
-**Returns** — A validator that produces the address as a string.
-
-**Throws** — When `version` is given and is not `"v4"` or `"v6"`.
-
-**Example**
-
-```ts
-ip()("192.168.0.1"); // { ok: true, ... }
-ip({ version: "v6" })("192.168.0.1"); // { ok: false, ... }, params { format: "ipv6" }
 ```
 
 ### is
@@ -635,28 +427,12 @@ The narrowing is only accurate for a validator that does not change the value. A
 const isPort = (input: unknown): input is number => is(number({ int: true, min: 1, max: 65535 }), input);
 ```
 
-### isoDate
-
-```ts
-export declare function isoDate(): Validator<string>;
-```
-
-Creates a validator for ISO 8601 calendar dates such as `2026-09-28`, on a day that exists. The value is a string and is not modified; to get a `Date`, use `date`.
-
-**Returns** — A validator that produces the date as a string.
-
-**Example**
-
-```ts
-isoDate()("2024-02-29"); // { ok: true, ... }
-isoDate()("2026-02-29"); // { ok: false, ... }: 2026 is not a leap year
-```
-
 ### json
 
 ```ts
-export declare function json(): Validator<unknown>;
-export declare function json<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, Infer<TValidator>>;
+export declare function json(options?: MessageOptions): Validator<unknown>;
+export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, MessageOptions>): Composed<TValidator, Infer<TValidator>>;
+export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, MessageOptions>): AsyncValidator<Infer<TValidator>>;
 ```
 
 Creates a validator for text that holds JSON: it parses the text, then optionally validates what was parsed.
@@ -686,7 +462,8 @@ settings("{oops"); // { ok: false, ... }, code "invalid_format"
 ### lazy
 
 ```ts
-export declare function lazy<TValidator extends AnyValidator>(getter: () => TValidator, options?: LazyOptions): Composed<TValidator, Infer<TValidator>>;
+export declare function lazy<TValidator extends AnyValidator>(getter: () => TValidator, ...rest: Rest<Infer<TValidator>, LazyOptions>): Composed<TValidator, Infer<TValidator>>;
+export declare function lazy<TValidator extends AnyValidator>(getter: () => TValidator, ...rest: AsyncRest<Infer<TValidator>, LazyOptions>): AsyncValidator<Infer<TValidator>>;
 ```
 
 Creates a validator that looks up another validator the first time it runs, so a validator can refer to itself for recursive data such as a tree or a comment thread.
@@ -698,7 +475,6 @@ Every level of nesting is a level of recursion, and input nested past the stack,
 **Parameters**
 
 - `getter` — Returns the validator. Called once, on first use.
-- `options` — The depth limit.
 
 **Type parameters**
 
@@ -728,7 +504,8 @@ const category: Validator<Category> = object({
 ### literal
 
 ```ts
-export declare function literal<const T extends LiteralValue>(value: T): Validator<T>;
+export declare function literal<const T extends LiteralValue>(value: T, ...rest: Rest<T, MessageOptions>): Validator<T>;
+export declare function literal<const T extends LiteralValue>(value: T, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
 ```
 
 Creates a validator that accepts exactly one value, compared with `===`. The type is the value itself, so `literal("admin")` produces `"admin"` and not `string`. It is also how `null` and `undefined` are validated: `literal(null)`.
@@ -736,6 +513,7 @@ Creates a validator that accepts exactly one value, compared with `===`. The typ
 **Parameters**
 
 - `value` — The only accepted value.
+- `rest` — Options, then checks.
 
 **Type parameters**
 
@@ -751,12 +529,34 @@ Creates a validator that accepts exactly one value, compared with `===`. The typ
 const role = literal("admin");
 role("admin"); // { ok: true, value: "admin" }
 role("user"); // { ok: false, ... }, code "invalid_value", params { expected: "admin" }
+literal(true, { message: "You must accept the terms" });
+```
+
+### lowercase
+
+```ts
+export declare function lowercase(message?: Message): Check<string>;
+```
+
+Requires a string to be in lowercase: unchanged by `toLowerCase()`, so a string with no letters passes. It changes nothing; to lowercase the string instead, use `string({ case: "lower" })`. It fails with `invalid_format` and `params` `{ format: "lowercase" }`.
+
+**Parameters**
+
+- `message` — Wording for the issue.
+
+**Returns** — A check of strings.
+
+**Example**
+
+```ts
+string(lowercase("Must be lowercase"));
 ```
 
 ### map
 
 ```ts
-export declare function map<TKey extends AnyValidator, TValue extends AnyValidator>(key: TKey, value: TValue, options?: SizeOptions): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>>;
+export declare function map<TKey extends AnyValidator, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: Rest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>>;
+export declare function map<TKey extends AnyValidator, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncValidator<Map<Infer<TKey>, Infer<TValue>>>;
 ```
 
 Creates a validator for `Map`s whose every key passes `key` and every value passes `value`.
@@ -767,7 +567,6 @@ A wrong size is reported at once, without validating the entries. An issue's pat
 
 - `key` — Validator applied to every key.
 - `value` — Validator applied to every value.
-- `options` — Size limits.
 
 **Type parameters**
 
@@ -788,68 +587,49 @@ const stock = map(string(), number({ int: true, min: 0 }));
 stock(new Map([["apples", 3]])); // { ok: true, value: Map { "apples" => 3 } }
 ```
 
-### nanoid
+### multipleOf
 
 ```ts
-export declare function nanoid(): Validator<string>;
+export declare function multipleOf(step: number, message?: Message): Check<number>;
 ```
 
-Creates a validator for Nano IDs in their default form: 21 characters of `A-Za-z0-9_-`. The value is not modified.
+Requires a number that is a multiple of a step.
 
-**Returns** — A validator that produces the identifier as a string.
-
-**Example**
-
-```ts
-nanoid()("V1StGXR8_Z5jdHi6B-myT"); // { ok: true, value: "V1StGXR8_Z5jdHi6B-myT" }
-nanoid()("short"); // { ok: false, ... }, code "invalid_format"
-```
-
-### nativeEnum
-
-```ts
-export declare function nativeEnum<T extends EnumLike>(enumObject: T): Validator<T[keyof T]>;
-```
-
-Creates a validator that accepts any value of a TypeScript `enum`. The reverse-mapping entries TypeScript adds to a numeric enum are not values and are ignored.
+Both are compared as the decimals they are written as, so `0.3` is a multiple of `0.1` at any size. A value computed in floating point, such as `0.1 + 0.2`, is compared as the number it actually is, `0.30000000000000004`. It fails with `invalid_value` and `params` `{ type: "number", multipleOf }`.
 
 **Parameters**
 
-- `enumObject` — The enum.
+- `step` — A positive finite number.
+- `message` — Wording for the issue.
 
-**Type parameters**
+**Returns** — A check of numbers.
 
-- `T` — The enum object.
-
-**Returns** — A validator that produces a value of the enum.
-
-**Throws**
-
-- When the enum has no values, so the validator would accept nothing.
-- When a value is `NaN`, which no value equals.
+**Throws** — When `step` is not a positive finite number.
 
 **Example**
 
 ```ts
-enum Status { Active = "active", Archived = "archived" }
-nativeEnum(Status)("active"); // { ok: true, value: Status.Active }
-nativeEnum(Status)("deleted"); // { ok: false, ... }, code "invalid_value"
+number(multipleOf(0.01, "At most two decimals"));
 ```
 
-### never
+### nonZero
 
 ```ts
-export declare function never(): Validator<never>;
+export declare function nonZero(message?: Message): Check<number>;
 ```
 
-Creates a validator that rejects every value. Use it to forbid a property, or for a branch of a union that must never match.
+Requires a number other than zero. It fails with `invalid_value` and `params` `{ type: "number", format: "nonZero" }`.
 
-**Returns** — A validator that produces `never`.
+**Parameters**
+
+- `message` — Wording for the issue.
+
+**Returns** — A check of numbers.
 
 **Example**
 
 ```ts
-never()("anything"); // { ok: false, ... }, code "invalid_type", params { expected: "never", received: "string" }
+number(nonZero("Cannot be zero"));
 ```
 
 ### nullable
@@ -909,36 +689,11 @@ nickname(null); // { ok: true, value: null }
 nickname(undefined); // { ok: true, value: undefined }
 ```
 
-### number
-
-```ts
-export declare function number(options?: NumberOptions): Validator<number>;
-```
-
-Creates a validator for finite numbers. `NaN` and the infinities are always rejected.
-
-`clamp` runs first, then every constraint is checked against the clamped number, and each failing constraint reports its own issue.
-
-**Parameters**
-
-- `options` — Constraints and clean-up to apply.
-
-**Returns** — A validator that produces a number.
-
-**Throws** — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, `multipleOf` is not a positive finite number, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and reject every input.
-
-**Example**
-
-```ts
-const age = number({ int: true, min: 0, max: 130 });
-age(42); // { ok: true, value: 42 }
-age(-1); // { ok: false, error: { issues: [{ code: "too_small", ... }] } }
-```
-
 ### object
 
 ```ts
-export declare function object<TShape extends Shape>(shape: TShape, options?: ObjectOptions): Composed<TShape[keyof TShape], InferShape<TShape>>;
+export declare function object<TShape extends Shape>(shape: TShape, ...rest: Rest<InferShape<TShape>, ObjectOptions>): Composed<TShape[keyof TShape], InferShape<TShape>>;
+export declare function object<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferShape<TShape>, ObjectOptions>): AsyncValidator<InferShape<TShape>>;
 ```
 
 Creates a validator for plain objects with the given properties.
@@ -948,7 +703,7 @@ Only own enumerable properties are read, and class instances and arrays are not 
 **Parameters**
 
 - `shape` — Validator of each property.
-- `options` — How to treat properties the shape does not list.
+- `rest` — Options, including how to treat properties the shape does not list, then checks, which run once every property has passed and see the whole object.
 
 **Type parameters**
 
@@ -964,30 +719,37 @@ Only own enumerable properties are read, and class instances and arrays are not 
 const user = object({ name: string({ min: 2 }), age: optional(number({ int: true })) });
 user({ name: "Ada" }); // { ok: true, value: { name: "Ada" } }
 user({ name: "A" }); // { ok: false, error: { issues: [{ code: "too_small", path: ["name"], ... }] } }
+
+const signup = object(
+  { password: string({ min: 8 }), confirm: string() },
+  check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
+);
 ```
 
 ### oneOf
 
 ```ts
-export declare function oneOf<const T extends readonly LiteralValue[]>(values: T): Validator<T[number]>;
+export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike>(values: T, ...rest: Rest<ValuesOf<T>, MessageOptions>): Validator<ValuesOf<T>>;
+export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike>(values: T, ...rest: AsyncRest<ValuesOf<T>, MessageOptions>): AsyncValidator<ValuesOf<T>>;
 ```
 
-Creates a validator that accepts any one value of a list, compared with `===`. The values may be any primitives, as for `literal`. The type is the union of the listed values, so `oneOf(["admin", "user"])` produces `"admin" | "user"`.
+Creates a validator that accepts any one value of a list or of a TypeScript `enum`, compared with `===`. The type is the union of the values, so `oneOf(["admin", "user"])` produces `"admin" | "user"`. The entries TypeScript adds to a numeric enum to map values back to names are not values and are ignored.
 
 **Parameters**
 
-- `values` — The accepted values: any primitive, as for `literal`, including `null` and `undefined`. The list is copied, so changing it later has no effect.
+- `values` — The accepted values: a list of primitives, as for `literal`, or an enum. It is copied, so changing it later has no effect.
+- `rest` — Options, then checks.
 
 **Type parameters**
 
-- `T` — The listed values.
+- `T` — The list or the enum.
 
-**Returns** — A validator that produces one of `values`.
+**Returns** — A validator that produces one of the values.
 
 **Throws**
 
-- When `values` is empty, so the validator would accept nothing.
-- When `values` holds `NaN`, which no value equals.
+- When there is no value, so the validator would accept nothing.
+- When a value is `NaN`, which no value equals.
 
 **Example**
 
@@ -995,25 +757,32 @@ Creates a validator that accepts any one value of a list, compared with `===`. T
 const role = oneOf(["admin", "user"]);
 role("admin"); // { ok: true, value: "admin" }
 role("guest"); // { ok: false, ... }, code "invalid_value", params { options: ["admin", "user"] }
+
+enum Status { Active = "active", Archived = "archived" }
+oneOf(Status)("active"); // { ok: true, value: Status.Active }
 ```
 
 ### optional
 
 ```ts
 export declare function optional<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, Infer<TValidator> | undefined>;
+export declare function optional<TValidator extends AnyValidator>(validator: TValidator, value: Fallback<Exclude<Infer<TValidator>, undefined>>): Composed<TValidator, Exclude<Infer<TValidator>, undefined>>;
 ```
 
-Wraps a validator so `undefined` is accepted and passed through, and every other value goes to the wrapped validator. Inside `object`, the property then becomes optional in the inferred type.
+Wraps a validator so `undefined` is accepted, and every other value goes to the wrapped validator. Inside `object`, the property then becomes optional in the inferred type.
+
+Given a default, `undefined` is replaced by it instead, the output type no longer includes `undefined`, and inside `object` the property is always present in the output. The default is trusted and is not run through the wrapped validator. A function is called for every use to produce the default, so pass one for an object or array, which would otherwise be shared by every result. To use a function as the default value itself, return it from a function.
 
 **Parameters**
 
 - `validator` — The validator for values that are present.
+- `value` — The default, or a function that returns it.
 
 **Type parameters**
 
 - `TValidator` — The wrapped validator.
 
-**Returns** — A validator that produces the wrapped type, or `undefined`.
+**Returns** — A validator that produces the wrapped type, and `undefined` or the default for `undefined`.
 
 **Throws** — When `validator` is not a function.
 
@@ -1022,8 +791,11 @@ Wraps a validator so `undefined` is accepted and passed through, and every other
 ```ts
 const nickname = optional(string({ min: 2 }));
 nickname(undefined); // { ok: true, value: undefined }
-nickname("Ad"); // { ok: true, value: "Ad" }
 nickname(null); // { ok: false, ... }: null is not undefined
+
+const role = optional(oneOf(["admin", "user"]), "user");
+role(undefined); // { ok: true, value: "user" }
+const tags = optional(array(string()), () => []);
 ```
 
 ### partial
@@ -1077,6 +849,31 @@ const even: Validator<number> = (input) =>
   typeof input === "number" && input % 2 === 0 ? pass(input) : fail({ code: "not_even" });
 ```
 
+### pattern
+
+```ts
+export declare function pattern(expression: RegExp, message?: Message): Check<string>;
+```
+
+Requires a string to match a regular expression.
+
+The `g` and `y` flags are dropped, so the check gives the same answer on every call. It fails with `invalid_format` and `params` `{ format: "regex", pattern }`, the pattern written as `/source/flags`.
+
+**Parameters**
+
+- `expression` — What the string must match.
+- `message` — Wording for the issue.
+
+**Returns** — A check of strings.
+
+**Throws** — When `expression` is not a regular expression.
+
+**Example**
+
+```ts
+string(pattern(/^[a-z]+$/, "Lowercase letters only"));
+```
+
 ### pipe
 
 ```ts
@@ -1102,14 +899,15 @@ The first failure stops the pipe, because a later step has nothing valid to work
 **Example**
 
 ```ts
-const address = pipe(string({ trim: true, lowercase: true }), email());
+const address = pipe(string({ trim: true, case: "lower" }), email());
 address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
 ```
 
 ### record
 
 ```ts
-export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, options?: SizeOptions): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>>;
+export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: Rest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>>;
+export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncValidator<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>>;
 ```
 
 Creates a validator for plain objects used as a dictionary: any number of keys, all following the same rules.
@@ -1120,7 +918,6 @@ Each key passes `key` and each value passes `value`. An issue's path ends at the
 
 - `key` — Validator applied to every key.
 - `value` — Validator applied to every value.
-- `options` — Limits on the number of keys.
 
 **Type parameters**
 
@@ -1142,62 +939,49 @@ scores({ ada: 3, alan: 5 }); // { ok: true, value: { ada: 3, alan: 5 } }
 scores({ ada: "3" }); // { ok: false, ... }, code "invalid_type" at path ["ada"]
 ```
 
-### refine
+### searchParams
 
 ```ts
-export declare function refine<T, TNarrowed extends T>(validator: Validator<T>, check: (value: T) => value is TNarrowed, issue?: RefineIssue): Validator<TNarrowed>;
-export declare function refine<T, TNarrowed extends T>(validator: AnyValidator<T>, check: (value: T) => value is TNarrowed, issue?: RefineIssue): AsyncValidator<TNarrowed>;
-export declare function refine<T>(validator: Validator<T>, check: (value: T) => boolean, issue?: RefineIssue): Validator<T>;
-export declare function refine<T>(validator: AnyValidator<T>, check: (value: T) => boolean | PromiseLike<boolean>, issue?: RefineIssue): AsyncValidator<T>;
+export declare function searchParams<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, SearchParamsOptions>): Composed<TValidator, Infer<TValidator>>;
+export declare function searchParams<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, SearchParamsOptions>): AsyncValidator<Infer<TValidator>>;
 ```
 
-Adds a rule the wrapped validator cannot express, such as two fields having to match.
+Creates a validator that reads a query string, or a `URLSearchParams`, into an object of its decoded parameters, and validates that object: each key's value as a string, or with `repeated` every value of every key as an array. The value is what the validator produces, so values can be converted as they are read.
 
-The check runs only when the wrapped validator succeeded, and receives the value it produced. A check that returns a promise, such as a database lookup, makes the result asynchronous, and the type says so. A check written as a type guard, `(value): value is Admin => ...`, narrows the output type to what it guards. To report several issues at once or choose the path per failure, write a validator function instead.
+The parameters are read as `URLSearchParams` reads them, `+` as a space and escapes decoded, and a leading `?` is ignored. A key given more than once fails, at its path with `invalid_key`, unless `repeated` is set: a check that saw one of two values while a server read the other would pass a value nobody checked. It is the reading `url` gives its `query` option.
 
 **Parameters**
 
-- `validator` — The validator to add the rule to.
-- `check` — Returns `true` when the value is acceptable.
-- `issue` — How to report a rejected value. Defaults to code `"custom"`.
+- `validator` — Validates the object of parameters.
+- `rest` — Options, then checks, which run on what the validator produced.
 
 **Type parameters**
 
-- `T` — The type the wrapped validator produces.
-- `TNarrowed` — The type a type-guard `check` narrows the output to.
+- `TValidator` — The validator of the parameters.
 
-**Returns** — A validator with the same output type as the wrapped one, or the narrower type a type-guard `check` names.
+**Returns** — A validator that produces what `validator` produces.
 
-**Throws** — When `validator` or `check` is not a function.
+**Throws** — When `validator` or a check is not a function.
 
 **Example**
 
 ```ts
-const signup = refine(
-  object({ password: string({ min: 8 }), confirm: string() }),
-  (data) => data.password === data.confirm,
-  { message: "Passwords must match", path: ["confirm"] },
-);
+const filters = searchParams(object({ page: coerceNumber({ int: true, min: 1 }), q: optional(string()) }));
+filters("?page=2&q=shoes"); // { ok: true, value: { page: 2, q: "shoes" } }
+filters("page=1&page=2"); // { ok: false, ... }, a repeated key
+searchParams(object({ tag: array(string()) }), { repeated: true })("tag=a&tag=b"); // { tag: ["a", "b"] }
 ```
 
 ### set
 
 ```ts
-export declare function set<TElement extends AnyValidator>(element: TElement, options?: SizeOptions): Composed<TElement, Set<Infer<TElement>>>;
+export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: Rest<Set<Infer<TItem>>, SizeOptions & MessageOptions>): Composed<TItem, Set<Infer<TItem>>>;
+export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Set<Infer<TItem>>, SizeOptions & MessageOptions>): AsyncValidator<Set<Infer<TItem>>>;
 ```
 
 Creates a validator for `Set`s whose every value passes `element`.
 
 A wrong size is reported at once, without validating the values. Otherwise every value is validated, and each issue's path leads through the value's position in iteration order. The output is a new `Set` of the validated values. When `element` changes values so that one becomes equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its position, rather than dropped, so the output never holds fewer values than the size options allow. It is synchronous when `element` is, and asynchronous otherwise.
-
-**Parameters**
-
-- `element` — Validator applied to every value.
-- `options` — Size limits.
-
-**Type parameters**
-
-- `TElement` — The validator for each value.
 
 **Returns** — A validator that produces a `Set` of what `element` produces.
 
@@ -1246,33 +1030,63 @@ signup["~standard"].validate({ email: "nope" });
 // { issues: [{ message: "Invalid email address", path: ["email"] }, ...] }
 ```
 
-### string
+### startsWith
 
 ```ts
-export declare function string(options?: StringOptions): Validator<string>;
+export declare function startsWith(value: string, message?: Message): Check<string>;
 ```
 
-Creates a validator for strings.
-
-`trim`, `lowercase` and `uppercase` run first, then every constraint is checked against the cleaned string, and each failing constraint reports its own issue. Formats such as email or URL are validators of their own; combine them with this one using `pipe`.
+Requires a string to start with a prefix. It fails with `invalid_format` and `params` `{ format: "startsWith", value }`.
 
 **Parameters**
 
-- `options` — Constraints and clean-up to apply.
+- `value` — The text required.
+- `message` — Wording for the issue.
 
-**Returns** — A validator that produces a string.
-
-**Throws**
-
-- When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
-- When both `lowercase` and `uppercase` are set, or `pattern` is not a regular expression.
+**Returns** — A check of strings.
 
 **Example**
 
 ```ts
-const username = string({ trim: true, min: 3, max: 30 });
-username("  ada  "); // { ok: true, value: "ada" }
-username(42); // { ok: false, error: { issues: [{ code: "invalid_type", ... }] } }
+string(startsWith("https://"));
+```
+
+### tagged
+
+```ts
+export declare function tagged<const TKey extends string, const TVariants extends Variants>(key: TKey, variants: TVariants & CheckedVariants<TKey, TVariants>, ...rest: Rest<InferTagged<TKey, TVariants>, MessageOptions>): Composed<TVariants[keyof TVariants], InferTagged<TKey, TVariants>>;
+export declare function tagged<const TKey extends string, const TVariants extends Variants>(key: TKey, variants: TVariants & CheckedVariants<TKey, TVariants>, ...rest: AsyncRest<InferTagged<TKey, TVariants>, MessageOptions>): AsyncValidator<InferTagged<TKey, TVariants>>;
+```
+
+Creates a validator for objects that share a tag property and differ in the rest, such as events with a `type`. The tag chooses the variant, so a failure reports that variant's own issues instead of a list of everything that did not match.
+
+The input's tag must be one of the keys of `variants`, and the variant validates the rest of the input, without the tag. The variant must not list the tag property: one that does, such as `object({ type: literal("click"), ... })`, never sees it and fails, so its type is rejected. That is also why a strict object works as a variant, and a `record` does too, checking every key but the tag. The tag is added back to the output, so the result is a proper tagged union. Each variant must produce a plain object: an array, a `Date`, a class instance or anything else would be taken apart by adding the tag, so a variant whose output type is an array or a function is a compile error, and one that produces any non-plain value throws a `TypeError` when it does, as a callback's bug does. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. It is synchronous when every variant is, and asynchronous otherwise. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
+
+**Parameters**
+
+- `key` — The name of the tag property.
+- `variants` — A validator for each tag value. Each must produce a plain object.
+
+**Type parameters**
+
+- `TKey` — The name of the tag property.
+- `TVariants` — The variants, keyed by tag.
+
+**Returns** — A validator that produces one of the variants' objects, tagged.
+
+**Throws** — When a variant is not a function, and, from the returned validator, when a variant produces something other than a plain object.
+
+**Example**
+
+```ts
+const event = tagged("type", {
+  click: object({ x: number(), y: number() }),
+  key: object({ key: string({ min: 1 }) }),
+});
+
+event({ type: "key", key: "a" }); // { ok: true, value: { type: "key", key: "a" } }
+event({ type: "scroll" }); // { ok: false, ... }, code "invalid_union" at path ["type"]
+event({ type: "click", x: 1 }); // { ok: false, ... }, code "invalid_type" at path ["y"]
 ```
 
 ### transform
@@ -1313,7 +1127,8 @@ const user = transform(string(), async (id) => await loadUser(id));
 ### tuple
 
 ```ts
-export declare function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]], TRest extends AnyValidator | undefined = undefined>(items: TItems, options?: TupleOptions<TRest>): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>>;
+export declare function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]], TRest extends AnyValidator | undefined = undefined>(items: TItems, ...rest: Rest<InferTuple<TItems, TRest>, TupleOptions<TRest>>): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>>;
+export declare function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]], TRest extends AnyValidator | undefined = undefined>(items: TItems, ...rest: AsyncRest<InferTuple<TItems, TRest>, TupleOptions<TRest>>): AsyncValidator<InferTuple<TItems, TRest>>;
 ```
 
 Creates a validator for arrays of fixed length whose items each have their own validator.
@@ -1323,7 +1138,6 @@ A wrong length is reported at once, without validating the items. With `rest`, t
 **Parameters**
 
 - `items` — One validator per position.
-- `options` — The validator for extra positions.
 
 **Type parameters**
 
@@ -1345,32 +1159,16 @@ const args = tuple([string()], { rest: number() });
 args(["sum", 1, 2, 3]); // { ok: true, ... }
 ```
 
-### ulid
-
-```ts
-export declare function ulid(): Validator<string>;
-```
-
-Creates a validator for ULIDs in any letter case. The value is not modified.
-
-**Returns** — A validator that produces the identifier as a string.
-
-**Example**
-
-```ts
-ulid()("01ARZ3NDEKTSV4RRFFQ69G5FAV"); // { ok: true, value: "01ARZ3NDEKTSV4RRFFQ69G5FAV" }
-ulid()("01ARZ3NDEKTSV4RRFFQ69G5FAU!"); // { ok: false, ... }, code "invalid_format"
-```
-
 ### union
 
 ```ts
-export declare function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(options: TOptions): Composed<TOptions[number], Infer<TOptions[number]>>;
+export declare function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(options: TOptions, ...rest: Rest<Infer<TOptions[number]>, MessageOptions>): Composed<TOptions[number], Infer<TOptions[number]>>;
+export declare function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(options: TOptions, ...rest: AsyncRest<Infer<TOptions[number]>, MessageOptions>): AsyncValidator<Infer<TOptions[number]>>;
 ```
 
 Creates a validator that accepts a value passing any one of several validators.
 
-The validators are tried in order and the first that accepts the value wins, so put the more specific ones first, and the value it produced is the result. If none accepts it, the result is one `invalid_union` issue at the value's own location whose `params.issues` lists, per option in order, the issues that option found; their paths are relative to the value the union received. For objects that share a tag property, `discriminatedUnion` reports the failing variant's own issues instead. It is synchronous when every option is, and asynchronous otherwise.
+The validators are tried in order and the first that accepts the value wins, so put the more specific ones first, and the value it produced is the result. If none accepts it, the result is one `invalid_union` issue at the value's own location whose `params.issues` lists, per option in order, the issues that option found; their paths are relative to the value the union received. For objects that share a tag property, `tagged` reports the failing variant's own issues instead. It is synchronous when every option is, and asynchronous otherwise.
 
 **Parameters**
 
@@ -1393,35 +1191,68 @@ id(7); // { ok: true, value: 7 }
 id(true); // { ok: false, ... }, code "invalid_union"
 ```
 
-### unknown
+### unique
 
 ```ts
-export declare function unknown(): Validator<unknown>;
+export declare function unique<T>(by?: (item: T) => unknown, message?: Message): Check<readonly T[]>;
 ```
 
-Creates a validator that accepts any value and passes it through unchanged. Use it for a property whose content you do not check, or as the start of a `pipe`.
+Requires the items of an array to be distinct, reporting each repeat at its own index with `invalid_value` and `params` `{ unique: true }`.
 
-**Returns** — A validator that produces `unknown`.
+Without `by` it compares the validated items themselves; with it, the value `by` returns for each, so `unique((user) => user.id)` makes ids unique. Comparison is SameValueZero, as for a `Set`.
+
+**Parameters**
+
+- `by` — What to compare for each item. The item itself when omitted.
+- `message` — Wording for each issue.
+
+**Type parameters**
+
+- `T` — The type of an item.
+
+**Returns** — A check of arrays.
 
 **Example**
 
 ```ts
-unknown()({ anything: [1, 2, 3] }); // { ok: true, value: { anything: [1, 2, 3] } }
+array(string(), { max: 10 }, unique());
+array(object({ id: number(), name: string() }), unique((user) => user.id, "Ids must be unique"));
+```
+
+### uppercase
+
+```ts
+export declare function uppercase(message?: Message): Check<string>;
+```
+
+Requires a string to be in uppercase: unchanged by `toUpperCase()`, so a string with no letters passes. It changes nothing; to uppercase the string instead, use `string({ case: "upper" })`. It fails with `invalid_format` and `params` `{ format: "uppercase" }`.
+
+**Parameters**
+
+- `message` — Wording for the issue.
+
+**Returns** — A check of strings.
+
+**Example**
+
+```ts
+string(uppercase("Must be uppercase"));
 ```
 
 ### url
 
 ```ts
-export declare function url(options?: UrlOptions): Validator<string>;
+export declare function url(...checks: Check<string>[]): Validator<string>;
+export declare function url<const TOptions extends UrlOptions>(options: TOptions, ...checks: Check<string>[]): Composed<UrlParts<TOptions>, string>;
+export declare function url(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
+export declare function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 ```
 
 Creates a validator for absolute URLs with an allowed protocol and a public domain name, and without embedded credentials. The value is the URL as the URL parser writes it, which is what a request made with it will use.
 
-The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected, with `allowLocal` as well.
+The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected.
 
-**Parameters**
-
-- `options` — Accepted protocols, and whether local hosts are allowed.
+The `host`, `port`, `path` and `query` options check those parts with validators of your own, which only decide: the value is still the whole URL, and one that is asynchronous makes the validator asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules.
 
 **Returns** — A validator that produces the URL as the parser writes it.
 
@@ -1432,59 +1263,8 @@ The text is read by the standard URL parser, and every check is made on what it 
 ```ts
 url()("https://Example.com/a?b=1"); // { ok: true, value: "https://example.com/a?b=1" }
 url()("http://localhost:3000"); // { ok: false, ... }
-url({ allowLocal: true })("http://localhost:3000"); // { ok: true, value: "http://localhost:3000/" }
-```
-
-### uuid
-
-```ts
-export declare function uuid(): Validator<string>;
-```
-
-Creates a validator for UUIDs of version 1 to 8 in hyphenated form, in any letter case, and the nil and max UUIDs. The value is not modified.
-
-**Returns** — A validator that produces the UUID as a string.
-
-**Example**
-
-```ts
-uuid()("123e4567-e89b-12d3-a456-426614174000"); // { ok: true, value: "123e4567-e89b-12d3-a456-426614174000" }
-uuid()("00000000-0000-0000-0000-000000000000"); // { ok: true, ... }, the nil UUID
-uuid()("not-a-uuid"); // { ok: false, ... }, code "invalid_format"
-```
-
-### withDefault
-
-```ts
-export declare function withDefault<TValidator extends AnyValidator>(validator: TValidator, value: Exclude<Infer<TValidator>, undefined> | (() => Exclude<Infer<TValidator>, undefined>)): Composed<TValidator, Exclude<Infer<TValidator>, undefined>>;
-```
-
-Wraps a validator so `undefined` is replaced by a default value, and every other value goes to the wrapped validator. Inside `object`, the property is then always present in the output.
-
-The default is trusted and is not run through the wrapped validator. A function is called for every use to produce the default, so pass one for an object or array, which would otherwise be shared by every result. To use a function as the default value itself, return it from a function.
-
-**Parameters**
-
-- `validator` — The validator for values that are present.
-- `value` — The default, or a function that returns it.
-
-**Type parameters**
-
-- `TValidator` — The wrapped validator.
-
-**Returns** — A validator that produces the wrapped type, never `undefined`.
-
-**Throws** — When `validator` is not a function.
-
-**Example**
-
-```ts
-const role = withDefault(oneOf(["admin", "user"]), "user");
-role(undefined); // { ok: true, value: "user" }
-role("admin"); // { ok: true, value: "admin" }
-role("guest"); // { ok: false, ... }: only undefined is replaced
-
-const tags = withDefault(array(string()), () => []);
+url({ host: hostname() })("http://localhost:3000"); // { ok: true, value: "http://localhost:3000/" }
+url({ protocols: ["https"], path: string(startsWith("/api/")), query: object({ page: optional(string()) }) });
 ```
 
 ## Interfaces
@@ -1492,14 +1272,10 @@ const tags = withDefault(array(string()), () => []);
 ### ArrayOptions
 
 ```ts
-export interface ArrayOptions<TItem = unknown> extends SizeOptions
+export interface ArrayOptions extends SizeOptions, MessageOptions
 ```
 
-Constraints for [array](#array). Every option is optional.
-
-**Type parameters**
-
-- `TItem` — The type of an item after validation, which `unique` receives.
+Constraints for [array](#array). Every option is optional. Duplicates are rejected with the `unique()` check.
 
 #### length
 
@@ -1509,22 +1285,38 @@ Inherited from [SizeOptions](#sizeoptions).
 
 Inherited from [SizeOptions](#sizeoptions).
 
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
 #### min
 
 Inherited from [SizeOptions](#sizeoptions).
 
-#### unique
+### Base64Options
 
 ```ts
-unique?: boolean | ((item: TItem) => unknown);
+export interface Base64Options extends MessageOptions
 ```
 
-Rejects duplicates, reporting each repeat at its own index. `true` compares the validated items themselves; a function compares the value it returns for each item, so `(user) => user.id` makes ids unique. Comparison is SameValueZero, as for a `Set`.
+Options for [base64](#base64).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+#### url
+
+```ts
+url?: boolean;
+```
+
+Requires the URL-safe alphabet of RFC 4648, with `-` and `_` for `+` and `/` and the padding optional, and reports the format as `base64url`.
 
 ### BigintOptions
 
 ```ts
-export interface BigintOptions
+export interface BigintOptions extends MessageOptions
 ```
 
 Constraints for [bigint](#bigint). Every option is optional.
@@ -1553,6 +1345,10 @@ max?: bigint;
 
 Requires a value of at most this.
 
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
 #### min
 
 ```ts
@@ -1564,7 +1360,7 @@ Requires a value of at least this.
 ### DateOptions
 
 ```ts
-export interface DateOptions
+export interface DateOptions extends MessageOptions
 ```
 
 Bounds for [date](#date). Every option is optional.
@@ -1577,6 +1373,10 @@ max?: Date;
 
 Requires this moment or an earlier one. Must be a valid `Date`.
 
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
 #### min
 
 ```ts
@@ -1588,10 +1388,14 @@ Requires this moment or a later one. Must be a valid `Date`.
 ### DatetimeOptions
 
 ```ts
-export interface DatetimeOptions
+export interface DatetimeOptions extends MessageOptions
 ```
 
 Options for [datetime](#datetime).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
 
 #### offset
 
@@ -1612,7 +1416,7 @@ Exact number of fractional-second digits, an integer from 0 to 9. `0` forbids th
 ### EmailOptions
 
 ```ts
-export interface EmailOptions
+export interface EmailOptions extends MessageOptions
 ```
 
 Options for [email](#email).
@@ -1624,6 +1428,34 @@ allowPlus?: boolean;
 ```
 
 Accepts `+` in the local part, as in `me+tag@example.com`.
+
+#### domain
+
+```ts
+domain?: AnyValidator;
+```
+
+Validates the domain instead of the default rule, that it is a public domain name. It receives the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode, and the domain must still be a hostname: `email({ domain: hostname() })` accepts `ada@localhost`, and `email({ domain: oneOf(["example.com"]) })` accepts that domain alone. Its issues are placed under `["domain"]`.
+
+#### local
+
+```ts
+local?: AnyValidator;
+```
+
+Validates the local part, the text before the `@`, as written. Its issues are placed under `["local"]`.
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+### Factory
+
+```ts
+export interface Factory<T, TOptions>
+```
+
+The factory of a validator of `T` with options `TOptions`: options first and optional, then any checks. It makes a [Validator](#validator) while every check is a [Check](#check), and an [AsyncValidator](#asyncvalidator) as soon as one is an [AsyncCheck](#asynccheck).
 
 ### FlattenedErrors
 
@@ -1652,10 +1484,14 @@ Messages of issues at the root, which belong to no field.
 ### IpOptions
 
 ```ts
-export interface IpOptions
+export interface IpOptions extends MessageOptions
 ```
 
 Options for [ip](#ip).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
 
 #### version
 
@@ -1708,7 +1544,7 @@ Location of the failure relative to the value being validated. Defaults to that 
 ### LazyOptions
 
 ```ts
-export interface LazyOptions
+export interface LazyOptions extends MessageOptions
 ```
 
 Options for [lazy](#lazy).
@@ -1721,13 +1557,33 @@ maxDepth?: number;
 
 The most levels of `lazy` that may be open at once, counting every `lazy` validator, not only this one. Input nested deeper fails with `too_big` instead of exhausting the stack. Since the levels of every `lazy` count, a `maxDepth` of 1 inside another `lazy` fails at once: set it for the whole nesting.
 
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+### MessageOptions
+
+```ts
+export interface MessageOptions
+```
+
+The options every validator takes.
+
+#### message
+
+```ts
+message?: Message;
+```
+
+Wording for every issue this validator reports itself, and none a child or a check reports.
+
 ### NumberOptions
 
 ```ts
-export interface NumberOptions
+export interface NumberOptions extends MessageOptions
 ```
 
-Constraints and clean-up for [number](#number). Every option is optional.
+Constraints and clean-up for [number](#number). Every option is optional. Rarer constraints, such as `multipleOf` or `nonZero`, are checks given after the options.
 
 #### clamp
 
@@ -1769,6 +1625,10 @@ max?: number;
 
 Requires a value of at most this.
 
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
 #### min
 
 ```ts
@@ -1776,22 +1636,6 @@ min?: number;
 ```
 
 Requires a value of at least this.
-
-#### multipleOf
-
-```ts
-multipleOf?: number;
-```
-
-Requires a multiple of this positive number, compared as the decimals both are written as, so `0.3` is a multiple of `0.1` at any size. A value computed in floating point, such as `0.1 + 0.2`, is compared as the number it actually is, `0.30000000000000004`.
-
-#### nonZero
-
-```ts
-nonZero?: boolean;
-```
-
-Requires a value other than zero.
 
 #### safeInt
 
@@ -1804,10 +1648,14 @@ Requires a whole number that a double represents exactly, that is within `Number
 ### ObjectOptions
 
 ```ts
-export interface ObjectOptions
+export interface ObjectOptions extends MessageOptions
 ```
 
 Options for [object](#object).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
 
 #### unknownKeys
 
@@ -1816,6 +1664,26 @@ unknownKeys?: "strip" | "strict" | "passthrough";
 ```
 
 What to do with input properties the shape does not list. `"strip"` drops them from the output, `"strict"` rejects each with an `unrecognized_key` issue, and `"passthrough"` copies them to the output unchecked.
+
+### SearchParamsOptions
+
+```ts
+export interface SearchParamsOptions extends MessageOptions
+```
+
+Options for [searchParams](#searchparams).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+#### repeated
+
+```ts
+repeated?: boolean;
+```
+
+Gives the validator every value of every key as an array, and accepts a key given more than once.
 
 ### SizeOptions
 
@@ -2078,26 +1946,18 @@ Result produced by Standard Schema validation.
 ### StringOptions
 
 ```ts
-export interface StringOptions
+export interface StringOptions extends MessageOptions
 ```
 
-Constraints and clean-up for [string](#string). Every option is optional.
+Constraints and clean-up for [string](#string). Every option is optional. Rarer constraints, such as a pattern or a prefix, are checks given after the options.
 
-#### endsWith
+#### case
 
 ```ts
-endsWith?: string;
+case?: "lower" | "upper";
 ```
 
-Requires the string to end with this suffix.
-
-#### includes
-
-```ts
-includes?: string;
-```
-
-Requires the string to contain this substring.
+Converts the string to lowercase or uppercase before the constraints run, and in the output. To require a case without changing the string, use the `lowercase()` or `uppercase()` check.
 
 #### length
 
@@ -2107,14 +1967,6 @@ length?: number;
 
 Requires exactly this many characters. A non-negative integer.
 
-#### lowercase
-
-```ts
-lowercase?: boolean;
-```
-
-Lowercases the string before the constraints run, and in the output. Cannot be combined with `uppercase`.
-
 #### max
 
 ```ts
@@ -2122,6 +1974,10 @@ max?: number;
 ```
 
 Allows at most this many characters. A non-negative integer.
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
 
 #### min
 
@@ -2131,22 +1987,6 @@ min?: number;
 
 Requires at least this many characters (UTF-16 code units, as `String.length` counts them). A non-negative integer.
 
-#### pattern
-
-```ts
-pattern?: RegExp;
-```
-
-Requires the string to match. The `g` and `y` flags are ignored, so the same validator gives the same answer on every call.
-
-#### startsWith
-
-```ts
-startsWith?: string;
-```
-
-Requires the string to start with this prefix.
-
 #### trim
 
 ```ts
@@ -2155,21 +1995,37 @@ trim?: boolean;
 
 Removes leading and trailing whitespace before the constraints run, and from the output.
 
-#### uppercase
+### TimeOptions
 
 ```ts
-uppercase?: boolean;
+export interface TimeOptions extends MessageOptions
 ```
 
-Uppercases the string before the constraints run, and in the output. Cannot be combined with `lowercase`.
+Options for [time](#time).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+#### precision
+
+```ts
+precision?: number;
+```
+
+Exact number of fractional-second digits, an integer from 0 to 9, which also makes the seconds required. Without it, the seconds and their fraction are optional and the fraction unbounded.
 
 ### TupleOptions
 
 ```ts
-export interface TupleOptions<TRest extends AnyValidator | undefined = undefined>
+export interface TupleOptions<TRest extends AnyValidator | undefined = undefined> extends MessageOptions
 ```
 
 Options for [tuple](#tuple).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
 
 #### rest
 
@@ -2182,18 +2038,38 @@ Validator for every position after the fixed ones. Without it the array must be 
 ### UrlOptions
 
 ```ts
-export interface UrlOptions
+export interface UrlOptions extends MessageOptions
 ```
 
 Options for [url](#url).
 
-#### allowLocal
+#### host
 
 ```ts
-allowLocal?: boolean;
+host?: AnyValidator;
 ```
 
-Accepts hosts that are not public domain names: `localhost`, single-label hosts, every IP address, public ones included and with no check of ranges, and special-use names such as `app.localhost`, `db.internal` or `printer.local`. It means "any host", not "only private ones".
+Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its issues are placed under `["host"]`.
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+#### path
+
+```ts
+path?: AnyValidator;
+```
+
+Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, always starting with `/`. Its issues are placed under `["path"]`.
+
+#### port
+
+```ts
+port?: AnyValidator;
+```
+
+Validates the port, a number, or `undefined` when the URL names none or names its scheme's default, which the parser drops. So `port: optional(port())` accepts either, and `port: literal(8080)` requires it. Its issues are placed under `["port"]`.
 
 #### protocols
 
@@ -2202,6 +2078,42 @@ protocols?: readonly string[];
 ```
 
 Accepted protocols, without the colon, in any letter case. Of the schemes without a host, `mailto`, `tel` and `urn` are accepted, each checked by its own rules even when written with a host; any other is always rejected. `javascript`, `vbscript` and `data` cannot be listed, since their URLs run script.
+
+#### query
+
+```ts
+query?: AnyValidator;
+```
+
+Validates the query, as an object of its decoded parameters: each key's value as a string, or with `repeated` every value of every key as an array. A key given twice fails at `["query", key]` unless `repeated` is set. Its issues are placed under `["query"]`. To reject parameters it does not list, give it `object(shape, { unknownKeys: "strict" })`.
+
+#### repeated
+
+```ts
+repeated?: boolean;
+```
+
+Gives `query` every value of every key as an array, and accepts a key given more than once.
+
+### UuidOptions
+
+```ts
+export interface UuidOptions extends MessageOptions
+```
+
+Options for [uuid](#uuid).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+#### version
+
+```ts
+version?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+```
+
+Requires this version, from 1 to 8. The nil and max UUIDs have no version and are then rejected. Any version when omitted.
 
 ### ValidationErr
 
@@ -2325,6 +2237,26 @@ Any validator, synchronous or asynchronous.
 
 - `T` — The type of the value on success.
 
+### AsyncCheck
+
+```ts
+export type AsyncCheck<T> = (value: T) => readonly ValidationIssue[] | undefined | PromiseLike<readonly ValidationIssue[] | undefined>;
+```
+
+A check that may finish later, such as one that asks a server whether a name is taken. A validator given one is an [AsyncValidator](#asyncvalidator).
+
+**Type parameters**
+
+- `T` — The type of the value it checks.
+
+### AsyncRest
+
+```ts
+export type AsyncRest<T, TOptions> = [options?: TOptions, ...checks: AsyncCheck<T>[]] | AsyncCheck<T>[];
+```
+
+[Rest](#rest) where a check may be an [AsyncCheck](#asynccheck).
+
 ### AsyncValidator
 
 ```ts
@@ -2338,6 +2270,20 @@ Always `await` its result. It is a promise only when the validator actually had 
 **Type parameters**
 
 - `T` — The type of the value on success.
+
+### Check
+
+```ts
+export type Check<T> = (value: T) => readonly ValidationIssue[] | undefined;
+```
+
+A rule about a value that already has its type, given to a validator after its options: `string({ min: 3 }, startsWith("ab"))`. It returns nothing when the value passes, or the issues it found, with paths relative to the value.
+
+Make one with `check`, or write the function yourself.
+
+**Type parameters**
+
+- `T` — The type of the value it checks.
 
 ### Composed
 
@@ -2363,7 +2309,7 @@ A class a value can be checked against, including abstract ones.
 ### EnumLike
 
 ```ts
-export type EnumLike = Record<string, string | number>;
+export type EnumLike = Readonly<Record<string, string | number>>;
 ```
 
 An object made by a TypeScript `enum`, or written like one.
@@ -2386,23 +2332,6 @@ The type a validator produces on success.
 const age = number({ int: true });
 type Age = Infer<typeof age>; // number
 ```
-
-### InferDiscriminated
-
-```ts
-export type InferDiscriminated<TKey extends string, TVariants extends Variants> = {
-    [TTag in keyof TVariants & string]: Simplify<Infer<TVariants[TTag]> & {
-        [K in TKey]: TTag;
-    }>;
-}[keyof TVariants & string];
-```
-
-The type a tagged union produces: one object type per variant, each with its tag property set to the literal tag, so checking the tag narrows the type.
-
-**Type parameters**
-
-- `TKey` — The name of the tag property.
-- `TVariants` — The variants, keyed by tag.
 
 ### InferRecord
 
@@ -2433,6 +2362,23 @@ The object type a shape produces. A property whose validator accepts `undefined`
 
 - `TShape` — Property validators.
 
+### InferTagged
+
+```ts
+export type InferTagged<TKey extends string, TVariants extends Variants> = {
+    [TTag in keyof TVariants & string]: Simplify<Infer<TVariants[TTag]> & {
+        [K in TKey]: TTag;
+    }>;
+}[keyof TVariants & string];
+```
+
+The type a tagged union produces: one object type per variant, each with its tag property set to the literal tag, so checking the tag narrows the type.
+
+**Type parameters**
+
+- `TKey` — The name of the tag property.
+- `TVariants` — The variants, keyed by tag.
+
 ### InferTuple
 
 ```ts
@@ -2454,6 +2400,14 @@ export type LiteralValue = string | number | boolean | bigint | symbol | null | 
 
 A value a validator can require exactly: any primitive, including `null` and `undefined`.
 
+### Message
+
+```ts
+export type Message = string | ((issue: ValidationIssue) => string);
+```
+
+Wording for the issues one validator reports itself: the text, or a function that words an issue. A function is called when the issue is reported.
+
 ### Messages
 
 ```ts
@@ -2474,13 +2428,13 @@ export type PartialShape<TShape extends Shape> = {
 
 A shape with every property wrapped in `optional`.
 
-### RefineIssue
+### Rest
 
 ```ts
-export type RefineIssue = IssueInput | string;
+export type Rest<T, TOptions> = [options?: TOptions, ...checks: Check<T>[]] | Check<T>[];
 ```
 
-How a failed [refine](#refine) check is reported. A string is shorthand for `{ message }`.
+What follows a validator's own arguments, such as the value of `literal`: options, then checks, or checks alone. Every check is a [Check](#check).
 
 ### Shape
 
@@ -2540,6 +2494,288 @@ The variants of a tagged union: a validator for each value the tag can have.
 
 ## Variables
 
+### base64
+
+```ts
+export declare const base64: Factory<string, Base64Options>;
+```
+
+Creates a validator for base64 as an encoder writes it: the bits past the last byte are zero, and the standard alphabet is correctly padded. The value is not modified.
+
+**Example**
+
+```ts
+base64()("aGVsbG8="); // { ok: true, value: "aGVsbG8=" }
+base64()("aGVsbG8"); // { ok: false, ... }, code "invalid_format"
+base64({ url: true })("aGVsbG8"); // { ok: true, ... }, padding is optional in the URL-safe alphabet
+```
+
+### bigint
+
+```ts
+export declare const bigint: Factory<bigint, BigintOptions>;
+```
+
+Creates a validator for bigints. Numbers are rejected, including whole ones.
+
+**Throws** — When no bigint can satisfy the bounds together.
+
+**Example**
+
+```ts
+const id = bigint({ gt: 0n });
+id(10n); // { ok: true, value: 10n }
+id(0n); // { ok: false, ... }, code "too_small"
+```
+
+### boolean
+
+```ts
+export declare const boolean: Factory<boolean, MessageOptions>;
+```
+
+Creates a validator for booleans. Only `true` and `false` pass; to accept text such as `"yes"`, use the coercing variant.
+
+**Example**
+
+```ts
+boolean()(true); // { ok: true, value: true }
+boolean()("true"); // { ok: false, error: { issues: [{ code: "invalid_type", ... }] } }
+boolean({ message: "Choose yes or no" });
+```
+
+### cidr
+
+```ts
+export declare const cidr: Factory<string, IpOptions>;
+```
+
+Creates a validator for IP address blocks in CIDR notation, an address and a prefix length, such as `192.168.0.0/24` or `2001:db8::/32`. The prefix is at most 32 for IPv4 and 128 for IPv6. The value is the address in the canonical spelling `ip` gives it and the prefix, so one block is one value.
+
+Bits set past the prefix are accepted, as in `192.168.0.5/24`, which names an address and its network.
+
+**Throws** — When `version` is given and is not `"v4"` or `"v6"`.
+
+**Example**
+
+```ts
+cidr()("10.0.0.0/8"); // { ok: true, value: "10.0.0.0/8" }
+cidr()("2001:DB8:0::/32"); // { ok: true, value: "2001:db8::/32" }
+cidr({ version: "v4" })("10.0.0.0/33"); // { ok: false, ... }, params { format: "cidrv4" }
+```
+
+### coerceBigint
+
+```ts
+export declare const coerceBigint: Factory<bigint, BigintOptions>;
+```
+
+Creates a validator for bigints that also accepts safe integers and text holding a decimal integer, converting them, then applies the same constraints as [bigint](#bigint).
+
+Fractions, numbers beyond `Number.MAX_SAFE_INTEGER` (which have already lost precision), other text, booleans and `null` are rejected. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+
+**Returns** — A validator that produces a bigint.
+
+**Throws** — When no bigint can satisfy the bounds together.
+
+**Example**
+
+```ts
+coerceBigint({ gt: 0n })("12345678901234567890"); // { ok: true, value: 12345678901234567890n }
+coerceBigint()(1.5); // { ok: false, ... }, code "invalid_type"
+```
+
+### coerceBoolean
+
+```ts
+export declare const coerceBoolean: Factory<boolean, MessageOptions>;
+```
+
+Creates a validator for booleans that also accepts the words `true`/`false`, `yes`/`no`, `on`/`off` and `1`/`0`, in any letter case and ignoring surrounding whitespace, and the numbers `1` and `0`.
+
+Anything else is rejected, so a typo such as `"ture"` is an error and not `false`. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`. Combine with `optional` with a default for an environment variable that may be missing.
+
+**Returns** — A validator that produces a boolean.
+
+**Example**
+
+```ts
+coerceBoolean()("yes"); // { ok: true, value: true }
+coerceBoolean()("Off"); // { ok: true, value: false }
+coerceBoolean()("maybe"); // { ok: false, ... }, code "invalid_type"
+```
+
+### coerceDate
+
+```ts
+export declare const coerceDate: Factory<Date, DateOptions>;
+```
+
+Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [date](#date).
+
+Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM:SS`, an optional fraction and an optional zone: `Z`, or an offset written `+HH`, `+HHMM` or `+HH:MM`. That is wider than `datetime`, which checks one exact spelling. Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`. Fractions of a second beyond milliseconds are cut, not rounded. A date without a time and a date-time without an offset are both read as UTC, so the result never depends on the timezone of the machine. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+
+**Returns** — A validator that produces a `Date`.
+
+**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
+
+**Example**
+
+```ts
+coerceDate()("2026-09-28"); // { ok: true, value: Date 2026-09-28T00:00:00.000Z }
+coerceDate()(0); // { ok: true, value: Date 1970-01-01T00:00:00.000Z }
+coerceDate()("yesterday"); // { ok: false, ... }, code "invalid_type"
+```
+
+### coerceNumber
+
+```ts
+export declare const coerceNumber: Factory<number, NumberOptions>;
+```
+
+Creates a validator for numbers that also accepts text holding a decimal number, converting it, then applies the same constraints as [number](#number).
+
+Surrounding whitespace is ignored, and a dot with no digits on one side, as in `".5"` or `"5."`, is read as people type it. Empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and `"NaN"` are rejected, and so is text holding a whole number beyond `Number.MAX_SAFE_INTEGER`, which could not be read exactly (use `coerceBigint` for those). So are booleans, `null`, objects and arrays: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+
+**Returns** — A validator that produces a number.
+
+**Throws** — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, `multipleOf` is not a positive finite number, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
+
+**Example**
+
+```ts
+const port = coerceNumber({ int: true, min: 1, max: 65535 });
+port("8080"); // { ok: true, value: 8080 }
+port("0"); // { ok: false, ... }, code "too_small"
+port("abc"); // { ok: false, ... }, code "invalid_type"
+```
+
+### coerceString
+
+```ts
+export declare const coerceString: Factory<string, StringOptions>;
+```
+
+Creates a validator for text that also accepts finite numbers, bigints and booleans, converting them to their string form, then applies the same constraints as [string](#string).
+
+`NaN` and `Infinity`, `null`, `undefined`, objects, arrays, functions and symbols are not converted: guessing what an object should look like as text would hide bugs. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+
+**Returns** — A validator that produces a string.
+
+**Throws**
+
+- When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
+- When `case` is not `"lower"` or `"upper"`, or a check is not a function.
+
+**Example**
+
+```ts
+coerceString({ min: 2 })(12); // { ok: true, value: "12" }
+coerceString()(null); // { ok: false, ... }, code "invalid_type"
+```
+
+### creditCard
+
+```ts
+export declare const creditCard: Factory<string, MessageOptions>;
+```
+
+Creates a validator for payment card numbers: 12 to 19 digits whose Luhn checksum holds, optionally grouped by spaces or hyphens as people type them. The value is the digits alone, so one card is one value however it was grouped.
+
+Only the structure is checked: whether the number was issued, and by which network, is not known from the number alone. Card numbers are sensitive, and like every value they never appear in an issue.
+
+**Example**
+
+```ts
+creditCard()("4242 4242 4242 4242"); // { ok: true, value: "4242424242424242" }
+creditCard()("4242 4242 4242 4241"); // { ok: false, ... }: the checksum fails
+```
+
+### cuid2
+
+```ts
+export declare const cuid2: Factory<string, MessageOptions>;
+```
+
+Creates a validator for CUID2 identifiers. The value is not modified.
+
+**Example**
+
+```ts
+cuid2()("tz4a98xxat96iws9zmbrgj3a"); // { ok: true, value: "tz4a98xxat96iws9zmbrgj3a" }
+cuid2()("1bad"); // { ok: false, ... }, code "invalid_format"
+```
+
+### date
+
+```ts
+export declare const date: Factory<Date, DateOptions>;
+```
+
+Creates a validator for valid `Date` objects. An invalid `Date` such as `new Date("nope")`, a timestamp and a date string are all rejected; parse text with `isoDate` or convert it first.
+
+**Returns** — A validator that produces a `Date`.
+
+**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
+
+**Example**
+
+```ts
+const birthday = date({ max: new Date() });
+birthday(new Date("1990-04-01")); // { ok: true, ... }
+birthday(new Date("nope")); // { ok: false, ... }, code "invalid_type"
+```
+
+### datetime
+
+```ts
+export declare const datetime: Factory<string, DatetimeOptions>;
+```
+
+Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a day that exists. The value is not modified.
+
+**Throws** — When `precision` is not an integer from 0 to 9.
+
+**Example**
+
+```ts
+datetime()("2026-09-28T14:30:00Z"); // { ok: true, ... }
+datetime()("2026-02-30T00:00:00Z"); // { ok: false, ... }: February has no 30th
+datetime({ offset: true })("2026-09-28T14:30:00+02:00"); // { ok: true, ... }
+```
+
+### domain
+
+```ts
+export declare const domain: Factory<string, MessageOptions>;
+```
+
+Creates a validator for public domain names, such as `example.com` or `münchen.de`: at least two labels, a real top-level domain, and none of the special-use names that never name a public host, such as `localhost`, `.local`, `.internal` or `.test`. This is the rule `email` and `url` apply to their host by default. The value is the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
+
+To accept any hostname, such as `localhost` or `intranet`, use `hostname`. Whether the domain resolves, or is registered, is not checked.
+
+**Example**
+
+```ts
+domain()("Example.COM"); // { ok: true, value: "example.com" }
+domain()("localhost"); // { ok: false, ... }, code "invalid_format"
+```
+
+### duration
+
+```ts
+export declare const duration: Factory<string, MessageOptions>;
+```
+
+Creates a validator for ISO 8601 durations such as `P1Y2M`, `PT30M` or `P1DT12H`. The value is not modified.
+
+**Example**
+
+```ts
+duration()("PT1H30M"); // { ok: true, value: "PT1H30M" }
+duration()("P"); // { ok: false, ... }, code "invalid_format"
+```
+
 ### englishMessages
 
 ```ts
@@ -2559,6 +2795,321 @@ if (!result.ok) {
 }
 ```
 
+### hex
+
+```ts
+export declare const hex: Factory<string, MessageOptions>;
+```
+
+Creates a validator for one or more hexadecimal digits of any letter case. The value is not modified.
+
+**Example**
+
+```ts
+hex()("deadBEEF01"); // { ok: true, value: "deadBEEF01" }
+hex()("xyz"); // { ok: false, ... }, code "invalid_format"
+```
+
+### hostname
+
+```ts
+export declare const hostname: Factory<string, MessageOptions>;
+```
+
+Creates a validator for hostnames: dot-separated labels of letters, digits and hyphens, at most 253 characters, whose last label is not a number, all digits or `0x` and hex digits, since the URL parser reads a name that ends that way as an IPv4 address (`0x7f000001` is `127.0.0.1`), and whose punycode labels, such as `xn--mnchen-3ya`, decode. An absolute name ending in one dot, such as `example.com.`, is accepted. Unlike `url`, single-label hosts such as `localhost` are accepted. The value is not modified.
+
+**Example**
+
+```ts
+hostname()("localhost"); // { ok: true, value: "localhost" }
+hostname()("-bad.com"); // { ok: false, ... }, code "invalid_format"
+```
+
+### ip
+
+```ts
+export declare const ip: Factory<string, IpOptions>;
+```
+
+Creates a validator for IPv4 and IPv6 addresses. The value is the canonical spelling, so one address is one value however it was written: an IPv4 address as written, and an IPv6 address lowercase with the longest run of zero groups shortened to `::`, as RFC 5952 and the URL parser write it.
+
+An IPv6 address that embeds an IPv4 one, such as `::ffff:192.0.2.1`, is written in hex groups, `::ffff:c000:201`, as the URL parser writes it.
+
+**Throws** — When `version` is given and is not `"v4"` or `"v6"`.
+
+**Example**
+
+```ts
+ip()("192.168.0.1"); // { ok: true, value: "192.168.0.1" }
+ip()("0:0:0:0:0:0:0:1"); // { ok: true, value: "::1" }
+ip({ version: "v6" })("192.168.0.1"); // { ok: false, ... }, params { format: "ipv6" }
+```
+
+### isoDate
+
+```ts
+export declare const isoDate: Factory<string, MessageOptions>;
+```
+
+Creates a validator for ISO 8601 calendar dates such as `2026-09-28`, on a day that exists. The value is a string and is not modified; to get a `Date`, use `date`.
+
+**Example**
+
+```ts
+isoDate()("2024-02-29"); // { ok: true, ... }
+isoDate()("2026-02-29"); // { ok: false, ... }: 2026 is not a leap year
+```
+
+### jwt
+
+```ts
+export declare const jwt: Factory<string, MessageOptions>;
+```
+
+Creates a validator for JSON Web Tokens in compact form: three base64url segments separated by dots, whose header and payload decode to JSON objects, and whose header names an algorithm in `alg`. The value is not modified.
+
+Only the structure is checked. The signature is not verified and the claims, such as the expiry, are not read: a token that passes may be forged or expired. Verify it with the key before trusting it.
+
+**Example**
+
+```ts
+jwt()("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl"); // { ok: true, ... }
+jwt()("not.a.token"); // { ok: false, ... }, code "invalid_format"
+```
+
+### mac
+
+```ts
+export declare const mac: Factory<string, MessageOptions>;
+```
+
+Creates a validator for MAC addresses (EUI-48) written as six pairs of hex digits separated by colons or by hyphens, such as `00:1A:2b:3c:4d:5e` or `00-1a-2b-3c-4d-5e`. The value is the canonical spelling, lowercase with colons, so one address is one value however it was written.
+
+**Example**
+
+```ts
+mac()("00-1A-2B-3C-4D-5E"); // { ok: true, value: "00:1a:2b:3c:4d:5e" }
+mac()("00:1a-2b:3c:4d:5e"); // { ok: false, ... }: mixed separators
+```
+
+### nanoid
+
+```ts
+export declare const nanoid: Factory<string, MessageOptions>;
+```
+
+Creates a validator for Nano IDs in their default form: 21 characters of `A-Za-z0-9_-`. The value is not modified.
+
+**Example**
+
+```ts
+nanoid()("V1StGXR8_Z5jdHi6B-myT"); // { ok: true, value: "V1StGXR8_Z5jdHi6B-myT" }
+nanoid()("short"); // { ok: false, ... }, code "invalid_format"
+```
+
+### never
+
+```ts
+export declare const never: Factory<never, MessageOptions>;
+```
+
+Creates a validator that rejects every value, with `invalid_type` and `params.expected` `"never"`. It marks a property that must be absent: `optional(never())`.
+
+**Example**
+
+```ts
+never()(1); // { ok: false, ... }, params { expected: "never", received: "number" }
+```
+
+### number
+
+```ts
+export declare const number: Factory<number, NumberOptions>;
+```
+
+Creates a validator for finite numbers. `NaN` and the infinities are always rejected.
+
+`clamp` runs first, then every constraint and every check runs on the clamped number, and each failing one reports its own issue.
+
+**Throws** — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and reject every input.
+
+**Example**
+
+```ts
+const age = number({ int: true, min: 0, max: 130 });
+age(42); // { ok: true, value: 42 }
+age(-1); // { ok: false, error: { issues: [{ code: "too_small", ... }] } }
+number({ min: 0 }, multipleOf(0.01)); // money
+```
+
+### phone
+
+```ts
+export declare const phone: Factory<string, MessageOptions>;
+```
+
+Creates a validator for international phone numbers in E.164 form: a `+`, the country code and the number, 7 to 15 digits in all, optionally with spaces, hyphens, dots or parentheses between digits. The value is the canonical E.164 spelling, `+` and the digits alone, so one number is one value however it was written.
+
+Only the international form is accepted, since a national number means nothing without knowing its country. Whether the number exists, and whether it fits its country's numbering plan, is not checked.
+
+**Example**
+
+```ts
+phone()("+55 (11) 98765-4321"); // { ok: true, value: "+5511987654321" }
+phone()("(11) 98765-4321"); // { ok: false, ... }: no country code
+```
+
+### port
+
+```ts
+export declare const port: Factory<number, MessageOptions>;
+```
+
+Creates a validator for network ports: whole numbers from 1 to 65535. Port 0, which asks a system for any free port, cannot be connected to and is rejected. A number that is not a port fails with `invalid_format` and `params` `{ format: "port" }`; text is not a port, so read a port from text with `pipe(coerceNumber(), port())`.
+
+**Example**
+
+```ts
+port()(8080); // { ok: true, value: 8080 }
+port()(70_000); // { ok: false, ... }, code "invalid_format"
+url({ port: optional(port()) }); // a URL's port is a number, or absent
+```
+
+### semver
+
+```ts
+export declare const semver: Factory<string, MessageOptions>;
+```
+
+Creates a validator for Semantic Versioning 2.0.0 versions, such as `1.2.3`, `1.0.0-rc.1` or `1.0.0+build.5`. A leading `v` is not part of a version and is rejected. The value is not modified.
+
+**Example**
+
+```ts
+semver()("1.4.0-beta.2"); // { ok: true, value: "1.4.0-beta.2" }
+semver()("v1.4.0"); // { ok: false, ... }, code "invalid_format"
+```
+
+### slug
+
+```ts
+export declare const slug: Factory<string, MessageOptions>;
+```
+
+Creates a validator for URL slugs: lowercase ASCII letters and digits in words joined by single hyphens, such as `hello-world-2`. The value is not modified.
+
+**Example**
+
+```ts
+slug()("hello-world"); // { ok: true, value: "hello-world" }
+slug()("Hello World"); // { ok: false, ... }, code "invalid_format"
+```
+
+### string
+
+```ts
+export declare const string: Factory<string, StringOptions>;
+```
+
+Creates a validator for strings.
+
+`trim` and `case` run first, then every constraint and every check on the cleaned string, and each failing one reports its own issue. Formats such as email or URL are validators of their own; combine them with this one using `pipe`.
+
+**Throws**
+
+- When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
+- When `case` is not `"lower"` or `"upper"`, or a check is not a function.
+
+**Example**
+
+```ts
+const username = string({ trim: true, min: 3, max: 30, message: "3 to 30 characters" }, pattern(/^\w+$/));
+username("  ada  "); // { ok: true, value: "ada" }
+username(42); // { ok: false, error: { issues: [{ code: "invalid_type", ... }] } }
+string(startsWith("a")); // options can be left out
+```
+
+### symbol
+
+```ts
+export declare const symbol: Factory<symbol, MessageOptions>;
+```
+
+Creates a validator for symbols. To accept one symbol only, use `literal`.
+
+**Example**
+
+```ts
+symbol()(Symbol("id")); // { ok: true, ... }
+symbol()("id"); // { ok: false, ... }, code "invalid_type"
+```
+
+### time
+
+```ts
+export declare const time: Factory<string, TimeOptions>;
+```
+
+Creates a validator for ISO 8601 times of day without an offset, such as `14:30`, `14:30:00` or `14:30:00.250`, as an HTML time input writes them. The value is not modified.
+
+**Throws** — When `precision` is not an integer from 0 to 9.
+
+**Example**
+
+```ts
+time()("09:15"); // { ok: true, value: "09:15" }
+time()("24:00"); // { ok: false, ... }, code "invalid_format"
+time({ precision: 0 })("09:15"); // { ok: false, ... }: the seconds are required
+```
+
+### ulid
+
+```ts
+export declare const ulid: Factory<string, MessageOptions>;
+```
+
+Creates a validator for ULIDs in any letter case. The value is not modified.
+
+**Example**
+
+```ts
+ulid()("01ARZ3NDEKTSV4RRFFQ69G5FAV"); // { ok: true, value: "01ARZ3NDEKTSV4RRFFQ69G5FAV" }
+ulid()("01ARZ3NDEKTSV4RRFFQ69G5FAU!"); // { ok: false, ... }, code "invalid_format"
+```
+
+### unknown
+
+```ts
+export declare const unknown: Factory<unknown, MessageOptions>;
+```
+
+Creates a validator that accepts every value, unchanged. Checks given to it run on any value, which makes it the base for a rule about a value of no particular type.
+
+**Example**
+
+```ts
+const metadata = object({ id: string(), extra: unknown() });
+const serializable = unknown(check((value) => JSON.stringify(value) !== undefined, "Must be serializable"));
+```
+
+### uuid
+
+```ts
+export declare const uuid: Factory<string, UuidOptions>;
+```
+
+Creates a validator for UUIDs of version 1 to 8 in hyphenated form, in any letter case, and the nil and max UUIDs. The value is not modified.
+
+**Throws** — When `version` is not an integer from 1 to 8.
+
+**Example**
+
+```ts
+uuid()("123e4567-e89b-12d3-a456-426614174000"); // { ok: true, value: "123e4567-e89b-12d3-a456-426614174000" }
+uuid()("00000000-0000-0000-0000-000000000000"); // { ok: true, ... }, the nil UUID
+uuid({ version: 7 })("123e4567-e89b-12d3-a456-426614174000"); // { ok: false, ... }, a version 1 UUID
+```
+
 ## Internal types
 
 ### CheckedVariants
@@ -2569,9 +3120,9 @@ type CheckedVariants<TKey extends string, TVariants extends Variants> = {
 };
 ```
 
-The variants as `discriminatedUnion` accepts them. A variant whose output type is an array or a function, which cannot carry the tag, or declares the tag property, even as optional or beside an index signature, which the variant is never given, is typed `never`, so passing it is a compile error at that variant. An index signature alone, as a `record` has, declares no property, so it is accepted.
+The variants as `tagged` accepts them. A variant whose output type is an array or a function, which cannot carry the tag, or declares the tag property, even as optional or beside an index signature, which the variant is never given, is typed `never`, so passing it is a compile error at that variant. An index signature alone, as a `record` has, declares no property, so it is accepted.
 
-Not exported; declared in `src/composition/discriminated-union.ts`.
+Not exported; declared in `src/composition/tagged.ts`.
 
 ### DeclaredKeys
 
@@ -2583,7 +3134,17 @@ type DeclaredKeys<T> = keyof {
 
 The property names a type declares, without its index signatures: `{ [key: string]: unknown; type: string }` declares `"type"`, and a `Record<string, number>` declares none.
 
-Not exported; declared in `src/composition/discriminated-union.ts`.
+Not exported; declared in `src/composition/tagged.ts`.
+
+### Fallback
+
+```ts
+type Fallback<T> = T | (() => T);
+```
+
+A value, or a function called for every use to produce it.
+
+Not exported; declared in `src/composition/optional.ts`.
 
 ### InferItems
 
@@ -2626,7 +3187,7 @@ type Simplify<T> = {
 } & {};
 ```
 
-Not exported; declared in `src/composition/discriminated-union.ts`, `src/composition/object.ts`.
+Not exported; declared in `src/composition/object.ts`, `src/composition/tagged.ts`.
 
 ### Transformed
 
@@ -2637,3 +3198,13 @@ type Transformed<R> = 0 extends 1 & R ? Validator<R> : [unknown] extends [R] ? A
 What a synchronous validator becomes once `convert` runs on its value: still synchronous when `convert` never returns a promise, and asynchronous, producing what the promise settles to, when it may return one, such as a function typed `number | Promise<number>`. A function typed as returning `unknown` may return one too, so it makes the validator asynchronous. One typed as returning `any`, such as `JSON.parse`, has opted out of type checking, and is taken at its word as synchronous: typing it asynchronous would make the most common conversion need an `await` it never needs.
 
 Not exported; declared in `src/composition/transform.ts`.
+
+### ValuesOf
+
+```ts
+type ValuesOf<T> = T extends readonly unknown[] ? T[number] : T[keyof T];
+```
+
+The values a list or an enum holds.
+
+Not exported; declared in `src/primitives/one-of.ts`.

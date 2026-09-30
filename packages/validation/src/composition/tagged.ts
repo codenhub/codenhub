@@ -1,7 +1,17 @@
 import { chain, type Maybe } from "../core/async";
-import { invalidObject, isPlainObject, setOwn } from "../core/objects";
-import { assertFunction, describeType, failWith, pass, toIssue } from "../core/result";
-import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
+import { tail } from "../core/checks";
+import { isPlainObject, objectIssue, setOwn } from "../core/objects";
+import { assertFunction, describeType, issue } from "../core/result";
+import type {
+  AnyValidator,
+  AsyncRest,
+  AsyncValidator,
+  Composed,
+  Infer,
+  MessageOptions,
+  Rest,
+  ValidationResult,
+} from "../core/types";
 
 type Simplify<T> = { [K in keyof T]: T[K] } & {};
 
@@ -17,7 +27,7 @@ type DeclaredKeys<T> = keyof {
 };
 
 /**
- * The variants as `discriminatedUnion` accepts them. A variant whose output type is an array or a
+ * The variants as `tagged` accepts them. A variant whose output type is an array or a
  * function, which cannot carry the tag, or declares the tag property, even as optional or beside an
  * index signature, which the variant is never given, is typed `never`, so passing it is a compile error
  * at that variant. An index signature alone, as a `record` has, declares no property, so it is accepted.
@@ -37,7 +47,7 @@ type CheckedVariants<TKey extends string, TVariants extends Variants> = {
  * @typeParam TKey - The name of the tag property.
  * @typeParam TVariants - The variants, keyed by tag.
  */
-export type InferDiscriminated<TKey extends string, TVariants extends Variants> = {
+export type InferTagged<TKey extends string, TVariants extends Variants> = {
   [TTag in keyof TVariants & string]: Simplify<Infer<TVariants[TTag]> & { [K in TKey]: TTag }>;
 }[keyof TVariants & string];
 
@@ -63,7 +73,7 @@ export type InferDiscriminated<TKey extends string, TVariants extends Variants> 
  *
  * @example
  * ```ts
- * const event = discriminatedUnion("type", {
+ * const event = tagged("type", {
  *   click: object({ x: number(), y: number() }),
  *   key: object({ key: string({ min: 1 }) }),
  * });
@@ -81,33 +91,39 @@ export type InferDiscriminated<TKey extends string, TVariants extends Variants> 
  * @throws {TypeError} When a variant is not a function, and, from the returned validator, when a variant
  * produces something other than a plain object.
  */
-export function discriminatedUnion<const TKey extends string, const TVariants extends Variants>(
+export function tagged<const TKey extends string, const TVariants extends Variants>(
   key: TKey,
   variants: TVariants & CheckedVariants<TKey, TVariants>,
-): Composed<TVariants[keyof TVariants], InferDiscriminated<TKey, TVariants>> {
+  ...rest: Rest<InferTagged<TKey, TVariants>, MessageOptions>
+): Composed<TVariants[keyof TVariants], InferTagged<TKey, TVariants>>;
+export function tagged<const TKey extends string, const TVariants extends Variants>(
+  key: TKey,
+  variants: TVariants & CheckedVariants<TKey, TVariants>,
+  ...rest: AsyncRest<InferTagged<TKey, TVariants>, MessageOptions>
+): AsyncValidator<InferTagged<TKey, TVariants>>;
+export function tagged(key: string, variants: Variants, ...rest: unknown[]): AnyValidator {
   // The variants are read once, so changing the record after the validator is made changes nothing.
   const table = new Map(Object.entries(variants));
   const tags = [...table.keys()];
   table.forEach((variant, tag) => assertFunction(`variants.${tag}`, variant));
+  const [, reject, accept] = tail<MessageOptions, object>(rest);
 
-  const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
-      return invalidObject(input);
+      return reject([objectIssue(input)]);
     }
     const tag = Object.hasOwn(input, key) ? input[key] : undefined;
     const variant = typeof tag === "string" ? table.get(tag) : undefined;
     if (variant === undefined) {
-      return failWith([
-        toIssue({ code: "invalid_union", path: [key], params: { discriminator: key, options: [...tags] } }),
-      ]);
+      return reject([issue("invalid_union", { discriminator: key, options: [...tags] }, [key])]);
     }
-    const rest = {};
+    const others = {};
     for (const name of Object.keys(input)) {
       if (name !== key) {
-        setOwn(rest, name, input[name]);
+        setOwn(others, name, input[name]);
       }
     }
-    return chain(variant(rest), (result) => {
+    return chain(variant(others), (result) => {
       if (!result.ok) {
         return result;
       }
@@ -116,8 +132,7 @@ export function discriminatedUnion<const TKey extends string, const TVariants ex
         throw new TypeError(`variants.${tag} must produce a plain object, received ${describeType(result.value)}`);
       }
       // The tag is defined first, for its place in the output, and again last, so the variant cannot replace it.
-      return pass({ [key]: tag, ...result.value, [key]: tag });
+      return accept({ [key]: tag, ...result.value, [key]: tag });
     });
   };
-  return validate as unknown as Composed<TVariants[keyof TVariants], InferDiscriminated<TKey, TVariants>>;
 }

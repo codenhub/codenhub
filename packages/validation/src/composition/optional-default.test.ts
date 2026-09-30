@@ -7,10 +7,9 @@ import { codesOf, isFree, isPending, valueOf } from "../test-utils";
 import { array } from "./array";
 import { object } from "./object";
 import { optional } from "./optional";
-import { withDefault } from "./with-default";
 
-describe("withDefault", () => {
-  const role = withDefault(oneOf(["admin", "user"]), "user");
+describe("optional with a default", () => {
+  const role = optional(oneOf(["admin", "user"]), "user");
 
   it("should replace undefined with the default", () => {
     expect(valueOf(role(undefined))).toBe("user");
@@ -23,12 +22,12 @@ describe("withDefault", () => {
   });
 
   it("should trust the default and not validate it", () => {
-    const loose = withDefault(number({ min: 10 }), 1);
+    const loose = optional(number({ min: 10 }), 1);
     expect(valueOf(loose(undefined))).toBe(1);
   });
 
   it("should call a function default every time, so objects are not shared", () => {
-    const tags = withDefault(array(string()), () => []);
+    const tags = optional(array(string()), () => []);
     const first = valueOf(tags(undefined));
     first.push("x");
     expect(valueOf(tags(undefined))).toEqual([]);
@@ -36,7 +35,7 @@ describe("withDefault", () => {
 
   it("should share a plain value default between results", () => {
     const shared: string[] = [];
-    const tags = withDefault(array(string()), shared);
+    const tags = optional(array(string()), shared);
     expect(valueOf(tags(undefined))).toBe(shared);
   });
 
@@ -47,7 +46,7 @@ describe("withDefault", () => {
   });
 
   it("should answer at once for undefined even when the wrapped validator is asynchronous", async () => {
-    const validator = withDefault(isFree, "fresh");
+    const validator = optional(isFree, "fresh");
     expect(isPending(validator(undefined))).toBe(false);
     expect(valueOf(validator(undefined) as never)).toBe("fresh");
     expect(codesOf(await validator("taken"))).toEqual(["taken"]);

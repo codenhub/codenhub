@@ -1,5 +1,5 @@
-import { failIssue, pass } from "../core/result";
-import type { Validator } from "../core/types";
+import { member } from "../core/checks";
+import type { AnyValidator, AsyncRest, AsyncValidator, MessageOptions, Rest, Validator } from "../core/types";
 
 /** A value a validator can require exactly: any primitive, including `null` and `undefined`. */
 export type LiteralValue = string | number | boolean | bigint | symbol | null | undefined;
@@ -14,16 +14,27 @@ export type LiteralValue = string | number | boolean | bigint | symbol | null | 
  * const role = literal("admin");
  * role("admin"); // { ok: true, value: "admin" }
  * role("user"); // { ok: false, ... }, code "invalid_value", params { expected: "admin" }
+ * literal(true, { message: "You must accept the terms" });
  * ```
  *
  * @typeParam T - The literal type.
  * @param value - The only accepted value.
+ * @param rest - Options, then checks.
  * @returns A validator that produces `value`.
  * @throws {RangeError} When `value` is `NaN`, which no value equals, so the literal would accept nothing.
  */
-export function literal<const T extends LiteralValue>(value: T): Validator<T> {
+export function literal<const T extends LiteralValue>(value: T, ...rest: Rest<T, MessageOptions>): Validator<T>;
+export function literal<const T extends LiteralValue>(
+  value: T,
+  ...rest: AsyncRest<T, MessageOptions>
+): AsyncValidator<T>;
+export function literal(value: LiteralValue, ...rest: unknown[]): AnyValidator {
   if (Number.isNaN(value)) {
     throw new RangeError("literal(NaN) accepts nothing");
   }
-  return (input) => (input === value ? pass(value) : failIssue("invalid_value", { expected: value }));
+  return member(
+    (input) => input === value,
+    () => ({ expected: value }),
+    rest,
+  );
 }

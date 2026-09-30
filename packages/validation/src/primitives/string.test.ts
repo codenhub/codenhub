@@ -1,7 +1,8 @@
-import { runInNewContext } from "node:vm";
-
 import { describe, expect, it } from "vitest";
 
+import { lowercase } from "../checks/lowercase";
+import { pattern } from "../checks/pattern";
+import { startsWith } from "../checks/starts-with";
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
 import { string } from "./string";
 
@@ -59,39 +60,16 @@ describe("string", () => {
     });
   });
 
-  describe("pattern and substring rules", () => {
-    it("should test the pattern, and ignore the g and y flags so answers do not depend on earlier calls", () => {
-      const validator = string({ pattern: /^a/g });
-      expect([validator("ab").ok, validator("ab").ok, validator("ab").ok]).toEqual([true, true, true]);
-      expect(string({ pattern: /^a/y })("ab").ok).toBe(true);
-    });
-
-    it("should check start, end and inclusion", () => {
-      expect(accepts(string({ startsWith: "ab" }), "abc", "bc")).toEqual([true, false]);
-      expect(accepts(string({ endsWith: "bc" }), "abc", "ab")).toEqual([true, false]);
-      expect(accepts(string({ includes: "b" }), "abc", "ac")).toEqual([true, false]);
-    });
-
-    it("should report format, with what was required, for a failed pattern or substring rule", () => {
-      expect(issuesOf(string({ pattern: /^a$/ })("b"))[0]).toEqual({
-        code: "invalid_format",
-        path: [],
-        params: { format: "regex", pattern: "/^a$/" },
-      });
-      expect(issuesOf(string({ startsWith: "x" })("b"))[0]?.params).toEqual({ format: "startsWith", value: "x" });
-    });
-  });
-
   describe("clean-up", () => {
     it("should trim, lowercase or uppercase the output", () => {
       expect(valueOf(string({ trim: true })("  a  "))).toBe("a");
-      expect(valueOf(string({ lowercase: true })("AbC"))).toBe("abc");
-      expect(valueOf(string({ uppercase: true })("AbC"))).toBe("ABC");
+      expect(valueOf(string({ case: "lower" })("AbC"))).toBe("abc");
+      expect(valueOf(string({ case: "upper" })("AbC"))).toBe("ABC");
     });
 
     it("should run before the constraints, so they see the cleaned string", () => {
       expect(accepts(string({ trim: true, min: 3 }), "  ab  ", " abc ")).toEqual([false, true]);
-      expect(accepts(string({ lowercase: true, startsWith: "a" }), "ABC")).toEqual([true]);
+      expect(accepts(string({ case: "lower" }, startsWith("a"), lowercase()), "ABC")).toEqual([true]);
       expect(string({ trim: true, min: 1 })("   ").ok).toBe(false);
     });
 
@@ -99,22 +77,13 @@ describe("string", () => {
       expect(valueOf(string()("  Mixed Case  "))).toBe("  Mixed Case  ");
     });
 
-    it("should refuse to lowercase and uppercase at once when the validator is created", () => {
-      expect(() => string({ lowercase: true, uppercase: true })).toThrow(TypeError);
+    it("should refuse a case other than lower or upper when the validator is created", () => {
+      expect(() => string({ case: "title" as never })).toThrow(TypeError);
     });
   });
 
-  it("should refuse a pattern that is not a regular expression when the validator is created", () => {
-    const pattern = "^a$" as unknown as RegExp;
-    expect(() => string({ pattern })).toThrow(new TypeError("pattern must be a RegExp, received string"));
-    const lookalike = { source: "^a$", flags: "" } as unknown as RegExp;
-    expect(() => string({ pattern: lookalike })).toThrow(new TypeError("pattern must be a RegExp, received object"));
-    const foreign = runInNewContext("/^a$/") as RegExp;
-    expect(accepts(string({ pattern: foreign }), "a", "b")).toEqual([true, false]);
-  });
-
-  it("should report every constraint that fails, in a fixed order", () => {
-    const strict = string({ min: 5, pattern: /^\d+$/, startsWith: "9" });
+  it("should report every constraint that fails, then every check, in a fixed order", () => {
+    const strict = string({ min: 5 }, pattern(/^\d+$/), startsWith("9"));
     expect(issuesOf(strict("ab")).map((issue) => issue.params?.format ?? issue.code)).toEqual([
       "too_small",
       "regex",
@@ -122,9 +91,19 @@ describe("string", () => {
     ]);
   });
 
+  it("should word its own issues with message, and leave each check's to the check", () => {
+    const named = string({ min: 5, message: "Too short" }, startsWith("9", "Start with 9"));
+    expect(issuesOf(named("ab")).map((issue) => issue.message)).toEqual(["Too short", "Start with 9"]);
+    expect(issuesOf(string({ message: "Text please" })(1))[0]?.message).toBe("Text please");
+  });
+
+  it("should take checks without options", () => {
+    expect(accepts(string(startsWith("a")), "ab", "b")).toEqual([true, false]);
+  });
+
   it("should never put the received value into an issue", () => {
     const secret = "hunter2";
-    expect(JSON.stringify(issuesOf(string({ min: 20, pattern: /^\d+$/ })(secret)))).not.toContain(secret);
+    expect(JSON.stringify(issuesOf(string({ min: 20 }, pattern(/^\d+$/))(secret)))).not.toContain(secret);
   });
 
   it("should give the same answer on every call", () => {

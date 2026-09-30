@@ -56,7 +56,7 @@ describe("intersection", () => {
     const merged = valueOf(intersection(counts, labels)(new Map([["a", { count: 1, label: "A" }]])));
     expect(merged).toEqual(new Map([["a", { count: 1, label: "A" }]]));
     const trimmed = map(string(), string({ trim: true }));
-    const upper = map(string(), string({ uppercase: true }));
+    const upper = map(string(), string({ case: "upper" }));
     expect(issuesOf(intersection(trimmed, upper)(new Map([["k", " a "]])))).toEqual([
       { code: "invalid_intersection", path: ["k"] },
     ]);
@@ -105,7 +105,7 @@ describe("intersection", () => {
   });
 
   it("should report outputs that cannot be merged as invalid_intersection at the conflict, not keep one", () => {
-    expect(issuesOf(intersection(string({ trim: true }), string({ uppercase: true }))("  ab "))).toEqual([
+    expect(issuesOf(intersection(string({ trim: true }), string({ case: "upper" }))("  ab "))).toEqual([
       { code: "invalid_intersection", path: [] },
     ]);
     const left = object({ tags: array(string()) });

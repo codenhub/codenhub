@@ -39,7 +39,7 @@ describe("set", () => {
   });
 
   it("should never produce fewer values than its size options allow", () => {
-    const lower = set(string({ lowercase: true }), { min: 2 });
+    const lower = set(string({ case: "lower" }), { min: 2 });
     expect(lower(new Set(["A", "a"])).ok).toBe(false);
     expect(valueOf(lower(new Set(["A", "b"])))).toEqual(new Set(["a", "b"]));
   });

@@ -1,8 +1,8 @@
 import { timeOf } from "../core/objects";
-import { invalidCoercion } from "../core/result";
-import type { Validator } from "../core/types";
+import type { Factory } from "../core/types";
 import { isCalendarDate } from "../formats/calendar";
 import { date, type DateOptions } from "../primitives/date";
+import { coercing } from "./coerce";
 
 const ISO_PATTERN =
   /^(\d{4}-\d{2}-\d{2})(?:[T ]((?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d)(?:\.(\d+))?(Z|[+-](?:[01]\d|2[0-3])(?::?[0-5]\d)?)?)?$/;
@@ -49,24 +49,16 @@ const readIso = (text: string): Date | undefined => {
  * @returns A validator that produces a `Date`.
  * @throws {RangeError} When `min` or `max` is not a valid `Date`, or `min` is after `max`.
  */
-export function coerceDate(options: DateOptions = {}): Validator<Date> {
-  const strict = date(options);
-  return (input) => {
+export const coerceDate = ((...args: unknown[]) =>
+  coercing("valid date", date(...(args as [])), args, (input) => {
     if (timeOf(input) !== undefined) {
-      return strict(input);
+      return [input];
     }
     if (typeof input === "number" && Number.isInteger(input)) {
       const converted = new Date(input);
       // A timestamp past what a Date can hold, about 275,000 years either way, converts to nothing.
-      return Number.isNaN(converted.getTime()) ? invalidCoercion("valid date", input) : strict(converted);
+      return Number.isNaN(converted.getTime()) ? undefined : [converted];
     }
-    if (typeof input === "string") {
-      const text = input.trim();
-      const parsed = readIso(text);
-      if (parsed !== undefined) {
-        return strict(parsed);
-      }
-    }
-    return invalidCoercion("valid date", input);
-  };
-}
+    const parsed = typeof input === "string" ? readIso(input.trim()) : undefined;
+    return parsed === undefined ? undefined : [parsed];
+  })) as Factory<Date, DateOptions>;

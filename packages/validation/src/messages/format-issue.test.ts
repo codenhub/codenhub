@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
 
+import { endsWith } from "../checks/ends-with";
+import { includes } from "../checks/includes";
+import { lowercase } from "../checks/lowercase";
+import { multipleOf } from "../checks/multiple-of";
+import { nonZero } from "../checks/non-zero";
+import { pattern } from "../checks/pattern";
+import { startsWith } from "../checks/starts-with";
+import { unique } from "../checks/unique";
+import { uppercase } from "../checks/uppercase";
 import { array } from "../composition/array";
 import { json } from "../composition/json";
 import { map } from "../composition/map";
@@ -9,8 +18,21 @@ import { tuple } from "../composition/tuple";
 import { union } from "../composition/union";
 import { fail } from "../core/result";
 import type { ValidationIssue, ValidationResult } from "../core/types";
+import { base64 } from "../formats/base64";
+import { cidr } from "../formats/cidr";
+import { creditCard } from "../formats/credit-card";
+import { domain } from "../formats/domain";
+import { duration } from "../formats/duration";
 import { email } from "../formats/email";
 import { ip } from "../formats/ip";
+import { jwt } from "../formats/jwt";
+import { mac } from "../formats/mac";
+import { phone } from "../formats/phone";
+import { port } from "../formats/port";
+import { searchParams } from "../formats/search-params";
+import { semver } from "../formats/semver";
+import { slug } from "../formats/slug";
+import { time } from "../formats/time";
 import { url } from "../formats/url";
 import { uuid } from "../formats/uuid";
 import { bigint } from "../primitives/bigint";
@@ -19,6 +41,7 @@ import { literal } from "../primitives/literal";
 import { number } from "../primitives/number";
 import { oneOf } from "../primitives/one-of";
 import { string } from "../primitives/string";
+import { unknown } from "../primitives/unknown";
 import { issuesOf } from "../test-utils";
 import { englishMessages } from "./english-messages";
 import { flatten, formatIssue as formatWith, formatPath, type Messages } from "./format-issue";
@@ -109,7 +132,7 @@ describe("formatIssue", () => {
   });
 
   it("should describe the built-in codes the validators report", () => {
-    const messageOf = (result: ReturnType<ReturnType<typeof string>>): string[] =>
+    const messageOf = (result: ValidationResult<unknown>): string[] =>
       issuesOf(result).map((found) => formatIssue(found));
 
     expect(messageOf(string()(1))).toEqual(["Expected string, received number"]);
@@ -118,23 +141,23 @@ describe("formatIssue", () => {
     expect(messageOf(string({ min: 1 })(""))).toEqual(["Must be at least 1 character"]);
     expect(messageOf(string({ length: 1 })(""))).toEqual(["Must be exactly 1 character"]);
     expect(messageOf(string({ length: 3 })("ab"))).toEqual(["Must be exactly 3 characters"]);
-    expect(messageOf(string({ pattern: /^a$/ })("b"))).toEqual(["Must match /^a$/"]);
-    expect(messageOf(string({ startsWith: "x" })("b"))).toEqual(['Must start with "x"']);
-    expect(messageOf(string({ endsWith: "x" })("b"))).toEqual(['Must end with "x"']);
-    expect(messageOf(string({ includes: "x" })("b"))).toEqual(['Must include "x"']);
+    expect(messageOf(string(pattern(/^a$/))("b"))).toEqual(["Must match /^a$/"]);
+    expect(messageOf(string(startsWith("x"))("b"))).toEqual(['Must start with "x"']);
+    expect(messageOf(string(endsWith("x"))("b"))).toEqual(['Must end with "x"']);
+    expect(messageOf(string(includes("x"))("b"))).toEqual(['Must include "x"']);
     expect(messageOf(email()("nope"))).toEqual(["Invalid email address"]);
   });
 
   it("should quote an affix as a string literal, so one holding a quote or line break reads unambiguously", () => {
     const messageOf = (result: ValidationResult<unknown>): string[] =>
       issuesOf(result).map((issue) => formatIssue(issue, englishMessages));
-    expect(messageOf(string({ startsWith: 'a"b' })("x"))).toEqual(['Must start with "a\\"b"']);
-    expect(messageOf(string({ endsWith: "a\nb" })("x"))).toEqual(['Must end with "a\\nb"']);
-    expect(messageOf(string({ includes: "\\" })("x"))).toEqual(['Must include "\\\\"']);
+    expect(messageOf(string(startsWith('a"b'))("x"))).toEqual(['Must start with "a\\"b"']);
+    expect(messageOf(string(endsWith("a\nb"))("x"))).toEqual(['Must end with "a\\nb"']);
+    expect(messageOf(string(includes("\\"))("x"))).toEqual(['Must include "\\\\"']);
   });
 
   it("should word number limits with their inclusivity", () => {
-    const messages = (result: ReturnType<ReturnType<typeof number>>): string[] =>
+    const messages = (result: ValidationResult<unknown>): string[] =>
       issuesOf(result).map((found) => formatIssue(found));
 
     expect(messages(number({ min: 1 })(0))).toEqual(["Must be at least 1"]);
@@ -143,12 +166,12 @@ describe("formatIssue", () => {
     expect(messages(number({ lt: 1 })(1))).toEqual(["Must be less than 1"]);
     expect(messages(number({ int: true })(1.5))).toEqual(["Must be an integer"]);
     expect(messages(number({ safeInt: true })(2 ** 60))).toEqual(["Must be a safe integer"]);
-    expect(messages(number({ nonZero: true })(0))).toEqual(["Must not be zero"]);
-    expect(messages(number({ multipleOf: 5 })(7))).toEqual(["Must be a multiple of 5"]);
+    expect(messages(number(nonZero())(0))).toEqual(["Must not be zero"]);
+    expect(messages(number(multipleOf(5))(7))).toEqual(["Must be a multiple of 5"]);
   });
 
   it("should describe the formats by their names", () => {
-    const messageOf = (result: ReturnType<ReturnType<typeof email>>): string[] =>
+    const messageOf = (result: ValidationResult<unknown>): string[] =>
       issuesOf(result).map((found) => formatIssue(found));
 
     expect(messageOf(url()("x"))).toEqual(["Invalid URL"]);
@@ -157,8 +180,51 @@ describe("formatIssue", () => {
     expect(messageOf(ip()("x"))).toEqual(["Invalid IP address"]);
   });
 
+  it("should word every format and check added in 0.2", () => {
+    const messageOf = (result: ValidationResult<unknown>): string | undefined =>
+      issuesOf(result).map((found) => formatIssue(found))[0];
+    expect(
+      [
+        base64({ url: true })("+"),
+        domain()("localhost"),
+        port()(0),
+        phone()("1"),
+        slug()("A"),
+        semver()("v1"),
+        jwt()("x"),
+        creditCard()("1"),
+        cidr()("x"),
+        cidr({ version: "v4" })("x"),
+        cidr({ version: "v6" })("x"),
+        mac()("x"),
+        time()("x"),
+        duration()("x"),
+        string(lowercase())("A"),
+        string(uppercase())("a"),
+      ].map(messageOf),
+    ).toEqual([
+      "Invalid base64url string",
+      "Invalid domain name",
+      "Invalid port",
+      "Invalid phone number",
+      "Invalid slug",
+      "Invalid version",
+      "Invalid token",
+      "Invalid card number",
+      "Invalid CIDR block",
+      "Invalid IPv4 CIDR block",
+      "Invalid IPv6 CIDR block",
+      "Invalid MAC address",
+      "Invalid time",
+      "Invalid duration",
+      "Must be lowercase",
+      "Must be uppercase",
+    ]);
+    expect(messageOf(searchParams(unknown())(1))).toBe("Expected query string, received number");
+  });
+
   it("should word bigint and date bounds", () => {
-    const messages = (result: ReturnType<ReturnType<typeof bigint>>): string[] =>
+    const messages = (result: ValidationResult<unknown>): string[] =>
       issuesOf(result).map((found) => formatIssue(found));
 
     expect(messages(bigint({ min: 10n })(1n))).toEqual(["Must be at least 10"]);
@@ -206,9 +272,7 @@ describe("formatIssue", () => {
   });
 
   it("should describe duplicates, unions and JSON", () => {
-    expect(formatIssue(issuesOf(array(string(), { unique: true })(["a", "a"]))[0] as ValidationIssue)).toBe(
-      "Must be unique",
-    );
+    expect(formatIssue(issuesOf(array(string(), unique())(["a", "a"]))[0] as ValidationIssue)).toBe("Must be unique");
     expect(formatIssue(issuesOf(union([string()])(1))[0] as ValidationIssue)).toBe(
       "Does not match any of the allowed types",
     );
@@ -243,7 +307,7 @@ describe("formatIssue", () => {
   it("should word a bad key with the first issue its key validator found", () => {
     const [short] = issuesOf(record(string({ min: 3 }), number())({ ab: 1 }));
     expect(formatIssue(short as ValidationIssue)).toBe("Invalid key: Must be at least 3 characters");
-    const [repeated] = issuesOf(record(string({ lowercase: true }), number())({ A: 1, a: 2 }));
+    const [repeated] = issuesOf(record(string({ case: "lower" }), number())({ A: 1, a: 2 }));
     expect(formatIssue(repeated as ValidationIssue)).toBe("Invalid key: Must be unique");
     const custom = issue({ code: "invalid_key", params: { issues: [issue({ code: "x", message: "Reserved" })] } });
     expect(formatIssue(custom)).toBe("Invalid key: Reserved");
@@ -264,7 +328,7 @@ describe("formatIssue", () => {
   });
 
   it("should name an unknown format by its own name", () => {
-    expect(formatIssue(issue({ code: "invalid_format", params: { format: "phone" } }))).toBe("Invalid phone");
+    expect(formatIssue(issue({ code: "invalid_format", params: { format: "postcode" } }))).toBe("Invalid postcode");
   });
 
   it("should never echo the received value", () => {

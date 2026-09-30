@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { Validator } from "../core/types";
+import { unknown } from "../primitives/unknown";
+import { domain } from "./domain";
 import { email } from "./email";
+import { ip } from "./ip";
 import { url } from "./url";
 
 /*
@@ -92,7 +95,7 @@ const accepted = (validate: Validator<string>, texts: Iterable<string>): [string
 describe("agreement with the URL parser", () => {
   it.each([
     ["public", url()],
-    ["local", url({ allowLocal: true })],
+    ["local", url({ host: unknown() })],
   ])("url (%s) should only ever return a URL the parser writes back unchanged", (_, validate) => {
     const texts = [...strings(7, 4000, 6)].flatMap((noise) => [
       `https://ex${noise}ample.com/a`,
@@ -114,6 +117,34 @@ describe("agreement with the URL parser", () => {
     expect(values.length).toBeGreaterThan(100);
     const domainOf = (address: string): string => address.slice(address.indexOf("@") + 1);
     expect(values.filter(([, value]) => new URL(`http://${domainOf(value)}`).hostname !== domainOf(value))).toEqual([]);
+    expect(values.filter(([, value]) => valueOf(validate(value)) !== value)).toEqual([]);
+  });
+
+  it("domain should only ever return a host the parser writes back unchanged", () => {
+    const validate = domain();
+    const values = accepted(
+      validate,
+      [...strings(13, 4000, 5)].map((noise) => `ex${noise}ample.com`),
+    );
+    expect(values.length).toBeGreaterThan(100);
+    expect(values.filter(([, value]) => new URL(`http://${value}`).hostname !== value)).toEqual([]);
+    expect(values.filter(([, value]) => valueOf(validate(value)) !== value)).toEqual([]);
+  });
+
+  it("ip should only ever return an IPv6 address the parser writes back unchanged, one spelling per address", () => {
+    const validate = ip({ version: "v6" });
+    const groups = ["0", "00", "000", "0000", "1", "A", "ff", "db8", "2001", "FFFF"];
+    const texts = [
+      ...strings(
+        17,
+        4000,
+        8,
+        groups.map((group) => `${group}:`),
+      ),
+    ].flatMap((head) => [`${head}:1`, `${head}1`, `::${head}1`]);
+    const values = accepted(validate, texts);
+    expect(values.length).toBeGreaterThan(1000);
+    expect(values.filter(([, value]) => new URL(`http://[${value}]`).hostname !== `[${value}]`)).toEqual([]);
     expect(values.filter(([, value]) => valueOf(validate(value)) !== value)).toEqual([]);
   });
 });

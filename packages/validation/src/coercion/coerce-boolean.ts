@@ -1,6 +1,6 @@
-import { invalidCoercion } from "../core/result";
-import type { Validator } from "../core/types";
+import type { Factory, MessageOptions } from "../core/types";
 import { boolean } from "../primitives/boolean";
+import { coercing } from "./coerce";
 
 const TRUE_WORDS = new Set(["true", "1", "yes", "on"]);
 const FALSE_WORDS = new Set(["false", "0", "no", "off"]);
@@ -12,7 +12,7 @@ const FALSE_WORDS = new Set(["false", "0", "no", "off"]);
  * @remarks
  * Anything else is rejected, so a typo such as `"ture"` is an error and not `false`. A value that
  * cannot be converted fails with `invalid_type` and `coerced: true` in `params`. Combine with
- * `withDefault` for an environment variable that may be missing.
+ * `optional` with a default for an environment variable that may be missing.
  *
  * @example
  * ```ts
@@ -23,19 +23,14 @@ const FALSE_WORDS = new Set(["false", "0", "no", "off"]);
  *
  * @returns A validator that produces a boolean.
  */
-export function coerceBoolean(): Validator<boolean> {
-  const strict = boolean();
-  return (input) => {
+export const coerceBoolean = ((...args: unknown[]) =>
+  coercing("boolean", boolean(...(args as [])), args, (input) => {
     if (typeof input === "boolean") {
-      return strict(input);
+      return [input];
     }
     if (typeof input !== "string" && typeof input !== "number") {
-      return invalidCoercion("boolean", input);
+      return undefined;
     }
     const word = String(input).trim().toLowerCase();
-    if (TRUE_WORDS.has(word)) {
-      return strict(true);
-    }
-    return FALSE_WORDS.has(word) ? strict(false) : invalidCoercion("boolean", input);
-  };
-}
+    return TRUE_WORDS.has(word) ? [true] : FALSE_WORDS.has(word) ? [false] : undefined;
+  })) as Factory<boolean, MessageOptions>;

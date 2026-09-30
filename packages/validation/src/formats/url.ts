@@ -1,7 +1,16 @@
-import type { Validator } from "../core/types";
+import { split } from "../core/checks";
+import type {
+  AnyValidator,
+  AsyncCheck,
+  AsyncValidator,
+  Check,
+  Composed,
+  MessageOptions,
+  Validator,
+} from "../core/types";
 import { HOSTLESS_SCHEMES, toHostlessUrl } from "./hostless-url";
+import { notFormat, partsFormat, readQuery, type Part, type Reading } from "./parts";
 import { HOST_MAX_LENGTH, isPublicHost } from "./patterns";
-import { canonicalFormat } from "./text-format";
 
 /**
  * Visible characters only: a written URL holds no whitespace and no control characters (RFC 3986). The
@@ -20,7 +29,7 @@ const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*$/i;
 const SCRIPT_SCHEMES = ["javascript", "vbscript", "data"];
 
 /** Options for {@link url}. */
-export interface UrlOptions {
+export interface UrlOptions extends MessageOptions {
   /**
    * Accepted protocols, without the colon, in any letter case. Of the schemes without a host, `mailto`, `tel` and `urn`
    * are accepted, each checked by its own rules even when written with a host; any other is always rejected. `javascript`, `vbscript`
@@ -30,14 +39,41 @@ export interface UrlOptions {
    */
   protocols?: readonly string[];
   /**
-   * Accepts hosts that are not public domain names: `localhost`, single-label hosts, every IP address,
-   * public ones included and with no check of ranges, and special-use names such as `app.localhost`,
-   * `db.internal` or `printer.local`. It means "any host", not "only private ones".
+   * Validates the host instead of the default rule, that it is a public domain name. It receives the
+   * host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in
+   * punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. So
+   * `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])`
+   * accepts IP addresses but not `localhost`. Its issues are placed under `["host"]`.
+   */
+  host?: AnyValidator;
+  /**
+   * Validates the port, a number, or `undefined` when the URL names none or names its scheme's default,
+   * which the parser drops. So `port: optional(port())` accepts either, and `port: literal(8080)` requires
+   * it. Its issues are placed under `["port"]`.
+   */
+  port?: AnyValidator;
+  /**
+   * Validates the path as the parser writes it: dot segments resolved and characters such as spaces
+   * percent-encoded, always starting with `/`. Its issues are placed under `["path"]`.
+   */
+  path?: AnyValidator;
+  /**
+   * Validates the query, as an object of its decoded parameters: each key's value as a string, or with
+   * `repeated` every value of every key as an array. A key given twice fails at `["query", key]` unless
+   * `repeated` is set. Its issues are placed under `["query"]`. To reject parameters it does not list,
+   * give it `object(shape, { unknownKeys: "strict" })`.
+   */
+  query?: AnyValidator;
+  /**
+   * Gives `query` every value of every key as an array, and accepts a key given more than once.
    *
    * @defaultValue false
    */
-  allowLocal?: boolean;
+  repeated?: boolean;
 }
+
+/** The part validators an options object names. */
+type UrlParts<TOptions> = Extract<TOptions[keyof TOptions & ("host" | "port" | "path" | "query")], AnyValidator>;
 
 /**
  * Creates a validator for absolute URLs with an allowed protocol and a public domain name, and
@@ -51,22 +87,34 @@ export interface UrlOptions {
  * spelled with fullwidth letters or invisible characters is the host they spell, an internationalized
  * host is in punycode, an IPv4 host is four decimal parts, and characters such as `"` and `<` are
  * percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and
- * no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected, with
- * `allowLocal` as well.
+ * no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected.
+ *
+ * The `host`, `port`, `path` and `query` options check those parts with validators of your own, which
+ * only decide: the value is still the whole URL, and one that is asynchronous makes the validator
+ * asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules.
  *
  * @example
  * ```ts
  * url()("https://Example.com/a?b=1"); // { ok: true, value: "https://example.com/a?b=1" }
  * url()("http://localhost:3000"); // { ok: false, ... }
- * url({ allowLocal: true })("http://localhost:3000"); // { ok: true, value: "http://localhost:3000/" }
+ * url({ host: hostname() })("http://localhost:3000"); // { ok: true, value: "http://localhost:3000/" }
+ * url({ protocols: ["https"], path: string(startsWith("/api/")), query: object({ page: optional(string()) }) });
  * ```
  *
- * @param options - Accepted protocols, and whether local hosts are allowed.
  * @returns A validator that produces the URL as the parser writes it.
  * @throws {TypeError} When a protocol is not a scheme name, for instance `"https:"` with its colon, or is
  * `javascript`, `vbscript` or `data`, whose URLs run script.
  */
-export function url(options: UrlOptions = {}): Validator<string> {
+export function url(...checks: Check<string>[]): Validator<string>;
+export function url<const TOptions extends UrlOptions>(
+  options: TOptions,
+  ...checks: Check<string>[]
+): Composed<UrlParts<TOptions>, string>;
+export function url(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
+export function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
+export function url(...rest: unknown[]): AnyValidator {
+  const [options, checks] = split<UrlOptions, string>(rest);
+  const { host, port, path, query, repeated = false, message } = options;
   const protocols = (options.protocols ?? ["http", "https"]).map((protocol) => {
     if (!SCHEME_PATTERN.test(protocol)) {
       throw new TypeError(`Protocols are scheme names without the colon, such as "https", received "${protocol}"`);
@@ -77,22 +125,42 @@ export function url(options: UrlOptions = {}): Validator<string> {
     }
     return scheme;
   });
-  const allowLocal = options.allowLocal ?? false;
-  return canonicalFormat("url", (text) => {
+
+  const read = (text: string): Reading => {
     if (!WRITTEN_URL_PATTERN.test(text) || !URL.canParse(text)) {
-      return undefined;
+      return notFormat("url");
     }
     const parsed = new URL(text);
     const scheme = parsed.protocol.slice(0, -1);
     if (!protocols.includes(scheme) || parsed.username !== "" || parsed.password !== "") {
-      return undefined;
+      return notFormat("url");
     }
     if (parsed.host === "" || HOSTLESS_SCHEMES.includes(scheme)) {
-      const rest = toHostlessUrl(scheme, parsed.href.slice(parsed.protocol.length), allowLocal);
-      return rest === undefined ? undefined : `${parsed.protocol}${rest}`;
+      const hostless = toHostlessUrl(scheme, parsed.href.slice(parsed.protocol.length), false);
+      return hostless === undefined ? notFormat("url") : { value: `${parsed.protocol}${hostless}`, parts: [] };
     }
-    return parsed.hostname.length <= HOST_MAX_LENGTH && (allowLocal || isPublicHost(parsed.hostname))
-      ? parsed.href
-      : undefined;
-  });
+    const { hostname } = parsed;
+    if (hostname.length > HOST_MAX_LENGTH || (host === undefined && !isPublicHost(hostname))) {
+      return notFormat("url");
+    }
+    const parts: Part[] = [];
+    if (host !== undefined) {
+      parts.push(["host", host, hostname.startsWith("[") ? hostname.slice(1, -1) : hostname]);
+    }
+    if (port !== undefined) {
+      parts.push(["port", port, parsed.port === "" ? undefined : Number(parsed.port)]);
+    }
+    if (path !== undefined) {
+      parts.push(["path", path, parsed.pathname]);
+    }
+    if (query !== undefined) {
+      const { value, issues } = readQuery(parsed.searchParams, repeated, ["query"]);
+      if (issues.length > 0) {
+        return { issues };
+      }
+      parts.push(["query", query, value]);
+    }
+    return { value: parsed.href, parts };
+  };
+  return partsFormat(read, message, checks);
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { check } from "../builders/check";
 import type { Validator } from "../core/types";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
@@ -10,7 +11,6 @@ import { lazy } from "./lazy";
 import { object } from "./object";
 import { optional } from "./optional";
 import { pipe } from "./pipe";
-import { refine } from "./refine";
 import { transform } from "./transform";
 import { union } from "./union";
 
@@ -91,9 +91,9 @@ describe("lazy", () => {
         next: optional(
           union([
             pipe(
-              refine(
-                lazy(() => heavy),
-                () => true,
+              lazy(
+                () => heavy,
+                check(() => true),
               ),
               // Typed as the object `heavy` produces, since a function returning `unknown` may be a promise.
               transform(unknown(), (value) => value as object),

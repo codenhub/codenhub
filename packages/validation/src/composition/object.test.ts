@@ -24,7 +24,10 @@ describe("object", () => {
       Array(7).fill(false),
     );
     expect(issuesOf(user([]))[0]?.params).toEqual({ expected: "object", received: "array" });
-    expect(issuesOf(user(new (class Widget {})()))[0]?.params).toEqual({ expected: "object", received: "Widget" });
+    expect(issuesOf(user(new (class Widget {})()))[0]?.params).toEqual({
+      expected: "object",
+      received: "non-plain object",
+    });
   });
 
   it("should accept null-prototype objects", () => {

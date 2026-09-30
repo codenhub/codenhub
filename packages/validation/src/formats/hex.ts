@@ -1,5 +1,4 @@
-import type { Validator } from "../core/types";
-import { textFormat } from "./text-format";
+import { formatFactory } from "./text-format";
 
 const HEX_PATTERN = /^[0-9a-f]+$/i;
 
@@ -11,9 +10,5 @@ const HEX_PATTERN = /^[0-9a-f]+$/i;
  * hex()("deadBEEF01"); // { ok: true, value: "deadBEEF01" }
  * hex()("xyz"); // { ok: false, ... }, code "invalid_format"
  * ```
- *
- * @returns A validator that produces the string.
  */
-export function hex(): Validator<string> {
-  return textFormat("hex", (text) => HEX_PATTERN.test(text));
-}
+export const hex = /* @__PURE__ */ formatFactory("hex", (text) => (HEX_PATTERN.test(text) ? text : undefined));

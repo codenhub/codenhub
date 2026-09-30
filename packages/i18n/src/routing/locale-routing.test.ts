@@ -66,7 +66,7 @@ describe("createLocaleRouting", () => {
     expect(() => createLocaleRouting(inherited as Parameters<typeof createLocaleRouting>[0])).toThrow(
       "Invalid locale routing configuration: Expected object, received non-plain object",
     );
-    expect(() => createLocaleRouting(new RoutingConfig())).toThrow("received RoutingConfig");
+    expect(() => createLocaleRouting(new RoutingConfig())).toThrow("received non-plain object");
   });
 
   it("should apply the default-locale prefix policy when parsing unprefixed paths", () => {

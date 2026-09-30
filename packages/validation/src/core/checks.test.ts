@@ -1,0 +1,79 @@
+import { describe, expect, it } from "vitest";
+
+import { issuesOf, isPending } from "../test-utils";
+import { finish, leaf, split, word } from "./checks";
+import { issue } from "./result";
+import type { Check, ValidationResult } from "./types";
+
+const short: Check<string> = (value) => (value.length < 3 ? [issue("too_small")] : undefined);
+const noSpaces: Check<string> = (value) => (value.includes(" ") ? [issue("spaces")] : undefined);
+const isString = (input: unknown): boolean => typeof input === "string";
+const sync = <T>(result: unknown): ValidationResult<T> => result as ValidationResult<T>;
+
+describe("split", () => {
+  it("should take an object as the options and the rest as checks", () => {
+    expect(split([{ message: "m" }, short])).toEqual([{ message: "m" }, [short]]);
+  });
+
+  it("should take a function in first place as a check, with no options", () => {
+    expect(split([short, noSpaces])).toEqual([{}, [short, noSpaces]]);
+  });
+
+  it("should give empty options and no checks for no arguments, or undefined options", () => {
+    expect(split([])).toEqual([{}, []]);
+    expect(split([undefined, short])).toEqual([{}, [short]]);
+  });
+
+  it("should throw when a check is not a function, since that is a mistake in the schema", () => {
+    expect(() => split([{}, "x"])).toThrow(TypeError);
+  });
+});
+
+describe("word", () => {
+  it("should leave issues alone without a message", () => {
+    expect(word([issue("a")], undefined)).toEqual([{ code: "a", path: [] }]);
+  });
+
+  it("should give each issue the text, or what a function words it as", () => {
+    expect(word([issue("a"), issue("b")], "Bad")).toEqual([
+      { code: "a", path: [], message: "Bad" },
+      { code: "b", path: [], message: "Bad" },
+    ]);
+    expect(word([issue("a", { n: 1 })], (found) => `${found.code}${String(found.params?.n)}`)[0]?.message).toBe("a1");
+  });
+});
+
+describe("finish", () => {
+  it("should pass the value when nothing was found", () => {
+    expect(finish("value", [], undefined, [short])).toEqual({ ok: true, value: "value" });
+  });
+
+  it("should report the validator's own issues, worded, then every check's, unworded", () => {
+    expect(issuesOf(sync(finish("a b", [issue("own")], "Own", [short, noSpaces])))).toEqual([
+      { code: "own", path: [], message: "Own" },
+      { code: "spaces", path: [] },
+    ]);
+  });
+
+  it("should stay synchronous with synchronous checks and turn asynchronous with an asynchronous one", async () => {
+    expect(isPending(finish("abc", [], undefined, [short]))).toBe(false);
+    const pending = finish("ab", [], undefined, [short, async () => [issue("later")]]);
+    expect(isPending(pending)).toBe(true);
+    expect(issuesOf(await pending).map((found) => found.code)).toEqual(["too_small", "later"]);
+  });
+});
+
+describe("leaf", () => {
+  it("should report a value of the wrong type with its wording, and run no check", () => {
+    const validate = leaf("string", isString, "Text please", [() => [issue("never")]]);
+    expect(issuesOf(sync(validate(1)))).toEqual([
+      { code: "invalid_type", path: [], params: { expected: "string", received: "number" }, message: "Text please" },
+    ]);
+  });
+
+  it("should run the checks on the value its inspection returns", () => {
+    const validate = leaf<string>("string", isString, undefined, [short], (text) => text.trim());
+    expect(validate("  abc  ")).toEqual({ ok: true, value: "abc" });
+    expect(issuesOf(sync(validate(" ab "))).map((found) => found.code)).toEqual(["too_small"]);
+  });
+});

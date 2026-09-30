@@ -19,7 +19,7 @@ type Output<TValidators extends readonly AnyValidator[]> = TValidators extends r
  *
  * @example
  * ```ts
- * const address = pipe(string({ trim: true, lowercase: true }), email());
+ * const address = pipe(string({ trim: true, case: "lower" }), email());
  * address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
  * ```
  *

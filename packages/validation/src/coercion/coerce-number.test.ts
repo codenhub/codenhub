@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { nonZero } from "../checks/non-zero";
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
 import { coerceNumber } from "./coerce-number";
 
@@ -59,11 +60,11 @@ describe("coerceNumber", () => {
   });
 
   it("should reject bad options when the validator is created, as number does", () => {
-    expect(() => coerceNumber({ multipleOf: 0 })).toThrow(RangeError);
+    expect(() => coerceNumber({ min: Number.NaN })).toThrow(RangeError);
   });
 
   it("should read minus zero as zero", () => {
     expect(Object.is(valueOf(coerceNumber()("-0")), 0)).toBe(true);
-    expect(coerceNumber({ nonZero: true })("-0").ok).toBe(false);
+    expect(coerceNumber(nonZero())("-0").ok).toBe(false);
   });
 });
