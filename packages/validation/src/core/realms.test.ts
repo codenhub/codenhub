@@ -92,7 +92,7 @@ describe("values from another realm", () => {
       describeType(foreign("new Map()")),
       describeType(foreign("new Set()")),
       describeType(foreign("({})")),
-    ]).toEqual(["map", "set", "object"]);
+    ]).toEqual(["object", "object", "object"]);
   });
 });
 
@@ -102,9 +102,8 @@ describe("an object with a prototype of its own", () => {
     expect(issue?.params).toEqual({ expected: "object", received: "non-plain object" });
   });
 
-  it("should keep the class name of an instance, and fall back to object for a nameless class", () => {
-    expect(describeType(new (class Widget {})())).toBe("Widget");
-    expect(describeType(new (class {})())).toBe("object");
+  it("should be named object, never by its class, which would take reading its prototype", () => {
+    expect(describeType(new (class Widget {})())).toBe("object");
   });
 });
 
