@@ -553,7 +553,9 @@ function buildSymbol(
     members,
     name,
     namespaceMembers,
-    overloads: overloadsOf(declaration),
+    // Only a function's signatures are overloads with `.d.ts` lines to pair with; a
+    // callable interface's call signatures sit inside its body.
+    overloads: kind === "function" ? overloadsOf(declaration) : [],
     parameters: namedDocs(signatureParts(declaration, "parameters"), comment, "@param"),
     reexportedFrom: primary.reexportedFrom,
     returns: optionalBlockTagText(comment, "@returns"),

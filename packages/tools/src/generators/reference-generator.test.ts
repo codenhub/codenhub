@@ -241,6 +241,37 @@ describe("analyzeReference", () => {
     );
   });
 
+  // A callable interface's call signatures are not function overloads: the interface
+  // keeps its header and summary, as @codenhub/toaster's `Toaster` needs.
+  it("keeps a callable interface's own signature and summary", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-callable", {
+      "index.ts": [
+        "/** Shows notifications. */",
+        "export interface Notifier {",
+        "  /**",
+        "   * Shows a message.",
+        "   * @param message - The text.",
+        "   */",
+        "  (message: string): void;",
+        "  /**",
+        "   * Shows a message from options.",
+        "   * @param options - The options.",
+        "   */",
+        "  (options: { message: string }): void;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    const page = files[0]?.contents ?? "";
+
+    expect(model.entrypoints[0]?.symbols[0]?.overloads).toEqual([]);
+    expect(page).toContain(
+      ["### Notifier", "", "```ts", "export interface Notifier", "```", "", "Shows notifications."].join("\n"),
+    );
+  });
+
   it("lists unexported types that public declarations name as internal types", { timeout: 30_000 }, async () => {
     const workspacePackage = await createReferenceFixture("fixture-internal", {
       "index.ts": [
