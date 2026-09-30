@@ -44,7 +44,7 @@ const scenarios: Scenario[] = [
     name: "object of three fields",
     source: `import { email, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });`,
-    budget: 2910,
+    budget: 2930,
   },
   {
     name: "object of three fields with messages",
@@ -147,7 +147,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 8880,
+    budget: 8900,
   },
 ];
 

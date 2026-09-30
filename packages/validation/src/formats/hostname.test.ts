@@ -26,6 +26,11 @@ describe("hostname", () => {
     expect(accepts(hostname(), ...invalid)).toEqual(invalid.map(() => false));
   });
 
+  it("should reject a punycode label that does not decode, and accept one that does", () => {
+    expect(accepts(hostname(), "xn--zz.com", "a.xn--zz", "XN--ZZ")).toEqual([false, false, false]);
+    expect(accepts(hostname(), "xn--mnchen-3ya.de", "a.xn--ls8h")).toEqual([true, true]);
+  });
+
   it("should report invalid_type for a non-string and invalid_format, naming the format, for a bad string", () => {
     expect(codesOf(hostname()(42))).toEqual(["invalid_type"]);
     expect(issuesOf(hostname()("!!"))).toEqual([{ code: "invalid_format", path: [], params: { format: "hostname" } }]);

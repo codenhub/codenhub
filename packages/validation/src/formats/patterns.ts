@@ -32,6 +32,12 @@ export const isPublicHost = (host: string): boolean =>
 const UNICODE_HOST_PATTERN = /^[\p{L}\p{M}\p{N}.-]+$/u;
 /** A label in punycode, the ASCII form of an internationalized one. */
 const PUNYCODE_LABEL_PATTERN = /(?:^|\.)xn--/i;
+/**
+ * Tests whether every punycode label of a host decodes, which the URL parser checks and a pattern
+ * cannot: `xn--zz` is no label. Call it only on text `HOSTNAME_PATTERN` accepts, so nothing but
+ * letters, digits, hyphens and dots reaches the parser.
+ */
+const decodes = (host: string): boolean => !PUNYCODE_LABEL_PATTERN.test(host) || URL.canParse(`http://${host}`);
 /** Any character past ASCII. */
 const NON_ASCII_PATTERN = /[\u0080-\uffff]/;
 /** The longest a domain name can be, in its ASCII form. */
@@ -46,10 +52,7 @@ export const HOST_MAX_LENGTH = 253;
  */
 export function toAsciiHost(host: string): string | undefined {
   if (!NON_ASCII_PATTERN.test(host)) {
-    // A punycode label must decode, which the parser checks and a pattern cannot: `xn--zz` is none.
-    const isUndecodable =
-      PUNYCODE_LABEL_PATTERN.test(host) && HOSTNAME_PATTERN.test(host) && !URL.canParse(`http://${host}`);
-    return isUndecodable ? undefined : host;
+    return HOSTNAME_PATTERN.test(host) && !decodes(host) ? undefined : host;
   }
   // The parser maps a host through NFKC before encoding it, so a host that mapping changes, such as
   // fullwidth or decomposed letters, is a second spelling of another and would pass as a distinct string.
@@ -60,5 +63,9 @@ export function toAsciiHost(host: string): string | undefined {
   return hostname.length <= HOST_MAX_LENGTH ? hostname : undefined;
 }
 
-/** A hostname whose last label is not all digits, since a name ending that way reads as an IPv4 address. */
-export const isHostname = (text: string): boolean => HOSTNAME_PATTERN.test(text) && !/(?:^|\.)\d+$/.test(text);
+/**
+ * A hostname whose last label is not all digits, since a name ending that way reads as an IPv4 address,
+ * and whose punycode labels decode.
+ */
+export const isHostname = (text: string): boolean =>
+  HOSTNAME_PATTERN.test(text) && !/(?:^|\.)\d+$/.test(text) && decodes(text);
