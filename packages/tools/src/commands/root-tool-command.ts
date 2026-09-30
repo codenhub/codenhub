@@ -1,4 +1,5 @@
 import { execute, formatCommand, type CommandSpec } from "../process/execute.ts";
+import { prepareCapturedOutput } from "../reporting/captured-output.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext, type CommandDefinition } from "./definition.ts";
 
 /** How a repository-wide tool is exposed as a command. */
@@ -79,12 +80,12 @@ export function createRootToolCommand(options: RootToolCommandOptions): CommandD
         stdio: streams ? "inherit" : "pipe",
         timeoutMs: context.options.timeoutMs,
       });
-      // Everything the tool said is repeated, not just what failed. A linter
+      // Captured output is reported even when the tool passed. A linter
       // reports warnings and still exits zero, so keying this on the exit code
       // would drop the findings the run existed to surface.
       const captured = outcome.output?.trimEnd() ?? "";
       if (!streams && captured !== "") {
-        context.reporter.info(captured);
+        context.reporter.info(await prepareCapturedOutput(context, outcome.output ?? ""));
       }
       return outcome.isSuccess ? EXIT_SUCCESS : EXIT_FAILURE;
     },

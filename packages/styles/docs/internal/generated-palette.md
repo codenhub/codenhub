@@ -1,12 +1,12 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-29
+last_updated: 2026-09-30
 scope: The generated, flat `./palette` output of `@codenhub/styles`' composed colors, for consumers that cannot depend on the Tailwind pipeline that produces them.
 ---
 
 # Generated palette
 
-This is the maintained contract for `./palette`. The generator and its output comply with it, per the repository root `docs/README.md`'s `IMPLEMENTED` status.
+This is the maintained contract for `./palette`. The generator and its output comply with it.
 
 This document contains no drop-in code: the source and the generator own the implementation, while this document owns the durable naming and output rules.
 

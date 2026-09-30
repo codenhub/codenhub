@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-10
+last_updated: 2026-09-30
 scope: Generated API reference documentation for public workspace packages.
 ---
 
@@ -152,4 +152,4 @@ Source JSDoc/TSDoc coverage is enforced by `undocumented-export/missing-jsdoc`, 
 
 ## Exceptions
 
-Exceptions to this spec MUST follow `docs/README.md` and be recorded in `docs/specs/packages-exceptions.md`. An exception to the `reference` check MUST declare a `Checks bypassed` bullet with the affected codes, per that register.
+`docs/guidelines/documentation.md` defines exception requirements; `docs/specs/packages-exceptions.md` owns package-specific exceptions and compliance-check waivers. An exception to the `reference` check MUST declare a `Checks bypassed` bullet with the affected codes, per that register.

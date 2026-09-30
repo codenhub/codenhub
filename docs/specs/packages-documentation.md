@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-22
+last_updated: 2026-09-30
 scope: Documentation for public workspace packages.
 ---
 
@@ -190,7 +190,7 @@ docs/internal/
   debugging.md
 ```
 
-These names are illustrative. Internal docs MUST use the YAML metadata and status model from `docs/README.md` because they may describe approved future direction as well as current implementation.
+These names are illustrative. Internal docs MUST use the YAML metadata and status model from `docs/guidelines/documentation.md` because they may describe approved future direction as well as current implementation.
 
 Do not use `docs/internal/` for scratch notes, short-lived plans, TODO lists, or information better expressed in code comments or issue tracking.
 
@@ -249,4 +249,4 @@ Link validation MUST cover `README.md`, public `docs/**/*.md`, `llms.txt`, and t
 
 ## Exceptions
 
-Package documentation exceptions MUST follow `docs/README.md` and be recorded in `docs/specs/packages-exceptions.md`.
+`docs/guidelines/documentation.md` defines exception requirements; `docs/specs/packages-exceptions.md` owns package-specific exceptions and compliance-check waivers.

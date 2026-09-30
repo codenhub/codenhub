@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-29
+last_updated: 2026-09-30
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -55,7 +55,7 @@ A command name without its own definition runs the package script of that name, 
 
 ## Targets
 
-Every command SHOULD be given a target. Omitting one covers the whole workspace, which is a deliberate choice rather than a convenient default: a repo-wide `test` takes minutes, while the same command narrowed to one package takes seconds. Work on a package by naming it from the repository root, and reserve the omitted form for final verification before delivering a change and for commands that are repo-wide by nature, such as `cloc`.
+Omitting a target selects the whole workspace. An explicit target narrows the selection to packages or paths; `CONTRIBUTING.md` defines development and final-verification practice.
 
 Every command takes the same selectors, resolved through one fallback chain:
 
@@ -137,17 +137,19 @@ The flags above always belong to `hub`, even where the underlying tool has one o
 
 ## Reporting
 
-A run reports what failed. Child output is captured rather than streamed, and a package that passed prints nothing beyond its place in the closing count; a package that failed prints its whole output under its own heading. A green workspace run is a handful of lines, which is what makes the one red package in it findable.
+A run reports what failed. Child output is captured rather than streamed, and a package that passed prints nothing beyond its place in the closing count; a package that failed prints diagnostics under its own heading. A green workspace run is a handful of lines, which is what makes the one red package in it findable.
 
-`--verbose` reports what passed as well, which is the way to read output a successful command produced. It streams that output live only when one command holds the terminal; several packages running at once would interleave into a transcript nobody can read, so their output is captured and printed as each one finishes. Repository-wide tools are the exception to the rule above: `lint`, `format`, and `cloc` repeat whatever they wrote, pass or fail, because a linter reports warnings and still exits zero, and keying their output off the exit code would drop the findings the run existed to surface.
+Captured diagnostic output is limited to 12,000 JavaScript string characters per process, including the omission notice. Oversized output retains its beginning and end, with the omitted-character count and an absolute path to the complete UTF-8 log under `logs/hub/output-*/output.log`. Each shortened result gets its own directory so parallel failures cannot overwrite one another. Logs preserve the original output, including trailing whitespace. If saving a log fails, a warning accompanies the complete output rather than discarding diagnostics. Several failed processes can each produce an excerpt; this is not a run-wide limit.
 
-Package runs are killed when they exceed `--timeout`, together with every process they started: a script runs under a shell, and it is the shell's children that hold the output open, so killing the shell alone would leave the run waiting on them. On Windows `taskkill` ends the tree; elsewhere the tree is read from one `ps` snapshot taken just before the kill, so a process started after that instant is not in it and can outlive the run. This is what keeps one hanging browser-test worker from blocking a whole workspace run. Interactive `dev`, `debug`, `preview`, and watch commands stream through one attached terminal and have no timeout.
+`--verbose` shows complete output and reports what passed as well, which is the way to inspect output a successful command produced. It streams that output live only when one command holds the terminal; several packages running at once would interleave into a transcript nobody can read, so their output is captured and printed as each one finishes. Repository-wide tools are the exception to the rule above: `lint`, `format`, and `cloc` repeat whatever they wrote, pass or fail, because a linter reports warnings and still exits zero, and keying their output off the exit code would drop the findings the run existed to surface.
+
+Package runs are killed when they exceed `--timeout`, together with every process they started: a script runs under a shell, and it is the shell's children that hold the output open, so killing the shell alone would leave the run waiting on them. On Windows `taskkill` ends the tree; elsewhere the tree is read from one `ps` snapshot taken just before the kill, so a process started after that instant is not in it and can outlive the run. This is what keeps one hanging browser-test worker from blocking a whole workspace run. Interactive `dev`, `debug`, `preview`, and watch commands stream through one attached terminal and have no timeout or output cap. Native machine-readable results such as `check --json` and `list --json` are not shortened; a captured run requested with `--json` also preserves its complete output. Valid JSON emitted by an underlying tool remains complete even without a hub flag.
 
 ## Repository-wide tools
 
 `lint`, `format`, and `cloc` run from the repository root over resolved paths rather than once per package. Selecting nothing falls back to the whole repository, which is why `pnpm cloc` needs no argument.
 
-`format` runs two formatters in sequence: `oxfmt` over every resolved path, then Prettier over the Markdown among them. `oxfmt` does not format Markdown, and Prettier is the one holding the `proseWrap` rule `docs/README.md` sets. Both always run, so a failure in one still surfaces the other's findings or fixes. Tool arguments after `--` reach `oxfmt` only, because Prettier shares none of its flags. Markdown that `.prettierignore` lists, the vendored icon attributions, is left as received. In agent skills (`packages/skills/skills/` and `drafts/`), `.prettierrc.json` turns off `embeddedLanguageFormatting`, so fenced examples keep their line breaks.
+`format` runs two formatters in sequence: `oxfmt` over every resolved path, then Prettier over the Markdown among them. `oxfmt` does not format Markdown, and Prettier is the one holding the `proseWrap` rule `docs/guidelines/documentation.md` sets. Both always run, so a failure in one still surfaces the other's findings or fixes. Tool arguments after `--` reach `oxfmt` only, because Prettier shares none of its flags. Markdown that `.prettierignore` lists, the vendored icon attributions, is left as received. In agent skills (`packages/skills/skills/` and `drafts/`), `.prettierrc.json` turns off `embeddedLanguageFormatting`, so fenced examples keep their line breaks.
 
 ## Browser tests
 

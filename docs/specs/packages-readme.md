@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-04
+last_updated: 2026-09-30
 scope: README files for workspace packages.
 ---
 
@@ -128,4 +128,4 @@ Experimental packages MUST state what is unstable: API shape, behavior, build ou
 
 ## Exceptions
 
-Exceptions to this spec MUST follow `docs/README.md` and be recorded in `docs/specs/packages-exceptions.md`.
+`docs/guidelines/documentation.md` defines exception requirements; `docs/specs/packages-exceptions.md` owns package-specific exceptions and compliance-check waivers.

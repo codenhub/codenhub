@@ -1,8 +1,8 @@
 # Contributing
 
-This document covers how a change gets from a working tree into `main`: branches, commits, and pull requests. It applies to everyone, and it applies unchanged to AI agents — an agent that cannot follow it should not be committing here. `AGENTS.md` routes agents to it.
+This document defines the contributor workflow, from a working tree through validation, review, and release. It applies to maintainers, contributors, and AI agents.
 
-What a change must contain, rather than how it lands, lives elsewhere: `docs/guidelines/code.md` for code, `docs/README.md` for documentation, and `docs/tooling.md` for the commands referenced below.
+[Repository documentation](docs/README.md) maps the technical guidelines, specifications, and references. [Repository tooling](docs/tooling.md) describes the commands below. [Agent instructions](AGENTS.md) contain agent-specific behavior and context guidance.
 
 ## Setup
 
@@ -14,6 +14,13 @@ pnpm install
 ```
 
 `pnpm install` also points git at `.githooks/` through `core.hooksPath`, so the hooks described below start working after the first install and not before. `docs/ci.md` covers why the versions are pinned where they are.
+
+## Changes
+
+- Keep each change within its requested scope and preserve unrelated work.
+- Applicable coding standards, specifications, and APPROVED or IMPLEMENTED documentation govern the change. Existing code may lag those contracts; conflicts and exceptions are resolved under the documentation guidelines.
+- Update affected documentation alongside changes to behavior, public APIs, exports, conventions, or lifecycle rules. Each technical contract has one owning document; references identify that owner rather than repeat its requirements.
+- Do not commit secrets, build artifacts, or unrelated changes.
 
 ## Branches
 
@@ -86,9 +93,13 @@ Co-authored-by: Claude Opus 5 <noreply@anthropic.com>
 
 The human directing the work stays the commit author. The trailer is an addition to authorship, never a replacement for it.
 
-## Before opening a pull request
+## Validation
 
-Run the full verification for what you touched:
+Run scripts from the repository root. Root tooling owns dependency build ordering, so use its selectors rather than `pnpm --filter` or commands run from a package directory. Narrow development checks to the affected package or paths; [tooling](docs/tooling.md#targets) documents selector resolution and options.
+
+Run `pnpm verify` after changes. A targeted run covers the affected package during development; the final verification before delivery covers the workspace. `--skip=test:browser` is appropriate when the change cannot affect browser suites; report any skipped steps.
+
+Before opening a pull request, also verify the branch selection:
 
 ```sh
 pnpm verify --changed

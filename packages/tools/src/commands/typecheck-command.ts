@@ -1,6 +1,7 @@
 import { mapConcurrent } from "../process/concurrency.ts";
 import { execute, formatCommand, type CommandSpec } from "../process/execute.ts";
 import { buildScriptSpec, resolveBinDirectories, withBinPath } from "../process/script-runner.ts";
+import { prepareCapturedOutput } from "../reporting/captured-output.ts";
 import { formatDuration, type SummaryRow, type SummaryStatus } from "../reporting/reporter.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext, type CommandDefinition } from "./definition.ts";
@@ -155,13 +156,14 @@ async function runUnits(
     }
     const output = outcome.output?.trimEnd() ?? "";
     if (!settings.streams && output !== "" && (settings.showsPassing || !outcome.isSuccess)) {
+      const displayed = await prepareCapturedOutput(context, outcome.output ?? "");
       reporter.blank();
       // A diagnostic names its own file, so a batch needs no heading. A single
       // package's script can print anything at all, and does need one.
       if (unit.packages.length === 1) {
         reporter.step(`${(unit.packages[0] as WorkspacePackage).name} › ${SCRIPT}`);
       }
-      reporter.info(output);
+      reporter.info(displayed);
     }
     const failed = outcome.isSuccess ? new Set<string>() : attributeDiagnostics(output, unit.packages);
     for (const workspacePackage of unit.packages) {
