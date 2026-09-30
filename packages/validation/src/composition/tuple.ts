@@ -59,8 +59,9 @@ export function tuple<
     if (!Array.isArray(input)) {
       return invalidType("array", input);
     }
-    if (input.length < length || (rest === undefined && input.length > length)) {
-      const isShort = input.length < length;
+    const size = input.length;
+    if (size < length || (rest === undefined && size > length)) {
+      const isShort = size < length;
       return failWith([
         toIssue({
           code: isShort ? "too_small" : "too_big",
@@ -73,7 +74,10 @@ export function tuple<
       ]);
     }
     return settle(
-      Array.from(input, (item, index) => ((index < length ? items[index] : rest) as AnyValidator)(item)),
+      // By index up to the length that was checked, never through the array's own iterator, as in `array`.
+      Array.from({ length: size }, (_, index) =>
+        ((index < length ? items[index] : rest) as AnyValidator)(input[index]),
+      ),
       pass,
     );
   };

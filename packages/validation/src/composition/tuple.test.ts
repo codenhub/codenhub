@@ -57,6 +57,15 @@ describe("tuple", () => {
     expect(tuple([number(), number()])(sparse).ok).toBe(false);
   });
 
+  it("should read items by index, ignoring an iterator the array carries", () => {
+    const tampered = Object.defineProperty([1], Symbol.iterator, {
+      value: function* () {
+        yield* ["x", "y"];
+      },
+    });
+    expect(tuple([number()])(tampered)).toEqual({ ok: true, value: [1] });
+  });
+
   it("should give a tuple type", () => {
     const pair: [string, number] = valueOf(tuple([string(), number()])(["a", 1]));
     expect(pair).toEqual(["a", 1]);

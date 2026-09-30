@@ -53,12 +53,15 @@ export function array<TElement extends AnyValidator>(
     if (!Array.isArray(input)) {
       return invalidType("array", input);
     }
-    const oversize = sizeIssues(input.length, "array", options);
+    const { length } = input;
+    const oversize = sizeIssues(length, "array", options);
     if (oversize.length > 0) {
       return failWith(oversize);
     }
     return settle(
-      Array.from(input, (item) => element(item)),
+      // Read by index up to the length that was checked, never through the array's own iterator, which
+      // the input can replace to yield other items or never stop.
+      Array.from({ length }, (_, index) => element(input[index])),
       (items) => {
         if (unique === undefined || unique === false) {
           return pass(items);
