@@ -102,8 +102,11 @@ jobs:
       # needs on a runner, and runs even on a cache hit because the packages it
       # installs live outside the cached directory. The install is the same command
       # a contributor runs locally, so the two resolve the same browser versions.
+      # The libraries come from the runner's package mirror, which sometimes stalls
+      # with no deadline of its own, so each attempt is capped and `hub browsers`
+      # retries a failed one once; `docs/ci.md` has the numbers behind the cap.
       - name: Install browsers
-        run: pnpm hub browsers --with-deps $SELECTOR -- ${{ matrix.engine }}
+        run: pnpm hub browsers --with-deps --timeout=360 $SELECTOR -- ${{ matrix.engine }}
 
       # Every package names its Playwright projects after the engine they run on,
       # so one glob selects this job's engine across all of them. See
@@ -175,7 +178,7 @@ jobs:
           key: playwright-${{ runner.os }}-chromium-${{ steps.playwright.outputs.version }}
 
       - name: Install browsers
-        run: pnpm hub browsers --with-deps styles -- chromium
+        run: pnpm hub browsers --with-deps --timeout=360 styles -- chromium
 
       # Generated files are derived from READMEs, package docs, and manifests, so
       # a change that edits a source without regenerating leaves the repository
