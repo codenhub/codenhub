@@ -121,10 +121,11 @@ enum Status {
 const status = nativeEnum(Status);
 ```
 
-## Any value, no value and instances
+## Any value, no value, functions and instances
 
 - `unknown()` accepts every value and passes it through unchanged. Use it for a property you do not check.
 - `never()` rejects every value with `invalid_type` and `{ expected: "never", received }`. Use it to forbid a property, or for a branch that must never match.
+- `func()` accepts any function, from any realm, classes and async and generator functions included, and produces it unchanged. It fails with `invalid_type` and `{ expected: "function", received }`. Only that the value is a function can be checked, not the parameters it takes or what it returns, so name the signature you expect as the type argument, `func<(value: string) => void>()`, and it becomes the output type on trust, as a cast would; without one the output takes any arguments and returns `unknown`.
 - `instanceOf(Class)` accepts instances of a class, subclasses and abstract classes included, checked with `instanceof`, so an instance from another realm such as an iframe is not recognized. `date`, `map`, `set` and `object` do not have that limit and accept values from any realm. It fails with `invalid_type` and `{ expected: "instance of Class", received }`. A target that is not a function, such as an import that resolved to nothing, throws a `TypeError` when the validator is created.
 
 ## Formats
@@ -446,4 +447,4 @@ The coercing validators accept text that holds a value, convert it, and then app
 
 ### Types
 
-`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `ArrayOptions`, `TupleOptions`, `SizeOptions`, `LazyOptions`, `RefineIssue`, `InferTuple`, `InferRecord`, `InferDiscriminated`, `Variants`, `PartialShape`, `LiteralValue`, `EnumLike`, `Constructor`, `Messages`, `FlattenedErrors` and `StandardSchemaV1` are exported for annotating your own code. Each is documented in the source and listed in the [API reference](reference/index.md), and the ones you meet in everyday use are explained in [Custom validators](custom-validators.md) and [Issues and messages](errors.md).
+`Validator<T>`, `AsyncValidator<T>`, `AnyValidator`, `ValidationResult<T>`, `ValidationOk<T>`, `ValidationErr`, `ValidationFailure`, `ValidationIssue`, `ValidationIssueCode`, `ValidationPathSegment`, `IssueInput`, `Composed`, `Shape`, `InferShape`, `StringOptions`, `NumberOptions`, `BigintOptions`, `DateOptions`, `EmailOptions`, `UrlOptions`, `IpOptions`, `DatetimeOptions`, `ObjectOptions`, `ArrayOptions`, `TupleOptions`, `SizeOptions`, `LazyOptions`, `RefineIssue`, `InferTuple`, `InferRecord`, `InferDiscriminated`, `Variants`, `PartialShape`, `LiteralValue`, `EnumLike`, `Constructor`, `AnyFunction`, `Messages`, `FlattenedErrors` and `StandardSchemaV1` are exported for annotating your own code. Each is documented in the source and listed in the [API reference](reference/index.md), and the ones you meet in everyday use are explained in [Custom validators](custom-validators.md) and [Issues and messages](errors.md).

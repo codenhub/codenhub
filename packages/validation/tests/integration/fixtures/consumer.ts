@@ -18,6 +18,7 @@ import {
   fail,
   fallback,
   flatten,
+  func,
   formatIssue,
   intersection,
   is,
@@ -198,6 +199,11 @@ export const untypedLoadedOk = untypedLoaded("a").ok;
 export const parsed = transform(string(), (text) => JSON.parse(text));
 export const parsedSync: Validator<unknown> = parsed;
 export const parsedOk: boolean = parsed("1").ok;
+// func takes the signature it expects on trust, and without one produces a function of unknown result.
+export const handlers = object({ onChange: func<(value: string) => void>(), anything: func() });
+export const handlersValue: Infer<typeof handlers> = { onChange: (value: string) => void value, anything: () => 1 };
+// @ts-expect-error the signature given is the output type
+export const wrongHandler: Infer<typeof handlers> = { onChange: (value: number) => void value, anything: () => 1 };
 export const updates = object(partial({ name: string(), email: email() }));
 export const updateValue: Infer<typeof updates> = {};
 
