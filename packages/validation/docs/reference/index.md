@@ -711,6 +711,8 @@ Creates a validator that accepts exactly one value, compared with `===`. The typ
 
 **Returns** — A validator that produces `value`.
 
+**Throws** — When `value` is `NaN`, which no value equals, so the literal would accept nothing.
+
 **Example**
 
 ```ts

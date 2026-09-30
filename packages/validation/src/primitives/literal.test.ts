@@ -16,8 +16,8 @@ describe("literal", () => {
     expect(accepts(literal(1n), 1n, 1)).toEqual([true, false]);
   });
 
-  it("should distinguish NaN's never-equal nature, so a NaN literal matches nothing", () => {
-    expect(literal(Number.NaN)(Number.NaN).ok).toBe(false);
+  it("should refuse NaN, which no value equals, so the literal could accept nothing", () => {
+    expect(() => literal(Number.NaN)).toThrow(RangeError);
   });
 
   it("should compare symbols by identity", () => {

@@ -735,7 +735,7 @@ The options `min` and `max` are `Date`s, both inclusive, and throw a `RangeError
 
 ## Fixed values
 
-- `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`. The one exception is `literal(NaN)`, which matches nothing, since `NaN === NaN` is false.
+- `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`. The one exception is `NaN`: `NaN === NaN` is false, so `literal(NaN)` could accept nothing, and it throws a `RangeError` when created.
 - `oneOf(values)` accepts any one string or number of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The list is copied when the validator is created.
 - `nativeEnum(enumObject)` accepts any value of a TypeScript `enum`. It ignores the reverse-mapping names TypeScript adds to a numeric enum, so only the numbers are values.
 
