@@ -27,10 +27,12 @@ const FIELD_PATTERN = /^(?:to|cc|bcc|subject|body)$/;
 /** The fields that hold recipients, which must pass as addresses too. */
 const RECIPIENT_FIELD_PATTERN = /^(?:to|cc|bcc)$/;
 /**
- * The text of a `subject` or `body` as RFC 6068 writes it: letters, digits, `- . _ ~`, the delimiters
- * `! $ ' ( ) * + , ; : @`, and escapes, which is how a line break or any other character is written.
+ * The text of a `subject` or `body`: what RFC 6068 allows, letters, digits, `- . _ ~`, the delimiters
+ * `! $ ' ( ) * + , ; : @` and escapes, which is how a line break or any other character is written, and
+ * also `/` and `?`, which a URL query allows and links often hold unescaped, as in a body that is a link.
+ * `&`, `=` and `#` stay escaped, since they would end the field, start another or end the query.
  */
-const TEXT_VALUE_PATTERN = /^(?:[\w.~!$'()*+,;:@-]|%[0-9a-f]{2})*$/i;
+const TEXT_VALUE_PATTERN = /^(?:[\w.~!$'()*+,;:@/?-]|%[0-9a-f]{2})*$/i;
 /**
  * Characters of an address that a mailto URL must escape (RFC 6068): all but letters, digits, `@` and
  * `_ . ~ ! $ ' * + -`. Only a local part holds any, such as `?`, `&`, `#` or `%`, which would end the

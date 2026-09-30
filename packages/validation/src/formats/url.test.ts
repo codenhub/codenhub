@@ -266,11 +266,12 @@ describe("url without a host", () => {
     expect(valueOf(all("mailto://example.com/ada@example.com"))).toBe("mailto:%2F%2Fexample.com%2Fada@example.com");
   });
 
-  it("should accept subject and body text only as RFC 6068 writes it: qchar and escapes", () => {
+  it("should accept subject and body text as RFC 6068 writes it, and / and ? as a URL query allows them", () => {
     const valid = [
       "mailto:ada@example.com?subject=Hi%20there&body=Line%0D%0Aline",
       "mailto:ada@example.com?subject=(re):a,b;c@d!$'*+-._~",
       "mailto:ada@example.com?subject=",
+      "mailto:ada@example.com?subject=Why?&body=https://example.com/a?b",
     ];
     expect(accepts(mailto, ...valid)).toEqual(valid.map(() => true));
     const invalid = [
@@ -279,8 +280,6 @@ describe("url without a host", () => {
       "mailto:ada@example.com?body=a`b",
       "mailto:ada@example.com?subject=a{b}|c^d",
       "mailto:ada@example.com?body=a[b]",
-      "mailto:ada@example.com?body=a/b",
-      "mailto:ada@example.com?subject=a?b",
       "mailto:ada@example.com?body=a=b",
     ];
     expect(accepts(mailto, ...invalid)).toEqual(invalid.map(() => false));
