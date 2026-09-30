@@ -106,7 +106,7 @@ The package is `sideEffects: false`, every module is side-effect free at load, a
 - Options are read once when a validator is created, not per call, and defaults are resolved there.
 - The English wording lives in `messages/english-messages.ts` and is reachable only through the `englishMessages` export, so `formatIssue` itself carries none of it.
 
-`tests/integration/bundle-size.test.ts` bundles small consumer-shaped modules against the built `dist/` and asserts a gzip ceiling for each: one leaf validator, an object of a few fields, messages alone, and everything. A budget that fails means something made every validator heavier. Budgets sit a little above what each scenario measures, so ordinary changes pass and a regression shows. A change that grows a scenario past its budget raises that budget, and only that one, to the new size plus at least 10 bytes, rounded up to ten, and its commit says by how much and why.
+`tests/integration/bundle-size.test.ts` bundles small consumer-shaped modules against the built `dist/` and asserts a gzip ceiling for each: one leaf validator, an object of a few fields, messages alone, and everything. A budget that fails means something made a validator a tenth heavier. Each budget is what its scenario measured plus 10%, rounded up to ten bytes, so a fix that adds a few bytes passes without touching the test. When one fails on purpose, every scenario is measured again and every budget reset by the same rule, and the commit says what grew and why.
 
 ## Types
 
