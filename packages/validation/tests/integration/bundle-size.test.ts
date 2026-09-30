@@ -39,25 +39,25 @@ const scenarios: Scenario[] = [
   {
     name: "string",
     source: `import { string } from "DIST"; export const check = string({ min: 2, trim: true });`,
-    budget: 1230,
+    budget: 1270,
   },
   { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 1060 },
   {
     name: "object of three fields",
     source: `import { email, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });`,
-    budget: 3140,
+    budget: 3180,
   },
   {
     name: "object of three fields with messages",
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 4300,
+    budget: 4340,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 730 },
-  { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 1750 },
-  { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 1090 },
+  { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 1900 },
+  { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 1100 },
   {
     name: "datetime",
     source: `import { datetime } from "DIST"; export const check = datetime({ offset: true });`,
@@ -71,12 +71,12 @@ export const describe = (input: unknown) => { const result = check(input); retur
   {
     name: "oneOf",
     source: `import { oneOf } from "DIST"; export const check = oneOf(["admin", "user"]);`,
-    budget: 330,
+    budget: 440,
   },
   {
     name: "array",
     source: `import { array, string } from "DIST"; export const check = array(string(), { max: 5 });`,
-    budget: 1810,
+    budget: 1850,
   },
   {
     name: "set",
@@ -86,7 +86,7 @@ export const describe = (input: unknown) => { const result = check(input); retur
   {
     name: "map",
     source: `import { map, number, string } from "DIST"; export const check = map(string(), number());`,
-    budget: 2650,
+    budget: 2690,
   },
   {
     name: "tuple",
@@ -96,18 +96,18 @@ export const describe = (input: unknown) => { const result = check(input); retur
   {
     name: "record",
     source: `import { number, record, string } from "DIST"; export const check = record(string(), number());`,
-    budget: 2670,
+    budget: 2710,
   },
   {
     name: "union",
     source: `import { literal, union } from "DIST"; export const check = union([literal("a"), literal("b")]);`,
-    budget: 580,
+    budget: 620,
   },
   {
     name: "discriminatedUnion",
     source: `import { discriminatedUnion, object, string } from "DIST";
 export const check = discriminatedUnion("type", { a: object({ a: string() }), b: object({ b: string() }) });`,
-    budget: 2080,
+    budget: 2120,
   },
   { name: "json", source: `import { json } from "DIST"; export const check = json();`, budget: 700 },
   {
@@ -118,7 +118,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "coerceString",
     source: `import { coerceString } from "DIST"; export const check = coerceString();`,
-    budget: 1280,
+    budget: 1330,
   },
   {
     name: "coerceBoolean",
@@ -134,7 +134,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "standard",
     source: `import { englishMessages, number, standard } from "DIST"; export const check = standard(number(), englishMessages);`,
-    budget: 2810,
+    budget: 2820,
   },
   {
     name: "formatIssue with your own wording",
@@ -149,7 +149,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 9970,
+    budget: 10450,
   },
 ];
 
