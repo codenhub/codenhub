@@ -6,6 +6,7 @@ import { string } from "../primitives/string";
 import { accepts, codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { discriminatedUnion } from "./discriminated-union";
 import { object } from "./object";
+import { transform } from "./transform";
 
 describe("discriminatedUnion", () => {
   const event = discriminatedUnion("type", {
@@ -69,6 +70,15 @@ describe("discriminatedUnion", () => {
     expect(Object.keys(valueOf(event({ type: "key", key: "a" })))).toEqual(["type", "key"]);
     const passthrough = discriminatedUnion("type", { a: object({}, { unknownKeys: "passthrough" }) });
     expect(valueOf(passthrough({ type: "a", extra: 1 }))).toEqual({ type: "a", extra: 1 });
+  });
+
+  it("should throw when a variant produces something other than a plain object, instead of flattening it", async () => {
+    const dated = discriminatedUnion("type", { a: transform(object({}), () => new Date(0)) as never });
+    expect(() => dated({ type: "a" })).toThrow(new TypeError("variants.a must produce a plain object, received date"));
+    const listed = discriminatedUnion("type", { a: transform(object({}), async () => [1]) as never });
+    await expect(listed({ type: "a" })).rejects.toThrow(
+      new TypeError("variants.a must produce a plain object, received array"),
+    );
   });
 
   it("should let a strict object be a variant, since the variant does not see the tag", () => {

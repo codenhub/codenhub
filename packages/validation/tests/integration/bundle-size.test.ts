@@ -105,7 +105,7 @@ export const describe = (input: unknown) => { const result = check(input); retur
     name: "discriminatedUnion",
     source: `import { discriminatedUnion, object, string } from "DIST";
 export const check = discriminatedUnion("type", { a: object({ a: string() }), b: object({ b: string() }) });`,
-    budget: 1870,
+    budget: 1900,
   },
   { name: "json", source: `import { json } from "DIST"; export const check = json();`, budget: 640 },
   {
@@ -147,7 +147,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 8610,
+    budget: 8640,
   },
 ];
 

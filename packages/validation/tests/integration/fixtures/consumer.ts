@@ -203,6 +203,16 @@ export const clickX: number | undefined = (() => {
   const result = event(raw);
   return result.ok && result.value.type === "click" ? result.value.x : undefined;
 })();
+// A variant must not list the tag, which it is never given, and must produce an object that can carry it.
+export const listsTag = discriminatedUnion("type", {
+  // @ts-expect-error the variant lists the tag it is never given
+  a: object({ type: literal("a"), x: number() }),
+});
+export const producesArray = discriminatedUnion("type", {
+  // @ts-expect-error a variant must produce an object that can carry the tag, not an array
+  a: transform(object({}), () => [1]),
+});
+export const passthroughVariant = discriminatedUnion("type", { a: object({}, { unknownKeys: "passthrough" }) });
 export const both = intersection(object({ name: string() }), object({ age: number() }));
 export const bothValue: Infer<typeof both> = { name: "Ada", age: 36 };
 export const settingsFromText = json(object({ theme: oneOf(["light", "dark"]) }));
