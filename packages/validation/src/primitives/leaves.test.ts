@@ -48,27 +48,16 @@ const leaves: [name: string, factory: Leaf, good: unknown, bad: unknown][] = [
   ["coerceDate", coerceDate as Leaf, "2024-01-01", "x"],
 ];
 
-describe.each(leaves)("%s", (name, factory, good, bad) => {
+describe.each(leaves)("%s", (_name, factory, good) => {
   const refuse: Check<never> = () => [{ code: "refused", path: [] }];
 
   it("should accept a value of its kind with no arguments", () => {
     expect(factory()(good).ok).toBe(true);
   });
 
-  it("should word its own issue with the message option", () => {
-    if (name === "unknown") {
-      return;
-    }
-    expect(issuesOf(factory({ message: "Nope" })(bad)).map((issue) => issue.message)).toEqual(["Nope"]);
-    expect(issuesOf(factory({ message: (issue) => `Nope: ${issue.code}` })(bad))[0]?.message).toMatch(/^Nope: /);
-  });
-
-  it("should run checks, with or without options, on a value of its kind only", () => {
+  it("should run checks, with or without options", () => {
     expect(issuesOf(factory(refuse)(good)).map((issue) => issue.code)).toEqual(["refused"]);
     expect(issuesOf(factory({}, refuse)(good)).map((issue) => issue.code)).toEqual(["refused"]);
-    if (name !== "unknown") {
-      expect(issuesOf(factory(refuse)(bad)).map((issue) => issue.code)).not.toContain("refused");
-    }
   });
 
   it("should turn asynchronous with an asynchronous check, and only then", async () => {
@@ -81,6 +70,22 @@ describe.each(leaves)("%s", (name, factory, good, bad) => {
 
   it("should refuse a check that is not a function when it is created", () => {
     expect(() => factory({}, "x" as unknown as Check<never>)).toThrow(TypeError);
+  });
+});
+
+/** The leaves that reject something, which is every one but `unknown`. */
+const rejecting = leaves.filter(([name]) => name !== "unknown");
+
+describe.each(rejecting)("%s, given a value it rejects", (_name, factory, _good, bad) => {
+  const refuse: Check<never> = () => [{ code: "refused", path: [] }];
+
+  it("should word its own issue with the message option", () => {
+    expect(issuesOf(factory({ message: "Nope" })(bad)).map((issue) => issue.message)).toEqual(["Nope"]);
+    expect(issuesOf(factory({ message: (issue) => `Nope: ${issue.code}` })(bad))[0]?.message).toMatch(/^Nope: /);
+  });
+
+  it("should run no check, since the value is not of its kind", () => {
+    expect(issuesOf(factory(refuse)(bad)).map((issue) => issue.code)).not.toContain("refused");
   });
 });
 
