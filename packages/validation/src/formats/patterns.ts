@@ -30,6 +30,8 @@ export const isPublicHost = (host: string): boolean =>
  * the vowel signs of Devanagari.
  */
 const UNICODE_HOST_PATTERN = /^[\p{L}\p{M}\p{N}.-]+$/u;
+/** A label in punycode, the ASCII form of an internationalized one. */
+const PUNYCODE_LABEL_PATTERN = /(?:^|\.)xn--/i;
 /** Any character past ASCII. */
 const NON_ASCII_PATTERN = /[\u0080-\uffff]/;
 /** The longest a domain name can be, in its ASCII form. */
@@ -38,13 +40,16 @@ export const HOST_MAX_LENGTH = 253;
 /**
  * The ASCII form of a host that may be internationalized, as the URL parser writes it, so `münchen.de`
  * is `xn--mnchen-3ya.de`, or undefined when it is not a host at all, or not written in the normalized
- * form the parser reads it in. Text that is already ASCII is returned as it is. Only letters, digits,
- * hyphens and dots reach the parser, so nothing in the text can turn it into a port, a path or another
- * host.
+ * form the parser reads it in. Text that is already ASCII is returned as it is, unless it holds a
+ * punycode label that does not decode, such as `xn--zz`. Only letters, digits, hyphens and dots reach
+ * the parser, so nothing in the text can turn it into a port, a path or another host.
  */
 export function toAsciiHost(host: string): string | undefined {
   if (!NON_ASCII_PATTERN.test(host)) {
-    return host;
+    // A punycode label must decode, which the parser checks and a pattern cannot: `xn--zz` is none.
+    const isUndecodable =
+      PUNYCODE_LABEL_PATTERN.test(host) && HOSTNAME_PATTERN.test(host) && !URL.canParse(`http://${host}`);
+    return isUndecodable ? undefined : host;
   }
   // The parser maps a host through NFKC before encoding it, so a host that mapping changes, such as
   // fullwidth or decomposed letters, is a second spelling of another and would pass as a distinct string.

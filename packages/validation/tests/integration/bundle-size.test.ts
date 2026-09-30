@@ -44,17 +44,17 @@ const scenarios: Scenario[] = [
     name: "object of three fields",
     source: `import { email, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });`,
-    budget: 2890,
+    budget: 2910,
   },
   {
     name: "object of three fields with messages",
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 3910,
+    budget: 3930,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 680 },
-  { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 1710 },
+  { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 1730 },
   { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 1000 },
   {
     name: "datetime",
@@ -147,7 +147,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 8730,
+    budget: 8750,
   },
 ];
 

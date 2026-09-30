@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
 import { email } from "./email";
+import { url } from "./url";
 
 describe("email", () => {
   it("should accept ordinary addresses and leave them unchanged", () => {
@@ -19,6 +20,14 @@ describe("email", () => {
       true,
       true,
     ]);
+  });
+
+  it("should reject a punycode label that does not decode, in any position", () => {
+    const invalid = ["a@example.xn--zz", "a@xn--zz.com", "a@XN--ZZ.example.com", "a@a.xn--a"];
+    expect(accepts(email(), ...invalid)).toEqual(invalid.map(() => false));
+    expect(accepts(email(), "a@a.xn--ls8h", "a@XN--MNCHEN-3YA.de")).toEqual([true, true]);
+    const local = url({ protocols: ["mailto"], allowLocal: true });
+    expect(accepts(local, "mailto:a@xn--zz", "mailto:a@xn--mnchen-3ya")).toEqual([false, true]);
   });
 
   it("should reject a host the URL parser would rewrite before reading it, so one address has one spelling", () => {
