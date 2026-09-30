@@ -85,21 +85,40 @@ id(10n); // { ok: true, value: 10n }
 id(0n); // { ok: false, ... }, code "too_small"
 ```
 
-### boolean
+### check
 
 ```ts
-export declare function boolean(): Validator<boolean>;
+export declare function check<T>(test: (value: T) => boolean, issue?: IssueInput | string): Check<T>;
+export declare function check<T>(test: (value: T) => boolean | PromiseLike<boolean>, issue?: IssueInput | string): AsyncCheck<T>;
 ```
 
-Creates a validator for booleans. Only `true` and `false` pass; to accept text such as `"yes"`, use the coercing variant.
+Makes a check from a test of a typed value, for a rule a validator's options do not express.
 
-**Returns** — A validator that produces a boolean.
+Give it to a validator after its options. It runs once the value has its type: for an object, once every property has passed, so it can compare them. A test that returns a promise makes an [AsyncCheck](#asynccheck), and the validator given it asynchronous.
+
+**Parameters**
+
+- `test` — Returns `true` when the value is acceptable.
+- `issue` — What to report when it is not: an issue, or a string as its message. Defaults to code `"custom"` at the value's own location.
+
+**Type parameters**
+
+- `T` — The type of the value it checks.
+
+**Returns** — A check that reports the issue when `test` returns `false`.
+
+**Throws** — When `test` is not a function.
 
 **Example**
 
 ```ts
-boolean()(true); // { ok: true, value: true }
-boolean()("true"); // { ok: false, error: { issues: [{ code: "invalid_type", ... }] } }
+const even = check((n: number) => n % 2 === 0, "Must be even");
+number({ int: true }, even);
+
+const signup = object(
+  { password: string({ min: 8 }), confirm: string() },
+  check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
+);
 ```
 
 ### coerceBigint
@@ -415,6 +434,33 @@ Groups the messages of a failure for display: issues at the root go to `formErro
 
 **Returns** — The grouped messages.
 
+### format
+
+```ts
+export declare function format(name: string, test: (text: string) => boolean): Factory<string, MessageOptions>;
+```
+
+Makes the factory of a validator for a string format, which behaves exactly as `email()` or `uuid()` do.
+
+A value that is not a string fails with `invalid_type`, and a string the test rejects with `invalid_format` and `params.format` set to `name`. An accepted string is returned as written. The validators it makes take a `message` option and checks.
+
+**Parameters**
+
+- `name` — The name of the format, for the issue. Treat it as part of the format's contract.
+- `test` — Returns `true` for a string of the format.
+
+**Returns** — The factory of the validator.
+
+**Throws** — When `test` is not a function.
+
+**Example**
+
+```ts
+const slug = format("slug", (text) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text));
+slug()("hello-world"); // { ok: true, value: "hello-world" }
+slug({ message: "Use lowercase words and hyphens" })("Hello World"); // { ok: false, ... }
+```
+
 ### formatIssue
 
 ```ts
@@ -487,6 +533,36 @@ Only that the value is a function can be checked at runtime: the parameters it t
 const config = object({ onChange: func<(value: string) => void>() });
 config({ onChange: (value: string) => console.log(value) }); // { ok: true, ... }
 config({ onChange: "log" }); // { ok: false, ... }, params { expected: "function", received: "string" }
+```
+
+### guard
+
+```ts
+export declare function guard<T>(expected: string, accepts: (input: unknown) => input is T): Factory<T, MessageOptions>;
+```
+
+Makes the factory of a validator for any type, from a type guard.
+
+A value the guard rejects fails with `invalid_type` and `params.expected` set to `expected`. The validators it makes take a `message` option and checks, as every built-in one does.
+
+**Parameters**
+
+- `expected` — The name of the type, for the issue.
+- `accepts` — Returns `true` for a value of the type.
+
+**Type parameters**
+
+- `T` — The type the guard accepts.
+
+**Returns** — The factory of the validator.
+
+**Throws** — When `accepts` is not a function.
+
+**Example**
+
+```ts
+const file = guard("File", (input): input is File => input instanceof File);
+const upload = object({ avatar: file({ message: "Choose an image" }) });
 ```
 
 ### hex
@@ -1625,6 +1701,14 @@ allowPlus?: boolean;
 
 Accepts `+` in the local part, as in `me+tag@example.com`.
 
+### Factory
+
+```ts
+export interface Factory<T, TOptions>
+```
+
+The factory of a validator of `T` with options `TOptions`: options first and optional, then any checks. It makes a [Validator](#validator) while every check is a [Check](#check), and an [AsyncValidator](#asyncvalidator) as soon as one is an [AsyncCheck](#asynccheck).
+
 ### FlattenedErrors
 
 ```ts
@@ -1720,6 +1804,22 @@ maxDepth?: number;
 ```
 
 The most levels of `lazy` that may be open at once, counting every `lazy` validator, not only this one. Input nested deeper fails with `too_big` instead of exhausting the stack. Since the levels of every `lazy` count, a `maxDepth` of 1 inside another `lazy` fails at once: set it for the whole nesting.
+
+### MessageOptions
+
+```ts
+export interface MessageOptions
+```
+
+The options every validator takes.
+
+#### message
+
+```ts
+message?: Message;
+```
+
+Wording for every issue this validator reports itself, and none a child or a check reports.
 
 ### NumberOptions
 
@@ -2325,6 +2425,18 @@ Any validator, synchronous or asynchronous.
 
 - `T` — The type of the value on success.
 
+### AsyncCheck
+
+```ts
+export type AsyncCheck<T> = (value: T) => readonly ValidationIssue[] | undefined | PromiseLike<readonly ValidationIssue[] | undefined>;
+```
+
+A check that may finish later, such as one that asks a server whether a name is taken. A validator given one is an [AsyncValidator](#asyncvalidator).
+
+**Type parameters**
+
+- `T` — The type of the value it checks.
+
 ### AsyncValidator
 
 ```ts
@@ -2338,6 +2450,20 @@ Always `await` its result. It is a promise only when the validator actually had 
 **Type parameters**
 
 - `T` — The type of the value on success.
+
+### Check
+
+```ts
+export type Check<T> = (value: T) => readonly ValidationIssue[] | undefined;
+```
+
+A rule about a value that already has its type, given to a validator after its options: `string({ min: 3 }, startsWith("ab"))`. It returns nothing when the value passes, or the issues it found, with paths relative to the value.
+
+Make one with `check`, or write the function yourself.
+
+**Type parameters**
+
+- `T` — The type of the value it checks.
 
 ### Composed
 
@@ -2454,6 +2580,14 @@ export type LiteralValue = string | number | boolean | bigint | symbol | null | 
 
 A value a validator can require exactly: any primitive, including `null` and `undefined`.
 
+### Message
+
+```ts
+export type Message = string | ((issue: ValidationIssue) => string);
+```
+
+Wording for the issues one validator reports itself: the text, or a function that words an issue. A function is called when the issue is reported.
+
 ### Messages
 
 ```ts
@@ -2539,6 +2673,22 @@ export type Variants = Record<string, AnyValidator<object>>;
 The variants of a tagged union: a validator for each value the tag can have.
 
 ## Variables
+
+### boolean
+
+```ts
+export declare const boolean: Factory<boolean, MessageOptions>;
+```
+
+Creates a validator for booleans. Only `true` and `false` pass; to accept text such as `"yes"`, use the coercing variant.
+
+**Example**
+
+```ts
+boolean()(true); // { ok: true, value: true }
+boolean()("true"); // { ok: false, error: { issues: [{ code: "invalid_type", ... }] } }
+boolean({ message: "Choose yes or no" });
+```
 
 ### englishMessages
 

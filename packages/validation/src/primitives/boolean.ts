@@ -1,5 +1,7 @@
-import { invalidType, pass } from "../core/result";
-import type { Validator } from "../core/types";
+import { leaf, split } from "../core/checks";
+import type { Factory, MessageOptions } from "../core/types";
+
+const isBoolean = (input: unknown): input is boolean => typeof input === "boolean";
 
 /**
  * Creates a validator for booleans. Only `true` and `false` pass; to accept text such as `"yes"`, use
@@ -9,10 +11,10 @@ import type { Validator } from "../core/types";
  * ```ts
  * boolean()(true); // { ok: true, value: true }
  * boolean()("true"); // { ok: false, error: { issues: [{ code: "invalid_type", ... }] } }
+ * boolean({ message: "Choose yes or no" });
  * ```
- *
- * @returns A validator that produces a boolean.
  */
-export function boolean(): Validator<boolean> {
-  return (input) => (typeof input === "boolean" ? pass(input) : invalidType("boolean", input));
-}
+export const boolean = ((...args: unknown[]) => {
+  const [{ message }, checks] = split<MessageOptions, boolean>(args);
+  return leaf("boolean", isBoolean, message, checks);
+}) as Factory<boolean, MessageOptions>;

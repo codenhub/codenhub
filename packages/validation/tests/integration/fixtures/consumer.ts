@@ -5,6 +5,8 @@
 import {
   array,
   bigint,
+  boolean,
+  check,
   coerceBigint,
   coerceBoolean,
   coerceDate,
@@ -18,8 +20,10 @@ import {
   fail,
   fallback,
   flatten,
+  format,
   func,
   formatIssue,
+  guard,
   intersection,
   is,
   json,
@@ -46,7 +50,9 @@ import {
   unknown,
   url,
   withDefault,
+  type AsyncCheck,
   type AsyncValidator,
+  type Check,
   type Infer,
   type StandardSchemaV1,
   type Validator,
@@ -290,3 +296,27 @@ export const asStandard: StandardSchemaV1<unknown, { email: string }> = exposed;
 export const standardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: "a@example.com" };
 // @ts-expect-error the output type is the validator's output
 export const badStandardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: 1 };
+
+// Checks follow the options, which can be left out. A validator stays synchronous while every check
+// is, and becomes asynchronous with one asynchronous check.
+export const mustAgree: Check<boolean> = (value) => (value ? undefined : [{ code: "must_agree", path: [] }]);
+export const agreed: Validator<boolean> = boolean({ message: "Agree to continue" }, mustAgree);
+export const agreedBare: Validator<boolean> = boolean(mustAgree);
+export const remoteAgreed: AsyncCheck<boolean> = async (value) => (value ? undefined : [{ code: "x", path: [] }]);
+export const agreedLater: AsyncValidator<boolean> = boolean(remoteAgreed);
+// @ts-expect-error an asynchronous check makes an asynchronous validator
+export const agreedNow: Validator<boolean> = boolean(remoteAgreed);
+// @ts-expect-error a check of another type cannot be given
+export const wrongCheck = boolean(check((n: number) => n > 0));
+
+// Builders make factories that behave as the built-in ones do.
+export const slug = format("slug", (text) => /^[a-z-]+$/.test(text));
+export const slugValidator: Validator<string> = slug(
+  { message: "Use a slug" },
+  check((text) => text.length < 64),
+);
+export class Widget {}
+export const widget = guard("Widget", (input): input is Widget => input instanceof Widget);
+export type WidgetValue = Infer<ReturnType<typeof widget>>;
+export const widgetValue: WidgetValue = new Widget();
+export const asyncCheck: AsyncCheck<string> = check(async (text: string) => text !== "taken");

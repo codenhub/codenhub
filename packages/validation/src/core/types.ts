@@ -93,6 +93,33 @@ export type AsyncValidator<T> = (input: unknown) => ValidationResult<T> | Promis
 export type AnyValidator<T = unknown> = Validator<T> | AsyncValidator<T>;
 
 /**
+ * A rule about a value that already has its type, given to a validator after its options:
+ * `string({ min: 3 }, startsWith("ab"))`. It returns nothing when the value passes, or the issues it
+ * found, with paths relative to the value.
+ *
+ * Make one with `check`, or write the function yourself.
+ *
+ * @typeParam T - The type of the value it checks.
+ */
+export type Check<T> = (value: T) => readonly ValidationIssue[] | undefined;
+
+/**
+ * A check that may finish later, such as one that asks a server whether a name is taken. A validator
+ * given one is an {@link AsyncValidator}.
+ *
+ * @typeParam T - The type of the value it checks.
+ */
+export type AsyncCheck<T> = (
+  value: T,
+) => readonly ValidationIssue[] | undefined | PromiseLike<readonly ValidationIssue[] | undefined>;
+
+/**
+ * Wording for the issues one validator reports itself: the text, or a function that words an issue.
+ * A function is called when the issue is reported.
+ */
+export type Message = string | ((issue: ValidationIssue) => string);
+
+/**
  * The type a validator produces on success.
  *
  * @example
@@ -116,3 +143,24 @@ export type Infer<TValidator extends AnyValidator> =
 export type Composed<TChildren extends AnyValidator, TOutput> = [TChildren] extends [Validator<unknown>]
   ? Validator<TOutput>
   : AsyncValidator<TOutput>;
+
+/**
+ * The factory of a validator of `T` with options `TOptions`: options first and optional, then any
+ * checks. It makes a {@link Validator} while every check is a {@link Check}, and an
+ * {@link AsyncValidator} as soon as one is an {@link AsyncCheck}.
+ *
+ * @typeParam T - The type the validators it makes produce.
+ * @typeParam TOptions - Its options.
+ */
+export interface Factory<T, TOptions> {
+  (...checks: Check<T>[]): Validator<T>;
+  (options: TOptions, ...checks: Check<T>[]): Validator<T>;
+  (...checks: AsyncCheck<T>[]): AsyncValidator<T>;
+  (options: TOptions, ...checks: AsyncCheck<T>[]): AsyncValidator<T>;
+}
+
+/** The options every validator takes. */
+export interface MessageOptions {
+  /** Wording for every issue this validator reports itself, and none a child or a check reports. */
+  message?: Message;
+}

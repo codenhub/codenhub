@@ -4,6 +4,9 @@
  * @packageDocumentation
  */
 
+export { check } from "./builders/check";
+export { format } from "./builders/format";
+export { guard } from "./builders/guard";
 export { coerceBigint } from "./coercion/coerce-bigint";
 export { coerceBoolean } from "./coercion/coerce-boolean";
 export { coerceDate } from "./coercion/coerce-date";
@@ -34,9 +37,14 @@ export { is } from "./core/is";
 export { fail, pass, type IssueInput } from "./core/result";
 export type {
   AnyValidator,
+  AsyncCheck,
+  Check,
   AsyncValidator,
   Composed,
+  Factory,
   Infer,
+  Message,
+  MessageOptions,
   ValidationErr,
   ValidationFailure,
   ValidationIssue,
