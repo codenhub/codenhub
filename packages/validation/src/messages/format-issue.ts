@@ -4,9 +4,12 @@ import type { ValidationFailure, ValidationIssue, ValidationPathSegment } from "
  * Message text keyed by issue code, such as `englishMessages` or a translation.
  *
  * A string is used as it is. A function receives the issue, so it can word the message from
- * `params`. This is how messages are worded and localized.
+ * `params`, and the map it was found in, so it can word an issue nested in `params`, such as the one
+ * behind an `invalid_key`, with the same map. This is how messages are worded and localized.
  */
-export type Messages = Readonly<Record<string, string | ((issue: ValidationIssue) => string) | undefined>>;
+export type Messages = Readonly<
+  Record<string, string | ((issue: ValidationIssue, messages: Messages) => string) | undefined>
+>;
 
 /** Characters that would make a key read as more than one segment, or as an index. */
 const AMBIGUOUS_KEY_PATTERN = /[.[\]"]/;
@@ -74,7 +77,7 @@ export function formatIssue(issue: ValidationIssue, messages?: Messages): string
   if (custom === undefined) {
     return FALLBACK_MESSAGE;
   }
-  return typeof custom === "function" ? custom(issue) : custom;
+  return typeof custom === "function" ? custom(issue, messages as Messages) : custom;
 }
 
 /** Issue messages grouped for display next to form fields. */

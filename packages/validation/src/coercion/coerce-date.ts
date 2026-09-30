@@ -30,7 +30,9 @@ const readIso = (text: string): Date | undefined => {
  * the same bounds as {@link date}.
  *
  * @remarks
- * Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends
+ * Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM:SS`, an optional fraction
+ * and an optional zone: `Z`, or an offset written `+HH`, `+HHMM` or `+HH:MM`. That is wider than
+ * `datetime`, which checks one exact spelling. Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends
  * on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`.
  * Fractions of a second beyond milliseconds are cut, not rounded. A date without a time and a date-time without an offset are both read as UTC, so the result never
  * depends on the timezone of the machine. A value that cannot be converted fails with

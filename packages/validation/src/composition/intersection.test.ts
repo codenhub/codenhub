@@ -8,7 +8,9 @@ import { codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { array } from "./array";
 import { intersection } from "./intersection";
 import { json } from "./json";
+import { map } from "./map";
 import { object } from "./object";
+import { set } from "./set";
 import { transform } from "./transform";
 
 describe("intersection", () => {
@@ -46,6 +48,25 @@ describe("intersection", () => {
     const ids = array(object({ id: number() }));
     const names = array(object({ name: string() }));
     expect(valueOf(intersection(ids, names)([{ id: 1, name: "a" }]))).toEqual([{ id: 1, name: "a" }]);
+  });
+
+  it("should merge two maps entry by entry, recursively, and report a conflict at the entry's key", () => {
+    const counts = map(string(), object({ count: number() }));
+    const labels = map(string(), object({ label: string() }));
+    const merged = valueOf(intersection(counts, labels)(new Map([["a", { count: 1, label: "A" }]])));
+    expect(merged).toEqual(new Map([["a", { count: 1, label: "A" }]]));
+    const trimmed = map(string(), string({ trim: true }));
+    const upper = map(string(), string({ uppercase: true }));
+    expect(issuesOf(intersection(trimmed, upper)(new Map([["k", " a "]])))).toEqual([
+      { code: "invalid_intersection", path: ["k"] },
+    ]);
+  });
+
+  it("should accept two sets that hold the same values, and report sets that differ", () => {
+    const ids = set(number());
+    expect(valueOf(intersection(ids, set(number({ int: true })))(new Set([1, 2])))).toEqual(new Set([1, 2]));
+    const shifted = transform(set(number()), (values) => new Set([...values].map((value) => value + 1)));
+    expect(codesOf(intersection(ids, shifted)(new Set([1])))).toEqual(["invalid_intersection"]);
   });
 
   it("should treat dates holding the same moment as equal", () => {

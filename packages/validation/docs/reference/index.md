@@ -155,7 +155,7 @@ export declare function coerceDate(options?: DateOptions): Validator<Date>;
 
 Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [date](#date).
 
-Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`. Fractions of a second beyond milliseconds are cut, not rounded. A date without a time and a date-time without an offset are both read as UTC, so the result never depends on the timezone of the machine. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM:SS`, an optional fraction and an optional zone: `Z`, or an offset written `+HH`, `+HHMM` or `+HH:MM`. That is wider than `datetime`, which checks one exact spelling. Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`. Fractions of a second beyond milliseconds are cut, not rounded. A date without a time and a date-time without an offset are both read as UTC, so the result never depends on the timezone of the machine. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
 
 **Parameters**
 
@@ -219,7 +219,7 @@ Creates a validator for text that also accepts finite numbers, bigints and boole
 **Throws**
 
 - When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
-- When both `lowercase` and `uppercase` are set.
+- When both `lowercase` and `uppercase` are set, or `pattern` is not a regular expression.
 
 **Example**
 
@@ -488,7 +488,7 @@ hex()("xyz"); // { ok: false, ... }, code "invalid_format"
 export declare function hostname(): Validator<string>;
 ```
 
-Creates a validator for hostnames: dot-separated labels of letters, digits and hyphens, at most 253 characters, whose last label is not all digits, since a name that ends that way reads as an IPv4 address, and whose punycode labels, such as `xn--mnchen-3ya`, decode. Unlike `url`, single-label hosts such as `localhost` are accepted. The value is not modified.
+Creates a validator for hostnames: dot-separated labels of letters, digits and hyphens, at most 253 characters, whose last label is not a number, all digits or `0x` and hex digits, since the URL parser reads a name that ends that way as an IPv4 address (`0x7f000001` is `127.0.0.1`), and whose punycode labels, such as `xn--mnchen-3ya`, decode. An absolute name ending in one dot, such as `example.com.`, is accepted. Unlike `url`, single-label hosts such as `localhost` are accepted. The value is not modified.
 
 **Returns** — A validator that produces the hostname as a string.
 
@@ -535,7 +535,7 @@ export declare function intersection<TLeft extends AnyValidator, TRight extends 
 
 Creates a validator that accepts a value only when it passes both validators, and produces the two results merged.
 
-Both validators receive the same input and both run, so the issues of each are reported together. The outputs are merged: plain objects key by key and arrays of the same length item by item, recursively, while any other pair must be the same value, or two dates holding the same moment. Where the outputs differ otherwise, such as `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path, rather than one side silently winning. Two `object`s with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and asynchronous otherwise.
+Both validators receive the same input and both run, so the issues of each are reported together. The outputs are merged: plain objects and maps key by key and arrays of the same length item by item, recursively, and two sets must hold the same values, while any other pair must be the same value, or two dates holding the same moment. Where the outputs differ otherwise, such as `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path, rather than one side silently winning. Two `object`s with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and asynchronous otherwise.
 
 **Parameters**
 
@@ -799,6 +799,11 @@ Creates a validator that accepts any value of a TypeScript `enum`. The reverse-m
 
 **Returns** — A validator that produces a value of the enum.
 
+**Throws**
+
+- When the enum has no values, so the validator would accept nothing.
+- When a value is `NaN`, which no value equals.
+
 **Example**
 
 ```ts
@@ -954,6 +959,11 @@ Creates a validator that accepts any one value of a list, compared with `===`. T
 - `T` — The listed values.
 
 **Returns** — A validator that produces one of `values`.
+
+**Throws**
+
+- When `values` is empty, so the validator would accept nothing.
+- When `values` holds `NaN`, which no value equals.
 
 **Example**
 
@@ -1231,7 +1241,7 @@ Creates a validator for strings.
 **Throws**
 
 - When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
-- When both `lowercase` and `uppercase` are set.
+- When both `lowercase` and `uppercase` are set, or `pattern` is not a regular expression.
 
 **Example**
 
@@ -1879,6 +1889,22 @@ readonly path?: ReadonlyArray<PropertyKey | PathSegment> | undefined;
 
 Path segments pointing to the location of the invalid data.
 
+#### StandardSchemaV1.Options
+
+```ts
+interface Options
+```
+
+Options a caller can pass to `validate`.
+
+##### libraryOptions
+
+```ts
+readonly libraryOptions?: Record<string, unknown> | undefined;
+```
+
+Options specific to the library behind the schema.
+
 #### StandardSchemaV1.PathSegment
 
 ```ts
@@ -1919,7 +1945,7 @@ Inferred TypeScript types preserved for schema inspection.
 ##### validate
 
 ```ts
-readonly validate: (value: unknown) => Result<TOutput> | Promise<Result<TOutput>>;
+readonly validate: (value: unknown, options?: Options | undefined) => Result<TOutput> | Promise<Result<TOutput>>;
 ```
 
 Validates an unknown input value and returns a synchronous or asynchronous result.
@@ -2399,12 +2425,12 @@ A value a validator can require exactly: any primitive, including `null` and `un
 ### Messages
 
 ```ts
-export type Messages = Readonly<Record<string, string | ((issue: ValidationIssue) => string) | undefined>>;
+export type Messages = Readonly<Record<string, string | ((issue: ValidationIssue, messages: Messages) => string) | undefined>>;
 ```
 
 Message text keyed by issue code, such as `englishMessages` or a translation.
 
-A string is used as it is. A function receives the issue, so it can word the message from `params`. This is how messages are worded and localized.
+A string is used as it is. A function receives the issue, so it can word the message from `params`, and the map it was found in, so it can word an issue nested in `params`, such as the one behind an `invalid_key`, with the same map. This is how messages are worded and localized.
 
 ### PartialShape
 

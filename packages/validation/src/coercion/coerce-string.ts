@@ -20,7 +20,7 @@ import { string, type StringOptions } from "../primitives/string";
  * @param options - Constraints and clean-up, exactly as for `string`.
  * @returns A validator that produces a string.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
- * @throws {TypeError} When both `lowercase` and `uppercase` are set.
+ * @throws {TypeError} When both `lowercase` and `uppercase` are set, or `pattern` is not a regular expression.
  */
 export function coerceString(options: StringOptions = {}): Validator<string> {
   const strict = string(options);

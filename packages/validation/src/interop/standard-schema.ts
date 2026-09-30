@@ -1,5 +1,6 @@
 /**
- * Zero-dependency TypeScript interface definition matching the Standard Schema specification (v1).
+ * Zero-dependency TypeScript interface definition matching the Standard Schema specification (v1, as
+ * published in `@standard-schema/spec` 1.1).
  *
  * @see https://github.com/standard-schema/standard-schema
  */
@@ -30,7 +31,7 @@ export declare namespace StandardSchemaV1 {
     /** The vendor identifier of the schema library. */
     readonly vendor: string;
     /** Validates an unknown input value and returns a synchronous or asynchronous result. */
-    readonly validate: (value: unknown) => Result<TOutput> | Promise<Result<TOutput>>;
+    readonly validate: (value: unknown, options?: Options | undefined) => Result<TOutput> | Promise<Result<TOutput>>;
     /** Inferred TypeScript types preserved for schema inspection. */
     readonly types?: Types<TInput, TOutput> | undefined;
   }
@@ -52,6 +53,12 @@ export declare namespace StandardSchemaV1 {
     readonly value: TOutput;
     /** Discriminant indicating absence of validation issues. */
     readonly issues?: undefined;
+  }
+
+  /** Options a caller can pass to `validate`. */
+  export interface Options {
+    /** Options specific to the library behind the schema. */
+    readonly libraryOptions?: Record<string, unknown> | undefined;
   }
 
   /**

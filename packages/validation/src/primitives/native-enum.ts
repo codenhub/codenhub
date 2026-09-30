@@ -24,10 +24,15 @@ const isReverseMapping = (enumObject: EnumLike, key: string): boolean => {
  * @typeParam T - The enum object.
  * @param enumObject - The enum.
  * @returns A validator that produces a value of the enum.
+ * @throws {TypeError} When the enum has no values, so the validator would accept nothing.
+ * @throws {RangeError} When a value is `NaN`, which no value equals.
  */
 export function nativeEnum<T extends EnumLike>(enumObject: T): Validator<T[keyof T]> {
   const values = Object.keys(enumObject)
     .filter((key) => !isReverseMapping(enumObject, key))
     .map((key) => enumObject[key] as T[keyof T] & (string | number));
+  if (values.length === 0) {
+    throw new TypeError("nativeEnum() needs an enum with at least one value");
+  }
   return oneOf(values);
 }

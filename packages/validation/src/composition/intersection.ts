@@ -1,5 +1,5 @@
 import { chain, collect, type Maybe } from "../core/async";
-import { isPlainObject, setOwn, timeOf } from "../core/objects";
+import { entriesOf, isPlainObject, setOwn, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "../core/objects";
 import { assertFunction, failWith, pass, toIssue } from "../core/result";
 import type {
   AnyValidator,
@@ -31,9 +31,10 @@ function pathOf(pending: Pending): ValidationPathSegment[] {
 /**
  * Merges one pair, queueing the pairs inside it in `inner`. The same value on both sides is kept,
  * which is what a key both sides passed through unchecked holds, so a cycle in the input is never
- * followed, and so are two dates holding the same moment. Plain objects are merged key by key and
- * arrays of the same length item by item. Anything else cannot be both values at once, so it is
- * reported in `conflicts` at its path, and the right value stands in only so the walk can go on.
+ * followed, and so are two dates holding the same moment. Plain objects and maps are merged key by key,
+ * arrays of the same length item by item, and two sets holding the same values are one set. Anything
+ * else cannot be both values at once, so it is reported in `conflicts` at its path, and the right value
+ * stands in only so the walk can go on.
  */
 function mergeOne(pending: Pending, inner: Pending[], conflicts: ValidationIssue[]): unknown {
   const { left, right } = pending;
@@ -66,6 +67,29 @@ function mergeOne(pending: Pending, inner: Pending[], conflicts: ValidationIssue
       }
     }
     return merged;
+  }
+  if (sizeOfMap(left) !== undefined && sizeOfMap(right) !== undefined) {
+    const merged = new Map(entriesOf(left));
+    entriesOf(right).forEach(([key, value], index) => {
+      if (merged.has(key)) {
+        // A path names a key it can hold, a string or a number, and the entry's position otherwise, as `map` does.
+        const segment = typeof key === "string" || typeof key === "number" ? key : index;
+        const place = (both: unknown): void => {
+          merged.set(key, both);
+        };
+        inner.push({ left: merged.get(key), right: value, place, parent: pending, segment });
+      } else {
+        merged.set(key, value);
+      }
+    });
+    return merged;
+  }
+  const size = sizeOfSet(left);
+  if (size !== undefined && size === sizeOfSet(right)) {
+    const values = new Set(valuesOf(left));
+    if (valuesOf(right).every((value) => values.has(value))) {
+      return values;
+    }
   }
   conflicts.push(toIssue({ code: "invalid_intersection", path: pathOf(pending) }));
   return right;
@@ -104,8 +128,9 @@ function merge(left: unknown, right: unknown, conflicts: ValidationIssue[]): unk
  *
  * @remarks
  * Both validators receive the same input and both run, so the issues of each are reported together.
- * The outputs are merged: plain objects key by key and arrays of the same length item by item,
- * recursively, while any other pair must be the same value, or two dates holding the same moment. Where
+ * The outputs are merged: plain objects and maps key by key and arrays of the same length item by item,
+ * recursively, and two sets must hold the same values, while any other pair must be the same value, or
+ * two dates holding the same moment. Where
  * the outputs differ otherwise, such as `"  ab "` trimmed on one side and uppercased on the other, no
  * value satisfies both, so each such place fails with `invalid_intersection` at its path, rather than
  * one side silently winning. Two `object`s with `unknownKeys: "strict"` never pass together, since each rejects the

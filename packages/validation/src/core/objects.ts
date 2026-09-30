@@ -51,6 +51,16 @@ const sizeOf = (prototype: object, value: unknown): number | undefined => {
 /** The moment a `Date` holds, `NaN` for an invalid one, or undefined when the value is not a `Date`, in any realm. */
 export const timeOf = (value: unknown): number | undefined => brand(() => Date.prototype.getTime.call(value));
 
+/**
+ * The source of a regular expression, or undefined when the value is not one, in any realm. The getter
+ * is looked up when called, as `size` is, and reads the value's own slot, so an object that only has a
+ * `source` property is not taken for a regular expression.
+ */
+export const sourceOfRegExp = (value: unknown): string | undefined => {
+  const getter = Object.getOwnPropertyDescriptor(RegExp.prototype, "source")?.get as (() => string) | undefined;
+  return brand(() => getter?.call(value));
+};
+
 /** How many entries a `Map` holds, or undefined when the value is not a `Map`, in any realm. */
 export const sizeOfMap = (value: unknown): number | undefined => sizeOf(Map.prototype, value);
 
