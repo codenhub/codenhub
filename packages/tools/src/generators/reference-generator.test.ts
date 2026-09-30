@@ -240,4 +240,29 @@ describe("analyzeReference", () => {
       ].join("\n"),
     );
   });
+
+  it("reports a same-package type that the reference cannot find anywhere", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-unresolved", {
+      // A global type from a hand-written declaration file is never emitted, so there
+      // is no declaration to list it from.
+      "ambient.d.ts": "type Ambient = { readonly inner: string };\n",
+      "index.ts": [
+        "/**",
+        " * Makes an ambient value.",
+        " * @returns The value.",
+        " */",
+        "export function make(): Ambient {",
+        '  return { inner: "" };',
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+
+    expect(model.unresolved).toEqual([
+      { declaredIn: "src/ambient.d.ts", name: "Ambient", subpath: ".", symbol: "make" },
+    ]);
+    expect(files[0]?.contents).not.toContain("## Internal types");
+  });
 });

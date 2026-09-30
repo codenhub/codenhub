@@ -140,6 +140,8 @@ TypeDoc is a dependency rather than an in-house extractor because faithfully mod
 - `reference/unexpected-file` — `error` — a file exists under `docs/reference/` that the generator did not produce. `hub generate` only writes, so a page orphaned by a removed or renamed entrypoint must be deleted by hand in the same change; this finding fails the run until it is.
 - `reference/entrypoint` — `error` — a documented entrypoint's subpath is not kebab-case, its page path collides with another's, or a configured `entrypoints` key does not resolve.
 - `reference/unsupported-export` — `error` — a documented entrypoint exposes an export whose declaration kind the page model does not cover.
+- `reference/unresolved-type` — `error` — a documented declaration names a type from this package that no page documents.
+- `reference/empty-section` — `error` — a section would render nothing a reader can use: a symbol, overload, or declared member with no signature, or a namespace with no members. An inherited member is exempt, since it links to the type that declares it.
 
 Source JSDoc/TSDoc coverage is enforced by `undocumented-export/missing-jsdoc`, independently of reference opt-in and `prose`, as defined in `docs/specs/packages-documentation.md`. The `reference` rule owns generated-page correctness and does not duplicate that finding.
 
