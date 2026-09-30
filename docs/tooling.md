@@ -167,7 +167,7 @@ pnpm hub browsers --with-deps
 
 Browser suites run several packages at a time like any other script, so a package that starts a server MUST bind a port no other package uses. Two suites sharing a port passed only because the runs were once serialized, and would now race.
 
-A package opts in by declaring `@playwright/test`. Browsers are cached per Playwright version outside the repository, so packages on the same version share one install, and the command only downloads once for all of them. Extra arguments reach Playwright, which is how CI asks for the system libraries a headless browser needs on a runner with `--with-deps`.
+A package opts in by declaring `@playwright/test`. Browsers are cached per Playwright version outside the repository, so packages on the same version share one install, and the command only downloads once for all of them. Extra arguments reach Playwright, which is how CI asks for the system libraries a headless browser needs on a runner with `--with-deps`. An install that fails or times out is tried once more before it is reported: it fails mostly on the network, a download that drops or an operating system package mirror that stalls, and a second attempt opens new connections. `--timeout` bounds each attempt, not the pair.
 
 ## Asset placement
 
