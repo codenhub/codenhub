@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
+import { unknown } from "../primitives/unknown";
 import { accepts, codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { map } from "./map";
 
@@ -20,15 +21,23 @@ describe("map", () => {
     expect(issuesOf(stock({}))[0]?.params).toEqual({ expected: "map", received: "object" });
   });
 
-  it("should report issues at the entry's key when it is a string or a number", () => {
+  it("should report issues at the entry's key when it is a string", () => {
     expect(issuesOf(stock(new Map([["apples", -1]]))).map((issue) => issue.path)).toEqual([["apples"]]);
-    expect(issuesOf(map(number(), string())(new Map([[7, 1]]))).map((issue) => issue.path)).toEqual([[7]]);
   });
 
-  it("should fall back to the position for keys that are neither", () => {
-    const objectKeys = map(number(), number());
-    const result = objectKeys(new Map<unknown, unknown>([[{}, 1]]));
-    expect(issuesOf(result).map((issue) => issue.path)).toEqual([[0]]);
+  it("should report issues at the entry's position for any other key, so no two entries share a path", () => {
+    expect(issuesOf(map(number(), string())(new Map([[7, 1]]))).map((issue) => issue.path)).toEqual([[0]]);
+    const mixed = map(
+      unknown(),
+      string(),
+    )(
+      new Map<unknown, unknown>([
+        [{}, 1],
+        [0, 2],
+        ["0", 3],
+      ]),
+    );
+    expect(issuesOf(mixed).map((issue) => issue.path)).toEqual([[0], [1], ["0"]]);
   });
 
   it("should report a bad key as invalid_key holding the key's issues, and a bad value as itself", () => {

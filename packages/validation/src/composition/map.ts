@@ -1,7 +1,14 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { entriesOf, sizeOfMap } from "../core/objects";
 import { assertFunction, collectNested, failWith, invalidType, pass, repeatedKey, toIssue } from "../core/result";
-import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
+import type {
+  AnyValidator,
+  Composed,
+  Infer,
+  ValidationIssue,
+  ValidationPathSegment,
+  ValidationResult,
+} from "../core/types";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
 /**
@@ -9,7 +16,8 @@ import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
  *
  * @remarks
  * A wrong size is reported at once, without validating the entries. An issue's path ends at the
- * entry's key when it is a string or a number, and at its position in iteration order otherwise. A
+ * entry's key when it is a string, and at its position in iteration order, a number, for any other
+ * key, so no two entries share a path, as a number key and the position of an object key could. A
  * key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key
  * validator found. A key that the key validator changes must stay distinct: an entry that arrives at a
  * key already taken is reported as `invalid_key`, so no value is silently replaced.
@@ -48,9 +56,8 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
       return failWith(oversize);
     }
     const entries = entriesOf(input);
-    const segments = entries.map(([name], index) =>
-      typeof name === "string" || typeof name === "number" ? name : index,
-    );
+    // A string key is its own segment; any other is the position, a number, so segments never collide.
+    const segments = entries.map(([name], index) => (typeof name === "string" ? name : index));
     const results = entries.map(([name, item]) =>
       chain(key(name), (keyResult) => chain(value(item), (valueResult) => ({ keyResult, valueResult }))),
     );
@@ -58,7 +65,7 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
       const issues: ValidationIssue[] = [];
       const output = new Map<unknown, unknown>();
       settled.forEach(({ keyResult, valueResult }, index) => {
-        const segment = segments[index] as string | number;
+        const segment = segments[index] as ValidationPathSegment;
         if (!keyResult.ok) {
           // Wrapped, so a bad key is not mistaken for a bad value at the same path.
           issues.push(toIssue({ code: "invalid_key", path: [segment], params: { issues: keyResult.error.issues } }));
