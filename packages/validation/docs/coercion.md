@@ -45,7 +45,7 @@ A value that cannot be converted fails with `invalid_type`, and its `params` are
 
 A fraction of a second beyond milliseconds is cut, not rounded, the same way on every runtime, and a timestamp with a fraction of a millisecond is rejected rather than cut. Leap seconds (`23:59:60`) are rejected, since a `Date` cannot hold one. The text `"-0"` is read as `0`, and a decimal is read as the nearest double, so `"0.30000000000000004999"` is `0.30000000000000004`.
 
-Date-only strings and date-times without an offset are both read as UTC, so the result does not depend on the timezone of the machine. Include an offset or `Z` in text you produce when the moment is not UTC.
+Date text is read in these ISO 8601 forms: a date `YYYY-MM-DD` alone, or followed by `T` or a space, a time `HH:MM:SS`, an optional fraction of a second, and an optional zone, which is `Z` or an offset written `+HH`, `+HHMM` or `+HH:MM` (or with `-`). This is wider than `datetime()`, which accepts only the `T` separator and `Z` or, with `offset`, `+HH:MM`, because a converter reads what programs and people commonly write while a format checks one exact spelling. Date-only strings and date-times without an offset are both read as UTC, so the result does not depend on the timezone of the machine. Include an offset or `Z` in text you produce when the moment is not UTC.
 
 ## Reading a whole environment
 

@@ -207,7 +207,7 @@ IPv4 is four decimal parts from 0 to 255 without leading zeros, which some parse
 
 ### `datetime`
 
-`datetime(options?)` requires the `T` separator, a time, and `Z`, and rejects days that do not exist, so `2026-02-30T00:00:00Z` fails. The options are `offset`, default `false`, which accepts a UTC offset such as `+02:00` instead of only `Z`, and `precision`, an integer from 0 to 9, which requires exactly that many fractional-second digits (`0` forbids them; without it they are optional). A `precision` outside that throws a `RangeError` when the validator is created. Leap seconds (`23:59:60`) are rejected.
+`datetime(options?)` requires the `T` separator, a time, and `Z`, and rejects days that do not exist, so `2026-02-30T00:00:00Z` fails. The options are `offset`, default `false`, which accepts a UTC offset such as `+02:00` instead of only `Z`, and `precision`, an integer from 0 to 9, which requires exactly that many fractional-second digits (`0` forbids them; without it they are optional). A `precision` outside that throws a `RangeError` when the validator is created. Leap seconds (`23:59:60`) are rejected. `coerceDate` reads more spellings than this, such as a space for the `T`, an offset without its colon or no zone at all, because it converts text rather than checks its form; [Coercion](coercion.md) lists them.
 
 ## Objects
 
