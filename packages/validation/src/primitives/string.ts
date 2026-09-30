@@ -70,7 +70,7 @@ const invalidFormat = (format: string, extra: Record<string, unknown> = {}): Val
  * @param options - Constraints and clean-up to apply.
  * @returns A validator that produces a string.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
- * @throws {TypeError} When both `lowercase` and `uppercase` are set.
+ * @throws {TypeError} When both `lowercase` and `uppercase` are set, or `pattern` is not a regular expression.
  */
 export function string(options: StringOptions = {}): Validator<string> {
   const { min, max, length, pattern, startsWith, endsWith, includes, trim, lowercase, uppercase } = options;
@@ -88,6 +88,10 @@ export function string(options: StringOptions = {}): Validator<string> {
   assertOrder("length", length, "max", max);
   if (lowercase === true && uppercase === true) {
     throw new TypeError("string() cannot lowercase and uppercase at once");
+  }
+  // Read by shape, so a regular expression from another realm, such as an iframe, is one too.
+  if (pattern !== undefined && (typeof pattern.source !== "string" || typeof pattern.flags !== "string")) {
+    throw new TypeError(`pattern must be a RegExp, received ${pattern === null ? "null" : typeof pattern}`);
   }
   const stateless = pattern && new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ""));
 

@@ -1,3 +1,5 @@
+import { runInNewContext } from "node:vm";
+
 import { describe, expect, it } from "vitest";
 
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
@@ -100,6 +102,13 @@ describe("string", () => {
     it("should refuse to lowercase and uppercase at once when the validator is created", () => {
       expect(() => string({ lowercase: true, uppercase: true })).toThrow(TypeError);
     });
+  });
+
+  it("should refuse a pattern that is not a regular expression when the validator is created", () => {
+    const pattern = "^a$" as unknown as RegExp;
+    expect(() => string({ pattern })).toThrow(new TypeError("pattern must be a RegExp, received string"));
+    const foreign = runInNewContext("/^a$/") as RegExp;
+    expect(accepts(string({ pattern: foreign }), "a", "b")).toEqual([true, false]);
   });
 
   it("should report every constraint that fails, in a fixed order", () => {
