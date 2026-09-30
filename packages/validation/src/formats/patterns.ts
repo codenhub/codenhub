@@ -2,6 +2,13 @@
 export const HOSTNAME_PATTERN =
   /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i;
 
+/**
+ * An IPv4 address as four decimal parts from 0 to 255, without the leading zeros some parsers read as
+ * octal. It is also the one form the URL parser writes, so a host in any other form is one it rewrites.
+ */
+export const IPV4_PATTERN =
+  /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/;
+
 /** A domain name with at least one dot and a real top-level domain. */
 const DOMAIN_NAME_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,}|xn--[a-z0-9-]{1,59})$/i;
 

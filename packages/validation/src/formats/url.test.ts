@@ -162,6 +162,21 @@ describe("url", () => {
     ]);
   });
 
+  it("should accept an IPv4 host only as ip() writes it, never in a form the URL parser rewrites", () => {
+    const local = url({ allowLocal: true, protocols: ["http", "foo"] });
+    expect(accepts(local, "http://127.0.0.1:3000/", "http://10.0.0.1")).toEqual([true, true]);
+    const rewritten = [
+      "http://0x7f.1",
+      "http://0X7F.0.0.1",
+      "http://127.1",
+      "http://0177.0.0.1",
+      "http://127.000.0.1",
+      "http://2130706433",
+      "foo://127.1",
+    ];
+    expect(accepts(local, ...rewritten)).toEqual(rewritten.map(() => false));
+  });
+
   it("should copy the protocol list, so changing it later has no effect", () => {
     const protocols = ["https"];
     const validator = url({ protocols });

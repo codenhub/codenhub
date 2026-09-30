@@ -54,7 +54,7 @@ export const describe = (input: unknown) => { const result = check(input); retur
     budget: 3910,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 680 },
-  { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 1630 },
+  { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 1710 },
   { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 1000 },
   {
     name: "datetime",
@@ -147,7 +147,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 8700,
+    budget: 8730,
   },
 ];
 

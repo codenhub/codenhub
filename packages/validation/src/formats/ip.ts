@@ -1,8 +1,7 @@
 import type { Validator } from "../core/types";
+import { IPV4_PATTERN } from "./patterns";
 import { textFormat } from "./text-format";
 
-const IPV4_PATTERN =
-  /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/;
 const IPV6_GROUP_PATTERN = /^[0-9a-f]{1,4}$/i;
 /** A zone names a network interface, such as `eth0`. */
 const IPV6_ZONE_PATTERN = /^[0-9a-z._~-]+$/i;
