@@ -43,6 +43,8 @@ export interface ObjectOptions {
  * property is validated even when an earlier one failed, so the result lists every problem. Issue
  * paths lead from the object down to the property. The output is a new object; the input is never
  * modified. It is synchronous when every property validator is, and asynchronous otherwise.
+ * A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's
+ * exception does; data parsed from JSON has none.
  *
  * @example
  * ```ts

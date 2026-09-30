@@ -29,7 +29,9 @@ function merge(left: unknown, right: unknown): unknown {
  * @remarks
  * Both validators receive the same input and both run, so the issues of each are reported together.
  * Plain-object outputs are merged key by key, recursively; for anything else the right validator's
- * output wins. It is synchronous when both validators are, and asynchronous otherwise.
+ * output wins. Two `object`s with `unknownKeys: "strict"` never pass together, since each rejects the
+ * keys only the other lists; spread their shapes into one strict object instead. It is synchronous
+ * when both validators are, and asynchronous otherwise.
  *
  * @example
  * ```ts

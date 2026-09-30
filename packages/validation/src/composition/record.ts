@@ -23,7 +23,8 @@ export type InferRecord<TKey extends string, TValue> = string extends TKey
  * Each key passes `key` and each value passes `value`. An issue's path ends at the key it belongs
  * to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the
  * key validator found, so it cannot be mistaken for a problem with the value; the value is still
- * checked. Only own enumerable properties are read. The output is
+ * checked. Only own enumerable properties are read, and a getter or `Proxy` trap in the input that
+ * throws while it is read propagates, as a callback's exception does. The output is
  * a new object and the input is never modified. A key such as `__proto__` from parsed JSON is
  * kept as data and never writes to a prototype. A key that the `key` validator changes, such as by
  * lowercasing, must stay distinct: a second entry that arrives at a key already taken is reported as

@@ -32,6 +32,8 @@ export type InferDiscriminated<TKey extends string, TVariants extends Variants> 
  * A missing, unknown or non-string tag fails with `invalid_union`, at the
  * tag's path, with `params: { discriminator, options }` listing the accepted tags. It is synchronous
  * when every variant is, and asynchronous otherwise.
+ * A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's
+ * exception does; data parsed from JSON has none.
  *
  * @example
  * ```ts
