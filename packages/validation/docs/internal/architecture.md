@@ -254,7 +254,35 @@ The claim held in the sense that matters for correctness: the built output conta
 
 Two consequences follow. First, hand-written checks are still cheaper in bytes for a handful of options, and the package earns its place through consistency and shared behavior rather than size, so "lightweight" holds per validator and not for a package that validates little. Second, inlining copies the shared core into every package that inlines it: an application that installs several such packages carries one copy per package, where a regular dependency would be deduplicated by the application's bundler. Inlining buys isolation from this package's version, and that is worth revisiting once the API is 1.0.
 
-The measurements above are of 0.1.0. The migration also exposed three gaps, which 0.2.0 closes: there was no leaf for function-valued options, which `func()` now is; a validator could not carry a fixed message of its own, which the `message` option now does; and the shared core was about 0.6 kB in every consumer, which 0.2.0 slims by naming received types without reading prototypes and by building issues through one constructor. The adopter is measured again for 0.2.0 and the numbers replace these. One gap remains by design: a message that needs the offending value cannot be built by a validator, since issues never hold it.
+The measurements above are of 0.1.0. The migration also exposed three gaps, which 0.2.0 closes: there was no leaf for function-valued options, which `func()` now is; a validator could not carry a fixed message of its own, which the `message` option now does; and the shared core was about 0.6 kB in every consumer. One gap remains by design: a message that needs the offending value cannot be built by a validator, since issues never hold it.
+
+### 0.2.0, measured again
+
+The same package, moved to checks, `func` and `unique`, measures 7.88 kB against 8.04 kB for the same package on 0.1.0, each built file minified with esbuild and gzipped, then summed. So 0.2.0 costs this adopter 0.16 kB less while adding checks, messages per validator and asynchronous checks to everything it uses: the slimmer type naming and the rare constraints leaving `string` pay for the argument handling and check running every validator now shares. That shared core is about 0.65 kB in a bundle with one leaf in it.
+
+### Compared with valibot
+
+The same schemas, bundled the same way (tsdown, minified, gzipped), against valibot 1.5.0 with `safeParse`, in bytes:
+
+| Scenario                                             | This package | valibot |
+| ---------------------------------------------------- | ------------ | ------- |
+| `boolean()`                                          | 688          | 689     |
+| `string()`                                           | 1078         | 689     |
+| `string({ min: 2, trim: true })`                     | 1087         | 911     |
+| `number({ int: true })`                              | 1223         | 873     |
+| `object` of two strings                              | 1620         | 1059    |
+| `email()`                                            | 1323         | 914     |
+| `url()`                                              | 2335         | 898     |
+| `object` of a name, an email and an optional integer | 2799         | 1491    |
+| the same, with English messages                      | 3979         | 1514    |
+
+Valibot's issues always carry an English message, so its last two rows are the same code; here the English is a separate import a consumer that words its own issues never bundles.
+
+The shared core costs the same in both. The difference is in the validators, and three things account for most of it:
+
+- **Options are carried whole.** `string()` bundles the code for `min`, `max`, `length`, `trim` and `case`, and the checks at creation that reject impossible combinations, with their error text, even when none is used. Valibot bundles only the actions a pipe names. This is the cost of the hybrid: the common constraints are short to write and paid for together.
+- **`email` and `url` are not patterns.** Valibot's `email` is a regular expression and its `url` asks whether `new URL` accepts the text. These read the text with the URL parser and return its reading, reject credentials, script schemes, special-use and single-label hosts, and whitespace the parser would drop, and give `mailto`, `tel` and `urn` their own rules. That is [what the formats defend against](#formats-are-allowlists), and it is most of their weight.
+- **Objects defend against their input.** `object` accepts plain objects from any realm and never a class instance, defines every key as own data so `__proto__` cannot reach a prototype, and supports strict and passthrough keys.
 
 ## Coercion
 
