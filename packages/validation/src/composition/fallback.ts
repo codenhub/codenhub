@@ -8,7 +8,9 @@ import type { AnyValidator, Composed, Infer, ValidationIssue } from "../core/typ
  *
  * @remarks
  * The fallback is trusted and is not validated. A function is called with the issues that were
- * found, so it can log them, and its return value becomes the result. Use this sparingly: it turns
+ * found, so it can log them, and its return value becomes the result. A value that is not a function
+ * is the same value in every result, so pass a function for an object or array, such as `() => []`,
+ * or a change to one result shows up in the next. Use this sparingly: it turns
  * bad input into a valid-looking value, so reserve it for data where a sensible default is safer
  * than an error, such as a stored preference that may be out of date.
  *

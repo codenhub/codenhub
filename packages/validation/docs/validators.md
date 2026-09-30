@@ -306,7 +306,7 @@ const tags = withDefault(array(string()), () => []);
 
 ### `fallback`
 
-`fallback(validator, value)` replaces a value that fails `validator` with a fallback, so the result never fails. The fallback is trusted and is not validated, and a function receives the issues that were found, which is the place to log them. A function is called with the issues, so a fallback that is itself a function has to be returned from one: `fallback(validator, () => callback)`. This turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
+`fallback(validator, value)` replaces a value that fails `validator` with a fallback, so the result never fails. The fallback is trusted and is not validated, and a function receives the issues that were found, which is the place to log them. A fallback that is not a function is the same value in every result, so pass a function for an array or object, such as `fallback(array(string()), () => [])`, or a change to one result shows up in the next. A function is called with the issues, so a fallback that is itself a function has to be returned from one: `fallback(validator, () => callback)`. This turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
 
 ### `pipe`
 
