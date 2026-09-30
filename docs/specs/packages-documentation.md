@@ -125,7 +125,7 @@ docs/
   troubleshooting.md
 ```
 
-Packages SHOULD adapt their structure when another organization better matches their public surface. Do not add `docs/guidelines/documentation.md`; `docs/index.md` owns the documentation entrypoint. The repository's root `docs/guidelines/documentation.md` is outside this rule: root `docs/` is never published, and a README is what a repository browser shows first.
+Packages SHOULD adapt their structure when another organization better matches their public surface. Do not add `docs/README.md`; `docs/index.md` owns the documentation entrypoint. The repository's root `docs/README.md` is outside this rule: root `docs/` is never published, and a README is what a repository browser shows first.
 
 Public documentation paths MUST be deterministic and portable:
 
