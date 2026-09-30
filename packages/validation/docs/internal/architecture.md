@@ -77,8 +77,11 @@ Options that change the value are named as changes, and checks never change it: 
 A check is a rule about a value that already has its type. It is not a validator: it receives the typed value, and returns nothing when the value passes, or the issues it found.
 
 ```ts
-type Check<T> = (value: T) => ValidationIssue[] | undefined | PromiseLike<ValidationIssue[] | undefined>;
+type Check<T> = (value: T) => readonly ValidationIssue[] | undefined;
+type AsyncCheck<T> = (value: T) => readonly ValidationIssue[] | undefined | PromiseLike<readonly ValidationIssue[] | undefined>;
 ```
+
+The two mirror `Validator` and `AsyncValidator`: a check a consumer writes and types as `Check` keeps its validator synchronous, where one typed as the broader `AsyncCheck` would make every validator given it asynchronous.
 
 A check is given to a validator after its options: `string({ min: 3 }, startsWith("ab"))`, `object(shape, check((data) => data.password === data.confirm, { path: ["confirm"] }))`. It runs once the value has its type: for a leaf, as soon as the input has passed the type test, next to the option constraints; for a composer, once every child has passed, since before that there is no value of the type to check. A check on an object therefore reports nothing while a property fails, which is the price of giving it a typed value.
 
@@ -88,11 +91,11 @@ Checks replace `refine`, which wrapped a validator to add one rule. A check atta
 
 ### Builders
 
-The built-in validators and checks are made with three public helpers, so a custom one behaves exactly as a built-in does, with the same issue shapes, the same `message` option and the same checks:
+Three public helpers make validators and checks on the same internals as the built-in ones, `leaf` and `split` in `core/checks.ts`, so a custom one behaves exactly as a built-in does, with the same issue shapes, the same `message` option and the same checks. The built-ins call those internals rather than the helpers, because `export const boolean = guard(...)` is a call made when the module loads, which a bundler cannot drop, and every consumer would carry every such validator:
 
 - `check(predicate, issue?)` makes a check of any type. The issue is an issue to report, or a string as its message, and defaults to code `custom`.
 - `format(name, predicate)` makes a factory for a string format, such as `slug()`: a non-string fails with `invalid_type`, and a string the predicate rejects with `invalid_format` and `params.format` set to `name`.
-- `guard(expected, typeGuard)` makes a validator for any type from a type guard: `guard("File", (value): value is File => value instanceof File)`. A value the guard rejects fails with `invalid_type` and `params.expected` set to `expected`.
+- `guard(expected, typeGuard)` makes a factory for a validator of any type from a type guard: `const file = guard("File", (value): value is File => value instanceof File)`, used as `file()`. A value the guard rejects fails with `invalid_type` and `params.expected` set to `expected`.
 
 A validator with options of its own is a function that checks its options and returns one of these. No further helper exists for it, because a function already does it.
 
@@ -208,6 +211,7 @@ The package is `sideEffects: false`, every module is side-effect free at load, a
 - One validator or check per module; a module imports only `core/` helpers and other validators it truly composes.
 - No shared mutable state, no module-level registries, no `Object.assign`-style attachment of properties to functions at load. The one piece of module-level state is the depth counter of `lazy`, described under [Results, not exceptions](#results-not-exceptions): it is created at load without a side effect and is back at zero whenever no validator is running.
 - Options are read once when a validator is created, not per call, and defaults are resolved there.
+- No export is the result of a call made at load, such as `export const boolean = guard(...)`: a bundler keeps a call it cannot prove pure, so every consumer would carry it. An export is a function or a constant.
 - The English wording lives in `messages/english-messages.ts` and is reachable only through the `englishMessages` export, so `formatIssue` itself carries none of it.
 
 `tests/integration/bundle-size.test.ts` bundles small consumer-shaped modules against the built `dist/` and asserts a gzip ceiling for each: one leaf validator, an object of a few fields, messages alone, and everything. A budget that fails means something made a validator a tenth heavier. The shared core, the code every validator carries, is where a byte costs most: it is paid once per validator family a consumer uses, so a helper there earns its place only if nearly every validator needs it. Each budget is what its scenario measured plus 10%, rounded up to ten bytes, so a fix that adds a few bytes passes without touching the test. When one fails on purpose, every scenario is measured again and every budget reset by the same rule, and the commit says what grew and why.
@@ -216,7 +220,7 @@ The package is `sideEffects: false`, every module is side-effect free at load, a
 
 There is no input-type parameter. Every validator accepts `unknown`, and that is the honest input type of a function that exists to check unknown data. `Infer<typeof validator>` reads the output type from either flavor.
 
-The public types are the ones a consumer writes: `Validator`, `AsyncValidator`, `Check`, `Infer`, `ValidationResult`, `ValidationIssue`, `Messages` and the options interface of each validator. The types that compute a composer's return type, such as `Composed`, `AnyValidator` and `InferShape`, are internal, so they can change without breaking a caller.
+The public types are the ones a consumer writes: `Validator`, `AsyncValidator`, `Check`, `AsyncCheck`, `Message`, `MessageOptions`, `Factory`, `Infer`, `ValidationResult`, `ValidationIssue`, `Messages` and the options interface of each validator. The types that compute a composer's return type, such as `Composed`, `AnyValidator` and `InferShape`, are internal, so they can change without breaking a caller.
 
 An `object` output type is built with `Simplify`, so hover text shows one object, and a property whose validator can produce `undefined` becomes optional in it.
 
