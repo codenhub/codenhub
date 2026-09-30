@@ -1,17 +1,19 @@
-import { pass } from "../core/result";
-import type { Validator } from "../core/types";
+import { leaf, split } from "../core/checks";
+import type { Factory, MessageOptions } from "../core/types";
+
+const always = (): boolean => true;
 
 /**
- * Creates a validator that accepts any value and passes it through unchanged. Use it for a property
- * whose content you do not check, or as the start of a `pipe`.
+ * Creates a validator that accepts every value, unchanged. Checks given to it run on any value, which
+ * makes it the base for a rule about a value of no particular type.
  *
  * @example
  * ```ts
- * unknown()({ anything: [1, 2, 3] }); // { ok: true, value: { anything: [1, 2, 3] } }
+ * const metadata = object({ id: string(), extra: unknown() });
+ * const serializable = unknown(check((value) => JSON.stringify(value) !== undefined, "Must be serializable"));
  * ```
- *
- * @returns A validator that produces `unknown`.
  */
-export function unknown(): Validator<unknown> {
-  return (input) => pass(input);
-}
+export const unknown = ((...args: unknown[]) => {
+  const [{ message }, checks] = split<MessageOptions, unknown>(args);
+  return leaf("unknown", always, message, checks);
+}) as Factory<unknown, MessageOptions>;

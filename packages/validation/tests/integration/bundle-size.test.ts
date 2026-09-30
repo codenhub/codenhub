@@ -34,26 +34,26 @@ const scenarios: Scenario[] = [
   {
     name: "number",
     source: `import { number } from "DIST"; export const check = number({ int: true, min: 0 });`,
-    budget: 1380,
+    budget: 1350,
   },
   {
     name: "string",
     source: `import { string } from "DIST"; export const check = string({ min: 2, trim: true });`,
-    budget: 1250,
+    budget: 1200,
   },
   { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 1200 },
   {
     name: "object of three fields",
     source: `import { email, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });`,
-    budget: 3360,
+    budget: 2900,
   },
   {
     name: "object of three fields with messages",
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 4510,
+    budget: 4070,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 830 },
   { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 2050 },
@@ -66,75 +66,75 @@ export const describe = (input: unknown) => { const result = check(input); retur
   {
     name: "date",
     source: `import { date } from "DIST"; export const check = date({ min: new Date(0) });`,
-    budget: 790,
+    budget: 1040,
   },
   {
     name: "oneOf",
     source: `import { oneOf } from "DIST"; export const check = oneOf(["admin", "user"]);`,
-    budget: 380,
+    budget: 780,
   },
   {
     name: "array",
     source: `import { array, string } from "DIST"; export const check = array(string(), { max: 5 });`,
-    budget: 1820,
+    budget: 1760,
   },
   {
     name: "set",
     source: `import { number, set } from "DIST"; export const check = set(number());`,
-    budget: 2020,
+    budget: 1970,
   },
   {
     name: "map",
     source: `import { map, number, string } from "DIST"; export const check = map(string(), number());`,
-    budget: 2610,
+    budget: 2350,
   },
   {
     name: "tuple",
     source: `import { number, tuple } from "DIST"; export const check = tuple([number(), number()]);`,
-    budget: 1760,
+    budget: 1720,
   },
   {
     name: "record",
     source: `import { number, record, string } from "DIST"; export const check = record(string(), number());`,
-    budget: 2690,
+    budget: 2400,
   },
   {
     name: "union",
     source: `import { literal, union } from "DIST"; export const check = union([literal("a"), literal("b")]);`,
-    budget: 570,
+    budget: 820,
   },
   {
     name: "discriminatedUnion",
     source: `import { discriminatedUnion, object, string } from "DIST";
 export const check = discriminatedUnion("type", { a: object({ a: string() }), b: object({ b: string() }) });`,
-    budget: 2110,
+    budget: 2030,
   },
   { name: "json", source: `import { json } from "DIST"; export const check = json();`, budget: 550 },
   {
     name: "coerceNumber",
     source: `import { coerceNumber } from "DIST"; export const check = coerceNumber({ int: true });`,
-    budget: 1520,
+    budget: 1540,
   },
   {
     name: "coerceString",
     source: `import { coerceString } from "DIST"; export const check = coerceString();`,
-    budget: 1320,
+    budget: 1310,
   },
   {
     name: "coerceBoolean",
     source: `import { coerceBoolean } from "DIST"; export const check = coerceBoolean();`,
-    budget: 930,
+    budget: 960,
   },
   {
     name: "coerceBigint",
     source: `import { coerceBigint } from "DIST"; export const check = coerceBigint();`,
-    budget: 940,
+    budget: 1220,
   },
-  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1210 },
+  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1500 },
   {
     name: "standard",
     source: `import { englishMessages, number, standard } from "DIST"; export const check = standard(number(), englishMessages);`,
-    budget: 2730,
+    budget: 2660,
   },
   {
     name: "formatIssue with your own wording",
@@ -149,7 +149,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 11010,
+    budget: 11150,
   },
 ];
 

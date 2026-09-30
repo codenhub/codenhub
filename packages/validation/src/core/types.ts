@@ -159,6 +159,15 @@ export interface Factory<T, TOptions> {
   (options: TOptions, ...checks: AsyncCheck<T>[]): AsyncValidator<T>;
 }
 
+/**
+ * What follows a validator's own arguments, such as the value of `literal`: options, then checks, or
+ * checks alone. Every check is a {@link Check}.
+ */
+export type Rest<T, TOptions> = [options?: TOptions, ...checks: Check<T>[]] | Check<T>[];
+
+/** {@link Rest} where a check may be an {@link AsyncCheck}. */
+export type AsyncRest<T, TOptions> = [options?: TOptions, ...checks: AsyncCheck<T>[]] | AsyncCheck<T>[];
+
 /** The options every validator takes. */
 export interface MessageOptions {
   /** Wording for every issue this validator reports itself, and none a child or a check reports. */

@@ -30,10 +30,11 @@ import {
   lazy,
   literal,
   map,
-  nativeEnum,
   nullable,
   number,
   object,
+  startsWith,
+  symbol,
   oneOf,
   optional,
   partial,
@@ -139,7 +140,7 @@ enum Status {
   Active = "active",
   Archived = "archived",
 }
-export const status = nativeEnum(Status);
+export const status = oneOf(Status);
 export const statusValue: Infer<typeof status> = Status.Active;
 
 // Formats produce strings; date and bigint produce their own types.
@@ -320,3 +321,21 @@ export const widget = guard("Widget", (input): input is Widget => input instance
 export type WidgetValue = Infer<ReturnType<typeof widget>>;
 export const widgetValue: WidgetValue = new Widget();
 export const asyncCheck: AsyncCheck<string> = check(async (text: string) => text !== "taken");
+
+// Leaves with an argument of their own take options and checks after it, and a check's value is
+// typed by the validator it is given to.
+export const admin: Validator<"admin"> = literal("admin", { message: "Admins only" });
+export const roleChecked: Validator<"a" | "b"> = oneOf(
+  ["a", "b"],
+  check((role) => role !== "b"),
+);
+export const statusLater: AsyncValidator<Status> = oneOf(
+  Status,
+  check(async (value) => value === Status.Active),
+);
+export const token: Validator<symbol> = symbol();
+export const prefixed: Validator<string> = string({ min: 1 }, startsWith("a"));
+// @ts-expect-error a string check cannot be given to a number
+export const wrongPrefixed = number(startsWith("a"));
+export const handler = func<(value: string) => void>(check((fn) => fn.length === 1));
+export const handlerValue: Infer<typeof handler> = (value: string) => void value;

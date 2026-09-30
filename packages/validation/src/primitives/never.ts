@@ -1,17 +1,18 @@
-import { describeType, failIssue } from "../core/result";
-import type { Validator } from "../core/types";
+import { leaf, split } from "../core/checks";
+import type { Factory, MessageOptions } from "../core/types";
+
+const nothing = (): boolean => false;
 
 /**
- * Creates a validator that rejects every value. Use it to forbid a property, or for a branch of a
- * union that must never match.
+ * Creates a validator that rejects every value, with `invalid_type` and `params.expected` `"never"`. It
+ * marks a property that must be absent: `optional(never())`.
  *
  * @example
  * ```ts
- * never()("anything"); // { ok: false, ... }, code "invalid_type", params { expected: "never", received: "string" }
+ * never()(1); // { ok: false, ... }, params { expected: "never", received: "number" }
  * ```
- *
- * @returns A validator that produces `never`.
  */
-export function never(): Validator<never> {
-  return (input) => failIssue("invalid_type", { expected: "never", received: describeType(input) });
-}
+export const never = ((...args: unknown[]) => {
+  const [{ message }, checks] = split<MessageOptions, never>(args);
+  return leaf("never", nothing, message, checks);
+}) as Factory<never, MessageOptions>;

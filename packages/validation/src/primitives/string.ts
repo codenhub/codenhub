@@ -1,23 +1,18 @@
-import { sourceOfRegExp } from "../core/objects";
-import { assertOrder, assertSize, failWith, invalidType, pass, toIssue } from "../core/result";
-import type { ValidationIssue, Validator } from "../core/types";
+import { leaf, split } from "../core/checks";
+import { assertOrder, assertSize, issue } from "../core/result";
+import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
 
-/** Constraints and clean-up for {@link string}. Every option is optional. */
-export interface StringOptions {
+/**
+ * Constraints and clean-up for {@link string}. Every option is optional. Rarer constraints, such as a
+ * pattern or a prefix, are checks given after the options.
+ */
+export interface StringOptions extends MessageOptions {
   /** Requires at least this many characters (UTF-16 code units, as `String.length` counts them). A non-negative integer. */
   min?: number;
   /** Allows at most this many characters. A non-negative integer. */
   max?: number;
   /** Requires exactly this many characters. A non-negative integer. */
   length?: number;
-  /** Requires the string to match. The `g` and `y` flags are ignored, so the same validator gives the same answer on every call. */
-  pattern?: RegExp;
-  /** Requires the string to start with this prefix. */
-  startsWith?: string;
-  /** Requires the string to end with this suffix. */
-  endsWith?: string;
-  /** Requires the string to contain this substring. */
-  includes?: string;
   /**
    * Removes leading and trailing whitespace before the constraints run, and from the output.
    *
@@ -25,56 +20,42 @@ export interface StringOptions {
    */
   trim?: boolean;
   /**
-   * Lowercases the string before the constraints run, and in the output. Cannot be combined with `uppercase`.
-   *
-   * @defaultValue false
+   * Converts the string to lowercase or uppercase before the constraints run, and in the output. To
+   * require a case without changing the string, use the `lowercase()` or `uppercase()` check.
    */
-  lowercase?: boolean;
-  /**
-   * Uppercases the string before the constraints run, and in the output. Cannot be combined with `lowercase`.
-   *
-   * @defaultValue false
-   */
-  uppercase?: boolean;
+  case?: "lower" | "upper";
 }
 
-const tooSmall = (minimum: number, isExact: boolean): ValidationIssue =>
-  toIssue({
-    code: "too_small",
-    params: isExact ? { minimum, exact: true, type: "string" } : { minimum, type: "string" },
-  });
+const isString = (input: unknown): boolean => typeof input === "string";
 
-const tooBig = (maximum: number, isExact: boolean): ValidationIssue =>
-  toIssue({
-    code: "too_big",
-    params: isExact ? { maximum, exact: true, type: "string" } : { maximum, type: "string" },
+const lengthIssue = (code: "too_small" | "too_big", bound: number, isExact: boolean): ValidationIssue =>
+  issue(code, {
+    [code === "too_small" ? "minimum" : "maximum"]: bound,
+    ...(isExact && { exact: true }),
+    type: "string",
   });
-
-const invalidFormat = (format: string, extra: Record<string, unknown> = {}): ValidationIssue =>
-  toIssue({ code: "invalid_format", params: { format, ...extra } });
 
 /**
  * Creates a validator for strings.
  *
  * @remarks
- * `trim`, `lowercase` and `uppercase` run first, then every constraint is checked against the
- * cleaned string, and each failing constraint reports its own issue. Formats such as email or URL
- * are validators of their own; combine them with this one using `pipe`.
+ * `trim` and `case` run first, then every constraint and every check on the cleaned string, and each
+ * failing one reports its own issue. Formats such as email or URL are validators of their own; combine
+ * them with this one using `pipe`.
  *
  * @example
  * ```ts
- * const username = string({ trim: true, min: 3, max: 30 });
+ * const username = string({ trim: true, min: 3, max: 30, message: "3 to 30 characters" }, pattern(/^\w+$/));
  * username("  ada  "); // { ok: true, value: "ada" }
  * username(42); // { ok: false, error: { issues: [{ code: "invalid_type", ... }] } }
+ * string(startsWith("a")); // options can be left out
  * ```
  *
- * @param options - Constraints and clean-up to apply.
- * @returns A validator that produces a string.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
- * @throws {TypeError} When both `lowercase` and `uppercase` are set, or `pattern` is not a regular expression.
+ * @throws {TypeError} When `case` is not `"lower"` or `"upper"`, or a check is not a function.
  */
-export function string(options: StringOptions = {}): Validator<string> {
-  const { min, max, length, pattern, startsWith, endsWith, includes, trim, lowercase, uppercase } = options;
+export const string = ((...args: unknown[]) => {
+  const [{ min, max, length, trim, case: letterCase, message }, checks] = split<StringOptions, string>(args);
   for (const [name, size] of [
     ["Minimum length", min],
     ["Maximum length", max],
@@ -87,54 +68,26 @@ export function string(options: StringOptions = {}): Validator<string> {
   assertOrder("min", min, "max", max);
   assertOrder("min", min, "length", length);
   assertOrder("length", length, "max", max);
-  if (lowercase === true && uppercase === true) {
-    throw new TypeError("string() cannot lowercase and uppercase at once");
+  if (letterCase !== undefined && letterCase !== "lower" && letterCase !== "upper") {
+    throw new TypeError(`case must be "lower" or "upper", received "${String(letterCase)}"`);
   }
-  // Checked with the built-in getter, so a regular expression from another realm, such as an iframe, is
-  // one too, and an object that merely has `source` and `flags` is not.
-  const source = pattern === undefined ? undefined : sourceOfRegExp(pattern);
-  if (pattern !== undefined && source === undefined) {
-    throw new TypeError(`pattern must be a RegExp, received ${pattern === null ? "null" : typeof pattern}`);
-  }
-  const stateless = pattern && new RegExp(source as string, pattern.flags.replace(/[gy]/g, ""));
 
-  return (input) => {
-    if (typeof input !== "string") {
-      return invalidType("string", input);
+  return leaf<string>("string", isString, message, checks, (input, issues) => {
+    let value = trim === true ? input.trim() : input;
+    if (letterCase !== undefined) {
+      value = letterCase === "lower" ? value.toLowerCase() : value.toUpperCase();
     }
-
-    let value = input;
-    if (trim === true) {
-      value = value.trim();
-    }
-    if (lowercase === true) {
-      value = value.toLowerCase();
-    } else if (uppercase === true) {
-      value = value.toUpperCase();
-    }
-
-    const issues: ValidationIssue[] = [];
     if (min !== undefined && value.length < min) {
-      issues.push(tooSmall(min, false));
+      issues.push(lengthIssue("too_small", min, false));
     }
     if (max !== undefined && value.length > max) {
-      issues.push(tooBig(max, false));
+      issues.push(lengthIssue("too_big", max, false));
     }
     if (length !== undefined && value.length !== length) {
-      issues.push(value.length < length ? tooSmall(length, true) : tooBig(length, true));
+      issues.push(
+        value.length < length ? lengthIssue("too_small", length, true) : lengthIssue("too_big", length, true),
+      );
     }
-    if (stateless !== undefined && !stateless.test(value)) {
-      issues.push(invalidFormat("regex", { pattern: String(pattern) }));
-    }
-    if (startsWith !== undefined && !value.startsWith(startsWith)) {
-      issues.push(invalidFormat("startsWith", { value: startsWith }));
-    }
-    if (endsWith !== undefined && !value.endsWith(endsWith)) {
-      issues.push(invalidFormat("endsWith", { value: endsWith }));
-    }
-    if (includes !== undefined && !value.includes(includes)) {
-      issues.push(invalidFormat("includes", { value: includes }));
-    }
-    return issues.length > 0 ? failWith(issues) : pass(value);
-  };
-}
+    return value;
+  });
+}) as Factory<string, StringOptions>;

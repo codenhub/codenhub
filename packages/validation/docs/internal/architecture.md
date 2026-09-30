@@ -220,7 +220,7 @@ The package is `sideEffects: false`, every module is side-effect free at load, a
 
 There is no input-type parameter. Every validator accepts `unknown`, and that is the honest input type of a function that exists to check unknown data. `Infer<typeof validator>` reads the output type from either flavor.
 
-The public types are the ones a consumer writes: `Validator`, `AsyncValidator`, `Check`, `AsyncCheck`, `Message`, `MessageOptions`, `Factory`, `Infer`, `ValidationResult`, `ValidationIssue`, `Messages` and the options interface of each validator. The types that compute a composer's return type, such as `Composed`, `AnyValidator` and `InferShape`, are internal, so they can change without breaking a caller.
+The public types are the ones a consumer writes: `Validator`, `AsyncValidator`, `Check`, `AsyncCheck`, `Message`, `MessageOptions`, `Factory`, `Rest`, `AsyncRest`, `Infer`, `ValidationResult`, `ValidationIssue`, `Messages` and the options interface of each validator. The types that compute a composer's return type, such as `Composed`, `AnyValidator` and `InferShape`, are internal, so they can change without breaking a caller.
 
 An `object` output type is built with `Simplify`, so hover text shows one object, and a property whose validator can produce `undefined` becomes optional in it.
 

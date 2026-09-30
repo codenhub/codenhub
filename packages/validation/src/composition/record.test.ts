@@ -105,7 +105,7 @@ describe("record", () => {
   });
 
   it("should report a key that the key validator makes equal to an earlier one, instead of dropping a value", () => {
-    const lowered = record(string({ lowercase: true }), number());
+    const lowered = record(string({ case: "lower" }), number());
     const result = lowered({ A: 1, a: 2 });
     expect(issuesOf(result)).toEqual([
       {

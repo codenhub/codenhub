@@ -10,7 +10,7 @@ import { pipe } from "./pipe";
 import { refine } from "./refine";
 
 describe("pipe", () => {
-  const address = pipe(string({ trim: true, lowercase: true }), email());
+  const address = pipe(string({ trim: true, case: "lower" }), email());
 
   it("should feed each validator the value the previous one produced", () => {
     expect(valueOf(address("  Ada@Example.COM "))).toBe("ada@example.com");

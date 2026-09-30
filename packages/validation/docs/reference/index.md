@@ -61,30 +61,6 @@ base64()("aGVsbG8="); // { ok: true, value: "aGVsbG8=" }
 base64()("aGVsbG8"); // { ok: false, ... }, code "invalid_format"
 ```
 
-### bigint
-
-```ts
-export declare function bigint(options?: BigintOptions): Validator<bigint>;
-```
-
-Creates a validator for bigints. Numbers are rejected, including whole ones.
-
-**Parameters**
-
-- `options` — Bounds to apply. Positive is `gt: 0n`, non-negative is `min: 0n`, negative is `lt: 0n`.
-
-**Returns** — A validator that produces a bigint.
-
-**Throws** — When no bigint can satisfy the bounds together.
-
-**Example**
-
-```ts
-const id = bigint({ gt: 0n });
-id(10n); // { ok: true, value: 10n }
-id(0n); // { ok: false, ... }, code "too_small"
-```
-
 ### check
 
 ```ts
@@ -121,132 +97,6 @@ const signup = object(
 );
 ```
 
-### coerceBigint
-
-```ts
-export declare function coerceBigint(options?: BigintOptions): Validator<bigint>;
-```
-
-Creates a validator for bigints that also accepts safe integers and text holding a decimal integer, converting them, then applies the same constraints as [bigint](#bigint).
-
-Fractions, numbers beyond `Number.MAX_SAFE_INTEGER` (which have already lost precision), other text, booleans and `null` are rejected. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
-
-**Parameters**
-
-- `options` — Bounds, exactly as for `bigint`.
-
-**Returns** — A validator that produces a bigint.
-
-**Throws** — When no bigint can satisfy the bounds together.
-
-**Example**
-
-```ts
-coerceBigint({ gt: 0n })("12345678901234567890"); // { ok: true, value: 12345678901234567890n }
-coerceBigint()(1.5); // { ok: false, ... }, code "invalid_type"
-```
-
-### coerceBoolean
-
-```ts
-export declare function coerceBoolean(): Validator<boolean>;
-```
-
-Creates a validator for booleans that also accepts the words `true`/`false`, `yes`/`no`, `on`/`off` and `1`/`0`, in any letter case and ignoring surrounding whitespace, and the numbers `1` and `0`.
-
-Anything else is rejected, so a typo such as `"ture"` is an error and not `false`. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`. Combine with `withDefault` for an environment variable that may be missing.
-
-**Returns** — A validator that produces a boolean.
-
-**Example**
-
-```ts
-coerceBoolean()("yes"); // { ok: true, value: true }
-coerceBoolean()("Off"); // { ok: true, value: false }
-coerceBoolean()("maybe"); // { ok: false, ... }, code "invalid_type"
-```
-
-### coerceDate
-
-```ts
-export declare function coerceDate(options?: DateOptions): Validator<Date>;
-```
-
-Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [date](#date).
-
-Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM:SS`, an optional fraction and an optional zone: `Z`, or an offset written `+HH`, `+HHMM` or `+HH:MM`. That is wider than `datetime`, which checks one exact spelling. Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`. Fractions of a second beyond milliseconds are cut, not rounded. A date without a time and a date-time without an offset are both read as UTC, so the result never depends on the timezone of the machine. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
-
-**Parameters**
-
-- `options` — Earliest and latest accepted moments, exactly as for `date`.
-
-**Returns** — A validator that produces a `Date`.
-
-**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
-
-**Example**
-
-```ts
-coerceDate()("2026-09-28"); // { ok: true, value: Date 2026-09-28T00:00:00.000Z }
-coerceDate()(0); // { ok: true, value: Date 1970-01-01T00:00:00.000Z }
-coerceDate()("yesterday"); // { ok: false, ... }, code "invalid_type"
-```
-
-### coerceNumber
-
-```ts
-export declare function coerceNumber(options?: NumberOptions): Validator<number>;
-```
-
-Creates a validator for numbers that also accepts text holding a decimal number, converting it, then applies the same constraints as [number](#number).
-
-Surrounding whitespace is ignored, and a dot with no digits on one side, as in `".5"` or `"5."`, is read as people type it. Empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and `"NaN"` are rejected, and so is text holding a whole number beyond `Number.MAX_SAFE_INTEGER`, which could not be read exactly (use `coerceBigint` for those). So are booleans, `null`, objects and arrays: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
-
-**Parameters**
-
-- `options` — Constraints and clean-up, exactly as for `number`.
-
-**Returns** — A validator that produces a number.
-
-**Throws** — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, `multipleOf` is not a positive finite number, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
-
-**Example**
-
-```ts
-const port = coerceNumber({ int: true, min: 1, max: 65535 });
-port("8080"); // { ok: true, value: 8080 }
-port("0"); // { ok: false, ... }, code "too_small"
-port("abc"); // { ok: false, ... }, code "invalid_type"
-```
-
-### coerceString
-
-```ts
-export declare function coerceString(options?: StringOptions): Validator<string>;
-```
-
-Creates a validator for text that also accepts finite numbers, bigints and booleans, converting them to their string form, then applies the same constraints as [string](#string).
-
-`NaN` and `Infinity`, `null`, `undefined`, objects, arrays, functions and symbols are not converted: guessing what an object should look like as text would hide bugs. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
-
-**Parameters**
-
-- `options` — Constraints and clean-up, exactly as for `string`.
-
-**Returns** — A validator that produces a string.
-
-**Throws**
-
-- When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
-- When both `lowercase` and `uppercase` are set, or `pattern` is not a regular expression.
-
-**Example**
-
-```ts
-coerceString({ min: 2 })(12); // { ok: true, value: "12" }
-coerceString()(null); // { ok: false, ... }, code "invalid_type"
-```
-
 ### cuid2
 
 ```ts
@@ -262,30 +112,6 @@ Creates a validator for CUID2 identifiers. The value is not modified.
 ```ts
 cuid2()("tz4a98xxat96iws9zmbrgj3a"); // { ok: true, value: "tz4a98xxat96iws9zmbrgj3a" }
 cuid2()("1bad"); // { ok: false, ... }, code "invalid_format"
-```
-
-### date
-
-```ts
-export declare function date(options?: DateOptions): Validator<Date>;
-```
-
-Creates a validator for valid `Date` objects. An invalid `Date` such as `new Date("nope")`, a timestamp and a date string are all rejected; parse text with `isoDate` or convert it first.
-
-**Parameters**
-
-- `options` — Earliest and latest accepted moments, both inclusive.
-
-**Returns** — A validator that produces a `Date`.
-
-**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
-
-**Example**
-
-```ts
-const birthday = date({ max: new Date() });
-birthday(new Date("1990-04-01")); // { ok: true, ... }
-birthday(new Date("nope")); // { ok: false, ... }, code "invalid_type"
 ```
 
 ### datetime
@@ -370,6 +196,27 @@ The value is the address as mail is delivered to it: the local part as written, 
 ```ts
 email()("Ada@Example.COM"); // { ok: true, value: "Ada@example.com" }
 email()("ada@localhost"); // { ok: false, error: { issues: [{ code: "invalid_format", ... }] } }
+```
+
+### endsWith
+
+```ts
+export declare function endsWith(value: string, message?: Message): Check<string>;
+```
+
+Requires a string to end with a suffix. It fails with `invalid_format` and `params` `{ format: "endsWith", value }`.
+
+**Parameters**
+
+- `value` — The text required.
+- `message` — Wording for the issue.
+
+**Returns** — A check of strings.
+
+**Example**
+
+```ts
+string(endsWith(".pdf", "Upload a PDF"));
 ```
 
 ### fail
@@ -514,12 +361,17 @@ formatPath(["a.b"]); // '["a.b"]'
 ### func
 
 ```ts
-export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(): Validator<T>;
+export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(...rest: Rest<T, MessageOptions>): Validator<T>;
+export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
 ```
 
 Creates a validator for functions, such as a callback in a configuration object. Classes, arrow, async and generator functions are all functions, and a function from another realm is one too.
 
 Only that the value is a function can be checked at runtime: the parameters it takes and what it returns cannot. Name the signature you expect as the type argument, and it is the type of the output, taken on trust as a cast would be. Without one, the output is a function that takes any arguments and returns `unknown`.
+
+**Parameters**
+
+- `rest` — Options, then checks.
 
 **Type parameters**
 
@@ -599,10 +451,32 @@ hostname()("localhost"); // { ok: true, value: "localhost" }
 hostname()("-bad.com"); // { ok: false, ... }, code "invalid_format"
 ```
 
+### includes
+
+```ts
+export declare function includes(value: string, message?: Message): Check<string>;
+```
+
+Requires a string to contain a substring. It fails with `invalid_format` and `params` `{ format: "includes", value }`.
+
+**Parameters**
+
+- `value` — The text required.
+- `message` — Wording for the issue.
+
+**Returns** — A check of strings.
+
+**Example**
+
+```ts
+string(includes("@"));
+```
+
 ### instanceOf
 
 ```ts
-export declare function instanceOf<T>(target: Constructor<T>): Validator<T>;
+export declare function instanceOf<T>(target: Constructor<T>, ...rest: Rest<T, MessageOptions>): Validator<T>;
+export declare function instanceOf<T>(target: Constructor<T>, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
 ```
 
 Creates a validator that accepts instances of a class, checked with `instanceof`. An instance from another realm, such as an iframe, is not recognized.
@@ -610,6 +484,7 @@ Creates a validator that accepts instances of a class, checked with `instanceof`
 **Parameters**
 
 - `target` — The class the value must be an instance of.
+- `rest` — Options, then checks.
 
 **Type parameters**
 
@@ -804,7 +679,8 @@ const category: Validator<Category> = object({
 ### literal
 
 ```ts
-export declare function literal<const T extends LiteralValue>(value: T): Validator<T>;
+export declare function literal<const T extends LiteralValue>(value: T, ...rest: Rest<T, MessageOptions>): Validator<T>;
+export declare function literal<const T extends LiteralValue>(value: T, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
 ```
 
 Creates a validator that accepts exactly one value, compared with `===`. The type is the value itself, so `literal("admin")` produces `"admin"` and not `string`. It is also how `null` and `undefined` are validated: `literal(null)`.
@@ -812,6 +688,7 @@ Creates a validator that accepts exactly one value, compared with `===`. The typ
 **Parameters**
 
 - `value` — The only accepted value.
+- `rest` — Options, then checks.
 
 **Type parameters**
 
@@ -827,6 +704,27 @@ Creates a validator that accepts exactly one value, compared with `===`. The typ
 const role = literal("admin");
 role("admin"); // { ok: true, value: "admin" }
 role("user"); // { ok: false, ... }, code "invalid_value", params { expected: "admin" }
+literal(true, { message: "You must accept the terms" });
+```
+
+### lowercase
+
+```ts
+export declare function lowercase(message?: Message): Check<string>;
+```
+
+Requires a string to be in lowercase: unchanged by `toLowerCase()`, so a string with no letters passes. It changes nothing; to lowercase the string instead, use `string({ case: "lower" })`. It fails with `invalid_format` and `params` `{ format: "lowercase" }`.
+
+**Parameters**
+
+- `message` — Wording for the issue.
+
+**Returns** — A check of strings.
+
+**Example**
+
+```ts
+string(lowercase("Must be lowercase"));
 ```
 
 ### map
@@ -864,6 +762,31 @@ const stock = map(string(), number({ int: true, min: 0 }));
 stock(new Map([["apples", 3]])); // { ok: true, value: Map { "apples" => 3 } }
 ```
 
+### multipleOf
+
+```ts
+export declare function multipleOf(step: number, message?: Message): Check<number>;
+```
+
+Requires a number that is a multiple of a step.
+
+Both are compared as the decimals they are written as, so `0.3` is a multiple of `0.1` at any size. A value computed in floating point, such as `0.1 + 0.2`, is compared as the number it actually is, `0.30000000000000004`. It fails with `invalid_value` and `params` `{ type: "number", multipleOf }`.
+
+**Parameters**
+
+- `step` — A positive finite number.
+- `message` — Wording for the issue.
+
+**Returns** — A check of numbers.
+
+**Throws** — When `step` is not a positive finite number.
+
+**Example**
+
+```ts
+number(multipleOf(0.01, "At most two decimals"));
+```
+
 ### nanoid
 
 ```ts
@@ -881,51 +804,24 @@ nanoid()("V1StGXR8_Z5jdHi6B-myT"); // { ok: true, value: "V1StGXR8_Z5jdHi6B-myT"
 nanoid()("short"); // { ok: false, ... }, code "invalid_format"
 ```
 
-### nativeEnum
+### nonZero
 
 ```ts
-export declare function nativeEnum<T extends EnumLike>(enumObject: T): Validator<T[keyof T]>;
+export declare function nonZero(message?: Message): Check<number>;
 ```
 
-Creates a validator that accepts any value of a TypeScript `enum`. The reverse-mapping entries TypeScript adds to a numeric enum are not values and are ignored.
+Requires a number other than zero. It fails with `invalid_value` and `params` `{ type: "number", format: "nonZero" }`.
 
 **Parameters**
 
-- `enumObject` — The enum.
+- `message` — Wording for the issue.
 
-**Type parameters**
-
-- `T` — The enum object.
-
-**Returns** — A validator that produces a value of the enum.
-
-**Throws**
-
-- When the enum has no values, so the validator would accept nothing.
-- When a value is `NaN`, which no value equals.
+**Returns** — A check of numbers.
 
 **Example**
 
 ```ts
-enum Status { Active = "active", Archived = "archived" }
-nativeEnum(Status)("active"); // { ok: true, value: Status.Active }
-nativeEnum(Status)("deleted"); // { ok: false, ... }, code "invalid_value"
-```
-
-### never
-
-```ts
-export declare function never(): Validator<never>;
-```
-
-Creates a validator that rejects every value. Use it to forbid a property, or for a branch of a union that must never match.
-
-**Returns** — A validator that produces `never`.
-
-**Example**
-
-```ts
-never()("anything"); // { ok: false, ... }, code "invalid_type", params { expected: "never", received: "string" }
+number(nonZero("Cannot be zero"));
 ```
 
 ### nullable
@@ -985,32 +881,6 @@ nickname(null); // { ok: true, value: null }
 nickname(undefined); // { ok: true, value: undefined }
 ```
 
-### number
-
-```ts
-export declare function number(options?: NumberOptions): Validator<number>;
-```
-
-Creates a validator for finite numbers. `NaN` and the infinities are always rejected.
-
-`clamp` runs first, then every constraint is checked against the clamped number, and each failing constraint reports its own issue.
-
-**Parameters**
-
-- `options` — Constraints and clean-up to apply.
-
-**Returns** — A validator that produces a number.
-
-**Throws** — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, `multipleOf` is not a positive finite number, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and reject every input.
-
-**Example**
-
-```ts
-const age = number({ int: true, min: 0, max: 130 });
-age(42); // { ok: true, value: 42 }
-age(-1); // { ok: false, error: { issues: [{ code: "too_small", ... }] } }
-```
-
 ### object
 
 ```ts
@@ -1045,25 +915,27 @@ user({ name: "A" }); // { ok: false, error: { issues: [{ code: "too_small", path
 ### oneOf
 
 ```ts
-export declare function oneOf<const T extends readonly LiteralValue[]>(values: T): Validator<T[number]>;
+export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike>(values: T, ...rest: Rest<ValuesOf<T>, MessageOptions>): Validator<ValuesOf<T>>;
+export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike>(values: T, ...rest: AsyncRest<ValuesOf<T>, MessageOptions>): AsyncValidator<ValuesOf<T>>;
 ```
 
-Creates a validator that accepts any one value of a list, compared with `===`. The values may be any primitives, as for `literal`. The type is the union of the listed values, so `oneOf(["admin", "user"])` produces `"admin" | "user"`.
+Creates a validator that accepts any one value of a list or of a TypeScript `enum`, compared with `===`. The type is the union of the values, so `oneOf(["admin", "user"])` produces `"admin" | "user"`. The entries TypeScript adds to a numeric enum to map values back to names are not values and are ignored.
 
 **Parameters**
 
-- `values` — The accepted values: any primitive, as for `literal`, including `null` and `undefined`. The list is copied, so changing it later has no effect.
+- `values` — The accepted values: a list of primitives, as for `literal`, or an enum. It is copied, so changing it later has no effect.
+- `rest` — Options, then checks.
 
 **Type parameters**
 
-- `T` — The listed values.
+- `T` — The list or the enum.
 
-**Returns** — A validator that produces one of `values`.
+**Returns** — A validator that produces one of the values.
 
 **Throws**
 
-- When `values` is empty, so the validator would accept nothing.
-- When `values` holds `NaN`, which no value equals.
+- When there is no value, so the validator would accept nothing.
+- When a value is `NaN`, which no value equals.
 
 **Example**
 
@@ -1071,6 +943,9 @@ Creates a validator that accepts any one value of a list, compared with `===`. T
 const role = oneOf(["admin", "user"]);
 role("admin"); // { ok: true, value: "admin" }
 role("guest"); // { ok: false, ... }, code "invalid_value", params { options: ["admin", "user"] }
+
+enum Status { Active = "active", Archived = "archived" }
+oneOf(Status)("active"); // { ok: true, value: Status.Active }
 ```
 
 ### optional
@@ -1153,6 +1028,31 @@ const even: Validator<number> = (input) =>
   typeof input === "number" && input % 2 === 0 ? pass(input) : fail({ code: "not_even" });
 ```
 
+### pattern
+
+```ts
+export declare function pattern(expression: RegExp, message?: Message): Check<string>;
+```
+
+Requires a string to match a regular expression.
+
+The `g` and `y` flags are dropped, so the check gives the same answer on every call. It fails with `invalid_format` and `params` `{ format: "regex", pattern }`, the pattern written as `/source/flags`.
+
+**Parameters**
+
+- `expression` — What the string must match.
+- `message` — Wording for the issue.
+
+**Returns** — A check of strings.
+
+**Throws** — When `expression` is not a regular expression.
+
+**Example**
+
+```ts
+string(pattern(/^[a-z]+$/, "Lowercase letters only"));
+```
+
 ### pipe
 
 ```ts
@@ -1178,7 +1078,7 @@ The first failure stops the pipe, because a later step has nothing valid to work
 **Example**
 
 ```ts
-const address = pipe(string({ trim: true, lowercase: true }), email());
+const address = pipe(string({ trim: true, case: "lower" }), email());
 address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
 ```
 
@@ -1322,33 +1222,25 @@ signup["~standard"].validate({ email: "nope" });
 // { issues: [{ message: "Invalid email address", path: ["email"] }, ...] }
 ```
 
-### string
+### startsWith
 
 ```ts
-export declare function string(options?: StringOptions): Validator<string>;
+export declare function startsWith(value: string, message?: Message): Check<string>;
 ```
 
-Creates a validator for strings.
-
-`trim`, `lowercase` and `uppercase` run first, then every constraint is checked against the cleaned string, and each failing constraint reports its own issue. Formats such as email or URL are validators of their own; combine them with this one using `pipe`.
+Requires a string to start with a prefix. It fails with `invalid_format` and `params` `{ format: "startsWith", value }`.
 
 **Parameters**
 
-- `options` — Constraints and clean-up to apply.
+- `value` — The text required.
+- `message` — Wording for the issue.
 
-**Returns** — A validator that produces a string.
-
-**Throws**
-
-- When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
-- When both `lowercase` and `uppercase` are set, or `pattern` is not a regular expression.
+**Returns** — A check of strings.
 
 **Example**
 
 ```ts
-const username = string({ trim: true, min: 3, max: 30 });
-username("  ada  "); // { ok: true, value: "ada" }
-username(42); // { ok: false, error: { issues: [{ code: "invalid_type", ... }] } }
+string(startsWith("https://"));
 ```
 
 ### transform
@@ -1469,20 +1361,24 @@ id(7); // { ok: true, value: 7 }
 id(true); // { ok: false, ... }, code "invalid_union"
 ```
 
-### unknown
+### uppercase
 
 ```ts
-export declare function unknown(): Validator<unknown>;
+export declare function uppercase(message?: Message): Check<string>;
 ```
 
-Creates a validator that accepts any value and passes it through unchanged. Use it for a property whose content you do not check, or as the start of a `pipe`.
+Requires a string to be in uppercase: unchanged by `toUpperCase()`, so a string with no letters passes. It changes nothing; to uppercase the string instead, use `string({ case: "upper" })`. It fails with `invalid_format` and `params` `{ format: "uppercase" }`.
 
-**Returns** — A validator that produces `unknown`.
+**Parameters**
+
+- `message` — Wording for the issue.
+
+**Returns** — A check of strings.
 
 **Example**
 
 ```ts
-unknown()({ anything: [1, 2, 3] }); // { ok: true, value: { anything: [1, 2, 3] } }
+string(uppercase("Must be uppercase"));
 ```
 
 ### url
@@ -1600,7 +1496,7 @@ Rejects duplicates, reporting each repeat at its own index. `true` compares the 
 ### BigintOptions
 
 ```ts
-export interface BigintOptions
+export interface BigintOptions extends MessageOptions
 ```
 
 Constraints for [bigint](#bigint). Every option is optional.
@@ -1629,6 +1525,10 @@ max?: bigint;
 
 Requires a value of at most this.
 
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
 #### min
 
 ```ts
@@ -1640,7 +1540,7 @@ Requires a value of at least this.
 ### DateOptions
 
 ```ts
-export interface DateOptions
+export interface DateOptions extends MessageOptions
 ```
 
 Bounds for [date](#date). Every option is optional.
@@ -1652,6 +1552,10 @@ max?: Date;
 ```
 
 Requires this moment or an earlier one. Must be a valid `Date`.
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
 
 #### min
 
@@ -1824,10 +1728,10 @@ Wording for every issue this validator reports itself, and none a child or a che
 ### NumberOptions
 
 ```ts
-export interface NumberOptions
+export interface NumberOptions extends MessageOptions
 ```
 
-Constraints and clean-up for [number](#number). Every option is optional.
+Constraints and clean-up for [number](#number). Every option is optional. Rarer constraints, such as `multipleOf` or `nonZero`, are checks given after the options.
 
 #### clamp
 
@@ -1869,6 +1773,10 @@ max?: number;
 
 Requires a value of at most this.
 
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
 #### min
 
 ```ts
@@ -1876,22 +1784,6 @@ min?: number;
 ```
 
 Requires a value of at least this.
-
-#### multipleOf
-
-```ts
-multipleOf?: number;
-```
-
-Requires a multiple of this positive number, compared as the decimals both are written as, so `0.3` is a multiple of `0.1` at any size. A value computed in floating point, such as `0.1 + 0.2`, is compared as the number it actually is, `0.30000000000000004`.
-
-#### nonZero
-
-```ts
-nonZero?: boolean;
-```
-
-Requires a value other than zero.
 
 #### safeInt
 
@@ -2178,26 +2070,18 @@ Result produced by Standard Schema validation.
 ### StringOptions
 
 ```ts
-export interface StringOptions
+export interface StringOptions extends MessageOptions
 ```
 
-Constraints and clean-up for [string](#string). Every option is optional.
+Constraints and clean-up for [string](#string). Every option is optional. Rarer constraints, such as a pattern or a prefix, are checks given after the options.
 
-#### endsWith
+#### case
 
 ```ts
-endsWith?: string;
+case?: "lower" | "upper";
 ```
 
-Requires the string to end with this suffix.
-
-#### includes
-
-```ts
-includes?: string;
-```
-
-Requires the string to contain this substring.
+Converts the string to lowercase or uppercase before the constraints run, and in the output. To require a case without changing the string, use the `lowercase()` or `uppercase()` check.
 
 #### length
 
@@ -2207,14 +2091,6 @@ length?: number;
 
 Requires exactly this many characters. A non-negative integer.
 
-#### lowercase
-
-```ts
-lowercase?: boolean;
-```
-
-Lowercases the string before the constraints run, and in the output. Cannot be combined with `uppercase`.
-
 #### max
 
 ```ts
@@ -2222,6 +2098,10 @@ max?: number;
 ```
 
 Allows at most this many characters. A non-negative integer.
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
 
 #### min
 
@@ -2231,22 +2111,6 @@ min?: number;
 
 Requires at least this many characters (UTF-16 code units, as `String.length` counts them). A non-negative integer.
 
-#### pattern
-
-```ts
-pattern?: RegExp;
-```
-
-Requires the string to match. The `g` and `y` flags are ignored, so the same validator gives the same answer on every call.
-
-#### startsWith
-
-```ts
-startsWith?: string;
-```
-
-Requires the string to start with this prefix.
-
 #### trim
 
 ```ts
@@ -2254,14 +2118,6 @@ trim?: boolean;
 ```
 
 Removes leading and trailing whitespace before the constraints run, and from the output.
-
-#### uppercase
-
-```ts
-uppercase?: boolean;
-```
-
-Uppercases the string before the constraints run, and in the output. Cannot be combined with `lowercase`.
 
 ### TupleOptions
 
@@ -2437,6 +2293,14 @@ A check that may finish later, such as one that asks a server whether a name is 
 
 - `T` — The type of the value it checks.
 
+### AsyncRest
+
+```ts
+export type AsyncRest<T, TOptions> = [options?: TOptions, ...checks: AsyncCheck<T>[]] | AsyncCheck<T>[];
+```
+
+[Rest](#rest) where a check may be an [AsyncCheck](#asynccheck).
+
 ### AsyncValidator
 
 ```ts
@@ -2489,7 +2353,7 @@ A class a value can be checked against, including abstract ones.
 ### EnumLike
 
 ```ts
-export type EnumLike = Record<string, string | number>;
+export type EnumLike = Readonly<Record<string, string | number>>;
 ```
 
 An object made by a TypeScript `enum`, or written like one.
@@ -2616,6 +2480,14 @@ export type RefineIssue = IssueInput | string;
 
 How a failed [refine](#refine) check is reported. A string is shorthand for `{ message }`.
 
+### Rest
+
+```ts
+export type Rest<T, TOptions> = [options?: TOptions, ...checks: Check<T>[]] | Check<T>[];
+```
+
+What follows a validator's own arguments, such as the value of `literal`: options, then checks, or checks alone. Every check is a [Check](#check).
+
 ### Shape
 
 ```ts
@@ -2674,6 +2546,24 @@ The variants of a tagged union: a validator for each value the tag can have.
 
 ## Variables
 
+### bigint
+
+```ts
+export declare const bigint: Factory<bigint, BigintOptions>;
+```
+
+Creates a validator for bigints. Numbers are rejected, including whole ones.
+
+**Throws** — When no bigint can satisfy the bounds together.
+
+**Example**
+
+```ts
+const id = bigint({ gt: 0n });
+id(10n); // { ok: true, value: 10n }
+id(0n); // { ok: false, ... }, code "too_small"
+```
+
 ### boolean
 
 ```ts
@@ -2688,6 +2578,136 @@ Creates a validator for booleans. Only `true` and `false` pass; to accept text s
 boolean()(true); // { ok: true, value: true }
 boolean()("true"); // { ok: false, error: { issues: [{ code: "invalid_type", ... }] } }
 boolean({ message: "Choose yes or no" });
+```
+
+### coerceBigint
+
+```ts
+export declare const coerceBigint: Factory<bigint, BigintOptions>;
+```
+
+Creates a validator for bigints that also accepts safe integers and text holding a decimal integer, converting them, then applies the same constraints as [bigint](#bigint).
+
+Fractions, numbers beyond `Number.MAX_SAFE_INTEGER` (which have already lost precision), other text, booleans and `null` are rejected. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+
+**Returns** — A validator that produces a bigint.
+
+**Throws** — When no bigint can satisfy the bounds together.
+
+**Example**
+
+```ts
+coerceBigint({ gt: 0n })("12345678901234567890"); // { ok: true, value: 12345678901234567890n }
+coerceBigint()(1.5); // { ok: false, ... }, code "invalid_type"
+```
+
+### coerceBoolean
+
+```ts
+export declare const coerceBoolean: Factory<boolean, MessageOptions>;
+```
+
+Creates a validator for booleans that also accepts the words `true`/`false`, `yes`/`no`, `on`/`off` and `1`/`0`, in any letter case and ignoring surrounding whitespace, and the numbers `1` and `0`.
+
+Anything else is rejected, so a typo such as `"ture"` is an error and not `false`. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`. Combine with `withDefault` for an environment variable that may be missing.
+
+**Returns** — A validator that produces a boolean.
+
+**Example**
+
+```ts
+coerceBoolean()("yes"); // { ok: true, value: true }
+coerceBoolean()("Off"); // { ok: true, value: false }
+coerceBoolean()("maybe"); // { ok: false, ... }, code "invalid_type"
+```
+
+### coerceDate
+
+```ts
+export declare const coerceDate: Factory<Date, DateOptions>;
+```
+
+Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [date](#date).
+
+Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM:SS`, an optional fraction and an optional zone: `Z`, or an offset written `+HH`, `+HHMM` or `+HH:MM`. That is wider than `datetime`, which checks one exact spelling. Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`. Fractions of a second beyond milliseconds are cut, not rounded. A date without a time and a date-time without an offset are both read as UTC, so the result never depends on the timezone of the machine. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+
+**Returns** — A validator that produces a `Date`.
+
+**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
+
+**Example**
+
+```ts
+coerceDate()("2026-09-28"); // { ok: true, value: Date 2026-09-28T00:00:00.000Z }
+coerceDate()(0); // { ok: true, value: Date 1970-01-01T00:00:00.000Z }
+coerceDate()("yesterday"); // { ok: false, ... }, code "invalid_type"
+```
+
+### coerceNumber
+
+```ts
+export declare const coerceNumber: Factory<number, NumberOptions>;
+```
+
+Creates a validator for numbers that also accepts text holding a decimal number, converting it, then applies the same constraints as [number](#number).
+
+Surrounding whitespace is ignored, and a dot with no digits on one side, as in `".5"` or `"5."`, is read as people type it. Empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and `"NaN"` are rejected, and so is text holding a whole number beyond `Number.MAX_SAFE_INTEGER`, which could not be read exactly (use `coerceBigint` for those). So are booleans, `null`, objects and arrays: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+
+**Returns** — A validator that produces a number.
+
+**Throws** — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, `multipleOf` is not a positive finite number, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
+
+**Example**
+
+```ts
+const port = coerceNumber({ int: true, min: 1, max: 65535 });
+port("8080"); // { ok: true, value: 8080 }
+port("0"); // { ok: false, ... }, code "too_small"
+port("abc"); // { ok: false, ... }, code "invalid_type"
+```
+
+### coerceString
+
+```ts
+export declare const coerceString: Factory<string, StringOptions>;
+```
+
+Creates a validator for text that also accepts finite numbers, bigints and booleans, converting them to their string form, then applies the same constraints as [string](#string).
+
+`NaN` and `Infinity`, `null`, `undefined`, objects, arrays, functions and symbols are not converted: guessing what an object should look like as text would hide bugs. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+
+**Returns** — A validator that produces a string.
+
+**Throws**
+
+- When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
+- When `case` is not `"lower"` or `"upper"`, or a check is not a function.
+
+**Example**
+
+```ts
+coerceString({ min: 2 })(12); // { ok: true, value: "12" }
+coerceString()(null); // { ok: false, ... }, code "invalid_type"
+```
+
+### date
+
+```ts
+export declare const date: Factory<Date, DateOptions>;
+```
+
+Creates a validator for valid `Date` objects. An invalid `Date` such as `new Date("nope")`, a timestamp and a date string are all rejected; parse text with `isoDate` or convert it first.
+
+**Returns** — A validator that produces a `Date`.
+
+**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
+
+**Example**
+
+```ts
+const birthday = date({ max: new Date() });
+birthday(new Date("1990-04-01")); // { ok: true, ... }
+birthday(new Date("nope")); // { ok: false, ... }, code "invalid_type"
 ```
 
 ### englishMessages
@@ -2707,6 +2727,95 @@ const result = number({ min: 18 })(15);
 if (!result.ok) {
   formatIssue(result.error.issues[0], englishMessages); // "Must be at least 18"
 }
+```
+
+### never
+
+```ts
+export declare const never: Factory<never, MessageOptions>;
+```
+
+Creates a validator that rejects every value, with `invalid_type` and `params.expected` `"never"`. It marks a property that must be absent: `optional(never())`.
+
+**Example**
+
+```ts
+never()(1); // { ok: false, ... }, params { expected: "never", received: "number" }
+```
+
+### number
+
+```ts
+export declare const number: Factory<number, NumberOptions>;
+```
+
+Creates a validator for finite numbers. `NaN` and the infinities are always rejected.
+
+`clamp` runs first, then every constraint and every check runs on the clamped number, and each failing one reports its own issue.
+
+**Throws** — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and reject every input.
+
+**Example**
+
+```ts
+const age = number({ int: true, min: 0, max: 130 });
+age(42); // { ok: true, value: 42 }
+age(-1); // { ok: false, error: { issues: [{ code: "too_small", ... }] } }
+number({ min: 0 }, multipleOf(0.01)); // money
+```
+
+### string
+
+```ts
+export declare const string: Factory<string, StringOptions>;
+```
+
+Creates a validator for strings.
+
+`trim` and `case` run first, then every constraint and every check on the cleaned string, and each failing one reports its own issue. Formats such as email or URL are validators of their own; combine them with this one using `pipe`.
+
+**Throws**
+
+- When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
+- When `case` is not `"lower"` or `"upper"`, or a check is not a function.
+
+**Example**
+
+```ts
+const username = string({ trim: true, min: 3, max: 30, message: "3 to 30 characters" }, pattern(/^\w+$/));
+username("  ada  "); // { ok: true, value: "ada" }
+username(42); // { ok: false, error: { issues: [{ code: "invalid_type", ... }] } }
+string(startsWith("a")); // options can be left out
+```
+
+### symbol
+
+```ts
+export declare const symbol: Factory<symbol, MessageOptions>;
+```
+
+Creates a validator for symbols. To accept one symbol only, use `literal`.
+
+**Example**
+
+```ts
+symbol()(Symbol("id")); // { ok: true, ... }
+symbol()("id"); // { ok: false, ... }, code "invalid_type"
+```
+
+### unknown
+
+```ts
+export declare const unknown: Factory<unknown, MessageOptions>;
+```
+
+Creates a validator that accepts every value, unchanged. Checks given to it run on any value, which makes it the base for a rule about a value of no particular type.
+
+**Example**
+
+```ts
+const metadata = object({ id: string(), extra: unknown() });
+const serializable = unknown(check((value) => JSON.stringify(value) !== undefined, "Must be serializable"));
 ```
 
 ## Internal types
@@ -2787,3 +2896,13 @@ type Transformed<R> = 0 extends 1 & R ? Validator<R> : [unknown] extends [R] ? A
 What a synchronous validator becomes once `convert` runs on its value: still synchronous when `convert` never returns a promise, and asynchronous, producing what the promise settles to, when it may return one, such as a function typed `number | Promise<number>`. A function typed as returning `unknown` may return one too, so it makes the validator asynchronous. One typed as returning `any`, such as `JSON.parse`, has opted out of type checking, and is taken at its word as synchronous: typing it asynchronous would make the most common conversion need an `await` it never needs.
 
 Not exported; declared in `src/composition/transform.ts`.
+
+### ValuesOf
+
+```ts
+type ValuesOf<T> = T extends readonly unknown[] ? T[number] : T[keyof T];
+```
+
+The values a list or an enum holds.
+
+Not exported; declared in `src/primitives/one-of.ts`.

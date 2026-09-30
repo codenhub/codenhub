@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "./async";
-import { failWith, pass, typeIssue } from "./result";
-import type { AsyncCheck, Message, MessageOptions, ValidationIssue, ValidationResult } from "./types";
+import { failWith, issue, pass, typeIssue } from "./result";
+import type { AsyncCheck, Check, Message, MessageOptions, ValidationIssue, ValidationResult } from "./types";
 
 /**
  * Separates the arguments of a factory, `(options?, ...checks)`, into its options and its checks. An
@@ -70,4 +70,35 @@ export function leaf<T>(
     const issues: ValidationIssue[] = [];
     return finish(inspect === undefined ? (input as T) : inspect(input as T, issues), issues, message, checks);
   };
+}
+
+/**
+ * Builds a built-in check: a value `test` accepts passes, and any other reports one issue with `code`
+ * and `params`, worded by `message` when there is one.
+ */
+export const rule =
+  <T>(
+    test: (value: T) => boolean,
+    code: string,
+    params: Readonly<Record<string, unknown>>,
+    message: Message | undefined,
+  ): Check<T> =>
+  (value) =>
+    test(value) ? undefined : word([issue(code, params)], message);
+
+/**
+ * Builds a validator that accepts the values `accepts` names, and reports any other with one
+ * `invalid_value` issue whose params `params` makes afresh for each failure, as `literal` and `oneOf`
+ * do, where `leaf` would report the type.
+ */
+export function member<T>(
+  accepts: (input: unknown) => boolean,
+  params: () => Readonly<Record<string, unknown>>,
+  args: readonly unknown[],
+): (input: unknown) => Maybe<ValidationResult<T>> {
+  const [{ message }, checks] = split<MessageOptions, T>(args);
+  return (input) =>
+    accepts(input)
+      ? finish(input as T, [], message, checks)
+      : failWith(word([issue("invalid_value", params())], message));
 }

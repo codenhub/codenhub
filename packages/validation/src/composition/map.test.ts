@@ -67,7 +67,7 @@ describe("map", () => {
   });
 
   it("should report a key that the key validator makes equal to an earlier one, instead of dropping a value", () => {
-    const lowered = map(string({ lowercase: true }), number());
+    const lowered = map(string({ case: "lower" }), number());
     const result = lowered(
       new Map([
         ["A", 1],

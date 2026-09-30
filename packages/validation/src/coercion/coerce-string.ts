@@ -1,6 +1,6 @@
-import { invalidCoercion } from "../core/result";
-import type { Validator } from "../core/types";
+import type { Factory } from "../core/types";
 import { string, type StringOptions } from "../primitives/string";
+import { coercing } from "./coerce";
 
 /**
  * Creates a validator for text that also accepts finite numbers, bigints and booleans, converting them to
@@ -20,15 +20,14 @@ import { string, type StringOptions } from "../primitives/string";
  * @param options - Constraints and clean-up, exactly as for `string`.
  * @returns A validator that produces a string.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
- * @throws {TypeError} When both `lowercase` and `uppercase` are set, or `pattern` is not a regular expression.
+ * @throws {TypeError} When `case` is not `"lower"` or `"upper"`, or a check is not a function.
  */
-export function coerceString(options: StringOptions = {}): Validator<string> {
-  const strict = string(options);
-  return (input) =>
+export const coerceString = ((...args: unknown[]) =>
+  coercing("string", string(...(args as [])), args, (input) =>
     typeof input === "string" ||
     (typeof input === "number" && Number.isFinite(input)) ||
     typeof input === "bigint" ||
     typeof input === "boolean"
-      ? strict(String(input))
-      : invalidCoercion("string", input);
-}
+      ? [String(input)]
+      : undefined,
+  )) as Factory<string, StringOptions>;

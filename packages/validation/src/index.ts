@@ -5,6 +5,14 @@
  */
 
 export { check } from "./builders/check";
+export { endsWith } from "./checks/ends-with";
+export { includes } from "./checks/includes";
+export { lowercase } from "./checks/lowercase";
+export { multipleOf } from "./checks/multiple-of";
+export { nonZero } from "./checks/non-zero";
+export { pattern } from "./checks/pattern";
+export { startsWith } from "./checks/starts-with";
+export { uppercase } from "./checks/uppercase";
 export { format } from "./builders/format";
 export { guard } from "./builders/guard";
 export { coerceBigint } from "./coercion/coerce-bigint";
@@ -38,6 +46,7 @@ export { fail, pass, type IssueInput } from "./core/result";
 export type {
   AnyValidator,
   AsyncCheck,
+  AsyncRest,
   Check,
   AsyncValidator,
   Composed,
@@ -45,6 +54,7 @@ export type {
   Infer,
   Message,
   MessageOptions,
+  Rest,
   ValidationErr,
   ValidationFailure,
   ValidationIssue,
@@ -76,9 +86,9 @@ export { date, type DateOptions } from "./primitives/date";
 export { func, type AnyFunction } from "./primitives/func";
 export { instanceOf, type Constructor } from "./primitives/instance-of";
 export { literal, type LiteralValue } from "./primitives/literal";
-export { nativeEnum, type EnumLike } from "./primitives/native-enum";
 export { never } from "./primitives/never";
 export { number, type NumberOptions } from "./primitives/number";
-export { oneOf } from "./primitives/one-of";
+export { oneOf, type EnumLike } from "./primitives/one-of";
 export { string, type StringOptions } from "./primitives/string";
+export { symbol } from "./primitives/symbol";
 export { unknown } from "./primitives/unknown";

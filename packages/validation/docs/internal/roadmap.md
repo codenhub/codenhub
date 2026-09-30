@@ -33,7 +33,7 @@ Everything follows the [architecture](architecture.md): a factory with the signa
 - **Parts.** `hostname`, `domain` (a public domain name), `ip` and `port` (numbers) as validators on their own. `url({ protocols, host, path, port, query, repeated })`, with `host` replacing `allowLocal`. `email({ domain, local, allowPlus })`. `searchParams(validator, { repeated })`.
 - **Formats.** The 0.1.0 formats, with `ip` returning the canonical form, plus `phone` (E.164, returned canonical), `slug`, `semver`, `jwt` (its structure, not its signature), `creditCard` (the Luhn check), `cidr`, `mac`, `time`, `duration`, `base64({ url })` and `uuid({ version })`.
 - **Unchanged.** Coercion, `is`, `pass` and `fail`, the result shape, `formatIssue`, `flatten`, `formatPath`, `englishMessages` with wording for every new code, and `standard`.
-- **Types.** The public types are `Validator`, `AsyncValidator`, `Check`, `AsyncCheck`, `Message`, `MessageOptions`, `Factory`, `Infer`, `ValidationResult`, `ValidationIssue`, `Messages` and the options interfaces. The rest are internal.
+- **Types.** The public types are `Validator`, `AsyncValidator`, `Check`, `AsyncCheck`, `Message`, `MessageOptions`, `Factory`, `Rest`, `AsyncRest`, `Infer`, `ValidationResult`, `ValidationIssue`, `Messages` and the options interfaces. The rest are internal.
 
 ### Quality
 
