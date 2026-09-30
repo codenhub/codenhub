@@ -63,7 +63,10 @@ export function object<TShape extends Shape>(
   shape: TShape,
   options: ObjectOptions = {},
 ): Composed<TShape[keyof TShape], InferShape<TShape>> {
+  // The shape is read once, so changing it after the validator is made changes nothing.
   const keys = Object.keys(shape);
+  const validators = keys.map((key) => shape[key] as AnyValidator);
+  const known = new Set(keys);
   const unknownKeys = options.unknownKeys ?? "strip";
   if (unknownKeys !== "strip" && unknownKeys !== "strict" && unknownKeys !== "passthrough") {
     throw new TypeError(`unknownKeys must be "strip", "strict" or "passthrough", received "${String(unknownKeys)}"`);
@@ -77,13 +80,15 @@ export function object<TShape extends Shape>(
     const issues: ValidationIssue[] = [];
     if (unknownKeys === "strict") {
       for (const key of Object.keys(input)) {
-        if (!Object.hasOwn(shape, key)) {
+        if (!known.has(key)) {
           issues.push(toIssue({ code: "unrecognized_key", path: [key], params: { key } }));
         }
       }
     }
 
-    const results = keys.map((key) => (shape[key] as AnyValidator)(Object.hasOwn(input, key) ? input[key] : undefined));
+    const results = keys.map((key, index) =>
+      (validators[index] as AnyValidator)(Object.hasOwn(input, key) ? input[key] : undefined),
+    );
     return chain(collect(results), (settled) => {
       const output: Record<string, unknown> = {};
       settled.forEach((result, index) => {
@@ -99,7 +104,7 @@ export function object<TShape extends Shape>(
       }
       if (unknownKeys === "passthrough") {
         for (const key of Object.keys(input)) {
-          if (!Object.hasOwn(shape, key)) {
+          if (!known.has(key)) {
             setOwn(output, key, input[key]);
           }
         }

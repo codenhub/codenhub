@@ -85,6 +85,13 @@ describe("number", () => {
       expect([-5, 5, 50].map((input) => valueOf(clamped(input)))).toEqual([0, 5, 10]);
     });
 
+    it("should read the range once, when the validator is created", () => {
+      const range = { min: 0, max: 10 };
+      const clamped = number({ clamp: range });
+      range.max = 1;
+      expect(valueOf(clamped(5))).toBe(5);
+    });
+
     it("should run before the constraints, so they see the clamped number", () => {
       expect(number({ clamp: { min: 0, max: 10 }, max: 10 })(50).ok).toBe(true);
       expect(number({ clamp: { min: 0, max: 10 }, min: 5 })(2).ok).toBe(false);

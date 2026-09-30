@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { fail, pass } from "../core/result";
-import type { AsyncValidator } from "../core/types";
+import type { AsyncValidator, Validator } from "../core/types";
 import { email } from "../formats/email";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
@@ -100,6 +100,17 @@ describe("object", () => {
       expect((output as { admin?: boolean }).admin).toBeUndefined();
       expect(Object.keys(output)).toEqual(["name", "__proto__"]);
     });
+  });
+
+  it("should read the shape once, when the validator is created", () => {
+    const shape: Record<string, Validator<unknown>> = { name: string() };
+    const user = object(shape, { unknownKeys: "strict" });
+    shape["name"] = number();
+    shape["age"] = number();
+    expect(user({ name: "Ada" })).toEqual({ ok: true, value: { name: "Ada" } });
+    expect(codesOf(user({ name: "Ada", age: 1 }))).toEqual(["unrecognized_key"]);
+    delete shape["name"];
+    expect(user({ name: "Ada" }).ok).toBe(true);
   });
 
   it("should accept an empty shape and strip everything", () => {

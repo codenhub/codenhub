@@ -51,7 +51,7 @@ export const check = object({ name: string({ min: 2 }), email: email(), age: opt
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 3840,
+    budget: 3860,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 680 },
   { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 1590 },
@@ -84,7 +84,7 @@ export const describe = (input: unknown) => { const result = check(input); retur
   {
     name: "map",
     source: `import { map, number, string } from "DIST"; export const check = map(string(), number());`,
-    budget: 2360,
+    budget: 2380,
   },
   {
     name: "tuple",
@@ -105,7 +105,7 @@ export const describe = (input: unknown) => { const result = check(input); retur
     name: "discriminatedUnion",
     source: `import { discriminatedUnion, object, string } from "DIST";
 export const check = discriminatedUnion("type", { a: object({ a: string() }), b: object({ b: string() }) });`,
-    budget: 1780,
+    budget: 1810,
   },
   { name: "json", source: `import { json } from "DIST"; export const check = json();`, budget: 620 },
   {
@@ -132,7 +132,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "standard",
     source: `import { englishMessages, number, standard } from "DIST"; export const check = standard(number(), englishMessages);`,
-    budget: 2460,
+    budget: 2490,
   },
   {
     name: "formatIssue with your own wording",
@@ -147,7 +147,7 @@ export const check = discriminatedUnion("type", { a: object({ a: string() }), b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 8380,
+    budget: 8430,
   },
 ];
 

@@ -57,14 +57,17 @@ export function discriminatedUnion<const TKey extends string, const TVariants ex
   key: TKey,
   variants: TVariants,
 ): Composed<TVariants[keyof TVariants], InferDiscriminated<TKey, TVariants>> {
-  const tags = Object.keys(variants);
+  // The variants are read once, so changing the record after the validator is made changes nothing.
+  const table = new Map(Object.entries(variants));
+  const tags = [...table.keys()];
 
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
       return invalidObject(input);
     }
     const tag = Object.hasOwn(input, key) ? input[key] : undefined;
-    if (typeof tag !== "string" || !Object.hasOwn(variants, tag)) {
+    const variant = typeof tag === "string" ? table.get(tag) : undefined;
+    if (variant === undefined) {
       return failWith([
         toIssue({ code: "invalid_union", path: [key], params: { discriminator: key, options: [...tags] } }),
       ]);
@@ -75,9 +78,7 @@ export function discriminatedUnion<const TKey extends string, const TVariants ex
         setOwn(rest, name, input[name]);
       }
     }
-    return chain((variants[tag] as AnyValidator)(rest), (result) =>
-      result.ok ? pass({ [key]: tag, ...(result.value as object) }) : result,
-    );
+    return chain(variant(rest), (result) => (result.ok ? pass({ [key]: tag, ...(result.value as object) }) : result));
   };
   return validate as unknown as Composed<TVariants[keyof TVariants], InferDiscriminated<TKey, TVariants>>;
 }

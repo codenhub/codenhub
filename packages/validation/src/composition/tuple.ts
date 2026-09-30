@@ -53,7 +53,9 @@ export function tuple<
   options: TupleOptions<TRest> = {},
 ): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>> {
   const { rest } = options;
-  const { length } = items;
+  // Copied, so changing the list after the validator is made changes nothing.
+  const fixed = [...items];
+  const { length } = fixed;
 
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!Array.isArray(input)) {
@@ -76,7 +78,7 @@ export function tuple<
     return settle(
       // By index up to the length that was checked, never through the array's own iterator, as in `array`.
       Array.from({ length: size }, (_, index) =>
-        ((index < length ? items[index] : rest) as AnyValidator)(input[index]),
+        ((index < length ? fixed[index] : rest) as AnyValidator)(input[index]),
       ),
       pass,
     );

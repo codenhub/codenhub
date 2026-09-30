@@ -93,7 +93,9 @@ const isMultipleOf = (value: number, step: number): boolean => {
  * reject every input.
  */
 export function number(options: NumberOptions = {}): Validator<number> {
-  const { min, max, gt, lt, int, safeInt, multipleOf, nonZero, clamp } = options;
+  const { min, max, gt, lt, int, safeInt, multipleOf, nonZero } = options;
+  // Copied, so changing the range after the validator is made changes nothing.
+  const clamp = options.clamp && { min: options.clamp.min, max: options.clamp.max };
   if (multipleOf !== undefined && (!Number.isFinite(multipleOf) || multipleOf <= 0)) {
     throw new RangeError(`multipleOf must be a positive finite number, received ${multipleOf}`);
   }

@@ -17,6 +17,14 @@ describe("union", () => {
     expect(valueOf(id(7))).toBe(7);
   });
 
+  it("should read the options once, when the validator is created", () => {
+    const options: [Validator<unknown>, ...Validator<unknown>[]] = [number()];
+    const either = union(options);
+    options[0] = string();
+    options.push(string());
+    expect(accepts(either, 1, "a")).toEqual([true, false]);
+  });
+
   it("should reject a value no option accepts, with one invalid_union issue at the value", () => {
     expect(codesOf(id(true))).toEqual(["invalid_union"]);
     expect(issuesOf(id(true))[0]?.path).toEqual([]);

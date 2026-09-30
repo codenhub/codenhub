@@ -28,12 +28,14 @@ import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult }
 export function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(
   options: TOptions,
 ): Composed<TOptions[number], Infer<TOptions[number]>> {
+  // Copied, so changing the list after the validator is made changes nothing.
+  const tried = [...options];
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     const found: (readonly ValidationIssue[])[] = [];
     const attempt = (index: number): Maybe<ValidationResult<unknown>> =>
-      index === options.length
+      index === tried.length
         ? failIssue("invalid_union", { issues: found })
-        : chain((options[index] as AnyValidator)(input), (result) => {
+        : chain((tried[index] as AnyValidator)(input), (result) => {
             if (result.ok) {
               return result;
             }
