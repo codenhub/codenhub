@@ -15,8 +15,15 @@ export interface SymbolSignature {
   text: string;
   /** Extra overload declaration texts for a function, in source order; `text` is the first. */
   overloads?: string[];
+  /**
+   * Headers of further declarations merged under this name, such as a namespace next
+   * to an interface, in source order; `text` is the first declaration's.
+   */
+  merged?: string[];
   /** Member name to its one-line declaration text, for a class, interface, or enum. */
   members?: Map<string, string>;
+  /** Signatures of the symbols declared in a namespace merged under this name. */
+  namespaceMembers?: SignatureIndex;
 }
 
 /** Every exported symbol's signature from one `.d.ts`, keyed by symbol name. */
@@ -90,6 +97,27 @@ function addSignature(index: SignatureIndex, name: string, signature: SymbolSign
   existing.overloads = [...(existing.overloads ?? []), signature.text];
 }
 
+/**
+ * Adds a declaration that merges with an existing one of the same name, such as a
+ * namespace next to an interface, or a second declaration of the same interface.
+ */
+function mergeSignature(index: SignatureIndex, name: string, signature: SymbolSignature): void {
+  const existing = index.get(name);
+  if (existing === undefined) {
+    index.set(name, signature);
+    return;
+  }
+  if (signature.text !== existing.text && !(existing.merged ?? []).includes(signature.text)) {
+    existing.merged = [...(existing.merged ?? []), signature.text];
+  }
+  if (signature.members !== undefined) {
+    existing.members = new Map([...(existing.members ?? []), ...signature.members]);
+  }
+  if (signature.namespaceMembers !== undefined) {
+    existing.namespaceMembers = new Map([...(existing.namespaceMembers ?? []), ...signature.namespaceMembers]);
+  }
+}
+
 /** `import("../types").ReadonlyErrorRegistry` → `ReadonlyErrorRegistry`; adds a terminating `;`. */
 function tidy(text: string, terminate: boolean): string {
   const stripped = text.replace(/import\((["'])[^"']*\1\)\./g, "").trim();
@@ -101,9 +129,13 @@ function modifiersText(node: ts.HasModifiers, source: ts.SourceFile): string {
 }
 
 function collectDeclarations(source: ts.SourceFile): SignatureIndex {
+  return collectStatements(source.statements, source);
+}
+
+function collectStatements(statements: readonly ts.Statement[], source: ts.SourceFile): SignatureIndex {
   const index: SignatureIndex = new Map();
 
-  for (const statement of source.statements) {
+  for (const statement of statements) {
     if (ts.isFunctionDeclaration(statement)) {
       const name = declaredName(statement.name, statement);
       if (name !== undefined) {
@@ -115,7 +147,7 @@ function collectDeclarations(source: ts.SourceFile): SignatureIndex {
     if (ts.isClassDeclaration(statement) || ts.isInterfaceDeclaration(statement)) {
       const name = declaredName(statement.name, statement);
       if (name !== undefined) {
-        index.set(name, {
+        mergeSignature(index, name, {
           members: memberEntries(statement.members, source),
           text: tidy(headerText(statement, source), false),
         });
@@ -129,7 +161,7 @@ function collectDeclarations(source: ts.SourceFile): SignatureIndex {
     }
 
     if (ts.isEnumDeclaration(statement)) {
-      index.set(statement.name.text, {
+      mergeSignature(index, statement.name.text, {
         members: memberEntries(statement.members, source),
         text: `${modifiersText(statement, source)} enum ${statement.name.text}`.trim(),
       });
@@ -150,7 +182,11 @@ function collectDeclarations(source: ts.SourceFile): SignatureIndex {
     }
 
     if (ts.isModuleDeclaration(statement) && ts.isIdentifier(statement.name)) {
-      index.set(statement.name.text, { text: `namespace ${statement.name.text}` });
+      const body = statement.body !== undefined && ts.isModuleBlock(statement.body) ? statement.body : undefined;
+      mergeSignature(index, statement.name.text, {
+        namespaceMembers: collectStatements(body?.statements ?? [], source),
+        text: `${modifiersText(statement, source)} namespace ${statement.name.text}`.trim(),
+      });
     }
   }
 
@@ -499,12 +535,13 @@ function withSignature(symbol: ReferenceSymbol, index: SignatureIndex | undefine
   }
   return {
     ...symbol,
+    namespaceMembers: symbol.namespaceMembers.map((member) => withSignature(member, found.namespaceMembers)),
     members: symbol.members.map((member) => {
       const text = found.members?.get(member.name);
       return text === undefined ? member : { ...member, signature: text };
     }),
-    // Overloads join the signature block as separate lines, in source order.
-    signature: [found.text, ...(found.overloads ?? [])].join("\n"),
+    // Overloads and merged declarations join the signature block as separate lines.
+    signature: [found.text, ...(found.overloads ?? []), ...(found.merged ?? [])].join("\n"),
   };
 }
 

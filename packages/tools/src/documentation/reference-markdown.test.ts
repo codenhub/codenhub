@@ -11,6 +11,7 @@ function symbol(partial: Partial<ReferenceSymbol> & Pick<ReferenceSymbol, "name"
     examples: [],
     see: [],
     members: [],
+    namespaceMembers: [],
     ...partial,
   };
 }

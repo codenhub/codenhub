@@ -99,4 +99,50 @@ describe("analyzeReference", () => {
     expect(files[0]?.contents).toContain("### add");
     expect(files[0]?.contents).toContain("Adds two numbers together.");
   });
+
+  // An interface and a namespace sharing one name are one symbol to a consumer,
+  // as `StandardSchemaV1` in @codenhub/validation is.
+  it("renders an interface merged with a namespace as one complete section", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-merged", {
+      "index.ts": [
+        "/** A schema. */",
+        "export interface Schema<TOutput = unknown> {",
+        "  /** The schema metadata. */",
+        '  readonly "~meta": Schema.Props<TOutput>;',
+        "}",
+        "",
+        "export declare namespace Schema {",
+        "  /** Metadata on a schema. */",
+        "  export interface Props<TOutput = unknown> {",
+        "    /** The vendor. */",
+        "    readonly vendor: string;",
+        "    /** Validates a value. */",
+        "    readonly validate: (value: unknown) => Result<TOutput>;",
+        "  }",
+        "  /** A validation result. */",
+        "  export type Result<TOutput> = { readonly value: TOutput };",
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    const page = files[0]?.contents ?? "";
+
+    expect(model.entrypoints[0]?.symbols.map((symbol) => symbol.name)).toEqual(["Schema"]);
+    expect(page.match(/^### Schema$/gm)).toHaveLength(1);
+    expect(page).not.toContain("## Namespaces");
+    expect(page).toContain(
+      ["```ts", "export interface Schema<TOutput = unknown>", "export declare namespace Schema", "```"].join("\n"),
+    );
+    expect(page).toContain('readonly "~meta": Schema.Props<TOutput>;');
+    expect(page).toContain("#### Schema.Props");
+    // Members of an ambient namespace carry no `export` keyword in the emitted `.d.ts`.
+    expect(page).toContain("interface Props<TOutput = unknown>");
+    expect(page).toContain("Metadata on a schema.");
+    expect(page).toContain("readonly vendor: string;");
+    expect(page).toContain("The vendor.");
+    expect(page).toContain("#### Schema.Result");
+    expect(page).toContain("type Result<TOutput> = {");
+  });
 });

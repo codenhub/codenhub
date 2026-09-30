@@ -1,6 +1,12 @@
 import { slug } from "github-slugger";
 
-import type { ReferenceEntrypoint, ReferenceMember, ReferenceNamedDoc, ReferenceSymbol } from "./reference-model.ts";
+import {
+  walkSymbols,
+  type ReferenceEntrypoint,
+  type ReferenceMember,
+  type ReferenceNamedDoc,
+  type ReferenceSymbol,
+} from "./reference-model.ts";
 
 // Symbol-group headings, in the render order docs/specs/packages-reference.md sets.
 const GROUP_HEADINGS: readonly { kind: ReferenceSymbol["kind"]; heading: string }[] = [
@@ -120,7 +126,17 @@ function notesSection(heading: string, items: readonly string[], link: (text: st
   return [`**${heading}**`, items.map((item) => `- ${link(item)}`).join("\n")];
 }
 
-function memberBlocks(member: ReferenceMember, prose: boolean, link: (text: string) => string): string[] {
+// Markdown stops at H6; deeper nesting keeps the last level rather than breaking the page.
+function heading(level: number, text: string): string {
+  return `${"#".repeat(Math.min(level, 6))} ${text}`;
+}
+
+function memberBlocks(
+  member: ReferenceMember,
+  prose: boolean,
+  link: (text: string) => string,
+  level: number,
+): string[] {
   if (member.inheritedFrom !== undefined) {
     if (!prose) {
       // An inherited member has no signature of its own to put in a manifest-only
@@ -131,12 +147,12 @@ function memberBlocks(member: ReferenceMember, prose: boolean, link: (text: stri
     // An inherited member points at the type that declares it; that type's own
     // section carries the signature and prose.
     return [
-      `#### ${member.name}`,
+      heading(level, member.name),
       member.inheritedFrom === "" ? "_Inherited._" : `Inherited from ${link(`{@link ${member.inheritedFrom}}`)}.`,
     ];
   }
 
-  const blocks = [`#### ${member.name}`];
+  const blocks = [heading(level, member.name)];
   if (member.signature !== undefined) {
     blocks.push(codeBlock(member.signature));
   }
@@ -156,8 +172,18 @@ function deprecationNote(deprecated: string | true, link: (text: string) => stri
   return deprecated === true ? "> **Deprecated.**" : `> **Deprecated.** ${link(deprecated)}`;
 }
 
-function symbolBlocks(symbol: ReferenceSymbol, prose: boolean, link: (text: string) => string): string[] {
-  const blocks = [`### ${symbol.name}`];
+/**
+ * One symbol's section. A namespace member is a section one level deeper than the
+ * symbol declaring it, headed by its dot-qualified name so its anchor is unique.
+ */
+function symbolBlocks(
+  symbol: ReferenceSymbol,
+  prose: boolean,
+  link: (text: string) => string,
+  level = 3,
+  qualifiedName = symbol.name,
+): string[] {
+  const blocks = [heading(level, qualifiedName)];
 
   if (symbol.signature !== undefined) {
     blocks.push(codeBlock(symbol.signature));
@@ -189,7 +215,10 @@ function symbolBlocks(symbol: ReferenceSymbol, prose: boolean, link: (text: stri
   }
 
   for (const member of symbol.members) {
-    blocks.push(...memberBlocks(member, prose, link));
+    blocks.push(...memberBlocks(member, prose, link, level + 1));
+  }
+  for (const nested of symbol.namespaceMembers) {
+    blocks.push(...symbolBlocks(nested, prose, link, level + 1, `${qualifiedName}.${nested.name}`));
   }
   return blocks;
 }
@@ -207,7 +236,7 @@ function symbolBlocks(symbol: ReferenceSymbol, prose: boolean, link: (text: stri
  * @returns The page's Markdown, newline-terminated.
  */
 export function renderReferencePage(entrypoint: ReferenceEntrypoint, options: RenderReferencePageOptions): string {
-  const ownNames = new Set(entrypoint.symbols.map((symbol) => symbol.name));
+  const ownNames = new Set([...walkSymbols(entrypoint.symbols)].map(([qualifiedName]) => qualifiedName));
   const link = (text: string): string => resolveLinks(text, ownNames, options.resolveLink);
 
   const sections: string[] = [

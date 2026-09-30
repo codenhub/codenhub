@@ -107,6 +107,12 @@ export interface ReferenceSymbol {
   since?: string;
   /** Members of a class, interface, or enum; empty otherwise. */
   members: ReferenceMember[];
+  /**
+   * Symbols a namespace declares, ordered like entrypoint symbols. Set on a namespace,
+   * and on any symbol merged with a namespace of the same name, such as an interface
+   * that also carries a namespace of related types; empty otherwise.
+   */
+  namespaceMembers: ReferenceSymbol[];
   /** Source file (repo-relative POSIX) and 1-based line the declaration starts on. */
   source?: { fileName: string; line: number };
   /** Repo-relative source file the real declaration lives in, when this symbol is a re-export. */
@@ -401,10 +407,19 @@ function buildSource(sources: SourceReference[] | undefined): ReferenceSymbol["s
   return { fileName: stripLeadingDotSlash(first.fileName), line: first.line };
 }
 
-function buildSymbol(
+/** A module or namespace child resolved to its declaration, following a re-export reference. */
+interface ResolvedChild {
+  name: string;
+  kind: ReferenceSymbolKind;
+  declaration: Reflection;
+  exported: Reflection;
+  reexportedFrom?: string;
+}
+
+function resolveChild(
   reflection: Reflection,
   resolve: (id: number) => Reflection | undefined,
-): ReferenceSymbol | undefined {
+): ResolvedChild | undefined {
   const name = reflection.name;
   if (typeof name !== "string") {
     return undefined;
@@ -422,20 +437,45 @@ function buildSymbol(
     declaration = target;
   }
 
-  if (typeof declaration.kind !== "number") {
-    return undefined;
-  }
-  const kind = SYMBOL_KIND_BY_REFLECTION.get(declaration.kind);
-  if (kind === undefined) {
-    return undefined;
-  }
+  const kind = typeof declaration.kind === "number" ? SYMBOL_KIND_BY_REFLECTION.get(declaration.kind) : undefined;
+  return kind === undefined ? undefined : { declaration, exported: reflection, kind, name, reexportedFrom };
+}
 
-  const comment = symbolComment(declaration);
+/**
+ * Builds one symbol from every declaration sharing its name.
+ *
+ * TypeScript merges an interface, class, function, or enum with a namespace of the
+ * same name, and TypeDoc keeps them as separate reflections. A consumer imports one
+ * name, so the reference documents one section: the kind, prose, and members come
+ * from the declaration that sorts first by group, and the namespace's own symbols
+ * become `namespaceMembers`.
+ */
+function buildSymbol(
+  declarations: readonly ResolvedChild[],
+  resolve: (id: number) => Reflection | undefined,
+): ReferenceSymbol | undefined {
+  const ordered = [...declarations].sort(
+    (left, right) => SYMBOL_KIND_ORDER.indexOf(left.kind) - SYMBOL_KIND_ORDER.indexOf(right.kind),
+  );
+  const primary = ordered[0];
+  if (primary === undefined) {
+    return undefined;
+  }
+  const { declaration, kind, name } = primary;
+
+  const comment = ordered.map((candidate) => symbolComment(candidate.declaration)).find((found) => found !== undefined);
   const signature = declaration.signatures?.[0];
-  const members =
-    kind === "class" || kind === "interface" || kind === "enum"
-      ? sortMembers((declaration.children ?? []).flatMap((child) => buildMember(child) ?? []))
-      : [];
+  const members = sortMembers(
+    ordered
+      .filter((candidate) => candidate.kind === "class" || candidate.kind === "interface" || candidate.kind === "enum")
+      .flatMap((candidate) => (candidate.declaration.children ?? []).flatMap((child) => buildMember(child) ?? [])),
+  );
+  const namespaceMembers = buildSymbols(
+    ordered
+      .filter((candidate) => candidate.kind === "namespace")
+      .flatMap((candidate) => candidate.declaration.children ?? []),
+    resolve,
+  );
 
   return {
     deprecated: deprecation(comment),
@@ -445,15 +485,40 @@ function buildSymbol(
     kind,
     members,
     name,
+    namespaceMembers,
     parameters: namedDocs(signature?.parameters, comment, "@param"),
-    reexportedFrom,
+    reexportedFrom: primary.reexportedFrom,
     returns: optionalBlockTagText(comment, "@returns"),
     see: blockTags(comment, "@see"),
     since: optionalBlockTagText(comment, "@since"),
-    source: buildSource(declaration.sources ?? reflection.sources),
+    source: buildSource(declaration.sources ?? primary.exported.sources),
     throws: blockTags(comment, "@throws"),
     typeParameters: namedDocs(signature?.typeParameters ?? declaration.typeParameters, comment, "@typeParam"),
   };
+}
+
+/** Groups a module's or namespace's children by exported name, resolving re-exports. */
+function groupChildren(
+  children: readonly Reflection[],
+  resolve: (id: number) => Reflection | undefined,
+): Map<string, ResolvedChild[]> {
+  const byName = new Map<string, ResolvedChild[]>();
+  for (const child of children) {
+    const resolved = resolveChild(child, resolve);
+    if (resolved !== undefined) {
+      byName.set(resolved.name, [...(byName.get(resolved.name) ?? []), resolved]);
+    }
+  }
+  return byName;
+}
+
+/** Builds the ordered symbols for a module's or namespace's children, merging same-name declarations. */
+function buildSymbols(
+  children: readonly Reflection[],
+  resolve: (id: number) => Reflection | undefined,
+): ReferenceSymbol[] {
+  const groups = groupChildren(children, resolve).values();
+  return sortSymbols([...groups].flatMap((declarations) => buildSymbol(declarations, resolve) ?? []));
 }
 
 function sortSymbols(symbols: ReferenceSymbol[]): ReferenceSymbol[] {
@@ -533,9 +598,26 @@ export function buildReferenceModel(project: unknown, subpathByModule: Record<st
       module,
       since: optionalBlockTagText(reflection?.comment, "@since"),
       subpath,
-      symbols: sortSymbols(children.flatMap((child) => buildSymbol(child, resolve) ?? [])),
+      symbols: buildSymbols(children, resolve),
     });
   }
 
   return { entrypoints, packageName, unsupported };
+}
+
+/**
+ * Walks a symbol list depth-first with each symbol's dot-qualified name.
+ * @param symbols Entrypoint symbols, or a symbol's `namespaceMembers`.
+ * @param qualifier Names of the enclosing namespaces, dot-joined; empty at the top level.
+ * @yields Each symbol followed by its namespace members, as `[qualifiedName, symbol]`.
+ */
+export function* walkSymbols(
+  symbols: readonly ReferenceSymbol[],
+  qualifier = "",
+): Generator<[string, ReferenceSymbol]> {
+  for (const symbol of symbols) {
+    const qualified = qualifier === "" ? symbol.name : `${qualifier}.${symbol.name}`;
+    yield [qualified, symbol];
+    yield* walkSymbols(symbol.namespaceMembers, qualified);
+  }
 }

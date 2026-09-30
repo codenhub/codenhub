@@ -102,6 +102,7 @@ describe("attachSignatures", () => {
               throws: [],
               examples: [],
               see: [],
+              namespaceMembers: [],
               members: [
                 {
                   name: "type",
