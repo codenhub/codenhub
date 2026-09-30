@@ -39,6 +39,10 @@ describe("nativeEnum", () => {
     expect(accepts(nativeEnum(Mixed), 1, "A", "B", 0)).toEqual([true, true, false, false]);
   });
 
+  it("should refuse an enum without values, which would accept nothing", () => {
+    expect(() => nativeEnum({})).toThrow(new TypeError("nativeEnum() needs an enum with at least one value"));
+  });
+
   it("should work with a plain object written like an enum", () => {
     expect(accepts(nativeEnum({ a: "x", b: "y" } as const), "x", "a")).toEqual([true, false]);
   });

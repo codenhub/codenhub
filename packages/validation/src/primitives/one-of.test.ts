@@ -36,12 +36,15 @@ describe("oneOf", () => {
     expect(issuesOf(validator("c"))[0]?.params?.options).toEqual(["a", "b"]);
   });
 
-  it("should accept nothing for an empty list", () => {
-    expect(oneOf([])("x").ok).toBe(false);
+  it("should refuse an empty list, which would accept nothing", () => {
+    expect(() => oneOf([])).toThrow(new TypeError("oneOf() needs at least one value"));
   });
 
-  it("should compare with ===, so NaN matches nothing and -0 matches 0", () => {
-    expect(oneOf([Number.NaN])(Number.NaN).ok).toBe(false);
+  it("should refuse NaN, which no value equals, so its entry could match nothing", () => {
+    expect(() => oneOf([1, Number.NaN])).toThrow(RangeError);
+  });
+
+  it("should compare with ===, so -0 matches 0", () => {
     expect(oneOf([0])(-0).ok).toBe(true);
   });
 });
