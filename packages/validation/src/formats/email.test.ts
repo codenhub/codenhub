@@ -5,16 +5,16 @@ import { email } from "./email";
 import { url } from "./url";
 
 describe("email", () => {
-  it("should accept ordinary addresses and leave them unchanged", () => {
-    expect(valueOf(email()("Me.Name+tag@Example.COM"))).toBe("Me.Name+tag@Example.COM");
+  it("should keep the local part as written and return the domain as the parser writes it", () => {
+    expect(valueOf(email()("Me.Name+tag@Example.COM"))).toBe("Me.Name+tag@example.com");
   });
 
   it("should accept subdomains and internationalized top-level domains in punycode", () => {
     expect(accepts(email(), "a@mail.example.co.uk", "a@example.xn--p1ai")).toEqual([true, true]);
   });
 
-  it("should accept an internationalized domain and leave the address as written", () => {
-    expect(valueOf(email()("ada@münchen.de"))).toBe("ada@münchen.de");
+  it("should accept an internationalized domain and return it in the ASCII form mail is delivered to", () => {
+    expect(valueOf(email()("ada@münchen.de"))).toBe("ada@xn--mnchen-3ya.de");
     expect(accepts(email(), "ada@例え.jp", "ada@bücher.example.co.uk", "ada@xn--mnchen-3ya.de")).toEqual([
       true,
       true,
@@ -30,10 +30,11 @@ describe("email", () => {
     expect(accepts(local, "mailto:a@xn--zz", "mailto:a@xn--mnchen-3ya")).toEqual([false, true]);
   });
 
-  it("should reject a host the URL parser would rewrite before reading it, so one address has one spelling", () => {
-    const rewritten = ["ada@\uff45xample.com", "ada@mu\u0308nchen.de", "ada@\ufb01sh.com"];
-    expect(accepts(email(), ...rewritten)).toEqual([false, false, false]);
-    expect(accepts(email(), "ada@m\u00fcnchen.de", "ada@example.com")).toEqual([true, true]);
+  it("should return the domain the parser reads when the text spells it another way, so one address has one spelling", () => {
+    expect(valueOf(email()("ada@\uff45xample.com"))).toBe("ada@example.com");
+    expect(valueOf(email()("ada@mu\u0308nchen.de"))).toBe("ada@xn--mnchen-3ya.de");
+    expect(valueOf(email()("ada@\ufb01sh.com"))).toBe("ada@fish.com");
+    expect(valueOf(email()("ada@exa\ufe0fmple.com"))).toBe("ada@example.com");
   });
 
   it("should measure the address as it is delivered, where an internationalized host is longer", () => {

@@ -1,11 +1,18 @@
-import { isEmailAddress } from "./email-address";
+import { toEmailAddress } from "./email-address";
+
+/**
+ * The schemes whose URLs name no host, each read by its own rules below. A URL of one of them is read
+ * by those rules even when it is written with a host, as in `mailto://example.com`, which names no
+ * recipient.
+ */
+export const HOSTLESS_SCHEMES = ["mailto", "tel", "urn"];
 
 /**
  * A global number from RFC 3966: `+`, digits with the visual separators `-`, `.`, `(` and `)`
- * between them, then `;name=value` parameters. Every repetition ends on a digit or starts with `;`,
- * so matching stays linear.
+ * between them, then `;name=value` parameters whose value holds only the characters the RFC lists
+ * and escapes. Every repetition ends on a digit or starts with `;`, so matching stays linear.
  */
-const TEL_PATTERN = /^\+[0-9](?:[-.()]*[0-9])*(?:;[a-z0-9-]+(?:=[^;]+)?)*$/i;
+const TEL_PATTERN = /^\+[0-9](?:[-.()]*[0-9])*(?:;[a-z0-9-]+(?:=(?:[\w.!~*'()[\]/:&+$-]|%[0-9a-f]{2})+)?)*$/i;
 
 /**
  * An RFC 8141 name after `urn:`: a namespace of 2 to 32 letters, digits and inner hyphens, a colon,
@@ -15,52 +22,78 @@ const TEL_PATTERN = /^\+[0-9](?:[-.()]*[0-9])*(?:;[a-z0-9-]+(?:=[^;]+)?)*$/i;
 const URN_PATTERN =
   /^[a-z0-9][a-z0-9-]{0,30}[a-z0-9]:(?:[\w\-.~!$&'()*+,;=:@]|%[0-9a-f]{2})(?:[\w\-.~!$&'()*+,;=:@/]|%[0-9a-f]{2})*(?:\?\+[^?#]*)?(?:\?=[^#]*)?(?:#.*)?$/i;
 
-/** The header fields of a mailto URL that hold recipients, which must pass as addresses too. */
-const RECIPIENT_FIELD_PATTERN = /^(?:to|cc|bcc)$/i;
+/** The header fields RFC 6068 gives a message. Any other, such as `from`, fails. */
+const FIELD_PATTERN = /^(?:to|cc|bcc|subject|body)$/;
+/** The fields that hold recipients, which must pass as addresses too. */
+const RECIPIENT_FIELD_PATTERN = /^(?:to|cc|bcc)$/;
+/**
+ * Characters of an address that a mailto URL must escape (RFC 6068): all but letters, digits, `@` and
+ * `_ . ~ ! $ ' * + -`. Only a local part holds any, such as `?`, `&`, `#` or `%`, which would end the
+ * address or start an escape.
+ */
+const MAILTO_ESCAPED_PATTERN = /[^\w.~!$'*+@-]/g;
 
 /**
- * Tests the part of a mailto URL after the colon: every recipient, in the path or the query. Other
- * fields, such as `subject` or `body`, are not checked, since RFC 6068 lets `body` hold encoded line
- * breaks, and the docs say so.
+ * Reads the part of a mailto URL after the colon, returning it with every recipient as `email` returns
+ * it and every field name in lowercase, or undefined when it is not a mailto. Every field of the query
+ * must be `name=value` with a name from an allowlist: `to`, `cc` and `bcc`, whose recipients must pass
+ * as addresses like those in the path, and `subject` and `body`, whose text is kept as the parser
+ * wrote it, since RFC 6068 lets `body` hold encoded line breaks.
  */
-function isMailto(rest: string, allowLocal: boolean): boolean {
+function toMailto(rest: string, allowLocal: boolean): string | undefined {
   const queryStart = rest.indexOf("?");
   const path = queryStart === -1 ? rest : rest.slice(0, queryStart);
-  const encoded = path === "" ? [] : path.split(",");
-  if (queryStart !== -1) {
-    for (const field of rest.slice(queryStart + 1).split("&")) {
-      const separator = field.indexOf("=");
-      if (separator !== -1 && RECIPIENT_FIELD_PATTERN.test(field.slice(0, separator))) {
-        // One by one: spreading a long list into `push` overflows the stack, and the list is the sender's.
-        for (const address of field.slice(separator + 1).split(",")) {
-          encoded.push(address);
-        }
-      }
-    }
-  }
+  let count = 0;
+  let isMailto = true;
+  // Each list is read with `map`, never spread into a call, which a long list would overflow.
+  const toRecipients = (list: string): string =>
+    list
+      .split(",")
+      .map((encoded) => {
+        const address = toEmailAddress(decodeURIComponent(encoded), true, allowLocal);
+        count += 1;
+        isMailto &&= address !== undefined;
+        return address?.replace(MAILTO_ESCAPED_PATTERN, (character) => encodeURIComponent(character));
+      })
+      .join(",");
+  const toField = (field: string): string => {
+    const separator = field.indexOf("=");
+    const name = field.slice(0, separator).toLowerCase();
+    const value = field.slice(separator + 1);
+    isMailto &&= separator !== -1 && FIELD_PATTERN.test(name);
+    return `${name}=${isMailto && RECIPIENT_FIELD_PATTERN.test(name) ? toRecipients(value) : value}`;
+  };
   try {
-    return (
-      encoded.length > 0 && encoded.every((address) => isEmailAddress(decodeURIComponent(address), true, allowLocal))
-    );
+    const recipients = path === "" ? "" : toRecipients(path);
+    const value =
+      queryStart === -1
+        ? recipients
+        : `${recipients}?${rest
+            .slice(queryStart + 1)
+            .split("&")
+            .map(toField)
+            .join("&")}`;
+    return isMailto && count > 0 ? value : undefined;
   } catch {
     // decodeURIComponent throws on a malformed escape, which makes the URL invalid.
-    return false;
+    return undefined;
   }
 }
 
 /**
- * Tests a URL that has no host, from the part after its scheme's colon. Each scheme has its own
- * rules, and a scheme without rules here fails, so a listed protocol is never accepted unchecked.
+ * Reads a URL that has no host from the part after its scheme's colon, returning that part as the value
+ * holds it, or undefined when it breaks its scheme's rules. Each scheme has its own rules, and a scheme
+ * without rules here fails, so a listed protocol is never accepted unchecked.
  */
-export function isHostlessUrl(scheme: string, rest: string, allowLocal: boolean): boolean {
+export function toHostlessUrl(scheme: string, rest: string, allowLocal: boolean): string | undefined {
   switch (scheme) {
     case "mailto":
-      return isMailto(rest, allowLocal);
+      return toMailto(rest, allowLocal);
     case "tel":
-      return TEL_PATTERN.test(rest);
+      return TEL_PATTERN.test(rest) ? rest : undefined;
     case "urn":
-      return URN_PATTERN.test(rest);
+      return URN_PATTERN.test(rest) ? rest : undefined;
     default:
-      return false;
+      return undefined;
   }
 }
