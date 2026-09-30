@@ -820,6 +820,7 @@ Reconfigures the toaster at runtime.
 #### custom
 
 ```ts
+custom(content: ToastContent, options?: Omit<CustomToastOptions, "content">): ToastHandle;
 custom(options: CustomToastOptions): ToastHandle;
 ```
 
@@ -848,6 +849,7 @@ Dismisses a specific toast handle, or all active toasts if handle is omitted.
 #### error
 
 ```ts
+error(message: string, options?: ToastOptions): ToastHandle;
 error(options: ToastOptions): ToastHandle;
 ```
 
@@ -856,6 +858,7 @@ Displays an error notification.
 #### info
 
 ```ts
+info(message: string, options?: ToastOptions): ToastHandle;
 info(options: ToastOptions): ToastHandle;
 ```
 
@@ -864,6 +867,7 @@ Displays an informational notification.
 #### loading
 
 ```ts
+loading(message: string, options?: LoadingToastOptions): ToastHandle;
 loading(options?: LoadingToastOptions): ToastHandle;
 ```
 
@@ -885,6 +889,7 @@ Binds a notification to a Promise lifecycle, automatically managing transition s
 #### success
 
 ```ts
+success(message: string, options?: ToastOptions): ToastHandle;
 success(options: ToastOptions): ToastHandle;
 ```
 
@@ -893,6 +898,7 @@ Displays a success notification.
 #### warning
 
 ```ts
+warning(message: string, options?: ToastOptions): ToastHandle;
 warning(options: ToastOptions): ToastHandle;
 ```
 
