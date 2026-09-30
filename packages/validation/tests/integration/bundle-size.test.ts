@@ -53,7 +53,7 @@ export const check = object({ name: string({ min: 2 }), email: email(), age: opt
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 4250,
+    budget: 4400,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 1010 },
   { name: "url", source: `import { url } from "DIST"; export const check = url({ allowLocal: true });`, budget: 2580 },
@@ -134,7 +134,7 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
   {
     name: "standard",
     source: `import { englishMessages, number, standard } from "DIST"; export const check = standard(number(), englishMessages);`,
-    budget: 2660,
+    budget: 2810,
   },
   {
     name: "formatIssue with your own wording",
@@ -144,12 +144,12 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
   {
     name: "formatIssue with the English wording",
     source: `import { englishMessages, formatIssue } from "DIST"; export const describe = (issue: Parameters<typeof formatIssue>[0]) => formatIssue(issue, englishMessages);`,
-    budget: 1360,
+    budget: 1510,
   },
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 12820,
+    budget: 12950,
   },
 ];
 

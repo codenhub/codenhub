@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { endsWith } from "../checks/ends-with";
 import { includes } from "../checks/includes";
+import { lowercase } from "../checks/lowercase";
 import { multipleOf } from "../checks/multiple-of";
 import { nonZero } from "../checks/non-zero";
 import { pattern } from "../checks/pattern";
 import { startsWith } from "../checks/starts-with";
 import { unique } from "../checks/unique";
+import { uppercase } from "../checks/uppercase";
 import { array } from "../composition/array";
 import { json } from "../composition/json";
 import { map } from "../composition/map";
@@ -16,8 +18,21 @@ import { tuple } from "../composition/tuple";
 import { union } from "../composition/union";
 import { fail } from "../core/result";
 import type { ValidationIssue, ValidationResult } from "../core/types";
+import { base64 } from "../formats/base64";
+import { cidr } from "../formats/cidr";
+import { creditCard } from "../formats/credit-card";
+import { domain } from "../formats/domain";
+import { duration } from "../formats/duration";
 import { email } from "../formats/email";
 import { ip } from "../formats/ip";
+import { jwt } from "../formats/jwt";
+import { mac } from "../formats/mac";
+import { phone } from "../formats/phone";
+import { port } from "../formats/port";
+import { searchParams } from "../formats/search-params";
+import { semver } from "../formats/semver";
+import { slug } from "../formats/slug";
+import { time } from "../formats/time";
 import { url } from "../formats/url";
 import { uuid } from "../formats/uuid";
 import { bigint } from "../primitives/bigint";
@@ -26,6 +41,7 @@ import { literal } from "../primitives/literal";
 import { number } from "../primitives/number";
 import { oneOf } from "../primitives/one-of";
 import { string } from "../primitives/string";
+import { unknown } from "../primitives/unknown";
 import { issuesOf } from "../test-utils";
 import { englishMessages } from "./english-messages";
 import { flatten, formatIssue as formatWith, formatPath, type Messages } from "./format-issue";
@@ -164,6 +180,49 @@ describe("formatIssue", () => {
     expect(messageOf(ip()("x"))).toEqual(["Invalid IP address"]);
   });
 
+  it("should word every format and check added in 0.2", () => {
+    const messageOf = (result: ValidationResult<unknown>): string | undefined =>
+      issuesOf(result).map((found) => formatIssue(found))[0];
+    expect(
+      [
+        base64({ url: true })("+"),
+        domain()("localhost"),
+        port()(0),
+        phone()("1"),
+        slug()("A"),
+        semver()("v1"),
+        jwt()("x"),
+        creditCard()("1"),
+        cidr()("x"),
+        cidr({ version: "v4" })("x"),
+        cidr({ version: "v6" })("x"),
+        mac()("x"),
+        time()("x"),
+        duration()("x"),
+        string(lowercase())("A"),
+        string(uppercase())("a"),
+      ].map(messageOf),
+    ).toEqual([
+      "Invalid base64url string",
+      "Invalid domain name",
+      "Invalid port",
+      "Invalid phone number",
+      "Invalid slug",
+      "Invalid version",
+      "Invalid token",
+      "Invalid card number",
+      "Invalid CIDR block",
+      "Invalid IPv4 CIDR block",
+      "Invalid IPv6 CIDR block",
+      "Invalid MAC address",
+      "Invalid time",
+      "Invalid duration",
+      "Must be lowercase",
+      "Must be uppercase",
+    ]);
+    expect(messageOf(searchParams(unknown())(1))).toBe("Expected query string, received number");
+  });
+
   it("should word bigint and date bounds", () => {
     const messages = (result: ValidationResult<unknown>): string[] =>
       issuesOf(result).map((found) => formatIssue(found));
@@ -269,7 +328,7 @@ describe("formatIssue", () => {
   });
 
   it("should name an unknown format by its own name", () => {
-    expect(formatIssue(issue({ code: "invalid_format", params: { format: "phone" } }))).toBe("Invalid phone");
+    expect(formatIssue(issue({ code: "invalid_format", params: { format: "postcode" } }))).toBe("Invalid postcode");
   });
 
   it("should never echo the received value", () => {
