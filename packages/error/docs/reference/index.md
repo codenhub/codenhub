@@ -272,12 +272,27 @@ Pattern matches on a Result, executing the corresponding callback based on the o
 
 ```ts
 export declare function ok(): Ok<void>;
-export declare function ok<T>(value: T): Ok<T>;
 ```
 
 Creates a successful `Ok<void>` Result with no value.
 
 **Returns** — An Ok result object carrying no value.
+
+```ts
+export declare function ok<T>(value: T): Ok<T>;
+```
+
+Creates a successful Result instance wrapping the provided value.
+
+**Parameters**
+
+- `value` — The success value to wrap.
+
+**Type parameters**
+
+- `T` — The type of the success value.
+
+**Returns** — An Ok result object.
 
 ### setErrorRegistry
 

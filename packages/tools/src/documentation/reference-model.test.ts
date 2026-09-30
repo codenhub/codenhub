@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildReferenceModel } from "./reference-model.ts";
+import {
+  buildReferenceModel,
+  findEmptySections,
+  type ReferenceMember,
+  type ReferenceSymbol,
+} from "./reference-model.ts";
 
 function textPart(text: string) {
   return { kind: "text", text };
@@ -273,5 +278,127 @@ describe("buildReferenceModel", () => {
 
   it("throws on a non-object project", () => {
     expect(() => buildReferenceModel(null, {})).toThrow(/expected an object/);
+  });
+});
+
+function symbolFixture(overrides: Partial<ReferenceSymbol> & Pick<ReferenceSymbol, "name" | "kind">): ReferenceSymbol {
+  return {
+    examples: [],
+    members: [],
+    namespaceMembers: [],
+    overloads: [],
+    parameters: [],
+    see: [],
+    signature: `export declare ${overrides.kind} ${overrides.name}`,
+    throws: [],
+    typeParameters: [],
+    ...overrides,
+  };
+}
+
+function memberFixture(overrides: Partial<ReferenceMember> & Pick<ReferenceMember, "name">): ReferenceMember {
+  return {
+    isOptional: false,
+    isReadonly: false,
+    isStatic: false,
+    kind: "property",
+    parameters: [],
+    signature: `${overrides.name}: string;`,
+    ...overrides,
+  };
+}
+
+describe("findEmptySections", () => {
+  it("reports every section that would render nothing to read", () => {
+    const model = {
+      entrypoints: [
+        {
+          module: "index",
+          internalTypes: [],
+          subpath: ".",
+          symbols: [
+            symbolFixture({ kind: "function", name: "complete" }),
+            symbolFixture({ kind: "function", name: "unsigned", signature: undefined }),
+            symbolFixture({
+              kind: "interface",
+              members: [
+                memberFixture({ name: "typed" }),
+                memberFixture({ name: "untyped", signature: undefined }),
+                // An inherited member links to its declaring type instead of carrying a signature.
+                memberFixture({ inheritedFrom: "Base", name: "inherited", signature: undefined }),
+              ],
+              name: "Shape",
+            }),
+            symbolFixture({
+              kind: "function",
+              name: "misaligned",
+              overloads: [
+                {
+                  examples: [],
+                  parameters: [],
+                  see: [],
+                  signature: "export declare function misaligned(): void;",
+                  throws: [],
+                  typeParameters: [],
+                },
+                { examples: [], parameters: [], see: [], throws: [], typeParameters: [] },
+              ],
+            }),
+            symbolFixture({ kind: "namespace", name: "Hollow" }),
+            symbolFixture({
+              kind: "namespace",
+              name: "Outer",
+              namespaceMembers: [symbolFixture({ kind: "type-alias", name: "Inner", signature: undefined })],
+            }),
+          ],
+        },
+      ],
+      packageName: "@codenhub/example",
+      unresolved: [],
+      unsupported: [],
+    };
+
+    expect(findEmptySections(model)).toEqual([
+      { reason: "no signature", section: "unsigned", subpath: "." },
+      { reason: "no signature", section: "Shape.untyped", subpath: "." },
+      { reason: "no signature", section: "misaligned (overloads)", subpath: "." },
+      { reason: "no members", section: "Hollow", subpath: "." },
+      { reason: "no signature", section: "Outer.Inner", subpath: "." },
+    ]);
+  });
+});
+
+describe("buildReferenceModel unsupported exports", () => {
+  it("reports an unsupported kind inside a namespace by its qualified name", () => {
+    const model = buildReferenceModel(
+      {
+        id: 0,
+        kind: 1,
+        name: "@codenhub/example",
+        children: [
+          {
+            id: 1,
+            kind: 2,
+            name: "index",
+            children: [
+              {
+                id: 2,
+                kind: 4,
+                name: "Ns",
+                children: [
+                  { id: 3, kind: 2097152, name: "Alias" },
+                  // A kind the page model has no group for, such as TypeDoc's Document.
+                  { id: 4, kind: 8388608, name: "Guide" },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      { index: "." },
+    );
+
+    expect(model.unsupported).toEqual([{ name: "Ns.Guide", subpath: "." }]);
+    expect(model.entrypoints[0]?.symbols[0]?.namespaceMembers.map((symbol) => symbol.name)).toEqual(["Alias"]);
   });
 });

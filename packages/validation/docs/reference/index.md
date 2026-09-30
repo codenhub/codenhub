@@ -639,6 +639,14 @@ Creates a validator for text that holds JSON: it parses the text, then optionall
 
 A non-string fails with `invalid_type`, and text that is not valid JSON fails with `invalid_format` and `{ format: "json" }`. Issues from `validator` have paths relative to the parsed value. Objects parsed from JSON are plain objects, so a `__proto__` key is data. Without `validator` the result is `unknown`.
 
+**Parameters**
+
+- `validator` — Validates the parsed value.
+
+**Type parameters**
+
+- `TValidator` — The validator for the parsed value.
+
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
 **Throws** — When `validator` is given and is not a function.
@@ -1810,7 +1818,8 @@ Requires at least this many items. A non-negative integer.
 ### StandardSchemaV1
 
 ```ts
-namespace StandardSchemaV1
+export interface StandardSchemaV1<TInput = unknown, TOutput = unknown>
+export declare namespace StandardSchemaV1
 ```
 
 Interface representing a Standard Schema compliant validator.
@@ -1824,7 +1833,197 @@ Conforming schemas expose the `~standard` property containing metadata and valid
 
 #### ~standard
 
+```ts
+readonly "~standard": StandardSchemaV1.Props<TInput, TOutput>;
+```
+
 The Standard Schema metadata and execution properties.
+
+#### StandardSchemaV1.FailureResult
+
+```ts
+interface FailureResult
+```
+
+Failed validation result containing accumulated issues.
+
+##### issues
+
+```ts
+readonly issues: ReadonlyArray<Issue>;
+```
+
+List of validation issues encountered during validation.
+
+#### StandardSchemaV1.Issue
+
+```ts
+interface Issue
+```
+
+A single validation issue produced by a standard schema validator.
+
+##### message
+
+```ts
+readonly message: string;
+```
+
+Human-readable description of the validation failure.
+
+##### path
+
+```ts
+readonly path?: ReadonlyArray<PropertyKey | PathSegment> | undefined;
+```
+
+Path segments pointing to the location of the invalid data.
+
+#### StandardSchemaV1.PathSegment
+
+```ts
+interface PathSegment
+```
+
+Structured path segment identifying an issue location.
+
+##### key
+
+```ts
+readonly key: PropertyKey;
+```
+
+The key or index segment.
+
+#### StandardSchemaV1.Props
+
+```ts
+interface Props<TInput = unknown, TOutput = unknown>
+```
+
+Properties defined on the `~standard` object of a compliant schema.
+
+**Type parameters**
+
+- `TInput` — Inferred input type.
+- `TOutput` — Inferred output type.
+
+##### types
+
+```ts
+readonly types?: Types<TInput, TOutput> | undefined;
+```
+
+Inferred TypeScript types preserved for schema inspection.
+
+##### validate
+
+```ts
+readonly validate: (value: unknown) => Result<TOutput> | Promise<Result<TOutput>>;
+```
+
+Validates an unknown input value and returns a synchronous or asynchronous result.
+
+##### vendor
+
+```ts
+readonly vendor: string;
+```
+
+The vendor identifier of the schema library.
+
+##### version
+
+```ts
+readonly version: 1;
+```
+
+The version number of the Standard Schema specification (always 1).
+
+#### StandardSchemaV1.SuccessResult
+
+```ts
+interface SuccessResult<TOutput>
+```
+
+Successful validation result containing the validated or transformed value.
+
+**Type parameters**
+
+- `TOutput` — Inferred output type.
+
+##### issues
+
+```ts
+readonly issues?: undefined;
+```
+
+Discriminant indicating absence of validation issues.
+
+##### value
+
+```ts
+readonly value: TOutput;
+```
+
+The validated and coerced output value.
+
+#### StandardSchemaV1.Types
+
+```ts
+interface Types<TInput = unknown, TOutput = unknown>
+```
+
+Container carrying phantom input and output types.
+
+**Type parameters**
+
+- `TInput` — Inferred input type.
+- `TOutput` — Inferred output type.
+
+##### input
+
+```ts
+readonly input: TInput;
+```
+
+Phantom input type.
+
+##### output
+
+```ts
+readonly output: TOutput;
+```
+
+Phantom output type.
+
+#### StandardSchemaV1.InferInput
+
+```ts
+type InferInput<Schema extends StandardSchemaV1> = NonNullable<Schema["~standard"]["types"]>["input"];
+```
+
+Infers the input type of a Standard Schema compliant validator.
+
+#### StandardSchemaV1.InferOutput
+
+```ts
+type InferOutput<Schema extends StandardSchemaV1> = NonNullable<Schema["~standard"]["types"]>["output"];
+```
+
+Infers the output type of a Standard Schema compliant validator.
+
+#### StandardSchemaV1.Result
+
+```ts
+type Result<TOutput> = SuccessResult<TOutput> | FailureResult;
+```
+
+Result produced by Standard Schema validation.
+
+**Type parameters**
+
+- `TOutput` — Inferred output type.
 
 ### StringOptions
 
@@ -2302,10 +2501,69 @@ if (!result.ok) {
 }
 ```
 
-## Namespaces
+## Internal types
 
-### StandardSchemaV1
+### CheckedVariants
 
 ```ts
-namespace StandardSchemaV1
+type CheckedVariants<TKey extends string, TVariants extends Variants> = {
+    [TTag in keyof TVariants]: Infer<TVariants[TTag]> extends readonly unknown[] | ((...args: never[]) => unknown) ? never : TKey extends keyof Infer<TVariants[TTag]> ? never : TVariants[TTag];
+};
 ```
+
+The variants as `discriminatedUnion` accepts them. A variant whose output type is an array or a function, which cannot carry the tag, or already has the tag property, which the variant is never given, is typed `never`, so passing it is a compile error at that variant.
+
+Not exported; declared in `src/composition/discriminated-union.ts`.
+
+### InferItems
+
+```ts
+type InferItems<TItems extends readonly AnyValidator[]> = {
+    -readonly [K in keyof TItems]: Infer<TItems[K]>;
+};
+```
+
+Not exported; declared in `src/composition/tuple.ts`.
+
+### OptionalKeys
+
+```ts
+type OptionalKeys<TShape extends Shape> = {
+    [K in keyof TShape]: undefined extends Infer<TShape[K]> ? K : never;
+}[keyof TShape];
+```
+
+Not exported; declared in `src/composition/object.ts`.
+
+### Output
+
+```ts
+type Output<TValidators extends readonly AnyValidator[]> = TValidators extends readonly [
+    ...AnyValidator[],
+    infer TLast extends AnyValidator
+] ? Infer<TLast> : never;
+```
+
+The type produced by the last validator of a list.
+
+Not exported; declared in `src/composition/pipe.ts`.
+
+### Simplify
+
+```ts
+type Simplify<T> = {
+    [K in keyof T]: T[K];
+} & {};
+```
+
+Not exported; declared in `src/composition/discriminated-union.ts`, `src/composition/object.ts`.
+
+### Transformed
+
+```ts
+type Transformed<R> = [unknown] extends [R] ? AsyncValidator<Awaited<R>> : [Extract<R, PromiseLike<unknown>>] extends [never] ? Validator<R> : AsyncValidator<Awaited<R>>;
+```
+
+What a synchronous validator becomes once `convert` runs on its value: still synchronous when `convert` never returns a promise, and asynchronous, producing what the promise settles to, when it may return one, such as a function typed `number | Promise<number>`. A function typed as returning `unknown` or `any` may return one too, so it makes the validator asynchronous.
+
+Not exported; declared in `src/composition/transform.ts`.

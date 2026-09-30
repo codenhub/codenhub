@@ -1,11 +1,8 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
 import { resolveEntrypoints } from "../documentation/reference-declarations.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
+import { createReferenceFixture } from "./reference-fixture.test-support.ts";
 import { analyzeReference, referencePageRel } from "./reference-generator.ts";
 
 describe("resolveEntrypoints", () => {
@@ -68,43 +65,9 @@ describe("referencePageRel", () => {
   });
 });
 
-async function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
-  const directory = await mkdtemp(join(tmpdir(), "codenhub-reference-"));
-  await mkdir(join(directory, "src"), { recursive: true });
-  await writeFile(
-    join(directory, "package.json"),
-    JSON.stringify(
-      {
-        name: "@codenhub/fixture-single-entry",
-        version: "1.0.0",
-        exports: { ".": { types: "./dist/index.d.ts", import: "./dist/index.js" } },
-      },
-      null,
-      2,
-    ),
-  );
-  await writeFile(
-    join(directory, "tsconfig.json"),
-    JSON.stringify(
-      {
-        compilerOptions: {
-          target: "ESNext",
-          module: "Preserve",
-          moduleResolution: "bundler",
-          lib: ["ES2024"],
-          strict: true,
-          composite: true,
-          noEmit: true,
-        },
-        include: ["src/**/*"],
-      },
-      null,
-      2,
-    ),
-  );
-  await writeFile(
-    join(directory, "src/index.ts"),
-    [
+function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
+  return createReferenceFixture("fixture-single-entry", {
+    "index.ts": [
       "/**",
       " * Adds two numbers together.",
       " * @param a - The first addend.",
@@ -116,22 +79,7 @@ async function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
       "}",
       "",
     ].join("\n"),
-  );
-  return {
-    directory,
-    directoryName: "fixture-single-entry",
-    isPrivate: false,
-    location: "fixture-single-entry",
-    manifest: {
-      name: "@codenhub/fixture-single-entry",
-      version: "1.0.0",
-      exports: { ".": { types: "./dist/index.d.ts", import: "./dist/index.js" } },
-    },
-    name: "@codenhub/fixture-single-entry",
-    scripts: {},
-    unscopedName: "fixture-single-entry",
-    workspaceDependencies: [],
-  };
+  });
 }
 
 describe("analyzeReference", () => {
@@ -150,5 +98,272 @@ describe("analyzeReference", () => {
     expect(files).toHaveLength(1);
     expect(files[0]?.contents).toContain("### add");
     expect(files[0]?.contents).toContain("Adds two numbers together.");
+  });
+
+  // An interface and a namespace sharing one name are one symbol to a consumer,
+  // as `StandardSchemaV1` in @codenhub/validation is.
+  it("renders an interface merged with a namespace as one complete section", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-merged", {
+      "index.ts": [
+        "/** A schema. */",
+        "export interface Schema<TOutput = unknown> {",
+        "  /** The schema metadata. */",
+        '  readonly "~meta": Schema.Props<TOutput>;',
+        "}",
+        "",
+        "export declare namespace Schema {",
+        "  /** Metadata on a schema. */",
+        "  export interface Props<TOutput = unknown> {",
+        "    /** The vendor. */",
+        "    readonly vendor: string;",
+        "    /** Validates a value. */",
+        "    readonly validate: (value: unknown) => Result<TOutput>;",
+        "  }",
+        "  /** A validation result. */",
+        "  export type Result<TOutput> = { readonly value: TOutput };",
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    const page = files[0]?.contents ?? "";
+
+    expect(model.entrypoints[0]?.symbols.map((symbol) => symbol.name)).toEqual(["Schema"]);
+    expect(page.match(/^### Schema$/gm)).toHaveLength(1);
+    expect(page).not.toContain("## Namespaces");
+    expect(page).toContain(
+      ["```ts", "export interface Schema<TOutput = unknown>", "export declare namespace Schema", "```"].join("\n"),
+    );
+    expect(page).toContain('readonly "~meta": Schema.Props<TOutput>;');
+    expect(page).toContain("#### Schema.Props");
+    // Members of an ambient namespace carry no `export` keyword in the emitted `.d.ts`.
+    expect(page).toContain("interface Props<TOutput = unknown>");
+    expect(page).toContain("Metadata on a schema.");
+    expect(page).toContain("readonly vendor: string;");
+    expect(page).toContain("The vendor.");
+    expect(page).toContain("#### Schema.Result");
+    expect(page).toContain("type Result<TOutput> = {");
+  });
+
+  it("documents the parameters and type parameters of every overload", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-overloads", {
+      "index.ts": [
+        "/**",
+        " * Parses text, optionally with a reviver.",
+        " * @typeParam T - The parsed type.",
+        " * @param reviver - Turns the parsed value into a `T`.",
+        " * @returns The parsed value.",
+        " */",
+        "export function parse(): unknown;",
+        "export function parse<T>(reviver: (value: unknown) => T): T;",
+        "export function parse(reviver?: (value: unknown) => unknown): unknown {",
+        "  return reviver;",
+        "}",
+        "",
+        "/** Formats values. */",
+        "export interface Formatter {",
+        "  /** Formats a value. */",
+        "  format(): string;",
+        "  format(value: number): string;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    const page = files[0]?.contents ?? "";
+
+    expect(page).toContain("export declare function parse(): unknown;");
+    expect(page).toContain("export declare function parse<T>(reviver: (value: unknown) => T): T;");
+    expect(page).toContain("- `reviver` — Turns the parsed value into a `T`.");
+    expect(page).toContain("- `T` — The parsed type.");
+    expect(page).toContain(["format(): string;", "format(value: number): string;"].join("\n"));
+  });
+
+  it("gives each separately documented overload its own block and prose", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-overload-docs", {
+      "index.ts": [
+        "/**",
+        " * Creates an empty box.",
+        " * @returns A box holding nothing.",
+        " */",
+        "export function box(): { value?: undefined };",
+        "/**",
+        " * Creates a box holding a value.",
+        " * @typeParam T - The boxed type.",
+        " * @param value - The value to hold.",
+        " * @returns A box holding `value`.",
+        " */",
+        "export function box<T>(value: T): { value: T };",
+        "export function box<T>(value?: T): { value?: T } {",
+        "  return { value };",
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    const page = files[0]?.contents ?? "";
+
+    expect(page).toContain(
+      [
+        "### box",
+        "",
+        "```ts",
+        "export declare function box(): {",
+        "  value?: undefined;",
+        "};",
+        "```",
+        "",
+        "Creates an empty box.",
+        "",
+        "**Returns** — A box holding nothing.",
+        "",
+        "```ts",
+        "export declare function box<T>(value: T): {",
+        "  value: T;",
+        "};",
+        "```",
+        "",
+        "Creates a box holding a value.",
+        "",
+        "**Parameters**",
+        "",
+        "- `value` — The value to hold.",
+        "",
+        "**Type parameters**",
+        "",
+        "- `T` — The boxed type.",
+        "",
+        "**Returns** — A box holding `value`.",
+      ].join("\n"),
+    );
+  });
+
+  // A callable interface's call signatures are not function overloads: the interface
+  // keeps its header and summary, as @codenhub/toaster's `Toaster` needs.
+  it("keeps a callable interface's own signature and summary", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-callable", {
+      "index.ts": [
+        "/** Shows notifications. */",
+        "export interface Notifier {",
+        "  /**",
+        "   * Shows a message.",
+        "   * @param message - The text.",
+        "   */",
+        "  (message: string): void;",
+        "  /**",
+        "   * Shows a message from options.",
+        "   * @param options - The options.",
+        "   */",
+        "  (options: { message: string }): void;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    const page = files[0]?.contents ?? "";
+
+    expect(model.entrypoints[0]?.symbols[0]?.overloads).toEqual([]);
+    expect(page).toContain(
+      ["### Notifier", "", "```ts", "export interface Notifier", "```", "", "Shows notifications."].join("\n"),
+    );
+  });
+
+  it("lists unexported types that public declarations name as internal types", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-internal", {
+      "index.ts": [
+        "type Deeper = { readonly depth: number };",
+        "",
+        "/** What {@link wrap} returns. */",
+        "type Hidden<T> = { readonly inner: T; readonly deeper: Deeper };",
+        "",
+        "/** A public shape. */",
+        "export interface Shown {",
+        "  /** A value. */",
+        "  readonly value: string;",
+        "}",
+        "",
+        "/**",
+        " * Wraps a value.",
+        " * @typeParam T - The wrapped type.",
+        " * @param value - The value.",
+        " * @returns The wrapper.",
+        " */",
+        "export function wrap<T>(value: T): Hidden<T> & Shown {",
+        '  return { inner: value, deeper: { depth: 0 }, value: "" };',
+        "}",
+        "",
+        "/** Keys of a record. */",
+        "export type Keys<T> = { [K in keyof T]: K }[keyof T];",
+        "",
+        "/** The element type of an array. */",
+        "export type Element<T> = T extends readonly (infer E)[] ? E : never;",
+        "",
+      ].join("\n"),
+    });
+
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    const page = files[0]?.contents ?? "";
+
+    // Type parameters, mapped-type keys, and `infer` bindings are in scope, not
+    // missing; `Shown` is documented; `Hidden`, and `Deeper` through it, are internal.
+    expect(model.unresolved).toEqual([]);
+    expect(model.entrypoints[0]?.internalTypes.map((type) => type.name)).toEqual(["Deeper", "Hidden"]);
+    expect(page).toContain(
+      [
+        "## Internal types",
+        "",
+        "### Deeper",
+        "",
+        "```ts",
+        "type Deeper = {",
+        "  readonly depth: number;",
+        "};",
+        "```",
+        "",
+        "Not exported; declared in `src/index.ts`.",
+        "",
+        "### Hidden",
+        "",
+        "```ts",
+        "type Hidden<T> = {",
+        "  readonly inner: T;",
+        "  readonly deeper: Deeper;",
+        "};",
+        "```",
+        "",
+        "What [wrap](#wrap) returns.",
+        "",
+        "Not exported; declared in `src/index.ts`.",
+      ].join("\n"),
+    );
+  });
+
+  it("reports a same-package type that the reference cannot find anywhere", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-unresolved", {
+      // A global type from a hand-written declaration file is never emitted, so there
+      // is no declaration to list it from.
+      "ambient.d.ts": "type Ambient = { readonly inner: string };\n",
+      "index.ts": [
+        "/**",
+        " * Makes an ambient value.",
+        " * @returns The value.",
+        " */",
+        "export function make(): Ambient {",
+        '  return { inner: "" };',
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+
+    expect(model.unresolved).toEqual([
+      { declaredIn: "src/ambient.d.ts", name: "Ambient", subpath: ".", symbol: "make" },
+    ]);
+    expect(files[0]?.contents).not.toContain("## Internal types");
   });
 });

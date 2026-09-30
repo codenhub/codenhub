@@ -88,11 +88,13 @@ describe("attachSignatures", () => {
   it("fills symbol and member signature text from the matching module index", () => {
     const model: ReferenceModel = {
       packageName: "@codenhub/error",
+      unresolved: [],
       unsupported: [],
       entrypoints: [
         {
           subpath: ".",
           module: "index",
+          internalTypes: [],
           symbols: [
             {
               name: "AppError",
@@ -102,6 +104,8 @@ describe("attachSignatures", () => {
               throws: [],
               examples: [],
               see: [],
+              namespaceMembers: [],
+              overloads: [],
               members: [
                 {
                   name: "type",

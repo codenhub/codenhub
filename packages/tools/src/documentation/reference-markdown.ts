@@ -1,6 +1,13 @@
 import { slug } from "github-slugger";
 
-import type { ReferenceEntrypoint, ReferenceMember, ReferenceNamedDoc, ReferenceSymbol } from "./reference-model.ts";
+import {
+  walkSymbols,
+  type ReferenceEntrypoint,
+  type ReferenceMember,
+  type ReferenceNamedDoc,
+  type ReferenceProse,
+  type ReferenceSymbol,
+} from "./reference-model.ts";
 
 // Symbol-group headings, in the render order docs/specs/packages-reference.md sets.
 const GROUP_HEADINGS: readonly { kind: ReferenceSymbol["kind"]; heading: string }[] = [
@@ -120,7 +127,17 @@ function notesSection(heading: string, items: readonly string[], link: (text: st
   return [`**${heading}**`, items.map((item) => `- ${link(item)}`).join("\n")];
 }
 
-function memberBlocks(member: ReferenceMember, prose: boolean, link: (text: string) => string): string[] {
+// Markdown stops at H6; deeper nesting keeps the last level rather than breaking the page.
+function heading(level: number, text: string): string {
+  return `${"#".repeat(Math.min(level, 6))} ${text}`;
+}
+
+function memberBlocks(
+  member: ReferenceMember,
+  prose: boolean,
+  link: (text: string) => string,
+  level: number,
+): string[] {
   if (member.inheritedFrom !== undefined) {
     if (!prose) {
       // An inherited member has no signature of its own to put in a manifest-only
@@ -131,12 +148,12 @@ function memberBlocks(member: ReferenceMember, prose: boolean, link: (text: stri
     // An inherited member points at the type that declares it; that type's own
     // section carries the signature and prose.
     return [
-      `#### ${member.name}`,
+      heading(level, member.name),
       member.inheritedFrom === "" ? "_Inherited._" : `Inherited from ${link(`{@link ${member.inheritedFrom}}`)}.`,
     ];
   }
 
-  const blocks = [`#### ${member.name}`];
+  const blocks = [heading(level, member.name)];
   if (member.signature !== undefined) {
     blocks.push(codeBlock(member.signature));
   }
@@ -156,40 +173,70 @@ function deprecationNote(deprecated: string | true, link: (text: string) => stri
   return deprecated === true ? "> **Deprecated.**" : `> **Deprecated.** ${link(deprecated)}`;
 }
 
-function symbolBlocks(symbol: ReferenceSymbol, prose: boolean, link: (text: string) => string): string[] {
-  const blocks = [`### ${symbol.name}`];
+function proseBlocks(prose: ReferenceProse, link: (text: string) => string, defaultValue?: string): string[] {
+  const blocks: string[] = [];
+  if (prose.deprecated !== undefined) {
+    blocks.push(deprecationNote(prose.deprecated, link));
+  }
+  if (prose.doc !== undefined) {
+    blocks.push(link(prose.doc));
+  }
+  blocks.push(...namedDocList("Parameters", prose.parameters, link));
+  blocks.push(...namedDocList("Type parameters", prose.typeParameters, link));
+  if (prose.returns !== undefined) {
+    blocks.push(`**Returns** — ${link(prose.returns)}`);
+  }
+  blocks.push(...notesSection("Throws", prose.throws, link));
+  if (defaultValue !== undefined) {
+    blocks.push(`**Default** — ${link(defaultValue)}`);
+  }
+  if (prose.since !== undefined) {
+    blocks.push(`**Since** — ${link(prose.since)}`);
+  }
+  for (const example of prose.examples) {
+    blocks.push("**Example**", example.trim());
+  }
+  blocks.push(...notesSection("See also", prose.see, link));
+  return blocks;
+}
 
-  if (symbol.signature !== undefined) {
-    blocks.push(codeBlock(symbol.signature));
-  }
+/**
+ * One symbol's section. A namespace member is a section one level deeper than the
+ * symbol declaring it, headed by its dot-qualified name so its anchor is unique.
+ * Overloads documented apart each get their own signature block and prose.
+ */
+function symbolBlocks(
+  symbol: ReferenceSymbol,
+  prose: boolean,
+  link: (text: string) => string,
+  level = 3,
+  qualifiedName = symbol.name,
+): string[] {
+  const blocks = [heading(level, qualifiedName)];
 
-  if (prose && symbol.deprecated !== undefined) {
-    blocks.push(deprecationNote(symbol.deprecated, link));
-  }
-  if (prose && symbol.doc !== undefined) {
-    blocks.push(link(symbol.doc));
-  }
-  if (prose) {
-    blocks.push(...namedDocList("Parameters", symbol.parameters, link));
-    blocks.push(...namedDocList("Type parameters", symbol.typeParameters, link));
-    if (symbol.returns !== undefined) {
-      blocks.push(`**Returns** — ${link(symbol.returns)}`);
+  if (symbol.overloads.length > 0) {
+    for (const overload of symbol.overloads) {
+      if (overload.signature !== undefined) {
+        blocks.push(codeBlock(overload.signature));
+      }
+      if (prose) {
+        blocks.push(...proseBlocks(overload, link));
+      }
     }
-    blocks.push(...notesSection("Throws", symbol.throws, link));
-    if (symbol.defaultValue !== undefined) {
-      blocks.push(`**Default** — ${link(symbol.defaultValue)}`);
+  } else {
+    if (symbol.signature !== undefined) {
+      blocks.push(codeBlock(symbol.signature));
     }
-    if (symbol.since !== undefined) {
-      blocks.push(`**Since** — ${link(symbol.since)}`);
+    if (prose) {
+      blocks.push(...proseBlocks(symbol, link, symbol.defaultValue));
     }
-    for (const example of symbol.examples) {
-      blocks.push("**Example**", example.trim());
-    }
-    blocks.push(...notesSection("See also", symbol.see, link));
   }
 
   for (const member of symbol.members) {
-    blocks.push(...memberBlocks(member, prose, link));
+    blocks.push(...memberBlocks(member, prose, link, level + 1));
+  }
+  for (const nested of symbol.namespaceMembers) {
+    blocks.push(...symbolBlocks(nested, prose, link, level + 1, `${qualifiedName}.${nested.name}`));
   }
   return blocks;
 }
@@ -199,7 +246,8 @@ function symbolBlocks(symbol: ReferenceSymbol, prose: boolean, link: (text: stri
  *
  * The page carries the closed frontmatter schema from
  * `docs/specs/packages-documentation.md`, a generated-file notice, a single H1,
- * and one H2 section per non-empty symbol group in spec order. Signature text is
+ * one H2 section per non-empty symbol group in spec order, and, last, the
+ * unexported types those symbols' declarations name. Signature text is
  * taken from whatever `attachSignatures` filled in; `{@link}` references resolve
  * against this page and `options.resolveLink`, falling back to inline code.
  * @param entrypoint Entrypoint from the reference model, with signatures attached.
@@ -207,7 +255,7 @@ function symbolBlocks(symbol: ReferenceSymbol, prose: boolean, link: (text: stri
  * @returns The page's Markdown, newline-terminated.
  */
 export function renderReferencePage(entrypoint: ReferenceEntrypoint, options: RenderReferencePageOptions): string {
-  const ownNames = new Set(entrypoint.symbols.map((symbol) => symbol.name));
+  const ownNames = new Set([...walkSymbols(entrypoint.symbols)].map(([qualifiedName]) => qualifiedName));
   const link = (text: string): string => resolveLinks(text, ownNames, options.resolveLink);
 
   const sections: string[] = [
@@ -224,6 +272,18 @@ export function renderReferencePage(entrypoint: ReferenceEntrypoint, options: Re
     sections.push(`## ${heading}`);
     for (const symbol of group) {
       sections.push(...symbolBlocks(symbol, options.prose, link));
+    }
+  }
+
+  if (entrypoint.internalTypes.length > 0) {
+    sections.push("## Internal types");
+    for (const type of entrypoint.internalTypes) {
+      sections.push(`### ${type.name}`, codeBlock(type.signature));
+      if (options.prose && type.doc !== undefined) {
+        sections.push(link(type.doc));
+      }
+      const files = type.declaredIn.map((file) => `\`${file}\``).join(", ");
+      sections.push(`Not exported; declared in ${files}.`);
     }
   }
 

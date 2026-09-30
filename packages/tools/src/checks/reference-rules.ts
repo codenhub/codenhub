@@ -2,8 +2,9 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { parseReferenceConfig } from "../documentation/reference-config.ts";
+import { findEmptySections } from "../documentation/reference-model.ts";
 import { hasContentDrift } from "../generators/generator.ts";
-import { analyzeReference } from "../generators/reference-generator.ts";
+import { analyzeReference, referencePageRel } from "../generators/reference-generator.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
@@ -107,6 +108,29 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
     });
   }
 
+  const subpaths = analysis.model.entrypoints.map((entrypoint) => entrypoint.subpath);
+  const pageOf = (subpath: string) => `${REFERENCE_DIR}/${referencePageRel(subpath, subpaths)}`;
+
+  for (const reference of analysis.model.unresolved) {
+    const origin = reference.declaredIn === undefined ? "" : ` (declared in ${reference.declaredIn})`;
+    findings.push({
+      code: "reference/unresolved-type",
+      location: pageOf(reference.subpath),
+      message: `The public signature of "${reference.symbol}" names "${reference.name}"${origin}, which no reference page documents.`,
+      severity: "error",
+    });
+  }
+
+  for (const empty of findEmptySections(analysis.model)) {
+    const detail = empty.reason === "no members" ? "a namespace with no members" : "no declaration signature";
+    findings.push({
+      code: "reference/empty-section",
+      location: pageOf(empty.subpath),
+      message: `Section "${empty.section}" renders ${detail}.`,
+      severity: "error",
+    });
+  }
+
   return findings;
 }
 
@@ -116,7 +140,8 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
  * It applies to a package whose `codenhub.docs.reference` is an object, and
  * regenerates that package's reference to compare it against what is committed:
  * a missing area, a stale or unexpected page, an unresolved or colliding
- * entrypoint, and an unsupported export kind. Source documentation coverage is
+ * entrypoint, an unsupported export kind, a public signature naming a type the
+ * reference documents nowhere, and a section that renders empty. Source documentation coverage is
  * owned by the `undocumented-export` rule.
  * @returns The `reference` rule, ready for registration.
  */

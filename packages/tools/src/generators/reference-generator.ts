@@ -6,8 +6,9 @@ import { Application, normalizePath, TSConfigReader } from "typedoc";
 import { parseReferenceConfig, type ReferenceConfig } from "../documentation/reference-config.ts";
 import { emitDeclarations, resolveEntrypoints, type EntrypointPlan } from "../documentation/reference-declarations.ts";
 import { renderReferencePage, symbolSlug } from "../documentation/reference-markdown.ts";
-import { buildReferenceModel, type ReferenceModel } from "../documentation/reference-model.ts";
+import { buildReferenceModel, walkSymbols, type ReferenceModel } from "../documentation/reference-model.ts";
 import {
+  attachInternalTypes,
   attachSignatures,
   buildSignatureResolver,
   type SignatureIndex,
@@ -38,9 +39,9 @@ export function referencePageRel(subpath: string, allSubpaths: readonly string[]
 function linkResolverFor(model: ReferenceModel, allSubpaths: readonly string[]) {
   const pageBySymbol = new Map<string, string>();
   for (const entrypoint of model.entrypoints) {
-    for (const symbol of entrypoint.symbols) {
-      if (!pageBySymbol.has(symbol.name)) {
-        pageBySymbol.set(symbol.name, entrypoint.subpath);
+    for (const [qualifiedName] of walkSymbols(entrypoint.symbols)) {
+      if (!pageBySymbol.has(qualifiedName)) {
+        pageBySymbol.set(qualifiedName, entrypoint.subpath);
       }
     }
   }
@@ -137,10 +138,10 @@ export async function analyzeReference(
   assertKebabEntrypoints(plans);
 
   const subpathByModule = Object.fromEntries(plans.map((plan) => [plan.module, plan.subpath]));
-  const model = withSignatures(
-    buildReferenceModel(await convertProject(pkgDir, plans), subpathByModule),
-    plans,
-    emitDeclarations(pkgDir, plans),
+  const declarations = emitDeclarations(pkgDir, plans);
+  const model = attachInternalTypes(
+    withSignatures(buildReferenceModel(await convertProject(pkgDir, plans), subpathByModule), plans, declarations),
+    declarations,
   );
 
   const allSubpaths = plans.map((plan) => plan.subpath);

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-29
+last_updated: 2026-09-30
 scope: repo-wide direction for the workspace's packages and deploy surfaces
 ---
 
@@ -14,7 +14,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
 
 - **Per-package landing pages.** Public surface stabilization is otherwise done: `apps/www`'s package list is the canonical entry point at `codenhub.dev`, `@codenhub/app-shell` gives the three deploy surfaces identical chrome, and `apps/docs` / `apps/demo` have slimmed their landing pages to a searchable list. What is left is a landing page per package at `codenhub.dev`, closer to a commercial page than a docs page, making the case for why a consumer should reach for it.
 - **`apps/docs` polish.** UI/UX and code cleanup, and the navigation rework: a clearer scheme for what individual sidebar entries are named, per-symbol reference anchors, search weighting, and the deck treatment (`description` / `since`) for hand-authored pages. The Guides / Reference / Changelog tab strip has landed; deeper sidebar nesting was weighed and rejected.
-- **Generated API reference rollout.** The generator, the `reference` check, and the `codenhub.docs.reference` opt-in are proven on `@codenhub/error`, and `@codenhub/validation` is opted in, which showed that merged declarations and overloads render incompletely. Next: opt in packages with different shapes (`icons`, `kbd`, `router`) to find where generated signatures and prose fall short, then flip to default-on with a `codenhub.docs.reference: false` opt-out.
+- **Generated API reference rollout.** The generator, the `reference` check, and the `codenhub.docs.reference` opt-in are proven on `@codenhub/error` and `@codenhub/validation`. Opting in `validation` showed gaps in merged declarations, overloads, and unexported types in public signatures. They are fixed, and the check now fails on a type it can't resolve and on an empty section. One known gap remains: TypeDoc drops a `@param` written on a method's first overload when only a later overload has that parameter. Next: opt in packages with different shapes (`icons`, `kbd`, `router`) to find where generated signatures and prose fall short, then flip to default-on with a `codenhub.docs.reference: false` opt-out.
 
 ## Planned
 
