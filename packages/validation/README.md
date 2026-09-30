@@ -62,7 +62,7 @@ Write your own validator by returning `pass(value)` or `fail(...)` from any func
 ## Requirements
 
 - Node.js 22 or newer, or a current browser, worker or edge runtime. The code relies on `Object.hasOwn`, and `url()` on `URL.canParse`.
-- ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`, so a bundler removes the validators you do not import.
+- ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`, so a bundler removes the validators you do not import. CommonJS code can `require()` it on Node.js 22.12 or newer, which load ES modules that way.
 
 Runtime code uses only standard JavaScript and the standard `URL` global, and nothing specific to a browser or to Node.js, so it runs in the browser, on the server and in workers.
 
