@@ -51,6 +51,7 @@ Write your own validator by returning `pass(value)` or `fail(...)` from any func
 ## Documentation
 
 - [Documentation overview](docs/index.md)
+- [API reference](docs/reference/index.md)
 - [Validator reference](docs/validators.md)
 - [Custom validators](docs/custom-validators.md)
 - [Issues and messages](docs/errors.md)

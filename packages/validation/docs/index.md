@@ -119,4 +119,5 @@ const isPort = (input: unknown): input is number => is(number({ int: true, min: 
 - [Coercion](coercion.md): validate text input such as environment variables, query strings and form fields by converting it.
 - [Standard Schema](standard-schema.md): use a validator wherever a library accepts a Standard Schema.
 - [Issues and messages](errors.md): the shape of an issue, the built-in codes, message text, localization and form errors.
+- [API reference](reference/index.md): every export with its signature and documentation, generated from the source.
 - [Changelog](changelog/index.md): release notes and the migration from 0.0.1.
