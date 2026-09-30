@@ -64,7 +64,7 @@ Write your own validator by returning `pass(value)` or `fail(...)` from any func
 ## Requirements
 
 - Node.js 22 or newer, or a current browser, worker or edge runtime. The code relies on `Object.hasOwn`, and `url()` on `URL.canParse`.
-- ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`, so a bundler removes the validators you do not import.
+- ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`, so a bundler removes the validators you do not import. CommonJS code can `require()` it on Node.js 22.12 or newer, which load ES modules that way.
 
 Runtime code uses only standard JavaScript and the standard `URL` global, and nothing specific to a browser or to Node.js, so it runs in the browser, on the server and in workers.
 
@@ -247,7 +247,7 @@ A value that cannot be converted fails with `invalid_type`, and its `params` are
 
 A fraction of a second beyond milliseconds is cut, not rounded, the same way on every runtime, and a timestamp with a fraction of a millisecond is rejected rather than cut. Leap seconds (`23:59:60`) are rejected, since a `Date` cannot hold one. The text `"-0"` is read as `0`, and a decimal is read as the nearest double, so `"0.30000000000000004999"` is `0.30000000000000004`.
 
-Date-only strings and date-times without an offset are both read as UTC, so the result does not depend on the timezone of the machine. Include an offset or `Z` in text you produce when the moment is not UTC.
+Date text is read in these ISO 8601 forms: a date `YYYY-MM-DD` alone, or followed by `T` or a space, a time `HH:MM:SS`, an optional fraction of a second, and an optional zone, which is `Z` or an offset written `+HH`, `+HHMM` or `+HH:MM` (or with `-`). This is wider than `datetime()`, which accepts only the `T` separator and `Z` or, with `offset`, `+HH:MM`, because a converter reads what programs and people commonly write while a format checks one exact spelling. Date-only strings and date-times without an offset are both read as UTC, so the result does not depend on the timezone of the machine. Include an offset or `Z` in text you produce when the moment is not UTC.
 
 ## Reading a whole environment
 
@@ -541,11 +541,11 @@ The text comes from the first of these that exists:
 2. An entry for its `code` in the message map you pass as the second argument.
 3. The generic "Invalid value".
 
-Two codes carry the issues behind them in `params.issues`. `englishMessages` words `invalid_key` with the first issue the key validator found, as in "Invalid key: Must be at least 3 characters", so a form says why the key is wrong. It words `invalid_union` generically, as "Does not match any of the allowed types", because listing what every option expected reads worse than saying none matched; the per-option issues are in `params.issues` for a message of your own. `flatten` and `standard` use the same wording, so neither lists nested issues separately.
+Two codes carry the issues behind them in `params.issues`. `englishMessages` words `invalid_key` with the first issue the key validator found, as in "Invalid key: Must be at least 3 characters", so a form says why the key is wrong, and words that issue with the map it was given, so an override of `too_small` in a spread of `englishMessages` reaches the key's message too. It words `invalid_union` generically, as "Does not match any of the allowed types", because listing what every option expected reads worse than saying none matched; the per-option issues are in `params.issues` for a message of your own. `flatten` and `standard` use the same wording, so neither lists nested issues separately.
 
 ### Rewording and localizing
 
-A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`. To change some of the English, spread `englishMessages` and override the codes you want; to translate, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
+A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`, and the map it was found in, so it can word an issue nested in `params` with `formatIssue(nested, messages)` and the same map. To change some of the English, spread `englishMessages` and override the codes you want; to translate, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
 
 ```ts
 import { englishMessages, formatIssue, type Messages } from "@codenhub/validation";
@@ -583,7 +583,7 @@ It takes the same message map as `formatIssue`, and without one every message is
 
 ## Reading the result
 
-A result is plain data, so it can be logged, sent to a client or stored, and because no issue holds the input, doing so does not leak what was submitted. One caveat: the bounds of a `bigint` validator are bigints in `params`, which `JSON.stringify` cannot serialize, and those of a `date` validator are `Date`s, which it turns into ISO strings. Convert them first if you send issues as JSON.
+A result is plain data, so it can be logged, sent to a client or stored, and because no issue holds the input, doing so does not leak what was submitted. One caveat: the bounds of a `bigint` or `coerceBigint` validator and the value a `literal` of a bigint expects are bigints in `params`, which `JSON.stringify` cannot serialize, and those of a `date` validator are `Date`s, which it turns into ISO strings. Convert them first if you send issues as JSON.
 
 <!-- Source: docs/standard-schema.md -->
 
@@ -736,8 +736,8 @@ The options `min` and `max` are `Date`s, both inclusive, and throw a `RangeError
 ## Fixed values
 
 - `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`. The one exception is `NaN`: `NaN === NaN` is false, so `literal(NaN)` could accept nothing, and it throws a `RangeError` when created.
-- `oneOf(values)` accepts any one string or number of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The list is copied when the validator is created.
-- `nativeEnum(enumObject)` accepts any value of a TypeScript `enum`. It ignores the reverse-mapping names TypeScript adds to a numeric enum, so only the numbers are values.
+- `oneOf(values)` accepts any one string or number of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The list is copied when the validator is created. An empty list throws a `TypeError` and one holding `NaN`, which no value equals, a `RangeError`, since either is a mistake in the schema.
+- `nativeEnum(enumObject)` accepts any value of a TypeScript `enum`. It ignores the reverse-mapping names TypeScript adds to a numeric enum, so only the numbers are values. An enum with no values throws a `TypeError`.
 
 All three fail with `invalid_value`. `literal` reports `{ expected }` and the other two report `{ options }`, the list of accepted values.
 
@@ -766,20 +766,20 @@ A format is a validator for a string of a particular shape. Most accept a string
 
 A non-string fails with `invalid_type` and `{ expected: "string", received }`. A string that does not match fails with `invalid_format` and `{ format }`, and `format` names it as the table shows.
 
-| Validator    | Accepts                                                                                                                             | `format`                     |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| `email()`    | An email address with a public domain name.                                                                                         | `"email"`                    |
-| `url()`      | An absolute URL with an allowed protocol and a public host.                                                                         | `"url"`                      |
-| `uuid()`     | A UUID of version 1 to 8, or the nil or max UUID, hyphenated, in any case.                                                          | `"uuid"`                     |
-| `ip()`       | An IPv4 or IPv6 address.                                                                                                            | `"ip"`, `"ipv4"` or `"ipv6"` |
-| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists.                                                         | `"datetime"`                 |
-| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.                                                               | `"date"`                     |
-| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens, the last not all digits, and punycode (`xn--`) labels that decode. | `"hostname"`                 |
-| `hex()`      | One or more hexadecimal digits of any case.                                                                                         | `"hex"`                      |
-| `base64()`   | Standard base64 with correct padding, as an encoder writes it. The empty string is base64 of no bytes.                              | `"base64"`                   |
-| `ulid()`     | A ULID, in any case.                                                                                                                | `"ulid"`                     |
-| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.                                                                      | `"nanoid"`                   |
-| `cuid2()`    | A CUID2 identifier.                                                                                                                 | `"cuid2"`                    |
+| Validator    | Accepts                                                                                                                                                                                                                                                                   | `format`                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| `email()`    | An email address with a public domain name.                                                                                                                                                                                                                               | `"email"`                    |
+| `url()`      | An absolute URL with an allowed protocol and a public host.                                                                                                                                                                                                               | `"url"`                      |
+| `uuid()`     | A UUID of version 1 to 8, or the nil or max UUID, hyphenated, in any case.                                                                                                                                                                                                | `"uuid"`                     |
+| `ip()`       | An IPv4 or IPv6 address.                                                                                                                                                                                                                                                  | `"ip"`, `"ipv4"` or `"ipv6"` |
+| `datetime()` | An ISO 8601 date-time such as `2026-09-28T14:30:00Z`, on a day that exists.                                                                                                                                                                                               | `"datetime"`                 |
+| `isoDate()`  | An ISO 8601 calendar date such as `2026-09-28`, on a day that exists.                                                                                                                                                                                                     | `"date"`                     |
+| `hostname()` | A hostname: dot-separated labels of letters, digits and hyphens, the last not a number (all digits, or `0x` and hex digits, which the URL parser reads as an IPv4 address), and punycode (`xn--`) labels that decode. One trailing dot, as in `example.com.`, is allowed. | `"hostname"`                 |
+| `hex()`      | One or more hexadecimal digits of any case.                                                                                                                                                                                                                               | `"hex"`                      |
+| `base64()`   | Standard base64 with correct padding, as an encoder writes it. The empty string is base64 of no bytes.                                                                                                                                                                    | `"base64"`                   |
+| `ulid()`     | A ULID, in any case.                                                                                                                                                                                                                                                      | `"ulid"`                     |
+| `nanoid()`   | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.                                                                                                                                                                                                            | `"nanoid"`                   |
+| `cuid2()`    | A CUID2 identifier.                                                                                                                                                                                                                                                       | `"cuid2"`                    |
 
 `isoDate()` produces a string. To get a `Date`, use `date()` on a `Date` you built yourself.
 
@@ -840,7 +840,7 @@ IPv4 is four decimal parts from 0 to 255 without leading zeros, which some parse
 
 ### `datetime`
 
-`datetime(options?)` requires the `T` separator, a time, and `Z`, and rejects days that do not exist, so `2026-02-30T00:00:00Z` fails. The options are `offset`, default `false`, which accepts a UTC offset such as `+02:00` instead of only `Z`, and `precision`, an integer from 0 to 9, which requires exactly that many fractional-second digits (`0` forbids them; without it they are optional). A `precision` outside that throws a `RangeError` when the validator is created. Leap seconds (`23:59:60`) are rejected.
+`datetime(options?)` requires the `T` separator, a time, and `Z`, and rejects days that do not exist, so `2026-02-30T00:00:00Z` fails. The options are `offset`, default `false`, which accepts a UTC offset such as `+02:00` instead of only `Z`, and `precision`, an integer from 0 to 9, which requires exactly that many fractional-second digits (`0` forbids them; without it they are optional). A `precision` outside that throws a `RangeError` when the validator is created. Leap seconds (`23:59:60`) are rejected. `coerceDate` reads more spellings than this, such as a space for the `T`, an offset without its colon or no zone at all, because it converts text rather than checks its form; [Coercion](docs/coercion.md) lists them.
 
 ## Objects
 
@@ -1005,7 +1005,7 @@ Each variant must produce a plain object, since that is what can carry the tag. 
 
 ### `intersection`
 
-`intersection(left, right)` accepts a value only when it passes both validators, reports the issues of both together, and produces the two outputs merged. Plain objects are merged key by key and arrays of the same length item by item, recursively. Any other pair must be the same value, or two dates holding the same moment: where the outputs differ otherwise, as `"  ab "` does trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path instead of one side silently winning.
+`intersection(left, right)` accepts a value only when it passes both validators, reports the issues of both together, and produces the two outputs merged. Plain objects and `Map`s are merged key by key and arrays of the same length item by item, recursively, and two `Set`s must hold the same values. Any other pair must be the same value, or two dates holding the same moment: where the outputs differ otherwise, as `"  ab "` does trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path instead of one side silently winning.
 
 Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` can never pass together: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 
@@ -1114,7 +1114,7 @@ The coercing validators accept text that holds a value, convert it, and then app
 - **Breaking.** `email()` and `url()` produce what the URL parser reads, so a check made later on the value sees what a mail server or a request will: `email()` keeps the local part as written and gives the domain in lowercase ASCII, with internationalized labels in punycode, and `url()` gives the URL as the parser writes it, with dot segments resolved, the host lowercased and characters such as `"` percent-encoded. Text holding whitespace or control characters is rejected rather than cleaned.
 - **Breaking.** `url()` requires a scheme, accepts `http` and `https` unless `protocols` says otherwise, and rejects embedded credentials and non-public hosts; `allowLocal: true` accepts `localhost`, single-label hosts, IP addresses and special-use names such as `db.internal`. `email()` and `url()` still accept public host names only. Listed `mailto`, `tel` and `urn` URLs are checked by their own rules, even when written with a host, a `mailto` query may hold only `to`, `cc`, `bcc`, `subject` and `body`, its recipients are produced as `email()` produces them and its `subject` and `body` hold only the characters RFC 6068 allows, plus `/` and `?`, a `tel` parameter holds only the characters RFC 3966 allows, other schemes without a host are rejected, and `javascript`, `vbscript` and `data`, whose URLs run script, cannot be listed.
 - **Breaking.** A missing property is `invalid_type` at the property's path, with `received: "undefined"`, where 0.0.1 reported `missing_key`. `NaN` and the infinities are `invalid_type` for numbers, where infinities were `invalid_value`.
-- **Breaking.** Invalid options, such as `string({ min: -1 })`, throw a `RangeError` when the validator is created, where 0.0.1 returned an `invalid_value` failure on every call. So does a combinator given a child that is not a function, or `instanceOf` a target that is not one, with a `TypeError` naming it, and a `union` or `pipe` given none.
+- **Breaking.** Invalid options, such as `string({ min: -1 })`, throw a `RangeError` when the validator is created, where 0.0.1 returned an `invalid_value` failure on every call. So does a combinator given a child that is not a function, or `instanceOf` a target that is not one, with a `TypeError` naming it, and a `union` or `pipe` given none, and a `oneOf` or `nativeEnum` given no value, or `NaN`.
 - **Breaking.** Coercion failures are `invalid_type` with `coerced: true` in `params`, where 0.0.1 used `invalid_format`, and they never repeat the input.
 - **Breaking.** Exceptions thrown by your own callbacks propagate, where 0.0.1's `custom` turned a thrown value into a failure. A callback that throws is a bug, and invalid input is a `fail(...)` result.
 
