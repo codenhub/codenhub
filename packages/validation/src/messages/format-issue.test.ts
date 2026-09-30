@@ -232,6 +232,16 @@ describe("formatIssue", () => {
     expect(formatIssue(issue({ code: "invalid_key", params: { issues: [] } }))).toBe("Invalid key");
   });
 
+  it("should word a bad key with the first issue its key validator found", () => {
+    const [short] = issuesOf(record(string({ min: 3 }), number())({ ab: 1 }));
+    expect(formatIssue(short as ValidationIssue)).toBe("Invalid key: Must be at least 3 characters");
+    const [repeated] = issuesOf(record(string({ lowercase: true }), number())({ A: 1, a: 2 }));
+    expect(formatIssue(repeated as ValidationIssue)).toBe("Invalid key: Must be unique");
+    const custom = issue({ code: "invalid_key", params: { issues: [issue({ code: "x", message: "Reserved" })] } });
+    expect(formatIssue(custom)).toBe("Invalid key: Reserved");
+    expect(formatIssue(issue({ code: "invalid_key" }))).toBe("Invalid key");
+  });
+
   it("should name an unknown format by its own name", () => {
     expect(formatIssue(issue({ code: "invalid_format", params: { format: "phone" } }))).toBe("Invalid phone");
   });

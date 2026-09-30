@@ -93,6 +93,8 @@ The text comes from the first of these that exists:
 2. An entry for its `code` in the message map you pass as the second argument.
 3. The generic "Invalid value".
 
+Two codes carry the issues behind them in `params.issues`. `englishMessages` words `invalid_key` with the first issue the key validator found, as in "Invalid key: Must be at least 3 characters", so a form says why the key is wrong. It words `invalid_union` generically, as "Does not match any of the allowed types", because listing what every option expected reads worse than saying none matched; the per-option issues are in `params.issues` for a message of your own. `flatten` and `standard` use the same wording, so neither lists nested issues separately.
+
 ### Rewording and localizing
 
 A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`. To change some of the English, spread `englishMessages` and override the codes you want; to translate, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
