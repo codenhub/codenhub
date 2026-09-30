@@ -88,6 +88,9 @@ These came out of measuring an adopter and are not conditions for 0.1.0. Each is
 - **A slimmer shared core.** The reporting of the received type and the issue building are about 0.6 kB gzipped in every consumer, and could be smaller.
 - **A leaf for function-valued options.** A `func()` validator, since callbacks are common in configuration.
 - **A fixed message on a validator.** A way to give one validator its own wording without a code-keyed map.
+- **Validators for the parts of a URL.** Options such as `url({ host, path })` taking validators that check the parts the URL parser read, so a consumer can require a host or a path prefix without splitting the text itself.
+- **A public-domain check on its own.** `hostname` with the public-host rule `email` and `url` use, for a value that is only a domain.
+- **One spelling of an IP address.** `ip` returns an address as written, so `::1` and `0:0:0:0:0:0:0:1` pass as different strings; returning its canonical form would let a later check compare addresses as text.
 
 ## Not Planned
 
