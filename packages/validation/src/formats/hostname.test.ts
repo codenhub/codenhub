@@ -26,6 +26,37 @@ describe("hostname", () => {
     expect(accepts(hostname(), ...invalid)).toEqual(invalid.map(() => false));
   });
 
+  it("should reject a name whose last label the URL parser reads as an IPv4 number, in hex as well", () => {
+    const numeric = ["0x7f000001", "127.0.0.0x1", "0x7f.0x0.0x0.0x1", "foo.0x1", "foo.0X1F", "foo.0x", "a.1."];
+    expect(accepts(hostname(), ...numeric)).toEqual(numeric.map(() => false));
+    expect(accepts(hostname(), "0x7f.com", "foo.0xg", "foo.x0")).toEqual([true, true, true]);
+  });
+
+  it("should accept an absolute name ending in one dot and leave it unchanged", () => {
+    expect(valueOf(hostname()("example.com."))).toBe("example.com.");
+    expect(accepts(hostname(), "localhost.", ".", "example.com..", `${"a".repeat(63)}.${"b".repeat(63)}.`)).toEqual([
+      true,
+      false,
+      false,
+      true,
+    ]);
+  });
+
+  it("should accept only names the URL parser reads as a name, never as an IPv4 address", () => {
+    const pieces = ["0x", "7f", "1", "a", "."];
+    let candidates = [""];
+    const misread: string[] = [];
+    for (let length = 0; length < 5; length += 1) {
+      candidates = candidates.flatMap((prefix) => pieces.map((piece) => prefix + piece));
+      for (const text of candidates.filter((candidate) => hostname()(candidate).ok)) {
+        if (!URL.canParse(`http://${text}`) || /^[\d.]+$/.test(new URL(`http://${text}`).hostname)) {
+          misread.push(text);
+        }
+      }
+    }
+    expect(misread).toEqual([]);
+  });
+
   it("should reject a punycode label that does not decode, and accept one that does", () => {
     expect(accepts(hostname(), "xn--zz.com", "a.xn--zz", "XN--ZZ")).toEqual([false, false, false]);
     expect(accepts(hostname(), "xn--mnchen-3ya.de", "a.xn--ls8h")).toEqual([true, true]);
