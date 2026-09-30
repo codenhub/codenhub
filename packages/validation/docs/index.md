@@ -58,7 +58,7 @@ if (result.ok) {
 
 A validator never throws for invalid input, because invalid input is an expected outcome and not a bug. The one exception is input that runs code of its own while it is read, a getter or a `Proxy` trap that throws: that exception propagates, as one from your own callback does. Data parsed from JSON has no such code. If you would rather stop the program, that is one line: `if (!result.ok) throw new Error(...)`.
 
-`result.value` is not necessarily the input you passed in. It is the value after the validator has run, with any clean-up you asked for applied (`trim`, `lowercase`, `clamp`) and, for an object, unlisted properties dropped. The input is never modified.
+`result.value` is not necessarily the input you passed in. It is the value after the validator has run, with any clean-up you asked for applied (`trim`, `lowercase`, `clamp`) and, for an object, unlisted properties dropped. `email` and `url` produce what the URL parser reads, such as a lowercase domain, so a check made later on the value sees what a mail server or a request will. The input is never modified.
 
 When something is wrong, the validator reports every problem it can find and not just the first, so a form can show all its errors at once. Each issue has a stable `code` to branch on, the `path` to the offending value, and `params` describing what was wrong. [Issues and messages](errors.md) has the details.
 
@@ -119,4 +119,5 @@ const isPort = (input: unknown): input is number => is(number({ int: true, min: 
 - [Coercion](coercion.md): validate text input such as environment variables, query strings and form fields by converting it.
 - [Standard Schema](standard-schema.md): use a validator wherever a library accepts a Standard Schema.
 - [Issues and messages](errors.md): the shape of an issue, the built-in codes, message text, localization and form errors.
+- [API reference](reference/index.md): every export with its signature and documentation, generated from the source.
 - [Changelog](changelog/index.md): release notes and the migration from 0.0.1.

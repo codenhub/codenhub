@@ -4,7 +4,7 @@ export const HOSTNAME_PATTERN =
 
 /**
  * An IPv4 address as four decimal parts from 0 to 255, without the leading zeros some parsers read as
- * octal. It is also the one form the URL parser writes, so a host in any other form is one it rewrites.
+ * octal.
  */
 export const IPV4_PATTERN =
   /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/;
@@ -25,11 +25,12 @@ export const isPublicHost = (host: string): boolean =>
   DOMAIN_NAME_PATTERN.test(host) && !SPECIAL_USE_NAME_PATTERN.test(host);
 
 /**
- * Letters, combining marks and digits from any script, joined by hyphens and dots: what can be an
- * internationalized host. Marks are there for scripts that write them even in normalized text, such as
- * the vowel signs of Devanagari.
+ * Letters, combining marks and digits from any script, joined by hyphens and dots: what a domain is
+ * written with. Marks are there for scripts that write them even in normalized text, such as the vowel
+ * signs of Devanagari. None of these can end a host, so text of them is read by the parser as a host
+ * and nothing else: never a port, a path, credentials or an escape.
  */
-const UNICODE_HOST_PATTERN = /^[\p{L}\p{M}\p{N}.-]+$/u;
+const DOMAIN_TEXT_PATTERN = /^[\p{L}\p{M}\p{N}.-]+$/u;
 /** A label in punycode, the ASCII form of an internationalized one. */
 const PUNYCODE_LABEL_PATTERN = /(?:^|\.)xn--/i;
 /**
@@ -38,25 +39,18 @@ const PUNYCODE_LABEL_PATTERN = /(?:^|\.)xn--/i;
  * letters, digits, hyphens and dots reaches the parser.
  */
 const decodes = (host: string): boolean => !PUNYCODE_LABEL_PATTERN.test(host) || URL.canParse(`http://${host}`);
-/** Any character past ASCII. */
-const NON_ASCII_PATTERN = /[\u0080-\uffff]/;
 /** The longest a domain name can be, in its ASCII form. */
 export const HOST_MAX_LENGTH = 253;
 
 /**
- * The ASCII form of a host that may be internationalized, as the URL parser writes it, so `münchen.de`
- * is `xn--mnchen-3ya.de`, or undefined when it is not a host at all, or not written in the normalized
- * form the parser reads it in. Text that is already ASCII is returned as it is, unless it holds a
- * punycode label that does not decode, such as `xn--zz`. Only letters, digits, hyphens and dots reach
- * the parser, so nothing in the text can turn it into a port, a path or another host.
+ * A host as the URL parser reads it: lowercase ASCII, with an internationalized label in punycode, so
+ * `München.de` is `xn--mnchen-3ya.de`, or undefined when the text is not a host at all. The parser's
+ * reading is returned rather than the text, so every spelling it maps to one host, such as fullwidth
+ * letters or an invisible variation selector, becomes that host, and no later check on the value can
+ * see a different one.
  */
 export function toAsciiHost(host: string): string | undefined {
-  if (!NON_ASCII_PATTERN.test(host)) {
-    return HOSTNAME_PATTERN.test(host) && !decodes(host) ? undefined : host;
-  }
-  // The parser maps a host through NFKC before encoding it, so a host that mapping changes, such as
-  // fullwidth or decomposed letters, is a second spelling of another and would pass as a distinct string.
-  if (!UNICODE_HOST_PATTERN.test(host) || host.normalize("NFKC") !== host || !URL.canParse(`http://${host}`)) {
+  if (!DOMAIN_TEXT_PATTERN.test(host) || !URL.canParse(`http://${host}`)) {
     return undefined;
   }
   const { hostname } = new URL(`http://${host}`);

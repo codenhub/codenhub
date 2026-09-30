@@ -57,7 +57,8 @@ let openDepth = 0;
  * @param getter - Returns the validator. Called once, on first use.
  * @param options - The depth limit.
  * @returns A validator that behaves as the one the getter returns.
- * @throws {TypeError} When `getter` is not a function.
+ * @throws {TypeError} When `getter` is not a function, and, from the returned validator on its first
+ * use, when `getter` returns something that is not a function.
  * @throws {RangeError} When `maxDepth` is not a positive integer.
  */
 export function lazy<TValidator extends AnyValidator>(
@@ -76,7 +77,14 @@ export function lazy<TValidator extends AnyValidator>(
     }
     openDepth += 1;
     try {
-      return (resolved ??= getter())(input);
+      if (resolved === undefined) {
+        const found: unknown = getter();
+        if (typeof found !== "function") {
+          throw new TypeError(`getter() must return a function, received ${found === null ? "null" : typeof found}`);
+        }
+        resolved = found as TValidator;
+      }
+      return resolved(input);
     } finally {
       openDepth -= 1;
     }

@@ -53,7 +53,8 @@
   "codenhub": {
     "docs": {
       "label": "ValidationKit",
-      "status": "experimental"
+      "status": "experimental",
+      "reference": {}
     }
   }
 }

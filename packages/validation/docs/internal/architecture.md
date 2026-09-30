@@ -17,6 +17,27 @@ Two consequences shape every decision below:
 - **A consumer pays only for what it imports.** The package is meant to be inlined into other packages at build time, so its weight lands in their bundles. Anything that makes every validator heavier is a regression, and the size budgets in `tests/integration/bundle-size.test.ts` enforce that.
 - **The contract is ours.** Results, issues and paths are plain data defined here. Nothing depends on another validator's shape or on another workspace package, which is what lets any workspace package depend on this one.
 
+## What the package defends against
+
+A validator is a boundary check on data a program did not make. This section says which input that covers, so a finding can be sorted before anyone writes a fix. It changes only by decision, and a change to it comes before the code that follows from it.
+
+In scope, and the package must get right:
+
+- **Any value JSON can hold, of any shape.** Wrong types, missing and extra keys, `__proto__` and other keys named like prototype members, and nesting of any depth reached through `lazy`. For this input, bad input is a failure and never an exception.
+- **Text crafted to be read one way by the validator and another by what uses it.** A format either describes its text completely with a pattern or grammar, or, where a standard parser decides what the text means, returns what that parser read (see [Formats are allowlists](#formats-are-allowlists)). A value that passes means the same thing to the validator and to its consumer.
+- **The input leaking through issues.** An issue holds type names and constraint values, never the value under test.
+
+Out of scope, and documented rather than defended:
+
+- **Code inside the input.** A getter, a `Proxy` trap or a `then` method runs when read, and its exception propagates, as a callback's does.
+- **Size.** Time and memory grow with the input and with the issues it produces. The caller caps untrusted input and gives collections a `max`.
+- **Recursion across an `await`.** `lazy` bounds the stack, not an asynchronous recursive schema.
+- **The world behind a value.** Whether a domain resolves, where it points, whether a mailbox exists, and which IP ranges are private.
+
+### When a finding is a blocker
+
+A finding blocks a release when, for input in scope, a value that should fail passes or one that should pass fails, a passing value means something different to its consumer than to the validator, bad input throws, or an issue holds the input. Anything else is recorded in the roadmap's backlog and does not reopen a release. A finding about input out of scope is a question about this section, not a bug: it becomes a fix only after this section is changed to take it in. Documentation that disagrees with the code is fixed when found, and blocks nothing on its own.
+
 ## A validator is a function
 
 ```ts
@@ -43,6 +64,12 @@ Every pre-made validator is created by calling a function, options optional: `em
 - **Composition** carries everything else, by function: `object`, `optional`, `pipe`, `refine`. Cleaning a string before checking a format is `pipe(string({ trim: true }), email())`, not an option on `email`.
 
 Options are applied in a fixed order that the docs state: clean-up (`trim`, `lowercase`, `clamp`) first, then every constraint on the cleaned value. Every failing constraint reports its own issue.
+
+### Formats are allowlists
+
+A format accepts text that matches a complete, positive description of it, a pattern or a grammar, and rejects everything else. It never accepts text for avoiding a list of known problems: such a list is finished only when nobody finds the next problem, and every finding adds to it.
+
+Where a standard parser decides what the text means, the parser is the description. `url` hands the text to the URL parser, checks what it read (the scheme against a list, the absence of credentials, the host against the public-host rule), and returns that reading serialized, never the text it was given. `email` does the same for its domain, and a `mailto` URL gives each recipient as `email` does. The value then cannot mean one thing to the validator and another to the request or mail server that uses it, whatever spelling the text used: dot segments, fullwidth or invisible characters, IPv4 shorthand, escapes. The rules these validators apply to raw text are positive descriptions too: a written URL holds only visible characters, and a domain is written with letters, marks, digits, dots and hyphens, none of which can end a host. Text a format checks without a parser, such as a UUID, is described completely by its pattern and is returned as written.
 
 ## Results, not exceptions
 
@@ -106,7 +133,7 @@ The package is `sideEffects: false`, every module is side-effect free at load, a
 - Options are read once when a validator is created, not per call, and defaults are resolved there.
 - The English wording lives in `messages/english-messages.ts` and is reachable only through the `englishMessages` export, so `formatIssue` itself carries none of it.
 
-`tests/integration/bundle-size.test.ts` bundles small consumer-shaped modules against the built `dist/` and asserts a gzip ceiling for each: one leaf validator, an object of a few fields, messages alone, and everything. A budget that fails means something made every validator heavier. Budgets sit a little above what each scenario measures, so ordinary changes pass and a regression shows. A change that grows a scenario past its budget raises that budget, and only that one, to the new size plus at least 10 bytes, rounded up to ten, and its commit says by how much and why.
+`tests/integration/bundle-size.test.ts` bundles small consumer-shaped modules against the built `dist/` and asserts a gzip ceiling for each: one leaf validator, an object of a few fields, messages alone, and everything. A budget that fails means something made a validator a tenth heavier. Each budget is what its scenario measured plus 10%, rounded up to ten bytes, so a fix that adds a few bytes passes without touching the test. When one fails on purpose, every scenario is measured again and every budget reset by the same rule, and the commit says what grew and why.
 
 ## Types
 
@@ -151,8 +178,9 @@ A validator is a function and not a schema object, so Standard Schema v1 support
 ## Adding a validator
 
 1. One module, one exported factory, options in one interface, all with TSDoc per `docs/guidelines/code.md`. Throw `RangeError` or `TypeError` from the factory for options that make no sense.
-2. Non-matching type: `invalidType(expected, input)`. Failed constraint: `invalid_format`, `invalid_value`, `too_small` or `too_big` with `params` that name the facts and never the value.
-3. Report every failing constraint, not the first.
-4. Tests beside it: accepted values, rejected values, edge cases, the exact issue shape, and that no issue contains the input.
-5. Add it to the size budgets if it adds a scenario a consumer would plausibly bundle alone.
-6. Document it in `docs/validators.md`, and the wording for its issue shape in `messages/english-messages.ts`.
+2. Describe what is accepted, never what is rejected, per [Formats are allowlists](#formats-are-allowlists). When a standard parser gives the input its meaning, check what the parser read and return it.
+3. Non-matching type: `invalidType(expected, input)`. Failed constraint: `invalid_format`, `invalid_value`, `too_small` or `too_big` with `params` that name the facts and never the value.
+4. Report every failing constraint, not the first.
+5. Tests beside it: accepted values, rejected values, edge cases, the exact issue shape, and that no issue contains the input. A format that returns a parser's reading also gets a case in `src/formats/parser-agreement.test.ts`.
+6. Add it to the size budgets if it adds a scenario a consumer would plausibly bundle alone.
+7. Document it in `docs/validators.md`, and the wording for its issue shape in `messages/english-messages.ts`.
