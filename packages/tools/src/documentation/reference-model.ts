@@ -79,13 +79,9 @@ export interface ReferenceMember {
   signature?: string;
 }
 
-/** One public symbol reachable from an entrypoint. */
-export interface ReferenceSymbol {
-  /** Symbol name as exported. `default` for an anonymous default export. */
-  name: string;
-  /** Declaration kind. */
-  kind: ReferenceSymbolKind;
-  /** Rendered Markdown summary and remarks, when the symbol carries TSDoc. */
+/** The TSDoc-derived prose of a symbol or of one of its overloads. */
+export interface ReferenceProse {
+  /** Rendered Markdown summary and remarks, when the declaration carries TSDoc. */
   doc?: string;
   /** `@deprecated` text, or `true` when the tag was present without one. */
   deprecated?: string | true;
@@ -101,10 +97,30 @@ export interface ReferenceSymbol {
   examples: string[];
   /** Every `@see` entry, in source order. */
   see: string[];
+  /** `@since` version text, when the declaration carries the tag. */
+  since?: string;
+}
+
+/** One overload of a function whose overloads carry their own TSDoc. */
+export interface ReferenceOverload extends ReferenceProse {
+  /** This overload's declaration text from the emitted `.d.ts`, attached after the model is built. */
+  signature?: string;
+}
+
+/** One public symbol reachable from an entrypoint. */
+export interface ReferenceSymbol extends ReferenceProse {
+  /** Symbol name as exported. `default` for an anonymous default export. */
+  name: string;
+  /** Declaration kind. */
+  kind: ReferenceSymbolKind;
   /** `@defaultValue` text for a variable or property, when present. */
   defaultValue?: string;
-  /** `@since` version text, when the symbol carries the tag. */
-  since?: string;
+  /**
+   * Each overload, in source order, when the overloads carry different TSDoc; empty when
+   * there is one signature or every overload shares one comment. When set, the symbol's
+   * own prose fields repeat the first commented overload's, for consumers that read one.
+   */
+  overloads: ReferenceOverload[];
   /** Members of a class, interface, or enum; empty otherwise. */
   members: ReferenceMember[];
   /**
@@ -294,15 +310,27 @@ function namedDocs(declared: Reflection[] | undefined, comment: Comment | undefi
     }
   }
 
-  return (declared ?? []).flatMap((reflection) => {
+  // Overloads repeat names: keep each once, in first-seen order, with the first
+  // description any overload gives it.
+  const docs = new Map<string, string | undefined>();
+  for (const reflection of declared ?? []) {
     const name = reflection.name;
     if (typeof name !== "string") {
-      return [];
+      continue;
     }
     const own = renderParts(reflection.comment?.summary);
     const doc = own !== "" ? own : described.get(name);
-    return doc === undefined || doc === "" ? [{ name }] : [{ name, doc }];
-  });
+    if (docs.get(name) === undefined) {
+      docs.set(name, doc === "" ? undefined : doc);
+    }
+  }
+  return [...docs].map(([name, doc]) => (doc === undefined ? { name } : { name, doc }));
+}
+
+/** Parameters or type parameters declared across every call signature, overloads included. */
+function signatureParts(reflection: Reflection, part: "parameters" | "typeParameters"): Reflection[] | undefined {
+  const signatures = reflection.signatures ?? [];
+  return signatures.length === 0 ? undefined : signatures.flatMap((signature) => signature[part] ?? []);
 }
 
 function memberKind(kind: number): ReferenceMemberKind | undefined {
@@ -322,9 +350,9 @@ function memberKind(kind: number): ReferenceMemberKind | undefined {
   }
 }
 
-/** The comment for a member: on the declaration, or on its first call signature. */
-function memberComment(reflection: Reflection): Comment | undefined {
-  return reflection.comment ?? reflection.signatures?.[0]?.comment;
+/** The comment for a member or symbol: on the declaration, or on its first commented call signature. */
+function declarationComment(reflection: Reflection): Comment | undefined {
+  return reflection.comment ?? reflection.signatures?.find((signature) => signature.comment !== undefined)?.comment;
 }
 
 /**
@@ -367,8 +395,7 @@ function buildMember(reflection: Reflection): ReferenceMember | undefined {
     };
   }
 
-  const comment = memberComment(reflection);
-  const signature = reflection.signatures?.[0];
+  const comment = declarationComment(reflection);
   return {
     deprecated: deprecation(comment),
     doc: renderComment(comment),
@@ -377,7 +404,7 @@ function buildMember(reflection: Reflection): ReferenceMember | undefined {
     isStatic: reflection.flags?.isStatic === true,
     kind,
     name: reflection.name,
-    parameters: namedDocs(signature?.parameters, comment, "@param"),
+    parameters: namedDocs(signatureParts(reflection, "parameters"), comment, "@param"),
   };
 }
 
@@ -392,11 +419,6 @@ function sortMembers(members: ReferenceMember[]): ReferenceMember[] {
   return [...members].sort(
     (left, right) => order[left.kind] - order[right.kind] || left.name.localeCompare(right.name),
   );
-}
-
-/** The comment for a symbol: on the declaration, or on its first call signature. */
-function symbolComment(reflection: Reflection): Comment | undefined {
-  return reflection.comment ?? reflection.signatures?.[0]?.comment;
 }
 
 function buildSource(sources: SourceReference[] | undefined): ReferenceSymbol["source"] {
@@ -463,8 +485,9 @@ function buildSymbol(
   }
   const { declaration, kind, name } = primary;
 
-  const comment = ordered.map((candidate) => symbolComment(candidate.declaration)).find((found) => found !== undefined);
-  const signature = declaration.signatures?.[0];
+  const comment = ordered
+    .map((candidate) => declarationComment(candidate.declaration))
+    .find((found) => found !== undefined);
   const members = sortMembers(
     ordered
       .filter((candidate) => candidate.kind === "class" || candidate.kind === "interface" || candidate.kind === "enum")
@@ -486,15 +509,55 @@ function buildSymbol(
     members,
     name,
     namespaceMembers,
-    parameters: namedDocs(signature?.parameters, comment, "@param"),
+    overloads: overloadsOf(declaration),
+    parameters: namedDocs(signatureParts(declaration, "parameters"), comment, "@param"),
     reexportedFrom: primary.reexportedFrom,
     returns: optionalBlockTagText(comment, "@returns"),
     see: blockTags(comment, "@see"),
     since: optionalBlockTagText(comment, "@since"),
     source: buildSource(declaration.sources ?? primary.exported.sources),
     throws: blockTags(comment, "@throws"),
-    typeParameters: namedDocs(signature?.typeParameters ?? declaration.typeParameters, comment, "@typeParam"),
+    typeParameters: namedDocs(
+      signatureParts(declaration, "typeParameters") ?? declaration.typeParameters,
+      comment,
+      "@typeParam",
+    ),
   };
+}
+
+function proseOf(
+  comment: Comment | undefined,
+  parameters: Reflection[] | undefined,
+  typeParameters: Reflection[] | undefined,
+): ReferenceProse {
+  return {
+    deprecated: deprecation(comment),
+    doc: renderComment(comment),
+    examples: blockTags(comment, "@example"),
+    parameters: namedDocs(parameters, comment, "@param"),
+    returns: optionalBlockTagText(comment, "@returns"),
+    see: blockTags(comment, "@see"),
+    since: optionalBlockTagText(comment, "@since"),
+    throws: blockTags(comment, "@throws"),
+    typeParameters: namedDocs(typeParameters, comment, "@typeParam"),
+  };
+}
+
+/**
+ * Per-overload prose, when a declaration's overloads carry different TSDoc.
+ *
+ * TypeDoc copies one comment onto every overload it applies to, so identical comments
+ * mean one description covers the whole overload set; only distinct ones are kept apart.
+ */
+function overloadsOf(declaration: Reflection): ReferenceOverload[] {
+  const signatures = declaration.signatures ?? [];
+  const comments = new Set(
+    signatures.flatMap((signature) => (signature.comment === undefined ? [] : [JSON.stringify(signature.comment)])),
+  );
+  if (comments.size < 2) {
+    return [];
+  }
+  return signatures.map((signature) => proseOf(signature.comment, signature.parameters, signature.typeParameters));
 }
 
 /** Groups a module's or namespace's children by exported name, resolving re-exports. */

@@ -20,7 +20,10 @@ export interface SymbolSignature {
    * to an interface, in source order; `text` is the first declaration's.
    */
   merged?: string[];
-  /** Member name to its one-line declaration text, for a class, interface, or enum. */
+  /**
+   * Member name to its declaration text, for a class, interface, or enum: one line per
+   * member, and one line per overload of an overloaded method.
+   */
   members?: Map<string, string>;
   /** Signatures of the symbols declared in a namespace merged under this name. */
   namespaceMembers?: SignatureIndex;
@@ -82,7 +85,10 @@ function memberEntries(members: ts.NodeArray<ts.ClassElement | ts.TypeElement | 
     if (ts.canHaveModifiers(member) && hasModifier(member, ts.SyntaxKind.PrivateKeyword)) {
       continue;
     }
-    entries.set(name.text, member.getText(source).replace(/\s+/g, " ").trim());
+    const text = member.getText(source).replace(/\s+/g, " ").trim();
+    const existing = entries.get(name.text);
+    // A repeated member name is a method overload set: one line per overload.
+    entries.set(name.text, existing === undefined ? text : `${existing}\n${text}`);
   }
   return entries;
 }
@@ -533,8 +539,14 @@ function withSignature(symbol: ReferenceSymbol, index: SignatureIndex | undefine
   if (found === undefined) {
     return symbol;
   }
+  const lines = [found.text, ...(found.overloads ?? [])];
   return {
     ...symbol,
+    // Overloads documented apart line up with the `.d.ts` overloads, both in source order.
+    overloads:
+      symbol.overloads.length === lines.length
+        ? symbol.overloads.map((overload, index) => ({ ...overload, signature: lines[index] }))
+        : symbol.overloads,
     namespaceMembers: symbol.namespaceMembers.map((member) => withSignature(member, found.namespaceMembers)),
     members: symbol.members.map((member) => {
       const text = found.members?.get(member.name);

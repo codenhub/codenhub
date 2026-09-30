@@ -145,4 +145,99 @@ describe("analyzeReference", () => {
     expect(page).toContain("#### Schema.Result");
     expect(page).toContain("type Result<TOutput> = {");
   });
+
+  it("documents the parameters and type parameters of every overload", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-overloads", {
+      "index.ts": [
+        "/**",
+        " * Parses text, optionally with a reviver.",
+        " * @typeParam T - The parsed type.",
+        " * @param reviver - Turns the parsed value into a `T`.",
+        " * @returns The parsed value.",
+        " */",
+        "export function parse(): unknown;",
+        "export function parse<T>(reviver: (value: unknown) => T): T;",
+        "export function parse(reviver?: (value: unknown) => unknown): unknown {",
+        "  return reviver;",
+        "}",
+        "",
+        "/** Formats values. */",
+        "export interface Formatter {",
+        "  /** Formats a value. */",
+        "  format(): string;",
+        "  format(value: number): string;",
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    const page = files[0]?.contents ?? "";
+
+    expect(page).toContain("export declare function parse(): unknown;");
+    expect(page).toContain("export declare function parse<T>(reviver: (value: unknown) => T): T;");
+    expect(page).toContain("- `reviver` — Turns the parsed value into a `T`.");
+    expect(page).toContain("- `T` — The parsed type.");
+    expect(page).toContain(["format(): string;", "format(value: number): string;"].join("\n"));
+  });
+
+  it("gives each separately documented overload its own block and prose", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-overload-docs", {
+      "index.ts": [
+        "/**",
+        " * Creates an empty box.",
+        " * @returns A box holding nothing.",
+        " */",
+        "export function box(): { value?: undefined };",
+        "/**",
+        " * Creates a box holding a value.",
+        " * @typeParam T - The boxed type.",
+        " * @param value - The value to hold.",
+        " * @returns A box holding `value`.",
+        " */",
+        "export function box<T>(value: T): { value: T };",
+        "export function box<T>(value?: T): { value?: T } {",
+        "  return { value };",
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    const page = files[0]?.contents ?? "";
+
+    expect(page).toContain(
+      [
+        "### box",
+        "",
+        "```ts",
+        "export declare function box(): {",
+        "  value?: undefined;",
+        "};",
+        "```",
+        "",
+        "Creates an empty box.",
+        "",
+        "**Returns** — A box holding nothing.",
+        "",
+        "```ts",
+        "export declare function box<T>(value: T): {",
+        "  value: T;",
+        "};",
+        "```",
+        "",
+        "Creates a box holding a value.",
+        "",
+        "**Parameters**",
+        "",
+        "- `value` — The value to hold.",
+        "",
+        "**Type parameters**",
+        "",
+        "- `T` — The boxed type.",
+        "",
+        "**Returns** — A box holding `value`.",
+      ].join("\n"),
+    );
+  });
 });

@@ -103,6 +103,7 @@ describe("attachSignatures", () => {
               examples: [],
               see: [],
               namespaceMembers: [],
+              overloads: [],
               members: [
                 {
                   name: "type",

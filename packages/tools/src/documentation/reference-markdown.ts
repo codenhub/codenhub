@@ -5,6 +5,7 @@ import {
   type ReferenceEntrypoint,
   type ReferenceMember,
   type ReferenceNamedDoc,
+  type ReferenceProse,
   type ReferenceSymbol,
 } from "./reference-model.ts";
 
@@ -172,9 +173,37 @@ function deprecationNote(deprecated: string | true, link: (text: string) => stri
   return deprecated === true ? "> **Deprecated.**" : `> **Deprecated.** ${link(deprecated)}`;
 }
 
+function proseBlocks(prose: ReferenceProse, link: (text: string) => string, defaultValue?: string): string[] {
+  const blocks: string[] = [];
+  if (prose.deprecated !== undefined) {
+    blocks.push(deprecationNote(prose.deprecated, link));
+  }
+  if (prose.doc !== undefined) {
+    blocks.push(link(prose.doc));
+  }
+  blocks.push(...namedDocList("Parameters", prose.parameters, link));
+  blocks.push(...namedDocList("Type parameters", prose.typeParameters, link));
+  if (prose.returns !== undefined) {
+    blocks.push(`**Returns** — ${link(prose.returns)}`);
+  }
+  blocks.push(...notesSection("Throws", prose.throws, link));
+  if (defaultValue !== undefined) {
+    blocks.push(`**Default** — ${link(defaultValue)}`);
+  }
+  if (prose.since !== undefined) {
+    blocks.push(`**Since** — ${link(prose.since)}`);
+  }
+  for (const example of prose.examples) {
+    blocks.push("**Example**", example.trim());
+  }
+  blocks.push(...notesSection("See also", prose.see, link));
+  return blocks;
+}
+
 /**
  * One symbol's section. A namespace member is a section one level deeper than the
  * symbol declaring it, headed by its dot-qualified name so its anchor is unique.
+ * Overloads documented apart each get their own signature block and prose.
  */
 function symbolBlocks(
   symbol: ReferenceSymbol,
@@ -185,33 +214,22 @@ function symbolBlocks(
 ): string[] {
   const blocks = [heading(level, qualifiedName)];
 
-  if (symbol.signature !== undefined) {
-    blocks.push(codeBlock(symbol.signature));
-  }
-
-  if (prose && symbol.deprecated !== undefined) {
-    blocks.push(deprecationNote(symbol.deprecated, link));
-  }
-  if (prose && symbol.doc !== undefined) {
-    blocks.push(link(symbol.doc));
-  }
-  if (prose) {
-    blocks.push(...namedDocList("Parameters", symbol.parameters, link));
-    blocks.push(...namedDocList("Type parameters", symbol.typeParameters, link));
-    if (symbol.returns !== undefined) {
-      blocks.push(`**Returns** — ${link(symbol.returns)}`);
+  if (symbol.overloads.length > 0) {
+    for (const overload of symbol.overloads) {
+      if (overload.signature !== undefined) {
+        blocks.push(codeBlock(overload.signature));
+      }
+      if (prose) {
+        blocks.push(...proseBlocks(overload, link));
+      }
     }
-    blocks.push(...notesSection("Throws", symbol.throws, link));
-    if (symbol.defaultValue !== undefined) {
-      blocks.push(`**Default** — ${link(symbol.defaultValue)}`);
+  } else {
+    if (symbol.signature !== undefined) {
+      blocks.push(codeBlock(symbol.signature));
     }
-    if (symbol.since !== undefined) {
-      blocks.push(`**Since** — ${link(symbol.since)}`);
+    if (prose) {
+      blocks.push(...proseBlocks(symbol, link, symbol.defaultValue));
     }
-    for (const example of symbol.examples) {
-      blocks.push("**Example**", example.trim());
-    }
-    blocks.push(...notesSection("See also", symbol.see, link));
   }
 
   for (const member of symbol.members) {
