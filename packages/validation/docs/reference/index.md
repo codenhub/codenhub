@@ -2565,11 +2565,23 @@ if (!result.ok) {
 
 ```ts
 type CheckedVariants<TKey extends string, TVariants extends Variants> = {
-    [TTag in keyof TVariants]: Infer<TVariants[TTag]> extends readonly unknown[] | ((...args: never[]) => unknown) ? never : string extends keyof Infer<TVariants[TTag]> ? TVariants[TTag] : TKey extends keyof Infer<TVariants[TTag]> ? never : TVariants[TTag];
+    [TTag in keyof TVariants]: Infer<TVariants[TTag]> extends readonly unknown[] | ((...args: never[]) => unknown) ? never : TKey extends DeclaredKeys<Infer<TVariants[TTag]>> ? never : TVariants[TTag];
 };
 ```
 
-The variants as `discriminatedUnion` accepts them. A variant whose output type is an array or a function, which cannot carry the tag, or declares the tag property, which the variant is never given, is typed `never`, so passing it is a compile error at that variant. An output with an index signature, such as a `record`, declares no property in particular, so it is accepted.
+The variants as `discriminatedUnion` accepts them. A variant whose output type is an array or a function, which cannot carry the tag, or declares the tag property, even as optional or beside an index signature, which the variant is never given, is typed `never`, so passing it is a compile error at that variant. An index signature alone, as a `record` has, declares no property, so it is accepted.
+
+Not exported; declared in `src/composition/discriminated-union.ts`.
+
+### DeclaredKeys
+
+```ts
+type DeclaredKeys<T> = keyof {
+    [K in keyof T as string extends K ? never : number extends K ? never : symbol extends K ? never : K]: T[K];
+};
+```
+
+The property names a type declares, without its index signatures: `{ [key: string]: unknown; type: string }` declares `"type"`, and a `Record<string, number>` declares none.
 
 Not exported; declared in `src/composition/discriminated-union.ts`.
 
