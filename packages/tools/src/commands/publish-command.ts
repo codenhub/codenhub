@@ -13,6 +13,7 @@ import {
   type VersionLookup,
 } from "../release/publish.ts";
 import { readPackageReadiness, type PackageReadiness, type ReadinessOptions } from "../release/readiness.ts";
+import { prepareCapturedOutput } from "../reporting/captured-output.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext, type CommandDefinition } from "./definition.ts";
 import type { CommandResolver } from "./verify-command.ts";
@@ -190,7 +191,7 @@ export function createPublishCommand(resolver?: CommandResolver, options: Publis
         const outcome = await (options.publish ?? runNpmPublish)(workspacePackage, context.options.timeoutMs);
         if (!outcome.isSuccess) {
           context.reporter.error(`npm publish failed for ${workspacePackage.name}.`);
-          context.reporter.detail(outcome.output);
+          context.reporter.detail(await prepareCapturedOutput(context, outcome.output));
           hasFailed = true;
           return;
         }

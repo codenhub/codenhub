@@ -1,4 +1,5 @@
 import { execute, formatCommand, type CommandSpec } from "../process/execute.ts";
+import { prepareCapturedOutput } from "../reporting/captured-output.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext, type CommandDefinition } from "./definition.ts";
 import { resolveToolPaths } from "./root-tool-command.ts";
 
@@ -35,7 +36,7 @@ export function resolveMarkdownTargets(paths: readonly string[]): string[] {
  * Runs one formatter and reports what it wrote.
  *
  * Output is streamed for `--fix` and `--verbose` and captured otherwise, so a
- * plain check still prints every finding: a formatter can exit non-zero with
+ * plain check still reports diagnostics: a formatter can exit non-zero with
  * nothing on stdout, and keying the echo off the exit code would drop it.
  * @param context Current command context.
  * @param spec Formatter invocation to run.
@@ -54,7 +55,7 @@ async function runFormatter(context: CommandContext, spec: CommandSpec): Promise
   });
   const captured = outcome.output?.trimEnd() ?? "";
   if (!streams && captured !== "") {
-    context.reporter.info(captured);
+    context.reporter.info(await prepareCapturedOutput(context, outcome.output ?? ""));
   }
   return outcome.isSuccess ? EXIT_SUCCESS : EXIT_FAILURE;
 }

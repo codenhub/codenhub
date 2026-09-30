@@ -1,6 +1,7 @@
 import { mapConcurrent, mapSeries } from "../process/concurrency.ts";
 import { formatCommand, type CommandSpec, execute } from "../process/execute.ts";
 import { buildScriptSpec } from "../process/script-runner.ts";
+import { prepareCapturedOutput } from "../reporting/captured-output.ts";
 import { formatDuration, type SummaryRow } from "../reporting/reporter.ts";
 import {
   groupByDependencyLevel,
@@ -133,9 +134,10 @@ export async function runPackageBatch(
       hasFailure = true;
     }
     if (!settings.streams && (settings.showsPassing || !outcome.isSuccess)) {
+      const output = await prepareCapturedOutput(context, outcome.output ?? "");
       reporter.blank();
       reporter.step(`${workspacePackage.name} › ${script}`);
-      reporter.info(outcome.output?.trimEnd() ?? "");
+      reporter.info(output);
     }
     rows.set(workspacePackage.name, toSummaryRow(workspacePackage, outcome));
   };
@@ -409,7 +411,7 @@ async function runSupportingCommands(
     // for: silent when it worked and nobody asked, printed when it did not.
     if (!settings.streams && (settings.showsPassing || !outcome.isSuccess)) {
       context.reporter.blank();
-      context.reporter.info(outcome.output?.trimEnd() ?? "");
+      context.reporter.info(await prepareCapturedOutput(context, outcome.output ?? ""));
     }
     if (!outcome.isSuccess) {
       failure = `Required step \`${formatCommand(spec)}\` failed in ${spec.cwd}.`;
