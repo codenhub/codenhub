@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-22
+last_updated: 2026-09-30
 scope: Naming and branding decisions across Coden, CodenHub, and their packages.
 ---
 
@@ -60,7 +60,7 @@ This governs the docs site: set `codenhub.docs.label` in `package.json` to `<Nam
 
 This does not govern the README title. `docs/specs/packages-readme.md` requires the README's first heading to be the package name exactly as published (e.g. `# @codenhub/icons`), and that rule is unaffected by this document — a resolved display name and a published npm name are allowed to differ, the same way they already differ for install commands (see the note in [Existing packages](#existing-packages)). The display name MAY still appear naturally in the README's opening description sentence as ordinary prose ("IconKit combines several icon families into one registry..."), but that is a writing choice, not a requirement.
 
-Typography and layout on the docs site should not visually distinguish branded from neutral packages beyond the words themselves — the Coden agency mark (see `docs/assets.md`) can appear on both, since CodenHub itself is a Coden project regardless of how any individual package is named.
+Typography and layout on the docs site should not visually distinguish branded from neutral packages beyond the words themselves — the Coden agency mark (defined in `docs/assets.md`) can appear on both, since CodenHub itself is a Coden project regardless of how any individual package is named.
 
 The agency mark is a default, not a ceiling. A package may use its own dedicated logo, favicon and branding instead, when one exists, and doing so does not require reclassifying the package as branded — this document's branded vs. neutral test governs the words used to describe a package, not the artwork used to represent it. Dedicated package artwork is out of scope for `docs/assets.md`, which only covers repository-wide assets under root `assets/`; a package-specific logo lives with the package itself.
 

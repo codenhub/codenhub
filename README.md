@@ -43,68 +43,24 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 
 <!-- generated: packages end -->
 
-## Commands
+## Repository
 
-The toolchain is pinned: Node comes from `.nvmrc`, pnpm from `packageManager`, and `pnpm install` fails rather than warns on a version outside `engines`. Run `nvm use` in a fresh clone if your Node is elsewhere.
+A pnpm workspace of packages, applications, and shared project standards:
 
-Use pnpm from the repository root. With no target, a command covers the whole workspace:
+- `packages/`: libraries and primitives, including framework plugins under `packages/plugins/` and the `hub` CLI under `packages/tools/`.
+- `apps/`: the documentation site, package demo aggregator, and site index.
+- `docs/`: repository-wide technical contracts, guidelines, and references.
+- `assets/`: shared fonts, logos, and icons.
+- Each package's `README.md` and `docs/`: consumer documentation and package-local maintainer knowledge.
 
-```sh
-pnpm build
-pnpm check
-pnpm clean
-pnpm format:check
-pnpm format:fix
-pnpm generate
-pnpm lint:check
-pnpm lint:fix
-pnpm test
-pnpm test:browser
-pnpm typecheck
-pnpm verify
-```
+## Tooling
 
-`pnpm test` runs unit and integration tests; `pnpm test:browser` runs the Playwright suites of the packages that have one, installing their browsers first. `pnpm verify` runs both.
+Root pnpm scripts use `hub`, the workspace-aware CLI in `@codenhub/tools`. It provides building, formatting, linting, type checking, unit and browser testing, compliance checks, and documentation generation. Commands accept package names, workspace directories, paths, globs, and changed-package selections.
 
-`pnpm check` reports packages against the lifecycle and documentation specs, and `pnpm generate` rewrites the files derived from them, such as each package's `llms-full.txt` and the package list above.
-
-Every command accepts the same targets: a package name, a workspace directory, a path, or a glob. Pass one to work on a single package from the root; omitting it covers the whole workspace and is meant for final verification.
-
-```sh
-pnpm test error
-pnpm test packages/error/src/bucket.test.ts
-pnpm test "packages/*/src/**/*.test.ts"
-pnpm typecheck packages/plugins/vite/icons
-pnpm lint:fix packages/error/src
-pnpm test --changed
-```
-
-Unrecognized flags reach the underlying tool, so `pnpm test error --reporter=verbose` works. Run `pnpm hub --help` for the full surface, or `pnpm packages` to see what a target resolves to.
-
-Before publishing or merging package behavior changes, run `pnpm verify`. It runs formatting, linting, building, type checking, tests, browser tests, and compliance checks in that order and stops at the first failure, so a whole branch is one command:
-
-```sh
-pnpm verify
-pnpm verify error
-pnpm verify --changed
-```
+`pnpm hub --help` describes the command surface, and `pnpm packages` lists workspace packages. [Repository tooling](docs/tooling.md) documents selectors, options, execution, and reporting. The toolchain versions are declared in `.nvmrc` and `package.json`.
 
 ## Documentation
 
-This repository is docs-first: durable decisions live in `docs/` and code should follow approved documentation. Package-specific documentation lives with each workspace package.
-
-Read these before changing package behavior, public APIs, or project conventions:
-
-- `docs/README.md`: repository documentation structure, status model, and exception rules.
-- `docs/tooling.md`: root scripts, the `hub` CLI, and package script rules.
-- `docs/ci.md`: the pinned toolchain and the pull-request workflow.
-- `docs/guidelines/code.md`: coding conventions and enforceable quality rules.
-- `docs/specs/packages-changelog.md`: recommended per-package changelog format and location.
-- `docs/specs/packages-demo.md`: general contract for package demos and the app that aggregates them into one deployed surface.
-- `docs/specs/packages-development.md`: optional package-local playground, dev, debug, and demo workflow for real usage scenarios and deployable demos.
-- `docs/specs/packages-documentation.md`: public and internal package documentation requirements.
-- `docs/specs/packages-exceptions.md`: package-specific exception register.
-- `docs/specs/packages-readme.md`: README requirements for public packages.
-- `docs/specs/packages-lifecycle.md`: package metadata, scripts, exports, build, publish, and versioning rules.
-
-Every `private: false` workspace package MUST follow `docs/specs/packages-lifecycle.md`, `docs/specs/packages-documentation.md`, and `docs/specs/packages-readme.md`.
+- [Contributing](CONTRIBUTING.md): setup, contributor workflow, validation, branches, commits, and releases.
+- [Agent instructions](AGENTS.md): agent behavior, communication, and context discipline.
+- [Repository documentation](docs/README.md): the map of technical guidelines, specifications, and repository references.

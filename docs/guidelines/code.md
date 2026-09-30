@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-22
+last_updated: 2026-09-30
 ---
 
 # Coding guidelines
@@ -28,6 +28,7 @@ Use names that describe domain intent. Avoid names based only on type or impleme
 - Prefer using folders to group related files, with an `index.ts` entrypoint
 - Keep public API surface small and intentional
 - Do not add compatibility layers unless there is a real consumer, persisted data, shipped behavior, or explicit requirement
+- Do not add dependencies unless simple in-house code is worse.
 
 ## Coding good/bad practices
 
@@ -84,15 +85,14 @@ Exceptions: framework callbacks, test helpers, tiny local functions, and APIs wh
 - Prefer observable behavior over implementation details.
 - Update affected tests when changing behavior.
 
-For comprehensive details on test categorization (Unit, Integration, E2E), config file requirements, and coverage targets, see the [Testing Specification](../specs/tests.md).
+The [testing specification](../specs/tests.md) defines test categories, configuration requirements, and coverage targets.
 
 ## Documentation
 
 - Comments explain WHY, not WHAT or HOW.
 - Remove and avoid redundant comments, decorations and outdated docs.
 - Public package APIs MUST have JSDoc/TSDoc in source, even when the README also documents them.
-- Public package documentation MUST follow `docs/specs/packages-documentation.md`.
-- Package READMEs MUST follow `docs/specs/packages-readme.md` when the package is public.
+- `docs/specs/packages-documentation.md` defines the public package documentation contract; `docs/specs/packages-readme.md` defines public package README requirements.
 
 For `private: false` workspace packages, every symbol exposed through `package.json` `exports` is public API. Public API includes exported functions, classes, methods, interfaces, type aliases, constants, config objects, plugin factories, CSS/token surfaces represented in TypeScript, and other consumer-facing values.
 

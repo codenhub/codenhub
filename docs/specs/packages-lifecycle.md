@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-29
+last_updated: 2026-09-30
 scope: Public workspace packages.
 ---
 
@@ -87,7 +87,7 @@ Generated output MUST NOT be treated as source of truth. Source, docs, and tests
 
 ## Development workflow
 
-Packages that need package-local real-usage scenarios SHOULD follow `docs/specs/packages-development.md` for the optional `playground`, `dev`, and `debug` workflow.
+`docs/specs/packages-development.md` defines the optional `playground`, `dev`, and `debug` workflow for package-local real-usage scenarios.
 
 This workflow is not required for every package. Missing it is non-compliant only when the package directly suffers from not having it and adding it would immediately remove recurring development or debugging pain.
 
@@ -204,9 +204,9 @@ Packages are also encouraged to track release history following `docs/specs/pack
 
 ## Documentation relationship
 
-Package README files MUST follow `docs/specs/packages-readme.md`.
+`docs/specs/packages-readme.md` defines package README requirements.
 
-Package documentation MUST follow `docs/specs/packages-documentation.md`.
+`docs/specs/packages-documentation.md` defines package documentation requirements.
 
 Private packages intended to expose public documentation MUST opt in through `codenhub.docs` and follow the same documentation spec. Opting in makes documentation eligible for the site; it does not publish it. The production documentation site publishes a package only from its latest release tag (`docs/ci.md`, "Publish-scoped content"), and a private package is never released, so an opted-in private package's documentation is held to the documentation spec and served by `astro dev`, but never reaches the production site.
 
@@ -216,6 +216,6 @@ Package pack checks MUST confirm that the README, public `docs/`, `llms.txt`, an
 
 ## Exceptions
 
-Exceptions MUST follow `docs/README.md` and be recorded in `docs/specs/packages-exceptions.md`.
+`docs/guidelines/documentation.md` defines exception requirements; `docs/specs/packages-exceptions.md` owns package-specific exceptions and compliance-check waivers.
 
 A valid lifecycle exception MUST name the package, the skipped rule, and why the package remains safe to build, test, or publish.

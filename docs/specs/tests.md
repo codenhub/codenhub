@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-30
+last_updated: 2026-09-30
 ---
 
 # Testing specification
@@ -53,7 +53,7 @@ E2E tests verify full user journeys, page transitions, rendering, and visual reg
   - Since E2E tests are slower and require browser environments, configure them separately to avoid blocking fast unit test loops.
   - Browser suites MUST be reachable only through `test:browser`. A package that declares a Playwright config MUST define that script, and `test`, `test:coverage`, and `test:watch` MUST NOT reach a browser suite, directly or through another script. `hub check` reports both.
   - Browsers are installed by `hub browsers`, which `hub test:browser` runs first. A package MUST NOT install browsers from its own scripts, because two packages doing that would download into one shared cache twice.
-  - Every Playwright project name MUST end in the engine it runs on — `chromium`, `firefox`, or `webkit` — optionally prefixed to distinguish surfaces, as `@codenhub/toaster` does with `source-chromium` and `package-chromium`. CI runs one engine per job and selects it across every package with `--project='*<engine>*'`, so a project named anything else drops out of that job silently rather than failing it. See `docs/ci.md`.
+  - Every Playwright project name MUST end in the engine it runs on — `chromium`, `firefox`, or `webkit` — optionally prefixed to distinguish surfaces, as `@codenhub/toaster` does with `source-chromium` and `package-chromium`. CI runs one engine per job and selects it across every package with `--project='*<engine>*'`, so a project named anything else drops out of that job silently rather than failing it. `docs/ci.md` describes engine selection.
   - A package with a browser suite SHOULD cover all three engines. The suites exist to catch what one engine does differently from another, which a single-engine run cannot do.
   - A browser suite whose tests do not depend on cookies, storage, or permissions surviving from one test into the next SHOULD share one browser context per worker and take a fresh page per test, as `packages/styles` does in `tests/browser/fixtures.ts`. Playwright builds a context per test by default, and the engines price that very differently: on that suite a fresh context cost Firefox about 2.6s against Chromium’s 0.3s, which was the whole of the gap between them. Writing such state is not what disqualifies a suite; reading it back across a test boundary is. A suite whose assertions rely on state an earlier test left behind MUST keep the default. A suite that shares a context MUST reset whatever the page under test persists, before each test rather than after — the styles playground stores its theme and aesthetic in local storage, so the fixture empties it as each document starts, which costs no round trip and holds even when a test fails partway.
 
@@ -106,4 +106,4 @@ pnpm test:browser:watch styles
 pnpm test --changed
 ```
 
-A target may be a package name, a workspace directory, a path, or a glob. File paths are forwarded to Vitest, so a single test file runs on its own. See `docs/tooling.md` for the full selector and option surface.
+A target may be a package name, a workspace directory, a path, or a glob. File paths are forwarded to Vitest, so a single test file runs on its own. `docs/tooling.md` describes the full selector and option surface.

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-07-18
+last_updated: 2026-09-30
 scope: Optional repo-level and package-level roadmap files.
 ---
 
@@ -26,7 +26,7 @@ Root `docs/` MUST NOT contain package-specific roadmap details. Package-specific
 
 A roadmap is an optional durable planning entrypoint. It should help readers understand current focus, intended direction, possible future work, and relevant planning context.
 
-A roadmap is not a short-lived task list, scratchpad, or replacement for issue tracking. Temporary plans and working notes should follow `docs/README.md`.
+A roadmap is not a short-lived task list, scratchpad, or replacement for issue tracking. `docs/guidelines/documentation.md` describes where temporary plans and working notes belong.
 
 ## Recommended structure
 

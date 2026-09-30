@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-27
+last_updated: 2026-09-30
 scope: General contract for package demos and the app that aggregates them into one deployed surface.
 ---
 
@@ -8,7 +8,7 @@ scope: General contract for package demos and the app that aggregates them into 
 
 Some packages benefit from more than an npm publish and a local `demo/` — a real deployed surface a consumer can open in a browser. This document defines the general contract between a package's `demo/` and whatever aggregates demos into one deployed app, and the assets convention any such app follows.
 
-It does not describe a specific app's implementation. `apps/demo` is the current aggregator; its own architecture belongs to it, not here — see `apps/demo/docs/internal/architecture.md`.
+It does not describe a specific app's implementation. `apps/demo` is the current aggregator; its own architecture belongs to it, not here — `apps/demo/docs/internal/architecture.md` contains that architecture.
 
 ## Why one shared aggregator
 

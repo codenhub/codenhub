@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-08-06
+last_updated: 2026-09-30
 scope: Workspace packages that expose errors to consumers.
 ---
 
@@ -193,6 +193,6 @@ export const myPackageErrors = {
 
 ## Exceptions
 
-Exceptions MUST follow `docs/README.md` and be recorded in `docs/specs/packages-exceptions.md`.
+`docs/guidelines/documentation.md` defines exception requirements; `docs/specs/packages-exceptions.md` owns package-specific exceptions and compliance-check waivers.
 
 A valid exception MUST name the package, the skipped rule, and why the package remains safe to publish.

@@ -1,12 +1,12 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-08-16
+last_updated: 2026-09-30
 scope: Approved exceptions for workspace packages.
 ---
 
 # Package exceptions
 
-This document is the central register for package-specific exceptions to repository guidelines and package specs. New exceptions MUST follow the exception rules in `docs/README.md`.
+This document is the central register for package-specific exceptions to repository guidelines and package specs. `docs/guidelines/documentation.md` defines the exception requirements.
 
 An exception to a rule that `hub check` enforces MUST also declare a `Checks bypassed` bullet listing the affected check codes in backticks, as shown below. `hub check` reads that bullet, so a waiver cannot exist without being recorded here. Run `pnpm check --json` to see the code behind any finding.
 
