@@ -69,7 +69,7 @@ export interface LocaleRouting<TLocale extends string> {
  *
  * @param config - Supported locales, default locale, and default-prefix policy.
  * @returns Pure parsing and generation operations bound to an immutable configuration snapshot.
- * @throws {TypeError} When locales are empty, invalid conservative ASCII identifiers, duplicated
+ * @throws {TypeError} When `config` is not a plain object, locales are empty, invalid conservative ASCII identifiers, duplicated
  * case-insensitively after trimming, the trimmed default locale is unsupported, or `prefixDefaultLocale` is not boolean.
  */
 export const createLocaleRouting = <TLocale extends string>(
