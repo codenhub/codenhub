@@ -5,7 +5,9 @@ import type { AnyValidator, Composed, Infer } from "../core/types";
 export interface LazyOptions {
   /**
    * The most levels of `lazy` that may be open at once, counting every `lazy` validator, not only this
-   * one. Input nested deeper fails with `too_big` instead of exhausting the stack.
+   * one. Input nested deeper fails with `too_big` instead of exhausting the stack. Since the levels of
+   * every `lazy` count, a `maxDepth` of 1 inside another `lazy` fails at once: set it for the whole
+   * nesting.
    *
    * @defaultValue 128
    */
