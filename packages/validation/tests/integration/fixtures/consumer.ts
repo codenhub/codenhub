@@ -180,6 +180,10 @@ export const maybeLoadedValue: Infer<typeof maybeLoaded> = 1;
 export const maybeLoadedPromise: Infer<typeof maybeLoaded> = Promise.resolve(1);
 // @ts-expect-error a transform that may return a promise must be awaited
 export const maybeLoadedOk = maybeLoaded("a").ok;
+declare const untyped: (id: string) => unknown;
+export const untypedLoaded = transform(string(), untyped);
+// @ts-expect-error a transform whose function returns unknown may be holding a promise, so must be awaited
+export const untypedLoadedOk = untypedLoaded("a").ok;
 export const updates = object(partial({ name: string(), email: email() }));
 export const updateValue: Infer<typeof updates> = {};
 

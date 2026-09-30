@@ -5,9 +5,14 @@ import type { AnyValidator, AsyncValidator, ValidationResult, Validator } from "
 /**
  * What a synchronous validator becomes once `convert` runs on its value: still synchronous when
  * `convert` never returns a promise, and asynchronous, producing what the promise settles to, when it
- * may return one, such as a function typed `number | Promise<number>`.
+ * may return one, such as a function typed `number | Promise<number>`. A function typed as returning
+ * `unknown` or `any` may return one too, so it makes the validator asynchronous.
  */
-type Transformed<R> = [Extract<R, PromiseLike<unknown>>] extends [never] ? Validator<R> : AsyncValidator<Awaited<R>>;
+type Transformed<R> = [unknown] extends [R]
+  ? AsyncValidator<Awaited<R>>
+  : [Extract<R, PromiseLike<unknown>>] extends [never]
+    ? Validator<R>
+    : AsyncValidator<Awaited<R>>;
 
 /**
  * Changes the value a validator produced into another value, such as text into a `Date`.
