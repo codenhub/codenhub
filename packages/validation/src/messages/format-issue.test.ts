@@ -250,6 +250,19 @@ describe("formatIssue", () => {
     expect(formatIssue(issue({ code: "invalid_key" }))).toBe("Invalid key");
   });
 
+  it("should word the key validator's issue with the map in use, so an override reaches it", () => {
+    const [short] = issuesOf(record(string({ min: 3 }), number())({ ab: 1 }));
+    const french: Messages = { ...englishMessages, too_small: "Trop court" };
+    expect(formatIssue(short as ValidationIssue, french)).toBe("Invalid key: Trop court");
+  });
+
+  it("should give a message function the map it was found in", () => {
+    const seen: unknown[] = [];
+    const messages: Messages = { custom: (_issue, map) => (seen.push(map), "x") };
+    formatWith(issue({ code: "custom" }), messages);
+    expect(seen).toEqual([messages]);
+  });
+
   it("should name an unknown format by its own name", () => {
     expect(formatIssue(issue({ code: "invalid_format", params: { format: "phone" } }))).toBe("Invalid phone");
   });
