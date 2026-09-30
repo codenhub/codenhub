@@ -114,6 +114,10 @@ export const evenCount: number | undefined = (() => {
 
 // Literals and lists of values keep their exact types.
 export const role = oneOf(["admin", "user"]);
+export const tristate = oneOf([true, false, null]);
+export const tristateValue: Infer<typeof tristate> = null;
+// @ts-expect-error only the listed values are in the type
+export const tristateWrong: Infer<typeof tristate> = "yes";
 export const roleValue: Infer<typeof role> = "admin";
 // @ts-expect-error "guest" is not in the list
 export const badRole: Infer<typeof role> = "guest";
