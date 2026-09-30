@@ -194,6 +194,10 @@ declare const untyped: (id: string) => unknown;
 export const untypedLoaded = transform(string(), untyped);
 // @ts-expect-error a transform whose function returns unknown may be holding a promise, so must be awaited
 export const untypedLoadedOk = untypedLoaded("a").ok;
+// A function returning `any`, such as JSON.parse, opts out of checking, so the validator stays synchronous.
+export const parsed = transform(string(), (text) => JSON.parse(text));
+export const parsedSync: Validator<unknown> = parsed;
+export const parsedOk: boolean = parsed("1").ok;
 export const updates = object(partial({ name: string(), email: email() }));
 export const updateValue: Infer<typeof updates> = {};
 
