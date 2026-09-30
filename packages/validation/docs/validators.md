@@ -82,7 +82,7 @@ Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, no
 | Below `min` or `gt`           | `too_small`     | `{ minimum, inclusive, type: "number" }`                      |
 | Above `max` or `lt`           | `too_big`       | `{ maximum, inclusive, type: "number" }`                      |
 | `int`, `safeInt` or `nonZero` | `invalid_value` | `{ type: "number", format: "int" \| "safeInt" \| "nonZero" }` |
-| `multipleOf`                  | `invalid_value` | `{ multipleOf }`                                              |
+| `multipleOf`                  | `invalid_value` | `{ type: "number", multipleOf }`                              |
 
 ## Booleans
 

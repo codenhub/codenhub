@@ -145,15 +145,15 @@ export function number(options: NumberOptions = {}): Validator<number> {
     }
     if (int === true && !Number.isInteger(value)) {
       issues.push(invalidValue("int"));
-    }
-    if (safeInt === true && !Number.isSafeInteger(value)) {
+    } else if (safeInt === true && !Number.isSafeInteger(value)) {
+      // A fraction that int already reported is not reported again as an unsafe integer.
       issues.push(invalidValue("safeInt"));
     }
     if (nonZero === true && value === 0) {
       issues.push(invalidValue("nonZero"));
     }
     if (multipleOf !== undefined && !isMultipleOf(value, multipleOf)) {
-      issues.push(toIssue({ code: "invalid_value", params: { multipleOf } }));
+      issues.push(toIssue({ code: "invalid_value", params: { type: "number", multipleOf } }));
     }
     return issues.length > 0 ? failWith(issues) : pass(value);
   };
