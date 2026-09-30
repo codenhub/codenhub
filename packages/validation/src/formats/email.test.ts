@@ -37,6 +37,13 @@ describe("email", () => {
     expect(valueOf(email()("ada@exa\ufe0fmple.com"))).toBe("ada@example.com");
   });
 
+  it("should read the full stops IDNA maps to a dot as dots, as url does", () => {
+    for (const stop of ["\u3002", "\uff0e", "\uff61"]) {
+      expect(valueOf(email()(`ada@example${stop}com`))).toBe("ada@example.com");
+      expect(valueOf(url()(`https://example${stop}com/`))).toBe("https://example.com/");
+    }
+  });
+
   it("should measure the address as it is delivered, where an internationalized host is longer", () => {
     const label = Array.from({ length: 26 }, (_, index) => String.fromCodePoint(0x4e00 + index * 7)).join("");
     const host = `${label}.${label}.${label}.${label}.com`;

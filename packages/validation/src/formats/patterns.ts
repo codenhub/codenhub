@@ -27,10 +27,11 @@ export const isPublicHost = (host: string): boolean =>
 /**
  * Letters, combining marks and digits from any script, joined by hyphens and dots: what a domain is
  * written with. Marks are there for scripts that write them even in normalized text, such as the vowel
- * signs of Devanagari. None of these can end a host, so text of them is read by the parser as a host
- * and nothing else: never a port, a path, credentials or an escape.
+ * signs of Devanagari. The ideographic, fullwidth and halfwidth full stops are there because IDNA reads
+ * them as dots, and `url` accepts them through the parser. None of these can end a host, so text of them
+ * is read by the parser as a host and nothing else: never a port, a path, credentials or an escape.
  */
-const DOMAIN_TEXT_PATTERN = /^[\p{L}\p{M}\p{N}.-]+$/u;
+const DOMAIN_TEXT_PATTERN = /^[\p{L}\p{M}\p{N}.。．｡-]+$/u;
 /** A label in punycode, the ASCII form of an internationalized one. */
 const PUNYCODE_LABEL_PATTERN = /(?:^|\.)xn--/i;
 /**
