@@ -43,10 +43,53 @@ jobs:
         if: github.event_name == 'pull_request'
         run: git rev-parse --verify origin/${{ github.base_ref }}
 
+      # A change to CI itself belongs to no package, so `--changed` would select
+      # none and the run would pass without exercising what changed. Such a pull
+      # request is verified the way its merge will be: the whole workspace.
+      - name: Widen the selection for a change to CI
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -q '^\.github/'; then
+            echo "SELECTOR=" >> "$GITHUB_ENV"
+          fi
+
       # Browser tests are skipped here because the browser job owns them; running
       # them twice would double the slowest step of the run.
       - name: Verify
         run: pnpm verify --skip=test:browser $SELECTOR
+
+  # The browser jobs run in Playwright's own image, which carries the system
+  # libraries and the browsers of one Playwright version. Installing them on a
+  # bare runner meant about 130 MB from the runner's Ubuntu package mirror on
+  # every run, and that mirror stalled often enough to fail merges; `docs/ci.md`
+  # has the history. The image is chosen by the version the lockfile pins, so a
+  # Playwright upgrade moves CI with it. A container's image is fixed before its
+  # steps run, so the version is read here, in a job of its own.
+  playwright:
+    name: Playwright image
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - name: Check out the lockfile
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          sparse-checkout: pnpm-lock.yaml
+          sparse-checkout-cone-mode: false
+
+      # One image holds one version's browsers, so a lockfile with two versions,
+      # or with none because its format moved, fails here rather than testing
+      # against browsers the packages do not use.
+      - name: Resolve the image
+        id: image
+        run: |
+          versions="$(grep -oE "^  playwright-core@[^:]+" pnpm-lock.yaml | sed "s/^  playwright-core@//" | sort -u)"
+          if [ "$(printf '%s\n' "$versions" | grep -c .)" -ne 1 ]; then
+            echo "::error::Expected one playwright-core version in pnpm-lock.yaml, found: ${versions:-none}"
+            exit 1
+          fi
+          echo "image=mcr.microsoft.com/playwright:v${versions}-noble" >> "$GITHUB_OUTPUT"
 
   browser:
     # One engine per job. The suites are the slowest thing in a run and the three
@@ -57,6 +100,13 @@ jobs:
     name: Browser tests (${{ matrix.engine }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    needs: playwright
+    # The runner's own user, as Playwright's CI guide recommends: the workspace
+    # and home the runner mounts are owned by it, and Firefox refuses to start as
+    # root in a home another user owns.
+    container:
+      image: ${{ needs.playwright.outputs.image }}
+      options: --user 1001
     strategy:
       fail-fast: false
       matrix:
@@ -74,39 +124,19 @@ jobs:
         if: github.event_name == 'pull_request'
         run: git rev-parse --verify origin/${{ github.base_ref }}
 
-      # The browsers belong to the `playwright-core` version the lockfile pins, so
-      # that version is the cache key rather than the whole lockfile, which any
-      # unrelated dependency bump would change. An empty result means the
-      # lockfile format moved and the key would stop tracking anything, so it fails.
-      - name: Resolve the Playwright version
-        id: playwright
+      # As in the verify job: a change to CI runs every browser suite.
+      - name: Widen the selection for a change to CI
+        if: github.event_name == 'pull_request'
         run: |
-          version="$(grep -oE "^  playwright-core@[^:]+" pnpm-lock.yaml | sed "s/^  playwright-core@//" | sort -u | paste -sd, -)"
-          test -n "$version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -q '^\.github/'; then
+            echo "SELECTOR=" >> "$GITHUB_ENV"
+          fi
 
-      # Browsers are downloaded once per engine and Playwright version rather than
-      # on every run. The key includes the engine because each job installs only
-      # its own. A miss costs the download the cache was meant to save, which is
-      # what the run did before this step existed. There are no restore keys: an
-      # older version's browsers would be restored, the new ones installed beside
-      # them, and both saved, so the cache would only ever grow.
-      - name: Restore the browser cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ matrix.engine }}-${{ steps.playwright.outputs.version }}
-
-      # Only this job's engine is installed; the other two would be downloaded and
-      # never launched. `--with-deps` adds the system libraries a headless browser
-      # needs on a runner, and runs even on a cache hit because the packages it
-      # installs live outside the cached directory. The install is the same command
-      # a contributor runs locally, so the two resolve the same browser versions.
-      # The libraries come from the runner's package mirror, which sometimes stalls
-      # with no deadline of its own, so each attempt is capped and `hub browsers`
-      # retries a failed one once; `docs/ci.md` has the numbers behind the cap.
+      # The image already holds this version's browsers, so this downloads nothing.
+      # It stays because it is the command a contributor runs, and it is what
+      # would notice an image and a lockfile that disagree.
       - name: Install browsers
-        run: pnpm hub browsers --with-deps --timeout=360 $SELECTOR -- ${{ matrix.engine }}
+        run: pnpm hub browsers $SELECTOR -- ${{ matrix.engine }}
 
       # Every package names its Playwright projects after the engine they run on,
       # so one glob selects this job's engine across all of them. See
@@ -150,6 +180,14 @@ jobs:
     name: Generated files
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: playwright
+    # `@codenhub/styles`' `styles-palette` generator reads real composed colors
+    # from a real headless browser rather than reimplementing `color-mix()` math
+    # by hand (see `docs/internal/generated-palette.md`), so the drift check needs
+    # Chromium, from the same image and as the same user as the browser jobs.
+    container:
+      image: ${{ needs.playwright.outputs.image }}
+      options: --user 1001
     steps:
       - name: Check out the repository
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
@@ -157,28 +195,8 @@ jobs:
       - name: Set up the workspace
         uses: ./.github/actions/setup
 
-      # Same resolution as the browser job, so both restore the same cache.
-      - name: Resolve the Playwright version
-        id: playwright
-        run: |
-          version="$(grep -oE "^  playwright-core@[^:]+" pnpm-lock.yaml | sed "s/^  playwright-core@//" | sort -u | paste -sd, -)"
-          test -n "$version"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-      # `@codenhub/styles`' `styles-palette` generator reads real composed
-      # colors from a real headless browser rather than reimplementing
-      # `color-mix()` math by hand (see `docs/internal/generated-palette.md`),
-      # so the drift check needs Chromium the same way the browser job's
-      # chromium leg does -- restored from the same cache key, installed with
-      # the same command, just the one engine this generator launches.
-      - name: Restore the browser cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-chromium-${{ steps.playwright.outputs.version }}
-
       - name: Install browsers
-        run: pnpm hub browsers --with-deps --timeout=360 styles -- chromium
+        run: pnpm hub browsers styles -- chromium
 
       # Generated files are derived from READMEs, package docs, and manifests, so
       # a change that edits a source without regenerating leaves the repository

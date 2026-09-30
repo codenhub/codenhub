@@ -37,11 +37,12 @@ async function runBrowsersCommand(context: CommandContext): Promise<number> {
     reporter.step(`${label} › playwright install`);
     let outcome = await execute(spec, { stdio: "inherit", timeoutMs: context.options.timeoutMs });
     let durationMs = outcome.durationMs;
-    // An install fails mostly on the network: a browser download that drops, or,
-    // with `--with-deps`, an operating system package mirror that stalls. A second
-    // attempt opens new connections and usually gets through, so one retry turns a
-    // transient outage into a slower run instead of a failed one. The install is
-    // idempotent, so a retry never redoes what the first attempt finished.
+    // An install fails mostly on a browser download that drops. A second attempt
+    // opens new connections and usually gets through, and the install is
+    // idempotent, so a retry never redoes what the first attempt finished. It
+    // cannot recover a stalled `--with-deps` on Linux: Playwright runs `apt-get`
+    // through `sudo`, so a timed-out attempt leaves it running as root, beyond
+    // this process's reach, holding the package lock the retry needs.
     if (!outcome.isSuccess) {
       reporter.warn(`${label} › install ${outcome.didTimeOut ? "timed out" : "failed"}, trying once more`);
       outcome = await execute(spec, { stdio: "inherit", timeoutMs: context.options.timeoutMs });

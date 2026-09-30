@@ -25,12 +25,14 @@ CI reads those same files rather than repeating a version: `pnpm/action-setup` t
 
 ## Triggers and selection
 
-| Event          | Selection                             |
-| -------------- | ------------------------------------- |
-| `pull_request` | `--changed=origin/<base branch>`      |
-| `push` to main | The whole workspace, with no selector |
+| Event          | Selection                                                                           |
+| -------------- | ----------------------------------------------------------------------------------- |
+| `pull_request` | `--changed=origin/<base branch>`, or the whole workspace when it changes `.github/` |
+| `push` to main | The whole workspace, with no selector                                               |
 
 A pull request checks what it changed, which is what makes the run fast enough to wait for. A merge into `main` checks everything, so nothing lands unverified because it happened to sit outside a changed package. Both are needed: neither alone both stays fast and stays honest.
+
+A pull request that changes `.github/` is the exception, and runs the whole workspace as its merge will. A workflow or the setup action belongs to no package, so `--changed` would select nothing and the run would pass without exercising the change it was opened for. That is how a browser-install fix once went green on its pull request and failed on its merge.
 
 `--changed` compares against a branch ref, so the checkout uses `fetch-depth: 0`. A shallow clone has no base branch to compare against. Both selecting jobs assert the base ref exists before running: `--changed` degrades to working-tree changes when its ref is missing, which locally means "check what I am editing" and in CI would mean checking nothing and reporting success.
 
@@ -40,14 +42,15 @@ The verification sequence builds declarations before `hub check` inspects them. 
 
 ## Jobs
 
-The jobs run in parallel and only `browser-result` waits on another, so a stale generated file is reported without waiting for the slowest test suite.
+The jobs run in parallel except that `browser` and `drift` wait for `playwright`, which takes seconds, and `browser-result` waits on `browser`, so a stale generated file is reported without waiting for the slowest test suite.
 
-| Job              | Runs                                                                                                                  |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `verify`         | `pnpm verify --skip=test:browser <selector>`                                                                          |
-| `browser`        | `pnpm hub browsers --with-deps <selector> -- <engine>`, then `pnpm test:browser <selector> -- --project='*<engine>*'` |
-| `drift`          | `pnpm generate --dry-run`, then an assertion that the working tree is unchanged                                       |
-| `browser-result` | Nothing; it passes only when every `browser` job passed                                                               |
+| Job              | Runs                                                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `verify`         | `pnpm verify --skip=test:browser <selector>`                                                                             |
+| `playwright`     | Reads the `playwright-core` version from `pnpm-lock.yaml` and names the Playwright image for it                          |
+| `browser`        | In that image: `pnpm hub browsers <selector> -- <engine>`, then `pnpm test:browser <selector> -- --project='*<engine>*'` |
+| `drift`          | `pnpm generate --dry-run`, then an assertion that the working tree is unchanged                                          |
+| `browser-result` | Nothing; it passes only when every `browser` job passed                                                                  |
 
 `verify` skips the browser step because the `browser` job owns it. Running it in both would double the slowest part of the run for no extra signal.
 
@@ -61,15 +64,19 @@ It runs under `always()`, which is what makes it a gate rather than a formality.
 
 Each job installs only its own engine and selects it with one glob. That works because every Playwright project in the repository is named after the engine it runs on; `docs/specs/tests.md` carries the rule, and a package free to name a project anything would silently drop out of an engine's job. `hub browsers` and `hub test:browser` both forward what follows `--` to Playwright, so neither the matrix nor the selector needed new tooling.
 
-Browsers are restored from `actions/cache` before the install, keyed on the runner, the engine, and the `playwright-core` version `pnpm-lock.yaml` pins — the version the browsers belong to. Keying on the whole lockfile instead would throw every engine's cache away on any unrelated dependency bump. The key has no restore fallback: restoring an older version's browsers would get the new ones installed beside them and both saved, so the cache would only grow. An empty version fails the step rather than producing a key that no longer tracks anything. `--with-deps` runs on a cache hit as well, because the system libraries it installs live outside the cached directory and a runner never has them. Those libraries come from the runner's Ubuntu package mirror, about 130 MB for WebKit, on every run, which makes the mirror the one outside service every browser job depends on. When it slows or stalls, an install that normally takes under a minute takes several, or hangs: `apt-get` has no deadline of its own. So each install attempt is capped with `--timeout=360`, above the slowest install that has still succeeded, and `hub browsers` tries a failed or timed-out install once more, with new connections, before failing the job. Two attempts fit inside the shortest job that installs, `drift` at 15 minutes.
+The `browser` and `drift` jobs run in Playwright's own image, `mcr.microsoft.com/playwright:v<version>-noble`, which carries the system libraries a headless browser needs and the browsers of one Playwright version. The `playwright` job picks the version from `pnpm-lock.yaml`, so a Playwright upgrade moves CI with it; it runs first because a container's image is fixed before any of its steps. It fails when the lockfile holds more than one `playwright-core` version, or none, since one image carries one version's browsers. The jobs run as the runner's user, `--user 1001`, as Playwright's CI guide recommends: the workspace and home the runner mounts are that user's, and Firefox refuses to start as root in a home another user owns.
 
-The install runs through `hub browsers`, the same command a contributor uses, so CI and a laptop resolve the same browser versions. Playwright artifacts are uploaded only when a job fails, which is the only time anyone reads them, and are named per engine so three jobs cannot overwrite each other's.
+The image replaced installing on a bare runner with `--with-deps`, which fetched about 130 MB of Ubuntu packages from the runner's package mirror on every run, outside any cache. That mirror was the one outside service every browser job depended on, and it degraded often enough to matter: installs that normally took under a minute took three to six when it crawled, and on two merges in one day it stalled outright until the job gave up. A retry could not recover that. `apt-get` runs under `sudo`, so a timed-out install left it running as root, beyond the reach of the runner's user, still holding the package lock the second attempt needed. The image is pulled from Microsoft's container registry, a different service, and holds everything the tests need, so a run installs nothing.
+
+The image is named by tag, not pinned by digest the way actions are. The tag names one exact Playwright version and is derived from the lockfile, so it changes only with a reviewed dependency upgrade; a digest would have to be updated by hand beside every such upgrade.
+
+The install still runs through `hub browsers`, the same command a contributor uses. In the image it downloads nothing; it stays because it is what would notice an image and a lockfile that disagree. Playwright artifacts are uploaded only when a job fails, which is the only time anyone reads them, and are named per engine so three jobs cannot overwrite each other's.
 
 The gate also catches what an install itself writes. A tracked `bin` target has to be committed with its executable bit: pnpm chmods the file it links, so a mode that disagrees with the index shows up as a modified working tree on Linux and nowhere on Windows. `packages/tools/src/cli.ts` is tracked `100755` for that reason.
 
 `drift` is a gate rather than a fix: `hub generate --dry-run` lists the files that no longer match the READMEs, package docs, and manifests they are derived from and exits non-zero without writing any of them. The step after it asserts that the dry run really wrote nothing: `git diff --exit-code` for tracked files, and an empty `git status --porcelain` for a file it created, which a diff never shows. A stale generated file means the repository describes itself incorrectly, which is why it fails a run rather than being regenerated by a bot: the author is the one who knows whether the source change was intended.
 
-`drift` also installs Chromium, the one engine it needs: `@codenhub/styles`' `styles-palette` generator computes `./palette`'s values by rendering real composed colors in a real browser rather than reimplementing `color-mix()` math by hand (`docs/internal/generated-palette.md` describes the composition), and `hub generate --dry-run` still has to run that generator to know whether `src/palette.css` is stale. The cache key and install command mirror the `browser` job's chromium leg exactly, restoring from the same cache.
+`drift` also installs Chromium, the one engine it needs: `@codenhub/styles`' `styles-palette` generator computes `./palette`'s values by rendering real composed colors in a real browser rather than reimplementing `color-mix()` math by hand (`docs/internal/generated-palette.md` describes the composition), and `hub generate --dry-run` still has to run that generator to know whether `src/palette.css` is stale. It runs in the same image, as the same user, as the `browser` job's chromium leg.
 
 Workspace setup — pnpm, Node, and a frozen-lockfile install — lives in `.github/actions/setup` so no job can drift apart from the others.
 
