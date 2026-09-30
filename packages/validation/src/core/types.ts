@@ -16,6 +16,7 @@ export type ValidationIssueCode =
   | "unrecognized_key"
   | "invalid_key"
   | "invalid_union"
+  | "invalid_intersection"
   | "custom"
   | (string & {});
 

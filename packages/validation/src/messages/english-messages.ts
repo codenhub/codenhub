@@ -134,6 +134,7 @@ export const englishMessages: Messages = {
   invalid_key: "Invalid key",
   // Quoted as a literal, since the key is text the sender chose and may hold quotes or line breaks.
   unrecognized_key: (issue) => `Unrecognized key ${formatValue(issue.params?.key)}`,
+  invalid_intersection: "Conflicting values",
   invalid_union: (issue) =>
     Array.isArray(issue.params?.options)
       ? `Expected ${param(issue, "discriminator")} to be one of ${issue.params.options.map(formatValue).join(", ")}`

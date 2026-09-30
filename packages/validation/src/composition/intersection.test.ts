@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 
+import { coerceDate } from "../coercion/coerce-date";
+import { date } from "../primitives/date";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
+import { array } from "./array";
 import { intersection } from "./intersection";
 import { object } from "./object";
+import { transform } from "./transform";
 
 describe("intersection", () => {
   const named = object({ name: string() });
@@ -28,13 +32,49 @@ describe("intersection", () => {
     expect(issuesOf(both({ name: "Ada" })).map((issue) => issue.path)).toEqual([["age"]]);
   });
 
-  it("should merge nested objects recursively, and let the right side win for other values", () => {
+  it("should merge nested objects recursively, and keep a value both sides produced equally", () => {
     const left = object({ profile: object({ a: number() }), tag: string() });
-    const right = object({ profile: object({ b: number() }), tag: string({ uppercase: true }) });
+    const right = object({ profile: object({ b: number() }), tag: string({ min: 1 }) });
     expect(valueOf(intersection(left, right)({ profile: { a: 1, b: 2 }, tag: "x" }))).toEqual({
       profile: { a: 1, b: 2 },
-      tag: "X",
+      tag: "x",
     });
+  });
+
+  it("should merge arrays of the same length item by item", () => {
+    const ids = array(object({ id: number() }));
+    const names = array(object({ name: string() }));
+    expect(valueOf(intersection(ids, names)([{ id: 1, name: "a" }]))).toEqual([{ id: 1, name: "a" }]);
+  });
+
+  it("should treat dates holding the same moment as equal", () => {
+    const window = intersection(coerceDate({ min: new Date(0) }), coerceDate({ max: new Date(2e12) }));
+    const value = valueOf(window("2026-01-01"));
+    expect(value).toEqual(new Date("2026-01-01"));
+    expect(valueOf(intersection(date(), date())(value))).toBe(value);
+  });
+
+  it("should report outputs that cannot be merged as invalid_intersection at the conflict, not keep one", () => {
+    expect(issuesOf(intersection(string({ trim: true }), string({ uppercase: true }))("  ab "))).toEqual([
+      { code: "invalid_intersection", path: [] },
+    ]);
+    const left = object({ tags: array(string()) });
+    const right = object({ tags: transform(array(string()), (tags) => tags.slice(1)) });
+    expect(issuesOf(intersection(left, right)({ tags: ["a", "b"] }))).toEqual([
+      { code: "invalid_intersection", path: ["tags"] },
+    ]);
+    const nested = intersection(
+      object({ a: array(object({ n: number() })) }),
+      object({ a: array(object({ n: number({ clamp: { min: 0, max: 1 } }) })) }),
+    );
+    expect(issuesOf(nested({ a: [{ n: 0 }, { n: 5 }] }))).toEqual([
+      { code: "invalid_intersection", path: ["a", 1, "n"] },
+    ]);
+    const dated = intersection(
+      transform(number(), (time) => new Date(time)),
+      transform(number(), (time) => new Date(time + 1)),
+    );
+    expect(codesOf(dated(0))).toEqual(["invalid_intersection"]);
   });
 
   it("should not let a __proto__ key write to a prototype while merging", () => {

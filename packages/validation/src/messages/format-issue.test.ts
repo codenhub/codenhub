@@ -51,7 +51,9 @@ describe("englishMessages", () => {
       "too_small",
       "too_big",
       "unrecognized_key",
+      "invalid_key",
       "invalid_union",
+      "invalid_intersection",
     ]) {
       expect(englishMessages[code]).toBeDefined();
     }
@@ -217,6 +219,7 @@ describe("formatIssue", () => {
       formatIssue(issue({ code: "invalid_type", params: { expected: "number", received: "string", coerced: true } })),
     ).toBe("Cannot convert string to number");
     expect(formatIssue(issue({ code: "invalid_union" }))).toBe("Does not match any of the allowed types");
+    expect(formatIssue(issue({ code: "invalid_intersection" }))).toBe("Conflicting values");
   });
 
   it("should word never and a missing or unknown tag without calling them types", () => {

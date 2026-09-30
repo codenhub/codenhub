@@ -372,7 +372,7 @@ Each variant must produce a plain object, since that is what can carry the tag. 
 
 ### `intersection`
 
-`intersection(left, right)` accepts a value only when it passes both validators, reports the issues of both together, and produces the two outputs merged. Plain objects are merged key by key, recursively, and for anything else the right validator's output wins.
+`intersection(left, right)` accepts a value only when it passes both validators, reports the issues of both together, and produces the two outputs merged. Plain objects are merged key by key and arrays of the same length item by item, recursively. Any other pair must be the same value, or two dates holding the same moment: where the outputs differ otherwise, as `"  ab "` does trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path instead of one side silently winning.
 
 Both validators see the whole input, so two `object`s with `unknownKeys: "strict"` can never pass together: each rejects the keys only the other lists. To combine strict shapes, spread them into one: `object({ ...named, ...aged }, { unknownKeys: "strict" })`.
 
