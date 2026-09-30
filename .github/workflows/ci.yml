@@ -43,6 +43,16 @@ jobs:
         if: github.event_name == 'pull_request'
         run: git rev-parse --verify origin/${{ github.base_ref }}
 
+      # A change to CI itself belongs to no package, so `--changed` would select
+      # none and the run would pass without exercising what changed. Such a pull
+      # request is verified the way its merge will be: the whole workspace.
+      - name: Widen the selection for a change to CI
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -q '^\.github/'; then
+            echo "SELECTOR=" >> "$GITHUB_ENV"
+          fi
+
       # Browser tests are skipped here because the browser job owns them; running
       # them twice would double the slowest step of the run.
       - name: Verify
@@ -113,6 +123,14 @@ jobs:
       - name: Assert the base ref is present
         if: github.event_name == 'pull_request'
         run: git rev-parse --verify origin/${{ github.base_ref }}
+
+      # As in the verify job: a change to CI runs every browser suite.
+      - name: Widen the selection for a change to CI
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -q '^\.github/'; then
+            echo "SELECTOR=" >> "$GITHUB_ENV"
+          fi
 
       # The image already holds this version's browsers, so this downloads nothing.
       # It stays because it is the command a contributor runs, and it is what

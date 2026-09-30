@@ -25,12 +25,14 @@ CI reads those same files rather than repeating a version: `pnpm/action-setup` t
 
 ## Triggers and selection
 
-| Event          | Selection                             |
-| -------------- | ------------------------------------- |
-| `pull_request` | `--changed=origin/<base branch>`      |
-| `push` to main | The whole workspace, with no selector |
+| Event          | Selection                                                                           |
+| -------------- | ----------------------------------------------------------------------------------- |
+| `pull_request` | `--changed=origin/<base branch>`, or the whole workspace when it changes `.github/` |
+| `push` to main | The whole workspace, with no selector                                               |
 
 A pull request checks what it changed, which is what makes the run fast enough to wait for. A merge into `main` checks everything, so nothing lands unverified because it happened to sit outside a changed package. Both are needed: neither alone both stays fast and stays honest.
+
+A pull request that changes `.github/` is the exception, and runs the whole workspace as its merge will. A workflow or the setup action belongs to no package, so `--changed` would select nothing and the run would pass without exercising the change it was opened for. That is how a browser-install fix once went green on its pull request and failed on its merge.
 
 `--changed` compares against a branch ref, so the checkout uses `fetch-depth: 0`. A shallow clone has no base branch to compare against. Both selecting jobs assert the base ref exists before running: `--changed` degrades to working-tree changes when its ref is missing, which locally means "check what I am editing" and in CI would mean checking nothing and reporting success.
 
