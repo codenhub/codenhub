@@ -1,11 +1,8 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
 import { resolveEntrypoints } from "../documentation/reference-declarations.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
+import { createReferenceFixture } from "./reference-fixture.test-support.ts";
 import { analyzeReference, referencePageRel } from "./reference-generator.ts";
 
 describe("resolveEntrypoints", () => {
@@ -68,43 +65,9 @@ describe("referencePageRel", () => {
   });
 });
 
-async function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
-  const directory = await mkdtemp(join(tmpdir(), "codenhub-reference-"));
-  await mkdir(join(directory, "src"), { recursive: true });
-  await writeFile(
-    join(directory, "package.json"),
-    JSON.stringify(
-      {
-        name: "@codenhub/fixture-single-entry",
-        version: "1.0.0",
-        exports: { ".": { types: "./dist/index.d.ts", import: "./dist/index.js" } },
-      },
-      null,
-      2,
-    ),
-  );
-  await writeFile(
-    join(directory, "tsconfig.json"),
-    JSON.stringify(
-      {
-        compilerOptions: {
-          target: "ESNext",
-          module: "Preserve",
-          moduleResolution: "bundler",
-          lib: ["ES2024"],
-          strict: true,
-          composite: true,
-          noEmit: true,
-        },
-        include: ["src/**/*"],
-      },
-      null,
-      2,
-    ),
-  );
-  await writeFile(
-    join(directory, "src/index.ts"),
-    [
+function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
+  return createReferenceFixture("fixture-single-entry", {
+    "index.ts": [
       "/**",
       " * Adds two numbers together.",
       " * @param a - The first addend.",
@@ -116,22 +79,7 @@ async function createSingleEntrypointFixture(): Promise<WorkspacePackage> {
       "}",
       "",
     ].join("\n"),
-  );
-  return {
-    directory,
-    directoryName: "fixture-single-entry",
-    isPrivate: false,
-    location: "fixture-single-entry",
-    manifest: {
-      name: "@codenhub/fixture-single-entry",
-      version: "1.0.0",
-      exports: { ".": { types: "./dist/index.d.ts", import: "./dist/index.js" } },
-    },
-    name: "@codenhub/fixture-single-entry",
-    scripts: {},
-    unscopedName: "fixture-single-entry",
-    workspaceDependencies: [],
-  };
+  });
 }
 
 describe("analyzeReference", () => {
