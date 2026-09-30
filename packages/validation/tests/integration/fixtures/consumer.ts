@@ -43,6 +43,7 @@ import {
   transform,
   tuple,
   union,
+  unknown,
   url,
   withDefault,
   type AsyncValidator,
@@ -241,6 +242,16 @@ export const passthroughVariant = discriminatedUnion("type", { a: object({}, { u
 export const tallies = discriminatedUnion("type", { totals: record(string(), number()), none: object({}) });
 export const talliesTag = (value: Infer<typeof tallies>): number | undefined =>
   value.type === "totals" ? value["ada"] : undefined;
+// An index signature does not excuse a tag the output also declares: the variant is never given it.
+export const indexedWithTag = discriminatedUnion("type", {
+  // @ts-expect-error the variant declares the tag beside its index signature
+  a: intersection(record(string(), unknown()), object({ type: string() })),
+});
+declare const indexedOptionalTag: Validator<{ [key: string]: unknown; type?: string }>;
+export const indexedWithOptionalTag = discriminatedUnion("type", {
+  // @ts-expect-error the variant declares the tag, even as optional, beside its index signature
+  a: indexedOptionalTag,
+});
 export const both = intersection(object({ name: string() }), object({ age: number() }));
 export const bothValue: Infer<typeof both> = { name: "Ada", age: 36 };
 export const settingsFromText = json(object({ theme: oneOf(["light", "dark"]) }));
