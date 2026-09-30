@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { entriesOf, sizeOfMap } from "../core/objects";
-import { collectNested, failWith, invalidType, pass, repeatedKey, toIssue } from "../core/result";
+import { assertFunction, collectNested, failWith, invalidType, pass, repeatedKey, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
@@ -27,6 +27,7 @@ import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
  * @param value - Validator applied to every value.
  * @param options - Size limits.
  * @returns A validator that produces a `Map`.
+ * @throws {TypeError} When `key` or `value` is not a function.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
@@ -34,6 +35,8 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
   value: TValue,
   options: SizeOptions = {},
 ): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>> {
+  assertFunction("key", key);
+  assertFunction("value", value);
   assertSizeOptions(options);
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     const size = sizeOfMap(input);

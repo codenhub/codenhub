@@ -1,6 +1,6 @@
 import { chain, type Maybe } from "../core/async";
 import { invalidObject, isPlainObject, setOwn } from "../core/objects";
-import { failWith, pass, toIssue } from "../core/result";
+import { assertFunction, failWith, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
 
 type Simplify<T> = { [K in keyof T]: T[K] } & {};
@@ -52,6 +52,7 @@ export type InferDiscriminated<TKey extends string, TVariants extends Variants> 
  * @param key - The name of the tag property.
  * @param variants - A validator for each tag value. Each must produce an object.
  * @returns A validator that produces one of the variants' objects, tagged.
+ * @throws {TypeError} When a variant is not a function.
  */
 export function discriminatedUnion<const TKey extends string, const TVariants extends Variants>(
   key: TKey,
@@ -60,6 +61,7 @@ export function discriminatedUnion<const TKey extends string, const TVariants ex
   // The variants are read once, so changing the record after the validator is made changes nothing.
   const table = new Map(Object.entries(variants));
   const tags = [...table.keys()];
+  table.forEach((variant, tag) => assertFunction(`variants.${tag}`, variant));
 
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {

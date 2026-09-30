@@ -1,5 +1,5 @@
 import { chain, type Maybe } from "../core/async";
-import { fail } from "../core/result";
+import { assertFunction, fail } from "../core/result";
 import type { IssueInput } from "../core/result";
 import type { AnyValidator, AsyncValidator, ValidationResult, Validator } from "../core/types";
 
@@ -29,6 +29,7 @@ export type RefineIssue = IssueInput | string;
  * @param check - Returns `true` when the value is acceptable.
  * @param issue - How to report a rejected value. Defaults to code `"custom"`.
  * @returns A validator with the same output type as the wrapped one.
+ * @throws {TypeError} When `validator` or `check` is not a function.
  */
 export function refine<T>(validator: Validator<T>, check: (value: T) => boolean, issue?: RefineIssue): Validator<T>;
 export function refine<T>(
@@ -41,6 +42,8 @@ export function refine<T>(
   check: (value: T) => boolean | PromiseLike<boolean>,
   issue: RefineIssue = {},
 ): AnyValidator<T> {
+  assertFunction("validator", validator);
+  assertFunction("check", check);
   const { path, params, ...rest } = typeof issue === "string" ? { message: issue } : issue;
   // The path and params are copied and frozen once, and every rejection builds its own issue around
   // them, so neither the caller nor a result can change what a later rejection reports. The freeze is

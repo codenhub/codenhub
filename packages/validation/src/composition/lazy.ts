@@ -1,4 +1,4 @@
-import { failIssue } from "../core/result";
+import { assertFunction, failIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer } from "../core/types";
 
 /** Options for {@link lazy}. */
@@ -53,12 +53,14 @@ let openDepth = 0;
  * @param getter - Returns the validator. Called once, on first use.
  * @param options - The depth limit.
  * @returns A validator that behaves as the one the getter returns.
+ * @throws {TypeError} When `getter` is not a function.
  * @throws {RangeError} When `maxDepth` is not a positive integer.
  */
 export function lazy<TValidator extends AnyValidator>(
   getter: () => TValidator,
   options: LazyOptions = {},
 ): Composed<TValidator, Infer<TValidator>> {
+  assertFunction("getter", getter);
   const { maxDepth = DEFAULT_MAX_DEPTH } = options;
   if (!Number.isInteger(maxDepth) || maxDepth < 1) {
     throw new RangeError(`maxDepth must be a positive integer, received ${maxDepth}`);

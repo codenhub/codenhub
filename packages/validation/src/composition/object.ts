@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { invalidObject, isPlainObject, setOwn } from "../core/objects";
-import { collectNested, failWith, pass, toIssue } from "../core/result";
+import { assertFunction, collectNested, failWith, pass, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 
 /** Maps property names to the validators of their values. */
@@ -57,7 +57,8 @@ export interface ObjectOptions {
  * @param shape - Validator of each property.
  * @param options - How to treat properties the shape does not list.
  * @returns A validator that produces an object.
- * @throws {TypeError} When `unknownKeys` is not `"strip"`, `"strict"` or `"passthrough"`.
+ * @throws {TypeError} When a property validator is not a function, or `unknownKeys` is not `"strip"`,
+ * `"strict"` or `"passthrough"`.
  */
 export function object<TShape extends Shape>(
   shape: TShape,
@@ -65,7 +66,10 @@ export function object<TShape extends Shape>(
 ): Composed<TShape[keyof TShape], InferShape<TShape>> {
   // The shape is read once, so changing it after the validator is made changes nothing.
   const keys = Object.keys(shape);
-  const validators = keys.map((key) => shape[key] as AnyValidator);
+  const validators = keys.map((key) => {
+    assertFunction(`shape.${key}`, shape[key]);
+    return shape[key] as AnyValidator;
+  });
   const known = new Set(keys);
   const unknownKeys = options.unknownKeys ?? "strip";
   if (unknownKeys !== "strip" && unknownKeys !== "strict" && unknownKeys !== "passthrough") {

@@ -1,6 +1,6 @@
 import type { Maybe } from "../core/async";
 import { sizeOfSet, valuesOf } from "../core/objects";
-import { failWith, invalidType, pass, repeatedItem } from "../core/result";
+import { assertFunction, failWith, invalidType, pass, repeatedItem } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 import { settle } from "./settle";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
@@ -27,12 +27,14 @@ import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
  * @param element - Validator applied to every value.
  * @param options - Size limits.
  * @returns A validator that produces a `Set` of what `element` produces.
+ * @throws {TypeError} When `element` is not a function.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function set<TElement extends AnyValidator>(
   element: TElement,
   options: SizeOptions = {},
 ): Composed<TElement, Set<Infer<TElement>>> {
+  assertFunction("element", element);
   assertSizeOptions(options);
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     const size = sizeOfSet(input);

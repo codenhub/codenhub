@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { isPlainObject, setOwn } from "../core/objects";
-import { failWith, pass } from "../core/result";
+import { assertFunction, failWith, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
 
 /**
@@ -45,11 +45,14 @@ function merge(left: unknown, right: unknown): unknown {
  * @param left - The first validator.
  * @param right - The second validator.
  * @returns A validator that produces the merged outputs, typed as an intersection.
+ * @throws {TypeError} When `left` or `right` is not a function.
  */
 export function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(
   left: TLeft,
   right: TRight,
 ): Composed<TLeft | TRight, Infer<TLeft> & Infer<TRight>> {
+  assertFunction("left", left);
+  assertFunction("right", right);
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> =>
     chain(collect([left(input), right(input)]), ([first, second]) => {
       if (first?.ok && second?.ok) {

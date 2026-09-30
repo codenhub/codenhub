@@ -1,5 +1,5 @@
 import { chain, type Maybe } from "../core/async";
-import { pass } from "../core/result";
+import { assertFunction, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
 
 /** The type produced by the last validator of a list. */
@@ -26,10 +26,12 @@ type Output<TValidators extends readonly AnyValidator[]> = TValidators extends r
  * @typeParam TValidators - The validators to run, in order. At least one.
  * @param validators - The validators to run, in order.
  * @returns A validator that produces what the last one produces.
+ * @throws {TypeError} When a validator is not a function.
  */
 export function pipe<const TValidators extends readonly [AnyValidator, ...AnyValidator[]]>(
   ...validators: TValidators
 ): Composed<TValidators[number], Output<TValidators>> {
+  validators.forEach((validator, index) => assertFunction(`validators[${index}]`, validator));
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> =>
     validators.reduce<Maybe<ValidationResult<unknown>>>(
       (previous, next) => chain(previous, (result) => (result.ok ? next(result.value) : result)),

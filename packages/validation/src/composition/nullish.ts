@@ -1,4 +1,4 @@
-import { pass } from "../core/result";
+import { assertFunction, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer } from "../core/types";
 
 /**
@@ -15,10 +15,12 @@ import type { AnyValidator, Composed, Infer } from "../core/types";
  * @typeParam TValidator - The wrapped validator.
  * @param validator - The validator for values that are present.
  * @returns A validator that produces the wrapped type, `null` or `undefined`.
+ * @throws {TypeError} When `validator` is not a function.
  */
 export function nullish<TValidator extends AnyValidator>(
   validator: TValidator,
 ): Composed<TValidator, Infer<TValidator> | null | undefined> {
+  assertFunction("validator", validator);
   const validate = (input: unknown) => (input === null || input === undefined ? pass(input) : validator(input));
   return validate as Composed<TValidator, Infer<TValidator> | null | undefined>;
 }

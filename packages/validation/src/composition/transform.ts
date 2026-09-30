@@ -1,5 +1,5 @@
 import { chain, type Maybe } from "../core/async";
-import { pass } from "../core/result";
+import { assertFunction, pass } from "../core/result";
 import type { AnyValidator, AsyncValidator, ValidationResult, Validator } from "../core/types";
 
 /**
@@ -36,11 +36,14 @@ type Transformed<R> = [unknown] extends [R]
  * @param validator - The validator to run first.
  * @param convert - Turns the validated value into the result.
  * @returns A validator that produces what `convert` returns.
+ * @throws {TypeError} When `validator` or `convert` is not a function.
  */
 export function transform<T, R>(validator: AnyValidator<T>, convert: (value: T) => PromiseLike<R>): AsyncValidator<R>;
 export function transform<T, R>(validator: Validator<T>, convert: (value: T) => R): Transformed<R>;
 export function transform<T, R>(validator: AnyValidator<T>, convert: (value: T) => R): AsyncValidator<Awaited<R>>;
 export function transform<T, R>(validator: AnyValidator<T>, convert: (value: T) => Maybe<R>): AnyValidator<R> {
+  assertFunction("validator", validator);
+  assertFunction("convert", convert);
   return (input) =>
     chain(
       validator(input),

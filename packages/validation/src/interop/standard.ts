@@ -1,4 +1,5 @@
 import { chain } from "../core/async";
+import { assertFunction } from "../core/result";
 import type { AnyValidator, Infer, ValidationResult } from "../core/types";
 import { formatIssue, type Messages } from "../messages/format-issue";
 import type { StandardSchemaV1 } from "./standard-schema";
@@ -27,11 +28,13 @@ import type { StandardSchemaV1 } from "./standard-schema";
  * @param messages - Text for the issue codes, such as `englishMessages`. Required, because the specification
  * needs a message on every issue and there is no built-in default to fall back on.
  * @returns A validator that is also a Standard Schema.
+ * @throws {TypeError} When `validator` is not a function.
  */
 export function standard<TValidator extends AnyValidator>(
   validator: TValidator,
   messages: Messages,
 ): TValidator & StandardSchemaV1<unknown, Infer<TValidator>> {
+  assertFunction("validator", validator);
   const wrapped = (input: unknown) => validator(input);
   const props: StandardSchemaV1.Props<unknown, Infer<TValidator>> = {
     version: 1,

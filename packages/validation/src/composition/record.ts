@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { invalidObject, isPlainObject, setOwn } from "../core/objects";
-import { collectNested, failWith, pass, repeatedKey, toIssue } from "../core/result";
+import { assertFunction, collectNested, failWith, pass, repeatedKey, toIssue } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue, ValidationResult } from "../core/types";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
@@ -46,6 +46,7 @@ export type InferRecord<TKey extends string, TValue> = string extends TKey
  * @param value - Validator applied to every value.
  * @param options - Limits on the number of keys.
  * @returns A validator that produces a dictionary object.
+ * @throws {TypeError} When `key` or `value` is not a function.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(
@@ -53,6 +54,8 @@ export function record<TKey extends AnyValidator<string>, TValue extends AnyVali
   value: TValue,
   options: SizeOptions = {},
 ): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>> {
+  assertFunction("key", key);
+  assertFunction("value", value);
   assertSizeOptions(options);
   const validate = (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {

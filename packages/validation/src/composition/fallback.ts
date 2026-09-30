@@ -1,5 +1,5 @@
 import { chain } from "../core/async";
-import { pass } from "../core/result";
+import { assertFunction, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue } from "../core/types";
 
 /**
@@ -23,11 +23,13 @@ import type { AnyValidator, Composed, Infer, ValidationIssue } from "../core/typ
  * @param validator - The validator to try first.
  * @param value - The fallback, or a function that receives the issues and returns it.
  * @returns A validator that produces the wrapped type and never fails.
+ * @throws {TypeError} When `validator` is not a function.
  */
 export function fallback<TValidator extends AnyValidator>(
   validator: TValidator,
   value: Infer<TValidator> | ((issues: readonly ValidationIssue[]) => Infer<TValidator>),
 ): Composed<TValidator, Infer<TValidator>> {
+  assertFunction("validator", validator);
   const validate = (input: unknown) =>
     chain(validator(input), (result) =>
       result.ok
