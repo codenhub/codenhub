@@ -12,8 +12,9 @@ export type RefineIssue = IssueInput | string;
  * @remarks
  * The check runs only when the wrapped validator succeeded, and receives the value it produced. A
  * check that returns a promise, such as a database lookup, makes the result asynchronous, and the
- * type says so. To report several issues at once or choose the path per failure, write a validator
- * function instead.
+ * type says so. A check written as a type guard, `(value): value is Admin => ...`, narrows the output
+ * type to what it guards. To report several issues at once or choose the path per failure, write a
+ * validator function instead.
  *
  * @example
  * ```ts
@@ -25,12 +26,24 @@ export type RefineIssue = IssueInput | string;
  * ```
  *
  * @typeParam T - The type the wrapped validator produces.
+ * @typeParam TNarrowed - The type a type-guard `check` narrows the output to.
  * @param validator - The validator to add the rule to.
  * @param check - Returns `true` when the value is acceptable.
  * @param issue - How to report a rejected value. Defaults to code `"custom"`.
- * @returns A validator with the same output type as the wrapped one.
+ * @returns A validator with the same output type as the wrapped one, or the narrower type a type-guard
+ * `check` names.
  * @throws {TypeError} When `validator` or `check` is not a function.
  */
+export function refine<T, TNarrowed extends T>(
+  validator: Validator<T>,
+  check: (value: T) => value is TNarrowed,
+  issue?: RefineIssue,
+): Validator<TNarrowed>;
+export function refine<T, TNarrowed extends T>(
+  validator: AnyValidator<T>,
+  check: (value: T) => value is TNarrowed,
+  issue?: RefineIssue,
+): AsyncValidator<TNarrowed>;
 export function refine<T>(validator: Validator<T>, check: (value: T) => boolean, issue?: RefineIssue): Validator<T>;
 export function refine<T>(
   validator: AnyValidator<T>,

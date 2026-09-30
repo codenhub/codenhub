@@ -324,7 +324,7 @@ const length = transform(string(), (text) => text.length);
 
 ### `refine`
 
-`refine(validator, check, issue?)` adds a rule that `validator` cannot express. It runs only when `validator` succeeded, and receives the value `validator` produced. `check` returns `true` for an acceptable value. The optional `issue` says how a rejection is reported: a string is the message, and an object can set a `code`, `path`, `params` and `message`. Without it the issue has code `custom`.
+`refine(validator, check, issue?)` adds a rule that `validator` cannot express. It runs only when `validator` succeeded, and receives the value `validator` produced. `check` returns `true` for an acceptable value. The optional `issue` says how a rejection is reported: a string is the message, and an object can set a `code`, `path`, `params` and `message`. Without it the issue has code `custom`. A `check` written as a type guard, such as `(value): value is string => typeof value === "string"`, narrows the output type to what it guards.
 
 ```ts
 import { object, refine, string } from "@codenhub/validation";

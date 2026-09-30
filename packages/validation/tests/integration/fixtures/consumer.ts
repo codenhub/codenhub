@@ -86,6 +86,16 @@ export const asyncResult: Promise<Awaited<ReturnType<typeof asyncSignup>>> = Pro
 export const notSync: Validator<unknown> = asyncSignup;
 export const stillAsync: AsyncValidator<{ username: string; email: string }> = asyncSignup;
 
+// A check written as a type guard narrows what the validator produces, synchronous or not.
+export const onlyText = refine(union([string(), number()]), (value): value is string => typeof value === "string");
+export const onlyTextValue: Infer<typeof onlyText> = "a";
+// @ts-expect-error the guard narrowed the output to string
+export const badOnlyTextValue: Infer<typeof onlyText> = 1;
+export const onlyTextLater = refine(union([username, number()]), (value): value is string => typeof value === "string");
+export const onlyTextLaterValue: AsyncValidator<string> = onlyTextLater;
+// @ts-expect-error a guard on an asynchronous validator is still asynchronous
+export const onlyTextLaterSync: Validator<string> = onlyTextLater;
+
 // Guards accept only synchronous validators.
 export const raw: unknown = "text";
 export const narrowed: string = is(string(), raw) ? raw : "";
