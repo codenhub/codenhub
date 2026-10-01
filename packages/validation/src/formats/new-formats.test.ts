@@ -6,6 +6,7 @@ import { cidr } from "./cidr";
 import { creditCard } from "./credit-card";
 import { domain } from "./domain";
 import { duration } from "./duration";
+import { email } from "./email";
 import { ip } from "./ip";
 import { jwt } from "./jwt";
 import { mac } from "./mac";
@@ -14,6 +15,7 @@ import { port } from "./port";
 import { semver } from "./semver";
 import { slug } from "./slug";
 import { time } from "./time";
+import { url } from "./url";
 import { uuid } from "./uuid";
 
 const formatOf = (result: Parameters<typeof issuesOf>[0]): unknown => issuesOf(result)[0]?.params?.format;
@@ -204,6 +206,12 @@ describe("domain", () => {
         "example.com.",
       ),
     ).toEqual(Array(7).fill(false));
+  });
+
+  it("should hold its top-level label to 63 characters, as it does every other label", () => {
+    expect(accepts(domain(), `example.${"a".repeat(63)}`, `example.${"a".repeat(64)}`)).toEqual([true, false]);
+    expect(accepts(email(), `ada@example.${"a".repeat(64)}`)).toEqual([false]);
+    expect(accepts(url(), `https://example.${"a".repeat(64)}/`)).toEqual([false]);
   });
 });
 
