@@ -27,10 +27,15 @@ export function instanceOf<T>(target: Constructor<T>, ...rest: Rest<T, MessageOp
 export function instanceOf<T>(target: Constructor<T>, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
 export function instanceOf(target: Constructor, ...rest: unknown[]): AnyValidator {
   assertFunction("target", target);
+  // A target with a `Symbol.hasInstance` of its own decides by its own rule, which is not run on an
+  // object made up here, since it may accept only some shapes and throw for the rest.
+  const hasOwnRule = target[Symbol.hasInstance] !== Function.prototype[Symbol.hasInstance];
   try {
     // An arrow or a method has no prototype, so `instanceof` would throw on every object given to it.
-    // oxlint-disable-next-line no-unused-expressions
-    ({}) instanceof target;
+    if (!hasOwnRule) {
+      // oxlint-disable-next-line no-unused-expressions
+      ({}) instanceof target;
+    }
   } catch {
     throw new TypeError("target must be a class or a function with a prototype");
   }

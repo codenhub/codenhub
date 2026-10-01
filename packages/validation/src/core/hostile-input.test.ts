@@ -25,3 +25,21 @@ describe("instanceOf, given a function instanceof cannot test against", () => {
     expect(() => instanceOf((() => undefined) as never)).toThrow(TypeError);
   });
 });
+
+describe("instanceOf, given a class with a Symbol.hasInstance of its own", () => {
+  class Tagged {
+    static [Symbol.hasInstance](input: unknown): boolean {
+      if (typeof input !== "object" || input === null || !("tag" in input)) {
+        throw new TypeError("not a tagged object");
+      }
+      return input.tag === "ok";
+    }
+  }
+
+  it("should not run that rule when it is made, and use it on the input", () => {
+    const tagged = instanceOf(Tagged);
+    expect(codesOf(tagged({ tag: "ok" }))).toEqual([]);
+    expect(codesOf(tagged({ tag: "no" }))).toEqual(["invalid_type"]);
+    expect(codesOf(tagged({}))).toEqual(["invalid_type"]);
+  });
+});
