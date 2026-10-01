@@ -77,3 +77,16 @@ describe("leaf", () => {
     expect(issuesOf(sync(validate(" ab "))).map((found) => found.code)).toEqual(["too_small"]);
   });
 });
+
+describe("split, given something other than options or a check first", () => {
+  it.each([["abc"], [5], [true]])("should throw a TypeError for %s", (first) => {
+    expect(() => split([first])).toThrow(TypeError);
+  });
+});
+
+describe("finish, given a check written by hand", () => {
+  it("should throw when a check returns something other than nothing or a list", () => {
+    const wrong = (() => false) as unknown as Check<string>;
+    expect(() => finish("x", [], undefined, [wrong])).toThrow("A check must return undefined or a list of issues");
+  });
+});

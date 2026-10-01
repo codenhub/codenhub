@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assertSize, collectNested, describeType, fail, failIssue, invalidType, pass, toIssue } from "./result";
+import { assertSize, collectNested, describeType, fail, issue, pass, toIssue, typeIssue } from "./result";
 import type { ValidationIssue } from "./types";
 
 describe("pass", () => {
@@ -105,18 +105,19 @@ describe("describeType", () => {
   });
 });
 
-describe("invalidType", () => {
+describe("typeIssue", () => {
   it("should name both types and never echo the value", () => {
-    const result = invalidType("string", "hunter2-as-number-42".length);
-    expect(result.error.issues).toEqual([
-      { code: "invalid_type", path: [], params: { expected: "string", received: "number" } },
-    ]);
+    expect(typeIssue("string", "hunter2-as-number-42".length)).toEqual({
+      code: "invalid_type",
+      path: [],
+      params: { expected: "string", received: "number" },
+    });
   });
 });
 
-describe("failIssue", () => {
+describe("issue", () => {
   it("should omit params when none are given", () => {
-    expect(failIssue("custom").error.issues).toEqual([{ code: "custom", path: [] }]);
+    expect(issue("custom")).toEqual({ code: "custom", path: [] });
   });
 });
 

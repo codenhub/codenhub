@@ -161,3 +161,36 @@ describe("searchParams", () => {
     ]);
   });
 });
+
+describe("audit regressions", () => {
+  it("should reject an IP address as the domain of an email, written as one or as a number", () => {
+    expect(accepts(email({ domain: unknown() }), "a@127.0.0.1", "a@0x7f000001", "a@example.com.")).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    expect(accepts(email({ domain: unknown() }), "a@localhost", "a@intranet")).toEqual([true, true]);
+  });
+
+  it("should not word a repeated query key with the URL's message, as it words no part's issue", () => {
+    const issues = issuesOf(url({ query: unknown(), message: "Bad URL" })("https://example.com/?a=1&a=2"));
+    expect(issues).toEqual([
+      {
+        code: "invalid_key",
+        path: ["query", "a"],
+        params: { issues: [{ code: "invalid_value", path: [], params: { unique: true } }] },
+      },
+    ]);
+  });
+
+  it("should not run a port's checks on a number that is not a port", () => {
+    const seen: number[] = [];
+    const record = check((value: number) => {
+      seen.push(value);
+      return true;
+    });
+    port(record)(70_000);
+    port(record)(8080);
+    expect(seen).toEqual([8080]);
+  });
+});

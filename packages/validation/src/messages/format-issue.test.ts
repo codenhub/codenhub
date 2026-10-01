@@ -385,3 +385,14 @@ describe("flatten", () => {
     expect(fieldErrors["__proto__"]).toEqual(["worse"]);
   });
 });
+
+describe("englishMessages, for issues no other test words", () => {
+  it("should word a depth limit and an invalid_value with no known params", () => {
+    expect(formatWith({ code: "too_big", path: [], params: { maximum: 3, type: "depth" } }, englishMessages)).toBe(
+      "Must be nested at most 3 levels deep",
+    );
+    expect(formatWith({ code: "invalid_value", path: [], params: { type: "number" } }, englishMessages)).toBe(
+      "Invalid value",
+    );
+  });
+});

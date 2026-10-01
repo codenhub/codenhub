@@ -157,7 +157,7 @@ A non-string fails with `invalid_type` and `{ expected: "string", received }`. A
 | `slug()`       | Lowercase ASCII letters and digits in words joined by single hyphens, such as `hello-world-2`.                                                                                                                                                                            | As written                                            | `"slug"`                           |
 | `jwt()`        | A JSON Web Token in compact form: three base64url segments whose header and payload are JSON objects, the header naming `alg`. The signature is not verified and the claims are not read, so a token that passes may be forged or expired.                                | As written                                            | `"jwt"`                            |
 | `hex()`        | One or more hexadecimal digits of any case.                                                                                                                                                                                                                               | As written                                            | `"hex"`                            |
-| `base64()`     | Standard base64 with correct padding, as an encoder writes it. The empty string is base64 of no bytes. `base64({ url: true })` requires the URL-safe alphabet, `-` and `_`, with the padding optional.                                                                    | As written                                            | `"base64"` or `"base64url"`        |
+| `base64()`     | Standard base64 with correct padding, as an encoder writes it. The empty string, which encodes nothing, is rejected. `base64({ url: true })` requires the URL-safe alphabet, `-` and `_`, with the padding optional.                                                      | As written                                            | `"base64"` or `"base64url"`        |
 | `ulid()`       | A ULID, in any case.                                                                                                                                                                                                                                                      | As written                                            | `"ulid"`                           |
 | `nanoid()`     | A Nano ID in its default form: 21 characters of `A-Za-z0-9_-`.                                                                                                                                                                                                            | As written                                            | `"nanoid"`                         |
 | `cuid2()`      | A CUID2 identifier.                                                                                                                                                                                                                                                       | As written                                            | `"cuid2"`                          |
@@ -236,7 +236,7 @@ IPv4 is four decimal parts from 0 to 255 without leading zeros, which some parse
 | `url({ port })`     | The port as a number, or `undefined` when the URL names none or names its scheme's default, which the parser drops.                                              | Any port                   |
 | `url({ path })`     | The path as the parser writes it, dot segments resolved and characters such as spaces percent-encoded, always starting with `/`.                                 | Any path                   |
 | `url({ query })`    | The query as an object of its decoded parameters, each key's value a string, or with `repeated: true` every value of every key as an array.                      | Any query                  |
-| `email({ domain })` | The domain as `email` produces it, lowercase ASCII with internationalized labels in punycode. It must still be a hostname.                                       | A public domain name       |
+| `email({ domain })` | The domain as `email` produces it, lowercase ASCII with internationalized labels in punycode. It must still be a hostname, so never an IP address.               | A public domain name       |
 | `email({ local })`  | The local part, before the `@`, as written.                                                                                                                      | The syntax of a local part |
 
 ```ts
@@ -254,7 +254,7 @@ A part's issues are placed under its name, such as `["host"]` or `["query", "pag
 
 The parts apply to a URL with a host. A `mailto`, `tel` or `urn` URL keeps its own rules above.
 
-A query key given more than once, as in `?id=1&id=2`, fails with `invalid_key` at `["query", key]` unless `repeated` is set. A check that saw one of the two values while a server read the other would pass a value nobody checked, so repeated keys are accepted only when you ask for every value.
+A query key given more than once, as in `?id=1&id=2`, fails with `invalid_key` at `["query", key]` unless `repeated` is set. A check that saw one of the two values while a server read the other would pass a value nobody checked, so repeated keys are accepted only when you ask for every value. The issue belongs to the query, so `url`'s `message` does not word it, as it words no part's issue.
 
 ### `searchParams`
 
@@ -350,7 +350,7 @@ const call = tuple([string()], { rest: number() }); // [string, ...number[]]
 
 ### `set` and `map`
 
-`set(item, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string and its position, a number, for any other key, so a number key and an object key never share a path. A map key that fails is reported as `invalid_key`, as for `record`, and so is one that another entry has already taken once the key validator has changed it. Likewise a set value that `element` makes equal to an earlier one, such as `"A"` and `"a"` under `string({ case: "lower" })`, is reported as `invalid_value` with `{ unique: true }` at its position rather than merged, so the output never holds fewer values than the size options allow. Both take `min`, `max` and `length`.
+`set(item, options?)` accepts `Set`s and produces a new `Set` of the validated values, and `map(key, value, options?)` accepts `Map`s and produces a new `Map`. Arrays and plain objects are not accepted for them. Paths lead through the position in iteration order for a set, and through the entry's key for a map when it is a string and its position, a number, for any other key, so a number key and an object key never share a path. A map key that fails is reported as `invalid_key`, as for `record`, and so is one that another entry has already taken once the key validator has changed it. Likewise a set value that `item` makes equal to an earlier one, such as `"A"` and `"a"` under `string({ case: "lower" })`, is reported as `invalid_value` with `{ unique: true }` at its position rather than merged, so the output never holds fewer values than the size options allow. Both take `min`, `max` and `length`.
 
 ## Combining validators
 
@@ -393,7 +393,7 @@ const length = transform(string(), (text) => text.length);
 
 ## Checks
 
-A check is a rule about a value that already has its type, given to a validator after its options. It runs once the value has its type: for a leaf, right after the type test, beside the options; for an object or a collection, once every child has passed, since before that there is no value of the type to check. Every check runs and every issue is reported.
+A check is a rule about a value that already has its type, given to a validator after its options. It runs once the value has its type: for a leaf, right after the type test, beside the options; for a format, once the text is of the format, so a check given to `ip()` or `uuid()` never sees text that is not an address or a UUID; for an object or a collection, once every child has passed, since before that there is no value of the type to check. Every check runs and every issue is reported.
 
 ```ts
 import { check, number, string, startsWith, uppercase } from "@codenhub/validation";

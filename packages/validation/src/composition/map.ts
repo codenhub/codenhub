@@ -38,7 +38,7 @@ import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
  * @typeParam TValue - The validator for values.
  * @param key - Validator applied to every key.
  * @param value - Validator applied to every value.
- * @param options - Size limits.
+ * @param rest - Size limits, then checks.
  * @returns A validator that produces a `Map`.
  * @throws {TypeError} When `key` or `value` is not a function.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.

@@ -156,7 +156,7 @@ export function url(...rest: unknown[]): AnyValidator {
     if (query !== undefined) {
       const { value, issues } = readQuery(parsed.searchParams, repeated, ["query"]);
       if (issues.length > 0) {
-        return { issues };
+        return { partIssues: issues };
       }
       parts.push(["query", query, value]);
     }

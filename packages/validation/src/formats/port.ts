@@ -1,6 +1,6 @@
-import { leaf, split } from "../core/checks";
-import { issue } from "../core/result";
+import { split } from "../core/checks";
 import type { Factory, MessageOptions } from "../core/types";
+import { formatLeaf } from "./text-format";
 
 const isNumber = (input: unknown): boolean => typeof input === "number" && Number.isFinite(input);
 
@@ -22,10 +22,12 @@ const MAX_PORT = 65_535;
  */
 export const port = ((...args: unknown[]) => {
   const [{ message }, checks] = split<MessageOptions, number>(args);
-  return leaf<number>("number", isNumber, message, checks, (value, issues) => {
-    if (!Number.isInteger(value) || value < 1 || value > MAX_PORT) {
-      issues.push(issue("invalid_format", { format: "port" }));
-    }
-    return value;
-  });
+  return formatLeaf<number>(
+    "number",
+    isNumber,
+    "port",
+    (value) => (Number.isInteger(value) && value >= 1 && value <= MAX_PORT ? value : undefined),
+    message,
+    checks,
+  );
 }) as Factory<number, MessageOptions>;

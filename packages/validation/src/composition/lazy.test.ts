@@ -145,3 +145,9 @@ describe("lazy", () => {
     });
   });
 });
+
+describe("lazy, given a getter that returns null", () => {
+  it("should throw a TypeError naming null on first use", () => {
+    expect(() => lazy(() => null as never)(1)).toThrow("getter() must return a function, received null");
+  });
+});

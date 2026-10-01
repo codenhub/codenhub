@@ -17,21 +17,30 @@ export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: 
 export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Infer<TItem>[], ArrayOptions>): AsyncValidator<Infer<TItem>[]>;
 ```
 
-Creates a validator for arrays whose every item passes `element`.
+Creates a validator for arrays whose every item passes `item`.
 
-A wrong size is reported at once, without validating the items, so a huge array is never worked through only to be rejected. Otherwise every item is validated, and each issue's path leads through the item's index. `unique` is checked on the validated items, after the others pass. The output is a new array; the input is never modified. It is synchronous when `element` is, and asynchronous otherwise.
+A wrong size is reported at once, without validating the items, so a huge array is never worked through only to be rejected. Otherwise every item is validated, and each issue's path leads through the item's index. Checks, such as `unique()`, run on the validated items once every item has passed. The output is a new array; the input is never modified. It is synchronous when `item` is, and asynchronous otherwise.
 
-**Returns** — A validator that produces an array of what `element` produces.
+**Parameters**
+
+- `item` — Validator applied to every item.
+- `rest` — Size limits, then checks.
+
+**Type parameters**
+
+- `TItem` — The validator for each item.
+
+**Returns** — A validator that produces an array of what `item` produces.
 
 **Throws**
 
-- When `element` is not a function.
+- When `item` or a check is not a function.
 - When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
 
 ```ts
-const tags = array(string({ trim: true, min: 1 }), { max: 5, unique: true });
+const tags = array(string({ trim: true, min: 1 }), { max: 5 }, unique());
 tags(["a", "b"]); // { ok: true, value: ["a", "b"] }
 tags(["a", "a"]); // { ok: false, ... }, code "invalid_value" at path [1]
 ```
@@ -342,7 +351,7 @@ export declare function instanceOf<T>(target: Constructor<T>, ...rest: Rest<T, M
 export declare function instanceOf<T>(target: Constructor<T>, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
 ```
 
-Creates a validator that accepts instances of a class, checked with `instanceof`. An instance from another realm, such as an iframe, is not recognized.
+Creates a validator that accepts instances of a class, checked with `instanceof`. An instance from another realm, such as an iframe, is not recognized, and neither is a value `instanceof` throws for, such as a revoked proxy.
 
 **Parameters**
 
@@ -355,7 +364,7 @@ Creates a validator that accepts instances of a class, checked with `instanceof`
 
 **Returns** — A validator that produces the instance.
 
-**Throws** — When `target` is not a function.
+**Throws** — When `target` is not a function `instanceof` can test against, such as an arrow function.
 
 **Example**
 
@@ -475,6 +484,7 @@ Every level of nesting is a level of recursion, and input nested past the stack,
 **Parameters**
 
 - `getter` — Returns the validator. Called once, on first use.
+- `rest` — The depth limit, then checks.
 
 **Type parameters**
 
@@ -567,6 +577,7 @@ A wrong size is reported at once, without validating the entries. An issue's pat
 
 - `key` — Validator applied to every key.
 - `value` — Validator applied to every value.
+- `rest` — Size limits, then checks.
 
 **Type parameters**
 
@@ -918,6 +929,7 @@ Each key passes `key` and each value passes `value`. An issue's path ends at the
 
 - `key` — Validator applied to every key.
 - `value` — Validator applied to every value.
+- `rest` — Limits on the number of keys, then checks.
 
 **Type parameters**
 
@@ -979,15 +991,24 @@ export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: Re
 export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Set<Infer<TItem>>, SizeOptions & MessageOptions>): AsyncValidator<Set<Infer<TItem>>>;
 ```
 
-Creates a validator for `Set`s whose every value passes `element`.
+Creates a validator for `Set`s whose every value passes `item`.
 
-A wrong size is reported at once, without validating the values. Otherwise every value is validated, and each issue's path leads through the value's position in iteration order. The output is a new `Set` of the validated values. When `element` changes values so that one becomes equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its position, rather than dropped, so the output never holds fewer values than the size options allow. It is synchronous when `element` is, and asynchronous otherwise.
+A wrong size is reported at once, without validating the values. Otherwise every value is validated, and each issue's path leads through the value's position in iteration order. The output is a new `Set` of the validated values. When `item` changes values so that one becomes equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its position, rather than dropped, so the output never holds fewer values than the size options allow. It is synchronous when `item` is, and asynchronous otherwise.
 
-**Returns** — A validator that produces a `Set` of what `element` produces.
+**Parameters**
+
+- `item` — Validator applied to every value.
+- `rest` — Size limits, then checks.
+
+**Type parameters**
+
+- `TItem` — The validator for each value.
+
+**Returns** — A validator that produces a `Set` of what `item` produces.
 
 **Throws**
 
-- When `element` is not a function.
+- When `item` or a check is not a function.
 - When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -1138,6 +1159,7 @@ A wrong length is reported at once, without validating the items. With `rest`, t
 **Parameters**
 
 - `items` — One validator per position.
+- `rest` — The validator for extra positions, then checks.
 
 **Type parameters**
 
@@ -2175,7 +2197,7 @@ Stable failure category.
 readonly message?: string;
 ```
 
-Ready-made message text. Built-in validators never set it; a custom validator can, and `formatIssue` prefers it over every other source of text.
+Ready-made message text. A built-in validator sets it only when given a `message` option, and a check only when given a message; a custom validator can set it too. `formatIssue` prefers it over every other source of text.
 
 #### params
 
@@ -2500,7 +2522,7 @@ The variants of a tagged union: a validator for each value the tag can have.
 export declare const base64: Factory<string, Base64Options>;
 ```
 
-Creates a validator for base64 as an encoder writes it: the bits past the last byte are zero, and the standard alphabet is correctly padded. The value is not modified.
+Creates a validator for base64 as an encoder writes it: the bits past the last byte are zero, and the standard alphabet is correctly padded. An empty string, which encodes nothing, is rejected, as `hex` rejects one. The value is not modified.
 
 **Example**
 
@@ -2639,7 +2661,7 @@ Surrounding whitespace is ignored, and a dot with no digits on one side, as in `
 
 **Returns** — A validator that produces a number.
 
-**Throws** — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, `multipleOf` is not a positive finite number, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
+**Throws** — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
 
 **Example**
 

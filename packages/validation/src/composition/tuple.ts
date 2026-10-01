@@ -1,5 +1,6 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { isArray } from "../core/objects";
 import { assertFunction, issue, typeIssue } from "../core/result";
 import type {
   AnyValidator,
@@ -52,7 +53,7 @@ export interface TupleOptions<TRest extends AnyValidator | undefined = undefined
  * @typeParam TItems - The validators of the fixed positions, at least one.
  * @typeParam TRest - The validator of the remaining positions.
  * @param items - One validator per position.
- * @param options - The validator for extra positions.
+ * @param rest - The validator for extra positions, then checks.
  * @returns A validator that produces a tuple.
  * @throws {TypeError} When an item or `rest` is not a function.
  */
@@ -82,7 +83,7 @@ export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyVa
   const { length } = fixed;
 
   return (input: unknown): Maybe<ValidationResult<unknown>> => {
-    if (!Array.isArray(input)) {
+    if (!isArray(input)) {
       return reject([typeIssue("array", input)]);
     }
     const size = input.length;

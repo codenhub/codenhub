@@ -65,11 +65,24 @@ describe("format", () => {
 
   it("should word its own issues and run checks, with or without options", () => {
     const short = check((text: string) => text.length <= 5, "Too long");
-    expect(issuesOf(slug({ message: "Use a slug" }, short)("Hello-world")).map((found) => found.message)).toEqual([
+    expect(issuesOf(slug({ message: "Use a slug" }, short)("Hello")).map((found) => found.message)).toEqual([
       "Use a slug",
+    ]);
+    expect(issuesOf(slug({ message: "Use a slug" }, short)("hello-world")).map((found) => found.message)).toEqual([
       "Too long",
     ]);
     expect(accepts(slug(short), "abc", "abcdef")).toEqual([true, false]);
+  });
+
+  it("should not run checks on a string that is not of the format", () => {
+    const seen: string[] = [];
+    const record = check((text: string) => {
+      seen.push(text);
+      return true;
+    });
+    slug(record)("Not A Slug");
+    slug(record)("a-slug");
+    expect(seen).toEqual(["a-slug"]);
   });
 
   it("should throw when the test is not a function", () => {

@@ -12,16 +12,18 @@ import type {
 
 /**
  * Separates the arguments of a factory, `(options?, ...checks)`, into its options and its checks. An
- * object is the options and a function is a check, so the options can be left out.
+ * object is the options and a function is a check, so the options can be left out. Anything else in
+ * first place, such as a string, is a mistake in the schema: read as options, `string("abc")` would
+ * take the string's `length` as its own. `null` is no options, as `undefined` is.
  */
 export function split<TOptions extends MessageOptions, T>(
   args: readonly unknown[],
 ): [options: TOptions, checks: AsyncCheck<T>[]] {
   const [first, ...rest] = args;
   const [options, checks] = typeof first === "function" ? [{}, args] : [first ?? {}, rest];
-  if (checks.some((check) => typeof check !== "function")) {
-    // A check that is not a function is a mistake in the schema, reported now rather than on the first input.
-    throw new TypeError("Checks must be functions");
+  if (typeof options !== "object" || checks.some((check) => typeof check !== "function")) {
+    // A mistake in the schema, reported now rather than on the first input.
+    throw new TypeError("Options must be an object, and checks functions");
   }
   return [options as TOptions, checks as AsyncCheck<T>[]];
 }
@@ -39,7 +41,8 @@ export function word(issues: ValidationIssue[], message: Message | undefined): V
 /**
  * Finishes a validator whose value has its type: words the issues it found itself, runs every check on
  * the value and adds what they found, and returns the value or every issue. It stays synchronous while
- * every check is.
+ * every check is. A check written by hand that returns anything but nothing or a list, such as `false`,
+ * is a bug, and throws saying so rather than failing later on what it returned.
  */
 export function finish<T>(
   value: T,
@@ -50,6 +53,9 @@ export function finish<T>(
   word(issues, message);
   return chain(collect(checks.map((check) => check(value))), (found) => {
     for (const list of found) {
+      if (list !== undefined && !Array.isArray(list)) {
+        throw new TypeError("A check must return undefined or a list of issues");
+      }
       // Pushed one by one: spreading a long list into `push` would overflow the stack.
       for (const each of list ?? []) {
         issues.push(each);

@@ -5,13 +5,13 @@ import { base64 } from "./base64";
 
 describe("base64", () => {
   it("should accept valid values and leave them unchanged", () => {
-    const valid = ["aGVsbG8=", "aGVsbG8gd29ybGQ=", "YWJj", ""];
+    const valid = ["aGVsbG8=", "aGVsbG8gd29ybGQ=", "YWJj"];
     expect(accepts(base64(), ...valid)).toEqual(valid.map(() => true));
     expect(valueOf(base64()(valid[0]))).toBe(valid[0]);
   });
 
   it("should reject invalid values", () => {
-    const invalid = ["aGVsbG8", "!!!!", "aGVsbG8==="];
+    const invalid = ["aGVsbG8", "!!!!", "aGVsbG8===", ""];
     expect(accepts(base64(), ...invalid)).toEqual(invalid.map(() => false));
   });
 

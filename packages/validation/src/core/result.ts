@@ -83,10 +83,6 @@ export const issue = (
   path: readonly ValidationPathSegment[] = ROOT_PATH,
 ): ValidationIssue => (params === undefined ? { code, path } : { code, path, params });
 
-/** Fails with one built-in issue at the value's own location. */
-export const failIssue = (code: ValidationIssueCode, params?: Readonly<Record<string, unknown>>): ValidationErr =>
-  failWith([issue(code, params)]);
-
 /**
  * Adds the issues a child found to its parent's list, one level down under `segment`. It pushes one
  * by one because spreading a long list into `push` passes each as an argument, which overflows the
@@ -140,17 +136,6 @@ export function describeType(value: unknown): string {
 /** The issue for an input that is not the type a validator accepts, naming both types and never the value. */
 export const typeIssue = (expected: string, input: unknown): ValidationIssue =>
   issue("invalid_type", { expected, received: describeType(input) });
-
-/** Fails because the input is not the type a validator accepts, naming both types and never the value. */
-export const invalidType = (expected: string, input: unknown): ValidationErr => failWith([typeIssue(expected, input)]);
-
-/** Fails because coercion could not convert the input, naming both types and never the value. */
-export const invalidCoercion = (expected: string, input: unknown): ValidationErr =>
-  failIssue("invalid_type", {
-    expected,
-    received: describeType(input),
-    coerced: true,
-  });
 
 /**
  * Rejects a lower and an upper bound that no value can satisfy, since that is a mistake in the schema

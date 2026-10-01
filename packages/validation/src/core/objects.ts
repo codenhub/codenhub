@@ -48,6 +48,9 @@ const sizeOf = (prototype: object, value: unknown): number | undefined => {
   return brand(() => getter?.call(value));
 };
 
+/** Tests whether a value is an array, in any realm. A revoked proxy, whose test throws, is not one. */
+export const isArray = (value: unknown): value is unknown[] => brand(() => Array.isArray(value)) === true;
+
 /** The moment a `Date` holds, `NaN` for an invalid one, or undefined when the value is not a `Date`, in any realm. */
 export const timeOf = (value: unknown): number | undefined => brand(() => Date.prototype.getTime.call(value));
 

@@ -1,5 +1,6 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { isArray } from "../core/objects";
 import { assertFunction, typeIssue } from "../core/result";
 import type {
   AnyValidator,
@@ -18,27 +19,27 @@ import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 export interface ArrayOptions extends SizeOptions, MessageOptions {}
 
 /**
- * Creates a validator for arrays whose every item passes `element`.
+ * Creates a validator for arrays whose every item passes `item`.
  *
  * @remarks
  * A wrong size is reported at once, without validating the items, so a huge array is never
  * worked through only to be rejected. Otherwise every item is validated, and each issue's path
- * leads through the item's index. `unique` is checked on the validated items, after the others
- * pass. The output is a new array; the input is never modified. It is synchronous when `element` is,
- * and asynchronous otherwise.
+ * leads through the item's index. Checks, such as `unique()`, run on the validated items once every
+ * item has passed. The output is a new array; the input is never modified. It is synchronous when
+ * `item` is, and asynchronous otherwise.
  *
  * @example
  * ```ts
- * const tags = array(string({ trim: true, min: 1 }), { max: 5, unique: true });
+ * const tags = array(string({ trim: true, min: 1 }), { max: 5 }, unique());
  * tags(["a", "b"]); // { ok: true, value: ["a", "b"] }
  * tags(["a", "a"]); // { ok: false, ... }, code "invalid_value" at path [1]
  * ```
  *
- * @typeParam TElement - The validator for each item.
- * @param element - Validator applied to every item.
- * @param options - Size limits and uniqueness.
- * @returns A validator that produces an array of what `element` produces.
- * @throws {TypeError} When `element` is not a function.
+ * @typeParam TItem - The validator for each item.
+ * @param item - Validator applied to every item.
+ * @param rest - Size limits, then checks.
+ * @returns A validator that produces an array of what `item` produces.
+ * @throws {TypeError} When `item` or a check is not a function.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function array<TItem extends AnyValidator>(
@@ -55,7 +56,7 @@ export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertSizeOptions(options);
 
   return (input: unknown): Maybe<ValidationResult<unknown>> => {
-    if (!Array.isArray(input)) {
+    if (!isArray(input)) {
       return reject([typeIssue("array", input)]);
     }
     const { length } = input;

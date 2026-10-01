@@ -146,8 +146,10 @@ describe("jwt", () => {
         `${header}.${notObject}.x`,
         `${header}.@@.x`,
         `${header}.${payload}.x.y`,
+        `${header}.a.x`,
+        `${header}.aGVsbG8.x`,
       ),
-    ).toEqual(Array(6).fill(false));
+    ).toEqual(Array(8).fill(false));
   });
 });
 
@@ -176,6 +178,10 @@ describe("cidr", () => {
   it("should restrict the family and name it in the format", () => {
     expect(accepts(cidr({ version: "v4" }), "10.0.0.0/8", "::/0")).toEqual([true, false]);
     expect(formatOf(cidr({ version: "v6" })("10.0.0.0/8"))).toBe("cidrv6");
+  });
+
+  it("should throw for a version that is not v4 or v6", () => {
+    expect(() => cidr({ version: "v5" as never })).toThrow(TypeError);
   });
 });
 
@@ -225,8 +231,8 @@ describe("uuid versions", () => {
 
 describe("base64url", () => {
   it("should accept the URL-safe alphabet with padding optional, and name the format", () => {
-    expect(accepts(base64({ url: true }), "aGVsbG8", "aGVsbG8=", "-_-_", "")).toEqual([true, true, true, true]);
-    expect(accepts(base64({ url: true }), "aGVsbG8+", "aGVsbG9", "a")).toEqual([false, false, false]);
+    expect(accepts(base64({ url: true }), "aGVsbG8", "aGVsbG8=", "-_-_")).toEqual([true, true, true]);
+    expect(accepts(base64({ url: true }), "aGVsbG8+", "aGVsbG9", "a", "")).toEqual([false, false, false, false]);
     expect(formatOf(base64({ url: true })("+"))).toBe("base64url");
   });
 });

@@ -14,8 +14,15 @@ import type {
 /** A part of a format given to the validator the consumer chose for it: its name, the validator, and what the parser read. */
 export type Part = [name: string, validator: AnyValidator, value: unknown];
 
-/** What reading a composite format found: its value and the parts to check, or the issues that make it invalid. */
-export type Reading = { value: string; parts: Part[] } | { issues: ValidationIssue[] };
+/**
+ * What reading a composite format found: its value and the parts to check, the issues that make the
+ * text invalid, which the format's message words, or issues found in a part before its validator could
+ * run, such as a repeated query key, which it does not.
+ */
+export type Reading =
+  | { value: string; parts: Part[] }
+  | { issues: ValidationIssue[] }
+  | { partIssues: ValidationIssue[] };
 
 /**
  * The search parameters as an object: each key's value, or with `repeated` every value of every key as
@@ -45,7 +52,8 @@ export function readQuery(
  * Builds the validator of a composite format, such as a URL or an email address: `read` gives the value
  * and the parts to check, or the issues that make the text invalid. Each part's validator runs on what
  * was read, its issues placed under the part's name and never worded by `message`, which words only the
- * format's own. The checks run once every part has passed. It stays synchronous while every part is.
+ * format's own, and neither are issues found in a part before its validator ran. The checks run once
+ * every part has passed. It stays synchronous while every part is.
  */
 export function partsFormat(
   read: (text: string) => Reading,
@@ -59,6 +67,9 @@ export function partsFormat(
     const reading = read(input);
     if ("issues" in reading) {
       return failWith(word(reading.issues, message));
+    }
+    if ("partIssues" in reading) {
+      return failWith(reading.partIssues);
     }
     const { value, parts } = reading;
     return chain(collect(parts.map(([, validator, part]) => validator(part))), (results) => {

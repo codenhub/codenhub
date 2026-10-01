@@ -33,8 +33,9 @@ export interface ValidationIssue {
    */
   readonly params?: Readonly<Record<string, unknown>>;
   /**
-   * Ready-made message text. Built-in validators never set it; a custom validator can, and
-   * `formatIssue` prefers it over every other source of text.
+   * Ready-made message text. A built-in validator sets it only when given a `message` option, and a
+   * check only when given a message; a custom validator can set it too. `formatIssue` prefers it over
+   * every other source of text.
    */
   readonly message?: string;
 }
