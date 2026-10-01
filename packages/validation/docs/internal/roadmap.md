@@ -39,7 +39,7 @@ Everything follows the [architecture](architecture.md): a factory with the signa
 
 - **Tests.** Every exported function has tests for accepted values, rejected values, edge cases, the exact issue shape, the `message` option and the invariant that no issue contains the input. Coverage stays above the repository target of 80%.
 - **Consumer types.** The built declarations compile for a consumer under strict settings, and a fixture pins the types that must not compile, including a check of the wrong type and the synchronous and asynchronous overloads.
-- **Size.** The shared core is slimmed before anything is built on it, and measured. Every budget is reset from measurement, and the sizes of a leaf, a format and an object of a few fields are compared with valibot for the same code and recorded in [architecture.md](architecture.md). The adopter measured for 0.1.0 is measured again.
+- **Size.** The shared core is slimmed before anything is built on it, and measured. Every budget is reset from measurement. The adopter measured for 0.1.0 is measured again.
 - **Determinism and failure behavior.** As for 0.1.0: no validator depends on time, locale, randomness or earlier calls; bad input of a bounded size never throws; a bad option throws when the validator is created.
 
 ### Documentation
@@ -67,7 +67,7 @@ Each step ends with the tree green (`pnpm verify validation`) and lands as its o
 4. **Composition.** Checks on every composer, `optional` with a default, `tagged`, the removals and the reduced exported types.
 5. **Formats.** `domain`, `port`, the parts of `url` and `email`, `query` and `searchParams`, the canonical `ip`, and the new formats.
 6. **Coercion, interop and English wording** for the new codes.
-7. **Budgets and the comparison.**
+7. **Budgets.**
 8. **Public docs**, migration table and changelog, generated files.
 9. **The workspace consumers.**
 

@@ -1,4 +1,5 @@
 import { split } from "../core/checks";
+import { assertOption } from "../core/result";
 import type {
   AnyValidator,
   AsyncCheck,
@@ -9,7 +10,7 @@ import type {
   Validator,
 } from "../core/types";
 import { HOSTLESS_SCHEMES, toHostlessUrl } from "./hostless-url";
-import { notFormat, partsFormat, readQuery, type Part, type Reading } from "./parts";
+import { assertParts, notFormat, partIssue, partsFormat, readQuery, type Part, type Reading } from "./parts";
 import { HOST_MAX_LENGTH, isPublicHost } from "./patterns";
 
 /**
@@ -43,24 +44,27 @@ export interface UrlOptions extends MessageOptions {
    * host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in
    * punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. So
    * `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])`
-   * accepts IP addresses but not `localhost`. Its issues are placed under `["host"]`.
+   * accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part`
+   * `"host"`.
    */
   host?: AnyValidator;
   /**
    * Validates the port, a number, or `undefined` when the URL names none or names its scheme's default,
    * which the parser drops. So `port: optional(port())` accepts either, and `port: literal(8080)` requires
-   * it. Its issues are placed under `["port"]`.
+   * it. Its failure is reported as the URL's, with `params.part` `"port"`.
    */
   port?: AnyValidator;
   /**
    * Validates the path as the parser writes it: dot segments resolved and characters such as spaces
-   * percent-encoded, always starting with `/`. Its issues are placed under `["path"]`.
+   * percent-encoded, always starting with `/`. Its failure is reported as the URL's, with `params.part`
+   * `"path"`.
    */
   path?: AnyValidator;
   /**
    * Validates the query, as an object of its decoded parameters: each key's value as a string, or with
-   * `repeated` every value of every key as an array. A key given twice fails at `["query", key]` unless
-   * `repeated` is set. Its issues are placed under `["query"]`. To reject parameters it does not list,
+   * `repeated` every value of every key as an array. A key given twice fails at `[key]` inside the
+   * query unless `repeated` is set. Its failure is reported as the URL's, with `params.part` `"query"`
+   * and paths relative to the query in `params.issues`. To reject parameters it does not list,
    * give it `object(shape, { unknownKeys: "strict" })`.
    */
   query?: AnyValidator;
@@ -91,7 +95,9 @@ type UrlParts<TOptions> = Extract<TOptions[keyof TOptions & ("host" | "port" | "
  *
  * The `host`, `port`, `path` and `query` options check those parts with validators of your own, which
  * only decide: the value is still the whole URL, and one that is asynchronous makes the validator
- * asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules.
+ * asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules. A
+ * part that fails is one `invalid_format` issue at the URL's own place, `{ format: "url", part, issues }`,
+ * so a form shows it beside the field, and the `message` option words it as every other issue of the URL.
  *
  * @example
  * ```ts
@@ -102,8 +108,9 @@ type UrlParts<TOptions> = Extract<TOptions[keyof TOptions & ("host" | "port" | "
  * ```
  *
  * @returns A validator that produces the URL as the parser writes it.
- * @throws {TypeError} When a protocol is not a scheme name, for instance `"https:"` with its colon, or is
- * `javascript`, `vbscript` or `data`, whose URLs run script.
+ * @throws {TypeError} When `protocols` is not a non-empty list, a protocol is not a scheme name, for
+ * instance `"https:"` with its colon, or is `javascript`, `vbscript` or `data`, whose URLs run script, a
+ * part validator is not a function, or `repeated` is not a boolean.
  */
 export function url(...checks: Check<string>[]): Validator<string>;
 export function url<const TOptions extends UrlOptions>(
@@ -114,8 +121,14 @@ export function url(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function url(...rest: unknown[]): AnyValidator {
   const [options, checks] = split<UrlOptions, string>(rest);
-  const { host, port, path, query, repeated = false, message } = options;
-  const protocols = (options.protocols ?? ["http", "https"]).map((protocol) => {
+  const { host, port, path, query, repeated = false, message, protocols: listed = ["http", "https"] } = options;
+  assertParts({ host, port, path, query });
+  assertOption("repeated", repeated, "boolean");
+  if (!Array.isArray(listed) || listed.length === 0) {
+    // An empty list would make a validator that rejects every URL without saying why.
+    throw new TypeError("protocols must be a non-empty list of scheme names");
+  }
+  const protocols = listed.map((protocol) => {
     if (!SCHEME_PATTERN.test(protocol)) {
       throw new TypeError(`Protocols are scheme names without the colon, such as "https", received "${protocol}"`);
     }
@@ -154,13 +167,13 @@ export function url(...rest: unknown[]): AnyValidator {
       parts.push(["path", path, parsed.pathname]);
     }
     if (query !== undefined) {
-      const { value, issues } = readQuery(parsed.searchParams, repeated, ["query"]);
+      const { value, issues } = readQuery(parsed.searchParams, repeated);
       if (issues.length > 0) {
-        return { issues };
+        return { issues: [partIssue("url", "query", issues)] };
       }
       parts.push(["query", query, value]);
     }
     return { value: parsed.href, parts };
   };
-  return partsFormat(read, message, checks);
+  return partsFormat("url", read, message, checks);
 }

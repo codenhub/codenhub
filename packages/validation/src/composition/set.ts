@@ -17,15 +17,15 @@ import { settle } from "./settle";
 import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
 /**
- * Creates a validator for `Set`s whose every value passes `element`.
+ * Creates a validator for `Set`s whose every value passes `item`.
  *
  * @remarks
  * A wrong size is reported at once, without validating the values. Otherwise every value is
  * validated, and each issue's path leads through the value's position in iteration order. The
- * output is a new `Set` of the validated values. When `element` changes values so that one becomes
+ * output is a new `Set` of the validated values. When `item` changes values so that one becomes
  * equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its
  * position, rather than dropped, so the output never holds fewer values than the size options allow.
- * It is synchronous when `element` is, and asynchronous otherwise.
+ * It is synchronous when `item` is, and asynchronous otherwise.
  *
  * @example
  * ```ts
@@ -34,11 +34,11 @@ import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
  * ids(new Set()); // { ok: false, ... }, code "too_small"
  * ```
  *
- * @typeParam TElement - The validator for each value.
- * @param element - Validator applied to every value.
- * @param options - Size limits.
- * @returns A validator that produces a `Set` of what `element` produces.
- * @throws {TypeError} When `element` is not a function.
+ * @typeParam TItem - The validator for each value.
+ * @param item - Validator applied to every value.
+ * @param rest - Size limits, then checks.
+ * @returns A validator that produces a `Set` of what `item` produces.
+ * @throws {TypeError} When `item` or a check is not a function.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function set<TItem extends AnyValidator>(

@@ -27,6 +27,11 @@ describe("split", () => {
   it("should throw when a check is not a function, since that is a mistake in the schema", () => {
     expect(() => split([{}, "x"])).toThrow(TypeError);
   });
+
+  it("should throw for a list in place of the options, which would drop the checks in it", () => {
+    expect(() => split([[short]])).toThrow(TypeError);
+    expect(() => split([[]])).toThrow(TypeError);
+  });
 });
 
 describe("word", () => {
@@ -41,6 +46,10 @@ describe("word", () => {
     ]);
     expect(word([issue("a", { n: 1 })], (found) => `${found.code}${String(found.params?.n)}`)[0]?.message).toBe("a1");
   });
+
+  it("should keep the wording an issue already has", () => {
+    expect(word([{ code: "a", path: [], message: "Mine" }], "Bad")).toEqual([{ code: "a", path: [], message: "Mine" }]);
+  });
 });
 
 describe("finish", () => {
@@ -48,11 +57,26 @@ describe("finish", () => {
     expect(finish("value", [], undefined, [short])).toEqual({ ok: true, value: "value" });
   });
 
-  it("should report the validator's own issues, worded, then every check's, unworded", () => {
-    expect(issuesOf(sync(finish("a b", [issue("own")], "Own", [short, noSpaces])))).toEqual([
+  it("should report the validator's own issues, then every check's, worded unless a check worded its own", () => {
+    const worded: Check<string> = () => [{ code: "worded", path: [], message: "Mine" }];
+    expect(issuesOf(sync(finish("a b", [issue("own")], "Own", [short, noSpaces, worded])))).toEqual([
       { code: "own", path: [], message: "Own" },
-      { code: "spaces", path: [] },
+      { code: "spaces", path: [], message: "Own" },
+      { code: "worded", path: [], message: "Mine" },
     ]);
+  });
+
+  it("should copy a check's issues, so a list the check reuses is never changed", () => {
+    const reused = Object.freeze([Object.freeze(issue("reused"))]);
+    expect(issuesOf(sync(finish("a", [], "Worded", [() => reused])))).toEqual([
+      { code: "reused", path: [], message: "Worded" },
+    ]);
+    expect(reused[0]).toEqual({ code: "reused", path: [] });
+  });
+
+  it("should place an issue a check wrote by hand without a path at the value", () => {
+    const pathless = (() => [{ code: "x" }]) as unknown as Check<string>;
+    expect(issuesOf(sync(finish("a", [], undefined, [pathless])))).toEqual([{ code: "x", path: [] }]);
   });
 
   it("should stay synchronous with synchronous checks and turn asynchronous with an asynchronous one", async () => {
@@ -75,5 +99,18 @@ describe("leaf", () => {
     const validate = leaf<string>("string", isString, undefined, [short], (text) => text.trim());
     expect(validate("  abc  ")).toEqual({ ok: true, value: "abc" });
     expect(issuesOf(sync(validate(" ab "))).map((found) => found.code)).toEqual(["too_small"]);
+  });
+});
+
+describe("split, given something other than options or a check first", () => {
+  it.each([["abc"], [5], [true]])("should throw a TypeError for %s", (first) => {
+    expect(() => split([first])).toThrow(TypeError);
+  });
+});
+
+describe("finish, given a check written by hand", () => {
+  it("should throw when a check returns something other than nothing or a list", () => {
+    const wrong = (() => false) as unknown as Check<string>;
+    expect(() => finish("x", [], undefined, [wrong])).toThrow("A check must return undefined or a list of issues");
   });
 });

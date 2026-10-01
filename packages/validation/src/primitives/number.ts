@@ -1,5 +1,5 @@
 import { leaf, split } from "../core/checks";
-import { assertBounds, assertOrder, issue } from "../core/result";
+import { assertBounds, assertOption, assertOrder, issue } from "../core/result";
 import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
 
 /**
@@ -57,6 +57,8 @@ const isNumber = (input: unknown): boolean => typeof input === "number" && Numbe
  * number({ min: 0 }, multipleOf(0.01)); // money
  * ```
  *
+ * @throws {TypeError} When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` lacks
+ * a number `min` or `max`.
  * @throws {RangeError} When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`,
  * no number can satisfy the bounds together, or `clamp`
  * has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound. Bounds
@@ -68,7 +70,10 @@ export const number = ((...args: unknown[]) => {
   const { min, max, gt, lt, int, safeInt, message } = options;
   // Copied, so changing the range after the validator is made changes nothing.
   const clamp = options.clamp && { min: options.clamp.min, max: options.clamp.max };
+  assertOption("int", int, "boolean");
+  assertOption("safeInt", safeInt, "boolean");
   for (const [name, bound] of Object.entries({ min, max, gt, lt })) {
+    assertOption(name, bound, "number");
     if (Number.isNaN(bound)) {
       throw new RangeError(`${name} must be a number, received NaN`);
     }
@@ -79,6 +84,8 @@ export const number = ((...args: unknown[]) => {
   }
   assertBounds(options);
   if (clamp !== undefined) {
+    assertOption("clamp.min", clamp.min ?? null, "number");
+    assertOption("clamp.max", clamp.max ?? null, "number");
     if (Number.isNaN(clamp.min) || Number.isNaN(clamp.max)) {
       throw new RangeError("clamp bounds must be numbers, received NaN");
     }

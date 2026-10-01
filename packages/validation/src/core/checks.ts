@@ -12,34 +12,62 @@ import type {
 
 /**
  * Separates the arguments of a factory, `(options?, ...checks)`, into its options and its checks. An
- * object is the options and a function is a check, so the options can be left out.
+ * object is the options and a function is a check, so the options can be left out. Anything else in
+ * first place, such as a string or a list, is a mistake in the schema: read as options, `string("abc")`
+ * would take the string's `length` as its own, and `array(item, [unique()])` would drop the check. `null`
+ * is no options, as `undefined` is.
  */
 export function split<TOptions extends MessageOptions, T>(
   args: readonly unknown[],
 ): [options: TOptions, checks: AsyncCheck<T>[]] {
   const [first, ...rest] = args;
   const [options, checks] = typeof first === "function" ? [{}, args] : [first ?? {}, rest];
-  if (checks.some((check) => typeof check !== "function")) {
-    // A check that is not a function is a mistake in the schema, reported now rather than on the first input.
-    throw new TypeError("Checks must be functions");
+  const message: unknown = (options as MessageOptions | null)?.message;
+  if (
+    typeof options !== "object" ||
+    Array.isArray(options) ||
+    (message !== undefined && typeof message !== "string" && typeof message !== "function") ||
+    checks.some((check) => typeof check !== "function")
+  ) {
+    // A mistake in the schema, reported now rather than on the first input. One condition and one text,
+    // since every validator carries them.
+    throw new TypeError("Options must be an object whose message is text or a function, and checks functions");
   }
   return [options as TOptions, checks as AsyncCheck<T>[]];
 }
 
-/** Gives a validator's own issues its wording, when it has one. The issues are replaced in place. */
+/**
+ * Rejects wording that is neither text nor a function, such as a translation that turned out to be a
+ * group of them, which would otherwise reach a form as `[object Object]`. Undefined is no wording.
+ */
+export function assertMessage(message: unknown): void {
+  if (message !== undefined && typeof message !== "string" && typeof message !== "function") {
+    throw new TypeError(`message must be text or a function, received ${message === null ? "null" : typeof message}`);
+  }
+}
+
+/**
+ * Gives a validator's wording, when it has one, to every issue in the list that has none of its own,
+ * such as one a check given no message reported. The issues are replaced in place.
+ */
 export function word(issues: ValidationIssue[], message: Message | undefined): ValidationIssue[] {
   if (message !== undefined) {
     issues.forEach((found, index) => {
-      issues[index] = { ...found, message: typeof message === "function" ? message(found) : message };
+      if (found.message === undefined) {
+        issues[index] = { ...found, message: typeof message === "function" ? message(found) : message };
+      }
     });
   }
   return issues;
 }
 
 /**
- * Finishes a validator whose value has its type: words the issues it found itself, runs every check on
- * the value and adds what they found, and returns the value or every issue. It stays synchronous while
- * every check is.
+ * Finishes a validator whose value has its type: runs every check on the value, adds what they found to
+ * the issues the validator found itself, words every issue that has no wording of its own, and returns
+ * the value or every issue. It stays synchronous while every check is. A check's issues are copied, so
+ * a list the check reuses is never changed, and one written by hand without a path is at the value. A
+ * check written by hand that returns anything but nothing or a list, such as `false`, is a bug, and
+ * throws saying so rather than failing later on what it returned.
  */
 export function finish<T>(
   value: T,
@@ -47,15 +75,17 @@ export function finish<T>(
   message: Message | undefined,
   checks: readonly AsyncCheck<T>[],
 ): Maybe<ValidationResult<T>> {
-  word(issues, message);
   return chain(collect(checks.map((check) => check(value))), (found) => {
     for (const list of found) {
+      if (list !== undefined && !Array.isArray(list)) {
+        throw new TypeError("A check must return undefined or a list of issues");
+      }
       // Pushed one by one: spreading a long list into `push` would overflow the stack.
       for (const each of list ?? []) {
-        issues.push(each);
+        issues.push({ path: [], ...each });
       }
     }
-    return issues.length > 0 ? failWith(issues) : pass(value);
+    return issues.length > 0 ? failWith(word(issues, message)) : pass(value);
   });
 }
 
@@ -84,15 +114,15 @@ export function leaf<T>(
  * Builds a built-in check: a value `test` accepts passes, and any other reports one issue with `code`
  * and `params`, worded by `message` when there is one.
  */
-export const rule =
-  <T>(
-    test: (value: T) => boolean,
-    code: string,
-    params: Readonly<Record<string, unknown>>,
-    message: Message | undefined,
-  ): Check<T> =>
-  (value) =>
-    test(value) ? undefined : word([issue(code, params)], message);
+export function rule<T>(
+  test: (value: T) => boolean,
+  code: string,
+  params: Readonly<Record<string, unknown>>,
+  message: Message | undefined,
+): Check<T> {
+  assertMessage(message);
+  return (value) => (test(value) ? undefined : word([issue(code, params)], message));
+}
 
 /**
  * Builds a validator that accepts the values `accepts` names, and reports any other with one
@@ -114,8 +144,9 @@ export function member<T>(
 /**
  * Reads what follows a composer's own arguments, options then checks, into the two ends of the
  * composer: `reject` fails with issues the composer found itself, such as a wrong type or size, worded
- * by the options' `message`, and `accept` runs the checks on a value once every child has passed.
- * Issues a child found are never worded here, since they are the child's.
+ * by the options' `message`, and `accept` runs the checks on a value once every child has passed, and
+ * words what a check found without a message of its own. Issues a child found are never worded here,
+ * since they are the child's.
  */
 export function tail<TOptions extends MessageOptions, T>(
   args: readonly unknown[],
@@ -128,6 +159,6 @@ export function tail<TOptions extends MessageOptions, T>(
   return [
     options,
     (issues) => failWith(word(issues, options.message)),
-    (value) => finish(value, [], undefined, checks),
+    (value) => finish(value, [], options.message, checks),
   ];
 }

@@ -83,14 +83,11 @@ export const issue = (
   path: readonly ValidationPathSegment[] = ROOT_PATH,
 ): ValidationIssue => (params === undefined ? { code, path } : { code, path, params });
 
-/** Fails with one built-in issue at the value's own location. */
-export const failIssue = (code: ValidationIssueCode, params?: Readonly<Record<string, unknown>>): ValidationErr =>
-  failWith([issue(code, params)]);
-
 /**
  * Adds the issues a child found to its parent's list, one level down under `segment`. It pushes one
  * by one because spreading a long list into `push` passes each as an argument, which overflows the
- * stack past about 120,000 issues and would turn bad input into an exception.
+ * stack past about 120,000 issues and would turn bad input into an exception. An issue from a validator
+ * written by hand without a path is at the child itself.
  */
 export function collectNested(
   target: ValidationIssue[],
@@ -98,7 +95,7 @@ export function collectNested(
   segment: ValidationPathSegment,
 ): void {
   for (const issue of issues) {
-    target.push({ ...issue, path: [segment, ...issue.path] });
+    target.push({ ...issue, path: [segment, ...(issue.path ?? [])] });
   }
 }
 
@@ -140,17 +137,6 @@ export function describeType(value: unknown): string {
 /** The issue for an input that is not the type a validator accepts, naming both types and never the value. */
 export const typeIssue = (expected: string, input: unknown): ValidationIssue =>
   issue("invalid_type", { expected, received: describeType(input) });
-
-/** Fails because the input is not the type a validator accepts, naming both types and never the value. */
-export const invalidType = (expected: string, input: unknown): ValidationErr => failWith([typeIssue(expected, input)]);
-
-/** Fails because coercion could not convert the input, naming both types and never the value. */
-export const invalidCoercion = (expected: string, input: unknown): ValidationErr =>
-  failIssue("invalid_type", {
-    expected,
-    received: describeType(input),
-    coerced: true,
-  });
 
 /**
  * Rejects a lower and an upper bound that no value can satisfy, since that is a mistake in the schema
@@ -194,6 +180,26 @@ export function assertBounds<T extends number | bigint>({
 export function assertFunction(name: string, value: unknown): void {
   if (typeof value !== "function") {
     throw new TypeError(`${name} must be a function, received ${value === null ? "null" : typeof value}`);
+  }
+}
+
+/**
+ * Rejects an option of the wrong type, such as `int: "yes"`, which would otherwise be read as another
+ * value or ignored, since it is a mistake in the schema and not in the input. Undefined is no option.
+ */
+export function assertOption(name: string, value: unknown, type: "boolean" | "number" | "bigint" | "string"): void {
+  if (value !== undefined && typeof value !== type) {
+    throw new TypeError(`${name} must be a ${type}, received ${value === null ? "null" : typeof value}`);
+  }
+}
+
+/**
+ * Rejects what must be text and is not, such as a prefix read from a variable that is not set, which
+ * would otherwise be converted to text and required as `"undefined"`.
+ */
+export function assertText(name: string, value: unknown): void {
+  if (typeof value !== "string") {
+    throw new TypeError(`${name} must be text, received ${value === null ? "null" : typeof value}`);
   }
 }
 

@@ -1,4 +1,4 @@
-import { chain } from "../core/async";
+import { isThenable } from "../core/async";
 import { assertFunction } from "../core/result";
 import type { AnyValidator, Infer, ValidationResult } from "../core/types";
 import { formatIssue, type Messages } from "../messages/format-issue";
@@ -13,7 +13,9 @@ import type { StandardSchemaV1 } from "./standard-schema";
  * the specification asks for. The one you gave is not modified. The specification requires a message
  * on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass:
  * `englishMessages` for the built-in English, or a map of your own. `~standard.validate` returns its result directly for a synchronous validator and a
- * promise for an asynchronous one. Input and output types are `unknown` and what the validator produces.
+ * `Promise` for an asynchronous one, even one that returns another kind of thenable, since callers
+ * tell the two apart with `instanceof Promise`, as the specification shows, and would otherwise read a
+ * pending result as one without issues. Input and output types are `unknown` and what the validator produces.
  *
  * @example
  * ```ts
@@ -36,22 +38,19 @@ export function standard<TValidator extends AnyValidator>(
 ): TValidator & StandardSchemaV1<unknown, Infer<TValidator>> {
   assertFunction("validator", validator);
   const wrapped = (input: unknown) => validator(input);
-  const props: StandardSchemaV1.Props<unknown, Infer<TValidator>> = {
+  type Output = Infer<TValidator>;
+  const toStandard = (result: ValidationResult<Output>): StandardSchemaV1.Result<Output> =>
+    result.ok
+      ? { value: result.value }
+      : { issues: result.error.issues.map((issue) => ({ message: formatIssue(issue, messages), path: issue.path })) };
+  const props: StandardSchemaV1.Props<unknown, Output> = {
     version: 1,
     vendor: "codenhub",
-    validate: (value) =>
-      chain(
-        validator(value) as ValidationResult<Infer<TValidator>> | PromiseLike<ValidationResult<Infer<TValidator>>>,
-        (result): StandardSchemaV1.Result<Infer<TValidator>> =>
-          result.ok
-            ? { value: result.value }
-            : {
-                issues: result.error.issues.map((issue) => ({
-                  message: formatIssue(issue, messages),
-                  path: issue.path,
-                })),
-              },
-      ) as StandardSchemaV1.Result<Infer<TValidator>> | Promise<StandardSchemaV1.Result<Infer<TValidator>>>,
+    validate: (value) => {
+      const result = validator(value) as ValidationResult<Output> | PromiseLike<ValidationResult<Output>>;
+      // An async function always returns a Promise, whatever kind of thenable it awaits.
+      return isThenable(result) ? (async () => toStandard(await result))() : toStandard(result);
+    },
   };
   return Object.assign(wrapped, { "~standard": props }) as unknown as TValidator &
     StandardSchemaV1<unknown, Infer<TValidator>>;

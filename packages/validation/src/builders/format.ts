@@ -1,4 +1,4 @@
-import { assertFunction } from "../core/result";
+import { assertFunction, assertText } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
 import { formatFactory } from "../formats/text-format";
 
@@ -21,9 +21,10 @@ import { formatFactory } from "../formats/text-format";
  * @param name - The name of the format, for the issue. Treat it as part of the format's contract.
  * @param test - Returns `true` for a string of the format.
  * @returns The factory of the validator.
- * @throws {TypeError} When `test` is not a function.
+ * @throws {TypeError} When `name` is not text or `test` is not a function.
  */
 export function format(name: string, test: (text: string) => boolean): Factory<string, MessageOptions> {
+  assertText("format(name)", name);
   assertFunction("test", test);
   return formatFactory(name, (text) => (test(text) ? text : undefined));
 }

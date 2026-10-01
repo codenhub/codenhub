@@ -1,5 +1,5 @@
 import { leaf, split } from "../core/checks";
-import { assertBounds, issue } from "../core/result";
+import { assertBounds, assertOption, issue } from "../core/result";
 import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
 
 /** Constraints for {@link bigint}. Every option is optional. */
@@ -34,11 +34,15 @@ const isBigint = (input: unknown): boolean => typeof input === "bigint";
  * ```
  *
  * @param options - Bounds to apply. Positive is `gt: 0n`, non-negative is `min: 0n`, negative is `lt: 0n`.
+ * @throws {TypeError} When a bound is not a bigint, such as the number `0` where `0n` was meant.
  * @throws {RangeError} When no bigint can satisfy the bounds together.
  */
 export const bigint = ((...args: unknown[]) => {
   const [options, checks] = split<BigintOptions, bigint>(args);
   const { min, max, gt, lt, message } = options;
+  for (const [name, bound] of Object.entries({ min, max, gt, lt })) {
+    assertOption(name, bound, "bigint");
+  }
   assertBounds(options);
   if (gt !== undefined && lt !== undefined && lt - gt <= 1n) {
     throw new RangeError(`No bigint lies between gt ${gt} and lt ${lt}`);

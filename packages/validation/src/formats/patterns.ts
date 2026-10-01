@@ -65,11 +65,19 @@ export function toAsciiHost(host: string): string | undefined {
 const NUMERIC_LAST_LABEL_PATTERN = /(?:^|\.)(?:\d+|0x[0-9a-f]*)$/i;
 
 /**
+ * A hostname, without a final dot, whose last label is not one the URL parser reads as a number, since
+ * a name ending that way is an IPv4 address. Its punycode is not tested: for a host the parser has
+ * already read, it decodes.
+ */
+export const isNamedHost = (name: string): boolean =>
+  HOSTNAME_PATTERN.test(name) && !NUMERIC_LAST_LABEL_PATTERN.test(name);
+
+/**
  * A hostname whose last label is not one the URL parser reads as a number, since a name ending that
  * way is an IPv4 address, and whose punycode labels decode. An absolute name, ending in one dot, is the
  * same name, and its dot is not counted.
  */
 export const isHostname = (text: string): boolean => {
   const name = text.endsWith(".") ? text.slice(0, -1) : text;
-  return HOSTNAME_PATTERN.test(name) && !NUMERIC_LAST_LABEL_PATTERN.test(name) && decodes(name);
+  return isNamedHost(name) && decodes(name);
 };

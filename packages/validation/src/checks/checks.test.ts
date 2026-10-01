@@ -72,7 +72,7 @@ describe("multipleOf", () => {
 
   it("should report the step", () => {
     expect(issuesOf(number(multipleOf(5))(7))).toEqual([
-      { code: "invalid_value", path: [], params: { type: "number", multipleOf: 5 } },
+      { code: "invalid_value", path: [], params: { type: "number", format: "multipleOf", value: 5 } },
     ]);
   });
 

@@ -28,7 +28,7 @@ const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
  * @param options - Constraints and clean-up, exactly as for `number`.
  * @returns A validator that produces a number.
  * @throws {RangeError} When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`,
- * no number can satisfy the bounds together, `multipleOf` is not a positive finite number, or `clamp`
+ * no number can satisfy the bounds together, or `clamp`
  * has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
  */
 export const coerceNumber = ((...args: unknown[]) =>

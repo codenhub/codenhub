@@ -1,5 +1,5 @@
-import { word } from "../core/checks";
-import { repeatedItem } from "../core/result";
+import { assertMessage, word } from "../core/checks";
+import { assertFunction, repeatedItem } from "../core/result";
 import type { Check, Message, ValidationIssue } from "../core/types";
 
 /**
@@ -20,8 +20,14 @@ import type { Check, Message, ValidationIssue } from "../core/types";
  * @param by - What to compare for each item. The item itself when omitted.
  * @param message - Wording for each issue.
  * @returns A check of arrays.
+ * @throws {TypeError} When `by` is given and is not a function, such as a message in its place: a
+ * message alone is `unique(undefined, message)`, or `message` is neither text nor a function.
  */
 export function unique<T>(by?: (item: T) => unknown, message?: Message): Check<readonly T[]> {
+  if (by !== undefined) {
+    assertFunction("by", by);
+  }
+  assertMessage(message);
   const keyOf = by ?? ((item: T): unknown => item);
   return (items) => {
     const seen = new Set<unknown>();

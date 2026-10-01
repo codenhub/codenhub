@@ -1,4 +1,5 @@
 import { leaf, split } from "../core/checks";
+import { isInstance } from "../core/objects";
 import { assertFunction } from "../core/result";
 import type { AnyValidator, AsyncRest, AsyncValidator, MessageOptions, Rest, Validator } from "../core/types";
 
@@ -7,7 +8,8 @@ export type Constructor<T = unknown> = abstract new (...args: never[]) => T;
 
 /**
  * Creates a validator that accepts instances of a class, checked with `instanceof`. An instance
- * from another realm, such as an iframe, is not recognized.
+ * from another realm, such as an iframe, is not recognized, and neither is a value `instanceof` throws
+ * for, such as a revoked proxy.
  *
  * @example
  * ```ts
@@ -20,12 +22,31 @@ export type Constructor<T = unknown> = abstract new (...args: never[]) => T;
  * @param target - The class the value must be an instance of.
  * @param rest - Options, then checks.
  * @returns A validator that produces the instance.
- * @throws {TypeError} When `target` is not a function.
+ * @throws {TypeError} When `target` is not a function `instanceof` can test against, such as an arrow function,
+ * or its `Symbol.hasInstance` is neither a function nor absent, which would make `instanceof` throw for every value.
  */
 export function instanceOf<T>(target: Constructor<T>, ...rest: Rest<T, MessageOptions>): Validator<T>;
 export function instanceOf<T>(target: Constructor<T>, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
 export function instanceOf(target: Constructor, ...rest: unknown[]): AnyValidator {
   assertFunction("target", target);
+  // `instanceof` treats a `Symbol.hasInstance` of null or undefined as absent and tests the prototype, and
+  // throws for any other value that is not a function, on every value it is given.
+  const rule: unknown = target[Symbol.hasInstance];
+  if (rule !== undefined && rule !== null && typeof rule !== "function") {
+    throw new TypeError("target's Symbol.hasInstance must be a function");
+  }
+  // A target with a rule of its own decides by it, and it is not run on an object made up here, since
+  // it may accept only some shapes and throw for the rest. Without one, the prototype is tested.
+  const hasOwnRule = typeof rule === "function" && rule !== Function.prototype[Symbol.hasInstance];
+  try {
+    // An arrow or a method has no prototype, so `instanceof` would throw on every object given to it.
+    if (!hasOwnRule) {
+      // oxlint-disable-next-line no-unused-expressions
+      ({}) instanceof target;
+    }
+  } catch {
+    throw new TypeError("target must be a class or a function with a prototype");
+  }
   const [{ message }, checks] = split<MessageOptions, unknown>(rest);
-  return leaf(`instance of ${target.name || "anonymous class"}`, (input) => input instanceof target, message, checks);
+  return leaf(`instance of ${target.name || "anonymous class"}`, (input) => isInstance(input, target), message, checks);
 }

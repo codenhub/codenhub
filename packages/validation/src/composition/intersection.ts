@@ -52,8 +52,12 @@ function pathOf(pending: Pending): ValidationPathSegment[] {
  */
 function mergeOne(pending: Pending, inner: Step[], conflicts: ValidationIssue[], merged: Merged): unknown {
   const { left, right } = pending;
-  const time = timeOf(left);
-  if (Object.is(left, right) || (time !== undefined && time === timeOf(right))) {
+  if (Object.is(left, right)) {
+    return right;
+  }
+  // Only an object can be a Date, and asking anything else would throw and catch for every value.
+  const time = typeof left === "object" ? timeOf(left) : undefined;
+  if (time !== undefined && time === timeOf(right)) {
     return right;
   }
   const isPair = typeof left === "object" && left !== null && typeof right === "object" && right !== null;

@@ -96,4 +96,17 @@ describe("standard", () => {
     const result = signup["~standard"].validate({ email: "hunter2", age: 1 });
     expect(JSON.stringify(result)).not.toContain("hunter2");
   });
+
+  it("should return a Promise for a validator that returns another kind of thenable", async () => {
+    // A thenable that is not a Promise, as some query builders and promise libraries return.
+    const thenable = <T>(value: T): PromiseLike<T> => ({
+      // oxlint-disable-next-line unicorn/no-thenable -- a thenable is what is under test
+      then: (onFulfilled) => thenable(onFulfilled ? onFulfilled(value) : value) as never,
+    });
+    const custom: AsyncValidator<string> = () => thenable(fail({ code: "taken" }));
+    const result = standard(custom, englishMessages)["~standard"].validate("a");
+    // The specification shows callers awaiting only a Promise; anything else they read as settled.
+    expect(result).toBeInstanceOf(Promise);
+    expect(await result).toEqual({ issues: [{ message: "Invalid value", path: [] }] });
+  });
 });

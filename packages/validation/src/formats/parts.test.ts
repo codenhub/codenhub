@@ -68,9 +68,19 @@ describe("url parts", () => {
     ).toEqual([true, false, false]);
     expect(issuesOf(search("https://example.com/?q=a&q=b"))).toEqual([
       {
-        code: "invalid_key",
-        path: ["query", "q"],
-        params: { issues: [{ code: "invalid_value", path: [], params: { unique: true } }] },
+        code: "invalid_format",
+        path: [],
+        params: {
+          format: "url",
+          part: "query",
+          issues: [
+            {
+              code: "invalid_key",
+              path: ["q"],
+              params: { issues: [{ code: "invalid_value", path: [], params: { unique: true } }] },
+            },
+          ],
+        },
       },
     ]);
   });
@@ -80,12 +90,26 @@ describe("url parts", () => {
     expect(accepts(tags, "https://example.com/?tag=a&tag=b", "https://example.com/?tag=a")).toEqual([true, true]);
   });
 
-  it("should place a part's issues under its name, and word none of them with the message", () => {
+  it("should report a failing part as the URL's own issue, at its place and worded by its message", () => {
     const strict = url({ message: "Bad URL", host: oneOf(["example.com"], { message: "Wrong host" }) });
     expect(issuesOf(strict("https://other.com/"))).toEqual([
-      { code: "invalid_value", path: ["host"], params: { options: ["example.com"] }, message: "Wrong host" },
+      {
+        code: "invalid_format",
+        path: [],
+        params: {
+          format: "url",
+          part: "host",
+          issues: [{ code: "invalid_value", path: [], params: { options: ["example.com"] }, message: "Wrong host" }],
+        },
+        message: "Bad URL",
+      },
     ]);
     expect(issuesOf(strict("nope"))[0]?.message).toBe("Bad URL");
+  });
+
+  it("should put a part's failure beside the field the URL is in, not under a path into the text", () => {
+    const form = object({ website: url({ host: oneOf(["example.com"]) }) });
+    expect(issuesOf(form({ website: "https://other.com/" })).map((issue) => issue.path)).toEqual([["website"]]);
   });
 
   it("should return the whole URL, whatever a part converts its value to", () => {
@@ -116,10 +140,17 @@ describe("email parts", () => {
     ]);
   });
 
-  it("should give the domain in ASCII and the local part as written, placing issues under their names", () => {
+  it("should give the domain in ASCII and the local part as written, and name a failing part", () => {
     const corporate = email({ domain: oneOf(["xn--mnchen-3ya.de"]), local: string({ max: 3 }) });
     expect(valueOf(corporate("Ada@München.DE"))).toBe("Ada@xn--mnchen-3ya.de");
-    expect(issuesOf(corporate("adalovelace@münchen.de")).map((issue) => issue.path)).toEqual([["local"]]);
+    expect(issuesOf(corporate("adalovelace@münchen.de")).map((issue) => [issue.path, issue.params?.part])).toEqual([
+      [[], "local"],
+    ]);
+  });
+
+  it("should word a failing part with its message, as the docs' company address example does", () => {
+    const company = email({ domain: oneOf(["company.com"]), message: "Use your company address" });
+    expect(issuesOf(company("ada@other.com"))[0]?.message).toBe("Use your company address");
   });
 
   it("should word its own issue, and run checks on the address", () => {
@@ -159,5 +190,49 @@ describe("searchParams", () => {
     expect(issuesOf(filters(1))).toEqual([
       { code: "invalid_type", path: [], params: { expected: "query string", received: "number" } },
     ]);
+  });
+});
+
+describe("audit regressions", () => {
+  it("should reject an IP address as the domain of an email, written as one or as a number", () => {
+    expect(accepts(email({ domain: unknown() }), "a@127.0.0.1", "a@0x7f000001", "a@example.com.")).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    expect(accepts(email({ domain: unknown() }), "a@localhost", "a@intranet")).toEqual([true, true]);
+  });
+
+  it("should report a repeated query key as a failure of the query part, worded by the URL's message", () => {
+    const issues = issuesOf(url({ query: unknown(), message: "Bad URL" })("https://example.com/?a=1&a=2"));
+    expect(issues).toEqual([
+      {
+        code: "invalid_format",
+        path: [],
+        params: {
+          format: "url",
+          part: "query",
+          issues: [
+            {
+              code: "invalid_key",
+              path: ["a"],
+              params: { issues: [{ code: "invalid_value", path: [], params: { unique: true } }] },
+            },
+          ],
+        },
+        message: "Bad URL",
+      },
+    ]);
+  });
+
+  it("should not run a port's checks on a number that is not a port", () => {
+    const seen: number[] = [];
+    const record = check((value: number) => {
+      seen.push(value);
+      return true;
+    });
+    port(record)(70_000);
+    port(record)(8080);
+    expect(seen).toEqual([8080]);
   });
 });

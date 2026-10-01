@@ -1,6 +1,7 @@
 import { chain, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
-import { assertFunction, typeIssue } from "../core/result";
+import { queryOf } from "../core/objects";
+import { assertFunction, assertOption, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -31,7 +32,7 @@ export interface SearchParamsOptions extends MessageOptions {
  *
  * @remarks
  * The parameters are read as `URLSearchParams` reads them, `+` as a space and escapes decoded, and a
- * leading `?` is ignored. A key given more than once fails, at its path with `invalid_key`, unless
+ * leading `?` is ignored. A `URLSearchParams` from another realm, such as an iframe, is read too. A key given more than once fails, at its path with `invalid_key`, unless
  * `repeated` is set: a check that saw one of two values while a server read the other would pass a
  * value nobody checked. It is the reading `url` gives its `query` option.
  *
@@ -47,7 +48,7 @@ export interface SearchParamsOptions extends MessageOptions {
  * @param validator - Validates the object of parameters.
  * @param rest - Options, then checks, which run on what the validator produced.
  * @returns A validator that produces what `validator` produces.
- * @throws {TypeError} When `validator` or a check is not a function.
+ * @throws {TypeError} When `validator` or a check is not a function, or `repeated` is not a boolean.
  */
 export function searchParams<TValidator extends AnyValidator>(
   validator: TValidator,
@@ -60,11 +61,14 @@ export function searchParams<TValidator extends AnyValidator>(
 export function searchParams(validator: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("validator", validator);
   const [{ repeated = false }, reject, accept] = tail<SearchParamsOptions, unknown>(rest);
+  assertOption("repeated", repeated, "boolean");
   return (input: unknown): Maybe<ValidationResult<unknown>> => {
-    if (typeof input !== "string" && !(input instanceof URLSearchParams)) {
+    // A `URLSearchParams` is read as its text, so one from another realm is read as one from this.
+    const query = typeof input === "string" ? input : queryOf(input);
+    if (query === undefined) {
       return reject([typeIssue("query string", input)]);
     }
-    const { value, issues } = readQuery(new URLSearchParams(input), repeated);
+    const { value, issues } = readQuery(new URLSearchParams(query), repeated);
     if (issues.length > 0) {
       return reject(issues);
     }

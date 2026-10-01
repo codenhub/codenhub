@@ -66,7 +66,7 @@ let openDepth = 0;
  *
  * @typeParam TValidator - The validator the getter returns.
  * @param getter - Returns the validator. Called once, on first use.
- * @param options - The depth limit.
+ * @param rest - The depth limit, then checks.
  * @returns A validator that behaves as the one the getter returns.
  * @throws {TypeError} When `getter` is not a function, and, from the returned validator on its first
  * use, when `getter` returns something that is not a function.

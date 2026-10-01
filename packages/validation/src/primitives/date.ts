@@ -11,17 +11,17 @@ export interface DateOptions extends MessageOptions {
   max?: Date;
 }
 
-/**
- * Reads a bound as the moment it holds, rejecting one that is not a valid `Date`, such as a string
- * passed where the types were not checked. It is read as `timeOf` reads input, so a `Date` from another
- * realm is one too.
- */
 /** A `Date` from any realm that holds a moment. */
 const isValidDate = (input: unknown): boolean => {
   const time = timeOf(input);
   return time !== undefined && !Number.isNaN(time);
 };
 
+/**
+ * Reads a bound as the moment it holds, rejecting one that is not a valid `Date`, such as a string
+ * passed where the types were not checked. It is read as `timeOf` reads input, so a `Date` from another
+ * realm is one too.
+ */
 const readBound = (name: string, bound: Date | undefined): number | undefined => {
   if (bound === undefined) {
     return undefined;

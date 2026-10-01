@@ -35,7 +35,9 @@ const isReverseMapping = (enumObject: EnumLike, key: string): boolean => {
  * so changing it later has no effect.
  * @param rest - Options, then checks.
  * @returns A validator that produces one of the values.
- * @throws {TypeError} When there is no value, so the validator would accept nothing.
+ * @throws {TypeError} When `values` is neither a list nor an enum, such as text, which would be read as
+ * its characters, there is no value, so the validator would accept nothing, or a value is an object or a
+ * function, which equals only itself.
  * @throws {RangeError} When a value is `NaN`, which no value equals.
  */
 export function oneOf<const T extends readonly LiteralValue[] | EnumLike>(
@@ -47,6 +49,10 @@ export function oneOf<const T extends readonly LiteralValue[] | EnumLike>(
   ...rest: AsyncRest<ValuesOf<T>, MessageOptions>
 ): AsyncValidator<ValuesOf<T>>;
 export function oneOf(values: readonly LiteralValue[] | EnumLike, ...rest: unknown[]): AnyValidator {
+  // Text would be read as a list of its characters. `Object(value) === value` holds for objects alone.
+  if (Object(values) !== values) {
+    throw new TypeError("oneOf() needs a list or an enum of primitives");
+  }
   const options: readonly unknown[] = Array.isArray(values)
     ? [...values]
     : Object.keys(values)
@@ -54,6 +60,10 @@ export function oneOf(values: readonly LiteralValue[] | EnumLike, ...rest: unkno
         .map((key) => (values as EnumLike)[key]);
   if (options.length === 0) {
     throw new TypeError("oneOf() needs at least one value");
+  }
+  // An object or a function equals only itself, so it would match no value parsed from input.
+  if (options.some((option) => Object(option) === option)) {
+    throw new TypeError("oneOf() needs a list or an enum of primitives");
   }
   if (options.some((option) => Number.isNaN(option))) {
     throw new RangeError("oneOf() cannot match NaN, which no value equals");

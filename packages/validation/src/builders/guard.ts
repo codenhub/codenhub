@@ -1,5 +1,5 @@
 import { leaf, split } from "../core/checks";
-import { assertFunction } from "../core/result";
+import { assertFunction, assertText } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
 
 /**
@@ -19,9 +19,10 @@ import type { Factory, MessageOptions } from "../core/types";
  * @param expected - The name of the type, for the issue.
  * @param accepts - Returns `true` for a value of the type.
  * @returns The factory of the validator.
- * @throws {TypeError} When `accepts` is not a function.
+ * @throws {TypeError} When `expected` is not text or `accepts` is not a function.
  */
 export function guard<T>(expected: string, accepts: (input: unknown) => input is T): Factory<T, MessageOptions> {
+  assertText("guard(expected)", expected);
   assertFunction("accepts", accepts);
   return ((...args: unknown[]) => {
     const [{ message }, checks] = split<MessageOptions, T>(args);
