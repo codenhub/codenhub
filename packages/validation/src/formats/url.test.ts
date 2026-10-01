@@ -69,6 +69,12 @@ describe("url", () => {
     expect(url()(`https://${longest}/`).ok).toBe(true);
     expect(url()(`https://${longest}f/`).ok).toBe(false);
     expect(url({ host: unknown() })(`https://${labels(20)}/`).ok).toBe(false);
+    expect(url()(`https://${longest}./`).ok).toBe(true);
+  });
+
+  it("should accept an absolute host, keeping its final dot", () => {
+    expect(valueOf(url()("https://Example.com./a"))).toBe("https://example.com./a");
+    expect(accepts(url(), "https://localhost./", "https://example.com../")).toEqual([false, false]);
   });
 
   it("should reject a punycode host that does not decode", () => {
@@ -102,6 +108,8 @@ describe("url", () => {
       "http://site.alt",
       "http://site.onion",
       "http://router.home.arpa",
+      "http://1.0.0.127.in-addr.arpa",
+      "http://example.テスト",
     ];
     expect(accepts(url(), ...reserved)).toEqual(Array(reserved.length).fill(false));
     expect(accepts(url({ host: unknown() }), ...reserved)).toEqual(Array(reserved.length).fill(true));
@@ -249,6 +257,30 @@ describe("url without a host", () => {
       "mailto:ada@example.com?subject=Hi&&body=x",
     ];
     expect(accepts(mailto, ...invalid)).toEqual(invalid.map(() => false));
+  });
+
+  it("should reject a line break in the subject, which only the body may hold", () => {
+    expect(
+      accepts(
+        mailto,
+        "mailto:ada@example.com?subject=Hi%0D%0ABcc:%20eve@example.net",
+        "mailto:ada@example.com?subject=Hi%0aBcc:eve@example.net",
+        "mailto:ada@example.com?SUBJECT=Hi%0d",
+        "mailto:ada@example.com?subject=100%25%20done&body=Line%0D%0Aline",
+      ),
+    ).toEqual([false, false, false, true]);
+  });
+
+  it("should reject a repeated subject or body, and accept repeated recipient fields", () => {
+    expect(
+      accepts(
+        mailto,
+        "mailto:ada@example.com?subject=a&subject=b",
+        "mailto:ada@example.com?Subject=a&SUBJECT=b",
+        "mailto:ada@example.com?body=a&body=b",
+        "mailto:ada@example.com?to=bob@example.org&to=eve@example.net&cc=a@example.com&cc=b@example.com",
+      ),
+    ).toEqual([false, false, false, true]);
   });
 
   it("should return each mailto recipient as email() does, so a later check on the value sees where mail goes", () => {

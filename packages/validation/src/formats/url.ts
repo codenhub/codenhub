@@ -1,5 +1,5 @@
 import { split } from "../core/checks";
-import { assertOption } from "../core/result";
+import { assertOption, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncCheck,
@@ -11,7 +11,7 @@ import type {
 } from "../core/types";
 import { HOSTLESS_SCHEMES, toHostlessUrl } from "./hostless-url";
 import { assertParts, notFormat, partIssue, partsFormat, readQuery, type Part, type Reading } from "./parts";
-import { HOST_MAX_LENGTH, isPublicHost } from "./patterns";
+import { HOST_MAX_LENGTH, isPublicName, withoutFinalDot } from "./patterns";
 
 /**
  * No whitespace and no control characters: a written URL holds neither (RFC 3986), and the parser would
@@ -30,6 +30,9 @@ const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*$/i;
  * safe to accept.
  */
 const SCRIPT_SCHEMES = ["javascript", "vbscript", "data"];
+
+/** A percent-encoded path separator, `%2F` for `/` or `%5C` for `\`, in either letter case. */
+const ENCODED_SEPARATOR_PATTERN = /%(?:2f|5c)/i;
 
 /** Options for {@link url}. */
 export interface UrlOptions extends MessageOptions {
@@ -61,7 +64,9 @@ export interface UrlOptions extends MessageOptions {
   /**
    * Validates the path as the parser writes it: dot segments resolved and characters such as spaces
    * percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such
-   * as `ssh://example.com`, that names no path. Its failure is reported as the URL's, with `params.part`
+   * as `ssh://example.com`, that names no path. A path holding an encoded `/` or `\`, `%2F` or `%5C`, fails
+   * before it runs, with `{ encodedSeparator: true }`, since a server that decodes it before routing would
+   * read another path than the validator saw. Its failure is reported as the URL's, with `params.part`
    * `"path"`.
    */
   path?: AnyValidator;
@@ -96,7 +101,8 @@ type UrlParts<TOptions> = Extract<TOptions[keyof TOptions & ("host" | "port" | "
  * spelled with fullwidth letters or invisible characters is the host they spell, an internationalized
  * host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules
  * for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and
- * no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected.
+ * no scheme is guessed for text that lacks one. A host longer than 253 characters, not counting the
+ * final dot of an absolute host such as `example.com.`, which is accepted and kept, is rejected.
  *
  * The `host`, `port`, `path` and `query` options check those parts with validators of your own, which
  * only decide: the value is still the whole URL, and one that is asynchronous makes the validator
@@ -162,7 +168,7 @@ export function url(...rest: unknown[]): AnyValidator {
     // the parser has done so already, and this changes nothing.
     parsed.hostname = parsed.hostname.toLowerCase().replace(/%[\da-f]{2}/g, (escape) => escape.toUpperCase());
     const { hostname } = parsed;
-    if (hostname.length > HOST_MAX_LENGTH || (host === undefined && !isPublicHost(hostname))) {
+    if (withoutFinalDot(hostname).length > HOST_MAX_LENGTH || (host === undefined && !isPublicName(hostname))) {
       return notFormat("url");
     }
     const parts: Part[] = [];
@@ -173,6 +179,12 @@ export function url(...rest: unknown[]): AnyValidator {
       parts.push(["port", port, parsed.port === "" ? undefined : Number(parsed.port)]);
     }
     if (path !== undefined) {
+      // An encoded `/` or `\` is one segment to the parser and to a check on the path, and two to a server
+      // that decodes it before routing, so `/api/..%2fadmin` would pass a check for `/api/` and reach
+      // `/admin`. It fails before the path validator runs, as a repeated query key does.
+      if (ENCODED_SEPARATOR_PATTERN.test(parsed.pathname)) {
+        return { issues: [partIssue("url", "path", [issue("invalid_value", { encodedSeparator: true })])] };
+      }
       parts.push(["path", path, parsed.pathname]);
     }
     if (query !== undefined) {

@@ -48,12 +48,17 @@ export function pass<T>(value: T): ValidationOk<T> {
  *
  * @param issues - What went wrong. Each defaults to code `"custom"` and to the value's own location.
  * @returns A failed result holding every issue, in order.
- * @throws {TypeError} When called without an issue, which the types already forbid.
+ * @throws {TypeError} When called without an issue, or with a `path` that is not a list, such as
+ * `"confirm"`, which would be split into one segment per letter. The types already forbid both.
  */
 export function fail(...issues: [IssueInput, ...IssueInput[]]): ValidationErr {
   if (issues.length === 0) {
     // The types forbid it, but a failure with no issue says nothing and breaks `issues[0]`.
     throw new TypeError("fail() needs at least one issue");
+  }
+  // A path written as text, such as "confirm", would be spread into one segment per letter, as `check` says.
+  if (issues.some(({ path }) => path !== undefined && !Array.isArray(path))) {
+    throw new TypeError("issue.path must be a list of keys and indexes");
   }
   return failWith(issues.map(toIssue));
 }

@@ -115,28 +115,32 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
       word(issues, options.message);
     }
 
-    const results = keys.map((key, index) =>
-      (validators[index] as AnyValidator)(Object.hasOwn(input, key) ? input[key] : undefined),
-    );
+    // Everything the output takes from the input is read before any child runs, so neither a child that
+    // changes the input nor a change made while one waits can reach the output.
+    const present = keys.map((key) => Object.hasOwn(input, key));
+    const values = keys.map((key, index) => (present[index] ? input[key] : undefined));
+    const extra =
+      unknownKeys === "passthrough"
+        ? Object.keys(input)
+            .filter((key) => !known.has(key))
+            .map((key) => [key, input[key]] as const)
+        : [];
+    const results = values.map((value, index) => (validators[index] as AnyValidator)(value));
     return chain(collect(results), (settled) => {
       const output: Record<string, unknown> = {};
       settled.forEach((result, index) => {
         const key = keys[index] as string;
         if (!result.ok) {
           collectNested(issues, result.error.issues, key);
-        } else if (result.value !== undefined || Object.hasOwn(input, key)) {
+        } else if (result.value !== undefined || present[index]) {
           setOwn(output, key, result.value);
         }
       });
       if (issues.length > 0) {
         return failWith(issues);
       }
-      if (unknownKeys === "passthrough") {
-        for (const key of Object.keys(input)) {
-          if (!known.has(key)) {
-            setOwn(output, key, input[key]);
-          }
-        }
+      for (const [key, value] of extra) {
+        setOwn(output, key, value);
       }
       return accept(output);
     });

@@ -23,6 +23,12 @@ describe("fail", () => {
     expect(() => (fail as () => unknown)()).toThrow(TypeError);
   });
 
+  it("should refuse a path that is not a list, which would be split into one segment per letter", () => {
+    expect(() => fail({ path: "confirm" as unknown as string[] })).toThrow(TypeError);
+    expect(() => fail({ code: "a" }, { path: 0 as unknown as string[] })).toThrow(TypeError);
+    expect(fail({ path: undefined }).error.issues[0].path).toEqual([]);
+  });
+
   it("should keep the code, path, params and message it is given", () => {
     const result = fail({ code: "username_taken", path: ["user", 0], params: { name: "ada" }, message: "Taken" });
     expect(result).toEqual({

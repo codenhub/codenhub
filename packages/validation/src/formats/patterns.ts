@@ -14,15 +14,30 @@ const DOMAIN_NAME_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z
 
 /**
  * Special-use names that look like domain names but never name a public host: `localhost`, `local`,
- * `internal` and `home.arpa` resolve on the local network or machine, and the rest are reserved for
- * testing, documentation or other networks (RFC 6761, 6762, 7686, 8375 and 9476, and ICANN's
- * `.internal`).
+ * `internal` and `home.arpa` resolve on the local network or machine, the rest of `.arpa` holds the
+ * infrastructure of the DNS itself, such as the reverse names in `in-addr.arpa`, and the rest are reserved
+ * for testing, documentation or other networks (RFC 3172, 6761, 6762, 7686, 8375 and 9476, and ICANN's
+ * `.internal`), the eleven IDN test top-level domains IANA listed included, in their ASCII form: `إختبار`,
+ * `آزمایشی`, `测试`, `測試`, `испытание`, `परीक्षा`, `δοκιμή`, `테스트`, `טעסט`, `テスト` and `பரிட்சை`.
  */
-const SPECIAL_USE_NAME_PATTERN = /(?:^|\.)(?:localhost|local|internal|test|example|invalid|alt|onion|home\.arpa)$/i;
+const SPECIAL_USE_NAME_PATTERN =
+  /(?:^|\.)(?:localhost|local|internal|test|example|invalid|alt|onion|arpa|xn--(?:kgbechtv|hgbk6aj7f53bba|0zwm56d|g6w251d|80akhbyknj4f|11b5bs3a9aj6g|jxalpdlp|9t4b11yi5a|deba0ad|zckzah|hlcj6aya9esc7a))$/i;
 
-/** Tests whether a host is a public domain name, which is what "public" means for email and URL hosts. */
+/**
+ * Tests whether a host is a public domain name, which is what "public" means for email and URL hosts. An
+ * absolute name, ending in a dot, is not one here; {@link isPublicName} accepts it.
+ */
 export const isPublicHost = (host: string): boolean =>
   DOMAIN_NAME_PATTERN.test(host) && !SPECIAL_USE_NAME_PATTERN.test(host);
+
+/** A host without the final dot of an absolute name, such as `example.com.`, which names the same host. */
+export const withoutFinalDot = (host: string): string => (host.endsWith(".") ? host.slice(0, -1) : host);
+
+/**
+ * Tests whether a host is a public domain name, written relative or absolute: `example.com.` is the same
+ * host as `example.com`. For `domain` and `url`; an email address has no absolute form.
+ */
+export const isPublicName = (host: string): boolean => isPublicHost(withoutFinalDot(host));
 
 /**
  * Letters, combining marks and digits from any script, joined by hyphens and dots: what a domain is
@@ -55,7 +70,8 @@ export function toAsciiHost(host: string): string | undefined {
     return undefined;
   }
   const { hostname } = new URL(`http://${host}`);
-  return hostname.length <= HOST_MAX_LENGTH ? hostname : undefined;
+  // The final dot of an absolute name is not counted, as `hostname` does not count it.
+  return withoutFinalDot(hostname).length <= HOST_MAX_LENGTH ? hostname : undefined;
 }
 
 /**

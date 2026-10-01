@@ -60,6 +60,45 @@ describe("url parts", () => {
     ).toEqual([true, true, false]);
   });
 
+  it("should reject an encoded slash or backslash in the path before the path validator sees it", () => {
+    const seen: unknown[] = [];
+    const api = url({
+      path: string(
+        startsWith("/api/"),
+        check((path) => (seen.push(path), true)),
+      ),
+    });
+    expect(
+      accepts(
+        api,
+        "https://example.com/api/..%2fadmin",
+        "https://example.com/api/..%2Fadmin",
+        "https://example.com/api/..%5cadmin",
+        "https://example.com/api/..%5Cadmin",
+        "https://example.com/api/a%252fb",
+      ),
+    ).toEqual([false, false, false, false, true]);
+    expect(seen).toEqual(["/api/a%252fb"]);
+    expect(issuesOf(api("https://example.com/api/..%2fadmin"))).toEqual([
+      {
+        code: "invalid_format",
+        path: [],
+        params: {
+          format: "url",
+          part: "path",
+          issues: [{ code: "invalid_value", path: [], params: { encodedSeparator: true } }],
+        },
+      },
+    ]);
+    expect(issuesOf(url({ path: string(), message: "Bad link" })("https://example.com/a%2fb"))[0]?.message).toBe(
+      "Bad link",
+    );
+  });
+
+  it("should keep accepting an encoded slash when no path validator is given", () => {
+    expect(valueOf(url()("https://example.com/a%2Fb"))).toBe("https://example.com/a%2Fb");
+  });
+
   it("should give the query as an object of decoded parameters, and reject a repeated key", () => {
     const search = url({ query: object({ q: string(), page: optional(string()) }, { unknownKeys: "strict" }) });
     expect(valueOf(search("https://example.com/?q=red+shoes"))).toBe("https://example.com/?q=red+shoes");

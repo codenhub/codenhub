@@ -208,9 +208,46 @@ describe("domain", () => {
         "db.internal",
         "example.test",
         "127.0.0.1",
-        "example.com.",
+        "localhost.",
+        "example.com..",
       ),
-    ).toEqual(Array(7).fill(false));
+    ).toEqual(Array(8).fill(false));
+  });
+
+  it("should accept an absolute name, keeping its final dot, which the length does not count", () => {
+    expect(valueOf(domain()("Example.COM."))).toBe("example.com.");
+    expect(valueOf(domain()("münchen.de."))).toBe("xn--mnchen-3ya.de.");
+    const longest = `${Array.from({ length: 4 }, () => "a".repeat(61)).join(".")}.abcde`;
+    expect(longest).toHaveLength(253);
+    expect(accepts(domain(), `${longest}.`, `${longest}f.`)).toEqual([true, false]);
+    expect(accepts(email(), "ada@example.com.")).toEqual([false]);
+  });
+
+  it("should reject every name under .arpa and the IDN test top-level domains", () => {
+    const reserved = [
+      "1.0.0.127.in-addr.arpa",
+      "b.a.ip6.arpa",
+      "router.home.arpa",
+      "example.arpa",
+      ...[
+        "إختبار",
+        "آزمایشی",
+        "测试",
+        "測試",
+        "испытание",
+        "परीक्षा",
+        "δοκιμή",
+        "테스트",
+        "טעסט",
+        "テスト",
+        "பரிட்சை",
+      ].map((tld) => `example.${tld}`),
+      "example.xn--zckzah",
+      "example.XN--ZCKZAH",
+    ];
+    expect(accepts(domain(), ...reserved)).toEqual(reserved.map(() => false));
+    expect(accepts(email(), ...reserved.map((host) => `ada@${host}`))).toEqual(reserved.map(() => false));
+    expect(accepts(domain(), "arpa.example.com", "テスト.example.com", "xn--zckzah.com")).toEqual([true, true, true]);
   });
 
   it("should hold its top-level label to 63 characters, as it does every other label", () => {

@@ -143,7 +143,7 @@ Builds a failed result from one or more issues.
 
 **Returns** — A failed result holding every issue, in order.
 
-**Throws** — When called without an issue, which the types already forbid.
+**Throws** — When called without an issue, or with a `path` that is not a list, such as `"confirm"`, which would be split into one segment per letter. The types already forbid both.
 
 ### fallback
 
@@ -1295,7 +1295,7 @@ export declare function url(options: UrlOptions, ...checks: AsyncCheck<string>[]
 
 Creates a validator for absolute URLs with an allowed protocol and a public domain name, and without embedded credentials. The value is the URL as the URL parser writes it, which is what a request made with it will use.
 
-The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected.
+The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters, not counting the final dot of an absolute host such as `example.com.`, which is accepted and kept, is rejected.
 
 The `host`, `port`, `path` and `query` options check those parts with validators of your own, which only decide: the value is still the whole URL, and one that is asynchronous makes the validator asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules. A part that fails is one `invalid_format` issue at the URL's own place, `{ format: "url", part, issues }`, so a form shows it beside the field, and the `message` option words it as every other issue of the URL.
 
@@ -2130,7 +2130,7 @@ Inherited from [MessageOptions](#messageoptions).
 path?: AnyValidator;
 ```
 
-Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such as `ssh://example.com`, that names no path. Its failure is reported as the URL's, with `params.part` `"path"`.
+Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such as `ssh://example.com`, that names no path. A path holding an encoded `/` or `\`, `%2F` or `%5C`, fails before it runs, with `{ encodedSeparator: true }`, since a server that decodes it before routing would read another path than the validator saw. Its failure is reported as the URL's, with `params.part` `"path"`.
 
 #### port
 
@@ -2840,7 +2840,7 @@ datetime({ local: true })("2026-09-28T14:30"); // { ok: true, ... }, a datetime-
 export declare const domain: Factory<string, MessageOptions>;
 ```
 
-Creates a validator for public domain names, such as `example.com` or `münchen.de`: at least two labels, a real top-level domain, and none of the special-use names that never name a public host, such as `localhost`, `.local`, `.internal` or `.test`. This is the rule `email` and `url` apply to their host by default. The value is the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
+Creates a validator for public domain names, such as `example.com` or `münchen.de`: at least two labels, a real top-level domain, and none of the special-use names that never name a public host, such as `localhost`, `.local`, `.internal`, `.test`, `.arpa` or an IDN test top-level domain such as `.テスト`. An absolute name, `example.com.`, is accepted and keeps its dot, which the 253-character limit does not count. This is the rule `email` and `url` apply to their host by default, except that an email address has no absolute form. The value is the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
 
 To accept any hostname, such as `localhost` or `intranet`, use `hostname`. Whether the domain resolves, or is registered, is not checked.
 
