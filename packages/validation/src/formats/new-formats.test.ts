@@ -226,6 +226,7 @@ describe("uuid versions", () => {
     expect(accepts(uuid({ version: 4 }), v4, v7, "00000000-0000-0000-0000-000000000000")).toEqual([true, false, false]);
     expect(accepts(uuid({ version: 7 }), v7)).toEqual([true]);
     expect(() => uuid({ version: 9 as never })).toThrow(RangeError);
+    expect(() => uuid({ version: "4" as never })).toThrow(new TypeError("version must be a number, received string"));
   });
 });
 

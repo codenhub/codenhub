@@ -34,7 +34,7 @@ A wrong size is reported at once, without validating the items, so a huge array 
 
 **Throws**
 
-- When `item` or a check is not a function.
+- When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
 - When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -500,7 +500,7 @@ Every level of nesting is a level of recursion, and input nested past the stack,
 
 **Throws**
 
-- When `getter` is not a function, and, from the returned validator on its first use, when `getter` returns something that is not a function.
+- When `getter` is not a function or `maxDepth` is not a number, and, from the returned validator on its first use, when `getter` returns something that is not a function.
 - When `maxDepth` is not a positive integer.
 
 **Example**
@@ -597,7 +597,7 @@ A wrong size is reported at once, without validating the entries. An issue's pat
 
 **Throws**
 
-- When `key` or `value` is not a function.
+- When `key` or `value` is not a function, or `min`, `max` or `length` is not a number.
 - When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -624,7 +624,10 @@ Both are compared as the decimals they are written as, so `0.3` is a multiple of
 
 **Returns** — A check of numbers.
 
-**Throws** — When `step` is not a positive finite number.
+**Throws**
+
+- When `step` is not a number.
+- When `step` is not a positive finite number.
 
 **Example**
 
@@ -949,7 +952,7 @@ Each key passes `key` and each value passes `value`. An issue's path ends at the
 
 **Throws**
 
-- When `key` or `value` is not a function.
+- When `key` or `value` is not a function, or `min`, `max` or `length` is not a number.
 - When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -1017,7 +1020,7 @@ A wrong size is reported at once, without validating the values. Otherwise every
 
 **Throws**
 
-- When `item` or a check is not a function.
+- When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
 - When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -2665,7 +2668,10 @@ Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM` or `H
 
 **Returns** — A validator that produces a `Date`.
 
-**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
+**Throws**
+
+- When `min` or `max` is not a `Date`.
+- When `min` or `max` is an invalid `Date`, or `min` is after `max`.
 
 **Example**
 
@@ -2713,7 +2719,7 @@ Creates a validator for text that also accepts finite numbers, bigints and boole
 **Throws**
 
 - When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
-- When `case` is not `"lower"` or `"upper"`, or a check is not a function.
+- When `min`, `max` or `length` is not a number, `case` is not `"lower"` or `"upper"`, or a check is not a function.
 
 **Example**
 
@@ -2764,7 +2770,10 @@ Creates a validator for valid `Date` objects. An invalid `Date` such as `new Dat
 
 **Returns** — A validator that produces a `Date`.
 
-**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
+**Throws**
+
+- When `min` or `max` is not a `Date`.
+- When `min` or `max` is an invalid `Date`, or `min` is after `max`.
 
 **Example**
 
@@ -2784,7 +2793,7 @@ Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a
 
 **Throws**
 
-- When `offset` or `local` is not a boolean.
+- When `offset` or `local` is not a boolean, or `precision` is not a number.
 - When `precision` is not an integer from 0 to 9.
 
 **Example**
@@ -3074,7 +3083,7 @@ Creates a validator for strings.
 **Throws**
 
 - When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
-- When `case` is not `"lower"` or `"upper"`, `trim` is not a boolean, or a check is not a function.
+- When `min`, `max` or `length` is not a number, `case` is not `"lower"` or `"upper"`, `trim` is not a boolean, or a check is not a function.
 
 **Example**
 
@@ -3108,7 +3117,10 @@ export declare const time: Factory<string, TimeOptions>;
 
 Creates a validator for ISO 8601 times of day without an offset, such as `14:30`, `14:30:00` or `14:30:00.250`, as an HTML time input writes them. The value is not modified.
 
-**Throws** — When `precision` is not an integer from 0 to 9.
+**Throws**
+
+- When `precision` is not a number.
+- When `precision` is not an integer from 0 to 9.
 
 **Example**
 
@@ -3157,7 +3169,10 @@ export declare const uuid: Factory<string, UuidOptions>;
 
 Creates a validator for UUIDs of version 1 to 8 in hyphenated form, in any letter case, and the nil and max UUIDs. The value is the UUID in lowercase, the form RFC 9562 writes, so one UUID is one value however it was written.
 
-**Throws** — When `version` is not an integer from 1 to 8.
+**Throws**
+
+- When `version` is not a number.
+- When `version` is not an integer from 1 to 8.
 
 **Example**
 

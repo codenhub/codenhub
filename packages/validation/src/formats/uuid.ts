@@ -1,4 +1,5 @@
 import { split } from "../core/checks";
+import { assertOption } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
 import { stringFormat } from "./text-format";
 
@@ -24,10 +25,12 @@ export interface UuidOptions extends MessageOptions {
  * uuid({ version: 7 })("123e4567-e89b-12d3-a456-426614174000"); // { ok: false, ... }, a version 1 UUID
  * ```
  *
+ * @throws {TypeError} When `version` is not a number.
  * @throws {RangeError} When `version` is not an integer from 1 to 8.
  */
 export const uuid = ((...args: unknown[]) => {
   const [{ version, message }, checks] = split<UuidOptions, string>(args);
+  assertOption("version", version, "number");
   if (version !== undefined && !(Number.isInteger(version) && version >= 1 && version <= 8)) {
     throw new RangeError(`version must be an integer from 1 to 8, received ${String(version)}`);
   }

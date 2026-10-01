@@ -130,4 +130,14 @@ describe("assertSize", () => {
   it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])("should throw a RangeError for %s", (size) => {
     expect(() => assertSize("Size", size)).toThrow(RangeError);
   });
+
+  it.each([
+    ["3", "string"],
+    [null, "null"],
+    [3n, "bigint"],
+  ])("should throw a TypeError for %s, which is not a number at all", (size, received) => {
+    expect(() => assertSize("Size", size as never)).toThrow(
+      new TypeError(`Size must be a number, received ${received}`),
+    );
+  });
 });

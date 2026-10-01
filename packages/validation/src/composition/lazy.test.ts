@@ -143,6 +143,12 @@ describe("lazy", () => {
       expect(() => lazy(() => number(), { maxDepth: 1.5 })).toThrow(RangeError);
       expect(() => lazy(() => number(), { maxDepth: Number.NaN })).toThrow(RangeError);
     });
+
+    it("should reject a limit that is not a number as a TypeError", () => {
+      expect(() => lazy(() => number(), { maxDepth: "5" as never })).toThrow(
+        new TypeError("maxDepth must be a number, received string"),
+      );
+    });
   });
 });
 

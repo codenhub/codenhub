@@ -23,6 +23,7 @@ export interface TimeOptions extends MessageOptions {
  * time({ precision: 0 })("09:15"); // { ok: false, ... }: the seconds are required
  * ```
  *
+ * @throws {TypeError} When `precision` is not a number.
  * @throws {RangeError} When `precision` is not an integer from 0 to 9.
  */
 export const time = ((...args: unknown[]) => {

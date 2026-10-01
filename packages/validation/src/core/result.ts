@@ -203,8 +203,12 @@ export function assertText(name: string, value: unknown): void {
   }
 }
 
-/** Rejects a size limit that is not a non-negative integer, since it is a mistake in the schema and not in the input. */
+/**
+ * Rejects a size limit that is not a number, as a `TypeError`, or not a non-negative integer, as a
+ * `RangeError`, since either is a mistake in the schema and not in the input.
+ */
 export function assertSize(name: string, value: number): void {
+  assertOption(name, value, "number");
   if (!Number.isInteger(value) || value < 0) {
     throw new RangeError(`${name} must be a non-negative integer, received ${value}`);
   }

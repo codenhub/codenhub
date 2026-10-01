@@ -48,6 +48,12 @@ describe("string", () => {
       }
     });
 
+    it("should reject a limit that is not a number as a TypeError when the validator is created", () => {
+      expect(() => string({ min: "3" as never })).toThrow(
+        new TypeError("Minimum length must be a number, received string"),
+      );
+    });
+
     it("should reject limits no string can satisfy when the validator is created", () => {
       for (const options of [
         { min: 3, max: 2 },

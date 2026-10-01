@@ -57,7 +57,7 @@ export type InferRecord<TKey extends string, TValue> = string extends TKey
  * @param value - Validator applied to every value.
  * @param rest - Limits on the number of keys, then checks.
  * @returns A validator that produces a dictionary object.
- * @throws {TypeError} When `key` or `value` is not a function.
+ * @throws {TypeError} When `key` or `value` is not a function, or `min`, `max` or `length` is not a number.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(

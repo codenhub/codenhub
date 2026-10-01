@@ -20,7 +20,8 @@ import { coercing } from "./coerce";
  * @param options - Constraints and clean-up, exactly as for `string`.
  * @returns A validator that produces a string.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
- * @throws {TypeError} When `case` is not `"lower"` or `"upper"`, or a check is not a function.
+ * @throws {TypeError} When `min`, `max` or `length` is not a number, `case` is not `"lower"` or `"upper"`, or a
+ * check is not a function.
  */
 export const coerceString = ((...args: unknown[]) =>
   coercing("string", string(...(args as [])), args, (input) =>

@@ -70,6 +70,10 @@ describe("multipleOf", () => {
     expect(accepts(number(multipleOf(0.3)), 1e16)).toEqual([false]);
   });
 
+  it("should reject a step that is not a number when it is created, as a TypeError", () => {
+    expect(() => multipleOf("0.1" as never)).toThrow(new TypeError("multipleOf needs a number, received string"));
+  });
+
   it("should report the step", () => {
     expect(issuesOf(number(multipleOf(5))(7))).toEqual([
       { code: "invalid_value", path: [], params: { type: "number", format: "multipleOf", value: 5 } },

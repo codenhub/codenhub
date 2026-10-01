@@ -50,7 +50,8 @@ const readIso = (text: string): Date | undefined => {
  *
  * @param options - Earliest and latest accepted moments, exactly as for `date`.
  * @returns A validator that produces a `Date`.
- * @throws {RangeError} When `min` or `max` is not a valid `Date`, or `min` is after `max`.
+ * @throws {TypeError} When `min` or `max` is not a `Date`.
+ * @throws {RangeError} When `min` or `max` is an invalid `Date`, or `min` is after `max`.
  */
 export const coerceDate = ((...args: unknown[]) =>
   coercing("valid date", date(...(args as [])), args, (input) => {

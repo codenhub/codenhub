@@ -40,9 +40,13 @@ const isMultipleOf = (value: number, step: number): boolean => {
  * @param step - A positive finite number.
  * @param message - Wording for the issue.
  * @returns A check of numbers.
+ * @throws {TypeError} When `step` is not a number.
  * @throws {RangeError} When `step` is not a positive finite number.
  */
 export function multipleOf(step: number, message?: Message): Check<number> {
+  if (typeof step !== "number") {
+    throw new TypeError(`multipleOf needs a number, received ${step === null ? "null" : typeof step}`);
+  }
   if (!Number.isFinite(step) || step <= 0) {
     throw new RangeError(`multipleOf needs a positive finite number, received ${step}`);
   }

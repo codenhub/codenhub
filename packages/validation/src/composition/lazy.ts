@@ -1,6 +1,6 @@
 import { chain } from "../core/async";
 import { tail } from "../core/checks";
-import { assertFunction, issue } from "../core/result";
+import { assertFunction, assertOption, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -26,6 +26,13 @@ export interface LazyOptions extends MessageOptions {
 }
 
 const DEFAULT_MAX_DEPTH = 128;
+/** Rejects a limit that is not a positive integer, since it is a mistake in the schema and not in the input. */
+function assertLimit(name: string, value: number): void {
+  assertOption(name, value, "number");
+  if (!Number.isInteger(value) || value < 1) {
+    throw new RangeError(`${name} must be a positive integer, received ${value}`);
+  }
+}
 
 /**
  * How many `lazy` calls are running right now. It only counts calls that are still on the stack:
@@ -68,8 +75,8 @@ let openDepth = 0;
  * @param getter - Returns the validator. Called once, on first use.
  * @param rest - The depth limit, then checks.
  * @returns A validator that behaves as the one the getter returns.
- * @throws {TypeError} When `getter` is not a function, and, from the returned validator on its first
- * use, when `getter` returns something that is not a function.
+ * @throws {TypeError} When `getter` is not a function or `maxDepth` is not a number, and,
+ * from the returned validator on its first use, when `getter` returns something that is not a function.
  * @throws {RangeError} When `maxDepth` is not a positive integer.
  */
 export function lazy<TValidator extends AnyValidator>(
@@ -84,9 +91,7 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
   assertFunction("getter", getter);
   const [options, reject, accept] = tail<LazyOptions, unknown>(rest);
   const { maxDepth = DEFAULT_MAX_DEPTH } = options;
-  if (!Number.isInteger(maxDepth) || maxDepth < 1) {
-    throw new RangeError(`maxDepth must be a positive integer, received ${maxDepth}`);
-  }
+  assertLimit("maxDepth", maxDepth);
   let resolved: AnyValidator | undefined;
   return (input: unknown) => {
     if (openDepth >= maxDepth) {

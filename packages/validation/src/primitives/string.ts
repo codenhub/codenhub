@@ -52,7 +52,8 @@ const lengthIssue = (code: "too_small" | "too_big", bound: number, isExact: bool
  * ```
  *
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
- * @throws {TypeError} When `case` is not `"lower"` or `"upper"`, `trim` is not a boolean, or a check is not a function.
+ * @throws {TypeError} When `min`, `max` or `length` is not a number, `case` is not `"lower"` or `"upper"`, `trim`
+ * is not a boolean, or a check is not a function.
  */
 export const string = ((...args: unknown[]) => {
   const [{ min, max, length, trim, case: letterCase, message }, checks] = split<StringOptions, string>(args);
