@@ -143,7 +143,7 @@ Builds a failed result from one or more issues.
 
 **Returns** — A failed result holding every issue, in order.
 
-**Throws** — When called without an issue, which the types already forbid.
+**Throws** — When called without an issue, or with a `path` that is not a list, such as `"confirm"`, which would be split into one segment per letter. The types already forbid both.
 
 ### fallback
 
