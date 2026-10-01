@@ -102,6 +102,8 @@ describe("url", () => {
       "http://site.alt",
       "http://site.onion",
       "http://router.home.arpa",
+      "http://1.0.0.127.in-addr.arpa",
+      "http://example.テスト",
     ];
     expect(accepts(url(), ...reserved)).toEqual(Array(reserved.length).fill(false));
     expect(accepts(url({ host: unknown() }), ...reserved)).toEqual(Array(reserved.length).fill(true));

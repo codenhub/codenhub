@@ -2840,7 +2840,7 @@ datetime({ local: true })("2026-09-28T14:30"); // { ok: true, ... }, a datetime-
 export declare const domain: Factory<string, MessageOptions>;
 ```
 
-Creates a validator for public domain names, such as `example.com` or `münchen.de`: at least two labels, a real top-level domain, and none of the special-use names that never name a public host, such as `localhost`, `.local`, `.internal` or `.test`. This is the rule `email` and `url` apply to their host by default. The value is the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
+Creates a validator for public domain names, such as `example.com` or `münchen.de`: at least two labels, a real top-level domain, and none of the special-use names that never name a public host, such as `localhost`, `.local`, `.internal`, `.test`, `.arpa` or an IDN test top-level domain such as `.テスト`. This is the rule `email` and `url` apply to their host by default. The value is the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
 
 To accept any hostname, such as `localhost` or `intranet`, use `hostname`. Whether the domain resolves, or is registered, is not checked.
 

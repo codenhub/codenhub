@@ -213,6 +213,33 @@ describe("domain", () => {
     ).toEqual(Array(7).fill(false));
   });
 
+  it("should reject every name under .arpa and the IDN test top-level domains", () => {
+    const reserved = [
+      "1.0.0.127.in-addr.arpa",
+      "b.a.ip6.arpa",
+      "router.home.arpa",
+      "example.arpa",
+      ...[
+        "إختبار",
+        "آزمایشی",
+        "测试",
+        "測試",
+        "испытание",
+        "परीक्षा",
+        "δοκιμή",
+        "테스트",
+        "טעסט",
+        "テスト",
+        "பரிட்சை",
+      ].map((tld) => `example.${tld}`),
+      "example.xn--zckzah",
+      "example.XN--ZCKZAH",
+    ];
+    expect(accepts(domain(), ...reserved)).toEqual(reserved.map(() => false));
+    expect(accepts(email(), ...reserved.map((host) => `ada@${host}`))).toEqual(reserved.map(() => false));
+    expect(accepts(domain(), "arpa.example.com", "テスト.example.com", "xn--zckzah.com")).toEqual([true, true, true]);
+  });
+
   it("should hold its top-level label to 63 characters, as it does every other label", () => {
     expect(accepts(domain(), `example.${"a".repeat(63)}`, `example.${"a".repeat(64)}`)).toEqual([true, false]);
     expect(accepts(email(), `ada@example.${"a".repeat(64)}`)).toEqual([false]);
