@@ -1,4 +1,5 @@
 import { leaf, split } from "../core/checks";
+import { isInstance } from "../core/objects";
 import { assertFunction } from "../core/result";
 import type { AnyValidator, AsyncRest, AsyncValidator, MessageOptions, Rest, Validator } from "../core/types";
 
@@ -40,13 +41,5 @@ export function instanceOf(target: Constructor, ...rest: unknown[]): AnyValidato
     throw new TypeError("target must be a class or a function with a prototype");
   }
   const [{ message }, checks] = split<MessageOptions, unknown>(rest);
-  const accepts = (input: unknown): boolean => {
-    try {
-      return input instanceof target;
-    } catch {
-      // A revoked proxy, or a proxy whose prototype trap throws, is not an instance of anything.
-      return false;
-    }
-  };
-  return leaf(`instance of ${target.name || "anonymous class"}`, accepts, message, checks);
+  return leaf(`instance of ${target.name || "anonymous class"}`, (input) => isInstance(input, target), message, checks);
 }

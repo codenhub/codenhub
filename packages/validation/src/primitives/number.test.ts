@@ -72,7 +72,7 @@ describe("number", () => {
       // A value computed in floating point is not the decimal it looks like.
       expect(number(multipleOf(0.1))(0.1 + 0.2).ok).toBe(false);
       expect(accepts(number(multipleOf(5)), 10, 0, -15, 7)).toEqual([true, true, true, false]);
-      expect(issuesOf(number(multipleOf(5))(7))[0]?.params).toEqual({ type: "number", multipleOf: 5 });
+      expect(issuesOf(number(multipleOf(5))(7))[0]?.params).toEqual({ type: "number", format: "multipleOf", value: 5 });
     });
 
     it("should check multipleOf exactly for whole numbers, however large", () => {

@@ -34,7 +34,7 @@ describe("isoDate", () => {
     expect(codesOf(isoDate()(new Date()))).toEqual(["invalid_type"]);
   });
 
-  it("should name the format date in the issue", () => {
-    expect(issuesOf(isoDate()("nope"))[0]?.params).toEqual({ format: "date" });
+  it("should name the format isoDate in the issue, as every format is named by its validator", () => {
+    expect(issuesOf(isoDate()("nope"))[0]?.params).toEqual({ format: "isoDate" });
   });
 });

@@ -13,11 +13,13 @@ export interface UuidOptions extends MessageOptions {
 
 /**
  * Creates a validator for UUIDs of version 1 to 8 in hyphenated form, in any letter case, and the nil
- * and max UUIDs. The value is not modified.
+ * and max UUIDs. The value is the UUID in lowercase, the form RFC 9562 writes, so one UUID is one value
+ * however it was written.
  *
  * @example
  * ```ts
  * uuid()("123e4567-e89b-12d3-a456-426614174000"); // { ok: true, value: "123e4567-e89b-12d3-a456-426614174000" }
+ * uuid()("123E4567-E89B-12D3-A456-426614174000"); // { ok: true, value: "123e4567-e89b-12d3-a456-426614174000" }
  * uuid()("00000000-0000-0000-0000-000000000000"); // { ok: true, ... }, the nil UUID
  * uuid({ version: 7 })("123e4567-e89b-12d3-a456-426614174000"); // { ok: false, ... }, a version 1 UUID
  * ```
@@ -35,7 +37,8 @@ export const uuid = ((...args: unknown[]) => {
   );
   return stringFormat(
     "uuid",
-    (text) => (pattern.test(text) || (version === undefined && SPECIAL_UUID_PATTERN.test(text)) ? text : undefined),
+    (text) =>
+      pattern.test(text) || (version === undefined && SPECIAL_UUID_PATTERN.test(text)) ? text.toLowerCase() : undefined,
     message,
     checks,
   );

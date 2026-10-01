@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { array } from "../composition/array";
 import { tuple } from "../composition/tuple";
+import { searchParams } from "../formats/search-params";
 import { instanceOf } from "../primitives/instance-of";
 import { string } from "../primitives/string";
+import { unknown } from "../primitives/unknown";
 import { codesOf } from "../test-utils";
 
 const revoked = (): object => {
@@ -17,6 +19,19 @@ describe("input that throws when it is inspected", () => {
     expect(codesOf(array(string())(revoked()))).toEqual(["invalid_type"]);
     expect(codesOf(tuple([string()])(revoked()))).toEqual(["invalid_type"]);
     expect(codesOf(instanceOf(Date)(revoked()))).toEqual(["invalid_type"]);
+  });
+
+  it("should be rejected as no query by searchParams, as by every other validator", () => {
+    const trapped = new Proxy(
+      {},
+      {
+        getPrototypeOf() {
+          throw new Error("trap");
+        },
+      },
+    );
+    expect(codesOf(searchParams(unknown())(revoked()))).toEqual(["invalid_type"]);
+    expect(codesOf(searchParams(unknown())(trapped))).toEqual(["invalid_type"]);
   });
 });
 

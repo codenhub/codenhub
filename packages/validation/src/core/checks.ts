@@ -13,36 +13,44 @@ import type {
 /**
  * Separates the arguments of a factory, `(options?, ...checks)`, into its options and its checks. An
  * object is the options and a function is a check, so the options can be left out. Anything else in
- * first place, such as a string, is a mistake in the schema: read as options, `string("abc")` would
- * take the string's `length` as its own. `null` is no options, as `undefined` is.
+ * first place, such as a string or a list, is a mistake in the schema: read as options, `string("abc")`
+ * would take the string's `length` as its own, and `array(item, [unique()])` would drop the check. `null`
+ * is no options, as `undefined` is.
  */
 export function split<TOptions extends MessageOptions, T>(
   args: readonly unknown[],
 ): [options: TOptions, checks: AsyncCheck<T>[]] {
   const [first, ...rest] = args;
   const [options, checks] = typeof first === "function" ? [{}, args] : [first ?? {}, rest];
-  if (typeof options !== "object" || checks.some((check) => typeof check !== "function")) {
+  if (typeof options !== "object" || Array.isArray(options) || checks.some((check) => typeof check !== "function")) {
     // A mistake in the schema, reported now rather than on the first input.
     throw new TypeError("Options must be an object, and checks functions");
   }
   return [options as TOptions, checks as AsyncCheck<T>[]];
 }
 
-/** Gives a validator's own issues its wording, when it has one. The issues are replaced in place. */
+/**
+ * Gives a validator's wording, when it has one, to every issue in the list that has none of its own,
+ * such as one a check given no message reported. The issues are replaced in place.
+ */
 export function word(issues: ValidationIssue[], message: Message | undefined): ValidationIssue[] {
   if (message !== undefined) {
     issues.forEach((found, index) => {
-      issues[index] = { ...found, message: typeof message === "function" ? message(found) : message };
+      if (found.message === undefined) {
+        issues[index] = { ...found, message: typeof message === "function" ? message(found) : message };
+      }
     });
   }
   return issues;
 }
 
 /**
- * Finishes a validator whose value has its type: words the issues it found itself, runs every check on
- * the value and adds what they found, and returns the value or every issue. It stays synchronous while
- * every check is. A check written by hand that returns anything but nothing or a list, such as `false`,
- * is a bug, and throws saying so rather than failing later on what it returned.
+ * Finishes a validator whose value has its type: runs every check on the value, adds what they found to
+ * the issues the validator found itself, words every issue that has no wording of its own, and returns
+ * the value or every issue. It stays synchronous while every check is. A check's issues are copied, so
+ * a list the check reuses is never changed, and one written by hand without a path is at the value. A
+ * check written by hand that returns anything but nothing or a list, such as `false`, is a bug, and
+ * throws saying so rather than failing later on what it returned.
  */
 export function finish<T>(
   value: T,
@@ -50,7 +58,6 @@ export function finish<T>(
   message: Message | undefined,
   checks: readonly AsyncCheck<T>[],
 ): Maybe<ValidationResult<T>> {
-  word(issues, message);
   return chain(collect(checks.map((check) => check(value))), (found) => {
     for (const list of found) {
       if (list !== undefined && !Array.isArray(list)) {
@@ -58,10 +65,10 @@ export function finish<T>(
       }
       // Pushed one by one: spreading a long list into `push` would overflow the stack.
       for (const each of list ?? []) {
-        issues.push(each);
+        issues.push({ path: [], ...each });
       }
     }
-    return issues.length > 0 ? failWith(issues) : pass(value);
+    return issues.length > 0 ? failWith(word(issues, message)) : pass(value);
   });
 }
 
@@ -120,8 +127,9 @@ export function member<T>(
 /**
  * Reads what follows a composer's own arguments, options then checks, into the two ends of the
  * composer: `reject` fails with issues the composer found itself, such as a wrong type or size, worded
- * by the options' `message`, and `accept` runs the checks on a value once every child has passed.
- * Issues a child found are never worded here, since they are the child's.
+ * by the options' `message`, and `accept` runs the checks on a value once every child has passed, and
+ * words what a check found without a message of its own. Issues a child found are never worded here,
+ * since they are the child's.
  */
 export function tail<TOptions extends MessageOptions, T>(
   args: readonly unknown[],
@@ -134,6 +142,6 @@ export function tail<TOptions extends MessageOptions, T>(
   return [
     options,
     (issues) => failWith(word(issues, options.message)),
-    (value) => finish(value, [], undefined, checks),
+    (value) => finish(value, [], options.message, checks),
   ];
 }

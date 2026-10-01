@@ -48,6 +48,13 @@ const sizeOf = (prototype: object, value: unknown): number | undefined => {
   return brand(() => getter?.call(value));
 };
 
+/**
+ * Tests whether a value is an instance of a class with `instanceof`. A value the test throws for, such
+ * as a revoked proxy or a proxy whose prototype trap throws, is not one.
+ */
+export const isInstance = (value: unknown, target: abstract new (...args: never[]) => unknown): boolean =>
+  brand(() => value instanceof target) === true;
+
 /** Tests whether a value is an array, in any realm. A revoked proxy, whose test throws, is not one. */
 export const isArray = (value: unknown): value is unknown[] => brand(() => Array.isArray(value)) === true;
 

@@ -1,5 +1,5 @@
 import { split } from "../core/checks";
-import { assertSize } from "../core/result";
+import { assertOption, assertSize } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
 import { isCalendarDate } from "./calendar";
 import { stringFormat } from "./text-format";
@@ -48,10 +48,12 @@ export interface DatetimeOptions extends MessageOptions {
  * datetime({ offset: true })("2026-09-28T14:30:00+02:00"); // { ok: true, ... }
  * ```
  *
+ * @throws {TypeError} When `offset` is not a boolean.
  * @throws {RangeError} When `precision` is not an integer from 0 to 9.
  */
 export const datetime = ((...args: unknown[]) => {
   const [{ offset, precision, message }, checks] = split<DatetimeOptions, string>(args);
+  assertOption("offset", offset, "boolean");
   const fraction = fractionPattern(precision);
   const zone = offset === true ? "(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)" : "Z";
   const pattern = new RegExp(`^(\\d{4}-\\d{2}-\\d{2})T${TIME}${fraction}${zone}$`);

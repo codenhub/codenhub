@@ -1,4 +1,5 @@
 import { split } from "../core/checks";
+import { assertOption } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
 import { stringFormat } from "./text-format";
 
@@ -33,9 +34,12 @@ export interface Base64Options extends MessageOptions {
  * base64()("aGVsbG8"); // { ok: false, ... }, code "invalid_format"
  * base64({ url: true })("aGVsbG8"); // { ok: true, ... }, padding is optional in the URL-safe alphabet
  * ```
+ *
+ * @throws {TypeError} When `url` is not a boolean.
  */
 export const base64 = ((...args: unknown[]) => {
   const [{ url, message }, checks] = split<Base64Options, string>(args);
+  assertOption("url", url, "boolean");
   const pattern = url === true ? BASE64URL_PATTERN : BASE64_PATTERN;
   return stringFormat(
     url === true ? "base64url" : "base64",

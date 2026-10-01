@@ -9,7 +9,7 @@ const FORMAT_NAMES: Readonly<Record<string, string>> = {
   ipv4: "IPv4 address",
   ipv6: "IPv6 address",
   datetime: "datetime",
-  date: "date",
+  isoDate: "date",
   base64: "base64 string",
   hex: "hexadecimal string",
   hostname: "hostname",
@@ -76,8 +76,14 @@ const describeLimit = ({ code, params }: ValidationIssue): string => {
   return unit === undefined ? `Must be ${wording} ${bound}` : `Must be ${wording} ${bound} ${counted(limit)}`;
 };
 
-const describeFormat = (issue: ValidationIssue): string => {
+const describeFormat = (issue: ValidationIssue, messages: Messages): string => {
   const format = param(issue, "format");
+  const name = FORMAT_NAMES[format] ?? format;
+  // A part of a URL or an address that failed is worded with what its validator found first.
+  const [found] = (issue.params?.["issues"] ?? []) as readonly ValidationIssue[];
+  if (found !== undefined) {
+    return `Invalid ${name} ${param(issue, "part")}: ${formatIssue(found, messages)}`;
+  }
   switch (format) {
     case "regex":
       return `Must match ${param(issue, "pattern")}`;
@@ -92,7 +98,7 @@ const describeFormat = (issue: ValidationIssue): string => {
     case "uppercase":
       return "Must be uppercase";
     default:
-      return `Invalid ${FORMAT_NAMES[format] ?? format}`;
+      return `Invalid ${name}`;
   }
 };
 
@@ -103,10 +109,9 @@ const describeValue = (issue: ValidationIssue): string => {
   if (Array.isArray(issue.params?.options)) {
     return `Expected one of ${issue.params.options.map(formatValue).join(", ")}`;
   }
-  if (issue.params?.multipleOf !== undefined) {
-    return `Must be a multiple of ${param(issue, "multipleOf")}`;
-  }
   switch (issue.params?.format) {
+    case "multipleOf":
+      return `Must be a multiple of ${param(issue, "value")}`;
     case "int":
       return "Must be an integer";
     case "safeInt":

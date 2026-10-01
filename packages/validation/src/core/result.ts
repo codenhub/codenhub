@@ -86,7 +86,8 @@ export const issue = (
 /**
  * Adds the issues a child found to its parent's list, one level down under `segment`. It pushes one
  * by one because spreading a long list into `push` passes each as an argument, which overflows the
- * stack past about 120,000 issues and would turn bad input into an exception.
+ * stack past about 120,000 issues and would turn bad input into an exception. An issue from a validator
+ * written by hand without a path is at the child itself.
  */
 export function collectNested(
   target: ValidationIssue[],
@@ -94,7 +95,7 @@ export function collectNested(
   segment: ValidationPathSegment,
 ): void {
   for (const issue of issues) {
-    target.push({ ...issue, path: [segment, ...issue.path] });
+    target.push({ ...issue, path: [segment, ...(issue.path ?? [])] });
   }
 }
 
@@ -179,6 +180,16 @@ export function assertBounds<T extends number | bigint>({
 export function assertFunction(name: string, value: unknown): void {
   if (typeof value !== "function") {
     throw new TypeError(`${name} must be a function, received ${value === null ? "null" : typeof value}`);
+  }
+}
+
+/**
+ * Rejects an option of the wrong type, such as `int: "yes"`, which would otherwise be read as another
+ * value or ignored, since it is a mistake in the schema and not in the input. Undefined is no option.
+ */
+export function assertOption(name: string, value: unknown, type: "boolean" | "number" | "bigint"): void {
+  if (value !== undefined && typeof value !== type) {
+    throw new TypeError(`${name} must be a ${type}, received ${value === null ? "null" : typeof value}`);
   }
 }
 

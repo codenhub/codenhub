@@ -92,9 +92,11 @@ export declare function email(options: EmailOptions, ...checks: AsyncCheck<strin
 
 Creates a validator for email addresses with a public domain name, which may be internationalized.
 
-The value is the address as mail is delivered to it: the local part as written, and the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode. So `Ada@München.DE` is `Ada@xn--mnchen-3ya.de`, and every spelling that names one domain, such as fullwidth letters or an invisible variation selector, gives one address. The local part must be ASCII: addresses with letters beyond it (RFC 6531) are rejected. Surrounding whitespace is not trimmed; trim first with `pipe` when the input may need it. The `domain` and `local` options check those parts with validators of your own, which make the validator asynchronous when one is.
+The value is the address as mail is delivered to it: the local part as written, and the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode. So `Ada@München.DE` is `Ada@xn--mnchen-3ya.de`, and every spelling that names one domain, such as fullwidth letters or an invisible variation selector, gives one address. The local part must be ASCII: addresses with letters beyond it (RFC 6531) are rejected. Surrounding whitespace is not trimmed; trim first with `pipe` when the input may need it. The `domain` and `local` options check those parts with validators of your own, which make the validator asynchronous when one is. A part that fails is one `invalid_format` issue at the address's own place, `{ format: "email", part, issues }`, so a form shows it beside the field, and the `message` option words it.
 
 **Returns** — A validator that produces the address, its domain as the parser reads it.
+
+**Throws** — When `domain` or `local` is not a function, or `allowPlus` is not a boolean.
 
 **Example**
 
@@ -606,7 +608,7 @@ export declare function multipleOf(step: number, message?: Message): Check<numbe
 
 Requires a number that is a multiple of a step.
 
-Both are compared as the decimals they are written as, so `0.3` is a multiple of `0.1` at any size. A value computed in floating point, such as `0.1 + 0.2`, is compared as the number it actually is, `0.30000000000000004`. It fails with `invalid_value` and `params` `{ type: "number", multipleOf }`.
+Both are compared as the decimals they are written as, so `0.3` is a multiple of `0.1` at any size. A value computed in floating point, such as `0.1 + 0.2`, is compared as the number it actually is, `0.30000000000000004`. It fails with `invalid_value` and `params` `{ type: "number", format: "multipleOf", value }`, the `value` being the step.
 
 **Parameters**
 
@@ -973,7 +975,7 @@ The parameters are read as `URLSearchParams` reads them, `+` as a space and esca
 
 **Returns** — A validator that produces what `validator` produces.
 
-**Throws** — When `validator` or a check is not a function.
+**Throws** — When `validator` or a check is not a function, or `repeated` is not a boolean.
 
 **Example**
 
@@ -1234,6 +1236,8 @@ Without `by` it compares the validated items themselves; with it, the value `by`
 
 **Returns** — A check of arrays.
 
+**Throws** — When `by` is given and is not a function, such as a message in its place: a message alone is `unique(undefined, message)`.
+
 **Example**
 
 ```ts
@@ -1274,11 +1278,11 @@ Creates a validator for absolute URLs with an allowed protocol and a public doma
 
 The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected.
 
-The `host`, `port`, `path` and `query` options check those parts with validators of your own, which only decide: the value is still the whole URL, and one that is asynchronous makes the validator asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules.
+The `host`, `port`, `path` and `query` options check those parts with validators of your own, which only decide: the value is still the whole URL, and one that is asynchronous makes the validator asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules. A part that fails is one `invalid_format` issue at the URL's own place, `{ format: "url", part, issues }`, so a form shows it beside the field, and the `message` option words it as every other issue of the URL.
 
 **Returns** — A validator that produces the URL as the parser writes it.
 
-**Throws** — When a protocol is not a scheme name, for instance `"https:"` with its colon, or is `javascript`, `vbscript` or `data`, whose URLs run script.
+**Throws** — When `protocols` is not a non-empty list, a protocol is not a scheme name, for instance `"https:"` with its colon, or is `javascript`, `vbscript` or `data`, whose URLs run script, a part validator is not a function, or `repeated` is not a boolean.
 
 **Example**
 
@@ -1457,7 +1461,7 @@ Accepts `+` in the local part, as in `me+tag@example.com`.
 domain?: AnyValidator;
 ```
 
-Validates the domain instead of the default rule, that it is a public domain name. It receives the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode, and the domain must still be a hostname: `email({ domain: hostname() })` accepts `ada@localhost`, and `email({ domain: oneOf(["example.com"]) })` accepts that domain alone. Its issues are placed under `["domain"]`.
+Validates the domain instead of the default rule, that it is a public domain name. It receives the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode, and the domain must still be a hostname: `email({ domain: hostname() })` accepts `ada@localhost`, and `email({ domain: oneOf(["example.com"]) })` accepts that domain alone. Its failure is reported as the address's, with `params.part` `"domain"`.
 
 #### local
 
@@ -1465,7 +1469,7 @@ Validates the domain instead of the default rule, that it is a public domain nam
 local?: AnyValidator;
 ```
 
-Validates the local part, the text before the `@`, as written. Its issues are placed under `["local"]`.
+Validates the local part, the text before the `@`, as written. Its failure is reported as the address's, with `params.part` `"local"`.
 
 #### message
 
@@ -2071,7 +2075,7 @@ Options for [url](#url).
 host?: AnyValidator;
 ```
 
-Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its issues are placed under `["host"]`.
+Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part` `"host"`.
 
 #### message
 
@@ -2083,7 +2087,7 @@ Inherited from [MessageOptions](#messageoptions).
 path?: AnyValidator;
 ```
 
-Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, always starting with `/`. Its issues are placed under `["path"]`.
+Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, always starting with `/`. Its failure is reported as the URL's, with `params.part` `"path"`.
 
 #### port
 
@@ -2091,7 +2095,7 @@ Validates the path as the parser writes it: dot segments resolved and characters
 port?: AnyValidator;
 ```
 
-Validates the port, a number, or `undefined` when the URL names none or names its scheme's default, which the parser drops. So `port: optional(port())` accepts either, and `port: literal(8080)` requires it. Its issues are placed under `["port"]`.
+Validates the port, a number, or `undefined` when the URL names none or names its scheme's default, which the parser drops. So `port: optional(port())` accepts either, and `port: literal(8080)` requires it. Its failure is reported as the URL's, with `params.part` `"port"`.
 
 #### protocols
 
@@ -2107,7 +2111,7 @@ Accepted protocols, without the colon, in any letter case. Of the schemes withou
 query?: AnyValidator;
 ```
 
-Validates the query, as an object of its decoded parameters: each key's value as a string, or with `repeated` every value of every key as an array. A key given twice fails at `["query", key]` unless `repeated` is set. Its issues are placed under `["query"]`. To reject parameters it does not list, give it `object(shape, { unknownKeys: "strict" })`.
+Validates the query, as an object of its decoded parameters: each key's value as a string, or with `repeated` every value of every key as an array. A key given twice fails at `[key]` inside the query unless `repeated` is set. Its failure is reported as the URL's, with `params.part` `"query"` and paths relative to the query in `params.issues`. To reject parameters it does not list, give it `object(shape, { unknownKeys: "strict" })`.
 
 #### repeated
 
@@ -2524,6 +2528,8 @@ export declare const base64: Factory<string, Base64Options>;
 
 Creates a validator for base64 as an encoder writes it: the bits past the last byte are zero, and the standard alphabet is correctly padded. An empty string, which encodes nothing, is rejected, as `hex` rejects one. The value is not modified.
 
+**Throws** — When `url` is not a boolean.
+
 **Example**
 
 ```ts
@@ -2540,7 +2546,10 @@ export declare const bigint: Factory<bigint, BigintOptions>;
 
 Creates a validator for bigints. Numbers are rejected, including whole ones.
 
-**Throws** — When no bigint can satisfy the bounds together.
+**Throws**
+
+- When a bound is not a bigint, such as the number `0` where `0n` was meant.
+- When no bigint can satisfy the bounds together.
 
 **Example**
 
@@ -2633,9 +2642,9 @@ coerceBoolean()("maybe"); // { ok: false, ... }, code "invalid_type"
 export declare const coerceDate: Factory<Date, DateOptions>;
 ```
 
-Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [date](#date).
+Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28`, `2026-09-28T14:30` from an HTML `datetime-local` input, or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [date](#date).
 
-Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM:SS`, an optional fraction and an optional zone: `Z`, or an offset written `+HH`, `+HHMM` or `+HH:MM`. That is wider than `datetime`, which checks one exact spelling. Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`. Fractions of a second beyond milliseconds are cut, not rounded. A date without a time and a date-time without an offset are both read as UTC, so the result never depends on the timezone of the machine. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM` or `HH:MM:SS` with an optional fraction, and an optional zone: `Z`, or an offset written `+HH`, `+HHMM` or `+HH:MM`. That is wider than `datetime`, which checks one exact spelling. Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`. Fractions of a second beyond milliseconds are cut, not rounded. A date without a time and a date-time without an offset are both read as UTC, so the result never depends on the timezone of the machine. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
 
 **Returns** — A validator that produces a `Date`.
 
@@ -2756,7 +2765,10 @@ export declare const datetime: Factory<string, DatetimeOptions>;
 
 Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a day that exists. The value is not modified.
 
-**Throws** — When `precision` is not an integer from 0 to 9.
+**Throws**
+
+- When `offset` is not a boolean.
+- When `precision` is not an integer from 0 to 9.
 
 **Example**
 
@@ -2838,12 +2850,13 @@ hex()("xyz"); // { ok: false, ... }, code "invalid_format"
 export declare const hostname: Factory<string, MessageOptions>;
 ```
 
-Creates a validator for hostnames: dot-separated labels of letters, digits and hyphens, at most 253 characters, whose last label is not a number, all digits or `0x` and hex digits, since the URL parser reads a name that ends that way as an IPv4 address (`0x7f000001` is `127.0.0.1`), and whose punycode labels, such as `xn--mnchen-3ya`, decode. An absolute name ending in one dot, such as `example.com.`, is accepted. Unlike `url`, single-label hosts such as `localhost` are accepted. The value is not modified.
+Creates a validator for hostnames: dot-separated labels of letters, digits and hyphens, at most 253 characters, whose last label is not a number, all digits or `0x` and hex digits, since the URL parser reads a name that ends that way as an IPv4 address (`0x7f000001` is `127.0.0.1`), and whose punycode labels, such as `xn--mnchen-3ya`, decode. An absolute name ending in one dot, such as `example.com.`, is accepted. Unlike `url`, single-label hosts such as `localhost` are accepted. The value is the hostname in lowercase, since letter case does not change the host it names, so one host is one value however it was written; an absolute name keeps its dot.
 
 **Example**
 
 ```ts
 hostname()("localhost"); // { ok: true, value: "localhost" }
+hostname()("Intranet.Example"); // { ok: true, value: "intranet.example" }
 hostname()("-bad.com"); // { ok: false, ... }, code "invalid_format"
 ```
 
@@ -2873,7 +2886,7 @@ ip({ version: "v6" })("192.168.0.1"); // { ok: false, ... }, params { format: "i
 export declare const isoDate: Factory<string, MessageOptions>;
 ```
 
-Creates a validator for ISO 8601 calendar dates such as `2026-09-28`, on a day that exists. The value is a string and is not modified; to get a `Date`, use `date`.
+Creates a validator for ISO 8601 calendar dates such as `2026-09-28`, on a day that exists. The value is a string and is not modified; to get a `Date`, use `coerceDate`. Text that is not one fails with `invalid_format` and `{ format: "isoDate" }`.
 
 **Example**
 
@@ -2953,7 +2966,10 @@ Creates a validator for finite numbers. `NaN` and the infinities are always reje
 
 `clamp` runs first, then every constraint and every check runs on the clamped number, and each failing one reports its own issue.
 
-**Throws** — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and reject every input.
+**Throws**
+
+- When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` lacks a number `min` or `max`.
+- When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and reject every input.
 
 **Example**
 
@@ -3040,7 +3056,7 @@ Creates a validator for strings.
 **Throws**
 
 - When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
-- When `case` is not `"lower"` or `"upper"`, or a check is not a function.
+- When `case` is not `"lower"` or `"upper"`, `trim` is not a boolean, or a check is not a function.
 
 **Example**
 
@@ -3090,12 +3106,13 @@ time({ precision: 0 })("09:15"); // { ok: false, ... }: the seconds are required
 export declare const ulid: Factory<string, MessageOptions>;
 ```
 
-Creates a validator for ULIDs in any letter case. The value is not modified.
+Creates a validator for ULIDs in any letter case. The value is the ULID in uppercase, the form its specification writes, so one ULID is one value however it was written.
 
 **Example**
 
 ```ts
 ulid()("01ARZ3NDEKTSV4RRFFQ69G5FAV"); // { ok: true, value: "01ARZ3NDEKTSV4RRFFQ69G5FAV" }
+ulid()("01arz3ndektsv4rrffq69g5fav"); // { ok: true, value: "01ARZ3NDEKTSV4RRFFQ69G5FAV" }
 ulid()("01ARZ3NDEKTSV4RRFFQ69G5FAU!"); // { ok: false, ... }, code "invalid_format"
 ```
 
@@ -3120,7 +3137,7 @@ const serializable = unknown(check((value) => JSON.stringify(value) !== undefine
 export declare const uuid: Factory<string, UuidOptions>;
 ```
 
-Creates a validator for UUIDs of version 1 to 8 in hyphenated form, in any letter case, and the nil and max UUIDs. The value is not modified.
+Creates a validator for UUIDs of version 1 to 8 in hyphenated form, in any letter case, and the nil and max UUIDs. The value is the UUID in lowercase, the form RFC 9562 writes, so one UUID is one value however it was written.
 
 **Throws** — When `version` is not an integer from 1 to 8.
 
@@ -3128,6 +3145,7 @@ Creates a validator for UUIDs of version 1 to 8 in hyphenated form, in any lette
 
 ```ts
 uuid()("123e4567-e89b-12d3-a456-426614174000"); // { ok: true, value: "123e4567-e89b-12d3-a456-426614174000" }
+uuid()("123E4567-E89B-12D3-A456-426614174000"); // { ok: true, value: "123e4567-e89b-12d3-a456-426614174000" }
 uuid()("00000000-0000-0000-0000-000000000000"); // { ok: true, ... }, the nil UUID
 uuid({ version: 7 })("123e4567-e89b-12d3-a456-426614174000"); // { ok: false, ... }, a version 1 UUID
 ```

@@ -29,7 +29,8 @@ const isMultipleOf = (value: number, step: number): boolean => {
  * @remarks
  * Both are compared as the decimals they are written as, so `0.3` is a multiple of `0.1` at any size. A
  * value computed in floating point, such as `0.1 + 0.2`, is compared as the number it actually is,
- * `0.30000000000000004`. It fails with `invalid_value` and `params` `{ type: "number", multipleOf }`.
+ * `0.30000000000000004`. It fails with `invalid_value` and `params` `{ type: "number", format: "multipleOf", value }`, the
+ * `value` being the step.
  *
  * @example
  * ```ts
@@ -45,5 +46,10 @@ export function multipleOf(step: number, message?: Message): Check<number> {
   if (!Number.isFinite(step) || step <= 0) {
     throw new RangeError(`multipleOf needs a positive finite number, received ${step}`);
   }
-  return rule((value) => isMultipleOf(value, step), "invalid_value", { type: "number", multipleOf: step }, message);
+  return rule(
+    (value) => isMultipleOf(value, step),
+    "invalid_value",
+    { type: "number", format: "multipleOf", value: step },
+    message,
+  );
 }
