@@ -76,7 +76,7 @@ Write a rule of your own with `check`, including one that needs to `await` somet
 
 ## Requirements
 
-- Node.js 22 or newer, or a current browser, worker or edge runtime. The code relies on `Object.hasOwn`, and `url()` on `URL.canParse`.
+- Node.js 22 or newer, or a current browser, worker or edge runtime. The code relies on `Object.hasOwn`, and `url()`, `email()`, `domain()` and `hostname()` on `URL.canParse`, which a runtime without it, such as Safari before 17, lacks, so they throw there. `ip()` and `cidr()` use the `URL` parser too.
 - ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`, so a bundler removes the validators you do not import. CommonJS code can `require()` it on Node.js 22.12 or newer, which load ES modules that way.
 
 Runtime code uses only standard JavaScript and the standard `URL` global, and nothing specific to a browser or to Node.js, so it runs in the browser, on the server and in workers.
