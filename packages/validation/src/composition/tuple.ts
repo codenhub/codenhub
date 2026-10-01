@@ -1,7 +1,7 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { isArray } from "../core/objects";
-import { assertFunction, assertList, issue, typeIssue } from "../core/result";
+import { assertFunction, assertList, assertOrder, assertSize, issue, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -31,6 +31,11 @@ export type InferTuple<
 export interface TupleOptions<TRest extends AnyValidator | undefined = undefined> extends MessageOptions {
   /** Validator for every position after the fixed ones. Without it the array must be exactly as long as the tuple. */
   rest?: TRest;
+  /**
+   * The most items the array may hold, the fixed ones included, a non-negative integer no smaller than
+   * their number. Only with `rest`, since without it the length is fixed.
+   */
+  max?: TRest extends AnyValidator ? number : never;
 }
 
 /**
@@ -38,7 +43,9 @@ export interface TupleOptions<TRest extends AnyValidator | undefined = undefined
  *
  * @remarks
  * A wrong length is reported at once, without validating the items. With `rest`, the array may be
- * longer, and every extra item must pass it. Each issue's path leads through the item's index.
+ * longer, and every extra item must pass it; `max` caps how long, the fixed items included, and a longer
+ * array fails with `too_big` and `{ maximum, type: "array" }`. Each issue's path leads through the item's
+ * index.
  *
  * @example
  * ```ts
@@ -46,16 +53,18 @@ export interface TupleOptions<TRest extends AnyValidator | undefined = undefined
  * point([1, 2]); // { ok: true, value: [1, 2] }
  * point([1]); // { ok: false, ... }, code "too_small"
  *
- * const args = tuple([string()], { rest: number() });
+ * const args = tuple([string()], { rest: number(), max: 10 });
  * args(["sum", 1, 2, 3]); // { ok: true, ... }
  * ```
  *
  * @typeParam TItems - The validators of the fixed positions, at least one.
  * @typeParam TRest - The validator of the remaining positions.
  * @param items - One validator per position.
- * @param rest - The validator for extra positions, then checks.
+ * @param rest - The validator for extra positions and the most items in all, then checks.
  * @returns A validator that produces a tuple.
- * @throws {TypeError} When `items` is not a list or is empty, or an item or `rest` is not a function.
+ * @throws {TypeError} When `items` is not a list or is empty, an item or `rest` is not a function, `max`
+ * is not a number, or `max` is given without `rest`.
+ * @throws {RangeError} When `max` is not a non-negative integer, or is less than the number of fixed items.
  */
 export function tuple<
   const TItems extends readonly [AnyValidator, ...AnyValidator[]],
@@ -73,7 +82,7 @@ export function tuple<
 ): AsyncValidator<InferTuple<TItems, TRest>>;
 export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyValidator {
   const [options, reject, accept] = tail<TupleOptions<AnyValidator | undefined>, unknown[]>(args);
-  const { rest } = options;
+  const { rest, max } = options;
   assertList("items", items);
   // Copied, so changing the list after the validator is made changes nothing.
   const fixed = [...items];
@@ -86,12 +95,22 @@ export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyVa
     assertFunction("rest", rest);
   }
   const { length } = fixed;
+  if (max !== undefined) {
+    if (rest === undefined) {
+      throw new TypeError("max needs rest, since the length is otherwise fixed");
+    }
+    assertSize("max", max);
+    assertOrder("the fixed items", length, "max", max);
+  }
 
   return (input: unknown): Maybe<ValidationResult<unknown>> => {
     if (!isArray(input)) {
       return reject([typeIssue("array", input)]);
     }
     const size = input.length;
+    if (max !== undefined && size > max) {
+      return reject([issue("too_big", { maximum: max, type: "array" })]);
+    }
     if (size < length || (rest === undefined && size > length)) {
       const isShort = size < length;
       return reject([

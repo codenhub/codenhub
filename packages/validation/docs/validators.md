@@ -335,13 +335,13 @@ tags(["a", "a"]); // fails: invalid_value at path [1]
 
 ### `tuple`
 
-`tuple(items, options?)` accepts arrays of fixed length in which each position has its own validator, and produces a tuple type. Without `rest` the array must be exactly as long as `items`, and a wrong length fails with `too_small` and `{ minimum, type: "array", exact: true }`, or `too_big` and `{ maximum, type: "array", exact: true }`. With `rest` the array must still have at least as many items as `items`, and only `too_small` is possible, without `exact`. The `rest` option is a validator for every position after the fixed ones, which lets the array be longer.
+`tuple(items, options?)` accepts arrays of fixed length in which each position has its own validator, and produces a tuple type. Without `rest` the array must be exactly as long as `items`, and a wrong length fails with `too_small` and `{ minimum, type: "array", exact: true }`, or `too_big` and `{ maximum, type: "array", exact: true }`. With `rest` the array must still have at least as many items as `items`, and fails with `too_small` without `exact` when it has fewer. The `rest` option is a validator for every position after the fixed ones, which lets the array be longer, and `max`, allowed only with `rest`, caps how long, the fixed items included: a longer array fails at once with `too_big` and `{ maximum, type: "array" }`, without validating the items. Give untrusted input a `max`, as you would an `array`.
 
 ```ts
 import { number, string, tuple } from "@codenhub/validation";
 
 const point = tuple([number(), number()]); // [number, number]
-const call = tuple([string()], { rest: number() }); // [string, ...number[]]
+const call = tuple([string()], { rest: number(), max: 10 }); // [string, ...number[]], at most 10 items
 ```
 
 ### `record`

@@ -1012,13 +1012,13 @@ tags(["a", "a"]); // fails: invalid_value at path [1]
 
 ### `tuple`
 
-`tuple(items, options?)` accepts arrays of fixed length in which each position has its own validator, and produces a tuple type. Without `rest` the array must be exactly as long as `items`, and a wrong length fails with `too_small` and `{ minimum, type: "array", exact: true }`, or `too_big` and `{ maximum, type: "array", exact: true }`. With `rest` the array must still have at least as many items as `items`, and only `too_small` is possible, without `exact`. The `rest` option is a validator for every position after the fixed ones, which lets the array be longer.
+`tuple(items, options?)` accepts arrays of fixed length in which each position has its own validator, and produces a tuple type. Without `rest` the array must be exactly as long as `items`, and a wrong length fails with `too_small` and `{ minimum, type: "array", exact: true }`, or `too_big` and `{ maximum, type: "array", exact: true }`. With `rest` the array must still have at least as many items as `items`, and fails with `too_small` without `exact` when it has fewer. The `rest` option is a validator for every position after the fixed ones, which lets the array be longer, and `max`, allowed only with `rest`, caps how long, the fixed items included: a longer array fails at once with `too_big` and `{ maximum, type: "array" }`, without validating the items. Give untrusted input a `max`, as you would an `array`.
 
 ```ts
 import { number, string, tuple } from "@codenhub/validation";
 
 const point = tuple([number(), number()]); // [number, number]
-const call = tuple([string()], { rest: number() }); // [string, ...number[]]
+const call = tuple([string()], { rest: number(), max: 10 }); // [string, ...number[]], at most 10 items
 ```
 
 ### `record`
@@ -1242,6 +1242,7 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 - Formats: `phone` (E.164), `slug`, `semver`, `jwt` (its structure), `creditCard` (the Luhn checksum), `cidr`, `mac`, `time` and `duration`, with `base64({ url: true })` for base64url, `uuid({ version })` for one version, and `datetime({ local: true })` for a date-time without a zone, such as an HTML `datetime-local` value.
 - `symbol()`, and `oneOf` over a TypeScript `enum`.
 - `optional(validator, value)`, which replaces a missing value with a default.
+- `tuple(items, { rest, max })`: `max` caps the length of a tuple with `rest`, the fixed items included, so untrusted input can be bounded as an `array` is.
 - English wording for every new format and check in `englishMessages`.
 
 ## Changed

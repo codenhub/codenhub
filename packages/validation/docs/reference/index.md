@@ -1170,12 +1170,12 @@ export declare function tuple<const TItems extends readonly [AnyValidator, ...An
 
 Creates a validator for arrays of fixed length whose items each have their own validator.
 
-A wrong length is reported at once, without validating the items. With `rest`, the array may be longer, and every extra item must pass it. Each issue's path leads through the item's index.
+A wrong length is reported at once, without validating the items. With `rest`, the array may be longer, and every extra item must pass it; `max` caps how long, the fixed items included, and a longer array fails with `too_big` and `{ maximum, type: "array" }`. Each issue's path leads through the item's index.
 
 **Parameters**
 
 - `items` — One validator per position.
-- `rest` — The validator for extra positions, then checks.
+- `rest` — The validator for extra positions and the most items in all, then checks.
 
 **Type parameters**
 
@@ -1184,7 +1184,10 @@ A wrong length is reported at once, without validating the items. With `rest`, t
 
 **Returns** — A validator that produces a tuple.
 
-**Throws** — When `items` is not a list or is empty, or an item or `rest` is not a function.
+**Throws**
+
+- When `items` is not a list or is empty, an item or `rest` is not a function, `max` is not a number, or `max` is given without `rest`.
+- When `max` is not a non-negative integer, or is less than the number of fixed items.
 
 **Example**
 
@@ -1193,7 +1196,7 @@ const point = tuple([number(), number()]);
 point([1, 2]); // { ok: true, value: [1, 2] }
 point([1]); // { ok: false, ... }, code "too_small"
 
-const args = tuple([string()], { rest: number() });
+const args = tuple([string()], { rest: number(), max: 10 });
 args(["sum", 1, 2, 3]); // { ok: true, ... }
 ```
 
@@ -2070,6 +2073,14 @@ export interface TupleOptions<TRest extends AnyValidator | undefined = undefined
 ```
 
 Options for [tuple](#tuple).
+
+#### max
+
+```ts
+max?: TRest extends AnyValidator ? number : never;
+```
+
+The most items the array may hold, the fixed ones included, a non-negative integer no smaller than their number. Only with `rest`, since without it the length is fixed.
 
 #### message
 

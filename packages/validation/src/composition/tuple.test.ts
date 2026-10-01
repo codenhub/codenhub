@@ -52,6 +52,38 @@ describe("tuple", () => {
     });
   });
 
+  describe("max", () => {
+    const capped = tuple([string()], { rest: number(), max: 3 });
+
+    it("should cap the length, fixed items included", () => {
+      expect(accepts(capped, ["a"], ["a", 1, 2], ["a", 1, 2, 3])).toEqual([true, true, false]);
+    });
+
+    it("should report a longer array at once, as too_big, without validating the items", () => {
+      expect(issuesOf(capped([1, "x", "y", "z"]))).toEqual([
+        { code: "too_big", path: [], params: { maximum: 3, type: "array" } },
+      ]);
+    });
+
+    it("should word that issue with its message", () => {
+      const worded = tuple([string()], { rest: number(), max: 1, message: "Too many" });
+      expect(issuesOf(worded(["a", 1]))[0]?.message).toBe("Too many");
+    });
+
+    it("should reject max without rest when it is created, since the length is then fixed", () => {
+      // @ts-expect-error -- max needs rest
+      expect(() => tuple([string()], { max: 3 })).toThrow(
+        new TypeError("max needs rest, since the length is otherwise fixed"),
+      );
+    });
+
+    it("should reject a max no array of the fixed items can satisfy, or that is not a size, when it is created", () => {
+      expect(() => tuple([string(), string()], { rest: number(), max: 1 })).toThrow(RangeError);
+      expect(() => tuple([string()], { rest: number(), max: 1.5 })).toThrow(RangeError);
+      expect(() => tuple([string()], { rest: number(), max: "3" as never })).toThrow(TypeError);
+    });
+  });
+
   it("should treat sparse array holes as undefined instead of skipping them", () => {
     const sparse: unknown[] = [1];
     sparse.length = 2;
