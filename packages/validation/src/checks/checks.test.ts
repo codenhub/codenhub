@@ -70,6 +70,12 @@ describe("multipleOf", () => {
     expect(accepts(number(multipleOf(0.3)), 1e16)).toEqual([false]);
   });
 
+  it("should read a whole number past the safe integers as it is written, as it does a fraction", () => {
+    // 1e23 is held as 99999999999999991611392, which is not a multiple of 10, though 1e23 is.
+    expect(accepts(number(multipleOf(10)), 1e23)).toEqual([true]);
+    expect(accepts(number(multipleOf(0.5)), 1e23)).toEqual([true]);
+  });
+
   it("should reject a step that is not a number when it is created, as a TypeError", () => {
     expect(() => multipleOf("0.1" as never)).toThrow(new TypeError("multipleOf needs a number, received string"));
   });

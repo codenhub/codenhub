@@ -416,7 +416,7 @@ The built-in checks, each its own import, take their message last:
 | `nonZero()`        | numbers | Anything but zero.                                                                                                  | `invalid_value`, `{ type: "number", format: "nonZero" }`           |
 | `unique(by?)`      | arrays  | Distinct items, [above](#array).                                                                                    | `invalid_value`, `{ unique: true }`, at each repeat's index        |
 
-A `pattern` that is not a regular expression, and a `multipleOf` step that is not a positive finite number, throw when the check is made. `multipleOf` is exact at any size, but a number computed in floating point is not always the decimal it looks like: `0.1 + 0.2` is `0.30000000000000004`, which is not a multiple of `0.1`.
+A `pattern` that is not a regular expression, and a `multipleOf` step that is not a positive finite number, throw when the check is made. `multipleOf` is exact for every number as it is written, the shortest text that reads back as it, which is what JSON carries. Past `Number.MAX_SAFE_INTEGER` that text is not always the number the double holds: `2 ** 60` is written `1152921504606847000`, so it is not a multiple of `1024`, though `1e23` is one of `10`. A number computed in floating point is not always the decimal it looks like: `0.1 + 0.2` is `0.30000000000000004`, which is not a multiple of `0.1`.
 
 `check(test, issue?)` makes a check of your own; [Custom validators](custom-validators.md) covers it and the other builders. A check that returns a promise makes its validator asynchronous.
 
