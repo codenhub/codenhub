@@ -164,6 +164,20 @@ describe("object", () => {
       expect(Object.hasOwn(valueOf(await pending), "nickname")).toBe(false);
     });
 
+    it("should read the input before a property's validator can change it", async () => {
+      const input: Record<string, unknown> = { username: "ada", nickname: "a", extra: "before" };
+      const changing: Validator<string> = (value) => {
+        input["extra"] = "after";
+        input["nickname"] = 1;
+        return pass(value as string);
+      };
+      const passthrough = object(
+        { username: changing, nickname: string(), slow: optional(isFree) },
+        { unknownKeys: "passthrough" },
+      );
+      expect(valueOf(await passthrough(input))).toEqual({ username: "ada", nickname: "a", extra: "before" });
+    });
+
     it("should return the validated value once the promises resolve", async () => {
       const result = await object({ username: isFree })({ username: "ada" });
       expect(valueOf(result)).toEqual({ username: "ada" });

@@ -115,18 +115,17 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
       word(issues, options.message);
     }
 
-    // Everything the output takes from the input is read now, so a child that waits cannot let a later
-    // change to the input reach the output.
+    // Everything the output takes from the input is read before any child runs, so neither a child that
+    // changes the input nor a change made while one waits can reach the output.
     const present = keys.map((key) => Object.hasOwn(input, key));
-    const results = keys.map((key, index) =>
-      (validators[index] as AnyValidator)(present[index] ? input[key] : undefined),
-    );
+    const values = keys.map((key, index) => (present[index] ? input[key] : undefined));
     const extra =
       unknownKeys === "passthrough"
         ? Object.keys(input)
             .filter((key) => !known.has(key))
             .map((key) => [key, input[key]] as const)
         : [];
+    const results = values.map((value, index) => (validators[index] as AnyValidator)(value));
     return chain(collect(results), (settled) => {
       const output: Record<string, unknown> = {};
       settled.forEach((result, index) => {
