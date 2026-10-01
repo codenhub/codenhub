@@ -235,7 +235,7 @@ Every type a public signature names is exported, since `hub check` requires it a
 
 An `object` output type is built with `Simplify`, so hover text shows one object, and a property whose validator can produce `undefined` becomes optional in it.
 
-`tests/integration/consumer-types.test.ts` compiles `tests/integration/fixtures/consumer.ts` against `dist/index.d.ts` with `skipLibCheck: false`. The fixture uses `@ts-expect-error` for lines that must fail, so a declaration that becomes too permissive breaks the test as surely as one that becomes too strict. Unit tests import from source and cannot see what a consumer sees; this is the test that can. It needs `dist/`, which `hub test` builds first.
+`tests/integration/consumer-types.test.ts` compiles `tests/integration/fixtures/consumer.ts` against `dist/index.d.ts` with `skipLibCheck: false`. The fixture uses `@ts-expect-error` for lines that must fail, so a declaration that becomes too permissive breaks the test as surely as one that becomes too strict. Unit tests import from source and cannot see what a consumer sees; this is the test that can. It needs `dist/`, which `hub test` builds first. `tests/integration/doc-examples.test.ts` holds the public docs to the same declarations: every TypeScript block of `README.md` and the pages directly under `docs/` is compiled as a module of its own, with the same settings, so an example that stops compiling fails the suite. A fragment that uses a name from the text around it, such as `input`, finds it in a short list of global declarations in the test, and a block that imports nothing is given an import of every export.
 
 ## Dependency model
 
