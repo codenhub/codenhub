@@ -148,12 +148,12 @@ Builds a failed result from one or more issues.
 ### fallback
 
 ```ts
-export declare function fallback<TValidator extends AnyValidator>(validator: TValidator, value: Infer<TValidator> | ((issues: readonly ValidationIssue[]) => Infer<TValidator>)): Composed<TValidator, Infer<TValidator>>;
+export declare function fallback<TValidator extends AnyValidator>(validator: TValidator, value: Replacement<Infer<TValidator>>): Composed<TValidator, Infer<TValidator>>;
 ```
 
 Wraps a validator so a value that fails it is replaced by a fallback instead of being rejected. The result never fails.
 
-The fallback is trusted and is not validated. A function is called with the issues that were found, so it can log them, and its return value becomes the result. A value that is not a function is the same value in every result, so pass a function for an object or array, such as `() => []`, or a change to one result shows up in the next. Use this sparingly: it turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
+The fallback is trusted and is not validated. A function is called with the issues that were found, so it can log them, and its return value becomes the result. A value that is not a function is the same value in every result, so pass a function for an object or array, such as `() => []`, or a change to one result shows up in the next. A fallback that is itself a function has to be returned from one, `fallback(func(), () => noop)`, which the types require when the wrapped validator can produce a function. Use this sparingly: it turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
 
 **Parameters**
 
@@ -796,7 +796,7 @@ export declare function optional<TValidator extends AnyValidator>(validator: TVa
 
 Wraps a validator so `undefined` is accepted, and every other value goes to the wrapped validator. Inside `object`, the property then becomes optional in the inferred type.
 
-Given a default, `undefined` is replaced by it instead, the output type no longer includes `undefined`, and inside `object` the property is always present in the output. The default is trusted and is not run through the wrapped validator. A function is called for every use to produce the default, so pass one for an object or array, which would otherwise be shared by every result. To use a function as the default value itself, return it from a function.
+Given a default, `undefined` is replaced by it instead, the output type no longer includes `undefined`, and inside `object` the property is always present in the output. The default is trusted and is not run through the wrapped validator. A function is called for every use to produce the default, so pass one for an object or array, which would otherwise be shared by every result. To use a function as the default value itself, return it from a function, `optional(func(), () => noop)`, which the types require when the wrapped validator can produce a function.
 
 **Parameters**
 
@@ -939,7 +939,7 @@ export declare function record<TKey extends AnyValidator<string>, TValue extends
 
 Creates a validator for plain objects used as a dictionary: any number of keys, all following the same rules.
 
-Each key passes `key` and each value passes `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it cannot be mistaken for a problem with the value; the value is still checked. Only own enumerable properties are read, and a getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does. The output is a new object and the input is never modified. A key such as `__proto__` from parsed JSON is kept as data and never writes to a prototype. A key that the `key` validator changes, such as by lowercasing, must stay distinct: a second entry that arrives at a key already taken is reported as `invalid_key` with `{ issues: [{ code: "invalid_value", params: { unique: true } }] }` instead of silently replacing the first. A wrong number of keys is reported at once, as `too_small` or `too_big` with `type: "record"`, without validating any entry. It is synchronous when both validators are, and asynchronous otherwise.
+Each key passes `key` and each value passes `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it cannot be mistaken for a problem with the value; the value is still checked. Only own enumerable properties are read, and a getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does. Every value is read when the validator is called, before any key or value validator runs, so a change to the input made by a callback or while an asynchronous key waits never reaches the output. The output is a new object and the input is never modified. A key such as `__proto__` from parsed JSON is kept as data and never writes to a prototype. A key that the `key` validator changes, such as by lowercasing, must stay distinct: a second entry that arrives at a key already taken is reported as `invalid_key` with `{ issues: [{ code: "invalid_value", params: { unique: true } }] }` instead of silently replacing the first. A wrong number of keys is reported at once, as `too_small` or `too_big` with `type: "record"`, without validating any entry. It is synchronous when both validators are, and asynchronous otherwise.
 
 **Parameters**
 
@@ -2138,7 +2138,7 @@ Validates the path as the parser writes it: dot segments resolved and characters
 port?: AnyValidator;
 ```
 
-Validates the port, a number, or `undefined` when the URL names none or names its scheme's default, which the parser drops. So `port: optional(port())` accepts either, and `port: literal(8080)` requires it. Its failure is reported as the URL's, with `params.part` `"port"`.
+Validates the port, a number, or `undefined` when the URL names none or names its scheme's default, which the parser drops. So `port: optional(port())` accepts either, and `port: literal(8080)` requires it. Without it, port 0, which nothing can connect to, is rejected; with it, the validator decides. Its failure is reported as the URL's, with `params.part` `"port"`.
 
 #### protocols
 
@@ -3241,10 +3241,10 @@ Not exported; declared in `src/composition/tagged.ts`.
 ### Fallback
 
 ```ts
-type Fallback<T> = T | (() => T);
+type Fallback<T> = [Extract<T, AnyFunction>] extends [never] ? T | (() => T) : () => T;
 ```
 
-A value, or a function called for every use to produce it.
+A value, or a function called for every use to produce it. When a function is among the types of the value, only the function that produces it is accepted, since the value itself would be called.
 
 Not exported; declared in `src/composition/optional.ts`.
 
@@ -3280,6 +3280,16 @@ type Output<TValidators extends readonly AnyValidator[]> = TValidators extends r
 The type produced by the last validator of a list.
 
 Not exported; declared in `src/composition/pipe.ts`.
+
+### Replacement
+
+```ts
+type Replacement<T> = [Extract<T, AnyFunction>] extends [never] ? T | ((issues: readonly ValidationIssue[]) => T) : (issues: readonly ValidationIssue[]) => T;
+```
+
+A fallback, or a function that receives the issues and returns it. When a function is among the types of the fallback, only the function that returns it is accepted, since the fallback itself would be called.
+
+Not exported; declared in `src/composition/fallback.ts`.
 
 ### Simplify
 
