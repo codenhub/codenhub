@@ -57,7 +57,7 @@ export interface DatetimeOptions extends MessageOptions {
  * datetime({ local: true })("2026-09-28T14:30"); // { ok: true, ... }, a datetime-local value
  * ```
  *
- * @throws {TypeError} When `offset` or `local` is not a boolean.
+ * @throws {TypeError} When `offset` or `local` is not a boolean, or `precision` is not a number.
  * @throws {RangeError} When `precision` is not an integer from 0 to 9.
  */
 export const datetime = ((...args: unknown[]) => {

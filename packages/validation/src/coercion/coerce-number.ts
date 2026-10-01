@@ -27,6 +27,8 @@ const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
  *
  * @param options - Constraints and clean-up, exactly as for `number`.
  * @returns A validator that produces a number.
+ * @throws {TypeError} When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` is not a range with
+ * a number `min` and `max`.
  * @throws {RangeError} When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`,
  * no number can satisfy the bounds together, or `clamp`
  * has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.

@@ -1,7 +1,7 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { sizeOfSet, valuesOf } from "../core/objects";
-import { assertFunction, failWith, repeatedItem, typeIssue } from "../core/result";
+import { assertFunction, repeatedItem, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -38,7 +38,7 @@ import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
  * @param item - Validator applied to every value.
  * @param rest - Size limits, then checks.
  * @returns A validator that produces a `Set` of what `item` produces.
- * @throws {TypeError} When `item` or a check is not a function.
+ * @throws {TypeError} When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
  * @throws {RangeError} When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
  */
 export function set<TItem extends AnyValidator>(
@@ -76,7 +76,7 @@ export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
             output.add(value);
           }
         });
-        return repeats.length > 0 ? failWith(repeats) : accept(output);
+        return repeats.length > 0 ? reject(repeats) : accept(output);
       },
     );
   };

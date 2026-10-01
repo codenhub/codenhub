@@ -62,8 +62,43 @@ describe("composer arguments", () => {
   it.each([
     ["union", () => union([] as never), "union() needs at least one option"],
     ["pipe", () => (pipe as (...validators: unknown[]) => unknown)(), "pipe() needs at least one validator"],
+    ["tagged", () => tagged("type", {}), "tagged() needs at least one variant"],
+    ["tuple", () => tuple([] as never), "tuple() needs at least one item"],
+    ["tuple with rest", () => tuple([] as never, { rest: valid }), "tuple() needs at least one item"],
   ])("%s should reject an empty list when it is created", (_, create, message) => {
     expect(create).toThrow(new TypeError(message));
+  });
+
+  it.each([
+    ["union", () => union(valid as never), "options must be a list of validators, received function"],
+    ["union", () => union(null as never), "options must be a list of validators, received null"],
+    ["tuple", () => tuple(valid as never), "items must be a list of validators, received function"],
+    ["tuple", () => tuple(undefined as never), "items must be a list of validators, received undefined"],
+  ])("%s should reject what is not a list of validators when it is created, naming it", (_, create, message) => {
+    expect(create).toThrow(new TypeError(message));
+  });
+
+  it.each([
+    ["object", () => object([valid] as never)],
+    ["partial", () => partial([valid] as never)],
+  ])("%s should reject a list as its shape, which would name its properties 0, 1 and on", (_, create) => {
+    expect(create).toThrow(new TypeError("shape must be a plain object of validators, received array"));
+  });
+
+  it.each([
+    ["a list", [object({})], "array"],
+    ["null", null, "null"],
+    ["a Map", new Map([["a", object({})]]), "object"],
+  ])("tagged should reject %s as its variants, which are a plain object of validators", (_, variants, received) => {
+    expect(() => tagged("type", variants as never)).toThrow(
+      new TypeError(`variants must be a plain object of validators, received ${received}`),
+    );
+  });
+
+  it("should reject a tagged key that is not text, which would name the property `undefined`", () => {
+    expect(() => (tagged as (key: unknown, variants: unknown) => unknown)(undefined, { a: object({}) })).toThrow(
+      new TypeError("tagged(key) must be text, received undefined"),
+    );
   });
 
   it("should reject a lazy getter that returns something other than a validator, naming the getter", () => {

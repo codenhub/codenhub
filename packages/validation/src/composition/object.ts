@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { tail, word } from "../core/checks";
-import { isPlainObject, objectIssue, setOwn } from "../core/objects";
+import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, collectNested, failWith, issue } from "../core/result";
 import type {
   AnyValidator,
@@ -74,8 +74,8 @@ export interface ObjectOptions extends MessageOptions {
  * @param rest - Options, including how to treat properties the shape does not list, then checks,
  * which run once every property has passed and see the whole object.
  * @returns A validator that produces an object.
- * @throws {TypeError} When a property validator is not a function, or `unknownKeys` is not `"strip"`,
- * `"strict"` or `"passthrough"`.
+ * @throws {TypeError} When `shape` is not a plain object, a property validator is not a function, or
+ * `unknownKeys` is not `"strip"`, `"strict"` or `"passthrough"`.
  */
 export function object<TShape extends Shape>(
   shape: TShape,
@@ -86,6 +86,7 @@ export function object<TShape extends Shape>(
   ...rest: AsyncRest<InferShape<TShape>, ObjectOptions>
 ): AsyncValidator<InferShape<TShape>>;
 export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
+  assertShape(shape);
   // The shape is read once, so changing it after the validator is made changes nothing.
   const keys = Object.keys(shape);
   const validators = keys.map((key) => {

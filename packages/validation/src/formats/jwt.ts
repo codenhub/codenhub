@@ -7,10 +7,13 @@ const JWT_PATTERN = /^([\w-]+)\.([\w-]+)\.([\w-]*)$/;
 const readSegment = (segment: string): unknown => {
   try {
     const binary = atob(segment.replace(/-/g, "+").replace(/_/g, "/"));
-    const parsed: unknown = JSON.parse(new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0))));
+    const parsed: unknown = JSON.parse(
+      new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from(binary, (char) => char.charCodeAt(0))),
+    );
     return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : undefined;
   } catch {
-    // atob throws on text that is not base64, JSON.parse on text that is not JSON.
+    // atob throws on text that is not base64, the decoder on bytes that are not UTF-8, JSON.parse on text
+    // that is not JSON.
     return undefined;
   }
 };

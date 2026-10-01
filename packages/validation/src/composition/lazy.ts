@@ -1,6 +1,6 @@
 import { chain } from "../core/async";
 import { tail } from "../core/checks";
-import { assertFunction, issue } from "../core/result";
+import { assertFunction, assertOption, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -23,9 +23,32 @@ export interface LazyOptions extends MessageOptions {
    * @defaultValue 128
    */
   maxDepth?: number;
+  /**
+   * The most `lazy` calls one outermost `lazy` call may make, counting every `lazy` validator, those of
+   * the options a `union` tries and fails included. Past it, every further call fails with `too_big`, so
+   * a schema whose work grows faster than its input, such as a recursive `union` of objects, which
+   * doubles with each level, stops instead of running for hours on a few hundred bytes. The limit of the
+   * outermost call holds its whole run, and that of a `lazy` called inside another is not read. Each
+   * outermost call has a count of its own, so a validator that reaches several `lazy` calls before any is
+   * open, such as an `array` of recursive items, has one per item: wrap the root in
+   * `lazy(() => schema, { maxCalls })` to hold a whole validation of untrusted input to one, and set the
+   * limit there. Recursive data with more nodes than this under one root needs it raised.
+   *
+   * @defaultValue 100000
+   */
+  maxCalls?: number;
 }
 
 const DEFAULT_MAX_DEPTH = 128;
+const DEFAULT_MAX_CALLS = 100_000;
+
+/** Rejects a limit that is not a positive integer, since it is a mistake in the schema and not in the input. */
+function assertLimit(name: string, value: number): void {
+  assertOption(name, value, "number");
+  if (!Number.isInteger(value) || value < 1) {
+    throw new RangeError(`${name} must be a positive integer, received ${value}`);
+  }
+}
 
 /**
  * How many `lazy` calls are running right now. It only counts calls that are still on the stack:
@@ -33,6 +56,16 @@ const DEFAULT_MAX_DEPTH = 128;
  * starts from a shallow one. That is the depth that can overflow.
  */
 let openDepth = 0;
+
+/**
+ * How many `lazy` calls the outermost `lazy` call still on the stack has made, itself included. It
+ * starts again with each outermost call, so separate validations never add up, and like the depth it
+ * counts one synchronous run: a continuation after an await starts a run of its own.
+ */
+let runCalls = 0;
+
+/** The `maxCalls` of the outermost `lazy` call still on the stack, which holds its whole run. */
+let runLimit = DEFAULT_MAX_CALLS;
 
 /**
  * Creates a validator that looks up another validator the first time it runs, so a validator can
@@ -51,6 +84,18 @@ let openDepth = 0;
  * bound an asynchronous recursive schema: it follows input of any depth, and a cyclic object until
  * memory runs out. Give such a schema a bound of its own.
  *
+ * Work can also grow faster than the input. A `union` tries every option, and an `object` checks every
+ * property even after one fails, so a recursive `union` of objects recurses through every option at
+ * every level, and its work doubles with each: a few hundred bytes can take hours. `maxCalls` stops that:
+ * past that many `lazy` calls under one outermost `lazy` call, every further one fails with `too_big`
+ * and `{ maximum, type: "calls" }`. Unlike `maxDepth`, only the outermost call's limit is read, and it
+ * holds the whole run. Like `maxDepth`, it counts one synchronous run. Each outermost call
+ * counts afresh, so a root that reaches several `lazy` calls before any is open, such as an `array` of
+ * recursive items or the options of a root `union`, gives each its own count, and the work still grows
+ * with every item: for untrusted input, wrap the root, `lazy(() => schema)`, so the whole validation is
+ * one count. For recursive objects told apart by a property, `tagged` reads that property first and does
+ * no such work.
+ *
  * @example
  * ```ts
  * interface Category {
@@ -66,11 +111,11 @@ let openDepth = 0;
  *
  * @typeParam TValidator - The validator the getter returns.
  * @param getter - Returns the validator. Called once, on first use.
- * @param rest - The depth limit, then checks.
+ * @param rest - The depth and call limits, then checks.
  * @returns A validator that behaves as the one the getter returns.
- * @throws {TypeError} When `getter` is not a function, and, from the returned validator on its first
- * use, when `getter` returns something that is not a function.
- * @throws {RangeError} When `maxDepth` is not a positive integer.
+ * @throws {TypeError} When `getter` is not a function or `maxDepth` or `maxCalls` is not a number, and,
+ * from the returned validator on its first use, when `getter` returns something that is not a function.
+ * @throws {RangeError} When `maxDepth` or `maxCalls` is not a positive integer.
  */
 export function lazy<TValidator extends AnyValidator>(
   getter: () => TValidator,
@@ -83,12 +128,20 @@ export function lazy<TValidator extends AnyValidator>(
 export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("getter", getter);
   const [options, reject, accept] = tail<LazyOptions, unknown>(rest);
-  const { maxDepth = DEFAULT_MAX_DEPTH } = options;
-  if (!Number.isInteger(maxDepth) || maxDepth < 1) {
-    throw new RangeError(`maxDepth must be a positive integer, received ${maxDepth}`);
-  }
+  const { maxDepth = DEFAULT_MAX_DEPTH, maxCalls = DEFAULT_MAX_CALLS } = options;
+  assertLimit("maxDepth", maxDepth);
+  assertLimit("maxCalls", maxCalls);
   let resolved: AnyValidator | undefined;
   return (input: unknown) => {
+    if (openDepth === 0) {
+      runCalls = 1;
+      runLimit = maxCalls;
+    } else {
+      runCalls += 1;
+    }
+    if (runCalls > runLimit) {
+      return reject([issue("too_big", { maximum: runLimit, type: "calls" })]);
+    }
     if (openDepth >= maxDepth) {
       return reject([issue("too_big", { maximum: maxDepth, type: "depth" })]);
     }

@@ -6,6 +6,7 @@ import { cidr } from "./cidr";
 import { creditCard } from "./credit-card";
 import { domain } from "./domain";
 import { duration } from "./duration";
+import { email } from "./email";
 import { ip } from "./ip";
 import { jwt } from "./jwt";
 import { mac } from "./mac";
@@ -14,6 +15,7 @@ import { port } from "./port";
 import { semver } from "./semver";
 import { slug } from "./slug";
 import { time } from "./time";
+import { url } from "./url";
 import { uuid } from "./uuid";
 
 const formatOf = (result: Parameters<typeof issuesOf>[0]): unknown => issuesOf(result)[0]?.params?.format;
@@ -151,6 +153,11 @@ describe("jwt", () => {
       ),
     ).toEqual(Array(8).fill(false));
   });
+
+  it("should reject a segment that is not UTF-8, as JSON text must be", () => {
+    const badUtf8 = "eyJhbGciOiL_In0"; // {"alg":"<0xff>"}
+    expect(accepts(jwt(), `${badUtf8}.${payload}.x`, `${header}.${badUtf8}.x`)).toEqual([false, false]);
+  });
 });
 
 describe("ip", () => {
@@ -205,6 +212,12 @@ describe("domain", () => {
       ),
     ).toEqual(Array(7).fill(false));
   });
+
+  it("should hold its top-level label to 63 characters, as it does every other label", () => {
+    expect(accepts(domain(), `example.${"a".repeat(63)}`, `example.${"a".repeat(64)}`)).toEqual([true, false]);
+    expect(accepts(email(), `ada@example.${"a".repeat(64)}`)).toEqual([false]);
+    expect(accepts(url(), `https://example.${"a".repeat(64)}/`)).toEqual([false]);
+  });
 });
 
 describe("port", () => {
@@ -226,6 +239,7 @@ describe("uuid versions", () => {
     expect(accepts(uuid({ version: 4 }), v4, v7, "00000000-0000-0000-0000-000000000000")).toEqual([true, false, false]);
     expect(accepts(uuid({ version: 7 }), v7)).toEqual([true]);
     expect(() => uuid({ version: 9 as never })).toThrow(RangeError);
+    expect(() => uuid({ version: "4" as never })).toThrow(new TypeError("version must be a number, received string"));
   });
 });
 

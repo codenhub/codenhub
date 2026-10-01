@@ -1,6 +1,6 @@
 import { chain, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
-import { assertFunction, issue } from "../core/result";
+import { assertFunction, assertList, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -35,7 +35,7 @@ import type {
  * @typeParam TOptions - The validators to try, at least one.
  * @param options - The validators to try, in order.
  * @returns A validator that produces what the first accepting option produces.
- * @throws {TypeError} When `options` is empty or an option is not a function.
+ * @throws {TypeError} When `options` is not a list, is empty, or holds an option that is not a function.
  */
 export function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(
   options: TOptions,
@@ -46,6 +46,7 @@ export function union<const TOptions extends readonly [AnyValidator, ...AnyValid
   ...rest: AsyncRest<Infer<TOptions[number]>, MessageOptions>
 ): AsyncValidator<Infer<TOptions[number]>>;
 export function union(options: readonly AnyValidator[], ...rest: unknown[]): AnyValidator {
+  assertList("options", options);
   // Copied, so changing the list after the validator is made changes nothing.
   const tried = [...options];
   if (tried.length === 0) {

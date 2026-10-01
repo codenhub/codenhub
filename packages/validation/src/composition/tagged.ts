@@ -1,7 +1,7 @@
 import { chain, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
-import { isPlainObject, objectIssue, setOwn } from "../core/objects";
-import { assertFunction, describeType, issue } from "../core/result";
+import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
+import { assertFunction, assertText, describeType, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -88,8 +88,9 @@ export type InferTagged<TKey extends string, TVariants extends Variants> = {
  * @param key - The name of the tag property.
  * @param variants - A validator for each tag value. Each must produce a plain object.
  * @returns A validator that produces one of the variants' objects, tagged.
- * @throws {TypeError} When a variant is not a function, and, from the returned validator, when a variant
- * produces something other than a plain object.
+ * @throws {TypeError} When `key` is not text, `variants` is not a plain object, there is no variant or a
+ * variant is not a function, and, from the returned validator, when a variant produces something other
+ * than a plain object.
  */
 export function tagged<const TKey extends string, const TVariants extends Variants>(
   key: TKey,
@@ -102,9 +103,15 @@ export function tagged<const TKey extends string, const TVariants extends Varian
   ...rest: AsyncRest<InferTagged<TKey, TVariants>, MessageOptions>
 ): AsyncValidator<InferTagged<TKey, TVariants>>;
 export function tagged(key: string, variants: Variants, ...rest: unknown[]): AnyValidator {
+  assertText("tagged(key)", key);
+  assertShape(variants, "variants");
   // The variants are read once, so changing the record after the validator is made changes nothing.
   const table = new Map(Object.entries(variants));
   const tags = [...table.keys()];
+  if (tags.length === 0) {
+    // The types forbid it, but a union of no variants would reject every value without saying why.
+    throw new TypeError("tagged() needs at least one variant");
+  }
   table.forEach((variant, tag) => assertFunction(`variants.${tag}`, variant));
   const [, reject, accept] = tail<MessageOptions, object>(rest);
 

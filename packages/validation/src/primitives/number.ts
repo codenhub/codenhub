@@ -1,5 +1,5 @@
 import { leaf, split } from "../core/checks";
-import { assertBounds, assertOption, assertOrder, issue } from "../core/result";
+import { assertBounds, assertOption, assertOrder, describeType, issue } from "../core/result";
 import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
 
 /**
@@ -57,8 +57,8 @@ const isNumber = (input: unknown): boolean => typeof input === "number" && Numbe
  * number({ min: 0 }, multipleOf(0.01)); // money
  * ```
  *
- * @throws {TypeError} When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` lacks
- * a number `min` or `max`.
+ * @throws {TypeError} When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` is not a range with
+ * a number `min` and `max`.
  * @throws {RangeError} When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`,
  * no number can satisfy the bounds together, or `clamp`
  * has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound. Bounds
@@ -68,6 +68,10 @@ const isNumber = (input: unknown): boolean => typeof input === "number" && Numbe
 export const number = ((...args: unknown[]) => {
   const [options, checks] = split<NumberOptions, number>(args);
   const { min, max, gt, lt, int, safeInt, message } = options;
+  const range: unknown = options.clamp;
+  if (range !== undefined && (typeof range !== "object" || range === null || Array.isArray(range))) {
+    throw new TypeError(`clamp must be a range with a number min and max, received ${describeType(range)}`);
+  }
   // Copied, so changing the range after the validator is made changes nothing.
   const clamp = options.clamp && { min: options.clamp.min, max: options.clamp.max };
   assertOption("int", int, "boolean");
@@ -84,8 +88,12 @@ export const number = ((...args: unknown[]) => {
   }
   assertBounds(options);
   if (clamp !== undefined) {
-    assertOption("clamp.min", clamp.min ?? null, "number");
-    assertOption("clamp.max", clamp.max ?? null, "number");
+    for (const [name, bound] of Object.entries(clamp)) {
+      // Both are required, so a missing one is named as undefined rather than taken for no option.
+      if (typeof bound !== "number") {
+        throw new TypeError(`clamp.${name} must be a number, received ${describeType(bound)}`);
+      }
+    }
     if (Number.isNaN(clamp.min) || Number.isNaN(clamp.max)) {
       throw new RangeError("clamp bounds must be numbers, received NaN");
     }

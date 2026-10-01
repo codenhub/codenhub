@@ -34,7 +34,7 @@ A wrong size is reported at once, without validating the items, so a huge array 
 
 **Throws**
 
-- When `item` or a check is not a function.
+- When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
 - When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -389,7 +389,7 @@ export declare function intersection<TLeft extends AnyValidator, TRight extends 
 
 Creates a validator that accepts a value only when it passes both validators, and produces the two results merged.
 
-Both validators receive the same input and both run, so the issues of each are reported together. The outputs are merged: plain objects key by key, arrays of the same length item by item, and maps and sets of the same size entry by entry in iteration order, which both validators keep from the input, recursively, so maps keyed by objects and sets of objects merge too. Any other pair must be the same value, or two dates holding the same moment. Where the outputs differ otherwise, such as `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path, rather than one side silently winning. Cyclic or shared objects in the outputs are merged once, and the merged output keeps their shape. Two `object`s with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and asynchronous otherwise.
+Both validators receive the same input and both run, so the issues of each are reported together. The outputs are merged: plain objects key by key, arrays of the same length item by item, and maps and sets of the same size entry by entry in iteration order, which both validators keep from the input, recursively, so maps keyed by objects and sets of objects merge too. Any other pair must be the same value, `0` and `-0` merging as `0`, or two dates holding the same moment. Where the outputs differ otherwise, such as `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path, rather than one side silently winning. Cyclic or shared objects in the outputs are merged once, and the merged output keeps their shape. Two `object`s with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and asynchronous otherwise.
 
 **Parameters**
 
@@ -487,10 +487,12 @@ TypeScript cannot infer a validator that refers to itself, so annotate the varia
 
 Every level of nesting is a level of recursion, and input nested past the stack, or a cyclic object, would throw. `maxDepth` stops that first: a value found more than that many levels down fails with `too_big` and `{ maximum, type: "depth" }` at its own path, so untrusted input can be checked without a size cap tuned to the stack. The count is of calls on the stack, so it bounds recursion that happens in one synchronous run, which is where the stack can overflow; a rule that awaits between levels starts the next from a fresh stack, and is not counted. So `maxDepth` does not bound an asynchronous recursive schema: it follows input of any depth, and a cyclic object until memory runs out. Give such a schema a bound of its own.
 
+Work can also grow faster than the input. A `union` tries every option, and an `object` checks every property even after one fails, so a recursive `union` of objects recurses through every option at every level, and its work doubles with each: a few hundred bytes can take hours. `maxCalls` stops that: past that many `lazy` calls under one outermost `lazy` call, every further one fails with `too_big` and `{ maximum, type: "calls" }`. Unlike `maxDepth`, only the outermost call's limit is read, and it holds the whole run. Like `maxDepth`, it counts one synchronous run. Each outermost call counts afresh, so a root that reaches several `lazy` calls before any is open, such as an `array` of recursive items or the options of a root `union`, gives each its own count, and the work still grows with every item: for untrusted input, wrap the root, `lazy(() => schema)`, so the whole validation is one count. For recursive objects told apart by a property, `tagged` reads that property first and does no such work.
+
 **Parameters**
 
 - `getter` — Returns the validator. Called once, on first use.
-- `rest` — The depth limit, then checks.
+- `rest` — The depth and call limits, then checks.
 
 **Type parameters**
 
@@ -500,8 +502,8 @@ Every level of nesting is a level of recursion, and input nested past the stack,
 
 **Throws**
 
-- When `getter` is not a function, and, from the returned validator on its first use, when `getter` returns something that is not a function.
-- When `maxDepth` is not a positive integer.
+- When `getter` is not a function or `maxDepth` or `maxCalls` is not a number, and, from the returned validator on its first use, when `getter` returns something that is not a function.
+- When `maxDepth` or `maxCalls` is not a positive integer.
 
 **Example**
 
@@ -597,7 +599,7 @@ A wrong size is reported at once, without validating the entries. An issue's pat
 
 **Throws**
 
-- When `key` or `value` is not a function.
+- When `key` or `value` is not a function, or `min`, `max` or `length` is not a number.
 - When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -624,7 +626,10 @@ Both are compared as the decimals they are written as, so `0.3` is a multiple of
 
 **Returns** — A check of numbers.
 
-**Throws** — When `step` is not a positive finite number.
+**Throws**
+
+- When `step` is not a number.
+- When `step` is not a positive finite number.
 
 **Example**
 
@@ -731,7 +736,7 @@ Only own enumerable properties are read, and class instances and arrays are not 
 
 **Returns** — A validator that produces an object.
 
-**Throws** — When a property validator is not a function, or `unknownKeys` is not `"strip"`, `"strict"` or `"passthrough"`.
+**Throws** — When `shape` is not a plain object, a property validator is not a function, or `unknownKeys` is not `"strip"`, `"strict"` or `"passthrough"`.
 
 **Example**
 
@@ -835,6 +840,8 @@ Makes every property of a shape optional, for a form or an update where any fiel
 - `TShape` — The shape.
 
 **Returns** — A shape whose every validator also accepts `undefined`.
+
+**Throws** — When `shape` is not a plain object, or a property validator is not a function.
 
 **Example**
 
@@ -949,7 +956,7 @@ Each key passes `key` and each value passes `value`. An issue's path ends at the
 
 **Throws**
 
-- When `key` or `value` is not a function.
+- When `key` or `value` is not a function, or `min`, `max` or `length` is not a number.
 - When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -1017,7 +1024,7 @@ A wrong size is reported at once, without validating the values. Otherwise every
 
 **Throws**
 
-- When `item` or a check is not a function.
+- When `item` or a check is not a function, or `min`, `max` or `length` is not a number.
 - When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -1049,7 +1056,7 @@ The result is a validator that behaves exactly as the one you gave, plus the `~s
 
 **Returns** — A validator that is also a Standard Schema.
 
-**Throws** — When `validator` is not a function.
+**Throws** — When `validator` is not a function, or `messages` is not a message map.
 
 **Example**
 
@@ -1106,7 +1113,7 @@ The input's tag must be one of the keys of `variants`, and the variant validates
 
 **Returns** — A validator that produces one of the variants' objects, tagged.
 
-**Throws** — When a variant is not a function, and, from the returned validator, when a variant produces something other than a plain object.
+**Throws** — When `key` is not text, `variants` is not a plain object, there is no variant or a variant is not a function, and, from the returned validator, when a variant produces something other than a plain object.
 
 **Example**
 
@@ -1165,12 +1172,12 @@ export declare function tuple<const TItems extends readonly [AnyValidator, ...An
 
 Creates a validator for arrays of fixed length whose items each have their own validator.
 
-A wrong length is reported at once, without validating the items. With `rest`, the array may be longer, and every extra item must pass it. Each issue's path leads through the item's index.
+A wrong length is reported at once, without validating the items. With `rest`, the array may be longer, and every extra item must pass it; `max` caps how long, the fixed items included, and a longer array fails with `too_big` and `{ maximum, type: "array" }`. Each issue's path leads through the item's index.
 
 **Parameters**
 
 - `items` — One validator per position.
-- `rest` — The validator for extra positions, then checks.
+- `rest` — The validator for extra positions and the most items in all, then checks.
 
 **Type parameters**
 
@@ -1179,7 +1186,10 @@ A wrong length is reported at once, without validating the items. With `rest`, t
 
 **Returns** — A validator that produces a tuple.
 
-**Throws** — When an item or `rest` is not a function.
+**Throws**
+
+- When `items` is not a list or is empty, an item or `rest` is not a function, `max` is not a number, or `max` is given without `rest`.
+- When `max` is not a non-negative integer, or is less than the number of fixed items.
 
 **Example**
 
@@ -1188,7 +1198,7 @@ const point = tuple([number(), number()]);
 point([1, 2]); // { ok: true, value: [1, 2] }
 point([1]); // { ok: false, ... }, code "too_small"
 
-const args = tuple([string()], { rest: number() });
+const args = tuple([string()], { rest: number(), max: 10 });
 args(["sum", 1, 2, 3]); // { ok: true, ... }
 ```
 
@@ -1213,7 +1223,7 @@ The validators are tried in order and the first that accepts the value wins, so 
 
 **Returns** — A validator that produces what the first accepting option produces.
 
-**Throws** — When `options` is empty or an option is not a function.
+**Throws** — When `options` is not a list, is empty, or holds an option that is not a function.
 
 **Example**
 
@@ -1285,7 +1295,7 @@ export declare function url(options: UrlOptions, ...checks: AsyncCheck<string>[]
 
 Creates a validator for absolute URLs with an allowed protocol and a public domain name, and without embedded credentials. The value is the URL as the URL parser writes it, which is what a request made with it will use.
 
-The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected.
+The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected.
 
 The `host`, `port`, `path` and `query` options check those parts with validators of your own, which only decide: the value is still the whole URL, and one that is asynchronous makes the validator asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules. A part that fails is one `invalid_format` issue at the URL's own place, `{ format: "url", part, issues }`, so a form shows it beside the field, and the `message` option words it as every other issue of the URL.
 
@@ -1592,6 +1602,14 @@ export interface LazyOptions extends MessageOptions
 
 Options for [lazy](#lazy).
 
+#### maxCalls
+
+```ts
+maxCalls?: number;
+```
+
+The most `lazy` calls one outermost `lazy` call may make, counting every `lazy` validator, those of the options a `union` tries and fails included. Past it, every further call fails with `too_big`, so a schema whose work grows faster than its input, such as a recursive `union` of objects, which doubles with each level, stops instead of running for hours on a few hundred bytes. The limit of the outermost call holds its whole run, and that of a `lazy` called inside another is not read. Each outermost call has a count of its own, so a validator that reaches several `lazy` calls before any is open, such as an `array` of recursive items, has one per item: wrap the root in `lazy(() => schema, { maxCalls })` to hold a whole validation of untrusted input to one, and set the limit there. Recursive data with more nodes than this under one root needs it raised.
+
 #### maxDepth
 
 ```ts
@@ -1618,7 +1636,7 @@ The options every validator takes.
 message?: Message;
 ```
 
-Wording for every issue this validator reports itself, and none a child or a check reports.
+Wording for every issue this validator reports itself, and every issue one of its checks reports without a message of its own. Issues a child validator reports keep their own wording.
 
 ### NumberOptions
 
@@ -2066,6 +2084,14 @@ export interface TupleOptions<TRest extends AnyValidator | undefined = undefined
 
 Options for [tuple](#tuple).
 
+#### max
+
+```ts
+max?: TRest extends AnyValidator ? number : never;
+```
+
+The most items the array may hold, the fixed ones included, a non-negative integer no smaller than their number. Only with `rest`, since without it the length is fixed.
+
 #### message
 
 Inherited from [MessageOptions](#messageoptions).
@@ -2092,7 +2118,7 @@ Options for [url](#url).
 host?: AnyValidator;
 ```
 
-Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part` `"host"`.
+Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. For a scheme the parser has no rules for, such as `ssh`, it reads a name as written, and the host is that name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part` `"host"`.
 
 #### message
 
@@ -2104,7 +2130,7 @@ Inherited from [MessageOptions](#messageoptions).
 path?: AnyValidator;
 ```
 
-Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, always starting with `/`. Its failure is reported as the URL's, with `params.part` `"path"`.
+Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such as `ssh://example.com`, that names no path. Its failure is reported as the URL's, with `params.part` `"path"`.
 
 #### port
 
@@ -2624,7 +2650,10 @@ Fractions, numbers beyond `Number.MAX_SAFE_INTEGER` (which have already lost pre
 
 **Returns** — A validator that produces a bigint.
 
-**Throws** — When no bigint can satisfy the bounds together.
+**Throws**
+
+- When a bound is not a bigint, such as the number `0` where `0n` was meant.
+- When no bigint can satisfy the bounds together.
 
 **Example**
 
@@ -2665,7 +2694,10 @@ Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM` or `H
 
 **Returns** — A validator that produces a `Date`.
 
-**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
+**Throws**
+
+- When `min` or `max` is not a `Date`.
+- When `min` or `max` is an invalid `Date`, or `min` is after `max`.
 
 **Example**
 
@@ -2687,7 +2719,10 @@ Surrounding whitespace is ignored, and a dot with no digits on one side, as in `
 
 **Returns** — A validator that produces a number.
 
-**Throws** — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
+**Throws**
+
+- When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` is not a range with a number `min` and `max`.
+- When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
 
 **Example**
 
@@ -2713,7 +2748,7 @@ Creates a validator for text that also accepts finite numbers, bigints and boole
 **Throws**
 
 - When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
-- When `case` is not `"lower"` or `"upper"`, or a check is not a function.
+- When `min`, `max` or `length` is not a number, `case` is not `"lower"` or `"upper"`, or a check is not a function.
 
 **Example**
 
@@ -2764,7 +2799,10 @@ Creates a validator for valid `Date` objects. An invalid `Date` such as `new Dat
 
 **Returns** — A validator that produces a `Date`.
 
-**Throws** — When `min` or `max` is not a valid `Date`, or `min` is after `max`.
+**Throws**
+
+- When `min` or `max` is not a `Date`.
+- When `min` or `max` is an invalid `Date`, or `min` is after `max`.
 
 **Example**
 
@@ -2784,7 +2822,7 @@ Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a
 
 **Throws**
 
-- When `offset` or `local` is not a boolean.
+- When `offset` or `local` is not a boolean, or `precision` is not a number.
 - When `precision` is not an integer from 0 to 9.
 
 **Example**
@@ -2986,7 +3024,7 @@ Creates a validator for finite numbers. `NaN` and the infinities are always reje
 
 **Throws**
 
-- When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` lacks a number `min` or `max`.
+- When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` is not a range with a number `min` and `max`.
 - When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and reject every input.
 
 **Example**
@@ -3074,7 +3112,7 @@ Creates a validator for strings.
 **Throws**
 
 - When `min`, `max` or `length` is not a non-negative integer, or no length satisfies them together.
-- When `case` is not `"lower"` or `"upper"`, `trim` is not a boolean, or a check is not a function.
+- When `min`, `max` or `length` is not a number, `case` is not `"lower"` or `"upper"`, `trim` is not a boolean, or a check is not a function.
 
 **Example**
 
@@ -3108,7 +3146,10 @@ export declare const time: Factory<string, TimeOptions>;
 
 Creates a validator for ISO 8601 times of day without an offset, such as `14:30`, `14:30:00` or `14:30:00.250`, as an HTML time input writes them. The value is not modified.
 
-**Throws** — When `precision` is not an integer from 0 to 9.
+**Throws**
+
+- When `precision` is not a number.
+- When `precision` is not an integer from 0 to 9.
 
 **Example**
 
@@ -3157,7 +3198,10 @@ export declare const uuid: Factory<string, UuidOptions>;
 
 Creates a validator for UUIDs of version 1 to 8 in hyphenated form, in any letter case, and the nil and max UUIDs. The value is the UUID in lowercase, the form RFC 9562 writes, so one UUID is one value however it was written.
 
-**Throws** — When `version` is not an integer from 1 to 8.
+**Throws**
+
+- When `version` is not a number.
+- When `version` is not an integer from 1 to 8.
 
 **Example**
 

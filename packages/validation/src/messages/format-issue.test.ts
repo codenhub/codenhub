@@ -395,4 +395,10 @@ describe("englishMessages, for issues no other test words", () => {
       "Invalid value",
     );
   });
+
+  it("should word a limit on recursive calls", () => {
+    expect(formatWith({ code: "too_big", path: [], params: { maximum: 10, type: "calls" } }, englishMessages)).toBe(
+      "Too complex to check within 10 recursive steps",
+    );
+  });
 });

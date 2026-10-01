@@ -171,6 +171,9 @@ export type AsyncRest<T, TOptions> = [options?: TOptions, ...checks: AsyncCheck<
 
 /** The options every validator takes. */
 export interface MessageOptions {
-  /** Wording for every issue this validator reports itself, and none a child or a check reports. */
+  /**
+   * Wording for every issue this validator reports itself, and every issue one of its checks reports
+   * without a message of its own. Issues a child validator reports keep their own wording.
+   */
   message?: Message;
 }

@@ -25,6 +25,16 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
 }
 
 /**
+ * Rejects a shape that is not a plain object, such as a list of validators, whose properties would be
+ * named `0`, `1` and on, since it is a mistake in the schema and not in the input.
+ */
+export function assertShape(shape: unknown, name = "shape"): void {
+  if (!isPlainObject(shape)) {
+    throw new TypeError(`${name} must be a plain object of validators, received ${describeType(shape)}`);
+  }
+}
+
+/**
  * Runs a built-in method on a value and returns what it gives, or undefined when the value is not
  * the kind the method belongs to. The methods are called through their own prototype, not through the
  * value, so a Date, Map or Set from another realm, or one whose prototype was swapped, is read the same

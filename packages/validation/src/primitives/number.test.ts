@@ -75,9 +75,14 @@ describe("number", () => {
       expect(issuesOf(number(multipleOf(5))(7))[0]?.params).toEqual({ type: "number", format: "multipleOf", value: 5 });
     });
 
-    it("should check multipleOf exactly for whole numbers, however large", () => {
+    it("should check multipleOf exactly for safe integers", () => {
       expect(accepts(number(multipleOf(3)), 8e15 + 2, 9e15, 3e15 + 1)).toEqual([false, true, false]);
       expect(number(multipleOf(10))(Number.MAX_SAFE_INTEGER).ok).toBe(false);
+    });
+
+    it("should read a whole number past the safe integers as it is written, not as the double it is held as", () => {
+      // 2^60 is written 1152921504606847000, which is not a multiple of 1024, though the double is.
+      expect(accepts(number(multipleOf(1024)), 2 ** 60)).toEqual([false]);
     });
 
     it("should reject a step that is not a positive finite number when the validator is created", () => {
@@ -119,6 +124,30 @@ describe("number", () => {
 
     it("should still reject non-numbers", () => {
       expect(number({ clamp: { min: 0, max: 10 } })("5").ok).toBe(false);
+    });
+
+    it.each([
+      [null, "null"],
+      [false, "boolean"],
+      [5, "number"],
+      ["0-10", "string"],
+      [[0, 10], "array"],
+    ])("should reject %j as the range when the validator is created, naming what it received", (range, received) => {
+      expect(() => number({ clamp: range as never })).toThrow(
+        new TypeError(`clamp must be a range with a number min and max, received ${received}`),
+      );
+    });
+
+    it("should reject a range without a number min or max, naming what it has instead", () => {
+      expect(() => number({ clamp: {} as never })).toThrow(
+        new TypeError("clamp.min must be a number, received undefined"),
+      );
+      expect(() => number({ clamp: { min: 0, max: null } as never })).toThrow(
+        new TypeError("clamp.max must be a number, received null"),
+      );
+      expect(() => number({ clamp: { min: "0", max: 1 } as never })).toThrow(
+        new TypeError("clamp.min must be a number, received string"),
+      );
     });
 
     it("should reject NaN bounds and an inverted range when the validator is created", () => {

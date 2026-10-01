@@ -45,13 +45,17 @@ describe("date", () => {
     expect(issuesOf(validator(day("2025-01-01")))[0]?.params?.minimum).toEqual(day("2026-01-01"));
   });
 
+  it("should reject a bound that is not a Date as a TypeError when the validator is created", () => {
+    expect(() => date({ min: "2026-01-01" as unknown as Date })).toThrow(
+      new TypeError("Minimum date must be a Date, received string"),
+    );
+    expect(() => date({ max: {} as Date })).toThrow(new TypeError("Maximum date must be a Date, received object"));
+  });
+
   it("should reject an invalid bound when the validator is created", () => {
     expect(() => date({ min: new Date("nope") })).toThrow(RangeError);
     expect(() => date({ max: new Date("nope") })).toThrow(RangeError);
-    expect(() => date({ min: "2026-01-01" as unknown as Date })).toThrow(
-      new RangeError("Minimum date must be a valid Date"),
-    );
-    expect(() => date({ max: {} as Date })).toThrow(new RangeError("Maximum date must be a valid Date"));
+    expect(() => date({ min: new Date("nope") })).toThrow(new RangeError("Minimum date must be a valid Date"));
     expect(() => date({ min: day("2027-01-01"), max: day("2026-01-01") })).toThrow(RangeError);
     expect(() => date({ min: day("2026-01-01"), max: day("2026-01-01") })).not.toThrow();
   });

@@ -79,6 +79,12 @@ describe("finish", () => {
     expect(issuesOf(sync(finish("a", [], undefined, [pathless])))).toEqual([{ code: "x", path: [] }]);
   });
 
+  it("should place an issue whose path a check wrote as undefined at the value too", () => {
+    const undefinedPath = (() => [{ code: "x", path: undefined }]) as unknown as Check<string>;
+    const [found] = issuesOf(sync(finish("a", [], undefined, [undefinedPath])));
+    expect(found?.path).toEqual([]);
+  });
+
   it("should stay synchronous with synchronous checks and turn asynchronous with an asynchronous one", async () => {
     expect(isPending(finish("abc", [], undefined, [short]))).toBe(false);
     const pending = finish("ab", [], undefined, [short, async () => [issue("later")]]);
@@ -105,6 +111,25 @@ describe("leaf", () => {
 describe("split, given something other than options or a check first", () => {
   it.each([["abc"], [5], [true]])("should throw a TypeError for %s", (first) => {
     expect(() => split([first])).toThrow(TypeError);
+  });
+
+  it.each([
+    ["a regular expression", /^a/],
+    ["a Date", new Date(0)],
+    ["a Map", new Map([["max", 1]])],
+    [
+      "a class instance",
+      new (class Options {
+        max = 1;
+      })(),
+    ],
+  ])("should throw a TypeError for %s, which would be read as options and ignored", (_, first) => {
+    expect(() => split([first])).toThrow(TypeError);
+  });
+
+  it("should accept options without a prototype", () => {
+    const options = Object.assign(Object.create(null) as object, { message: "Bad" });
+    expect(split([options])[0]).toBe(options);
   });
 });
 

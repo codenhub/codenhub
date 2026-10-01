@@ -63,6 +63,20 @@ describe("standard", () => {
     expect(portuguese["~standard"].validate(0)).toEqual({ issues: [{ message: "Muito pequeno", path: [] }] });
   });
 
+  it.each([
+    ["nothing", undefined, "undefined"],
+    ["null", null, "null"],
+    ["text", "en", "string"],
+    ["a list", [], "array"],
+  ])(
+    "should reject %s as the message map when it is created, rather than word every issue alike",
+    (_, map, received) => {
+      expect(() => standard(string(), map as never)).toThrow(
+        new TypeError(`messages must be a message map, such as englishMessages, received ${received}`),
+      );
+    },
+  );
+
   it("should prefer an issue's own message, then the map, then the built-in wording", () => {
     const custom = standard(() => fail({ code: "mine", message: "Fixed" }, { code: "other" }, { code: "custom" }), {
       other: "From map",

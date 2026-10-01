@@ -61,6 +61,9 @@ const describeLimit = ({ code, params }: ValidationIssue): string => {
   if (type === "depth") {
     return `Must be nested at most ${bound} levels deep`;
   }
+  if (type === "calls") {
+    return `Too complex to check within ${bound} recursive steps`;
+  }
   const counts = COLLECTIONS[type];
   if (counts !== undefined) {
     const wording = params?.exact === true ? "exactly" : isMin ? "at least" : "at most";

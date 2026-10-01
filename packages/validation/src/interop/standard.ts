@@ -1,5 +1,5 @@
 import { isThenable } from "../core/async";
-import { assertFunction } from "../core/result";
+import { assertFunction, describeType } from "../core/result";
 import type { AnyValidator, Infer, ValidationResult } from "../core/types";
 import { formatIssue, type Messages } from "../messages/format-issue";
 import type { StandardSchemaV1 } from "./standard-schema";
@@ -30,13 +30,17 @@ import type { StandardSchemaV1 } from "./standard-schema";
  * @param messages - Text for the issue codes, such as `englishMessages`. Required, because the specification
  * needs a message on every issue and there is no built-in default to fall back on.
  * @returns A validator that is also a Standard Schema.
- * @throws {TypeError} When `validator` is not a function.
+ * @throws {TypeError} When `validator` is not a function, or `messages` is not a message map.
  */
 export function standard<TValidator extends AnyValidator>(
   validator: TValidator,
   messages: Messages,
 ): TValidator & StandardSchemaV1<unknown, Infer<TValidator>> {
   assertFunction("validator", validator);
+  if (typeof messages !== "object" || messages === null || Array.isArray(messages)) {
+    // Without a map every issue would be worded "Invalid value", silently.
+    throw new TypeError(`messages must be a message map, such as englishMessages, received ${describeType(messages)}`);
+  }
   const wrapped = (input: unknown) => validator(input);
   type Output = Infer<TValidator>;
   const toStandard = (result: ValidationResult<Output>): StandardSchemaV1.Result<Output> =>

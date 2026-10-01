@@ -71,6 +71,7 @@ describe("coerceDate", () => {
   it("should apply the bounds of date to the converted value", () => {
     expect(codesOf(coerceDate({ min: new Date("2026-01-01") })("2025-01-01"))).toEqual(["too_small"]);
     expect(() => coerceDate({ min: new Date("nope") })).toThrow(RangeError);
+    expect(() => coerceDate({ min: 0 as unknown as Date })).toThrow(TypeError);
   });
 
   it("should accept whole timestamps only, since a Date would cut a fraction of a millisecond", () => {

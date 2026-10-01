@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { oneOf } from "../primitives/one-of";
 import { unknown } from "../primitives/unknown";
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
 import { url } from "./url";
@@ -156,6 +157,19 @@ describe("url", () => {
       true,
       true,
     ]);
+  });
+
+  it("should return the host of a scheme the parser leaves as written in lowercase, so one URL is one value", () => {
+    const ssh = url({ protocols: ["ssh", "postgres"] });
+    expect(valueOf(ssh("ssh://EXAMPLE.com/repo"))).toBe("ssh://example.com/repo");
+    expect(valueOf(ssh("postgres://Db.Example.COM:5432/app?x=1"))).toBe("postgres://db.example.com:5432/app?x=1");
+  });
+
+  it("should give a host validator that lowercase host, and keep its escapes uppercase as RFC 3986 writes them", () => {
+    expect(accepts(url({ protocols: ["ssh"], host: oneOf(["example.com"]) }), "ssh://EXAMPLE.COM/x")).toEqual([true]);
+    expect(valueOf(url({ protocols: ["git"], host: unknown() })("git://Ex%c3%A4mple.COM"))).toBe(
+      "git://ex%C3%A4mple.com",
+    );
   });
 
   it("should give any IP address to a host validator, public or not, checking no ranges itself", () => {

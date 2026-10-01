@@ -1,6 +1,6 @@
 import { leaf, split } from "../core/checks";
 import { timeOf } from "../core/objects";
-import { assertOrder, issue } from "../core/result";
+import { assertOrder, describeType, issue } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
 
 /** Bounds for {@link date}. Every option is optional. */
@@ -18,16 +18,19 @@ const isValidDate = (input: unknown): boolean => {
 };
 
 /**
- * Reads a bound as the moment it holds, rejecting one that is not a valid `Date`, such as a string
- * passed where the types were not checked. It is read as `timeOf` reads input, so a `Date` from another
- * realm is one too.
+ * Reads a bound as the moment it holds, rejecting one that is not a `Date`, such as a string passed
+ * where the types were not checked, as a `TypeError`, and an invalid one as a `RangeError`. It is read as
+ * `timeOf` reads input, so a `Date` from another realm is one too.
  */
 const readBound = (name: string, bound: Date | undefined): number | undefined => {
   if (bound === undefined) {
     return undefined;
   }
   const time = timeOf(bound);
-  if (time === undefined || Number.isNaN(time)) {
+  if (time === undefined) {
+    throw new TypeError(`${name} must be a Date, received ${describeType(bound)}`);
+  }
+  if (Number.isNaN(time)) {
     throw new RangeError(`${name} must be a valid Date`);
   }
   return time;
@@ -46,7 +49,8 @@ const readBound = (name: string, bound: Date | undefined): number | undefined =>
  *
  * @param options - Earliest and latest accepted moments, both inclusive.
  * @returns A validator that produces a `Date`.
- * @throws {RangeError} When `min` or `max` is not a valid `Date`, or `min` is after `max`.
+ * @throws {TypeError} When `min` or `max` is not a `Date`.
+ * @throws {RangeError} When `min` or `max` is an invalid `Date`, or `min` is after `max`.
  */
 export const date = ((...args: unknown[]) => {
   const [options, checks] = split<DateOptions, Date>(args);

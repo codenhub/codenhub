@@ -9,12 +9,13 @@ const toDecimal = (value: number): { digits: bigint; exponent: number } => {
 };
 
 const isMultipleOf = (value: number, step: number): boolean => {
-  // `%` is exact, so whole numbers of any size are compared as they are.
-  if (Number.isInteger(value) && Number.isInteger(step)) {
+  // A safe integer is written as the number it holds, and `%` is exact, so it is compared as it is.
+  if (Number.isSafeInteger(value) && Number.isSafeInteger(step)) {
     return value % step === 0;
   }
   // Otherwise both are read as the decimals they are written as, scaled to whole numbers with the same
-  // power of ten, so 0.3 is a multiple of 0.1 and 1e16 is not one of 0.3, at any size.
+  // power of ten, so 0.3 is a multiple of 0.1, 1e16 is not one of 0.3, and 1e23 is one of 10, though the
+  // double it is held as is not.
   const left = toDecimal(value);
   const right = toDecimal(step);
   const exponent = Math.min(left.exponent, right.exponent);
@@ -40,9 +41,13 @@ const isMultipleOf = (value: number, step: number): boolean => {
  * @param step - A positive finite number.
  * @param message - Wording for the issue.
  * @returns A check of numbers.
+ * @throws {TypeError} When `step` is not a number.
  * @throws {RangeError} When `step` is not a positive finite number.
  */
 export function multipleOf(step: number, message?: Message): Check<number> {
+  if (typeof step !== "number") {
+    throw new TypeError(`multipleOf needs a number, received ${step === null ? "null" : typeof step}`);
+  }
   if (!Number.isFinite(step) || step <= 0) {
     throw new RangeError(`multipleOf needs a positive finite number, received ${step}`);
   }
