@@ -38,6 +38,13 @@ describe("set", () => {
     ]);
   });
 
+  it("should word a value made equal to an earlier one with its message, as it is the set's own issue", () => {
+    const lower = set(string({ case: "lower" }), { message: "Each tag once" });
+    expect(issuesOf(lower(new Set(["A", "a"])))).toEqual([
+      { code: "invalid_value", path: [1], params: { unique: true }, message: "Each tag once" },
+    ]);
+  });
+
   it("should never produce fewer values than its size options allow", () => {
     const lower = set(string({ case: "lower" }), { min: 2 });
     expect(lower(new Set(["A", "a"])).ok).toBe(false);

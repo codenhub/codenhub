@@ -1,7 +1,7 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { sizeOfSet, valuesOf } from "../core/objects";
-import { assertFunction, failWith, repeatedItem, typeIssue } from "../core/result";
+import { assertFunction, repeatedItem, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -76,7 +76,7 @@ export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
             output.add(value);
           }
         });
-        return repeats.length > 0 ? failWith(repeats) : accept(output);
+        return repeats.length > 0 ? reject(repeats) : accept(output);
       },
     );
   };
