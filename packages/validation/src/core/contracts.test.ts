@@ -27,30 +27,29 @@ import { issuesOf, valueOf } from "../test-utils";
 import type { Validator } from "./types";
 
 describe("a mistake in the schema", () => {
-  it("should throw when the validator is made, for an option of the wrong type", () => {
-    const mistakes: [string, () => unknown][] = [
-      ["number min as text", () => number({ min: "5" as never })],
-      ["number int as text", () => number({ int: "yes" as never })],
-      ["number safeInt as a number", () => number({ safeInt: 1 as never })],
-      ["clamp without max", () => number({ clamp: { min: 0 } as never })],
-      ["clamp bounds as text", () => number({ clamp: { min: "0", max: "10" } as never })],
-      ["bigint bound as a number", () => bigint({ min: 0 as never })],
-      ["string trim as text", () => string({ trim: "yes" as never })],
-      ["datetime offset as text", () => datetime({ offset: "yes" as never })],
-      ["base64 url as text", () => base64({ url: "yes" as never })],
-      ["email allowPlus as text", () => email({ allowPlus: "no" as never })],
-      ["email domain as text", () => email({ domain: "example.com" as never })],
-      ["url host as text", () => url({ host: "example.com" as never })],
-      ["url repeated as text", () => url({ repeated: "yes" as never })],
-      ["url protocols as text", () => url({ protocols: "https" as never })],
-      ["url without protocols", () => url({ protocols: [] })],
-      ["searchParams repeated as text", () => searchParams(unknown(), { repeated: "yes" as never })],
-      ["a message in place of unique's by", () => unique("Must be unique" as never)],
-      ["checks given as a list", () => array(string(), [unique()] as never)],
-    ];
-    for (const [name, make] of mistakes) {
-      expect(make, name).toThrow(TypeError);
-    }
+  const mistakes: [string, () => unknown][] = [
+    ["number min as text", () => number({ min: "5" as never })],
+    ["number int as text", () => number({ int: "yes" as never })],
+    ["number safeInt as a number", () => number({ safeInt: 1 as never })],
+    ["clamp without max", () => number({ clamp: { min: 0 } as never })],
+    ["clamp bounds as text", () => number({ clamp: { min: "0", max: "10" } as never })],
+    ["bigint bound as a number", () => bigint({ min: 0 as never })],
+    ["string trim as text", () => string({ trim: "yes" as never })],
+    ["datetime offset as text", () => datetime({ offset: "yes" as never })],
+    ["base64 url as text", () => base64({ url: "yes" as never })],
+    ["email allowPlus as text", () => email({ allowPlus: "no" as never })],
+    ["email domain as text", () => email({ domain: "example.com" as never })],
+    ["url host as text", () => url({ host: "example.com" as never })],
+    ["url repeated as text", () => url({ repeated: "yes" as never })],
+    ["url protocols as text", () => url({ protocols: "https" as never })],
+    ["url without protocols", () => url({ protocols: [] })],
+    ["searchParams repeated as text", () => searchParams(unknown(), { repeated: "yes" as never })],
+    ["a message in place of unique's by", () => unique("Must be unique" as never)],
+    ["checks given as a list", () => array(string(), [unique()] as never)],
+  ];
+
+  it.each(mistakes)("should throw when the validator is made, for %s", (_, make) => {
+    expect(make).toThrow(TypeError);
   });
 
   it("should still accept every option left out", () => {
