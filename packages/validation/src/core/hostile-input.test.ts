@@ -41,6 +41,26 @@ describe("instanceOf, given a function instanceof cannot test against", () => {
   });
 });
 
+describe("instanceOf, given a Symbol.hasInstance that is not a function", () => {
+  it("should throw when it is made for one instanceof would throw for on every value", () => {
+    class Broken {
+      static [Symbol.hasInstance] = 5;
+    }
+    expect(() => instanceOf(Broken)).toThrow(new TypeError("target's Symbol.hasInstance must be a function"));
+  });
+
+  it("should treat null and undefined as absent, testing the prototype as instanceof does", () => {
+    class Plain {
+      static [Symbol.hasInstance] = undefined;
+    }
+    expect(codesOf(instanceOf(Plain)(new Plain()))).toEqual([]);
+    expect(codesOf(instanceOf(Plain)({}))).toEqual(["invalid_type"]);
+    // With no rule of its own, a function without a prototype still fails when it is made.
+    const arrow = Object.defineProperty(() => undefined, Symbol.hasInstance, { value: null });
+    expect(() => instanceOf(arrow as never)).toThrow(TypeError);
+  });
+});
+
 describe("instanceOf, given a class with a Symbol.hasInstance of its own", () => {
   class Tagged {
     static [Symbol.hasInstance](input: unknown): boolean {

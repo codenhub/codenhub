@@ -370,7 +370,7 @@ Creates a validator that accepts instances of a class, checked with `instanceof`
 
 **Returns** — A validator that produces the instance.
 
-**Throws** — When `target` is not a function `instanceof` can test against, such as an arrow function.
+**Throws** — When `target` is not a function `instanceof` can test against, such as an arrow function, or its `Symbol.hasInstance` is neither a function nor absent, which would make `instanceof` throw for every value.
 
 **Example**
 
