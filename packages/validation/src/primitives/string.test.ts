@@ -48,6 +48,10 @@ describe("string", () => {
       }
     });
 
+    it("should reject a regular expression in place of its options, which would accept every string", () => {
+      expect(() => string(/^a/ as never)).toThrow(TypeError);
+    });
+
     it("should reject a limit that is not a number as a TypeError when the validator is created", () => {
       expect(() => string({ min: "3" as never })).toThrow(
         new TypeError("Minimum length must be a number, received string"),

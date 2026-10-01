@@ -106,6 +106,24 @@ describe("split, given something other than options or a check first", () => {
   it.each([["abc"], [5], [true]])("should throw a TypeError for %s", (first) => {
     expect(() => split([first])).toThrow(TypeError);
   });
+  it.each([
+    ["a regular expression", /^a/],
+    ["a Date", new Date(0)],
+    ["a Map", new Map([["max", 1]])],
+    [
+      "a class instance",
+      new (class Options {
+        max = 1;
+      })(),
+    ],
+  ])("should throw a TypeError for %s, which would be read as options and ignored", (_, first) => {
+    expect(() => split([first])).toThrow(TypeError);
+  });
+
+  it("should accept options without a prototype", () => {
+    const options = Object.assign(Object.create(null) as object, { message: "Bad" });
+    expect(split([options])[0]).toBe(options);
+  });
 });
 
 describe("finish, given a check written by hand", () => {

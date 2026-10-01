@@ -1,4 +1,5 @@
 import { chain, collect, type Maybe } from "./async";
+import { isPlainObject } from "./objects";
 import { failWith, issue, pass, typeIssue } from "./result";
 import type {
   AsyncCheck,
@@ -11,11 +12,11 @@ import type {
 } from "./types";
 
 /**
- * Separates the arguments of a factory, `(options?, ...checks)`, into its options and its checks. An
+ * Separates the arguments of a factory, `(options?, ...checks)`, into its options and its checks. A plain
  * object is the options and a function is a check, so the options can be left out. Anything else in
- * first place, such as a string or a list, is a mistake in the schema: read as options, `string("abc")`
- * would take the string's `length` as its own, and `array(item, [unique()])` would drop the check. `null`
- * is no options, as `undefined` is.
+ * first place, such as a string, a list or a regular expression, is a mistake in the schema: read as
+ * options, `string("abc")` would take the string's `length` as its own, `array(item, [unique()])` would
+ * drop the check, and `string(/^a/)` would accept every string. `null` is no options, as `undefined` is.
  */
 export function split<TOptions extends MessageOptions, T>(
   args: readonly unknown[],
@@ -24,8 +25,7 @@ export function split<TOptions extends MessageOptions, T>(
   const [options, checks] = typeof first === "function" ? [{}, args] : [first ?? {}, rest];
   const message: unknown = (options as MessageOptions | null)?.message;
   if (
-    typeof options !== "object" ||
-    Array.isArray(options) ||
+    !isPlainObject(options) ||
     (message !== undefined && typeof message !== "string" && typeof message !== "function") ||
     checks.some((check) => typeof check !== "function")
   ) {

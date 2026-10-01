@@ -66,6 +66,13 @@ describe("composer arguments", () => {
     expect(create).toThrow(new TypeError(message));
   });
 
+  it.each([
+    ["object", () => object([valid] as never)],
+    ["partial", () => partial([valid] as never)],
+  ])("%s should reject a list as its shape, which would name its properties 0, 1 and on", (_, create) => {
+    expect(create).toThrow(new TypeError("shape must be a plain object of validators, received array"));
+  });
+
   it("should reject a lazy getter that returns something other than a validator, naming the getter", () => {
     const broken = lazy(() => undefined as never);
     expect(() => broken(1)).toThrow(new TypeError("getter() must return a function, received undefined"));

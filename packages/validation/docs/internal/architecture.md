@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-30
+last_updated: 2026-10-01
 scope: How the validation package is built and why, for whoever changes it next.
 ---
 
@@ -257,7 +257,7 @@ The measurements above are of 0.1.0. The migration also exposed three gaps, whic
 
 ### 0.2.0, measured again
 
-The same package, moved to checks, `func` and `unique`, measures 7.88 kB against 8.04 kB for the same package on 0.1.0, each built file minified with esbuild and gzipped, then summed. So 0.2.0 costs this adopter 0.16 kB less while adding checks, messages per validator and asynchronous checks to everything it uses: the slimmer type naming and the rare constraints leaving `string` pay for the argument handling and check running every validator now shares. That shared core is about 0.65 kB in a bundle with one leaf in it.
+The same package, moved to checks, `func` and `unique`, measures 7.88 kB against 8.04 kB for the same package on 0.1.0, each built file minified with esbuild and gzipped, then summed. So 0.2.0 costs this adopter 0.16 kB less while adding checks, messages per validator and asynchronous checks to everything it uses: the slimmer type naming and the rare constraints leaving `string` pay for the argument handling and check running every validator now shares. That shared core is about 0.65 kB in a bundle with one leaf in it. The fixes of the third review, chiefly rejecting options that are not a plain object, which takes the same test `object` uses, add 63 bytes gzipped to it (`boolean()` alone, 797 to 860 bytes); the adopter was not measured again for them.
 
 ## Coercion
 

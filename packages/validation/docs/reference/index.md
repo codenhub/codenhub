@@ -734,7 +734,7 @@ Only own enumerable properties are read, and class instances and arrays are not 
 
 **Returns** — A validator that produces an object.
 
-**Throws** — When a property validator is not a function, or `unknownKeys` is not `"strip"`, `"strict"` or `"passthrough"`.
+**Throws** — When `shape` is not a plain object, a property validator is not a function, or `unknownKeys` is not `"strip"`, `"strict"` or `"passthrough"`.
 
 **Example**
 
@@ -838,6 +838,8 @@ Makes every property of a shape optional, for a form or an update where any fiel
 - `TShape` — The shape.
 
 **Returns** — A shape whose every validator also accepts `undefined`.
+
+**Throws** — When `shape` is not a plain object, or a property validator is not a function.
 
 **Example**
 
