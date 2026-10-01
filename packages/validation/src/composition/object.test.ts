@@ -153,6 +153,17 @@ describe("object", () => {
       expect("then" in user({ name: "Ada" })).toBe(false);
     });
 
+    it("should build its output from the input as it was when called, not after the wait", async () => {
+      const passthrough = object({ username: isFree, nickname: optional(string()) }, { unknownKeys: "passthrough" });
+      const input: Record<string, unknown> = { username: "ada", extra: "before" };
+      const pending = passthrough(input);
+      input["extra"] = "after";
+      input["added"] = "later";
+      input["nickname"] = undefined;
+      expect(valueOf(await pending)).toEqual({ username: "ada", extra: "before" });
+      expect(Object.hasOwn(valueOf(await pending), "nickname")).toBe(false);
+    });
+
     it("should return the validated value once the promises resolve", async () => {
       const result = await object({ username: isFree })({ username: "ada" });
       expect(valueOf(result)).toEqual({ username: "ada" });
