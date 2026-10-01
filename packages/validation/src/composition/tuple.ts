@@ -1,7 +1,7 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { isArray } from "../core/objects";
-import { assertFunction, issue, typeIssue } from "../core/result";
+import { assertFunction, assertList, issue, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -55,7 +55,7 @@ export interface TupleOptions<TRest extends AnyValidator | undefined = undefined
  * @param items - One validator per position.
  * @param rest - The validator for extra positions, then checks.
  * @returns A validator that produces a tuple.
- * @throws {TypeError} When an item or `rest` is not a function.
+ * @throws {TypeError} When `items` is not a list or is empty, or an item or `rest` is not a function.
  */
 export function tuple<
   const TItems extends readonly [AnyValidator, ...AnyValidator[]],
@@ -74,8 +74,13 @@ export function tuple<
 export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyValidator {
   const [options, reject, accept] = tail<TupleOptions<AnyValidator | undefined>, unknown[]>(args);
   const { rest } = options;
+  assertList("items", items);
   // Copied, so changing the list after the validator is made changes nothing.
   const fixed = [...items];
+  if (fixed.length === 0) {
+    // The types forbid it: with `rest` it is an `array`, and without it a list that must be empty.
+    throw new TypeError("tuple() needs at least one item");
+  }
   fixed.forEach((item, index) => assertFunction(`items[${index}]`, item));
   if (rest !== undefined) {
     assertFunction("rest", rest);

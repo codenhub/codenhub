@@ -1054,7 +1054,7 @@ The result is a validator that behaves exactly as the one you gave, plus the `~s
 
 **Returns** — A validator that is also a Standard Schema.
 
-**Throws** — When `validator` is not a function.
+**Throws** — When `validator` is not a function, or `messages` is not a message map.
 
 **Example**
 
@@ -1111,7 +1111,7 @@ The input's tag must be one of the keys of `variants`, and the variant validates
 
 **Returns** — A validator that produces one of the variants' objects, tagged.
 
-**Throws** — When a variant is not a function, and, from the returned validator, when a variant produces something other than a plain object.
+**Throws** — When `key` is not text, `variants` is not a plain object, there is no variant or a variant is not a function, and, from the returned validator, when a variant produces something other than a plain object.
 
 **Example**
 
@@ -1184,7 +1184,7 @@ A wrong length is reported at once, without validating the items. With `rest`, t
 
 **Returns** — A validator that produces a tuple.
 
-**Throws** — When an item or `rest` is not a function.
+**Throws** — When `items` is not a list or is empty, or an item or `rest` is not a function.
 
 **Example**
 
@@ -1218,7 +1218,7 @@ The validators are tried in order and the first that accepts the value wins, so 
 
 **Returns** — A validator that produces what the first accepting option produces.
 
-**Throws** — When `options` is empty or an option is not a function.
+**Throws** — When `options` is not a list, is empty, or holds an option that is not a function.
 
 **Example**
 
@@ -2997,7 +2997,7 @@ Creates a validator for finite numbers. `NaN` and the infinities are always reje
 
 **Throws**
 
-- When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` lacks a number `min` or `max`.
+- When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` is not a range with a number `min` and `max`.
 - When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and reject every input.
 
 **Example**

@@ -121,6 +121,30 @@ describe("number", () => {
       expect(number({ clamp: { min: 0, max: 10 } })("5").ok).toBe(false);
     });
 
+    it.each([
+      [null, "null"],
+      [false, "boolean"],
+      [5, "number"],
+      ["0-10", "string"],
+      [[0, 10], "array"],
+    ])("should reject %j as the range when the validator is created, naming what it received", (range, received) => {
+      expect(() => number({ clamp: range as never })).toThrow(
+        new TypeError(`clamp must be a range with a number min and max, received ${received}`),
+      );
+    });
+
+    it("should reject a range without a number min or max, naming what it has instead", () => {
+      expect(() => number({ clamp: {} as never })).toThrow(
+        new TypeError("clamp.min must be a number, received undefined"),
+      );
+      expect(() => number({ clamp: { min: 0, max: null } as never })).toThrow(
+        new TypeError("clamp.max must be a number, received null"),
+      );
+      expect(() => number({ clamp: { min: "0", max: 1 } as never })).toThrow(
+        new TypeError("clamp.min must be a number, received string"),
+      );
+    });
+
     it("should reject NaN bounds and an inverted range when the validator is created", () => {
       expect(() => number({ clamp: { min: Number.NaN, max: 1 } })).toThrow(RangeError);
       expect(() => number({ clamp: { min: 2, max: 1 } })).toThrow(RangeError);
