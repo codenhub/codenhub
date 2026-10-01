@@ -2650,7 +2650,10 @@ Fractions, numbers beyond `Number.MAX_SAFE_INTEGER` (which have already lost pre
 
 **Returns** — A validator that produces a bigint.
 
-**Throws** — When no bigint can satisfy the bounds together.
+**Throws**
+
+- When a bound is not a bigint, such as the number `0` where `0n` was meant.
+- When no bigint can satisfy the bounds together.
 
 **Example**
 
@@ -2716,7 +2719,10 @@ Surrounding whitespace is ignored, and a dot with no digits on one side, as in `
 
 **Returns** — A validator that produces a number.
 
-**Throws** — When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
+**Throws**
+
+- When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` is not a range with a number `min` and `max`.
+- When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound.
 
 **Example**
 

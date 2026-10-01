@@ -21,6 +21,7 @@ const DECIMAL_INTEGER_PATTERN = /^[+-]?\d+$/;
  *
  * @param options - Bounds, exactly as for `bigint`.
  * @returns A validator that produces a bigint.
+ * @throws {TypeError} When a bound is not a bigint, such as the number `0` where `0n` was meant.
  * @throws {RangeError} When no bigint can satisfy the bounds together.
  */
 export const coerceBigint = ((...args: unknown[]) =>

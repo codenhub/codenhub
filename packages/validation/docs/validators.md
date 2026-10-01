@@ -79,7 +79,7 @@ The options, all optional:
 
 `multipleOf(step)` and `nonZero()` are [checks](#checks): `number({ min: 0 }, multipleOf(0.01))`.
 
-Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, non-negative is `min: 0`, negative is `lt: 0` and non-positive is `max: 0`. A `NaN` bound, or bounds no finite number can satisfy such as `{ min: 5, max: 2 }`, `{ gt: 1, lt: 1 }` or `{ min: Infinity }`, throws a `RangeError` rather than being ignored. `clamp` throws one for a `NaN` bound, a minimum above its maximum, or a range every value of which breaks a bound, such as `{ clamp: { min: 0, max: 10 }, min: 11 }`. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught when the validator is created, since checking would add to every consumer of `number`; such a validator rejects every input.
+Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, non-negative is `min: 0`, negative is `lt: 0` and non-positive is `max: 0`. A `NaN` bound, or bounds no finite number can satisfy such as `{ min: 5, max: 2 }`, `{ gt: 1, lt: 1 }` or `{ min: Infinity }`, throws a `RangeError` rather than being ignored, and a bound that is not a number, or a `clamp` that is not a range with a number `min` and `max`, a `TypeError`. `clamp` throws a `RangeError` for a `NaN` bound, a minimum above its maximum, or a range every value of which breaks a bound, such as `{ clamp: { min: 0, max: 10 }, min: 11 }`. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught when the validator is created, since checking would add to every consumer of `number`; such a validator rejects every input.
 
 | Failure             | `code`          | `params`                                         |
 | ------------------- | --------------- | ------------------------------------------------ |
@@ -222,7 +222,7 @@ IPv4 is four decimal parts from 0 to 255 without leading zeros, which some parse
 
 ### `datetime` and `time`
 
-`datetime(options?)` requires the `T` separator, a time, and `Z`, and rejects days that do not exist, so `2026-02-30T00:00:00Z` fails. The options are `offset`, default `false`, which accepts a UTC offset such as `+02:00` instead of only `Z`, `local`, default `false`, which also accepts a date-time without a zone, a time on a local clock such as `2026-09-28T14:30` from an HTML `datetime-local` input, whose seconds may be left out as that input leaves them out, and `precision`, an integer from 0 to 9, which requires exactly that many fractional-second digits (`0` forbids them; without it they are optional) and, with `local`, the seconds. A `precision` outside that throws a `RangeError` when the validator is created. Leap seconds (`23:59:60`) are rejected. `coerceDate` reads more spellings than this, such as a space for the `T`, an offset without its colon or no zone at all, because it converts text rather than checks its form; [Coercion](coercion.md) lists them.
+`datetime(options?)` requires the `T` separator, a time, and `Z`, and rejects days that do not exist, so `2026-02-30T00:00:00Z` fails. The options are `offset`, default `false`, which accepts a UTC offset such as `+02:00` instead of only `Z`, `local`, default `false`, which also accepts a date-time without a zone, a time on a local clock such as `2026-09-28T14:30` from an HTML `datetime-local` input, whose seconds may be left out as that input leaves them out, and `precision`, an integer from 0 to 9, which requires exactly that many fractional-second digits (`0` forbids them; without it they are optional) and, with `local`, the seconds. A `precision` that is not a number throws a `TypeError` when the validator is created, and one outside that range a `RangeError`. Leap seconds (`23:59:60`) are rejected. `coerceDate` reads more spellings than this, such as a space for the `T`, an offset without its colon or no zone at all, because it converts text rather than checks its form; [Coercion](coercion.md) lists them.
 
 `time(options?)` accepts `HH:MM`, as an HTML time input writes it, and `HH:MM:SS` with an optional fraction. It takes `precision` as `datetime` does, which also makes the seconds required.
 
@@ -316,7 +316,7 @@ See [Reusing shapes](#reusing-shapes) for extending, omitting and making propert
 
 Every collection validator takes the validator for its items, then options and checks, checks every item, and reports each issue with a path that leads through the item's position. A wrong size is reported at once, without validating the items, so a huge input is never worked through only to be rejected.
 
-The size options `min`, `max` and `length` are non-negative integers, and each throws a `RangeError` when created with anything else, as do limits no size can satisfy together, such as `min` above `max` or a `length` outside them. `min` and `max` are inclusive. A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"`, `"map"` or `"record"`, and `exact: true` is added for `length`. A record's size is its number of keys.
+The size options `min`, `max` and `length` are non-negative integers. Each throws a `TypeError` when created with a value that is not a number, such as `"3"`, and a `RangeError` with a number that is not a non-negative integer, as do limits no size can satisfy together, such as `min` above `max` or a `length` outside them. `min` and `max` are inclusive. A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"`, `"map"` or `"record"`, and `exact: true` is added for `length`. A record's size is its number of keys.
 
 ### `array`
 
@@ -493,9 +493,9 @@ const node: Validator<unknown> = union([object({ type: literal("a"), kids: array
 const body = lazy(() => array(node, { max: 100 }), { maxCalls: 50_000 }); // one limit for the whole request body
 ```
 
-Raise `maxCalls` on the root for recursive data with more nodes than that under one root. For objects told apart by a property, use [`tagged`](#tagged), which reads the property first and validates only the matching variant, so its work grows with the input.
+Raise `maxCalls` on the root for recursive data with more nodes than that under one root. Like `maxDepth`, it must be a positive integer, or `lazy` throws when created. For objects told apart by a property, use [`tagged`](#tagged), which reads the property first and validates only the matching variant, so its work grows with the input.
 
-The limits are about the stack and the work per node and not about size, so it does not stop a large flat input: cap the size of untrusted input, for instance with `pipe(string({ max: 100_000 }), json(category))`, and give `array` a `max`.
+The limits are about the stack and the work per node and not about size, so they do not stop a large flat input: cap the size of untrusted input, for instance with `pipe(string({ max: 100_000 }), json(category))`, and give `array` a `max`.
 
 ### `json`
 

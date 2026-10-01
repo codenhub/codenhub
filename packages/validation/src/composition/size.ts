@@ -11,7 +11,10 @@ export interface SizeOptions {
   length?: number;
 }
 
-/** Rejects a size option that is not a non-negative integer, since it is a mistake in the schema and not in the input. */
+/**
+ * Rejects a size option that is not a number, or not a non-negative integer, and limits no size can satisfy
+ * together, since each is a mistake in the schema and not in the input.
+ */
 export function assertSizeOptions({ min, max, length }: SizeOptions): void {
   for (const [name, size] of [
     ["Minimum size", min],
