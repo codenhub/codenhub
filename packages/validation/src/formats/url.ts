@@ -11,7 +11,7 @@ import type {
 } from "../core/types";
 import { HOSTLESS_SCHEMES, toHostlessUrl } from "./hostless-url";
 import { assertParts, notFormat, partIssue, partsFormat, readQuery, type Part, type Reading } from "./parts";
-import { HOST_MAX_LENGTH, isPublicHost } from "./patterns";
+import { HOST_MAX_LENGTH, isPublicName, withoutFinalDot } from "./patterns";
 
 /**
  * No whitespace and no control characters: a written URL holds neither (RFC 3986), and the parser would
@@ -101,7 +101,8 @@ type UrlParts<TOptions> = Extract<TOptions[keyof TOptions & ("host" | "port" | "
  * spelled with fullwidth letters or invisible characters is the host they spell, an internationalized
  * host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules
  * for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and
- * no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected.
+ * no scheme is guessed for text that lacks one. A host longer than 253 characters, not counting the
+ * final dot of an absolute host such as `example.com.`, which is accepted and kept, is rejected.
  *
  * The `host`, `port`, `path` and `query` options check those parts with validators of your own, which
  * only decide: the value is still the whole URL, and one that is asynchronous makes the validator
@@ -167,7 +168,7 @@ export function url(...rest: unknown[]): AnyValidator {
     // the parser has done so already, and this changes nothing.
     parsed.hostname = parsed.hostname.toLowerCase().replace(/%[\da-f]{2}/g, (escape) => escape.toUpperCase());
     const { hostname } = parsed;
-    if (hostname.length > HOST_MAX_LENGTH || (host === undefined && !isPublicHost(hostname))) {
+    if (withoutFinalDot(hostname).length > HOST_MAX_LENGTH || (host === undefined && !isPublicName(hostname))) {
       return notFormat("url");
     }
     const parts: Part[] = [];

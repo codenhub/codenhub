@@ -111,7 +111,7 @@ A format whose meaning has more than one spelling returns one canonical spelling
 - `url`, `email` and `domain` return what the URL parser read. For a scheme the parser has no rules for, such as `ssh`, it reads the host as written, so `url` normalizes that host as RFC 3986 does, letters in lowercase and escapes in uppercase.
 - `ip` returns an IPv4 address as written, which has one spelling, and an IPv6 address as the URL parser writes it, lowercase with the longest run of zero groups shortened (RFC 5952), and its zone as written. An IPv6 address that embeds an IPv4 one is written in hex groups, `::ffff:c000:201`, where RFC 5952 would keep the dotted form, since the parser's reading is the rule. `cidr` returns its address as `ip` does.
 - `mac` returns lowercase pairs separated by colons.
-- `hostname` and `uuid` return lowercase, and `ulid` uppercase, the spelling each one's specification writes; a hostname keeps a final dot, which names the same host but is not dropped from what was given.
+- `hostname` and `uuid` return lowercase, and `ulid` uppercase, the spelling each one's specification writes; a hostname keeps a final dot, which names the same host but is not dropped from what was given, and so do `domain` and the host of `url`, as the parser keeps it. An email domain has no absolute form, so `email` rejects one.
 - `phone` returns E.164, `+` and the digits (`+5511987654321`), and `creditCard` the digits alone, however either was grouped.
 
 ### Formats are made of parts

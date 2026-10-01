@@ -69,6 +69,12 @@ describe("url", () => {
     expect(url()(`https://${longest}/`).ok).toBe(true);
     expect(url()(`https://${longest}f/`).ok).toBe(false);
     expect(url({ host: unknown() })(`https://${labels(20)}/`).ok).toBe(false);
+    expect(url()(`https://${longest}./`).ok).toBe(true);
+  });
+
+  it("should accept an absolute host, keeping its final dot", () => {
+    expect(valueOf(url()("https://Example.com./a"))).toBe("https://example.com./a");
+    expect(accepts(url(), "https://localhost./", "https://example.com../")).toEqual([false, false]);
   });
 
   it("should reject a punycode host that does not decode", () => {

@@ -208,9 +208,19 @@ describe("domain", () => {
         "db.internal",
         "example.test",
         "127.0.0.1",
-        "example.com.",
+        "localhost.",
+        "example.com..",
       ),
-    ).toEqual(Array(7).fill(false));
+    ).toEqual(Array(8).fill(false));
+  });
+
+  it("should accept an absolute name, keeping its final dot, which the length does not count", () => {
+    expect(valueOf(domain()("Example.COM."))).toBe("example.com.");
+    expect(valueOf(domain()("münchen.de."))).toBe("xn--mnchen-3ya.de.");
+    const longest = `${Array.from({ length: 4 }, () => "a".repeat(61)).join(".")}.abcde`;
+    expect(longest).toHaveLength(253);
+    expect(accepts(domain(), `${longest}.`, `${longest}f.`)).toEqual([true, false]);
+    expect(accepts(email(), "ada@example.com.")).toEqual([false]);
   });
 
   it("should reject every name under .arpa and the IDN test top-level domains", () => {
