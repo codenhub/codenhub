@@ -153,6 +153,11 @@ describe("jwt", () => {
       ),
     ).toEqual(Array(8).fill(false));
   });
+
+  it("should reject a segment that is not UTF-8, as JSON text must be", () => {
+    const badUtf8 = "eyJhbGciOiL_In0"; // {"alg":"<0xff>"}
+    expect(accepts(jwt(), `${badUtf8}.${payload}.x`, `${header}.${badUtf8}.x`)).toEqual([false, false]);
+  });
 });
 
 describe("ip", () => {
