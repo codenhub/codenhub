@@ -256,6 +256,8 @@ The parts apply to a URL with a host. A `mailto`, `tel` or `urn` URL keeps its o
 
 A query key given more than once, as in `?id=1&id=2`, fails unless `repeated` is set, as a failure of the query part whose `issues` hold `invalid_key` at `[key]`. A check that saw one of the two values while a server read the other would pass a value nobody checked, so repeated keys are accepted only when you ask for every value.
 
+With a `path` validator, a path that holds an encoded `/` or `\`, `%2F` or `%5C` in either case, fails before any part runs, as a failure of the path part whose `issues` hold `invalid_value` with `{ encodedSeparator: true }`. The parser and a check on the path read `/api/..%2fadmin` as one segment under `/api/`, while a server that decodes the separator before routing reads `/admin`, so a prefix check would pass a path it does not cover. Without a `path` validator such a URL is accepted, since nothing checks its path.
+
 ### `searchParams`
 
 `searchParams(validator, options?, ...checks)` reads a query string, with or without its `?`, or a `URLSearchParams`, from this realm or another such as an iframe, into an object of its decoded parameters, and produces what `validator` makes of it. It reads the parameters as `url`'s `query` part does, `+` as a space and escapes decoded, and rejects a repeated key the same way unless `repeated` is set. Anything else fails with `invalid_type` and `{ expected: "query string", received }`.

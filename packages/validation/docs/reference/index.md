@@ -2130,7 +2130,7 @@ Inherited from [MessageOptions](#messageoptions).
 path?: AnyValidator;
 ```
 
-Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such as `ssh://example.com`, that names no path. Its failure is reported as the URL's, with `params.part` `"path"`.
+Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such as `ssh://example.com`, that names no path. A path holding an encoded `/` or `\`, `%2F` or `%5C`, fails before it runs, with `{ encodedSeparator: true }`, since a server that decodes it before routing would read another path than the validator saw. Its failure is reported as the URL's, with `params.part` `"path"`.
 
 #### port
 

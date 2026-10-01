@@ -156,7 +156,12 @@ export const englishMessages: Messages = {
   too_small: describeLimit,
   too_big: describeLimit,
   invalid_format: describeFormat,
-  invalid_value: (issue) => (issue.params?.unique === true ? "Must be unique" : describeValue(issue)),
+  invalid_value: (issue) =>
+    issue.params?.unique === true
+      ? "Must be unique"
+      : issue.params?.encodedSeparator === true
+        ? "Must not hold an encoded / or \\"
+        : describeValue(issue),
   // Worded with what the key validator found first, so a form says why the key is wrong, not only that it
   // is, and with the map in use, so a map that overrides some of this wording reaches that issue too.
   invalid_key: (issue, messages) => {

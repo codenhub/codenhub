@@ -1,5 +1,5 @@
 import { split } from "../core/checks";
-import { assertOption } from "../core/result";
+import { assertOption, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncCheck,
@@ -31,6 +31,9 @@ const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*$/i;
  */
 const SCRIPT_SCHEMES = ["javascript", "vbscript", "data"];
 
+/** A percent-encoded path separator, `%2F` for `/` or `%5C` for `\`, in either letter case. */
+const ENCODED_SEPARATOR_PATTERN = /%(?:2f|5c)/i;
+
 /** Options for {@link url}. */
 export interface UrlOptions extends MessageOptions {
   /**
@@ -61,7 +64,9 @@ export interface UrlOptions extends MessageOptions {
   /**
    * Validates the path as the parser writes it: dot segments resolved and characters such as spaces
    * percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such
-   * as `ssh://example.com`, that names no path. Its failure is reported as the URL's, with `params.part`
+   * as `ssh://example.com`, that names no path. A path holding an encoded `/` or `\`, `%2F` or `%5C`, fails
+   * before it runs, with `{ encodedSeparator: true }`, since a server that decodes it before routing would
+   * read another path than the validator saw. Its failure is reported as the URL's, with `params.part`
    * `"path"`.
    */
   path?: AnyValidator;
@@ -173,6 +178,12 @@ export function url(...rest: unknown[]): AnyValidator {
       parts.push(["port", port, parsed.port === "" ? undefined : Number(parsed.port)]);
     }
     if (path !== undefined) {
+      // An encoded `/` or `\` is one segment to the parser and to a check on the path, and two to a server
+      // that decodes it before routing, so `/api/..%2fadmin` would pass a check for `/api/` and reach
+      // `/admin`. It fails before the path validator runs, as a repeated query key does.
+      if (ENCODED_SEPARATOR_PATTERN.test(parsed.pathname)) {
+        return { issues: [partIssue("url", "path", [issue("invalid_value", { encodedSeparator: true })])] };
+      }
       parts.push(["path", path, parsed.pathname]);
     }
     if (query !== undefined) {

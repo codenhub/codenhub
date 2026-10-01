@@ -309,6 +309,11 @@ describe("formatIssue", () => {
     expect(formatIssue(short as ValidationIssue)).toBe("Invalid key: Must be at least 3 characters");
     const [repeated] = issuesOf(record(string({ case: "lower" }), number())({ A: 1, a: 2 }));
     expect(formatIssue(repeated as ValidationIssue)).toBe("Invalid key: Must be unique");
+  });
+
+  it("should word an encoded separator in a URL path", () => {
+    const [encoded] = issuesOf(url({ path: string() })("https://example.com/a%2fb"));
+    expect(formatIssue(encoded as ValidationIssue)).toBe("Invalid URL path: Must not hold an encoded / or \\");
     const custom = issue({ code: "invalid_key", params: { issues: [issue({ code: "x", message: "Reserved" })] } });
     expect(formatIssue(custom)).toBe("Invalid key: Reserved");
     expect(formatIssue(issue({ code: "invalid_key" }))).toBe("Invalid key");
