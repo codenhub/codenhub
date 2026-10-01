@@ -27,7 +27,7 @@ Pass `signup` to the library that asks for a Standard Schema, and it will call `
 
 A validator that behaves exactly as the one you gave, with the `~standard` property added, so it is still an ordinary validator you can call and compose. The validator you gave is not modified, so the same one can be exposed twice, with different messages for different audiences.
 
-`~standard.validate` returns `{ value }` on success and `{ issues }` on failure, and never both. It returns its result directly for a synchronous validator and a promise for an asynchronous one, which the specification allows. The input type is `unknown` and the output type is what the validator produces, so a library that infers types from a Standard Schema gets them.
+`~standard.validate` returns `{ value }` on success and `{ issues }` on failure, and never both. It returns its result directly for a synchronous validator and a `Promise` for an asynchronous one, which the specification allows. That holds even for a validator of your own that returns another kind of thenable, such as a query builder's, since callers tell the two apart with `instanceof Promise` and would read anything else as a result without issues. The input type is `unknown` and the output type is what the validator produces, so a library that infers types from a Standard Schema gets them.
 
 The package exports the `StandardSchemaV1` type so you can accept one in your own code.
 

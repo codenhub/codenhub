@@ -33,6 +33,14 @@ export interface DatetimeOptions extends MessageOptions {
    * @defaultValue false
    */
   offset?: boolean;
+  /**
+   * Also accepts a date-time without a zone, which names a time on a local clock rather than a moment,
+   * such as `2026-09-28T14:30` from an HTML `datetime-local` input. Without `precision`, the seconds may
+   * then be left out, as that input leaves them out when they are zero.
+   *
+   * @defaultValue false
+   */
+  local?: boolean;
   /** Exact number of fractional-second digits, an integer from 0 to 9. `0` forbids them; they are optional and unbounded when omitted. */
   precision?: number;
 }
@@ -46,17 +54,24 @@ export interface DatetimeOptions extends MessageOptions {
  * datetime()("2026-09-28T14:30:00Z"); // { ok: true, ... }
  * datetime()("2026-02-30T00:00:00Z"); // { ok: false, ... }: February has no 30th
  * datetime({ offset: true })("2026-09-28T14:30:00+02:00"); // { ok: true, ... }
+ * datetime({ local: true })("2026-09-28T14:30"); // { ok: true, ... }, a datetime-local value
  * ```
  *
- * @throws {TypeError} When `offset` is not a boolean.
+ * @throws {TypeError} When `offset` or `local` is not a boolean.
  * @throws {RangeError} When `precision` is not an integer from 0 to 9.
  */
 export const datetime = ((...args: unknown[]) => {
-  const [{ offset, precision, message }, checks] = split<DatetimeOptions, string>(args);
+  const [{ offset, local, precision, message }, checks] = split<DatetimeOptions, string>(args);
   assertOption("offset", offset, "boolean");
+  assertOption("local", local, "boolean");
   const fraction = fractionPattern(precision);
   const zone = offset === true ? "(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)" : "Z";
-  const pattern = new RegExp(`^(\\d{4}-\\d{2}-\\d{2})T${TIME}${fraction}${zone}$`);
+  // A local time may leave out its seconds, as `time` does, unless a precision asks for a fraction of them.
+  const clock =
+    local === true && precision === undefined
+      ? `(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d${fraction})?`
+      : `${TIME}${fraction}`;
+  const pattern = new RegExp(`^(\\d{4}-\\d{2}-\\d{2})T${clock}${zone}${local === true ? "?" : ""}$`);
   return stringFormat(
     "datetime",
     (text) => {

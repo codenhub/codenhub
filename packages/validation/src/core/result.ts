@@ -187,9 +187,19 @@ export function assertFunction(name: string, value: unknown): void {
  * Rejects an option of the wrong type, such as `int: "yes"`, which would otherwise be read as another
  * value or ignored, since it is a mistake in the schema and not in the input. Undefined is no option.
  */
-export function assertOption(name: string, value: unknown, type: "boolean" | "number" | "bigint"): void {
+export function assertOption(name: string, value: unknown, type: "boolean" | "number" | "bigint" | "string"): void {
   if (value !== undefined && typeof value !== type) {
     throw new TypeError(`${name} must be a ${type}, received ${value === null ? "null" : typeof value}`);
+  }
+}
+
+/**
+ * Rejects what must be text and is not, such as a prefix read from a variable that is not set, which
+ * would otherwise be converted to text and required as `"undefined"`.
+ */
+export function assertText(name: string, value: unknown): void {
+  if (typeof value !== "string") {
+    throw new TypeError(`${name} must be text, received ${value === null ? "null" : typeof value}`);
   }
 }
 

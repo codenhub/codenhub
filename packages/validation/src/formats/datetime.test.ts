@@ -79,6 +79,33 @@ describe("datetime", () => {
     expect(datetime({ precision: 9 })("2026-09-28T14:30:00.123456789Z").ok).toBe(true);
   });
 
+  it("should accept a date-time without a zone with local, as an HTML datetime-local input sends it", () => {
+    const local = datetime({ local: true });
+    expect(
+      accepts(local, "2026-09-28T14:30", "2026-09-28T14:30:15", "2026-09-28T14:30:15.5", "2026-09-28T14:30:00Z"),
+    ).toEqual([true, true, true, true]);
+    expect(accepts(local, "2026-09-28T14:30+02:00", "2026-02-30T14:30", "2026-09-28T24:00", "2026-09-28T14")).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ]);
+    expect(accepts(datetime(), "2026-09-28T14:30", "2026-09-28T14:30:00")).toEqual([false, false]);
+  });
+
+  it("should combine local with offset and precision", () => {
+    expect(accepts(datetime({ local: true, offset: true }), "2026-09-28T14:30", "2026-09-28T14:30+02:00")).toEqual([
+      true,
+      true,
+    ]);
+    // A precision asks for a fraction of the seconds, so the seconds are required.
+    expect(accepts(datetime({ local: true, precision: 3 }), "2026-09-28T14:30:00.000", "2026-09-28T14:30")).toEqual([
+      true,
+      false,
+    ]);
+    expect(() => datetime({ local: "yes" as never })).toThrow(TypeError);
+  });
+
   it("should report invalid_type for a non-string and invalid_format for a bad one", () => {
     expect(codesOf(datetime()(1))).toEqual(["invalid_type"]);
     expect(issuesOf(datetime()("x"))[0]?.params).toEqual({ format: "datetime" });

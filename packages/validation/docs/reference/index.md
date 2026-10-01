@@ -67,7 +67,7 @@ Give it to a validator after its options. It runs once the value has its type: f
 
 **Returns** — A check that reports the issue when `test` returns `false`.
 
-**Throws** — When `test` is not a function.
+**Throws** — When `test` is not a function, or `issue` is neither text nor an issue: one whose `code` and `message` are text when given, and whose `path` is a list.
 
 **Example**
 
@@ -120,6 +120,8 @@ Requires a string to end with a suffix. It fails with `invalid_format` and `para
 - `message` — Wording for the issue.
 
 **Returns** — A check of strings.
+
+**Throws** — When `value` is not text, such as a variable that is not set, or `message` is neither text nor a function.
 
 **Example**
 
@@ -206,7 +208,7 @@ A value that is not a string fails with `invalid_type`, and a string the test re
 
 **Returns** — The factory of the validator.
 
-**Throws** — When `test` is not a function.
+**Throws** — When `name` is not text or `test` is not a function.
 
 **Example**
 
@@ -316,7 +318,7 @@ A value the guard rejects fails with `invalid_type` and `params.expected` set to
 
 **Returns** — The factory of the validator.
 
-**Throws** — When `accepts` is not a function.
+**Throws** — When `expected` is not text or `accepts` is not a function.
 
 **Example**
 
@@ -339,6 +341,8 @@ Requires a string to contain a substring. It fails with `invalid_format` and `pa
 - `message` — Wording for the issue.
 
 **Returns** — A check of strings.
+
+**Throws** — When `value` is not text, such as a variable that is not set, or `message` is neither text nor a function.
 
 **Example**
 
@@ -533,7 +537,10 @@ Creates a validator that accepts exactly one value, compared with `===`. The typ
 
 **Returns** — A validator that produces `value`.
 
-**Throws** — When `value` is `NaN`, which no value equals, so the literal would accept nothing.
+**Throws**
+
+- When `value` is an object or a function, which equals only itself.
+- When `value` is `NaN`, which no value equals, so the literal would accept nothing.
 
 **Example**
 
@@ -761,7 +768,7 @@ Creates a validator that accepts any one value of a list or of a TypeScript `enu
 
 **Throws**
 
-- When there is no value, so the validator would accept nothing.
+- When `values` is neither a list nor an enum, such as text, which would be read as its characters, there is no value, so the validator would accept nothing, or a value is an object or a function, which equals only itself.
 - When a value is `NaN`, which no value equals.
 
 **Example**
@@ -1029,7 +1036,7 @@ export declare function standard<TValidator extends AnyValidator>(validator: TVa
 
 Makes a validator usable wherever a [Standard Schema](https://standardschema.dev/) is accepted, such as form libraries, API frameworks and routers, without an adapter on their side.
 
-The result is a validator that behaves exactly as the one you gave, plus the `~standard` property the specification asks for. The one you gave is not modified. The specification requires a message on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass: `englishMessages` for the built-in English, or a map of your own. `~standard.validate` returns its result directly for a synchronous validator and a promise for an asynchronous one. Input and output types are `unknown` and what the validator produces.
+The result is a validator that behaves exactly as the one you gave, plus the `~standard` property the specification asks for. The one you gave is not modified. The specification requires a message on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass: `englishMessages` for the built-in English, or a map of your own. `~standard.validate` returns its result directly for a synchronous validator and a `Promise` for an asynchronous one, even one that returns another kind of thenable, since callers tell the two apart with `instanceof Promise`, as the specification shows, and would otherwise read a pending result as one without issues. Input and output types are `unknown` and what the validator produces.
 
 **Parameters**
 
@@ -1067,6 +1074,8 @@ Requires a string to start with a prefix. It fails with `invalid_format` and `pa
 - `message` — Wording for the issue.
 
 **Returns** — A check of strings.
+
+**Throws** — When `value` is not text, such as a variable that is not set, or `message` is neither text nor a function.
 
 **Example**
 
@@ -1236,7 +1245,7 @@ Without `by` it compares the validated items themselves; with it, the value `by`
 
 **Returns** — A check of arrays.
 
-**Throws** — When `by` is given and is not a function, such as a message in its place: a message alone is `unique(undefined, message)`.
+**Throws** — When `by` is given and is not a function, such as a message in its place: a message alone is `unique(undefined, message)`, or `message` is neither text nor a function.
 
 **Example**
 
@@ -1418,6 +1427,14 @@ export interface DatetimeOptions extends MessageOptions
 ```
 
 Options for [datetime](#datetime).
+
+#### local
+
+```ts
+local?: boolean;
+```
+
+Also accepts a date-time without a zone, which names a time on a local clock rather than a moment, such as `2026-09-28T14:30` from an HTML `datetime-local` input. Without `precision`, the seconds may then be left out, as that input leaves them out when they are zero.
 
 #### message
 
@@ -2767,7 +2784,7 @@ Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a
 
 **Throws**
 
-- When `offset` is not a boolean.
+- When `offset` or `local` is not a boolean.
 - When `precision` is not an integer from 0 to 9.
 
 **Example**
@@ -2776,6 +2793,7 @@ Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a
 datetime()("2026-09-28T14:30:00Z"); // { ok: true, ... }
 datetime()("2026-02-30T00:00:00Z"); // { ok: false, ... }: February has no 30th
 datetime({ offset: true })("2026-09-28T14:30:00+02:00"); // { ok: true, ... }
+datetime({ local: true })("2026-09-28T14:30"); // { ok: true, ... }, a datetime-local value
 ```
 
 ### domain

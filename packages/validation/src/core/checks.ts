@@ -22,11 +22,28 @@ export function split<TOptions extends MessageOptions, T>(
 ): [options: TOptions, checks: AsyncCheck<T>[]] {
   const [first, ...rest] = args;
   const [options, checks] = typeof first === "function" ? [{}, args] : [first ?? {}, rest];
-  if (typeof options !== "object" || Array.isArray(options) || checks.some((check) => typeof check !== "function")) {
-    // A mistake in the schema, reported now rather than on the first input.
-    throw new TypeError("Options must be an object, and checks functions");
+  const message: unknown = (options as MessageOptions | null)?.message;
+  if (
+    typeof options !== "object" ||
+    Array.isArray(options) ||
+    (message !== undefined && typeof message !== "string" && typeof message !== "function") ||
+    checks.some((check) => typeof check !== "function")
+  ) {
+    // A mistake in the schema, reported now rather than on the first input. One condition and one text,
+    // since every validator carries them.
+    throw new TypeError("Options must be an object whose message is text or a function, and checks functions");
   }
   return [options as TOptions, checks as AsyncCheck<T>[]];
+}
+
+/**
+ * Rejects wording that is neither text nor a function, such as a translation that turned out to be a
+ * group of them, which would otherwise reach a form as `[object Object]`. Undefined is no wording.
+ */
+export function assertMessage(message: unknown): void {
+  if (message !== undefined && typeof message !== "string" && typeof message !== "function") {
+    throw new TypeError(`message must be text or a function, received ${message === null ? "null" : typeof message}`);
+  }
 }
 
 /**
@@ -97,15 +114,15 @@ export function leaf<T>(
  * Builds a built-in check: a value `test` accepts passes, and any other reports one issue with `code`
  * and `params`, worded by `message` when there is one.
  */
-export const rule =
-  <T>(
-    test: (value: T) => boolean,
-    code: string,
-    params: Readonly<Record<string, unknown>>,
-    message: Message | undefined,
-  ): Check<T> =>
-  (value) =>
-    test(value) ? undefined : word([issue(code, params)], message);
+export function rule<T>(
+  test: (value: T) => boolean,
+  code: string,
+  params: Readonly<Record<string, unknown>>,
+  message: Message | undefined,
+): Check<T> {
+  assertMessage(message);
+  return (value) => (test(value) ? undefined : word([issue(code, params)], message));
+}
 
 /**
  * Builds a validator that accepts the values `accepts` names, and reports any other with one

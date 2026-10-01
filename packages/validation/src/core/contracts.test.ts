@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { check } from "../builders/check";
+import { format } from "../builders/format";
+import { guard } from "../builders/guard";
+import { endsWith } from "../checks/ends-with";
+import { includes } from "../checks/includes";
 import { pattern } from "../checks/pattern";
+import { startsWith } from "../checks/starts-with";
 import { unique } from "../checks/unique";
 import { coerceDate } from "../coercion/coerce-date";
 import { array } from "../composition/array";
@@ -19,6 +24,7 @@ import { uuid } from "../formats/uuid";
 import { englishMessages } from "../messages/english-messages";
 import { flatten, formatIssue } from "../messages/format-issue";
 import { bigint } from "../primitives/bigint";
+import { literal } from "../primitives/literal";
 import { number } from "../primitives/number";
 import { oneOf } from "../primitives/one-of";
 import { string } from "../primitives/string";
@@ -46,6 +52,21 @@ describe("a mistake in the schema", () => {
     ["searchParams repeated as text", () => searchParams(unknown(), { repeated: "yes" as never })],
     ["a message in place of unique's by", () => unique("Must be unique" as never)],
     ["checks given as a list", () => array(string(), [unique()] as never)],
+    ["a message that is a group of translations", () => string({ message: { short: "Too short" } as never })],
+    ["a message that is null", () => email({ message: null as never })],
+    ["a check's message that is an object", () => startsWith("a", { text: "A" } as never)],
+    ["unique's message that is an object", () => unique(undefined, {} as never)],
+    ["oneOf given text, read as its characters", () => oneOf("admin,editor" as never)],
+    ["oneOf given an object value", () => oneOf([{ id: 1 }] as never)],
+    ["literal given an object", () => literal({} as never)],
+    ["startsWith given a variable that is not set", () => startsWith(undefined as never)],
+    ["endsWith given a number", () => endsWith(5 as never)],
+    ["includes given null", () => includes(null as never)],
+    ["format without a name", () => format(undefined as never, () => true)],
+    ["guard without a name", () => guard(undefined as never, (_input): _input is string => true)],
+    ["check given null as its issue", () => check(() => true, null as never)],
+    ["check given a path as text", () => check(() => true, { path: "confirm" as never })],
+    ["check given a message that is an object", () => check(() => true, { message: {} as never })],
   ];
 
   it.each(mistakes)("should throw when the validator is made, for %s", (_, make) => {
@@ -53,7 +74,17 @@ describe("a mistake in the schema", () => {
   });
 
   it("should still accept every option left out", () => {
-    expect(() => [number({}), bigint({}), string({}), url({}), email({}), unique(undefined, "Twice")]).not.toThrow();
+    expect(() => [
+      number({}),
+      bigint({}),
+      string({}),
+      url({}),
+      email({}),
+      unique(undefined, "Twice"),
+      string(null as never),
+      oneOf([null, undefined, 1n, Symbol("s")]),
+      check(() => true, {}),
+    ]).not.toThrow();
   });
 });
 

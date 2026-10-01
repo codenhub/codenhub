@@ -1,5 +1,5 @@
 import { chain } from "../core/async";
-import { assertFunction, toIssue, type IssueInput } from "../core/result";
+import { assertFunction, assertOption, toIssue, type IssueInput } from "../core/result";
 import type { AsyncCheck, Check } from "../core/types";
 
 /**
@@ -26,7 +26,8 @@ import type { AsyncCheck, Check } from "../core/types";
  * @param issue - What to report when it is not: an issue, or a string as its message. Defaults to code
  * `"custom"` at the value's own location.
  * @returns A check that reports the issue when `test` returns `false`.
- * @throws {TypeError} When `test` is not a function.
+ * @throws {TypeError} When `test` is not a function, or `issue` is neither text nor an issue: one whose
+ * `code` and `message` are text when given, and whose `path` is a list.
  */
 export function check<T>(test: (value: T) => boolean, issue?: IssueInput | string): Check<T>;
 export function check<T>(
@@ -38,7 +39,16 @@ export function check<T>(
   issue: IssueInput | string = {},
 ): AsyncCheck<T> {
   assertFunction("test", test);
+  if (typeof issue !== "string" && (typeof issue !== "object" || issue === null)) {
+    throw new TypeError("issue must be text or an issue object");
+  }
   const { path, params, ...rest } = typeof issue === "string" ? { message: issue } : issue;
+  assertOption("code", rest.code, "string");
+  assertOption("message", rest.message, "string");
+  // A path written as text, such as "confirm", would be spread into one segment per letter.
+  if (path !== undefined && !Array.isArray(path)) {
+    throw new TypeError("issue.path must be a list of keys and indexes");
+  }
   // Copied and frozen once, so neither the caller nor a result can change what a later failure reports.
   // The freeze is shallow: an object nested in params is the caller's own.
   const reported: IssueInput = {
