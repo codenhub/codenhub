@@ -42,7 +42,9 @@ export interface UrlOptions extends MessageOptions {
   /**
    * Validates the host instead of the default rule, that it is a public domain name. It receives the
    * host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in
-   * punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. So
+   * punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. For a
+   * scheme the parser has no rules for, such as `ssh`, it reads a name as written, and the host is that
+   * name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them. So
    * `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])`
    * accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part`
    * `"host"`.
@@ -56,7 +58,8 @@ export interface UrlOptions extends MessageOptions {
   port?: AnyValidator;
   /**
    * Validates the path as the parser writes it: dot segments resolved and characters such as spaces
-   * percent-encoded, always starting with `/`. Its failure is reported as the URL's, with `params.part`
+   * percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such
+   * as `ssh://example.com`, that names no path. Its failure is reported as the URL's, with `params.part`
    * `"path"`.
    */
   path?: AnyValidator;
@@ -89,8 +92,8 @@ type UrlParts<TOptions> = Extract<TOptions[keyof TOptions & ("host" | "port" | "
  * credentials and the host. The value is that reading, serialized, so a check made later on the value
  * sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host
  * spelled with fullwidth letters or invisible characters is the host they spell, an internationalized
- * host is in punycode, an IPv4 host is four decimal parts, and characters such as `"` and `<` are
- * percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and
+ * host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules
+ * for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and
  * no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected.
  *
  * The `host`, `port`, `path` and `query` options check those parts with validators of your own, which
@@ -152,6 +155,10 @@ export function url(...rest: unknown[]): AnyValidator {
       const hostless = toHostlessUrl(scheme, parsed.href.slice(parsed.protocol.length), false);
       return hostless === undefined ? notFormat("url") : { value: `${parsed.protocol}${hostless}`, parts: [] };
     }
+    // A scheme the parser has no rules for, such as `ssh`, keeps its host as written, so the host is
+    // normalized as RFC 3986 does it: letters in lowercase and escapes in uppercase. For any other scheme
+    // the parser has done so already, and this changes nothing.
+    parsed.hostname = parsed.hostname.toLowerCase().replace(/%[\da-f]{2}/g, (escape) => escape.toUpperCase());
     const { hostname } = parsed;
     if (hostname.length > HOST_MAX_LENGTH || (host === undefined && !isPublicHost(hostname))) {
       return notFormat("url");

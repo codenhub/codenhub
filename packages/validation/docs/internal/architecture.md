@@ -107,7 +107,7 @@ Where a standard parser decides what the text means, the parser is the descripti
 
 A format whose meaning has more than one spelling returns one canonical spelling, so a later comparison or lookup on the value treats one meaning as one value:
 
-- `url`, `email` and `domain` return what the URL parser read.
+- `url`, `email` and `domain` return what the URL parser read. For a scheme the parser has no rules for, such as `ssh`, it reads the host as written, so `url` normalizes that host as RFC 3986 does, letters in lowercase and escapes in uppercase.
 - `ip` returns an IPv4 address as written, which has one spelling, and an IPv6 address as the URL parser writes it, lowercase with the longest run of zero groups shortened (RFC 5952), and its zone as written. An IPv6 address that embeds an IPv4 one is written in hex groups, `::ffff:c000:201`, where RFC 5952 would keep the dotted form, since the parser's reading is the rule. `cidr` returns its address as `ip` does.
 - `mac` returns lowercase pairs separated by colons.
 - `hostname` and `uuid` return lowercase, and `ulid` uppercase, the spelling each one's specification writes; a hostname keeps a final dot, which names the same host but is not dropped from what was given.

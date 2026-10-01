@@ -108,6 +108,26 @@ describe("agreement with the URL parser", () => {
     expect(values.filter(([, value]) => valueOf(validate(value)) !== value)).toEqual([]);
   });
 
+  it("url should return one spelling of the host for a scheme the parser leaves as written, which it writes back unchanged", () => {
+    const validate = url({ protocols: ["ssh"], host: unknown() });
+    const texts = [...strings(19, 4000, 6, [..."exEMXZ%2e41-.:", "%c3", "%C3", "%a4"])].map(
+      (noise) => `ssh://ex${noise}/a`,
+    );
+    const values = accepted(validate, texts);
+    expect(values.length).toBeGreaterThan(1000);
+    expect(values.filter(([, value]) => new URL(value).href !== value)).toEqual([]);
+    expect(values.filter(([, value]) => valueOf(validate(value)) !== value)).toEqual([]);
+    // Letters lowercase and escapes uppercase, as RFC 3986 normalizes them.
+    const unnormalized = ([, value]: [string, string]): boolean => {
+      const { hostname } = new URL(value);
+      const escapes = hostname.match(/%[\da-f]{2}/gi) ?? [];
+      return (
+        /[A-Z]/.test(hostname.replace(/%[\da-f]{2}/gi, "")) || escapes.some((escape) => escape !== escape.toUpperCase())
+      );
+    };
+    expect(values.filter(unnormalized)).toEqual([]);
+  });
+
   it("email should only ever return a domain the parser writes back unchanged", () => {
     const validate = email();
     const values = accepted(
