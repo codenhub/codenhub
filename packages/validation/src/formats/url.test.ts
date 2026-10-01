@@ -251,6 +251,30 @@ describe("url without a host", () => {
     expect(accepts(mailto, ...invalid)).toEqual(invalid.map(() => false));
   });
 
+  it("should reject a line break in the subject, which only the body may hold", () => {
+    expect(
+      accepts(
+        mailto,
+        "mailto:ada@example.com?subject=Hi%0D%0ABcc:%20eve@example.net",
+        "mailto:ada@example.com?subject=Hi%0aBcc:eve@example.net",
+        "mailto:ada@example.com?SUBJECT=Hi%0d",
+        "mailto:ada@example.com?subject=100%25%20done&body=Line%0D%0Aline",
+      ),
+    ).toEqual([false, false, false, true]);
+  });
+
+  it("should reject a repeated subject or body, and accept repeated recipient fields", () => {
+    expect(
+      accepts(
+        mailto,
+        "mailto:ada@example.com?subject=a&subject=b",
+        "mailto:ada@example.com?Subject=a&SUBJECT=b",
+        "mailto:ada@example.com?body=a&body=b",
+        "mailto:ada@example.com?to=bob@example.org&to=eve@example.net&cc=a@example.com&cc=b@example.com",
+      ),
+    ).toEqual([false, false, false, true]);
+  });
+
   it("should return each mailto recipient as email() does, so a later check on the value sees where mail goes", () => {
     expect(valueOf(mailto("mailto:ada@EXAMPLE.com"))).toBe("mailto:ada@example.com");
     expect(valueOf(mailto("mailto:ada@exa%6dple.com"))).toBe("mailto:ada@example.com");
