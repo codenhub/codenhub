@@ -31,7 +31,7 @@ In scope, and the package must get right:
 Out of scope, and documented rather than defended:
 
 - **Code inside the input.** A getter, a `Proxy` trap or a `then` method runs when read, and its exception propagates, as a callback's does.
-- **Size.** Time and memory grow with the input and with the issues it produces. The caller caps untrusted input and gives collections a `max`.
+- **Size.** Time and memory that grow with the input and with the issues it produces. The caller caps untrusted input and gives collections a `max`.
 - **Recursion across an `await`.** `lazy` bounds the stack and the calls of one synchronous run, not an asynchronous recursive schema.
 - **The world behind a value.** Whether a domain resolves, where it points, whether a mailbox exists, and which IP ranges are private.
 
@@ -104,7 +104,7 @@ A validator with options of its own is a function that checks its options and re
 
 A format accepts text that matches a complete, positive description of it, a pattern or a grammar, and rejects everything else. It never accepts text for avoiding a list of known problems: such a list is finished only when nobody finds the next problem, and every finding adds to it.
 
-Where a standard parser decides what the text means, the parser is the description. `url` hands the text to the URL parser, checks what it read (the scheme against a list, the absence of credentials, the host against the public-host rule), and returns that reading serialized, never the text it was given. `email` does the same for its domain, and a `mailto` URL gives each recipient as `email` does. The value then cannot mean one thing to the validator and another to the request or mail server that uses it, whatever spelling the text used: dot segments, fullwidth or invisible characters, IPv4 shorthand, escapes. The rules these validators apply to raw text are positive descriptions too: a written URL holds only visible characters, and a domain is written with letters, marks, digits, dots and hyphens, none of which can end a host. Text a format checks without a parser, such as a UUID, is described completely by its pattern and is returned as written.
+Where a standard parser decides what the text means, the parser is the description. `url` hands the text to the URL parser, checks what it read (the scheme against a list, the absence of credentials, the host against the public-host rule), and returns that reading serialized, never the text it was given. `email` does the same for its domain, and a `mailto` URL gives each recipient as `email` does. The value then cannot mean one thing to the validator and another to the request or mail server that uses it, whatever spelling the text used: dot segments, fullwidth or invisible characters, IPv4 shorthand, escapes. The rules these validators apply to raw text are positive descriptions too: a written URL holds no whitespace and no control characters, and a domain is written with letters, marks, digits, dots and hyphens, none of which can end a host. Text a format checks without a parser, such as a UUID, is described completely by its pattern and is returned as written.
 
 A format whose meaning has more than one spelling returns one canonical spelling, so a later comparison or lookup on the value treats one meaning as one value:
 
@@ -163,7 +163,7 @@ An issue is `{ code, path, params?, message? }` and nothing else.
 - `path` is absolute: from the root of what was validated down to the offending value. A validator reports an issue at its own location (an empty path, or a path relative to its value), and each composer prefixes the segment it descended through with `collectNested`. Nothing else edits paths, which is what keeps them predictable.
 - `params` holds the facts behind the failure (`{ minimum: 3, type: "string" }`, `{ expected: "string", received: "number" }`), enough to build a message and to branch on.
 - `message` is optional. A built-in validator sets it only when the consumer passed a `message` option, and a check only when it was given one. A custom validator can set it when it wants fixed text.
-- `params.received` of `invalid_type` names the kind of value, from `typeof` plus `null`, `array`, `date`, `invalid date` and `nan`, and never a class name: naming a class takes reading the prototype, which every validator would pay for, for a message that tells the reader little.
+- `params.received` of `invalid_type` names the kind of value, from `typeof` plus `null`, `array`, `date`, `invalid date`, `nan` and `infinity`, and never a class name: naming a class takes reading the prototype, which every validator would pay for, for a message that tells the reader little.
 
 **Issues never contain an input value.** No `input` field exists, and `params` carries type names and constraint values, never the value under test. Keys are the exception by necessity: a path is made of the input's keys, and `unrecognized_key` names the key in `params.key` as well. This is a privacy invariant, not a default: inputs are passwords and tokens, and an issue is something callers log. Any new rule must keep it, and the unit tests check it per validator.
 

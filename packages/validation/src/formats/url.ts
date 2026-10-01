@@ -14,8 +14,10 @@ import { assertParts, notFormat, partIssue, partsFormat, readQuery, type Part, t
 import { HOST_MAX_LENGTH, isPublicHost } from "./patterns";
 
 /**
- * Visible characters only: a written URL holds no whitespace and no control characters (RFC 3986). The
- * parser would drop or encode them without a word, so text holding them is not taken for a URL.
+ * No whitespace and no control characters: a written URL holds neither (RFC 3986), and the parser would
+ * drop or encode them without a word, so text holding them is not taken for a URL. Invisible format
+ * characters, such as a zero-width space, are left to the parser, which drops them from a host and
+ * percent-encodes them elsewhere, and the value is what it read.
  */
 const WRITTEN_URL_PATTERN = /^[^\s\p{Cc}]+$/u;
 
