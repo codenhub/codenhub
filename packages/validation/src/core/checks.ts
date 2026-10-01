@@ -65,9 +65,9 @@ export function word(issues: ValidationIssue[], message: Message | undefined): V
  * Finishes a validator whose value has its type: runs every check on the value, adds what they found to
  * the issues the validator found itself, words every issue that has no wording of its own, and returns
  * the value or every issue. It stays synchronous while every check is. A check's issues are copied, so
- * a list the check reuses is never changed, and one written by hand without a path is at the value. A
- * check written by hand that returns anything but nothing or a list, such as `false`, is a bug, and
- * throws saying so rather than failing later on what it returned.
+ * a list the check reuses is never changed, and one written by hand without a path, or with an undefined
+ * one, is at the value. A check written by hand that returns anything but nothing or a list, such as
+ * `false`, is a bug, and throws saying so rather than failing later on what it returned.
  */
 export function finish<T>(
   value: T,
@@ -82,7 +82,7 @@ export function finish<T>(
       }
       // Pushed one by one: spreading a long list into `push` would overflow the stack.
       for (const each of list ?? []) {
-        issues.push({ path: [], ...each });
+        issues.push({ ...each, path: each.path ?? [] });
       }
     }
     return issues.length > 0 ? failWith(word(issues, message)) : pass(value);
