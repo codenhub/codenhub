@@ -130,6 +130,18 @@ describe("url", () => {
     );
   });
 
+  it("should reject port 0, which nothing can connect to, unless a port validator accepts it", () => {
+    expect(accepts(url(), "https://example.com:0/", "https://example.com:00/", "https://example.com:1/")).toEqual([
+      false,
+      false,
+      true,
+    ]);
+    expect(issuesOf(url()("https://example.com:0/"))).toEqual([
+      { code: "invalid_format", path: [], params: { format: "url" } },
+    ]);
+    expect(valueOf(url({ port: unknown() })("https://example.com:0/"))).toBe("https://example.com:0/");
+  });
+
   it("should still refuse credentials with a host validator", () => {
     expect(url({ host: unknown() })("http://user:pw@localhost").ok).toBe(false);
   });
