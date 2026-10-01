@@ -211,6 +211,22 @@ export const settings = object({
 export const settingsValue: Infer<typeof settings> = { role: "admin", nickname: null, page: 2 };
 // @ts-expect-error role is always present in the output, because it has a default
 export const missingRole: Infer<typeof settings> = { nickname: null, page: 2 };
+
+// A function default would be called to produce the value, so a function-valued one must be returned
+// from a factory, even when the output is only partly a function.
+const noop = (value: string): void => void value;
+export const callbacks = object({
+  onChange: optional(func<(value: string) => void>(), () => noop),
+  onBlur: fallback(func<(value: string) => void>(), () => noop),
+  either: optional(union([string(), func<(value: string) => void>()]), () => noop),
+});
+export const callbacksValue: Infer<typeof callbacks> = { onChange: noop, onBlur: noop, either: "a" };
+// @ts-expect-error optional would call noop for the default instead of using it
+export const calledDefault = optional(func<(value: string) => void>(), noop);
+// @ts-expect-error fallback would call noop with the issues instead of using it
+export const calledFallback = fallback(func<(value: string) => void>(), noop);
+// @ts-expect-error a function among the output's types needs the factory too
+export const calledEither = optional(union([string(), func<(value: string) => void>()]), noop);
 export const length = transform(string(), (text) => text.length);
 export const lengthValue: Infer<typeof length> = 3;
 export const loaded = transform(string(), async (id) => ({ id }));
