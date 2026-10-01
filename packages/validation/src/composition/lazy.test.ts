@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { check } from "../builders/check";
 import type { Validator } from "../core/types";
+import { literal } from "../primitives/literal";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { unknown } from "../primitives/unknown";
@@ -147,6 +148,120 @@ describe("lazy", () => {
     it("should reject a limit that is not a number as a TypeError", () => {
       expect(() => lazy(() => number(), { maxDepth: "5" as never })).toThrow(
         new TypeError("maxDepth must be a number, received string"),
+      );
+    });
+  });
+
+  describe("calls", () => {
+    interface Link {
+      next?: Link;
+    }
+    const chain = (links: number): Link => {
+      let link: Link = {};
+      for (let index = 1; index < links; index += 1) {
+        link = { next: link };
+      }
+      return { next: link };
+    };
+
+    it("should accept a run of up to the limit of lazy calls and fail past it, at the path of the call", () => {
+      const linked: Validator<Link> = object({ next: optional(lazy(() => linked, { maxCalls: 3 })) });
+      expect(linked(chain(3)).ok).toBe(true);
+      expect(issuesOf(linked(chain(4)))).toEqual([
+        { code: "too_big", path: ["next", "next", "next", "next"], params: { maximum: 3, type: "calls" } },
+      ]);
+    });
+
+    it("should hold the whole run to the limit of the outermost lazy call, lower or higher than the inner ones", () => {
+      const linked: Validator<Link> = object({ next: optional(lazy(() => linked)) });
+      expect(issuesOf(lazy(() => linked, { maxCalls: 3 })(chain(3)))).toEqual([
+        { code: "too_big", path: ["next", "next", "next"], params: { maximum: 3, type: "calls" } },
+      ]);
+      const tight: Validator<Link> = object({ next: optional(lazy(() => tight, { maxCalls: 3 })) });
+      expect(lazy(() => tight, { maxCalls: 10 })(chain(5)).ok).toBe(true);
+    });
+
+    it("should count each outermost call afresh, so calls made one after another do not add up", () => {
+      const linked: Validator<Link> = object({ next: optional(lazy(() => linked, { maxCalls: 3 })) });
+      expect([linked(chain(3)).ok, linked(chain(3)).ok, linked(chain(3)).ok]).toEqual([true, true, true]);
+    });
+
+    it("should count the calls a union makes for options that fail, which is where the work multiplies", () => {
+      const node: Validator<unknown> = union([
+        object({ type: literal("a"), kids: array(lazy(() => node, { maxCalls: 10 })) }),
+        object({ type: literal("b"), kids: array(lazy(() => node, { maxCalls: 10 })) }),
+      ]);
+      let input: unknown = { type: "b", kids: [] };
+      for (let level = 0; level < 5; level += 1) {
+        input = { type: "b", kids: [input] };
+      }
+      expect(node(input).ok).toBe(false);
+    });
+
+    /** A recursive union of objects, whose work doubles with each level, and a count of its lazy calls. */
+    const doubling = (): { node: Validator<unknown>; calls: () => number } => {
+      let calls = 0;
+      // Counts every call a lazy validator lets through to the union.
+      const counted: Validator<unknown> = (input) => {
+        calls += 1;
+        return node(input);
+      };
+      const node: Validator<unknown> = union([
+        object({ type: literal("a"), kids: array(lazy(() => counted)) }),
+        object({ type: literal("b"), kids: array(lazy(() => counted)) }),
+      ]);
+      return { node, calls: () => calls };
+    };
+    const deep = (levels: number): unknown => {
+      let input: unknown = { type: "b", kids: [] };
+      for (let level = 0; level < levels; level += 1) {
+        input = { type: "b", kids: [input] };
+      }
+      return input;
+    };
+
+    // Up to 100,000 calls, which a loaded machine may take a while over.
+    it(
+      "should stop a recursive union whose work doubles with each level by default, long before it would finish",
+      { timeout: 60_000 },
+      () => {
+        const { node, calls } = doubling();
+        // 2^60 calls without the limit; at most 100,000 with the root in one lazy run.
+        expect(lazy(() => node)(deep(60)).ok).toBe(false);
+        expect(calls()).toBeGreaterThan(0);
+        expect(calls()).toBeLessThanOrEqual(100_000);
+      },
+    );
+
+    it(
+      "should hold a whole validation that fans out to one limit when its root is wrapped in lazy",
+      { timeout: 60_000 },
+      () => {
+        const { node, calls } = doubling();
+        const items = Array.from({ length: 5 }, () => deep(30));
+        expect(lazy(() => array(node))(items).ok).toBe(false);
+        expect(calls()).toBeLessThanOrEqual(100_000);
+      },
+    );
+
+    it(
+      "should give each branch above the first lazy a limit of its own when the root is not wrapped",
+      { timeout: 60_000 },
+      () => {
+        const { node, calls } = doubling();
+        const items = Array.from({ length: 2 }, () => deep(30));
+        expect(array(node, { max: 2 })(items).ok).toBe(false);
+        // Two items, each tried against two options, each its own outermost lazy call.
+        expect(calls()).toBeGreaterThan(100_000);
+        expect(calls()).toBeLessThanOrEqual(4 * 100_000);
+      },
+    );
+
+    it("should reject a limit that is not a positive integer, or not a number", () => {
+      expect(() => lazy(() => number(), { maxCalls: 0 })).toThrow(RangeError);
+      expect(() => lazy(() => number(), { maxCalls: 1.5 })).toThrow(RangeError);
+      expect(() => lazy(() => number(), { maxCalls: "5" as never })).toThrow(
+        new TypeError("maxCalls must be a number, received string"),
       );
     });
   });

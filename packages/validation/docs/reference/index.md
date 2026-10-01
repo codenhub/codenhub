@@ -487,10 +487,12 @@ TypeScript cannot infer a validator that refers to itself, so annotate the varia
 
 Every level of nesting is a level of recursion, and input nested past the stack, or a cyclic object, would throw. `maxDepth` stops that first: a value found more than that many levels down fails with `too_big` and `{ maximum, type: "depth" }` at its own path, so untrusted input can be checked without a size cap tuned to the stack. The count is of calls on the stack, so it bounds recursion that happens in one synchronous run, which is where the stack can overflow; a rule that awaits between levels starts the next from a fresh stack, and is not counted. So `maxDepth` does not bound an asynchronous recursive schema: it follows input of any depth, and a cyclic object until memory runs out. Give such a schema a bound of its own.
 
+Work can also grow faster than the input. A `union` tries every option, and an `object` checks every property even after one fails, so a recursive `union` of objects recurses through every option at every level, and its work doubles with each: a few hundred bytes can take hours. `maxCalls` stops that: past that many `lazy` calls under one outermost `lazy` call, every further one fails with `too_big` and `{ maximum, type: "calls" }`. Unlike `maxDepth`, only the outermost call's limit is read, and it holds the whole run. Like `maxDepth`, it counts one synchronous run. Each outermost call counts afresh, so a root that reaches several `lazy` calls before any is open, such as an `array` of recursive items or the options of a root `union`, gives each its own count, and the work still grows with every item: for untrusted input, wrap the root, `lazy(() => schema)`, so the whole validation is one count. For recursive objects told apart by a property, `tagged` reads that property first and does no such work.
+
 **Parameters**
 
 - `getter` — Returns the validator. Called once, on first use.
-- `rest` — The depth limit, then checks.
+- `rest` — The depth and call limits, then checks.
 
 **Type parameters**
 
@@ -500,8 +502,8 @@ Every level of nesting is a level of recursion, and input nested past the stack,
 
 **Throws**
 
-- When `getter` is not a function or `maxDepth` is not a number, and, from the returned validator on its first use, when `getter` returns something that is not a function.
-- When `maxDepth` is not a positive integer.
+- When `getter` is not a function or `maxDepth` or `maxCalls` is not a number, and, from the returned validator on its first use, when `getter` returns something that is not a function.
+- When `maxDepth` or `maxCalls` is not a positive integer.
 
 **Example**
 
@@ -1599,6 +1601,14 @@ export interface LazyOptions extends MessageOptions
 ```
 
 Options for [lazy](#lazy).
+
+#### maxCalls
+
+```ts
+maxCalls?: number;
+```
+
+The most `lazy` calls one outermost `lazy` call may make, counting every `lazy` validator, those of the options a `union` tries and fails included. Past it, every further call fails with `too_big`, so a schema whose work grows faster than its input, such as a recursive `union` of objects, which doubles with each level, stops instead of running for hours on a few hundred bytes. The limit of the outermost call holds its whole run, and that of a `lazy` called inside another is not read. Each outermost call has a count of its own, so a validator that reaches several `lazy` calls before any is open, such as an `array` of recursive items, has one per item: wrap the root in `lazy(() => schema, { maxCalls })` to hold a whole validation of untrusted input to one, and set the limit there. Recursive data with more nodes than this under one root needs it raised.
 
 #### maxDepth
 

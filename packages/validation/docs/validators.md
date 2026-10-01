@@ -424,7 +424,7 @@ A `pattern` that is not a regular expression, and a `multipleOf` step that is no
 
 ### `union`
 
-`union(options)` accepts a value that passes any one of several validators and produces what the first one that accepts it produced, so put the more specific options first. A value that none accepts fails with one `invalid_union` issue at the value's own location, and `params.issues` lists, for each option in order, the issues it found. Those paths are relative to the value the union received.
+`union(options)` accepts a value that passes any one of several validators and produces what the first one that accepts it produced, so put the more specific options first. A value that none accepts fails with one `invalid_union` issue at the value's own location, and `params.issues` lists, for each option in order, the issues it found. Those paths are relative to the value the union received. Every option runs until one accepts, so a recursive union of objects does its work again for each option at every level; use [`tagged`](#tagged) for objects told apart by a property, and see [`lazy`](#lazy) for the limit on that work.
 
 ```ts
 import { number, string, union } from "@codenhub/validation";
@@ -484,7 +484,18 @@ const category: Validator<Category> = object({
 
 Each level of nesting is one level of recursion, which the JavaScript stack can only hold so many of, so `lazy` counts them. `lazy(getter, { maxDepth })` takes the most levels of `lazy` that may be open at once, 128 by default, counting every `lazy` validator and not only that one, and a value found deeper fails with `too_big` and `{ maximum, type: "depth" }` at its own path. One count for every `lazy` is what bounds the stack when two recursive validators call each other, and it means a limit is checked against every level already open: `lazy(getter, { maxDepth: 1 })` used inside any other `lazy` fails at once, because the outer one is already one level deep. Set `maxDepth` for the whole nesting, not for one validator's share of it. A request body of thousands of nested arrays and a cyclic object, which a recursive validator would follow forever, both come back as that failure and never throw. The count is of `lazy` calls on the stack, so it bounds recursion that happens in one synchronous run, where the stack can overflow. A rule that awaits before it reaches the next level starts that level from a fresh stack and is not counted, so `maxDepth` does not bound an asynchronous recursive schema at all: it follows input nested to any depth, and a cyclic object forever, until the process runs out of memory, while it keeps other work from running. Give such a schema a bound of its own. Input parsed from JSON cannot be cyclic, so a schema that only ever sees parsed JSON needs a size cap on the text, below; one that can be handed live objects needs a cycle check before it runs. Raise `maxDepth` only for data you know is deeper, and only as far as the stack of your runtime holds for the validators you wrote. `maxDepth` must be a positive integer, or `lazy` throws when created.
 
-The limit is about the stack and not about size, so it does not stop a large flat input: cap the size of untrusted input, for instance with `pipe(string({ max: 100_000 }), json(category))`, and give `array` a `max`.
+Work can also grow faster than the input. A `union` tries every option and an `object` checks every property even after one has failed, so in a recursive `union` of objects the options that do not match still recurse into the children, at every level, and the work doubles with each: a valid input of 500 bytes, 22 levels deep, takes seconds, and one a little deeper takes hours. `lazy(getter, { maxCalls })` stops that: it is the most `lazy` calls one outermost `lazy` call may make, 100,000 by default, counting every `lazy` validator, and past it every further call fails with `too_big` and `{ maximum, type: "calls" }`. Unlike `maxDepth`, it is read from the outermost `lazy` call alone, and holds its whole run: the `maxCalls` of a `lazy` called inside another is not read. Like `maxDepth`, it counts one synchronous run. Each outermost `lazy` call counts afresh, so a root that reaches several before any is open, such as an `array` of recursive items or the options of a `union` at the root, gives each its own count: ten such items of 574 bytes each still take about 3.6 seconds. For untrusted input, wrap the root in `lazy`, so the whole validation is one count, which brings those ten items to under 0.2 seconds:
+
+```ts
+import { array, lazy, literal, object, union, type Validator } from "@codenhub/validation";
+
+const node: Validator<unknown> = union([object({ type: literal("a"), kids: array(lazy(() => node)) }), object({ type: literal("b"), kids: array(lazy(() => node)) })]);
+const body = lazy(() => array(node, { max: 100 }), { maxCalls: 50_000 }); // one limit for the whole request body
+```
+
+Raise `maxCalls` on the root for recursive data with more nodes than that under one root. For objects told apart by a property, use [`tagged`](#tagged), which reads the property first and validates only the matching variant, so its work grows with the input.
+
+The limits are about the stack and the work per node and not about size, so it does not stop a large flat input: cap the size of untrusted input, for instance with `pipe(string({ max: 100_000 }), json(category))`, and give `array` a `max`.
 
 ### `json`
 
