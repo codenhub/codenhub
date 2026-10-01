@@ -55,6 +55,10 @@ function mergeOne(pending: Pending, inner: Step[], conflicts: ValidationIssue[],
   if (Object.is(left, right)) {
     return right;
   }
+  // The one pair `===` holds for and Object.is does not is 0 and -0, the same number, merged as 0.
+  if (left === right) {
+    return 0;
+  }
   // Only an object can be a Date, and asking anything else would throw and catch for every value.
   const time = typeof left === "object" ? timeOf(left) : undefined;
   if (time !== undefined && time === timeOf(right)) {
@@ -184,7 +188,7 @@ function merge(left: unknown, right: unknown, conflicts: ValidationIssue[]): unk
  * The outputs are merged: plain objects key by key, arrays of the same length item by item, and maps
  * and sets of the same size entry by entry in iteration order, which both validators keep from the
  * input, recursively, so maps keyed by objects and sets of objects merge too. Any other pair must be the
- * same value, or two dates holding the same moment. Where the outputs differ otherwise, such as
+ * same value, `0` and `-0` merging as `0`, or two dates holding the same moment. Where the outputs differ otherwise, such as
  * `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place
  * fails with `invalid_intersection` at its path, rather than one side silently winning. Cyclic or
  * shared objects in the outputs are merged once, and the merged output keeps their shape. Two `object`s

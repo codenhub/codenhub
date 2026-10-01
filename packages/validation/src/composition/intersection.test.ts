@@ -97,6 +97,13 @@ describe("intersection", () => {
     expect([...merged]).toEqual([{ x: 1 }, { x: 2 }]);
   });
 
+  it("should treat 0 and -0 as the same value and produce 0, whichever side holds which", () => {
+    const clamped = number({ clamp: { min: 0, max: 10 } }); // clamps -0 to 0
+    expect(Object.is(valueOf(intersection(clamped, number())(-0)), 0)).toBe(true);
+    expect(Object.is(valueOf(intersection(number(), clamped)(-0)), 0)).toBe(true);
+    expect(Object.is(valueOf(intersection(number(), number())(-0)), -0)).toBe(true);
+  });
+
   it("should treat dates holding the same moment as equal", () => {
     const window = intersection(coerceDate({ min: new Date(0) }), coerceDate({ max: new Date(2e12) }));
     const value = valueOf(window("2026-01-01"));
