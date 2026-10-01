@@ -8,9 +8,11 @@ import { object } from "../composition/object";
 import { record } from "../composition/record";
 import { set } from "../composition/set";
 import { tagged } from "../composition/tagged";
+import { searchParams } from "../formats/search-params";
 import { date } from "../primitives/date";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
+import { unknown } from "../primitives/unknown";
 import { issuesOf, valueOf } from "../test-utils";
 import { entriesOf, isPlainObject, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "./objects";
 import { describeType } from "./result";
@@ -115,6 +117,12 @@ describe("a value that is one of the kinds but has lost its prototype", () => {
     expect(timeOf(valueOf(coerceDate()(bare(new Date(0)))))).toBe(0);
     expect(valueOf(map(string(), number())(bare(new Map([["a", 1]]))))).toEqual(new Map([["a", 1]]));
     expect(valueOf(set(number())(bare(new Set([1, 2]))))).toEqual(new Set([1, 2]));
+    // A vm context has no URLSearchParams, so a bare one stands for one from an iframe here.
+    expect(valueOf(searchParams(unknown())(bare(new URLSearchParams("a=1&b=2"))))).toEqual({ a: "1", b: "2" });
+  });
+
+  it("should not be taken for one when it only claims the prototype", () => {
+    expect(issuesOf(searchParams(unknown())(Object.create(URLSearchParams.prototype)))[0]?.code).toBe("invalid_type");
   });
 
   it("should be checked against min, max and size like any other", () => {

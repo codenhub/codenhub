@@ -77,6 +77,14 @@ export const sizeOfMap = (value: unknown): number | undefined => sizeOf(Map.prot
 /** How many values a `Set` holds, or undefined when the value is not a `Set`, in any realm. */
 export const sizeOfSet = (value: unknown): number | undefined => sizeOf(Set.prototype, value);
 
+/**
+ * The text of a `URLSearchParams`, or undefined when the value is not one, in any realm. It is read with
+ * the built-in `toString`, which checks the value's own slot, so one from an iframe or with its prototype
+ * swapped is read, and an object that only claims the prototype is not.
+ */
+export const queryOf = (value: unknown): string | undefined =>
+  brand(() => URLSearchParams.prototype.toString.call(value as URLSearchParams));
+
 /** The entries of a value already known to be a `Map`, read with the built-in iterator. */
 export const entriesOf = (map: unknown): [unknown, unknown][] => [
   ...Map.prototype.entries.call(map as Map<unknown, unknown>),

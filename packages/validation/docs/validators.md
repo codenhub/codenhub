@@ -258,7 +258,7 @@ A query key given more than once, as in `?id=1&id=2`, fails unless `repeated` is
 
 ### `searchParams`
 
-`searchParams(validator, options?, ...checks)` reads a query string, with or without its `?`, or a `URLSearchParams`, into an object of its decoded parameters, and produces what `validator` makes of it. It reads the parameters as `url`'s `query` part does, `+` as a space and escapes decoded, and rejects a repeated key the same way unless `repeated` is set. Anything else fails with `invalid_type` and `{ expected: "query string", received }`.
+`searchParams(validator, options?, ...checks)` reads a query string, with or without its `?`, or a `URLSearchParams`, from this realm or another such as an iframe, into an object of its decoded parameters, and produces what `validator` makes of it. It reads the parameters as `url`'s `query` part does, `+` as a space and escapes decoded, and rejects a repeated key the same way unless `repeated` is set. Anything else fails with `invalid_type` and `{ expected: "query string", received }`.
 
 ```ts
 import { array, coerceNumber, object, optional, searchParams, string } from "@codenhub/validation";

@@ -259,32 +259,6 @@ The measurements above are of 0.1.0. The migration also exposed three gaps, whic
 
 The same package, moved to checks, `func` and `unique`, measures 7.88 kB against 8.04 kB for the same package on 0.1.0, each built file minified with esbuild and gzipped, then summed. So 0.2.0 costs this adopter 0.16 kB less while adding checks, messages per validator and asynchronous checks to everything it uses: the slimmer type naming and the rare constraints leaving `string` pay for the argument handling and check running every validator now shares. That shared core is about 0.65 kB in a bundle with one leaf in it.
 
-### Compared with valibot
-
-The same schemas, bundled the same way (tsdown, minified, gzipped), against valibot 1.5.0 with `safeParse`, in bytes:
-
-| Scenario                                             | This package | valibot |
-| ---------------------------------------------------- | ------------ | ------- |
-| `boolean()`                                          | 688          | 689     |
-| `string()`                                           | 1078         | 689     |
-| `string({ min: 2, trim: true })`                     | 1087         | 911     |
-| `number({ int: true })`                              | 1223         | 873     |
-| `object` of two strings                              | 1620         | 1059    |
-| `email()`                                            | 1323         | 914     |
-| `url()`                                              | 2335         | 898     |
-| `object` of a name, an email and an optional integer | 2799         | 1491    |
-| the same, with English messages                      | 3979         | 1514    |
-
-These were measured before the fixes of the audit of 0.2.0, which reject options of the wrong type when a validator is made, report a failed part of a URL or an address at the field, and word a check with its validator's message: they add about 20 bytes to the shared core, up to 90 to a leaf such as `number`, and about 100 to `email` and 130 to `url`. `tests/integration/bundle-size.test.ts` holds the current sizes.
-
-Valibot's issues always carry an English message, so its last two rows are the same code; here the English is a separate import a consumer that words its own issues never bundles.
-
-The shared core costs the same in both. The difference is in the validators, and three things account for most of it:
-
-- **Options are carried whole.** `string()` bundles the code for `min`, `max`, `length`, `trim` and `case`, and the checks at creation that reject impossible combinations, with their error text, even when none is used. Valibot bundles only the actions a pipe names. This is the cost of the hybrid: the common constraints are short to write and paid for together.
-- **`email` and `url` are not patterns.** Valibot's `email` is a regular expression and its `url` asks whether `new URL` accepts the text. These read the text with the URL parser and return its reading, reject credentials, script schemes, special-use and single-label hosts, and whitespace the parser would drop, and give `mailto`, `tel` and `urn` their own rules. That is [what the formats defend against](#formats-are-allowlists), and it is most of their weight.
-- **Objects defend against their input.** `object` accepts plain objects from any realm and never a class instance, defines every key as own data so `__proto__` cannot reach a prototype, and supports strict and passthrough keys.
-
 ## Coercion
 
 A coercing validator is a strict validator behind a converter: `coerceNumber(options)` builds `number(options)` once, converts the input, and hands the converted value to it. So the strict validator owns every constraint and every option check, and the coercing one adds only the conversion. Each is its own module and its own export, so a consumer that never coerces does not bundle the conversion code, which is why coercion is not an option on the strict validators.

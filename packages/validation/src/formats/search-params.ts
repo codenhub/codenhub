@@ -1,6 +1,6 @@
 import { chain, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
-import { isInstance } from "../core/objects";
+import { queryOf } from "../core/objects";
 import { assertFunction, assertOption, typeIssue } from "../core/result";
 import type {
   AnyValidator,
@@ -32,7 +32,7 @@ export interface SearchParamsOptions extends MessageOptions {
  *
  * @remarks
  * The parameters are read as `URLSearchParams` reads them, `+` as a space and escapes decoded, and a
- * leading `?` is ignored. A key given more than once fails, at its path with `invalid_key`, unless
+ * leading `?` is ignored. A `URLSearchParams` from another realm, such as an iframe, is read too. A key given more than once fails, at its path with `invalid_key`, unless
  * `repeated` is set: a check that saw one of two values while a server read the other would pass a
  * value nobody checked. It is the reading `url` gives its `query` option.
  *
@@ -63,11 +63,12 @@ export function searchParams(validator: AnyValidator, ...rest: unknown[]): AnyVa
   const [{ repeated = false }, reject, accept] = tail<SearchParamsOptions, unknown>(rest);
   assertOption("repeated", repeated, "boolean");
   return (input: unknown): Maybe<ValidationResult<unknown>> => {
-    // A value `instanceof` throws for, such as a revoked proxy, is no query.
-    if (typeof input !== "string" && !isInstance(input, URLSearchParams)) {
+    // A `URLSearchParams` is read as its text, so one from another realm is read as one from this.
+    const query = typeof input === "string" ? input : queryOf(input);
+    if (query === undefined) {
       return reject([typeIssue("query string", input)]);
     }
-    const { value, issues } = readQuery(new URLSearchParams(input as string | URLSearchParams), repeated);
+    const { value, issues } = readQuery(new URLSearchParams(query), repeated);
     if (issues.length > 0) {
       return reject(issues);
     }
