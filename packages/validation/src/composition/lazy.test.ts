@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import { check } from "../builders/check";
+import { format } from "../builders/format";
+import { guard } from "../builders/guard";
 import type { Validator } from "../core/types";
+import { boolean } from "../primitives/boolean";
 import { literal } from "../primitives/literal";
+import { never } from "../primitives/never";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { unknown } from "../primitives/unknown";
 import { isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { array } from "./array";
+import { fallback } from "./fallback";
 import { lazy } from "./lazy";
 import { object } from "./object";
 import { optional } from "./optional";
@@ -266,6 +271,29 @@ describe("lazy", () => {
         expect(calls()).toBeLessThanOrEqual(20_000);
       },
     );
+
+    it("should count a validation made from a callback on its own, apart from the one running the callback", async () => {
+      // One call is allowed, and the outer validation spends it before any callback runs.
+      const limited = lazy(() => string(), { maxCalls: 1 });
+      const fromCallback = (): boolean => limited("x").ok;
+      const outer = (inside: Validator<unknown>): Validator<unknown> => object({ first: limited, second: inside });
+      const callbacks: [string, Validator<unknown>, unknown, unknown][] = [
+        ["check", string(check(fromCallback)), "x", "x"],
+        ["transform", transform(string(), fromCallback), "x", true],
+        ["guard", guard("thing", (input): input is unknown => fromCallback() && input !== null)(), "x", "x"],
+        ["format", format("thing", fromCallback)(), "x", "x"],
+        ["optional default", optional(boolean(), fromCallback), undefined, true],
+        ["fallback", fallback(boolean(), fromCallback), "x", true],
+        ["lazy getter", lazy(() => (fromCallback() ? string() : never())), "x", "x"],
+      ];
+      for (const [name, inside, input, expected] of callbacks) {
+        const result = outer(inside)({ first: "x", second: input });
+        expect([name, result.ok && result.value]).toEqual([name, { first: "x", second: expected }]);
+      }
+      // An asynchronous check runs on its own after an await too.
+      const later = string(check(async (value: string) => (await isFree(value)).ok && fromCallback()));
+      expect((await object({ first: limited, second: later })({ first: "x", second: "x" })).ok).toBe(true);
+    });
 
     it("should count each validation afresh, even one made by a hand-written validator", () => {
       const linked: Validator<Link> = object({ next: optional(lazy(() => linked, { maxCalls: 3 })) });

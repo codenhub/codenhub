@@ -1,4 +1,4 @@
-import { chain, spendCall } from "../core/async";
+import { chain, detached, spendCall } from "../core/async";
 import { tail } from "../core/checks";
 import { call, composed } from "../core/nesting";
 import { assertFunction, assertOption, issue } from "../core/result";
@@ -30,7 +30,8 @@ export interface LazyOptions extends MessageOptions {
    * whose work grows faster than its input, such as a recursive `union` of objects, which doubles with
    * each level, stops instead of running for hours on a few hundred bytes. A validation is a call such as
    * `schema(input)` and everything it reaches before it settles, after any await included, so an `array` of recursive items shares
-   * this `lazy`'s count, and validations made one after another have counts of their own. Each `lazy`
+   * this `lazy`'s count, and validations made one after another, or from a callback such as a check's
+   * test, have counts of their own. Each `lazy`
    * counts its own calls against its own limit, so no other `lazy` overrides it. Recursive data with more
    * nodes than this in one validation needs it raised.
    *
@@ -136,7 +137,7 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
     openDepth += 1;
     try {
       if (resolved === undefined) {
-        const found: unknown = getter();
+        const found: unknown = detached(getter, undefined);
         if (typeof found !== "function") {
           throw new TypeError(`getter() must return a function, received ${found === null ? "null" : typeof found}`);
         }

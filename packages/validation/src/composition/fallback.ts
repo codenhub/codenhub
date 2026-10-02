@@ -1,4 +1,4 @@
-import { chain } from "../core/async";
+import { chain, detached } from "../core/async";
 import { assertFunction, assertUnshared, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue } from "../core/types";
 import type { AnyFunction } from "../primitives/func";
@@ -54,7 +54,7 @@ export function fallback<TValidator extends AnyValidator>(
         ? result
         : pass(
             typeof value === "function"
-              ? (value as (issues: readonly ValidationIssue[]) => unknown)(result.error.issues)
+              ? detached(value as (issues: readonly ValidationIssue[]) => unknown, result.error.issues)
               : value,
           ),
     );

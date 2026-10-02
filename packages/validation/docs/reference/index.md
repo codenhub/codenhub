@@ -1642,7 +1642,7 @@ Options for [lazy](#lazy).
 maxCalls?: number;
 ```
 
-The most calls this `lazy` may make in one validation, those made for the options a `union` tries and fails included. Past it, every further call fails with `too_big`, so a schema whose work grows faster than its input, such as a recursive `union` of objects, which doubles with each level, stops instead of running for hours on a few hundred bytes. A validation is a call such as `schema(input)` and everything it reaches before it settles, after any await included, so an `array` of recursive items shares this `lazy`'s count, and validations made one after another have counts of their own. Each `lazy` counts its own calls against its own limit, so no other `lazy` overrides it. Recursive data with more nodes than this in one validation needs it raised.
+The most calls this `lazy` may make in one validation, those made for the options a `union` tries and fails included. Past it, every further call fails with `too_big`, so a schema whose work grows faster than its input, such as a recursive `union` of objects, which doubles with each level, stops instead of running for hours on a few hundred bytes. A validation is a call such as `schema(input)` and everything it reaches before it settles, after any await included, so an `array` of recursive items shares this `lazy`'s count, and validations made one after another, or from a callback such as a check's test, have counts of their own. Each `lazy` counts its own calls against its own limit, so no other `lazy` overrides it. Recursive data with more nodes than this in one validation needs it raised.
 
 #### maxDepth
 

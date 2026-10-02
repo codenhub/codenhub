@@ -1,3 +1,4 @@
+import { detached } from "../core/async";
 import { assertFunction, assertText } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
 import { formatFactory } from "../formats/text-format";
@@ -26,5 +27,5 @@ import { formatFactory } from "../formats/text-format";
 export function format(name: string, test: (text: string) => boolean): Factory<string, MessageOptions> {
   assertText("format(name)", name);
   assertFunction("test", test);
-  return formatFactory(name, (text) => (test(text) ? text : undefined));
+  return formatFactory(name, (text) => (detached(test, text) ? text : undefined));
 }

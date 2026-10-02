@@ -45,6 +45,20 @@ function enter<A, R>(validation: Validation | undefined, work: (argument: A) => 
 export const within = <A, R>(work: (argument: A) => R, argument: A): R => enter(undefined, work, argument);
 
 /**
+ * Runs a callback the consumer wrote, such as a check's test or a transform's function, apart from
+ * the validation running now, so a validator it calls is a validation of its own, with counts of its own.
+ */
+export function detached<A, R>(callback: (argument: A) => R, argument: A): R {
+  const previous = current;
+  current = undefined;
+  try {
+    return callback(argument);
+  } finally {
+    current = previous;
+  }
+}
+
+/**
  * Counts a call of the `lazy` named by `key` in the validation running now, and tests whether that
  * `lazy` has now made more calls than `maxCalls`, its own limit.
  */
