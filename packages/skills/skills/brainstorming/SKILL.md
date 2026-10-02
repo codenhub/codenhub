@@ -89,6 +89,7 @@ Explore project context
 ## After the Design
 
 - Recommend a concise spec when the approved design should be preserved, shared, or carried forward. Never force one.
+- Wherever the design is kept, keep each choice with its reason and the alternatives rejected. A later reader who sees only the choice reopens it.
 - If the user wants brainstorming only, stop after the approved design.
 - If the user wants to proceed directly, brainstorming is complete; implementation happens outside this skill.
 - If the next step is unclear, ask: `Do you want a short spec first, or should I proceed to the change?`
