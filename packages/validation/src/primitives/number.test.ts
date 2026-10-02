@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { check } from "../builders/check";
 import { multipleOf } from "../checks/multiple-of";
 import { nonZero } from "../checks/non-zero";
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
@@ -185,5 +186,16 @@ describe("number", () => {
 
   it("should report every constraint that fails", () => {
     expect(codesOf(number({ min: 10, int: true }, nonZero())(0.5))).toEqual(["too_small", "invalid_value"]);
+  });
+
+  it("should run no check while one of its own constraints fails", () => {
+    let calls = 0;
+    const counted = check<number>(() => {
+      calls += 1;
+      return false;
+    });
+    expect(codesOf(number({ int: true }, multipleOf(0.5), counted)(1.5))).toEqual(["invalid_value"]);
+    expect(codesOf(number({ max: 1 }, counted)(2))).toEqual(["too_big"]);
+    expect(calls).toBe(0);
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { check } from "../builders/check";
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
 import { date } from "./date";
 
@@ -58,5 +59,15 @@ describe("date", () => {
     expect(() => date({ min: new Date("nope") })).toThrow(new RangeError("Minimum date must be a valid Date"));
     expect(() => date({ min: day("2027-01-01"), max: day("2026-01-01") })).toThrow(RangeError);
     expect(() => date({ min: day("2026-01-01"), max: day("2026-01-01") })).not.toThrow();
+  });
+
+  it("should run no check while one of its own constraints fails", () => {
+    let calls = 0;
+    const counted = check<Date>(() => {
+      calls += 1;
+      return false;
+    });
+    expect(codesOf(date({ min: day("2026-01-01") }, counted)(day("2025-01-01")))).toEqual(["too_small"]);
+    expect(calls).toBe(0);
   });
 });

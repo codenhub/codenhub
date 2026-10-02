@@ -54,7 +54,7 @@ export declare function check<T>(test: (value: T) => boolean | PromiseLike<boole
 
 Makes a check from a test of a typed value, for a rule a validator's options do not express.
 
-Give it to a validator after its options. It runs once the value has its type: for an object, once every property has passed, so it can compare them. A test that returns a promise makes an [AsyncCheck](#asynccheck), and the validator given it asynchronous.
+Give it to a validator after its options. It runs once the value has its type and has passed the validator's options, such as `min` and `max`: for an object, once every property has passed, so it can compare them. A test that returns a promise makes an [AsyncCheck](#asynccheck), and the validator given it asynchronous.
 
 **Parameters**
 
@@ -3020,7 +3020,7 @@ export declare const number: Factory<number, NumberOptions>;
 
 Creates a validator for finite numbers. `NaN` and the infinities are always rejected.
 
-`clamp` runs first, then every constraint and every check runs on the clamped number, and each failing one reports its own issue.
+`clamp` runs first, then every constraint on the clamped number, and each failing one reports its own issue. The checks run on it once every constraint has passed, and each failing one reports its own.
 
 **Throws**
 
@@ -3107,7 +3107,7 @@ export declare const string: Factory<string, StringOptions>;
 
 Creates a validator for strings.
 
-`trim` and `case` run first, then every constraint and every check on the cleaned string, and each failing one reports its own issue. Formats such as email or URL are validators of their own; combine them with this one using `pipe`.
+`trim` and `case` run first, then every constraint on the cleaned string, and each failing one reports its own issue. The checks run on it once every constraint has passed, so `max` keeps a long string from a costly `pattern` or a lookup, and each failing one reports its own. Formats such as email or URL are validators of their own; combine them with this one using `pipe`.
 
 **Throws**
 

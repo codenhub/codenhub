@@ -57,13 +57,36 @@ describe("finish", () => {
     expect(finish("value", [], undefined, [short])).toEqual({ ok: true, value: "value" });
   });
 
-  it("should report the validator's own issues, then every check's, worded unless a check worded its own", () => {
+  it("should report every check's issues, worded unless a check worded its own", () => {
     const worded: Check<string> = () => [{ code: "worded", path: [], message: "Mine" }];
-    expect(issuesOf(sync(finish("a b", [issue("own")], "Own", [short, noSpaces, worded])))).toEqual([
-      { code: "own", path: [], message: "Own" },
+    expect(issuesOf(sync(finish("a b", [], "Own", [short, noSpaces, worded])))).toEqual([
       { code: "spaces", path: [], message: "Own" },
       { code: "worded", path: [], message: "Mine" },
     ]);
+  });
+
+  it("should run no check once the validator found an issue of its own, and report that one alone", () => {
+    let calls = 0;
+    const counted: Check<string> = () => {
+      calls += 1;
+      return [issue("checked")];
+    };
+    expect(issuesOf(sync(finish("a b", [issue("own")], "Own", [counted, noSpaces])))).toEqual([
+      { code: "own", path: [], message: "Own" },
+    ]);
+    expect(calls).toBe(0);
+  });
+
+  it("should stay synchronous when its own issue stops an asynchronous check", () => {
+    let calls = 0;
+    const later = async (): Promise<undefined> => {
+      calls += 1;
+      return undefined;
+    };
+    const result = finish("a", [issue("own")], undefined, [later]);
+    expect(isPending(result)).toBe(false);
+    expect(issuesOf(sync(result)).map((found) => found.code)).toEqual(["own"]);
+    expect(calls).toBe(0);
   });
 
   it("should copy a check's issues, so a list the check reuses is never changed", () => {
@@ -105,6 +128,20 @@ describe("leaf", () => {
     const validate = leaf<string>("string", isString, undefined, [short], (text) => text.trim());
     expect(validate("  abc  ")).toEqual({ ok: true, value: "abc" });
     expect(issuesOf(sync(validate(" ab "))).map((found) => found.code)).toEqual(["too_small"]);
+  });
+
+  it("should run no check when its inspection found an issue", () => {
+    let calls = 0;
+    const counted: Check<string> = () => {
+      calls += 1;
+      return undefined;
+    };
+    const validate = leaf<string>("string", isString, undefined, [counted], (text, issues) => {
+      issues.push(issue("too_big"));
+      return text;
+    });
+    expect(issuesOf(sync(validate("abc"))).map((found) => found.code)).toEqual(["too_big"]);
+    expect(calls).toBe(0);
   });
 });
 

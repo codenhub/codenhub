@@ -395,7 +395,7 @@ const length = transform(string(), (text) => text.length);
 
 ## Checks
 
-A check is a rule about a value that already has its type, given to a validator after its options. It runs once the value has its type: for a leaf, right after the type test, beside the options; for a format, once the text is of the format, so a check given to `ip()` or `uuid()` never sees text that is not an address or a UUID; for an object or a collection, once every child has passed, since before that there is no value of the type to check. Every check runs and every issue is reported.
+A check is a rule about a value that already has its type, given to a validator after its options. It runs once the value has its type and has passed the validator's own options: for a leaf, once the input has passed the type test and every option, such as `min`, `max` or `int`; for a format, once the text is of the format, so a check given to `ip()` or `uuid()` never sees text that is not an address or a UUID; for an object or a collection, once every child has passed, since before that there is no value of the type to check. While an option fails, no check runs and only the option's issue is reported, so `max` keeps a long string from a costly `pattern`, and an asynchronous check, such as one that asks a server whether a name is taken, never sees a value the options already rejected. Once the options pass, every check runs and every issue is reported.
 
 ```ts
 import { check, number, string, startsWith, uppercase } from "@codenhub/validation";

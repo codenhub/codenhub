@@ -46,8 +46,8 @@ const isNumber = (input: unknown): boolean => typeof input === "number" && Numbe
  * Creates a validator for finite numbers. `NaN` and the infinities are always rejected.
  *
  * @remarks
- * `clamp` runs first, then every constraint and every check runs on the clamped number, and each
- * failing one reports its own issue.
+ * `clamp` runs first, then every constraint on the clamped number, and each failing one reports its own
+ * issue. The checks run on it once every constraint has passed, and each failing one reports its own.
  *
  * @example
  * ```ts

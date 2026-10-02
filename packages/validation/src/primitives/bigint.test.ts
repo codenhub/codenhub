@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { check } from "../builders/check";
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
 import { bigint } from "./bigint";
 
@@ -49,5 +50,15 @@ describe("bigint", () => {
       params: { minimum: 0n, inclusive: false, type: "bigint" },
     });
     expect(codesOf(bigint({ max: 0n })(1n))).toEqual(["too_big"]);
+  });
+
+  it("should run no check while one of its own constraints fails", () => {
+    let calls = 0;
+    const counted = check<bigint>(() => {
+      calls += 1;
+      return false;
+    });
+    expect(codesOf(bigint({ min: 10n }, counted)(5n))).toEqual(["too_small"]);
+    expect(calls).toBe(0);
   });
 });
