@@ -14,9 +14,11 @@ export interface BigintOptions extends MessageOptions {
   lt?: bigint;
 }
 
+// The bound is written as its decimal digits, since `JSON.stringify` throws on a bigint, and an issue is
+// data a server sends. `type: "bigint"` says what the digits are.
 const outOfRange = (side: "min" | "max", bound: bigint, isInclusive: boolean): ValidationIssue =>
   issue(side === "min" ? "too_small" : "too_big", {
-    [side === "min" ? "minimum" : "maximum"]: bound,
+    [side === "min" ? "minimum" : "maximum"]: String(bound),
     inclusive: isInclusive,
     type: "bigint",
   });
@@ -24,7 +26,8 @@ const outOfRange = (side: "min" | "max", bound: bigint, isInclusive: boolean): V
 const isBigint = (input: unknown): boolean => typeof input === "bigint";
 
 /**
- * Creates a validator for bigints. Numbers are rejected, including whole ones.
+ * Creates a validator for bigints. Numbers are rejected, including whole ones. A bound in an issue's
+ * `params` is written as its decimal digits, `"10"` for `10n`, so the issue can be sent as JSON.
  *
  * @example
  * ```ts

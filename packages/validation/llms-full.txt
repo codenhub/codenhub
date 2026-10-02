@@ -627,7 +627,7 @@ It takes the same message map as `formatIssue`, which it requires too. Field key
 
 ## Reading the result
 
-A result is plain data, so it can be logged, sent to a client or stored, and because no issue holds the input, doing so does not leak what was submitted. One caveat: the bounds of a `bigint` or `coerceBigint` validator and the value a `literal` of a bigint expects are bigints in `params`, which `JSON.stringify` cannot serialize, and those of a `date` validator are `Date`s, which it turns into ISO strings. Convert them first if you send issues as JSON.
+A result is plain data, so it can be logged, sent to a client or stored, and because no issue holds the input, doing so does not leak what was submitted. No issue holds a bigint, which `JSON.stringify` cannot serialize: a bigint bound or expected value is written as its decimal digits beside `type: "bigint"`. The bounds of a `date` validator are `Date`s, which `JSON.stringify` turns into ISO strings.
 
 <!-- Source: docs/standard-schema.md -->
 
@@ -773,7 +773,7 @@ Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, no
 
 `bigint(options?)` accepts bigints and produces a bigint. Numbers, including whole ones, fail with `invalid_type`. The options `min` and `max` are inclusive and `gt` and `lt` are exclusive, all bigints, and fail like the number bounds: `too_small` with `{ minimum, inclusive, type: "bigint" }`, or `too_big` with `{ maximum, inclusive, type: "bigint" }`. Positive is `gt: 0n`, non-negative is `min: 0n` and negative is `lt: 0n`.
 
-Bounds appear in `params` as bigints, which `JSON.stringify` cannot serialize. Convert them first if you send issues as JSON.
+Bounds appear in `params` as their decimal digits, `"10"` for `10n`, beside `type: "bigint"`, so an issue can be sent as JSON, which cannot hold a bigint. Read one back with `BigInt(params.minimum)`.
 
 ## Dates
 
@@ -786,7 +786,7 @@ The options `min` and `max` are `Date`s, both inclusive, and throw a `TypeError`
 - `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`. The one exception is `NaN`: `NaN === NaN` is false, so `literal(NaN)` could accept nothing, and it throws a `RangeError` when created.
 - `oneOf(values)` accepts any one value of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The values may be any primitives `literal` accepts, so `oneOf([true, false, null])` is a three-state flag. It also takes a TypeScript `enum`, and then ignores the reverse-mapping names TypeScript adds to a numeric enum, so only the numbers are values. The values are copied when the validator is created. No values throws a `TypeError` and one holding `NaN`, which no value equals, a `RangeError`, since either is a mistake in the schema.
 
-Both fail with `invalid_value`. `literal` reports `{ expected }` and `oneOf` reports `{ options }`, the list of accepted values.
+Both fail with `invalid_value`. `literal` reports `{ expected }` and `oneOf` reports `{ options }`, the list of accepted values. A bigint is reported as its decimal digits, so the issue can be sent as JSON: `literal(1n)` reports `{ expected: "1", type: "bigint" }`, and a `oneOf` of bigints alone adds `type: "bigint"` too. In a `oneOf` that mixes bigints with other values, a bigint option is its digits, as text, with nothing to tell it from a string.
 
 ```ts
 import { literal, oneOf } from "@codenhub/validation";
@@ -1295,6 +1295,7 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 - **Breaking.** `url()` rejects port 0, `https://example.com:0/`, which nothing can connect to and which `port()` rejects, where 0.1.0 accepted it. A `port` validator replaces the rule, as a `host` validator replaces the public-host one.
 - A composer reports an issue deep inside recursive input in time that grows with the input, where 0.1.0 copied the path of every issue at every level, which cost the square of the depth for each: 400 KB of input nested 100 levels deep with 100,000 issues took about eight seconds, and takes about half a second. Paths are unchanged.
 - **Breaking.** `formatIssue(issue, messages)` and `flatten(failure, messages)` require a message map, and throw a `TypeError` without one, where 0.1.0 worded every issue "Invalid value" when it was left out, which a form showed without a word. Pass `englishMessages`, a map of your own, or `{}` when every issue carries its own `message`.
+- **Breaking.** An issue holds no bigint: the bounds of `bigint` and `coerceBigint`, the value `literal` expects and the options of `oneOf` are written as their decimal digits, `"10"` for `10n`, with `type: "bigint"` beside a bound, a `literal` of a bigint and a `oneOf` of bigints alone, where 0.1.0 held the bigint itself, on which `JSON.stringify` throws, so an API that sent its issues as JSON failed on them. Read a bound back with `BigInt(params.minimum)`.
 
 ## Removed
 

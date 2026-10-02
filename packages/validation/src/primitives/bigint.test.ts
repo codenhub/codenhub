@@ -47,7 +47,7 @@ describe("bigint", () => {
     expect(issuesOf(bigint({ gt: 0n })(0n))[0]).toEqual({
       code: "too_small",
       path: [],
-      params: { minimum: 0n, inclusive: false, type: "bigint" },
+      params: { minimum: "0", inclusive: false, type: "bigint" },
     });
     expect(codesOf(bigint({ max: 0n })(1n))).toEqual(["too_big"]);
   });
@@ -60,5 +60,11 @@ describe("bigint", () => {
     });
     expect(codesOf(bigint({ min: 10n }, counted)(5n))).toEqual(["too_small"]);
     expect(calls).toBe(0);
+  });
+
+  it("should report a bound as its decimal digits, so the issue can be sent as JSON", () => {
+    const result = bigint({ max: 2n ** 64n })(2n ** 64n + 1n);
+    expect(issuesOf(result)[0]?.params).toEqual({ maximum: "18446744073709551616", inclusive: true, type: "bigint" });
+    expect(() => JSON.stringify(result)).not.toThrow();
   });
 });

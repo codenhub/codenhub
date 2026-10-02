@@ -64,4 +64,11 @@ describe("oneOf", () => {
   it("should compare with ===, so -0 matches 0", () => {
     expect(oneOf([0])(-0).ok).toBe(true);
   });
+
+  it("should report bigint options as their digits, so the issue can be sent as JSON", () => {
+    const result = oneOf([1n, 2n])(3n);
+    expect(issuesOf(result)[0]?.params).toEqual({ options: ["1", "2"], type: "bigint" });
+    expect(() => JSON.stringify(result)).not.toThrow();
+    expect(issuesOf(oneOf([1n, "a"])(3n))[0]?.params).toEqual({ options: ["1", "a"] });
+  });
 });

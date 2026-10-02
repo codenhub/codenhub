@@ -555,6 +555,7 @@ const role = literal("admin");
 role("admin"); // { ok: true, value: "admin" }
 role("user"); // { ok: false, ... }, code "invalid_value", params { expected: "admin" }
 literal(true, { message: "You must accept the terms" });
+literal(1n)(2n); // { ok: false, ... }, params { expected: "1", type: "bigint" }
 ```
 
 ### lowercase
@@ -2592,7 +2593,7 @@ base64({ url: true })("aGVsbG8"); // { ok: true, ... }, padding is optional in t
 export declare const bigint: Factory<bigint, BigintOptions>;
 ```
 
-Creates a validator for bigints. Numbers are rejected, including whole ones.
+Creates a validator for bigints. Numbers are rejected, including whole ones. A bound in an issue's `params` is written as its decimal digits, `"10"` for `10n`, so the issue can be sent as JSON.
 
 **Throws**
 

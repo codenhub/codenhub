@@ -135,4 +135,4 @@ It takes the same message map as `formatIssue`, which it requires too. Field key
 
 ## Reading the result
 
-A result is plain data, so it can be logged, sent to a client or stored, and because no issue holds the input, doing so does not leak what was submitted. One caveat: the bounds of a `bigint` or `coerceBigint` validator and the value a `literal` of a bigint expects are bigints in `params`, which `JSON.stringify` cannot serialize, and those of a `date` validator are `Date`s, which it turns into ISO strings. Convert them first if you send issues as JSON.
+A result is plain data, so it can be logged, sent to a client or stored, and because no issue holds the input, doing so does not leak what was submitted. No issue holds a bigint, which `JSON.stringify` cannot serialize: a bigint bound or expected value is written as its decimal digits beside `type: "bigint"`. The bounds of a `date` validator are `Date`s, which `JSON.stringify` turns into ISO strings.

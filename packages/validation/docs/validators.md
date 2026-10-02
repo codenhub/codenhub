@@ -96,7 +96,7 @@ Positive, negative and their "non-" variants are bounds: positive is `gt: 0`, no
 
 `bigint(options?)` accepts bigints and produces a bigint. Numbers, including whole ones, fail with `invalid_type`. The options `min` and `max` are inclusive and `gt` and `lt` are exclusive, all bigints, and fail like the number bounds: `too_small` with `{ minimum, inclusive, type: "bigint" }`, or `too_big` with `{ maximum, inclusive, type: "bigint" }`. Positive is `gt: 0n`, non-negative is `min: 0n` and negative is `lt: 0n`.
 
-Bounds appear in `params` as bigints, which `JSON.stringify` cannot serialize. Convert them first if you send issues as JSON.
+Bounds appear in `params` as their decimal digits, `"10"` for `10n`, beside `type: "bigint"`, so an issue can be sent as JSON, which cannot hold a bigint. Read one back with `BigInt(params.minimum)`.
 
 ## Dates
 
@@ -109,7 +109,7 @@ The options `min` and `max` are `Date`s, both inclusive, and throw a `TypeError`
 - `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`. The one exception is `NaN`: `NaN === NaN` is false, so `literal(NaN)` could accept nothing, and it throws a `RangeError` when created.
 - `oneOf(values)` accepts any one value of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The values may be any primitives `literal` accepts, so `oneOf([true, false, null])` is a three-state flag. It also takes a TypeScript `enum`, and then ignores the reverse-mapping names TypeScript adds to a numeric enum, so only the numbers are values. The values are copied when the validator is created. No values throws a `TypeError` and one holding `NaN`, which no value equals, a `RangeError`, since either is a mistake in the schema.
 
-Both fail with `invalid_value`. `literal` reports `{ expected }` and `oneOf` reports `{ options }`, the list of accepted values.
+Both fail with `invalid_value`. `literal` reports `{ expected }` and `oneOf` reports `{ options }`, the list of accepted values. A bigint is reported as its decimal digits, so the issue can be sent as JSON: `literal(1n)` reports `{ expected: "1", type: "bigint" }`, and a `oneOf` of bigints alone adds `type: "bigint"` too. In a `oneOf` that mixes bigints with other values, a bigint option is its digits, as text, with nothing to tell it from a string.
 
 ```ts
 import { literal, oneOf } from "@codenhub/validation";

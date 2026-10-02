@@ -248,6 +248,7 @@ describe("formatIssue", () => {
   it("should describe literals and lists of allowed values, writing values as they appear in code", () => {
     expect(formatIssue(issuesOf(literal("admin")("x"))[0] as ValidationIssue)).toBe('Expected "admin"');
     expect(formatIssue(issuesOf(literal(1n)(1))[0] as ValidationIssue)).toBe("Expected 1n");
+    expect(formatIssue(issuesOf(oneOf([1n, 2n])(1))[0] as ValidationIssue)).toBe("Expected one of 1n, 2n");
     expect(formatIssue(issuesOf(literal(null)(1))[0] as ValidationIssue)).toBe("Expected null");
     expect(formatIssue(issuesOf(oneOf(["a", "b"])("x"))[0] as ValidationIssue)).toBe('Expected one of "a", "b"');
     expect(formatIssue(issuesOf(oneOf([1, 2])(3))[0] as ValidationIssue)).toBe("Expected one of 1, 2");
