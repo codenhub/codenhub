@@ -35,7 +35,9 @@ export type InferRecord<TKey extends string, TValue> = string extends TKey
  * to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the
  * key validator found, so it cannot be mistaken for a problem with the value; the value is still
  * checked. Only own enumerable properties are read, and a getter or `Proxy` trap in the input that
- * throws while it is read propagates, as a callback's exception does. The output is
+ * throws while it is read propagates, as a callback's exception does. Every value is read when the
+ * validator is called, before any key or value validator runs, so a change to the input made by a
+ * callback or while an asynchronous key waits never reaches the output. The output is
  * a new object and the input is never modified. A key such as `__proto__` from parsed JSON is
  * kept as data and never writes to a prototype. A key that the `key` validator changes, such as by
  * lowercasing, must stay distinct: a second entry that arrives at a key already taken is reported as
@@ -84,8 +86,11 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
     if (oversize.length > 0) {
       return reject(oversize);
     }
-    const entries = names.map((name) =>
-      chain(key(name), (keyResult) => chain(value(input[name]), (valueResult) => ({ keyResult, valueResult }))),
+    // Every value is read before any validator runs, as in `object`, so neither a key validator that
+    // changes the input nor a change made while one waits can reach the output.
+    const values = names.map((name) => input[name]);
+    const entries = names.map((name, index) =>
+      chain(key(name), (keyResult) => chain(value(values[index]), (valueResult) => ({ keyResult, valueResult }))),
     );
     return chain(collect(entries), (settled) => {
       const issues: ValidationIssue[] = [];

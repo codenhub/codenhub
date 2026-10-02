@@ -1,8 +1,12 @@
 import { assertFunction, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer } from "../core/types";
+import type { AnyFunction } from "../primitives/func";
 
-/** A value, or a function called for every use to produce it. */
-type Fallback<T> = T | (() => T);
+/**
+ * A value, or a function called for every use to produce it. When a function is among the types of the
+ * value, only the function that produces it is accepted, since the value itself would be called.
+ */
+type Fallback<T> = [Extract<T, AnyFunction>] extends [never] ? T | (() => T) : () => T;
 
 /**
  * Wraps a validator so `undefined` is accepted, and every other value goes to the wrapped validator.
@@ -13,7 +17,8 @@ type Fallback<T> = T | (() => T);
  * `undefined`, and inside `object` the property is always present in the output. The default is
  * trusted and is not run through the wrapped validator. A function is called for every use to produce
  * the default, so pass one for an object or array, which would otherwise be shared by every result. To
- * use a function as the default value itself, return it from a function.
+ * use a function as the default value itself, return it from a function, `optional(func(), () => noop)`,
+ * which the types require when the wrapped validator can produce a function.
  *
  * @example
  * ```ts

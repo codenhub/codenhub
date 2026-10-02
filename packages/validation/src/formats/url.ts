@@ -58,7 +58,7 @@ export interface UrlOptions extends MessageOptions {
   /**
    * Validates the port, a number, or `undefined` when the URL names none or names its scheme's default,
    * which the parser drops. So `port: optional(port())` accepts either, and `port: literal(8080)` requires
-   * it. Its failure is reported as the URL's, with `params.part` `"port"`.
+   * it. Without it, port 0, which nothing can connect to, is rejected; with it, the validator decides. Its failure is reported as the URL's, with `params.part` `"port"`.
    */
   port?: AnyValidator;
   /**
@@ -169,6 +169,11 @@ export function url(...rest: unknown[]): AnyValidator {
     parsed.hostname = parsed.hostname.toLowerCase().replace(/%[\da-f]{2}/g, (escape) => escape.toUpperCase());
     const { hostname } = parsed;
     if (withoutFinalDot(hostname).length > HOST_MAX_LENGTH || (host === undefined && !isPublicName(hostname))) {
+      return notFormat("url");
+    }
+    // Port 0 asks a system for any free port, so no URL can reach it, as `port()` says. A port
+    // validator replaces this rule, as a host validator replaces the one above.
+    if (port === undefined && parsed.port === "0") {
       return notFormat("url");
     }
     const parts: Part[] = [];

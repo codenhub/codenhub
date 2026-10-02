@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { pass } from "../core/result";
+import type { Validator } from "../core/types";
 import { number } from "../primitives/number";
 import { oneOf } from "../primitives/one-of";
 import { string } from "../primitives/string";
@@ -102,6 +104,19 @@ describe("record", () => {
     expect(isPending(result)).toBe(true);
     expect(codesOf(await result)).toEqual(["invalid_key"]);
     expect(isPending(scores({ a: 1 }))).toBe(false);
+  });
+
+  it("should read the input before a key's validator can change it, or while one waits", async () => {
+    const input: Record<string, unknown> = { a: 1, b: 2 };
+    const changing: Validator<string> = (key) => {
+      input["b"] = "changed";
+      return pass(key as string);
+    };
+    expect(valueOf(record(changing, number())(input))).toEqual({ a: 1, b: 2 });
+    const later: Record<string, unknown> = { ok: 1 };
+    const pending = record(isFree, number())(later);
+    later["ok"] = "changed";
+    expect(valueOf(await pending)).toEqual({ ok: 1 });
   });
 
   it("should report a key that the key validator makes equal to an earlier one, instead of dropping a value", () => {
