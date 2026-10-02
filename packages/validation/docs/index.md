@@ -112,7 +112,7 @@ import { is, number } from "@codenhub/validation";
 const isPort = (input: unknown): input is number => is(number({ int: true, min: 1, max: 65535 }), input);
 ```
 
-`is` narrows to the type the validator produces, which is exact for a validator that does not change the value. For one that trims or transforms, read `result.value` from calling it instead. `is` accepts synchronous validators only.
+`is` returns a `boolean` and does not narrow the input, since a validator that trims, coerces or transforms produces another value than it was given. Where the validator keeps the value as it is, write the guard yourself, as above; otherwise read `result.value` from calling the validator. `is` accepts synchronous validators only.
 
 ## Next steps
 

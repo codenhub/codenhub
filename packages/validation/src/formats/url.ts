@@ -192,8 +192,12 @@ export function url(...rest: unknown[]): AnyValidator {
     }
     // A scheme the parser has no rules for, such as `ssh`, keeps its host as written, so the host is
     // normalized as RFC 3986 does it: letters in lowercase and escapes in uppercase. For any other scheme
-    // the parser has done so already, and this changes nothing.
-    parsed.hostname = parsed.hostname.toLowerCase().replace(/%[\da-f]{2}/g, (escape) => escape.toUpperCase());
+    // the parser has done so already, and the host is not written back: some parsers, such as Node.js 24.16
+    // to 24.19, read text like `http://äxn--` into a URL whose every setter aborts the process.
+    const normalized = parsed.hostname.toLowerCase().replace(/%[\da-f]{2}/g, (escape) => escape.toUpperCase());
+    if (normalized !== parsed.hostname) {
+      parsed.hostname = normalized;
+    }
     const { hostname } = parsed;
     if (withoutFinalDot(hostname).length > HOST_MAX_LENGTH || (host === undefined && !isPublicName(hostname))) {
       return notFormat("url");
