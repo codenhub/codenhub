@@ -152,6 +152,14 @@ When results come back:
 
 If the domains turn out not to be independent, stop treating them as parallel work and recombine the investigation.
 
+## Delegated Audits and Reviews
+
+When the work is an audit or review the user asked for, split it by area, not by question, and use the `audit` skill when it is available:
+
+- Give every worker its area and the same evidence standard and classification, verbatim.
+- Before reporting, merge duplicates and resolve every contradiction between workers: re-check the case and report one answer, or one question when it cannot be settled.
+- Report one verdict for the whole target, not one per worker.
+
 ## Hybrid Pattern
 
 Use parallel dispatch at the top level and the structured review loop inside each workstream when the work is large enough to justify it. A typical example is three unrelated bug clusters investigated in parallel, where each accepted fix still goes through spec review and code quality review before final integration.
