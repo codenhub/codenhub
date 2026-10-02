@@ -245,6 +245,15 @@ export const calledDefault = optional(func<(value: string) => void>(), noop);
 export const calledFallback = fallback(func<(value: string) => void>(), noop);
 // @ts-expect-error a function among the output's types needs the factory too
 export const calledEither = optional(union([string(), func<(value: string) => void>()]), noop);
+
+// An object or a list would be shared by every result, so it comes from a function too.
+export const freshTags = optional(array(string()), () => []);
+export const freshPage = fallback(object({ size: number() }), () => ({ size: 20 }));
+export const primitiveOfUnion = optional(union([string(), array(string())]), "none");
+// @ts-expect-error a list given directly would be shared by every result
+export const sharedTags = optional(array(string()), []);
+// @ts-expect-error an object given directly would be shared by every result
+export const sharedPage = fallback(object({ size: number() }), { size: 20 });
 export const length = transform(string(), (text) => text.length);
 export const lengthValue: Infer<typeof length> = 3;
 export const loaded = transform(string(), async (id) => ({ id }));

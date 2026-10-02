@@ -212,3 +212,13 @@ export function assertSize(name: string, value: number): void {
     throw new RangeError(`${name} must be a non-negative integer, received ${value}`);
   }
 }
+
+/**
+ * Rejects a default that is an object or a list, which every result would share, so a change to one
+ * would show up in the next. A function that returns it makes a new one each time.
+ */
+export function assertUnshared(name: string, value: unknown): void {
+  if (typeof value === "object" && value !== null) {
+    throw new TypeError(`${name} would be shared by every result: pass a function that returns it, such as () => []`);
+  }
+}

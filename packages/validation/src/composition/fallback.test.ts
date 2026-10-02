@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { number } from "../primitives/number";
+import { string } from "../primitives/string";
 import { codesOf, isFree, isPending, valueOf } from "../test-utils";
+import { array } from "./array";
 import { fallback } from "./fallback";
 
 describe("fallback", () => {
@@ -42,5 +44,17 @@ describe("fallback", () => {
     expect(isPending(validator("a"))).toBe(true);
     expect(valueOf(await validator("taken"))).toBe("default");
     expect(codesOf(await validator("a"))).toEqual([]);
+  });
+
+  it("should refuse an object or array fallback, which every result would share, when created", () => {
+    expect(() => fallback(array(string()), [] as never)).toThrow(
+      new TypeError(
+        "A fallback object would be shared by every result: pass a function that returns it, such as () => []",
+      ),
+    );
+    const fresh = fallback(array(string()), () => []);
+    const first = valueOf(fresh(1));
+    first.push("x");
+    expect(valueOf(fresh(1))).toEqual([]);
   });
 });

@@ -153,7 +153,7 @@ export declare function fallback<TValidator extends AnyValidator>(validator: TVa
 
 Wraps a validator so a value that fails it is replaced by a fallback instead of being rejected. The result never fails.
 
-The fallback is trusted and is not validated. A function is called with the issues that were found, so it can log them, and its return value becomes the result. A value that is not a function is the same value in every result, so pass a function for an object or array, such as `() => []`, or a change to one result shows up in the next. A fallback that is itself a function has to be returned from one, `fallback(func(), () => noop)`, which the types require when the wrapped validator can produce a function. Use this sparingly: it turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
+The fallback is trusted and is not validated. A function is called with the issues that were found, so it can log them, and its return value becomes the result. A primitive is used as it is. An object or an array must come from a function, such as `() => []`, since one value would be shared by every result and a change to one would show up in the next: the types reject it, and so does `fallback` when it is created. A fallback that is itself a function has to be returned from one, `fallback(func(), () => noop)`, which the types require when the wrapped validator can produce a function. Use this sparingly: it turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
 
 **Parameters**
 
@@ -166,7 +166,7 @@ The fallback is trusted and is not validated. A function is called with the issu
 
 **Returns** — A validator that produces the wrapped type and never fails.
 
-**Throws** — When `validator` is not a function.
+**Throws** — When `validator` is not a function, or `value` is an object or an array.
 
 **Example**
 
@@ -801,7 +801,7 @@ export declare function optional<TValidator extends AnyValidator>(validator: TVa
 
 Wraps a validator so `undefined` is accepted, and every other value goes to the wrapped validator. Inside `object`, the property then becomes optional in the inferred type.
 
-Given a default, `undefined` is replaced by it instead, the output type no longer includes `undefined`, and inside `object` the property is always present in the output. The default is trusted and is not run through the wrapped validator. A function is called for every use to produce the default, so pass one for an object or array, which would otherwise be shared by every result. To use a function as the default value itself, return it from a function, `optional(func(), () => noop)`, which the types require when the wrapped validator can produce a function.
+Given a default, `undefined` is replaced by it instead, the output type no longer includes `undefined`, and inside `object` the property is always present in the output. The default is trusted and is not run through the wrapped validator. A primitive is used as it is, and a function is called for every use to produce the default. An object or an array must come from a function, such as `() => []`, since one value would be shared by every result and a change to one would show up in the next: the types reject it, and so does `optional` when it is created. To use a function as the default value itself, return it from a function, `optional(func(), () => noop)`, which the types require when the wrapped validator can produce a function.
 
 **Parameters**
 
@@ -814,7 +814,7 @@ Given a default, `undefined` is replaced by it instead, the output type no longe
 
 **Returns** — A validator that produces the wrapped type, and `undefined` or the default for `undefined`.
 
-**Throws** — When `validator` is not a function.
+**Throws** — When `validator` is not a function, or `value` is an object or an array.
 
 **Example**
 
@@ -3277,10 +3277,10 @@ Not exported; declared in `src/composition/tagged.ts`.
 ### Fallback
 
 ```ts
-type Fallback<T> = [Extract<T, AnyFunction>] extends [never] ? T | (() => T) : () => T;
+type Fallback<T> = [Extract<T, AnyFunction>] extends [never] ? (T & LiteralValue) | (() => T) : () => T;
 ```
 
-A value, or a function called for every use to produce it. When a function is among the types of the value, only the function that produces it is accepted, since the value itself would be called.
+A primitive value, or a function called for every use to produce the value. An object or a list would be shared by every result, so it is produced by a function. When a function is among the types of the value, only the function that produces it is accepted, since the value itself would be called.
 
 Not exported; declared in `src/composition/optional.ts`.
 
@@ -3320,10 +3320,10 @@ Not exported; declared in `src/composition/pipe.ts`.
 ### Replacement
 
 ```ts
-type Replacement<T> = [Extract<T, AnyFunction>] extends [never] ? T | ((issues: readonly ValidationIssue[]) => T) : (issues: readonly ValidationIssue[]) => T;
+type Replacement<T> = [Extract<T, AnyFunction>] extends [never] ? (T & LiteralValue) | ((issues: readonly ValidationIssue[]) => T) : (issues: readonly ValidationIssue[]) => T;
 ```
 
-A fallback, or a function that receives the issues and returns it. When a function is among the types of the fallback, only the function that returns it is accepted, since the fallback itself would be called.
+A primitive fallback, or a function that receives the issues and returns the fallback. An object or a list would be shared by every result, so it is returned by a function. When a function is among the types of the fallback, only the function that returns it is accepted, since the fallback itself would be called.
 
 Not exported; declared in `src/composition/fallback.ts`.
 
