@@ -32,7 +32,7 @@ export interface LazyOptions extends MessageOptions {
    * instead of running for hours on a few hundred bytes. A validation is a call such as
    * `schema(input)` and everything it reaches before it settles, after any await included, so an `array` of recursive items shares
    * this `lazy`'s count, and validations made one after another, or from a callback such as a check's
-   * test, have counts of their own. Each `lazy`
+   * test, or after an await inside a validator you write yourself, have counts of their own. Each `lazy`
    * counts its own calls against its own limit, so no other `lazy` overrides it. Recursive data with more
    * nodes than this in one validation needs it raised.
    *
@@ -114,7 +114,11 @@ function isSamePath(left: Place, right: Place): boolean {
  * before it settles, whatever validator its root is, so the items of an `array` share each `lazy`'s
  * count. Unlike `maxDepth`, each `lazy` counts its own calls against its own limit, so a limit set on one
  * is never overridden by another that the validation reaches. Unlike `maxDepth` too, it lasts across awaits: what runs after an await counts toward the same
- * validation, so an asynchronous recursive schema is held to it as well. The issues of
+ * validation, so an asynchronous recursive schema is held to it as well. That holds for the awaits of
+ * this package, such as an asynchronous check's: an await inside a validator you write yourself is not
+ * seen, so what that validator calls after it starts a validation of its own, with fresh counts, and
+ * `maxCalls` does not bound recursion through it. Put asynchronous work in a check, or bound such a
+ * validator yourself. The issues of
  * the options that failed are kept, about 1 KB per call, so the default holds a validation stopped by the
  * limit to about 10 MB and a few tens of milliseconds for each `lazy`. Raise it for trusted recursive data with more nodes
  * than that in one validation. For recursive objects told apart by a property, `tagged` reads that
