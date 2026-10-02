@@ -19,7 +19,7 @@ You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2
 
 ---
 
-caveman, caveman-commit, caveman-review
+audit (pull request comment format), caveman, caveman-commit
 Adapted from: https://github.com/JuliusBrussee/caveman
 Copyright (c) 2026 Julius Brussee
 Licensed under the MIT License.
