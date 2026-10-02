@@ -183,6 +183,10 @@ export const englishMessages: Messages = {
     if (issue.params?.coerced === true) {
       return `Cannot convert ${param(issue, "received")} to ${param(issue, "expected")}`;
     }
+    if (issue.params?.received === "non-plain object") {
+      // Such as `process.env` or a class instance, which a copy into a plain object passes.
+      return "Expected a plain object; copy it first, as in { ...value }";
+    }
     return issue.params?.expected === "never"
       ? "Not allowed"
       : `Expected ${param(issue, "expected")}, received ${param(issue, "received")}`;

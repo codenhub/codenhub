@@ -284,7 +284,7 @@ const result = env({ PORT: "8080", ORIGINS: "https://a.example,https://b.example
 // { ok: true, value: { PORT: 8080, DEBUG: false, RETRIES: 3, ORIGINS: [...] } }
 ```
 
-In Node.js, pass a copy of the environment: `env({ ...process.env })`. `process.env` itself is not a plain object, since its prototype is not `Object.prototype`, and `object` rejects it as it rejects a class instance. A missing variable is `undefined`, which a default replaces and everything else rejects. For a query string, [`searchParams`](docs/validators.md#searchparams) reads the text into an object first, and gives a repeated key, as in `?id=1&id=2`, as an array when you ask for it with `repeated: true`, so validate it with `array(coerceNumber())`.
+In Node.js, pass a copy of the environment: `env({ ...process.env })`. `process.env` itself is not a plain object, since its prototype is not `Object.prototype`, and `object` rejects it as it rejects a class instance, with a message that says to copy it. A missing variable is `undefined`, which a default replaces and everything else rejects. For a query string, [`searchParams`](docs/validators.md#searchparams) reads the text into an object first, and gives a repeated key, as in `?id=1&id=2`, as an array when you ask for it with `repeated: true`, so validate it with `array(coerceNumber())`.
 
 To clean text before converting it, put a strict validator in front with `pipe`: `pipe(string({ trim: true }), coerceNumber())`. For text that holds JSON, use `json`, which parses it and validates the result.
 
@@ -560,7 +560,7 @@ The code set is open: a custom validator reports whatever code it likes. These a
 | `invalid_union`        | A value matched none of the options of a `union`, or a tagged union got a missing or unknown tag.                              | For `union`, `issues`: the issues each option found, in order, with paths relative to the union's value. For `tagged`, `discriminator` and `options`, and the issue's path is the tag's.                                                                                                                                                          |
 | `custom`               | The default code of a `check` or `fail` call that names no code.                                                               | Whatever the reporter set.                                                                                                                                                                                                                                                                                                                        |
 
-`received` names kinds of value the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `invalid date` for a `Date` holding no moment, `object` for any other object, a `Map`, a `Set` or a class instance included, or the `typeof` of anything else. It never names a class, since that would take reading the prototype of the input. Where a plain object is expected (`object`, `record`, `tagged`), any other object is `non-plain object`.
+`received` names kinds of value the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `invalid date` for a `Date` holding no moment, `object` for any other object, a `Map`, a `Set` or a class instance included, or the `typeof` of anything else. It never names a class, since that would take reading the prototype of the input. Where a plain object is expected (`object`, `record`, `tagged`), any other object is `non-plain object`, which `englishMessages` words "Expected a plain object; copy it first, as in { ...value }", since a copy, such as `{ ...process.env }`, is what passes.
 
 The validator reference lists the exact code and `params` each validator reports.
 
@@ -1259,7 +1259,7 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 - `symbol()`, and `oneOf` over a TypeScript `enum`.
 - `optional(validator, value)`, which replaces a missing value with a default. A function is called to produce the default, so when the wrapped validator can produce a function, such as `func()`, the types accept only a function that returns it: `optional(func(), () => noop)`.
 - `tuple(items, { rest, max })`: `max` caps the length of a tuple with `rest`, the fixed items included, so untrusted input can be bounded as an `array` is.
-- English wording for every new format and check in `englishMessages`. A `union` no option accepted is worded with the first issue of the one option whose kind the input had, when there is exactly one, so `union([literal(""), email()])` given `"nope"` says "Invalid email address" rather than "Does not match any of the allowed types".
+- English wording for every new format and check in `englishMessages`. A `union` no option accepted is worded with the first issue of the one option whose kind the input had, when there is exactly one, so `union([literal(""), email()])` given `"nope"` says "Invalid email address" rather than "Does not match any of the allowed types". An object that is not plain, such as `process.env`, is worded "Expected a plain object; copy it first, as in { ...value }" rather than "Expected object, received non-plain object".
 
 ## Changed
 

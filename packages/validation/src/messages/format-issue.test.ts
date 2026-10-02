@@ -320,6 +320,12 @@ describe("formatIssue", () => {
     expect(formatIssue(issue({ code: "invalid_intersection" }))).toBe("Conflicting values");
   });
 
+  it("should say how to pass an object that is not plain, such as process.env", () => {
+    expect(
+      formatIssue(issue({ code: "invalid_type", params: { expected: "object", received: "non-plain object" } })),
+    ).toBe("Expected a plain object; copy it first, as in { ...value }");
+  });
+
   it("should word never and a missing or unknown tag without calling them types", () => {
     expect(formatIssue(issue({ code: "invalid_type", params: { expected: "never", received: "number" } }))).toBe(
       "Not allowed",
