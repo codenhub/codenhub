@@ -263,14 +263,37 @@ describe("lazy", () => {
       expect([twice(chain(1)).ok, twice(chain(1)).ok]).toEqual([true, true]);
     });
 
-    it("should start a count of its own after an await", async () => {
+    it("should keep counting after an await, so a validation that waits is held to the limit too", async () => {
       const linked: Validator<Link> = object({ next: optional(lazy(() => linked, { maxCalls: 3 })) });
       const later = pipe(
         isFree,
-        transform(string(), () => chain(3)),
+        transform(string(), () => chain(2)),
         linked,
       );
-      expect((await later("free")).ok).toBe(true);
+      // Two calls before the await and two after it make four, one past the limit.
+      const both = object({ now: linked, later });
+      expect((await both({ now: chain(2), later: "free" })).ok).toBe(false);
+      expect((await both({ now: chain(1), later: "free" })).ok).toBe(true);
+    });
+
+    it("should stop a recursive union with an asynchronous rule, whose work doubles with each level", async () => {
+      let calls = 0;
+      const free = check(async (text: string) => {
+        calls += 1;
+        return (await isFree(text)).ok;
+      });
+      const node: Validator<unknown> = union([
+        object({ type: literal("a"), next: lazy(() => node, { maxCalls: 50 }) }),
+        object({ type: literal("b"), next: lazy(() => node, { maxCalls: 50 }) }),
+        string(free),
+      ]) as Validator<unknown>;
+      let input: unknown = "leaf";
+      for (let level = 0; level < 30; level += 1) {
+        input = { type: "b", next: input };
+      }
+      await node(input);
+      // 2^30 leaf checks without a limit that lasts across awaits.
+      expect(calls).toBeLessThan(1_000);
     });
 
     it("should allow 10,000 calls in one validation by default, a tree of 10,000 nodes", () => {

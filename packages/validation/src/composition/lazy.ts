@@ -29,7 +29,7 @@ export interface LazyOptions extends MessageOptions {
    * a `union` tries and fails included. Past it, every further call fails with `too_big`, so a schema
    * whose work grows faster than its input, such as a recursive `union` of objects, which doubles with
    * each level, stops instead of running for hours on a few hundred bytes. A validation is a call such as
-   * `schema(input)` and everything it reaches before it returns, so an `array` of recursive items shares
+   * `schema(input)` and everything it reaches before it settles, after any await included, so an `array` of recursive items shares
    * one count, and validations made one after another have one each. The limit of the first `lazy` a
    * validation reaches holds the whole of it, so set it on the outermost one. Recursive data with more
    * nodes than this in one validation needs it raised.
@@ -71,17 +71,18 @@ let openDepth = 0;
  * checked without a size cap tuned to the stack. The count is of calls on the stack, so it bounds
  * recursion that happens in one synchronous run, which is where the stack can overflow; a rule that
  * awaits between levels starts the next from a fresh stack, and is not counted. So `maxDepth` does not
- * bound an asynchronous recursive schema: it follows input of any depth, and a cyclic object until
- * memory runs out. Give such a schema a bound of its own.
+ * bound an asynchronous recursive schema; `maxCalls` does, below, since each level is a `lazy` call
+ * and the count of calls lasts across awaits, so even a cyclic object stops.
  *
  * Work can also grow faster than the input. A `union` tries every option, and an `object` checks every
  * property even after one fails, so a recursive `union` of objects recurses through every option at
  * every level, and its work doubles with each: a few hundred bytes can take hours. `maxCalls` stops that:
  * past that many `lazy` calls in one validation, every further one fails with `too_big` and
  * `{ maximum, type: "calls" }`. A validation is a call such as `schema(input)` and everything it reaches
- * before it returns, whatever validator its root is, so the items of an `array` share one count. Unlike
+ * before it settles, whatever validator its root is, so the items of an `array` share one count. Unlike
  * `maxDepth`, the limit is read from the first `lazy` the validation reaches, and holds the whole of it.
- * Like `maxDepth`, it counts one synchronous run: what runs after an await counts afresh. The issues of
+ * Unlike `maxDepth` too, it lasts across awaits: what runs after an await counts toward the same
+ * validation, so an asynchronous recursive schema is held to it as well. The issues of
  * the options that failed are kept, about 1 KB per call, so the default holds a validation stopped by the
  * limit to about 10 MB and a few tens of milliseconds. Raise it for trusted recursive data with more nodes
  * than that in one validation. For recursive objects told apart by a property, `tagged` reads that
