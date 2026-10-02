@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-30
+last_updated: 2026-10-02
 scope: Durable repository-level documentation under root `docs/`.
 ---
 
@@ -44,7 +44,14 @@ Markdown in this repository is not hard-wrapped. Write each paragraph and list i
 
 Repository documentation MUST be updated in the same change when architecture, conventions, or project decisions change.
 
-Truth priority is:
+APPROVED and IMPLEMENTED documents record decisions. A decision binds work while it stands, and changing it is legitimate work: the document is the current answer, not a final one. Judge work against a document on two separate questions, and keep the answers apart:
+
+- **Conformance:** does the work match the recorded decision? Where it does not, the work is brought in line, or the departure is recorded under "Exceptions".
+- **Merit:** is the recorded decision right? Where it is not, the decision and its document change, together with the code that follows them.
+
+Matching a document does not make work correct, and a merit finding is not a code defect: it is a proposal to change a decision, made as one and under "Recording decisions".
+
+Truth priority settles conformance, which is what work follows while a decision stands:
 
 1. APPROVED or IMPLEMENTED documentation.
 2. DRAFT documentation.
@@ -57,6 +64,14 @@ When APPROVED or IMPLEMENTED documents conflict with each other, the conflict MU
 Prefer updating existing documents over creating overlapping ones. Prefer updating documentation before changing code so intended direction is clear before implementation follows.
 
 Delete a document once it no longer describes current or intended direction, in the same change that makes it stale. Git keeps its history; an outdated document kept in the tree only competes with the current one in search and review.
+
+## Recording decisions
+
+A document that settles a choice MUST say why. Where real alternatives existed, it SHOULD name the ones it rejected and, briefly, why each lost. A decision recorded without its reason can only be obeyed or overruled, not judged, and the next reader reopens it.
+
+A change that reverses a recorded decision MUST name what the decision did not weigh: a concrete case it gets wrong, a measurement, or a constraint that has changed since. Preferring another option is not enough; without new evidence, the recorded decision stands. The reversing change records the old choice among the rejected alternatives, with the evidence that reversed it, so the decision is not reopened on arguments already heard.
+
+This applies to every document that uses this status model, including package internal documentation.
 
 ## Exceptions
 
