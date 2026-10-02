@@ -332,7 +332,7 @@ describe("lazy", () => {
       for (let level = 0; level < 30; level += 1) {
         input = { type: "b", next: input };
       }
-      await node(input);
+      expect((await node(input)).ok).toBe(true);
       // 2^30 leaf checks without a limit that lasts across awaits.
       expect(calls).toBeLessThan(1_000);
     });
