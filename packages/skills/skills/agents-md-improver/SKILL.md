@@ -1,172 +1,88 @@
 ---
 name: agents-md-improver
-description: Audits and improves AGENTS.md files in repositories. Use when the user asks to check, audit, update, improve, or fix AGENTS.md files.
+description: Audits, writes, and trims AGENTS.md files, both the root file and scoped ones in subdirectories, and the harness files that load them, such as CLAUDE.md. Use when asked to check, audit, create, update, clean up, or fix AGENTS.md or other agent instruction files, when agents keep repeating the same mistake in a repository, or when deciding what agents should be told about a project.
 metadata:
   short-description: Audit and improve AGENTS.md files
 ---
 
 # AGENTS.md Improver
 
-Audit, evaluate, and improve `AGENTS.md` files across a codebase so future agent sessions have better project guidance.
+An agent instruction file is loaded into every session in its scope, so every line costs context in every session. A line earns its place only when an agent without it would make a mistake it could not avoid by reading the repository. Judge every line by that test first, then by where it belongs.
 
-This skill can update `AGENTS.md` files. After presenting a quality report and getting user approval, it makes targeted improvements.
+## What Goes Where
 
-## Workflow
+Read the root `AGENTS.md` and the contributor documentation first. When they say what agent instructions hold, follow that layout and judge against it. Otherwise use this one:
 
-### Phase 1: Discovery
+- **Root `AGENTS.md`:** how to work in the repository: behavior agents get wrong here, judgment calls, and pointers to where the rules live. Not facts an agent finds on its own, such as commands already in the contributor guide, a directory map it can list, or conventions a linter enforces.
+- **Scoped `AGENTS.md`**, in any directory: the known traps of that scope, and nothing else.
+- **Documentation:** rules, decisions and their reasons, and the commands and workflows people need too. Instruction files point to it and never copy it.
+- **Tests, linters, and checks:** anything that can be verified mechanically. A rule a check enforces needs no line.
+- **Harness files**, for a harness that reads its own file instead of `AGENTS.md`: an import of `AGENTS.md` and only what that harness alone needs. When scoped files exist, make sure agents reach them: either the root tells agents to read every `AGENTS.md` on the path to their work, or each scope has the harness file as well.
+- **Never agent memory.** Knowledge worth keeping goes into the repository, where it is versioned, reviewed, and seen by every agent on every machine. Local memory files are none of those, and they go stale unseen.
 
-Determine the target file before auditing anything:
+## Traps
 
-1. If the user explicitly names a file, use that file as the primary target.
-2. Otherwise, search for `AGENTS.md` files and default to the project root `AGENTS.md` when it exists.
-3. Only inspect related instruction files when the user asks for them or they are necessary to explain the target file.
+A trap is information, not a rule. It answers "why isn't this done the obvious way?" and lets an agent check whether the answer still holds:
 
-**File Types & Locations:**
+- What happens, and when: "X happens when trying Y."
+- What to prefer instead.
+- The conditions it held under, such as a tool or runtime version, and its evidence when there is one, such as a test, an issue, or a measurement.
 
-| Type             | Location                 | Purpose                                  |
-| ---------------- | ------------------------ | ---------------------------------------- |
-| Explicit target  | User-provided path       | Highest-priority file to audit           |
-| Project root     | `./AGENTS.md`            | Primary shared project instructions      |
-| Package-specific | `./packages/*/AGENTS.md` | Module-level guidance in monorepos       |
-| Subdirectory     | Any nested location      | Feature or domain-specific instructions  |
-| Related guides   | Other instruction files  | Supplemental context only when requested |
-
-### Phase 2: Quality Assessment
-
-For each target `AGENTS.md` file, evaluate against the quality criteria. See [references/quality-criteria.md](references/quality-criteria.md) for detailed rubrics.
-
-**Quick Assessment Checklist:**
-
-| Criterion                         | Points | Check                                                           |
-| --------------------------------- | ------ | --------------------------------------------------------------- |
-| Commands and workflows documented | 20     | Are build, test, lint, and common operations present?           |
-| Architecture clarity              | 20     | Can the agent understand the codebase structure and boundaries? |
-| Non-obvious patterns              | 15     | Are gotchas, quirks, and exceptions documented?                 |
-| Conciseness                       | 15     | Is the file dense and useful instead of verbose?                |
-| Currency                          | 15     | Does it reflect the current codebase state?                     |
-| Actionability                     | 15     | Are instructions concrete and executable?                       |
-
-**Quality Scores:**
-
-- **A (90-100)**: Comprehensive, current, actionable
-- **B (70-89)**: Good coverage, minor gaps
-- **C (50-69)**: Basic info, missing key sections
-- **D (30-49)**: Sparse or outdated
-- **F (0-29)**: Missing or severely outdated
-
-### Phase 3: Quality Report Output
-
-Always output the quality report before making any updates.
-
-Format:
-
-```text
-## AGENTS.md Quality Report
-
-### Summary
-- Files found: X
-- Average score: X/100
-- Files needing update: X
-
-### File-by-File Assessment
-
-#### 1. ./AGENTS.md (Project Root)
-**Score: XX/100 (Grade: X)**
-
-| Criterion | Score | Notes |
-|-----------|-------|-------|
-| Commands and workflows | X/20 | ... |
-| Architecture clarity | X/20 | ... |
-| Non-obvious patterns | X/15 | ... |
-| Conciseness | X/15 | ... |
-| Currency | X/15 | ... |
-| Actionability | X/15 | ... |
-
-**Issues:**
-- [List specific problems]
-
-**Recommended additions:**
-- [List what should be added]
-
-#### 2. ./packages/api/AGENTS.md (Package-specific)
-...
+```markdown
+- Running this package's tests from the repository root fails on Windows: fixture paths resolve against the working directory. Prefer `pnpm --filter <package> test`. Seen with pnpm 10.4; no test guards it.
 ```
 
-### Phase 4: Targeted Updates
+- Bad: "Always run the tests from the package directory." It is a rule with no reason, so nobody can tell when it stops applying.
+- Bad: "This package uses Vitest." An agent finds that in `package.json`.
 
-After outputting the quality report, ask the user for confirmation before updating anything.
+Add a trap in the change that discovers it, and only when its cause is not evident from the code or documentation. Remove it in the change that removes its cause.
 
-See [references/update-guidelines.md](references/update-guidelines.md) for examples of what to add and leave out, and the checklist to validate each proposed change.
+## Audit
 
-**Update Guidelines (Critical):**
+1. **Find the files.** Every `AGENTS.md`, the harness files that load them, and what the root says about them. Audit the file the user names; otherwise all of them.
+2. **Give each line one verdict.** Verify by reading or running; mark what you could not verify.
+   - `keep`: an agent would make a mistake without it, and cannot find it elsewhere.
+   - `cut`: generic advice, behavior a capable agent shows anyway, or a rule a check already enforces.
+   - `move`: it belongs elsewhere. Name where: a rule or decision to documentation, a command to the contributor guide, a trap to a scoped file, a checkable rule to tooling.
+   - `point`: it copies content another file owns. Replace it with a pointer, or cut it when agents find that file anyway.
+   - `fix`: stale or wrong, such as a command that fails, a path that no longer exists, a trap whose cause is gone, or a statement the code contradicts.
+   - `reword`: right, but phrased so it fires wrongly, such as capitals or "CRITICAL" that make models over-apply it, a prohibition without its alternative, or a rule tied to a keyword instead of the situation where it applies.
+3. **Find what is missing, from evidence only.** Evidence is a mistake agents actually made here: a correction the user keeps repeating in prompts, review comments that recur on agent work, a fix that undid an agent's earlier fix, or a session transcript where an agent went wrong. Name the evidence for every addition. "Repositories should document X" is not evidence.
+4. **Find conflicts** between instruction files, or between an instruction and the documentation. For each, say which side should win and why.
 
-1. Propose targeted additions only. Focus on genuinely useful information:
-   - commands or workflows discovered during analysis
-   - gotchas or non-obvious patterns found in code
-   - package relationships that were not clear
-   - testing approaches that work
-   - configuration quirks
+When everything holds, say so and change nothing.
 
-2. Keep it minimal. Avoid:
-   - restating what is obvious from the code
-   - generic best practices already covered elsewhere
-   - one-off fixes unlikely to recur
-   - verbose explanations when a one-liner will do
+## Report
 
-3. Show diffs. For each change, show:
-   - which `AGENTS.md` file to update
-   - the specific addition as a diff or quoted block
-   - a brief explanation of why this helps future sessions
+Report before changing anything. Number every item so the user can approve by number, show each proposed line as it will read, and end with the net change in lines.
 
-**Diff Format:**
+```markdown
+**Files:** `AGENTS.md`, `packages/api/AGENTS.md`, `CLAUDE.md` (imports `AGENTS.md`).
+**Summary:** 2 cut, 1 point, 1 fix, 1 reword, 1 addition. Net: −12 lines.
 
-`````markdown
-### Update: ./AGENTS.md
+### AGENTS.md
 
-**Why:** The build command was missing, which makes it harder for future
-sessions to get started quickly.
+1. `cut` L12 "Write clean, readable code.": generic; no agent does anything differently because of it.
+2. `point` L20–31, the command table: `CONTRIBUTING.md` already documents these commands. Replace with "Commands and workflow: `CONTRIBUTING.md`."
+3. `fix` L40 "`npm run e2e`": no such script in `package.json`; the browser tests run with `pnpm test:browser`.
+4. `add` "Ask before adding or changing a public export." Evidence: in three of the last ten pull requests, an agent added an export that review then removed.
 
-````diff
-+## Quick Start
-+
-+```bash
-+npm install
-+npm run dev  # Start development server
-+```
-````
-`````
+### packages/api/AGENTS.md
 
-### Phase 5: Apply Updates
+5. `reword` L3 "NEVER touch the cache.": state the trap instead: what breaks, when, and what to prefer.
 
-After user approval, apply the changes. Preserve the existing content structure unless restructuring is part of the approved improvement.
+### Conflicts
 
-## Templates
+6. `cut` `AGENTS.md` L8 allows committing typo fixes to `main`; `CONTRIBUTING.md` forbids any commit to `main`. The contributor guide owns the workflow.
+```
 
-See [references/templates.md](references/templates.md) for `AGENTS.md` templates by project type.
+## Apply
 
-## Common Issues to Flag
+After the user approves, all items or some by number:
 
-1. Stale commands: documented commands no longer work
-2. Missing dependencies: required tools or setup not mentioned
-3. Outdated architecture: directory structure or key files have changed
-4. Missing environment setup: required variables or configuration are absent
-5. Broken test commands: test scripts or workflows have changed
-6. Undocumented gotchas: non-obvious patterns are not captured
-7. Generic filler: the file contains broad advice instead of project-specific guidance
+- Make only the approved changes, and keep each file's structure unless the user approved restructuring it.
+- Land moved content in its new home in the same change, so nothing is lost.
+- Write every added line as a plain directive, with its reason when the reason is not obvious, and tied to the situation where it applies.
+- Follow the project's formatting and commit conventions.
 
-## User Tips to Share
-
-When presenting recommendations, remind users:
-
-- Keep `AGENTS.md` concise and human-readable. Dense is better than verbose.
-- Prefer commands that are copy-paste ready.
-- Document project-specific patterns and gotchas, not generic engineering advice.
-- Separate shared project instructions from personal preferences when the host workflow supports it.
-- Revisit `AGENTS.md` after important workflow or architecture changes so it stays current.
-
-## Failure Modes To Handle
-
-- If no target file exists, say so clearly and ask whether to create one or use a different file.
-- If several candidate files exist, explain the candidates and anchor the audit to the user-requested file or the root `AGENTS.md` by default.
-- If a recommendation cannot be verified from the repository, label it as uncertain instead of stating it as fact.
-- If the file is already high quality, say so explicitly and avoid editing for the sake of editing.
+When a repository has no `AGENTS.md`, write the smallest root that passes the test, often a few lines: where the contributor workflow lives, and the behaviors agents got wrong here. Do not fill sections from a template.
