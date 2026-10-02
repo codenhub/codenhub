@@ -35,8 +35,8 @@ export interface DatetimeOptions extends MessageOptions {
   offset?: boolean;
   /**
    * Also accepts a date-time without a zone, which names a time on a local clock rather than a moment,
-   * such as `2026-09-28T14:30` from an HTML `datetime-local` input. Without `precision`, the seconds may
-   * then be left out, as that input leaves them out when they are zero.
+   * such as `2026-09-28T14:30` from an HTML `datetime-local` input. Without `precision`, such a time may
+   * leave out its seconds, as that input does when they are zero; a time with a zone still needs them.
    *
    * @defaultValue false
    */
@@ -66,12 +66,11 @@ export const datetime = ((...args: unknown[]) => {
   assertOption("local", local, "boolean");
   const fraction = fractionPattern(precision);
   const zone = offset === true ? "(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)" : "Z";
-  // A local time may leave out its seconds, as `time` does, unless a precision asks for a fraction of them.
-  const clock =
-    local === true && precision === undefined
-      ? `(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d${fraction})?`
-      : `${TIME}${fraction}`;
-  const pattern = new RegExp(`^(\\d{4}-\\d{2}-\\d{2})T${clock}${zone}${local === true ? "?" : ""}$`);
+  const clock = `${TIME}${fraction}${zone}${local === true ? "?" : ""}`;
+  // A time without a zone may leave out its seconds, as an HTML `datetime-local` input does, unless a
+  // precision asks for a fraction of them. A time with a zone keeps the rules it has without `local`.
+  const times = local === true && precision === undefined ? `(?:${clock}|(?:[01]\\d|2[0-3]):[0-5]\\d)` : clock;
+  const pattern = new RegExp(`^(\\d{4}-\\d{2}-\\d{2})T${times}$`);
   return stringFormat(
     "datetime",
     (text) => {

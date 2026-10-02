@@ -1,7 +1,8 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { tail, word } from "../core/checks";
+import { append, below, call, composed, placeAll } from "../core/nesting";
 import { isPlainObject, objectIssue, setOwn } from "../core/objects";
-import { assertFunction, collectNested, failWith, issue, repeatedKey } from "../core/result";
+import { assertFunction, failWith, issue, repeatedKey } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -77,20 +78,22 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
   assertFunction("value", value);
   const [options, reject, accept] = tail<SizeOptions & MessageOptions, Record<string, unknown>>(rest);
   assertSizeOptions(options);
-  return (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return composed((input, place): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
-      return reject([objectIssue(input)]);
+      return reject([objectIssue(input)], place);
     }
     const names = Object.keys(input);
     const oversize = sizeIssues(names.length, "record", options);
     if (oversize.length > 0) {
-      return reject(oversize);
+      return reject(oversize, place);
     }
     // Every value is read before any validator runs, as in `object`, so neither a key validator that
     // changes the input nor a change made while one waits can reach the output.
     const values = names.map((name) => input[name]);
     const entries = names.map((name, index) =>
-      chain(key(name), (keyResult) => chain(value(values[index]), (valueResult) => ({ keyResult, valueResult }))),
+      chain(key(name), (keyResult) =>
+        chain(call(value, values[index], below(place, name)), (valueResult) => ({ keyResult, valueResult })),
+      ),
     );
     return chain(collect(entries), (settled) => {
       const issues: ValidationIssue[] = [];
@@ -99,20 +102,25 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
         const name = names[index] as string;
         if (!keyResult.ok) {
           // Wrapped, so a bad key is not mistaken for a bad value at the same path.
-          issues.push(...word([issue("invalid_key", { issues: keyResult.error.issues }, [name])], options.message));
+          issues.push(
+            ...word(
+              placeAll([issue("invalid_key", { issues: keyResult.error.issues }, [name])], place),
+              options.message,
+            ),
+          );
         }
         if (!valueResult.ok) {
-          collectNested(issues, valueResult.error.issues, name);
+          append(issues, valueResult.error.issues);
         }
         if (keyResult.ok && valueResult.ok) {
           if (Object.hasOwn(output, keyResult.value as string)) {
-            issues.push(...word([repeatedKey(name)], options.message));
+            issues.push(...word(placeAll([repeatedKey(name)], place), options.message));
           } else {
             setOwn(output, keyResult.value as string, valueResult.value);
           }
         }
       });
-      return issues.length > 0 ? failWith(issues) : accept(output);
+      return issues.length > 0 ? failWith(issues) : accept(output, place);
     });
-  };
+  });
 }

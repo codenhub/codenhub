@@ -68,11 +68,15 @@ export function oneOf(values: readonly LiteralValue[] | EnumLike, ...rest: unkno
   if (options.some((option) => Number.isNaN(option))) {
     throw new RangeError("oneOf() cannot match NaN, which no value equals");
   }
+  // A bigint is reported as its decimal digits, since `JSON.stringify` throws on one, and a list of bigints
+  // alone says so with `type: "bigint"`.
+  const reported = options.map((option) => (typeof option === "bigint" ? String(option) : option));
+  const isBigints = options.every((option) => typeof option === "bigint");
   // A copy per failure, so changing an issue's list cannot change what the validator accepts. indexOf
   // compares with ===, as documented, where includes would also match NaN.
   return member(
     (input) => options.indexOf(input) !== -1,
-    () => ({ options: [...options] }),
+    () => (isBigints ? { options: [...reported], type: "bigint" } : { options: [...reported] }),
     rest,
   );
 }

@@ -8,7 +8,7 @@ import type {
 } from "./types";
 
 /** Shared by every issue at the root, so reporting one allocates no path. */
-const ROOT_PATH: readonly ValidationPathSegment[] = Object.freeze([]);
+export const ROOT_PATH: readonly ValidationPathSegment[] = Object.freeze([]);
 
 /** An issue as a validator author writes it; {@link fail} fills in the rest. */
 export interface IssueInput {
@@ -87,22 +87,6 @@ export const issue = (
   params?: Readonly<Record<string, unknown>>,
   path: readonly ValidationPathSegment[] = ROOT_PATH,
 ): ValidationIssue => (params === undefined ? { code, path } : { code, path, params });
-
-/**
- * Adds the issues a child found to its parent's list, one level down under `segment`. It pushes one
- * by one because spreading a long list into `push` passes each as an argument, which overflows the
- * stack past about 120,000 issues and would turn bad input into an exception. An issue from a validator
- * written by hand without a path is at the child itself.
- */
-export function collectNested(
-  target: ValidationIssue[],
-  issues: readonly ValidationIssue[],
-  segment: ValidationPathSegment,
-): void {
-  for (const issue of issues) {
-    target.push({ ...issue, path: [segment, ...(issue.path ?? [])] });
-  }
-}
 
 /** The issue for an item equal to an earlier one, where a collection requires them distinct. */
 export const repeatedItem = (segment: ValidationPathSegment): ValidationIssue =>
@@ -226,5 +210,15 @@ export function assertSize(name: string, value: number): void {
   assertOption(name, value, "number");
   if (!Number.isInteger(value) || value < 0) {
     throw new RangeError(`${name} must be a non-negative integer, received ${value}`);
+  }
+}
+
+/**
+ * Rejects a default that is an object or a list, which every result would share, so a change to one
+ * would show up in the next. A function that returns it makes a new one each time.
+ */
+export function assertUnshared(name: string, value: unknown): void {
+  if (typeof value === "object" && value !== null) {
+    throw new TypeError(`${name} would be shared by every result: pass a function that returns it, such as () => []`);
   }
 }

@@ -85,7 +85,7 @@ if (!result.ok) {
 }
 ```
 
-The English wording is a separate value you import, and `formatIssue` does not carry it. A program that words its own issues, or never shows one, does not bundle it, which is about 1 kB gzipped. It also means `formatIssue(issue)` with no map says only "Invalid value", so pass a map wherever you show text.
+The English wording is a separate value you import, and `formatIssue` does not carry it. A program that words its own issues, or never shows one, does not bundle it, which is about 1 kB gzipped. The map is required, so forgetting it is a compile error, and a `TypeError` in JavaScript, rather than a form that says "Invalid value" for everything. A program whose issues all carry their own `message` passes `{}`.
 
 The text comes from the first of these that exists:
 
@@ -131,8 +131,8 @@ if (!result.ok) {
 }
 ```
 
-It takes the same message map as `formatIssue`, and without one every message is "Invalid value". Field keys use the notation of `formatPath`. `fieldErrors` has no prototype, so a field named `constructor` or `toString` cannot be mistaken for an inherited member and `fieldErrors["toString"]` is `undefined` when there is no such field. The price is that it has no methods: ask with `"name" in fieldErrors` or `Object.hasOwn(fieldErrors, "name")`, not `fieldErrors.hasOwnProperty("name")`.
+It takes the same message map as `formatIssue`, which it requires too. Field keys use the notation of `formatPath`. `fieldErrors` has no prototype, so a field named `constructor` or `toString` cannot be mistaken for an inherited member and `fieldErrors["toString"]` is `undefined` when there is no such field. The price is that it has no methods: ask with `"name" in fieldErrors` or `Object.hasOwn(fieldErrors, "name")`, not `fieldErrors.hasOwnProperty("name")`.
 
 ## Reading the result
 
-A result is plain data, so it can be logged, sent to a client or stored, and because no issue holds the input, doing so does not leak what was submitted. One caveat: the bounds of a `bigint` or `coerceBigint` validator and the value a `literal` of a bigint expects are bigints in `params`, which `JSON.stringify` cannot serialize, and those of a `date` validator are `Date`s, which it turns into ISO strings. Convert them first if you send issues as JSON.
+A result is plain data, so it can be logged, sent to a client or stored, and because no issue holds the input, doing so does not leak what was submitted. No issue holds a bigint, which `JSON.stringify` cannot serialize: a bigint bound or expected value is written as its decimal digits beside `type: "bigint"`. The bounds of a `date` validator are `Date`s, which `JSON.stringify` turns into ISO strings.

@@ -1,3 +1,4 @@
+import { call, composed } from "../core/nesting";
 import { assertFunction, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer } from "../core/types";
 
@@ -21,6 +22,8 @@ export function nullish<TValidator extends AnyValidator>(
   validator: TValidator,
 ): Composed<TValidator, Infer<TValidator> | null | undefined> {
   assertFunction("validator", validator);
-  const validate = (input: unknown) => (input === null || input === undefined ? pass(input) : validator(input));
+  const validate = composed((input, place) =>
+    input === null || input === undefined ? pass(input) : call(validator, input, place),
+  );
   return validate as Composed<TValidator, Infer<TValidator> | null | undefined>;
 }

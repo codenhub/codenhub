@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { Validator } from "../core/types";
 import { accepts, issuesOf, valueOf } from "../test-utils";
 import { base64 } from "./base64";
 import { cidr } from "./cidr";
@@ -167,12 +168,48 @@ describe("ip", () => {
     expect(valueOf(ip()("fe80::1%eth0"))).toBe("fe80::1%eth0");
     expect(valueOf(ip()("192.168.0.1"))).toBe("192.168.0.1");
   });
+
+  it("should write an IPv4-mapped or NAT64 address with its IPv4 part dotted, however it was written", () => {
+    for (const text of ["::ffff:192.0.2.1", "::FFFF:C000:201", "0:0:0:0:0:ffff:c000:0201"]) {
+      expect(valueOf(ip()(text))).toBe("::ffff:192.0.2.1");
+    }
+    for (const text of ["64:ff9b::192.0.2.1", "64:FF9B:0:0:0:0:c000:201"]) {
+      expect(valueOf(ip()(text))).toBe("64:ff9b::192.0.2.1");
+    }
+    expect(valueOf(ip()("::ffff:0:0"))).toBe("::ffff:0.0.0.0");
+    expect(valueOf(ip()("64:ff9b::"))).toBe("64:ff9b::0.0.0.0");
+  });
+
+  it("should keep every other IPv6 address in hex groups, the deprecated IPv4-compatible ones included", () => {
+    expect(valueOf(ip()("::1"))).toBe("::1");
+    expect(valueOf(ip()("::"))).toBe("::");
+    expect(valueOf(ip()("::1.2.3.4"))).toBe("::102:304");
+    expect(valueOf(ip()("64:ff9b:1::1.2.3.4"))).toBe("64:ff9b:1::102:304");
+    expect(valueOf(ip()("::ffff:1:1.2.3.4"))).toBe("::ffff:1:102:304");
+  });
+
+  it("should give url's host part the spelling ip() gives, and keep the parser's in the URL", () => {
+    const seen: unknown[] = [];
+    const host: Validator<string> = (input) => {
+      seen.push(input);
+      return ip()(input);
+    };
+    const mapped = valueOf(url({ host })("https://[::ffff:192.0.2.1]:8443/a?b=1"));
+    expect(mapped).toBe("https://[::ffff:c000:201]:8443/a?b=1");
+    // The value is what the parser writes, so it reads back as itself.
+    expect(new URL(mapped).href).toBe(mapped);
+    expect(seen).toEqual(["::ffff:192.0.2.1"]);
+    expect(valueOf(url({ host })("http://[64:ff9b::1.2.3.4]/"))).toBe("http://[64:ff9b::102:304]/");
+    expect(seen).toEqual(["::ffff:192.0.2.1", "64:ff9b::1.2.3.4"]);
+    expect(valueOf(url({ host })("http://[::1]/"))).toBe("http://[::1]/");
+  });
 });
 
 describe("cidr", () => {
   it("should accept an address and a prefix its family allows, in canonical spelling", () => {
     expect(valueOf(cidr()("10.0.0.0/8"))).toBe("10.0.0.0/8");
     expect(valueOf(cidr()("2001:DB8:0::/32"))).toBe("2001:db8::/32");
+    expect(valueOf(cidr()("::ffff:c000:200/120"))).toBe("::ffff:192.0.2.0/120");
     expect(accepts(cidr(), "0.0.0.0/0", "192.168.0.5/24", "::/128")).toEqual([true, true, true]);
   });
 

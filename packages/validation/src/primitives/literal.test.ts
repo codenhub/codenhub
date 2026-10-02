@@ -39,4 +39,10 @@ describe("literal", () => {
     const role: "admin" = valueOf(literal("admin")("admin"));
     expect(role).toBe("admin");
   });
+
+  it("should report a bigint as its digits, so the issue can be sent as JSON", () => {
+    const result = literal(1n)(2n);
+    expect(issuesOf(result)[0]?.params).toEqual({ expected: "1", type: "bigint" });
+    expect(() => JSON.stringify(result)).not.toThrow();
+  });
 });

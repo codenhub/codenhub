@@ -186,6 +186,24 @@ export const badUsers = array(
   // @ts-expect-error the item has no `name`
   unique((user) => user.name),
 );
+// Without `by`, items are compared as a `Set` compares them, so only primitives can repeat.
+export const uniqueWords = array(string(), unique(undefined, "No repeats"));
+export const uniqueFlags = array(nullable(boolean()), unique());
+export const objectsWithoutKey = array(
+  object({ id: number() }),
+  // @ts-expect-error every validated object is new, so an object needs `by`
+  unique(),
+);
+export const datesWithoutKey = array(
+  date(),
+  // @ts-expect-error two Dates of one moment are two objects, so a Date needs `by`
+  unique(),
+);
+export const listsWithoutKey = array(
+  array(string()),
+  // @ts-expect-error every validated list is new, so a list needs `by`
+  unique(),
+);
 export const point = tuple([number(), number()]);
 export const pointValue: Infer<typeof point> = [1, 2];
 // @ts-expect-error a tuple has a fixed length
@@ -227,6 +245,15 @@ export const calledDefault = optional(func<(value: string) => void>(), noop);
 export const calledFallback = fallback(func<(value: string) => void>(), noop);
 // @ts-expect-error a function among the output's types needs the factory too
 export const calledEither = optional(union([string(), func<(value: string) => void>()]), noop);
+
+// An object or a list would be shared by every result, so it comes from a function too.
+export const freshTags = optional(array(string()), () => []);
+export const freshPage = fallback(object({ size: number() }), () => ({ size: 20 }));
+export const primitiveOfUnion = optional(union([string(), array(string())]), "none");
+// @ts-expect-error a list given directly would be shared by every result
+export const sharedTags = optional(array(string()), []);
+// @ts-expect-error an object given directly would be shared by every result
+export const sharedPage = fallback(object({ size: number() }), { size: 20 });
 export const length = transform(string(), (text) => text.length);
 export const lengthValue: Infer<typeof length> = 3;
 export const loaded = transform(string(), async (id) => ({ id }));

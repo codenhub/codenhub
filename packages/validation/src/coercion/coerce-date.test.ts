@@ -16,9 +16,27 @@ describe("coerceDate", () => {
     expect(valueOf(validator(" 2026-09-28 ")).toISOString()).toBe("2026-09-28T00:00:00.000Z");
   });
 
-  it("should read a date-time without an offset as UTC, whatever the machine's timezone", () => {
-    expect(valueOf(validator("2026-09-28T14:30:00")).toISOString()).toBe("2026-09-28T14:30:00.000Z");
-    expect(valueOf(validator("2026-09-28 14:30:00.5")).toISOString()).toBe("2026-09-28T14:30:00.500Z");
+  it("should refuse a date-time without a zone, which names no moment, as a failed conversion", () => {
+    for (const text of ["2026-09-28T14:30", "2026-09-28T14:30:00", "2026-09-28 14:30:00.5"]) {
+      expect(issuesOf(validator(text))[0]?.params).toEqual({
+        expected: "valid date",
+        received: "string",
+        coerced: true,
+      });
+    }
+  });
+
+  it("should read a date-time without a zone as UTC when told to, whatever the machine's timezone", () => {
+    const utc = coerceDate({ zoneless: "utc" });
+    expect(valueOf(utc("2026-09-28T14:30")).toISOString()).toBe("2026-09-28T14:30:00.000Z");
+    expect(valueOf(utc("2026-09-28 14:30:00.5")).toISOString()).toBe("2026-09-28T14:30:00.500Z");
+    expect(valueOf(utc("2026-09-28T14:30+02:00")).toISOString()).toBe("2026-09-28T12:30:00.000Z");
+  });
+
+  it("should reject a zoneless option other than utc when created", () => {
+    expect(() => coerceDate({ zoneless: "local" as never })).toThrow(
+      new TypeError('zoneless must be "utc", received string'),
+    );
   });
 
   it("should read the offset forms ISO 8601 allows", () => {

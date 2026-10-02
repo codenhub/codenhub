@@ -140,7 +140,7 @@ describe("canonical output", () => {
 
 describe("coerceDate", () => {
   it("should read what an HTML datetime-local input sends, without seconds", () => {
-    expect(valueOf(coerceDate()("2026-09-28T10:00")).toISOString()).toBe("2026-09-28T10:00:00.000Z");
+    expect(valueOf(coerceDate({ zoneless: "utc" })("2026-09-28T10:00")).toISOString()).toBe("2026-09-28T10:00:00.000Z");
     expect(valueOf(coerceDate()("2026-09-28T10:00+02:00")).toISOString()).toBe("2026-09-28T08:00:00.000Z");
     expect(coerceDate()("2026-09-28T10:00.5").ok).toBe(false);
   });

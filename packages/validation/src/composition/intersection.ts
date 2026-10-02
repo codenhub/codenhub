@@ -1,5 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { call, composed } from "../core/nesting";
 import { entriesOf, isPlainObject, setOwn, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "../core/objects";
 import { assertFunction, failWith, issue } from "../core/result";
 import type {
@@ -224,13 +225,15 @@ export function intersection(left: AnyValidator, right: AnyValidator, ...rest: u
   assertFunction("left", left);
   assertFunction("right", right);
   const [, reject, accept] = tail<MessageOptions, unknown>(rest);
-  return (input: unknown): Maybe<ValidationResult<unknown>> =>
-    chain(collect([left(input), right(input)]), ([first, second]) => {
-      if (first?.ok && second?.ok) {
-        const conflicts: ValidationIssue[] = [];
-        const merged = merge(first.value, second.value, conflicts);
-        return conflicts.length > 0 ? reject(conflicts) : accept(merged);
-      }
-      return failWith([first, second].flatMap((result) => (result?.ok === false ? result.error.issues : [])));
-    });
+  return composed(
+    (input, place): Maybe<ValidationResult<unknown>> =>
+      chain(collect([call(left, input, place), call(right, input, place)]), ([first, second]) => {
+        if (first?.ok && second?.ok) {
+          const conflicts: ValidationIssue[] = [];
+          const merged = merge(first.value, second.value, conflicts);
+          return conflicts.length > 0 ? reject(conflicts, place) : accept(merged, place);
+        }
+        return failWith([first, second].flatMap((result) => (result?.ok === false ? result.error.issues : [])));
+      }),
+  );
 }

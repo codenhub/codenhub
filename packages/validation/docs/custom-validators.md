@@ -30,7 +30,7 @@ string(
 
 The test receives the value the validator produced, after its clean-up, and returns `true` when the value is acceptable. The second argument is the issue to report when it returns `false`: a string is its message, and an object can set a `code`, `path`, `params` and `message`. Without it the issue has code `custom` at the value's own location. An issue without a message of its own is worded by the `message` option of the validator the check is given to, when it has one.
 
-A check runs once the value has its type. For an object that means once every property has passed, so a check can compare them and rely on their types. Point the issue at the field the user should fix with `path`:
+A check runs once the value has its type and has passed the validator's own options, so `string({ max: 30 }, check(isFree))` never asks about a name longer than 30 characters. For an object that means once every property has passed, so a check can compare them and rely on their types. Point the issue at the field the user should fix with `path`:
 
 ```ts
 import { check, object, string } from "@codenhub/validation";

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assertSize, collectNested, describeType, fail, issue, pass, toIssue, typeIssue } from "./result";
-import type { ValidationIssue } from "./types";
+import { assertSize, describeType, fail, issue, pass, toIssue, typeIssue } from "./result";
 
 describe("pass", () => {
   it("should wrap the value in a successful result", () => {
@@ -46,26 +45,6 @@ describe("fail", () => {
 
   it("should not add params or message keys that were not given", () => {
     expect(Object.keys(toIssue({ code: "x" }))).toEqual(["code", "path"]);
-  });
-});
-
-describe("collectNested", () => {
-  it("should add every issue with the segment in front of its path, without changing the originals", () => {
-    const original = toIssue({ code: "x", path: ["b"] });
-    const target: ValidationIssue[] = [];
-    collectNested(target, [original], "a");
-    expect(target[0]?.path).toEqual(["a", "b"]);
-    expect(original.path).toEqual(["b"]);
-  });
-
-  it("should take more issues than can be spread as arguments", () => {
-    const target: ValidationIssue[] = [];
-    collectNested(
-      target,
-      Array.from({ length: 500_000 }, () => toIssue({ code: "x" })),
-      "a",
-    );
-    expect(target).toHaveLength(500_000);
   });
 });
 

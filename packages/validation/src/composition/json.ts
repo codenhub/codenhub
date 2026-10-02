@@ -1,5 +1,6 @@
 import { chain } from "../core/async";
 import { tail } from "../core/checks";
+import { call, composed } from "../core/nesting";
 import { assertFunction, issue, pass, typeIssue } from "../core/result";
 import type {
   AnyValidator,
@@ -52,16 +53,18 @@ export function json(...args: unknown[]): AnyValidator {
   const [validator, rest] = isOptions ? [pass as AnyValidator, args] : [first as AnyValidator, args.slice(1)];
   assertFunction("validator", validator);
   const [, reject, accept] = tail<MessageOptions, unknown>(rest);
-  return (input) => {
+  return composed((input, place) => {
     if (typeof input !== "string") {
-      return reject([typeIssue("string", input)]);
+      return reject([typeIssue("string", input)], place);
     }
     let parsed: unknown;
     try {
       parsed = JSON.parse(input);
     } catch {
-      return reject([issue("invalid_format", { format: "json" })]);
+      return reject([issue("invalid_format", { format: "json" })], place);
     }
-    return chain(validator(parsed), (result: ValidationResult<unknown>) => (result.ok ? accept(result.value) : result));
-  };
+    return chain(call(validator, parsed, place), (result: ValidationResult<unknown>) =>
+      result.ok ? accept(result.value, place) : result,
+    );
+  });
 }

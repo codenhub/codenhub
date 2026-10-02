@@ -1,4 +1,5 @@
 import { chain, collect, type Maybe } from "./async";
+import { placeAll, type Place } from "./nesting";
 import { isPlainObject } from "./objects";
 import { failWith, issue, pass, typeIssue } from "./result";
 import type {
@@ -62,9 +63,11 @@ export function word(issues: ValidationIssue[], message: Message | undefined): V
 }
 
 /**
- * Finishes a validator whose value has its type: runs every check on the value, adds what they found to
- * the issues the validator found itself, words every issue that has no wording of its own, and returns
- * the value or every issue. It stays synchronous while every check is. A check's issues are copied, so
+ * Finishes a validator whose value has its type. When the validator found issues of its own, such as a
+ * string longer than `max`, it reports them and runs no check, so a bound keeps a long value from a costly
+ * check and an invalid one from a lookup. Otherwise it runs every check on the value, words every issue
+ * that has no wording of its own, and returns the value or every issue. It stays synchronous while every
+ * check is, and while its own issues stop the checks. A check's issues are copied, so
  * a list the check reuses is never changed, and one written by hand without a path, or with an undefined
  * one, is at the value. A check written by hand that returns anything but nothing or a list, such as
  * `false`, is a bug, and throws saying so rather than failing later on what it returned.
@@ -75,6 +78,9 @@ export function finish<T>(
   message: Message | undefined,
   checks: readonly AsyncCheck<T>[],
 ): Maybe<ValidationResult<T>> {
+  if (issues.length > 0) {
+    return failWith(word(issues, message));
+  }
   return chain(collect(checks.map((check) => check(value))), (found) => {
     for (const list of found) {
       if (list !== undefined && !Array.isArray(list)) {
@@ -92,7 +98,7 @@ export function finish<T>(
 /**
  * Builds a validator for a type: the input must pass `accepts`, then `inspect` reports the validator's
  * own constraints into the list and returns the value, cleaned if the validator cleans it, and then the
- * checks run on that value. Every leaf and format is one of these.
+ * checks run on that value, once every constraint has passed. Every leaf and format is one of these.
  */
 export function leaf<T>(
   expected: string,
@@ -143,22 +149,26 @@ export function member<T>(
 
 /**
  * Reads what follows a composer's own arguments, options then checks, into the two ends of the
- * composer: `reject` fails with issues the composer found itself, such as a wrong type or size, worded
- * by the options' `message`, and `accept` runs the checks on a value once every child has passed, and
- * words what a check found without a message of its own. Issues a child found are never worded here,
- * since they are the child's.
+ * composer: `reject` fails with issues the composer found itself, such as a wrong type or size, written
+ * relative to its value and moved to the `place` it was reached at, worded by the options' `message`,
+ * and `accept` runs the checks on a value once every child has passed, and words what a check found
+ * without a message of its own. Issues a child found are never worded here, since they are the child's.
  */
 export function tail<TOptions extends MessageOptions, T>(
   args: readonly unknown[],
 ): [
   options: TOptions,
-  reject: (issues: ValidationIssue[]) => ValidationErr,
-  accept: (value: T) => Maybe<ValidationResult<T>>,
+  reject: (issues: readonly ValidationIssue[], place: Place) => ValidationErr,
+  accept: (value: T, place: Place) => Maybe<ValidationResult<T>>,
 ] {
   const [options, checks] = split<TOptions, T>(args);
   return [
     options,
-    (issues) => failWith(word(issues, options.message)),
-    (value) => finish(value, [], options.message, checks),
+    (issues, place) => failWith(word(placeAll(issues, place), options.message)),
+    // A check reports relative to the value, as for a leaf, and its issues are moved to the place after.
+    (value, place) =>
+      chain(finish(value, [], options.message, checks), (result) =>
+        result.ok || place === undefined ? result : failWith(placeAll(result.error.issues, place)),
+      ),
   ];
 }

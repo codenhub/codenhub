@@ -106,11 +106,13 @@ const describeFormat = (issue: ValidationIssue, messages: Messages): string => {
 };
 
 const describeValue = (issue: ValidationIssue): string => {
+  // A bigint is reported as its digits, and `type: "bigint"` says so.
+  const word = issue.params?.type === "bigint" ? (value: unknown) => `${String(value)}n` : formatValue;
   if (issue.params !== undefined && "expected" in issue.params) {
-    return `Expected ${formatValue(issue.params.expected)}`;
+    return `Expected ${word(issue.params.expected)}`;
   }
   if (Array.isArray(issue.params?.options)) {
-    return `Expected one of ${issue.params.options.map(formatValue).join(", ")}`;
+    return `Expected one of ${issue.params.options.map(word).join(", ")}`;
   }
   switch (issue.params?.format) {
     case "multipleOf":

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { check } from "../builders/check";
 import { lowercase } from "../checks/lowercase";
 import { pattern } from "../checks/pattern";
 import { startsWith } from "../checks/starts-with";
-import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
+import { accepts, codesOf, issuesOf, isPending, valueOf } from "../test-utils";
 import { string } from "./string";
 
 describe("string", () => {
@@ -92,18 +93,47 @@ describe("string", () => {
     });
   });
 
-  it("should report every constraint that fails, then every check, in a fixed order", () => {
+  it("should report every check, in order, once its own constraints pass", () => {
+    const strict = string({ min: 2 }, pattern(/^\d+$/), startsWith("9"));
+    expect(issuesOf(strict("ab")).map((issue) => issue.params?.format ?? issue.code)).toEqual(["regex", "startsWith"]);
+  });
+
+  it("should run no check while one of its own constraints fails", () => {
     const strict = string({ min: 5 }, pattern(/^\d+$/), startsWith("9"));
-    expect(issuesOf(strict("ab")).map((issue) => issue.params?.format ?? issue.code)).toEqual([
-      "too_small",
-      "regex",
-      "startsWith",
-    ]);
+    expect(codesOf(strict("ab"))).toEqual(["too_small"]);
+  });
+
+  it("should keep a long string from its checks with max", () => {
+    let calls = 0;
+    const capped = string(
+      { max: 10 },
+      check(() => {
+        calls += 1;
+        return true;
+      }),
+    );
+    expect(codesOf(capped("x".repeat(1_000_000)))).toEqual(["too_big"]);
+    expect(calls).toBe(0);
+  });
+
+  it("should answer at once, without running an asynchronous check, while a constraint fails", async () => {
+    let calls = 0;
+    const taken = string(
+      { min: 3 },
+      check(async () => {
+        calls += 1;
+        return true;
+      }),
+    );
+    expect(isPending(taken("ab"))).toBe(false);
+    expect(codesOf(await taken("ab"))).toEqual(["too_small"]);
+    expect(calls).toBe(0);
   });
 
   it("should word its own issues with message, and leave each check's to the check", () => {
-    const named = string({ min: 5, message: "Too short" }, startsWith("9", "Start with 9"));
-    expect(issuesOf(named("ab")).map((issue) => issue.message)).toEqual(["Too short", "Start with 9"]);
+    const named = string({ min: 2, message: "Too short" }, startsWith("9", "Start with 9"));
+    expect(issuesOf(named("a")).map((issue) => issue.message)).toEqual(["Too short"]);
+    expect(issuesOf(named("ab")).map((issue) => issue.message)).toEqual(["Start with 9"]);
     expect(issuesOf(string({ message: "Text please" })(1))[0]?.message).toBe("Text please");
   });
 

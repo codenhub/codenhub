@@ -220,16 +220,16 @@ describe("lazy", () => {
       return input;
     };
 
-    // Up to 100,000 calls, which a loaded machine may take a while over.
+    // Up to 10,000 calls, which a loaded machine may take a while over.
     it(
       "should stop a recursive union whose work doubles with each level by default, long before it would finish",
       { timeout: 60_000 },
       () => {
         const { node, calls } = doubling();
-        // 2^60 calls without the limit; at most 100,000 with the root in one lazy run.
+        // 2^60 calls without the limit; at most 10,000 with the root in one lazy run.
         expect(lazy(() => node)(deep(60)).ok).toBe(false);
         expect(calls()).toBeGreaterThan(0);
-        expect(calls()).toBeLessThanOrEqual(100_000);
+        expect(calls()).toBeLessThanOrEqual(10_000);
       },
     );
 
@@ -240,22 +240,48 @@ describe("lazy", () => {
         const { node, calls } = doubling();
         const items = Array.from({ length: 5 }, () => deep(30));
         expect(lazy(() => array(node))(items).ok).toBe(false);
-        expect(calls()).toBeLessThanOrEqual(100_000);
+        expect(calls()).toBeLessThanOrEqual(10_000);
       },
     );
 
-    it(
-      "should give each branch above the first lazy a limit of its own when the root is not wrapped",
-      { timeout: 60_000 },
-      () => {
-        const { node, calls } = doubling();
-        const items = Array.from({ length: 2 }, () => deep(30));
-        expect(array(node, { max: 2 })(items).ok).toBe(false);
-        // Two items, each tried against two options, each its own outermost lazy call.
-        expect(calls()).toBeGreaterThan(100_000);
-        expect(calls()).toBeLessThanOrEqual(4 * 100_000);
-      },
-    );
+    it("should hold a whole validation to one limit when its root is not a lazy validator", { timeout: 60_000 }, () => {
+      const { node, calls } = doubling();
+      // Each item used to start a count of its own, so the work, and the issues kept, grew with the items.
+      const items = Array.from({ length: 50 }, () => deep(30));
+      expect(array(node)(items).ok).toBe(false);
+      expect(calls()).toBeLessThanOrEqual(10_000);
+    });
+
+    it("should count each validation afresh, even one made by a hand-written validator", () => {
+      const linked: Validator<Link> = object({ next: optional(lazy(() => linked, { maxCalls: 3 })) });
+      const twice: Validator<unknown> = (input) => {
+        const first = linked(input);
+        return first.ok ? linked(input) : first;
+      };
+      // Inside one validation, the two calls share its count.
+      expect(object({ a: twice })({ a: chain(2) }).ok).toBe(false);
+      expect([twice(chain(1)).ok, twice(chain(1)).ok]).toEqual([true, true]);
+    });
+
+    it("should start a count of its own after an await", async () => {
+      const linked: Validator<Link> = object({ next: optional(lazy(() => linked, { maxCalls: 3 })) });
+      const later = pipe(
+        isFree,
+        transform(string(), () => chain(3)),
+        linked,
+      );
+      expect((await later("free")).ok).toBe(true);
+    });
+
+    it("should allow 10,000 calls in one validation by default, a tree of 10,000 nodes", () => {
+      interface Node {
+        kids: Node[];
+      }
+      const node: Validator<Node> = object({ kids: array(lazy(() => node)) });
+      const tree = (nodes: number): Node => ({ kids: Array.from({ length: nodes - 1 }, () => ({ kids: [] })) });
+      expect(node(tree(10_001)).ok).toBe(true);
+      expect(issuesOf(node(tree(10_002)))[0]?.params).toEqual({ maximum: 10_000, type: "calls" });
+    });
 
     it("should reject a limit that is not a positive integer, or not a number", () => {
       expect(() => lazy(() => number(), { maxCalls: 0 })).toThrow(RangeError);

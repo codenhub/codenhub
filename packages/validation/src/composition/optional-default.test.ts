@@ -33,10 +33,13 @@ describe("optional with a default", () => {
     expect(valueOf(tags(undefined))).toEqual([]);
   });
 
-  it("should share a plain value default between results", () => {
-    const shared: string[] = [];
-    const tags = optional(array(string()), shared);
-    expect(valueOf(tags(undefined))).toBe(shared);
+  it("should refuse an object or array default, which every result would share, when created", () => {
+    const error = new TypeError(
+      "A default object would be shared by every result: pass a function that returns it, such as () => []",
+    );
+    expect(() => optional(array(string()), [] as never)).toThrow(error);
+    expect(() => optional(object({}), {} as never)).toThrow(error);
+    expect(valueOf(optional(string(), null as never)(undefined))).toBe(null);
   });
 
   it("should make the property required in the output type of an object", () => {

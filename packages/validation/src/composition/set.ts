@@ -1,5 +1,6 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { below, call, composed } from "../core/nesting";
 import { sizeOfSet, valuesOf } from "../core/objects";
 import { assertFunction, repeatedItem, typeIssue } from "../core/result";
 import type {
@@ -53,17 +54,17 @@ export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("item", item);
   const [options, reject, accept] = tail<SizeOptions & MessageOptions, Set<unknown>>(rest);
   assertSizeOptions(options);
-  return (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return composed((input, place): Maybe<ValidationResult<unknown>> => {
     const size = sizeOfSet(input);
     if (size === undefined) {
-      return reject([typeIssue("set", input)]);
+      return reject([typeIssue("set", input)], place);
     }
     const oversize = sizeIssues(size, "set", options);
     if (oversize.length > 0) {
-      return reject(oversize);
+      return reject(oversize, place);
     }
     return settle(
-      valuesOf(input).map((value) => item(value)),
+      valuesOf(input).map((value, index) => call(item, value, below(place, index))),
       (values) => {
         // A value that validation made equal to an earlier one is reported, not merged, so the output
         // holds as many values as the size options were checked against.
@@ -76,8 +77,8 @@ export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
             output.add(value);
           }
         });
-        return repeats.length > 0 ? reject(repeats) : accept(output);
+        return repeats.length > 0 ? reject(repeats, place) : accept(output, place);
       },
     );
-  };
+  });
 }

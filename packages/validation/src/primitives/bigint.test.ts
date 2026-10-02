@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { check } from "../builders/check";
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
 import { bigint } from "./bigint";
 
@@ -46,8 +47,24 @@ describe("bigint", () => {
     expect(issuesOf(bigint({ gt: 0n })(0n))[0]).toEqual({
       code: "too_small",
       path: [],
-      params: { minimum: 0n, inclusive: false, type: "bigint" },
+      params: { minimum: "0", inclusive: false, type: "bigint" },
     });
     expect(codesOf(bigint({ max: 0n })(1n))).toEqual(["too_big"]);
+  });
+
+  it("should run no check while one of its own constraints fails", () => {
+    let calls = 0;
+    const counted = check<bigint>(() => {
+      calls += 1;
+      return false;
+    });
+    expect(codesOf(bigint({ min: 10n }, counted)(5n))).toEqual(["too_small"]);
+    expect(calls).toBe(0);
+  });
+
+  it("should report a bound as its decimal digits, so the issue can be sent as JSON", () => {
+    const result = bigint({ max: 2n ** 64n })(2n ** 64n + 1n);
+    expect(issuesOf(result)[0]?.params).toEqual({ maximum: "18446744073709551616", inclusive: true, type: "bigint" });
+    expect(() => JSON.stringify(result)).not.toThrow();
   });
 });

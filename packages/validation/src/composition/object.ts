@@ -1,7 +1,8 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { tail, word } from "../core/checks";
+import { append, below, call, composed, pathAt } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
-import { assertFunction, collectNested, failWith, issue } from "../core/result";
+import { assertFunction, failWith, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -100,16 +101,16 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
     throw new TypeError(`unknownKeys must be "strip", "strict" or "passthrough", received "${String(unknownKeys)}"`);
   }
 
-  return (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return composed((input, place): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
-      return reject([objectIssue(input)]);
+      return reject([objectIssue(input)], place);
     }
 
     const issues: ValidationIssue[] = [];
     if (unknownKeys === "strict") {
       for (const key of Object.keys(input)) {
         if (!known.has(key)) {
-          issues.push(issue("unrecognized_key", { key }, [key]));
+          issues.push(issue("unrecognized_key", { key }, pathAt(place, [key])));
         }
       }
       word(issues, options.message);
@@ -125,13 +126,15 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
             .filter((key) => !known.has(key))
             .map((key) => [key, input[key]] as const)
         : [];
-    const results = values.map((value, index) => (validators[index] as AnyValidator)(value));
+    const results = values.map((value, index) =>
+      call(validators[index] as AnyValidator, value, below(place, keys[index] as string)),
+    );
     return chain(collect(results), (settled) => {
       const output: Record<string, unknown> = {};
       settled.forEach((result, index) => {
         const key = keys[index] as string;
         if (!result.ok) {
-          collectNested(issues, result.error.issues, key);
+          append(issues, result.error.issues);
         } else if (result.value !== undefined || present[index]) {
           setOwn(output, key, result.value);
         }
@@ -142,7 +145,7 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
       for (const [key, value] of extra) {
         setOwn(output, key, value);
       }
-      return accept(output);
+      return accept(output, place);
     });
-  };
+  });
 }

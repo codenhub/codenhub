@@ -10,6 +10,7 @@ import type {
   Validator,
 } from "../core/types";
 import { HOSTLESS_SCHEMES, toHostlessUrl } from "./hostless-url";
+import { toCanonicalIpv6 } from "./ip";
 import { assertParts, notFormat, partIssue, partsFormat, readQuery, type Part, type Reading } from "./parts";
 import { HOST_MAX_LENGTH, isPublicName, withoutFinalDot } from "./patterns";
 
@@ -47,8 +48,9 @@ export interface UrlOptions extends MessageOptions {
   /**
    * Validates the host instead of the default rule, that it is a public domain name. It receives the
    * host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in
-   * punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. For a
-   * scheme the parser has no rules for, such as `ssh`, it reads a name as written, and the host is that
+   * punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets, spelled as
+   * `ip()` spells it, while the URL produced keeps the parser's spelling. For a scheme the parser has no rules for, such
+   * as `ssh`, it reads a name as written, and the host is that
    * name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them. So
    * `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])`
    * accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part`
@@ -178,7 +180,9 @@ export function url(...rest: unknown[]): AnyValidator {
     }
     const parts: Part[] = [];
     if (host !== undefined) {
-      parts.push(["host", host, hostname.startsWith("[") ? hostname.slice(1, -1) : hostname]);
+      // An IPv6 host is given as `ip()` spells it, its IPv4 part dotted when it is IPv4-mapped or NAT64, so
+      // `host: ip()` and a list of addresses `ip()` produced agree. The value keeps the parser's hex groups.
+      parts.push(["host", host, hostname.startsWith("[") ? toCanonicalIpv6(hostname.slice(1, -1)) : hostname]);
     }
     if (port !== undefined) {
       parts.push(["port", port, parsed.port === "" ? undefined : Number(parsed.port)]);

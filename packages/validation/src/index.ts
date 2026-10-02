@@ -18,7 +18,7 @@ export { format } from "./builders/format";
 export { guard } from "./builders/guard";
 export { coerceBigint } from "./coercion/coerce-bigint";
 export { coerceBoolean } from "./coercion/coerce-boolean";
-export { coerceDate } from "./coercion/coerce-date";
+export { coerceDate, type CoerceDateOptions } from "./coercion/coerce-date";
 export { coerceNumber } from "./coercion/coerce-number";
 export { coerceString } from "./coercion/coerce-string";
 export { array, type ArrayOptions } from "./composition/array";

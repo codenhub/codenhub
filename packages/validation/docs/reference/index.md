@@ -54,7 +54,7 @@ export declare function check<T>(test: (value: T) => boolean | PromiseLike<boole
 
 Makes a check from a test of a typed value, for a rule a validator's options do not express.
 
-Give it to a validator after its options. It runs once the value has its type: for an object, once every property has passed, so it can compare them. A test that returns a promise makes an [AsyncCheck](#asynccheck), and the validator given it asynchronous.
+Give it to a validator after its options. It runs once the value has its type and has passed the validator's options, such as `min` and `max`: for an object, once every property has passed, so it can compare them. A test that returns a promise makes an [AsyncCheck](#asynccheck), and the validator given it asynchronous.
 
 **Parameters**
 
@@ -153,7 +153,7 @@ export declare function fallback<TValidator extends AnyValidator>(validator: TVa
 
 Wraps a validator so a value that fails it is replaced by a fallback instead of being rejected. The result never fails.
 
-The fallback is trusted and is not validated. A function is called with the issues that were found, so it can log them, and its return value becomes the result. A value that is not a function is the same value in every result, so pass a function for an object or array, such as `() => []`, or a change to one result shows up in the next. A fallback that is itself a function has to be returned from one, `fallback(func(), () => noop)`, which the types require when the wrapped validator can produce a function. Use this sparingly: it turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
+The fallback is trusted and is not validated. A function is called with the issues that were found, so it can log them, and its return value becomes the result. A primitive is used as it is. An object or an array must come from a function, such as `() => []`, since one value would be shared by every result and a change to one would show up in the next: the types reject it, and so does `fallback` when it is created. A fallback that is itself a function has to be returned from one, `fallback(func(), () => noop)`, which the types require when the wrapped validator can produce a function. Use this sparingly: it turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
 
 **Parameters**
 
@@ -166,7 +166,7 @@ The fallback is trusted and is not validated. A function is called with the issu
 
 **Returns** — A validator that produces the wrapped type and never fails.
 
-**Throws** — When `validator` is not a function.
+**Throws** — When `validator` is not a function, or `value` is an object or an array.
 
 **Example**
 
@@ -179,7 +179,7 @@ pageSize("lots"); // { ok: true, value: 20 }
 ### flatten
 
 ```ts
-export declare function flatten(failure: ValidationFailure, messages?: Messages): FlattenedErrors;
+export declare function flatten(failure: ValidationFailure, messages: Messages): FlattenedErrors;
 ```
 
 Groups the messages of a failure for display: issues at the root go to `formErrors`, the rest are keyed by their [formatPath](#formatpath) notation in `fieldErrors`, an object with no prototype so that a field named like an `Object.prototype` member cannot collide with it. Test for a field with `in` or `Object.hasOwn`, since it has no `hasOwnProperty`.
@@ -190,6 +190,8 @@ Groups the messages of a failure for display: issues at the root go to `formErro
 - `messages` — Text for the codes it names, as for [formatIssue](#formatissue).
 
 **Returns** — The grouped messages.
+
+**Throws** — When `messages` is not a message map, such as when it was left out.
 
 ### format
 
@@ -221,19 +223,21 @@ slug({ message: "Use lowercase words and hyphens" })("Hello World"); // { ok: fa
 ### formatIssue
 
 ```ts
-export declare function formatIssue(issue: ValidationIssue, messages?: Messages): string;
+export declare function formatIssue(issue: ValidationIssue, messages: Messages): string;
 ```
 
 Turns an issue into text a person can read.
 
-The text comes from the first of these that exists: the issue's own `message`, an entry for its `code` in `messages`, then the generic "Invalid value". The built-in English wording is not carried here, so a program that words its own issues does not bundle it: pass `englishMessages` for it, or a map of your own, or both spread together.
+The text comes from the first of these that exists: the issue's own `message`, an entry for its `code` in `messages`, then the generic "Invalid value". The built-in English wording is not carried here, so a program that words its own issues does not bundle it: pass `englishMessages` for it, or a map of your own, or both spread together. The map is required, so leaving it out is a compile error and not a form that says "Invalid value" for everything; a program whose issues all carry their own `message` passes `{}`.
 
 **Parameters**
 
 - `issue` — The issue to describe.
-- `messages` — Text for the codes it names, such as `englishMessages`.
+- `messages` — Text for the codes it names, such as `englishMessages`, or `{}` for none.
 
 **Returns** — The message.
+
+**Throws** — When `messages` is not a message map, such as when it was left out.
 
 **Example**
 
@@ -487,7 +491,7 @@ TypeScript cannot infer a validator that refers to itself, so annotate the varia
 
 Every level of nesting is a level of recursion, and input nested past the stack, or a cyclic object, would throw. `maxDepth` stops that first: a value found more than that many levels down fails with `too_big` and `{ maximum, type: "depth" }` at its own path, so untrusted input can be checked without a size cap tuned to the stack. The count is of calls on the stack, so it bounds recursion that happens in one synchronous run, which is where the stack can overflow; a rule that awaits between levels starts the next from a fresh stack, and is not counted. So `maxDepth` does not bound an asynchronous recursive schema: it follows input of any depth, and a cyclic object until memory runs out. Give such a schema a bound of its own.
 
-Work can also grow faster than the input. A `union` tries every option, and an `object` checks every property even after one fails, so a recursive `union` of objects recurses through every option at every level, and its work doubles with each: a few hundred bytes can take hours. `maxCalls` stops that: past that many `lazy` calls under one outermost `lazy` call, every further one fails with `too_big` and `{ maximum, type: "calls" }`. Unlike `maxDepth`, only the outermost call's limit is read, and it holds the whole run. Like `maxDepth`, it counts one synchronous run. Each outermost call counts afresh, so a root that reaches several `lazy` calls before any is open, such as an `array` of recursive items or the options of a root `union`, gives each its own count, and the work still grows with every item: for untrusted input, wrap the root, `lazy(() => schema)`, so the whole validation is one count. For recursive objects told apart by a property, `tagged` reads that property first and does no such work.
+Work can also grow faster than the input. A `union` tries every option, and an `object` checks every property even after one fails, so a recursive `union` of objects recurses through every option at every level, and its work doubles with each: a few hundred bytes can take hours. `maxCalls` stops that: past that many `lazy` calls in one validation, every further one fails with `too_big` and `{ maximum, type: "calls" }`. A validation is a call such as `schema(input)` and everything it reaches before it returns, whatever validator its root is, so the items of an `array` share one count. Unlike `maxDepth`, the limit is read from the first `lazy` the validation reaches, and holds the whole of it. Like `maxDepth`, it counts one synchronous run: what runs after an await counts afresh. The issues of the options that failed are kept, about 1 KB per call, so the default holds a validation stopped by the limit to about 10 MB and a few tens of milliseconds. Raise it for trusted recursive data with more nodes than that in one validation. For recursive objects told apart by a property, `tagged` reads that property first and does no such work.
 
 **Parameters**
 
@@ -551,6 +555,7 @@ const role = literal("admin");
 role("admin"); // { ok: true, value: "admin" }
 role("user"); // { ok: false, ... }, code "invalid_value", params { expected: "admin" }
 literal(true, { message: "You must accept the terms" });
+literal(1n)(2n); // { ok: false, ... }, params { expected: "1", type: "bigint" }
 ```
 
 ### lowercase
@@ -796,7 +801,7 @@ export declare function optional<TValidator extends AnyValidator>(validator: TVa
 
 Wraps a validator so `undefined` is accepted, and every other value goes to the wrapped validator. Inside `object`, the property then becomes optional in the inferred type.
 
-Given a default, `undefined` is replaced by it instead, the output type no longer includes `undefined`, and inside `object` the property is always present in the output. The default is trusted and is not run through the wrapped validator. A function is called for every use to produce the default, so pass one for an object or array, which would otherwise be shared by every result. To use a function as the default value itself, return it from a function, `optional(func(), () => noop)`, which the types require when the wrapped validator can produce a function.
+Given a default, `undefined` is replaced by it instead, the output type no longer includes `undefined`, and inside `object` the property is always present in the output. The default is trusted and is not run through the wrapped validator. A primitive is used as it is, and a function is called for every use to produce the default. An object or an array must come from a function, such as `() => []`, since one value would be shared by every result and a change to one would show up in the next: the types reject it, and so does `optional` when it is created. To use a function as the default value itself, return it from a function, `optional(func(), () => noop)`, which the types require when the wrapped validator can produce a function.
 
 **Parameters**
 
@@ -809,7 +814,7 @@ Given a default, `undefined` is replaced by it instead, the output type no longe
 
 **Returns** — A validator that produces the wrapped type, and `undefined` or the default for `undefined`.
 
-**Throws** — When `validator` is not a function.
+**Throws** — When `validator` is not a function, or `value` is an object or an array.
 
 **Example**
 
@@ -1237,12 +1242,13 @@ id(true); // { ok: false, ... }, code "invalid_union"
 ### unique
 
 ```ts
-export declare function unique<T>(by?: (item: T) => unknown, message?: Message): Check<readonly T[]>;
+export declare function unique<T extends LiteralValue>(by?: undefined, message?: Message): Check<readonly T[]>;
+export declare function unique<T>(by: (item: T) => unknown, message?: Message): Check<readonly T[]>;
 ```
 
 Requires the items of an array to be distinct, reporting each repeat at its own index with `invalid_value` and `params` `{ unique: true }`.
 
-Without `by` it compares the validated items themselves; with it, the value `by` returns for each, so `unique((user) => user.id)` makes ids unique. Comparison is SameValueZero, as for a `Set`.
+Without `by` it compares the validated items themselves; with it, the value `by` returns for each, so `unique((user) => user.id)` makes ids unique. Comparison is SameValueZero, as for a `Set`, so two objects are equal only when they are the same object. Every object or list a composer such as `object` or `array` produces is new, and two `Date`s of one moment are two objects, so `unique()` without `by` would find a repeat among them only where a validator passed the same object through twice: the types accept it only for an array of primitives, and an array of objects, lists or dates needs `by`, such as `unique((user) => user.id)` or `unique((day) => day.getTime())`.
 
 **Parameters**
 
@@ -1251,7 +1257,7 @@ Without `by` it compares the validated items themselves; with it, the value `by`
 
 **Type parameters**
 
-- `T` — The type of an item.
+- `T` — The type of an item, a primitive when `by` is omitted.
 
 **Returns** — A check of arrays.
 
@@ -1402,6 +1408,34 @@ min?: bigint;
 
 Requires a value of at least this.
 
+### CoerceDateOptions
+
+```ts
+export interface CoerceDateOptions extends DateOptions
+```
+
+Options for [coerceDate](#coercedate): the bounds of `date`, and how to read text without a zone.
+
+#### max
+
+Inherited from [DateOptions](#dateoptions).
+
+#### message
+
+Inherited from [DateOptions](#dateoptions).
+
+#### min
+
+Inherited from [DateOptions](#dateoptions).
+
+#### zoneless
+
+```ts
+zoneless?: "utc";
+```
+
+How to read a date-time written without a zone, such as `2026-09-28T14:30` from an HTML `datetime-local` input. Such text names a time on some clock, not a moment, so without this option it fails: reading it in any one zone would move the moment, without a word, for everyone in another. `"utc"` reads it as UTC, for text you know is written in UTC. A date alone, `2026-09-28`, is always midnight UTC, as JavaScript reads it.
+
 ### DateOptions
 
 ```ts
@@ -1444,7 +1478,7 @@ Options for [datetime](#datetime).
 local?: boolean;
 ```
 
-Also accepts a date-time without a zone, which names a time on a local clock rather than a moment, such as `2026-09-28T14:30` from an HTML `datetime-local` input. Without `precision`, the seconds may then be left out, as that input leaves them out when they are zero.
+Also accepts a date-time without a zone, which names a time on a local clock rather than a moment, such as `2026-09-28T14:30` from an HTML `datetime-local` input. Without `precision`, such a time may leave out its seconds, as that input does when they are zero; a time with a zone still needs them.
 
 #### message
 
@@ -1608,7 +1642,7 @@ Options for [lazy](#lazy).
 maxCalls?: number;
 ```
 
-The most `lazy` calls one outermost `lazy` call may make, counting every `lazy` validator, those of the options a `union` tries and fails included. Past it, every further call fails with `too_big`, so a schema whose work grows faster than its input, such as a recursive `union` of objects, which doubles with each level, stops instead of running for hours on a few hundred bytes. The limit of the outermost call holds its whole run, and that of a `lazy` called inside another is not read. Each outermost call has a count of its own, so a validator that reaches several `lazy` calls before any is open, such as an `array` of recursive items, has one per item: wrap the root in `lazy(() => schema, { maxCalls })` to hold a whole validation of untrusted input to one, and set the limit there. Recursive data with more nodes than this under one root needs it raised.
+The most `lazy` calls one validation may make, counting every `lazy` validator, those of the options a `union` tries and fails included. Past it, every further call fails with `too_big`, so a schema whose work grows faster than its input, such as a recursive `union` of objects, which doubles with each level, stops instead of running for hours on a few hundred bytes. A validation is a call such as `schema(input)` and everything it reaches before it returns, so an `array` of recursive items shares one count, and validations made one after another have one each. The limit of the first `lazy` a validation reaches holds the whole of it, so set it on the outermost one. Recursive data with more nodes than this in one validation needs it raised.
 
 #### maxDepth
 
@@ -2118,7 +2152,7 @@ Options for [url](#url).
 host?: AnyValidator;
 ```
 
-Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. For a scheme the parser has no rules for, such as `ssh`, it reads a name as written, and the host is that name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part` `"host"`.
+Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets, spelled as `ip()` spells it, while the URL produced keeps the parser's spelling. For a scheme the parser has no rules for, such as `ssh`, it reads a name as written, and the host is that name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part` `"host"`.
 
 #### message
 
@@ -2587,7 +2621,7 @@ base64({ url: true })("aGVsbG8"); // { ok: true, ... }, padding is optional in t
 export declare const bigint: Factory<bigint, BigintOptions>;
 ```
 
-Creates a validator for bigints. Numbers are rejected, including whole ones.
+Creates a validator for bigints. Numbers are rejected, including whole ones. A bound in an issue's `params` is written as its decimal digits, `"10"` for `10n`, so the issue can be sent as JSON.
 
 **Throws**
 
@@ -2685,18 +2719,18 @@ coerceBoolean()("maybe"); // { ok: false, ... }, code "invalid_type"
 ### coerceDate
 
 ```ts
-export declare const coerceDate: Factory<Date, DateOptions>;
+export declare const coerceDate: Factory<Date, CoerceDateOptions>;
 ```
 
-Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28`, `2026-09-28T14:30` from an HTML `datetime-local` input, or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [date](#date).
+Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [date](#date).
 
-Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM` or `HH:MM:SS` with an optional fraction, and an optional zone: `Z`, or an offset written `+HH`, `+HHMM` or `+HH:MM`. That is wider than `datetime`, which checks one exact spelling. Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`. Fractions of a second beyond milliseconds are cut, not rounded. A date without a time and a date-time without an offset are both read as UTC, so the result never depends on the timezone of the machine. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM` or `HH:MM:SS` with an optional fraction, and an optional zone: `Z`, or an offset written `+HH`, `+HHMM` or `+HH:MM`. That is wider than `datetime`, which checks one exact spelling. Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`. Fractions of a second beyond milliseconds are cut, not rounded. A date without a time is read as midnight UTC. A date-time without a zone, such as `2026-09-28T14:30` from an HTML `datetime-local` input, fails unless `zoneless: "utc"` says to read it as UTC: it names a time on some clock, and reading it in a zone the text does not name would give a moment hours off. Add the user's offset to such a value before converting it. The result never depends on the timezone of the machine. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
 
 **Returns** — A validator that produces a `Date`.
 
 **Throws**
 
-- When `min` or `max` is not a `Date`.
+- When `min` or `max` is not a `Date`, or `zoneless` is given and is not `"utc"`.
 - When `min` or `max` is an invalid `Date`, or `min` is after `max`.
 
 **Example**
@@ -2705,6 +2739,8 @@ Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM` or `H
 coerceDate()("2026-09-28"); // { ok: true, value: Date 2026-09-28T00:00:00.000Z }
 coerceDate()(0); // { ok: true, value: Date 1970-01-01T00:00:00.000Z }
 coerceDate()("yesterday"); // { ok: false, ... }, code "invalid_type"
+coerceDate()("2026-09-28T14:30"); // { ok: false, ... }: no zone says which 14:30
+coerceDate({ zoneless: "utc" })("2026-09-28T14:30"); // { ok: true, value: Date 2026-09-28T14:30:00.000Z }
 ```
 
 ### coerceNumber
@@ -2924,7 +2960,7 @@ export declare const ip: Factory<string, IpOptions>;
 
 Creates a validator for IPv4 and IPv6 addresses. The value is the canonical spelling, so one address is one value however it was written: an IPv4 address as written, and an IPv6 address lowercase with the longest run of zero groups shortened to `::`, as RFC 5952 and the URL parser write it.
 
-An IPv6 address that embeds an IPv4 one, such as `::ffff:192.0.2.1`, is written in hex groups, `::ffff:c000:201`, as the URL parser writes it.
+An IPv4-mapped address (`::ffff:0:0/96`) or one under the NAT64 well-known prefix (`64:ff9b::/96`) is written with its IPv4 part dotted, as RFC 5952 section 5 recommends, so `::ffff:c000:201` produces `::ffff:192.0.2.1`. Every other IPv6 address is written in hex groups, the deprecated IPv4-compatible ones such as `::1.2.3.4` included, which produce `::102:304`, since that range also holds `::1`.
 
 **Throws** — When `version` is given and is not `"v4"` or `"v6"`.
 
@@ -3020,7 +3056,7 @@ export declare const number: Factory<number, NumberOptions>;
 
 Creates a validator for finite numbers. `NaN` and the infinities are always rejected.
 
-`clamp` runs first, then every constraint and every check runs on the clamped number, and each failing one reports its own issue.
+`clamp` runs first, then every constraint on the clamped number, and each failing one reports its own issue. The checks run on it once every constraint has passed, and each failing one reports its own.
 
 **Throws**
 
@@ -3107,7 +3143,7 @@ export declare const string: Factory<string, StringOptions>;
 
 Creates a validator for strings.
 
-`trim` and `case` run first, then every constraint and every check on the cleaned string, and each failing one reports its own issue. Formats such as email or URL are validators of their own; combine them with this one using `pipe`.
+`trim` and `case` run first, then every constraint on the cleaned string, and each failing one reports its own issue. The checks run on it once every constraint has passed, so `max` keeps a long string from a costly `pattern` or a lookup. Formats such as email or URL are validators of their own; combine them with this one using `pipe`.
 
 **Throws**
 
@@ -3241,10 +3277,10 @@ Not exported; declared in `src/composition/tagged.ts`.
 ### Fallback
 
 ```ts
-type Fallback<T> = [Extract<T, AnyFunction>] extends [never] ? T | (() => T) : () => T;
+type Fallback<T> = [Extract<T, AnyFunction>] extends [never] ? (T & LiteralValue) | (() => T) : () => T;
 ```
 
-A value, or a function called for every use to produce it. When a function is among the types of the value, only the function that produces it is accepted, since the value itself would be called.
+A primitive value, or a function called for every use to produce the value. An object or a list would be shared by every result, so it is produced by a function. When a function is among the types of the value, only the function that produces it is accepted, since the value itself would be called.
 
 Not exported; declared in `src/composition/optional.ts`.
 
@@ -3284,10 +3320,10 @@ Not exported; declared in `src/composition/pipe.ts`.
 ### Replacement
 
 ```ts
-type Replacement<T> = [Extract<T, AnyFunction>] extends [never] ? T | ((issues: readonly ValidationIssue[]) => T) : (issues: readonly ValidationIssue[]) => T;
+type Replacement<T> = [Extract<T, AnyFunction>] extends [never] ? (T & LiteralValue) | ((issues: readonly ValidationIssue[]) => T) : (issues: readonly ValidationIssue[]) => T;
 ```
 
-A fallback, or a function that receives the issues and returns it. When a function is among the types of the fallback, only the function that returns it is accepted, since the fallback itself would be called.
+A primitive fallback, or a function that receives the issues and returns the fallback. An object or a list would be shared by every result, so it is returned by a function. When a function is among the types of the fallback, only the function that returns it is accepted, since the fallback itself would be called.
 
 Not exported; declared in `src/composition/fallback.ts`.
 

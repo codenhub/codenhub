@@ -1,5 +1,6 @@
 import { chain, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { call, composed } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, assertText, describeType, issue } from "../core/result";
 import type {
@@ -115,14 +116,14 @@ export function tagged(key: string, variants: Variants, ...rest: unknown[]): Any
   table.forEach((variant, tag) => assertFunction(`variants.${tag}`, variant));
   const [, reject, accept] = tail<MessageOptions, object>(rest);
 
-  return (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return composed((input, place): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
-      return reject([objectIssue(input)]);
+      return reject([objectIssue(input)], place);
     }
     const tag = Object.hasOwn(input, key) ? input[key] : undefined;
     const variant = typeof tag === "string" ? table.get(tag) : undefined;
     if (variant === undefined) {
-      return reject([issue("invalid_union", { discriminator: key, options: [...tags] }, [key])]);
+      return reject([issue("invalid_union", { discriminator: key, options: [...tags] }, [key])], place);
     }
     const others = {};
     for (const name of Object.keys(input)) {
@@ -130,7 +131,7 @@ export function tagged(key: string, variants: Variants, ...rest: unknown[]): Any
         setOwn(others, name, input[name]);
       }
     }
-    return chain(variant(others), (result) => {
+    return chain(call(variant, others, place), (result) => {
       if (!result.ok) {
         return result;
       }
@@ -139,7 +140,7 @@ export function tagged(key: string, variants: Variants, ...rest: unknown[]): Any
         throw new TypeError(`variants.${tag} must produce a plain object, received ${describeType(result.value)}`);
       }
       // The tag is defined first, for its place in the output, and again last, so the variant cannot replace it.
-      return accept({ [key]: tag, ...result.value, [key]: tag });
+      return accept({ [key]: tag, ...result.value, [key]: tag }, place);
     });
-  };
+  });
 }

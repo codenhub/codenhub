@@ -15,6 +15,7 @@ export type LiteralValue = string | number | boolean | bigint | symbol | null | 
  * role("admin"); // { ok: true, value: "admin" }
  * role("user"); // { ok: false, ... }, code "invalid_value", params { expected: "admin" }
  * literal(true, { message: "You must accept the terms" });
+ * literal(1n)(2n); // { ok: false, ... }, params { expected: "1", type: "bigint" }
  * ```
  *
  * @typeParam T - The literal type.
@@ -37,9 +38,10 @@ export function literal(value: LiteralValue, ...rest: unknown[]): AnyValidator {
   if (Number.isNaN(value)) {
     throw new RangeError("literal(NaN) accepts nothing");
   }
+  // A bigint is reported as its decimal digits and `type: "bigint"`, since `JSON.stringify` throws on one.
   return member(
     (input) => input === value,
-    () => ({ expected: value }),
+    () => (typeof value === "bigint" ? { expected: String(value), type: "bigint" } : { expected: value }),
     rest,
   );
 }

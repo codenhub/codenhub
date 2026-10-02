@@ -39,9 +39,10 @@ const lengthIssue = (code: "too_small" | "too_big", bound: number, isExact: bool
  * Creates a validator for strings.
  *
  * @remarks
- * `trim` and `case` run first, then every constraint and every check on the cleaned string, and each
- * failing one reports its own issue. Formats such as email or URL are validators of their own; combine
- * them with this one using `pipe`.
+ * `trim` and `case` run first, then every constraint on the cleaned string, and each failing one reports
+ * its own issue. The checks run on it once every constraint has passed, so `max` keeps a long string from
+ * a costly `pattern` or a lookup. Formats such as email or URL are validators of their own; combine them
+ * with this one using `pipe`.
  *
  * @example
  * ```ts

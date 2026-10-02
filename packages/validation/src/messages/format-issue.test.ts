@@ -53,15 +53,22 @@ const issue = (value: Partial<ValidationIssue> & { code: string }): ValidationIs
 
 describe("without the English wording", () => {
   it("should use the issue's own message, an entry for its code, and nothing else", () => {
-    expect(formatWith(issue({ code: "too_small", message: "Fixed" }))).toBe("Fixed");
+    expect(formatWith(issue({ code: "too_small", message: "Fixed" }), {})).toBe("Fixed");
     expect(formatWith(issue({ code: "too_small" }), { too_small: "Mine" })).toBe("Mine");
   });
 
   it("should say Invalid value when nothing supplies text, never the built-in wording", () => {
     const [found] = issuesOf(number({ min: 18 })(15));
-    expect(formatWith(found as ValidationIssue)).toBe("Invalid value");
     expect(formatWith(found as ValidationIssue, {})).toBe("Invalid value");
-    expect(flatten({ issues: [found as ValidationIssue] }).formErrors).toEqual(["Invalid value"]);
+    expect(flatten({ issues: [found as ValidationIssue] }, {}).formErrors).toEqual(["Invalid value"]);
+  });
+
+  it("should refuse a missing map instead of wording every issue Invalid value", () => {
+    const [found] = issuesOf(number({ min: 18 })(15));
+    const error = new TypeError("messages must be a message map, such as englishMessages, received undefined");
+    expect(() => formatWith(found as ValidationIssue, undefined as never)).toThrow(error);
+    expect(() => flatten({ issues: [found as ValidationIssue] }, undefined as never)).toThrow(error);
+    expect(() => formatWith(found as ValidationIssue, [] as never)).toThrow(TypeError);
   });
 });
 
@@ -241,6 +248,7 @@ describe("formatIssue", () => {
   it("should describe literals and lists of allowed values, writing values as they appear in code", () => {
     expect(formatIssue(issuesOf(literal("admin")("x"))[0] as ValidationIssue)).toBe('Expected "admin"');
     expect(formatIssue(issuesOf(literal(1n)(1))[0] as ValidationIssue)).toBe("Expected 1n");
+    expect(formatIssue(issuesOf(oneOf([1n, 2n])(1))[0] as ValidationIssue)).toBe("Expected one of 1n, 2n");
     expect(formatIssue(issuesOf(literal(null)(1))[0] as ValidationIssue)).toBe("Expected null");
     expect(formatIssue(issuesOf(oneOf(["a", "b"])("x"))[0] as ValidationIssue)).toBe('Expected one of "a", "b"');
     expect(formatIssue(issuesOf(oneOf([1, 2])(3))[0] as ValidationIssue)).toBe("Expected one of 1, 2");
@@ -374,18 +382,21 @@ describe("flatten", () => {
   });
 
   it("should keep a dotted key apart from the nested path it looks like", () => {
-    const { fieldErrors } = flatten({
-      issues: [
-        { code: "x", path: ["a.b"] },
-        { code: "y", path: ["a", "b"] },
-      ],
-    });
+    const { fieldErrors } = flatten(
+      {
+        issues: [
+          { code: "x", path: ["a.b"] },
+          { code: "y", path: ["a", "b"] },
+        ],
+      },
+      {},
+    );
     expect(Object.keys(fieldErrors)).toEqual(['["a.b"]', "a.b"]);
   });
 
   it("should not let a field named like an Object.prototype member collide", () => {
     const failure = fail({ path: ["constructor"], message: "bad" }, { path: ["__proto__"], message: "worse" }).error;
-    const { fieldErrors } = flatten(failure);
+    const { fieldErrors } = flatten(failure, {});
     expect(fieldErrors.constructor).toEqual(["bad"]);
     expect(fieldErrors["__proto__"]).toEqual(["worse"]);
   });
