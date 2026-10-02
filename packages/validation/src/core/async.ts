@@ -20,18 +20,16 @@ interface Validation {
   readonly results: Map<object, Map<unknown, unknown>>;
 }
 
-const newValidation = (): Validation => ({ calls: new Map(), results: new Map() });
-
-/** The validation running now, or undefined between validations. */
+/** The validation running now, or undefined between validations and in a consumer's callback. */
 let current: Validation | undefined;
 
 /**
- * Runs `work` as part of `validation`, or of the validation running now, or of a new one when none
- * is, and restores the one that was running when it returns.
+ * Runs `work` with `validation` as the one running, and restores the one that was running when it
+ * returns. Undefined runs it outside any, and a composer it reaches starts one of its own.
  */
 function enter<A, R>(validation: Validation | undefined, work: (argument: A) => R, argument: A): R {
   const previous = current;
-  current = validation ?? previous ?? newValidation();
+  current = validation;
   try {
     return work(argument);
   } finally {
@@ -41,23 +39,16 @@ function enter<A, R>(validation: Validation | undefined, work: (argument: A) => 
 
 /**
  * Runs `work` as part of the validation running now, starting one when none is, so everything it
- * reaches shares one count of `lazy` calls.
+ * reaches shares each `lazy`'s count. Only composers start one, so a leaf never carries this.
  */
-export const within = <A, R>(work: (argument: A) => R, argument: A): R => enter(undefined, work, argument);
+export const within = <A, R>(work: (argument: A) => R, argument: A): R =>
+  enter(current ?? { calls: new Map(), results: new Map() }, work, argument);
 
 /**
  * Runs a callback the consumer wrote, such as a check's test or a transform's function, apart from
  * the validation running now, so a validator it calls is a validation of its own, with counts of its own.
  */
-export function detached<A, R>(callback: (argument: A) => R, argument: A): R {
-  const previous = current;
-  current = undefined;
-  try {
-    return callback(argument);
-  } finally {
-    current = previous;
-  }
-}
+export const detached = <A, R>(callback: (argument: A) => R, argument: A): R => enter(undefined, callback, argument);
 
 /**
  * The results the `lazy` named by `key` has kept in the validation running now, which it alone reads
@@ -78,10 +69,12 @@ export function resultsOf(key: object): Map<unknown, unknown> | undefined {
  * `lazy` has now made more calls than `maxCalls`, its own limit.
  */
 export function spendCall(key: object, maxCalls: number): boolean {
-  // Every composer runs within a validation, so this only guards a call made outside one.
-  const { calls } = current ?? newValidation();
-  const spent = (calls.get(key) ?? 0) + 1;
-  calls.set(key, spent);
+  if (current === undefined) {
+    // Every composer runs within a validation, so this only guards a call made outside one.
+    return false;
+  }
+  const spent = (current.calls.get(key) ?? 0) + 1;
+  current.calls.set(key, spent);
   return spent > maxCalls;
 }
 
