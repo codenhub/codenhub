@@ -6,7 +6,7 @@
  * input controls. Any other validator, such as one written by hand, is called as usual, and its issues
  * are moved under the place once.
  */
-import { chain, type Maybe } from "./async";
+import { chain, within, type Maybe } from "./async";
 import { failWith, ROOT_PATH } from "./result";
 import type { AnyValidator, ValidationIssue, ValidationPathSegment, ValidationResult } from "./types";
 
@@ -67,11 +67,12 @@ export const placeAll = (issues: readonly ValidationIssue[], place: Place): Vali
     : issues.map((found) => ({ ...found, path: pathAt(place, found.path ?? ROOT_PATH) }));
 
 /**
- * Makes a composer from its work: called on its own, it validates from the root and reports paths
- * relative to its input; another composer reaches its work directly, with a place.
+ * Makes a composer from its work: called on its own, it validates from the root, as one run, and
+ * reports paths relative to its input; another composer reaches its work directly, with a place.
  */
 export function composed(run: Run): (input: unknown) => Maybe<ValidationResult<unknown>> {
-  const validator = (input: unknown): Maybe<ValidationResult<unknown>> => run(input, undefined);
+  const fromRoot = (input: unknown): Maybe<ValidationResult<unknown>> => run(input, undefined);
+  const validator = (input: unknown): Maybe<ValidationResult<unknown>> => within(fromRoot, input);
   runs.set(validator, run);
   return validator;
 }

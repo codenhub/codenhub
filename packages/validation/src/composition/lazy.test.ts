@@ -244,18 +244,34 @@ describe("lazy", () => {
       },
     );
 
-    it(
-      "should give each branch above the first lazy a limit of its own when the root is not wrapped",
-      { timeout: 60_000 },
-      () => {
-        const { node, calls } = doubling();
-        const items = Array.from({ length: 2 }, () => deep(30));
-        expect(array(node, { max: 2 })(items).ok).toBe(false);
-        // Two items, each tried against two options, each its own outermost lazy call.
-        expect(calls()).toBeGreaterThan(100_000);
-        expect(calls()).toBeLessThanOrEqual(4 * 100_000);
-      },
-    );
+    it("should hold a whole validation to one limit when its root is not a lazy validator", { timeout: 60_000 }, () => {
+      const { node, calls } = doubling();
+      // Each item used to start a count of its own, so the work, and the issues kept, grew with the items.
+      const items = Array.from({ length: 50 }, () => deep(30));
+      expect(array(node)(items).ok).toBe(false);
+      expect(calls()).toBeLessThanOrEqual(100_000);
+    });
+
+    it("should count each validation afresh, even one made by a hand-written validator", () => {
+      const linked: Validator<Link> = object({ next: optional(lazy(() => linked, { maxCalls: 3 })) });
+      const twice: Validator<unknown> = (input) => {
+        const first = linked(input);
+        return first.ok ? linked(input) : first;
+      };
+      // Inside one validation, the two calls share its count.
+      expect(object({ a: twice })({ a: chain(2) }).ok).toBe(false);
+      expect([twice(chain(1)).ok, twice(chain(1)).ok]).toEqual([true, true]);
+    });
+
+    it("should start a count of its own after an await", async () => {
+      const linked: Validator<Link> = object({ next: optional(lazy(() => linked, { maxCalls: 3 })) });
+      const later = pipe(
+        isFree,
+        transform(string(), () => chain(3)),
+        linked,
+      );
+      expect((await later("free")).ok).toBe(true);
+    });
 
     it("should reject a limit that is not a positive integer, or not a number", () => {
       expect(() => lazy(() => number(), { maxCalls: 0 })).toThrow(RangeError);
