@@ -192,6 +192,13 @@ describe("url", () => {
     );
   });
 
+  it("should read a host that some URL parsers cannot be written to again without ending the process", () => {
+    // Node.js 24.16 to 24.19 (ada 3.4.4) parse a non-ASCII letter before `xn--` into a URL whose every
+    // setter aborts the process, so a validator that wrote the host back would let one request end a server.
+    expect(accepts(url(), "http://äxn--")).toEqual([false]);
+    expect(valueOf(url({ host: unknown() })("http://äxn--"))).toBe("http://xn--xn---koa/");
+  });
+
   it("should give any IP address to a host validator, public or not, checking no ranges itself", () => {
     expect(accepts(url(), "http://8.8.8.8/", "http://169.254.169.254/")).toEqual([false, false]);
     expect(accepts(url({ host: unknown() }), "http://8.8.8.8/", "http://169.254.169.254/", "http://[::1]/")).toEqual([
