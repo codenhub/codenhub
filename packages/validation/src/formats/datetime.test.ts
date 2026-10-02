@@ -93,8 +93,20 @@ describe("datetime", () => {
     expect(accepts(datetime(), "2026-09-28T14:30", "2026-09-28T14:30:00")).toEqual([false, false]);
   });
 
+  it("should let only a time without a zone leave out its seconds with local", () => {
+    expect(accepts(datetime({ local: true }), "2026-09-28T14:30", "2026-09-28T14:30Z")).toEqual([true, false]);
+    expect(
+      accepts(
+        datetime({ local: true, offset: true }),
+        "2026-09-28T14:30",
+        "2026-09-28T14:30+02:00",
+        "2026-09-28T14:30Z",
+      ),
+    ).toEqual([true, false, false]);
+  });
+
   it("should combine local with offset and precision", () => {
-    expect(accepts(datetime({ local: true, offset: true }), "2026-09-28T14:30", "2026-09-28T14:30+02:00")).toEqual([
+    expect(accepts(datetime({ local: true, offset: true }), "2026-09-28T14:30", "2026-09-28T14:30:00+02:00")).toEqual([
       true,
       true,
     ]);

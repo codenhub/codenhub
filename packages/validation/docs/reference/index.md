@@ -1445,7 +1445,7 @@ Options for [datetime](#datetime).
 local?: boolean;
 ```
 
-Also accepts a date-time without a zone, which names a time on a local clock rather than a moment, such as `2026-09-28T14:30` from an HTML `datetime-local` input. Without `precision`, the seconds may then be left out, as that input leaves them out when they are zero.
+Also accepts a date-time without a zone, which names a time on a local clock rather than a moment, such as `2026-09-28T14:30` from an HTML `datetime-local` input. Without `precision`, such a time may leave out its seconds, as that input does when they are zero; a time with a zone still needs them.
 
 #### message
 
