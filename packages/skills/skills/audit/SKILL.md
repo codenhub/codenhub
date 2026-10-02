@@ -49,7 +49,7 @@ Every finding states a case:
 - **Result:** what happens, and what should happen.
 - **Reach:** who hits it (see the severity table).
 
-Run the case when you can; a failing test or a script settles what reasoning cannot. Mark a finding `verified` only when you executed its case in this session and saw the result, and `traced` otherwise; without a way to run code, every finding is `traced`. A concern you cannot turn into a case is a question, and so is a `traced` case that depends on what a compiler, runtime, or third-party library does: you did not observe that step, so you cannot claim its result.
+Run the case when you can; a failing test or a script settles what reasoning cannot. Mark a finding `verified` only when you executed its case in this session and saw the result, and `traced` otherwise; without a way to run code, every finding is `traced`. A `traced` finding stands when the code you read and the language or a documented API contract settle its result, such as a call to a function that does not exist. A concern you cannot turn into a case is a question, and so is a `traced` case whose result rests on tool behavior you assumed rather than read or ran, such as whether a compiler reports an error or how a third-party library handles an input.
 
 Do not report:
 
@@ -88,7 +88,7 @@ Read severity from reach and impact. Use only the values below; when a case fits
 
 **Impact:**
 
-- `critical`: security harm, data loss or corruption, a process that aborts or hangs, unbounded time or memory, or invalid input accepted as valid.
+- `critical`: security harm, data loss or corruption, a process that aborts or hangs, unbounded time or memory, or input the target exists to reject accepted as valid and passed on. Accepting anything else, such as an option that has no effect, is graded by what it causes.
 - `wrong`: a wrong result that callers notice, an exception the API does not promise to throw, or a broken documented promise.
 - `degraded`: works, but slow, confusing, misleadingly worded, or awkward to use.
 - `cosmetic`: no effect on behavior or use.
