@@ -1243,7 +1243,7 @@ export declare function unique<T>(by: (item: T) => unknown, message?: Message): 
 
 Requires the items of an array to be distinct, reporting each repeat at its own index with `invalid_value` and `params` `{ unique: true }`.
 
-Without `by` it compares the validated items themselves; with it, the value `by` returns for each, so `unique((user) => user.id)` makes ids unique. Comparison is SameValueZero, as for a `Set`, so two objects are equal only when they are the same object. Every object or list a validator produces is new, and two `Date`s of one moment are two objects, so `unique()` without `by` would never find a repeat among them: the types accept it only for an array of primitives, and an array of objects, lists or dates needs `by`, such as `unique((user) => user.id)` or `unique((day) => day.getTime())`.
+Without `by` it compares the validated items themselves; with it, the value `by` returns for each, so `unique((user) => user.id)` makes ids unique. Comparison is SameValueZero, as for a `Set`, so two objects are equal only when they are the same object. Every object or list a composer such as `object` or `array` produces is new, and two `Date`s of one moment are two objects, so `unique()` without `by` would find a repeat among them only where a validator passed the same object through twice: the types accept it only for an array of primitives, and an array of objects, lists or dates needs `by`, such as `unique((user) => user.id)` or `unique((day) => day.getTime())`.
 
 **Parameters**
 
@@ -1294,7 +1294,7 @@ export declare function url(...checks: AsyncCheck<string>[]): AsyncValidator<str
 export declare function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 ```
 
-Creates a validator for absolute URLs with an allowed protocol and a public domain name, and without embedded credentials. The value is the URL as the URL parser writes it, which is what a request made with it will use.
+Creates a validator for absolute URLs with an allowed protocol and a public domain name, and without embedded credentials. The value is the URL as the URL parser writes it, which is what a request made with it will use, except that an IPv4-mapped or NAT64 IPv6 host has its IPv4 part dotted, as `ip()` writes it.
 
 The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters, not counting the final dot of an absolute host such as `example.com.`, which is accepted and kept, is rejected.
 
@@ -3108,7 +3108,7 @@ export declare const string: Factory<string, StringOptions>;
 
 Creates a validator for strings.
 
-`trim` and `case` run first, then every constraint on the cleaned string, and each failing one reports its own issue. The checks run on it once every constraint has passed, so `max` keeps a long string from a costly `pattern` or a lookup, and each failing one reports its own. Formats such as email or URL are validators of their own; combine them with this one using `pipe`.
+`trim` and `case` run first, then every constraint on the cleaned string, and each failing one reports its own issue. The checks run on it once every constraint has passed, so `max` keeps a long string from a costly `pattern` or a lookup. Formats such as email or URL are validators of their own; combine them with this one using `pipe`.
 
 **Throws**
 

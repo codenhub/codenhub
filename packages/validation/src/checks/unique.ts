@@ -10,10 +10,11 @@ import type { LiteralValue } from "../primitives/literal";
  * @remarks
  * Without `by` it compares the validated items themselves; with it, the value `by` returns for each, so
  * `unique((user) => user.id)` makes ids unique. Comparison is SameValueZero, as for a `Set`, so two
- * objects are equal only when they are the same object. Every object or list a validator produces is
- * new, and two `Date`s of one moment are two objects, so `unique()` without `by` would never find a
- * repeat among them: the types accept it only for an array of primitives, and an array of objects,
- * lists or dates needs `by`, such as `unique((user) => user.id)` or `unique((day) => day.getTime())`.
+ * objects are equal only when they are the same object. Every object or list a composer such as `object`
+ * or `array` produces is new, and two `Date`s of one moment are two objects, so `unique()` without `by`
+ * would find a repeat among them only where a validator passed the same object through twice: the types
+ * accept it only for an array of primitives, and an array of objects, lists or dates needs `by`, such as
+ * `unique((user) => user.id)` or `unique((day) => day.getTime())`.
  *
  * @example
  * ```ts

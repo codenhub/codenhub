@@ -94,7 +94,8 @@ type UrlParts<TOptions> = Extract<TOptions[keyof TOptions & ("host" | "port" | "
 /**
  * Creates a validator for absolute URLs with an allowed protocol and a public domain name, and
  * without embedded credentials. The value is the URL as the URL parser writes it, which is what a
- * request made with it will use.
+ * request made with it will use, except that an IPv4-mapped or NAT64 IPv6 host has its IPv4 part
+ * dotted, as `ip()` writes it.
  *
  * @remarks
  * The text is read by the standard URL parser, and every check is made on what it read: the scheme, the

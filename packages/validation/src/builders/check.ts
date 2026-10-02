@@ -8,8 +8,8 @@ import type { AsyncCheck, Check } from "../core/types";
  * @remarks
  * Give it to a validator after its options. It runs once the value has its type and has passed the
  * validator's options, such as `min` and `max`: for an object, once every property has passed, so it can
- * compare them. A test that returns a promise makes an
- * {@link AsyncCheck}, and the validator given it asynchronous.
+ * compare them. A test that returns a promise makes an {@link AsyncCheck}, and the validator given it
+ * asynchronous.
  *
  * @example
  * ```ts
