@@ -188,17 +188,19 @@ describe("ip", () => {
     expect(valueOf(ip()("::ffff:1:1.2.3.4"))).toBe("::ffff:1:102:304");
   });
 
-  it("should give url's host part and produced text the spelling ip() gives", () => {
+  it("should give url's host part the spelling ip() gives, and keep the parser's in the URL", () => {
     const seen: unknown[] = [];
     const host: Validator<string> = (input) => {
       seen.push(input);
       return ip()(input);
     };
-    expect(valueOf(url({ host })("https://[::ffff:c000:201]:8443/a?b=1"))).toBe(
-      "https://[::ffff:192.0.2.1]:8443/a?b=1",
-    );
+    const mapped = valueOf(url({ host })("https://[::ffff:192.0.2.1]:8443/a?b=1"));
+    expect(mapped).toBe("https://[::ffff:c000:201]:8443/a?b=1");
+    // The value is what the parser writes, so it reads back as itself.
+    expect(new URL(mapped).href).toBe(mapped);
     expect(seen).toEqual(["::ffff:192.0.2.1"]);
-    expect(valueOf(url({ host })("http://[64:ff9b::1.2.3.4]/"))).toBe("http://[64:ff9b::1.2.3.4]/");
+    expect(valueOf(url({ host })("http://[64:ff9b::1.2.3.4]/"))).toBe("http://[64:ff9b::102:304]/");
+    expect(seen).toEqual(["::ffff:192.0.2.1", "64:ff9b::1.2.3.4"]);
     expect(valueOf(url({ host })("http://[::1]/"))).toBe("http://[::1]/");
   });
 });

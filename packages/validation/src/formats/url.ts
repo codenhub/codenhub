@@ -49,7 +49,7 @@ export interface UrlOptions extends MessageOptions {
    * Validates the host instead of the default rule, that it is a public domain name. It receives the
    * host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in
    * punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets, spelled as
-   * `ip()` spells it, which the URL produced follows too. For a scheme the parser has no rules for, such
+   * `ip()` spells it, while the URL produced keeps the parser's spelling. For a scheme the parser has no rules for, such
    * as `ssh`, it reads a name as written, and the host is that
    * name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them. So
    * `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])`
@@ -94,8 +94,7 @@ type UrlParts<TOptions> = Extract<TOptions[keyof TOptions & ("host" | "port" | "
 /**
  * Creates a validator for absolute URLs with an allowed protocol and a public domain name, and
  * without embedded credentials. The value is the URL as the URL parser writes it, which is what a
- * request made with it will use, except that an IPv4-mapped or NAT64 IPv6 host has its IPv4 part
- * dotted, as `ip()` writes it.
+ * request made with it will use.
  *
  * @remarks
  * The text is read by the standard URL parser, and every check is made on what it read: the scheme, the
@@ -179,14 +178,11 @@ export function url(...rest: unknown[]): AnyValidator {
     if (port === undefined && parsed.port === "0") {
       return notFormat("url");
     }
-    // An IPv6 host is spelled as `ip()` spells it, its IPv4 part dotted when it is IPv4-mapped or NAT64,
-    // in the host part and in the value. The parser writes it in hex groups and no setter changes that, so
-    // the host, which follows the scheme's `//` since a URL with credentials is rejected, is replaced.
-    const address = hostname.startsWith("[") ? toCanonicalIpv6(hostname.slice(1, -1)) : undefined;
-    const href = address === undefined ? parsed.href : parsed.href.replace(`//${hostname}`, `//[${address}]`);
     const parts: Part[] = [];
     if (host !== undefined) {
-      parts.push(["host", host, address ?? hostname]);
+      // An IPv6 host is given as `ip()` spells it, its IPv4 part dotted when it is IPv4-mapped or NAT64, so
+      // `host: ip()` and a list of addresses `ip()` produced agree. The value keeps the parser's hex groups.
+      parts.push(["host", host, hostname.startsWith("[") ? toCanonicalIpv6(hostname.slice(1, -1)) : hostname]);
     }
     if (port !== undefined) {
       parts.push(["port", port, parsed.port === "" ? undefined : Number(parsed.port)]);
@@ -207,7 +203,7 @@ export function url(...rest: unknown[]): AnyValidator {
       }
       parts.push(["query", query, value]);
     }
-    return { value: href, parts };
+    return { value: parsed.href, parts };
   };
   return partsFormat("url", read, message, checks);
 }
