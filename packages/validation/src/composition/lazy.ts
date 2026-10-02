@@ -25,13 +25,13 @@ export interface LazyOptions extends MessageOptions {
    */
   maxDepth?: number;
   /**
-   * The most `lazy` calls one validation may make, counting every `lazy` validator, those of the options
-   * a `union` tries and fails included. Past it, every further call fails with `too_big`, so a schema
+   * The most calls this `lazy` may make in one validation, those made for the options a `union` tries
+   * and fails included. Past it, every further call fails with `too_big`, so a schema
    * whose work grows faster than its input, such as a recursive `union` of objects, which doubles with
    * each level, stops instead of running for hours on a few hundred bytes. A validation is a call such as
    * `schema(input)` and everything it reaches before it settles, after any await included, so an `array` of recursive items shares
-   * one count, and validations made one after another have one each. The limit of the first `lazy` a
-   * validation reaches holds the whole of it, so set it on the outermost one. Recursive data with more
+   * this `lazy`'s count, and validations made one after another have counts of their own. Each `lazy`
+   * counts its own calls against its own limit, so no other `lazy` overrides it. Recursive data with more
    * nodes than this in one validation needs it raised.
    *
    * @defaultValue 10000
@@ -79,12 +79,12 @@ let openDepth = 0;
  * every level, and its work doubles with each: a few hundred bytes can take hours. `maxCalls` stops that:
  * past that many `lazy` calls in one validation, every further one fails with `too_big` and
  * `{ maximum, type: "calls" }`. A validation is a call such as `schema(input)` and everything it reaches
- * before it settles, whatever validator its root is, so the items of an `array` share one count. Unlike
- * `maxDepth`, the limit is read from the first `lazy` the validation reaches, and holds the whole of it.
- * Unlike `maxDepth` too, it lasts across awaits: what runs after an await counts toward the same
+ * before it settles, whatever validator its root is, so the items of an `array` share each `lazy`'s
+ * count. Unlike `maxDepth`, each `lazy` counts its own calls against its own limit, so a limit set on one
+ * is never overridden by another that the validation reaches. Unlike `maxDepth` too, it lasts across awaits: what runs after an await counts toward the same
  * validation, so an asynchronous recursive schema is held to it as well. The issues of
  * the options that failed are kept, about 1 KB per call, so the default holds a validation stopped by the
- * limit to about 10 MB and a few tens of milliseconds. Raise it for trusted recursive data with more nodes
+ * limit to about 10 MB and a few tens of milliseconds for each `lazy`. Raise it for trusted recursive data with more nodes
  * than that in one validation. For recursive objects told apart by a property, `tagged` reads that
  * property first and does no such work.
  *
@@ -124,10 +124,11 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
   assertLimit("maxDepth", maxDepth);
   assertLimit("maxCalls", maxCalls);
   let resolved: AnyValidator | undefined;
+  // Names this `lazy` to the count of calls, which keeps one per `lazy`.
+  const self = {};
   return composed((input, place) => {
-    const exceeded = spendCall(maxCalls);
-    if (exceeded !== undefined) {
-      return reject([issue("too_big", { maximum: exceeded, type: "calls" })], place);
+    if (spendCall(self, maxCalls)) {
+      return reject([issue("too_big", { maximum: maxCalls, type: "calls" })], place);
     }
     if (openDepth >= maxDepth) {
       return reject([issue("too_big", { maximum: maxDepth, type: "depth" })], place);

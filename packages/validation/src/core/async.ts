@@ -7,19 +7,19 @@
  * importing it can hang in some loaders.
  *
  * It also tracks a validation: a call such as `schema(input)` and everything it reaches, the
- * continuations after its awaits included. `lazy` counts its calls per validation, so a whole
- * validation shares one limit however many `lazy` validators it reaches, and waiting resets nothing.
+ * continuations after its awaits included. Each `lazy` counts its calls per validation against its own
+ * limit, whatever other `lazy` validators the validation reaches, and waiting resets nothing.
  */
 
 /** A value that may still be pending. */
 export type Maybe<T> = T | PromiseLike<T>;
 
-/** One validation: how many `lazy` calls it has made, and the limit that holds it. */
+/** One validation: how many calls each `lazy` it reached has made, keyed by that `lazy`. */
 interface Validation {
-  calls: number;
-  /** The `maxCalls` of the first `lazy` the validation reached, which holds the whole of it. */
-  limit: number | undefined;
+  readonly calls: Map<object, number>;
 }
+
+const newValidation = (): Validation => ({ calls: new Map() });
 
 /** The validation running now, or undefined between validations. */
 let current: Validation | undefined;
@@ -30,7 +30,7 @@ let current: Validation | undefined;
  */
 function enter<A, R>(validation: Validation | undefined, work: (argument: A) => R, argument: A): R {
   const previous = current;
-  current = validation ?? previous ?? { calls: 0, limit: undefined };
+  current = validation ?? previous ?? newValidation();
   try {
     return work(argument);
   } finally {
@@ -45,16 +45,15 @@ function enter<A, R>(validation: Validation | undefined, work: (argument: A) => 
 export const within = <A, R>(work: (argument: A) => R, argument: A): R => enter(undefined, work, argument);
 
 /**
- * Counts a `lazy` call in the validation running now and returns the limit when it has now made more
- * calls than it allows, or undefined while it has not. The first `lazy` a validation reaches sets the
- * limit.
+ * Counts a call of the `lazy` named by `key` in the validation running now, and tests whether that
+ * `lazy` has now made more calls than `maxCalls`, its own limit.
  */
-export function spendCall(maxCalls: number): number | undefined {
+export function spendCall(key: object, maxCalls: number): boolean {
   // Every composer runs within a validation, so this only guards a call made outside one.
-  const validation = current ?? { calls: 0, limit: undefined };
-  validation.calls += 1;
-  validation.limit ??= maxCalls;
-  return validation.calls > validation.limit ? validation.limit : undefined;
+  const { calls } = current ?? newValidation();
+  const spent = (calls.get(key) ?? 0) + 1;
+  calls.set(key, spent);
+  return spent > maxCalls;
 }
 
 /** Tests whether a value is a promise, or anything else with a `then` method. */

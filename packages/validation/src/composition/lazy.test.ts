@@ -172,13 +172,24 @@ describe("lazy", () => {
       ]);
     });
 
-    it("should hold the whole run to the limit of the outermost lazy call, lower or higher than the inner ones", () => {
+    it("should hold each lazy validator to its own limit, whatever the limits of the others it meets", () => {
       const linked: Validator<Link> = object({ next: optional(lazy(() => linked)) });
-      expect(issuesOf(lazy(() => linked, { maxCalls: 3 })(chain(3)))).toEqual([
-        { code: "too_big", path: ["next", "next", "next"], params: { maximum: 3, type: "calls" } },
-      ]);
+      expect(lazy(() => linked, { maxCalls: 3 })(chain(5)).ok).toBe(true);
       const tight: Validator<Link> = object({ next: optional(lazy(() => tight, { maxCalls: 3 })) });
-      expect(lazy(() => tight, { maxCalls: 10 })(chain(5)).ok).toBe(true);
+      expect(issuesOf(lazy(() => tight, { maxCalls: 10 })(chain(4)))).toEqual([
+        { code: "too_big", path: ["next", "next", "next", "next"], params: { maximum: 3, type: "calls" } },
+      ]);
+    });
+
+    it("should keep a raised limit when another lazy validator with a lower one is reached first", () => {
+      interface Node {
+        kids: Node[];
+      }
+      const node: Validator<Node> = object({ kids: array(lazy(() => node, { maxCalls: 20_000 })) });
+      const tag: Validator<Link> = object({ next: optional(lazy(() => tag, { maxCalls: 3 })) });
+      const document = object({ meta: tag, body: node });
+      const body = { kids: Array.from({ length: 15_000 }, () => ({ kids: [] })) };
+      expect(document({ meta: chain(1), body }).ok).toBe(true);
     });
 
     it("should count each outermost call afresh, so calls made one after another do not add up", () => {
@@ -226,31 +237,35 @@ describe("lazy", () => {
       { timeout: 60_000 },
       () => {
         const { node, calls } = doubling();
-        // 2^60 calls without the limit; at most 10,000 with the root in one lazy run.
+        // 2^60 calls without the limit; at most 10,000 for each of its two lazy validators.
         expect(lazy(() => node)(deep(60)).ok).toBe(false);
         expect(calls()).toBeGreaterThan(0);
-        expect(calls()).toBeLessThanOrEqual(10_000);
+        expect(calls()).toBeLessThanOrEqual(20_000);
       },
     );
 
     it(
-      "should hold a whole validation that fans out to one limit when its root is wrapped in lazy",
+      "should hold a whole validation that fans out to the limits when its root is wrapped in lazy",
       { timeout: 60_000 },
       () => {
         const { node, calls } = doubling();
         const items = Array.from({ length: 5 }, () => deep(30));
         expect(lazy(() => array(node))(items).ok).toBe(false);
-        expect(calls()).toBeLessThanOrEqual(10_000);
+        expect(calls()).toBeLessThanOrEqual(20_000);
       },
     );
 
-    it("should hold a whole validation to one limit when its root is not a lazy validator", { timeout: 60_000 }, () => {
-      const { node, calls } = doubling();
-      // Each item used to start a count of its own, so the work, and the issues kept, grew with the items.
-      const items = Array.from({ length: 50 }, () => deep(30));
-      expect(array(node)(items).ok).toBe(false);
-      expect(calls()).toBeLessThanOrEqual(10_000);
-    });
+    it(
+      "should hold a whole validation to the limits when its root is not a lazy validator",
+      { timeout: 60_000 },
+      () => {
+        const { node, calls } = doubling();
+        // Each item used to start a count of its own, so the work, and the issues kept, grew with the items.
+        const items = Array.from({ length: 50 }, () => deep(30));
+        expect(array(node)(items).ok).toBe(false);
+        expect(calls()).toBeLessThanOrEqual(20_000);
+      },
+    );
 
     it("should count each validation afresh, even one made by a hand-written validator", () => {
       const linked: Validator<Link> = object({ next: optional(lazy(() => linked, { maxCalls: 3 })) });
