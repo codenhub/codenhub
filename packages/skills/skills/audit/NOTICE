@@ -1,9 +1,9 @@
-caveman-review
+audit
 Adapted from: https://github.com/JuliusBrussee/caveman
 Original copyright: Copyright (c) 2026 Julius Brussee
 Original license: MIT
 License text: https://github.com/JuliusBrussee/caveman/blob/main/LICENSE
-Changes: Adapted skill instructions and prompts for the @codenhub/skills package format and conventions.
+Changes: The pull request comment format is adapted from caveman-review; the rest of the skill is original Coden Agency work.
 
 MIT License
 

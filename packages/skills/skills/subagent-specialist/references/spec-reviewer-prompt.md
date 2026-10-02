@@ -43,9 +43,13 @@ Verify all three categories:
 - Did they solve the wrong problem?
 - Did they build the right feature the wrong way?
 
+### Questionable Requirements
+A requirement can be met and still be wrong: it contradicts another requirement, breaks existing callers, or a clearly better behavior serves the same purpose. Report it as a question with the concrete case. It does not make the implementation non-compliant, and the implementer must not have departed from it silently.
+
 ## Report Format
 - `Spec compliant` if everything matches after code inspection
 - `Issues found` if anything is missing, extra, or misunderstood
+- `Questions` for questionable requirements, whichever verdict applies
 - Include precise file references for every issue you report
 
 Verify by reading the code, not by trusting the report.

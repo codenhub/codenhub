@@ -9,10 +9,10 @@ This page records the origin and license context of skill assets shipped by `@co
 | Skill                     | Origin                                                     | License    |
 | ------------------------- | ---------------------------------------------------------- | ---------- |
 | `agents-md-improver`      | Original Coden Agency work                                 | Apache-2.0 |
+| `audit`                   | Adapted from [JuliusBrussee/caveman]                       | MIT        |
 | `brainstorming`           | Adapted from [obra/superpowers]                            | MIT        |
 | `caveman`                 | Adapted from [JuliusBrussee/caveman]                       | MIT        |
 | `caveman-commit`          | Adapted from [JuliusBrussee/caveman]                       | MIT        |
-| `caveman-review`          | Adapted from [JuliusBrussee/caveman]                       | MIT        |
 | `frontend-design`         | Adapted from [Anthropic's official frontend-design plugin] | Apache-2.0 |
 | `ponytail`                | Adapted from [DietrichGebert/ponytail]                     | MIT        |
 | `ponytail-review`         | Adapted from [DietrichGebert/ponytail]                     | MIT        |

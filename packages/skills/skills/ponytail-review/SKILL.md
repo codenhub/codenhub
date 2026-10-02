@@ -57,4 +57,4 @@ Tag any row that names no trigger for revisiting with `no-trigger`; those are th
 
 ## Boundaries
 
-Over-engineering and complexity only. Route correctness bugs, security holes, and performance to a normal review. One small smoke test or assertion-based self-check is the minimum, not bloat; never flag it for deletion. For building new code minimally, use the `ponytail` skill.
+Over-engineering and complexity only. Route correctness bugs, security holes, and performance to the `audit` skill when it is available, or to a normal review. One small smoke test or assertion-based self-check is the minimum, not bloat; never flag it for deletion. For building new code minimally, use the `ponytail` skill.

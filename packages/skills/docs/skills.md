@@ -56,10 +56,10 @@ The rest of the authoring guidance, such as how a description is phrased or whet
 | Skill ID                  | Purpose                                                        |
 | ------------------------- | -------------------------------------------------------------- |
 | `agents-md-improver`      | Audits and improves repository `AGENTS.md` guidance.           |
+| `audit`                   | Audits and reviews code, classifying findings consistently.    |
 | `brainstorming`           | Explores requirements and design before implementation.        |
 | `caveman`                 | Provides an ultra-compressed communication mode.               |
 | `caveman-commit`          | Generates terse Conventional Commit messages.                  |
-| `caveman-review`          | Produces compressed, actionable code-review findings.          |
 | `frontend-design`         | Guides distinctive production-grade frontend design.           |
 | `ponytail`                | Builds the simplest solution that works, nothing speculative.  |
 | `ponytail-review`         | Finds over-engineering and ledgers deferred work.              |

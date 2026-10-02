@@ -33,15 +33,15 @@ Check the usual code review concerns, and explicitly inspect these questions:
 ## Review Rules
 - Read the code. Do not rely on the implementer's summary.
 - Focus on actionable quality issues, not style nitpicks unless they materially affect maintainability.
-- Distinguish between critical, important, and minor issues.
+- Sort issues by what the controller must do: must fix before the task closes, should fix, or optional.
 - If the implementation is solid, say so clearly.
 
 ## Report Format
 - Strengths
 - Issues
-  - Critical
-  - Important
-  - Minor
+  - Must fix
+  - Should fix
+  - Optional
 - Assessment
 
 Include file references for issues whenever possible.

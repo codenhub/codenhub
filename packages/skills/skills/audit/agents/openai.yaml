@@ -1,0 +1,4 @@
+interface:
+  display_name: "Audit"
+  short_description: "Audit and review code with consistent findings"
+  default_prompt: "Use $audit to audit or review this target: judge whether it works and whether it should work this way, ground every finding in a concrete case, classify each with the skill's kind and severity tables, and report a verdict before any change."
