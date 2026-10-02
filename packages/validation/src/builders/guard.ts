@@ -1,3 +1,4 @@
+import { detached } from "../core/async";
 import { leaf, split } from "../core/checks";
 import { assertFunction, assertText } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
@@ -26,6 +27,6 @@ export function guard<T>(expected: string, accepts: (input: unknown) => input is
   assertFunction("accepts", accepts);
   return ((...args: unknown[]) => {
     const [{ message }, checks] = split<MessageOptions, T>(args);
-    return leaf(expected, accepts, message, checks);
+    return leaf(expected, (input) => detached(accepts, input), message, checks);
   }) as Factory<T, MessageOptions>;
 }

@@ -287,6 +287,24 @@ describe("formatIssue", () => {
     expect(formatIssue(issuesOf(json()("{"))[0] as ValidationIssue)).toBe("Invalid JSON");
   });
 
+  it("should word a union with the one option whose type the input had, by its first issue", () => {
+    const messageOf = (result: ValidationResult<unknown>): string =>
+      formatIssue(issuesOf(result)[0] as ValidationIssue);
+    expect(messageOf(union([literal(""), email()])("nope"))).toBe("Invalid email address");
+    expect(messageOf(union([number(), string({ min: 3 })])("ab"))).toBe("Must be at least 3 characters");
+    expect(messageOf(union([oneOf(["a", "b"]), number({ int: true })])(1.5))).toBe("Must be an integer");
+  });
+
+  it("should word a union generically when no option or more than one had the input's type", () => {
+    const messageOf = (result: ValidationResult<unknown>): string =>
+      formatIssue(issuesOf(result)[0] as ValidationIssue);
+    expect(messageOf(union([string(), number()])(true))).toBe("Does not match any of the allowed types");
+    expect(messageOf(union([literal("a"), literal("b")])("c"))).toBe("Does not match any of the allowed types");
+    expect(messageOf(union([string({ min: 5 }), string({ max: 1 })])("abc"))).toBe(
+      "Does not match any of the allowed types",
+    );
+  });
+
   it("should quote an unrecognized key as a string literal, so quotes and line breaks in it stay inside", () => {
     expect(formatIssue(issue({ code: "unrecognized_key", params: { key: 'a"b\nc' } }))).toBe(
       String.raw`Unrecognized key "a\"b\nc"`,
@@ -300,6 +318,12 @@ describe("formatIssue", () => {
     ).toBe("Cannot convert string to number");
     expect(formatIssue(issue({ code: "invalid_union" }))).toBe("Does not match any of the allowed types");
     expect(formatIssue(issue({ code: "invalid_intersection" }))).toBe("Conflicting values");
+  });
+
+  it("should say how to pass an object that is not plain, such as process.env", () => {
+    expect(
+      formatIssue(issue({ code: "invalid_type", params: { expected: "object", received: "non-plain object" } })),
+    ).toBe("Expected a plain object; copy it first, as in { ...value }");
   });
 
   it("should word never and a missing or unknown tag without calling them types", () => {

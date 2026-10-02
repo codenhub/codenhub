@@ -58,6 +58,16 @@ export interface UrlOptions extends MessageOptions {
    */
   host?: AnyValidator;
   /**
+   * Validates the credentials, a user and a password written before the host, as in
+   * `postgres://app:secret@db.example.com`, which are rejected without it. It receives
+   * `{ username, password }` as the parser writes them, percent-encoded, with `password` empty when only
+   * a user is written, or `undefined` when the URL names neither, so `credentials: optional(object({
+   * username: string(), password: string() }))` accepts a URL with or without them. The URL produced
+   * keeps them. A URL without a host, `mailto`, `tel` or `urn`, never takes credentials. Its failure is
+   * reported as the URL's, with `params.part` `"credentials"`.
+   */
+  credentials?: AnyValidator;
+  /**
    * Validates the port, a number, or `undefined` when the URL names none or names its scheme's default,
    * which the parser drops. So `port: optional(port())` accepts either, and `port: literal(8080)` requires
    * it. Without it, port 0, which nothing can connect to, is rejected; with it, the validator decides. Its failure is reported as the URL's, with `params.part` `"port"`.
@@ -89,11 +99,14 @@ export interface UrlOptions extends MessageOptions {
 }
 
 /** The part validators an options object names. */
-type UrlParts<TOptions> = Extract<TOptions[keyof TOptions & ("host" | "port" | "path" | "query")], AnyValidator>;
+type UrlParts<TOptions> = Extract<
+  TOptions[keyof TOptions & ("credentials" | "host" | "port" | "path" | "query")],
+  AnyValidator
+>;
 
 /**
  * Creates a validator for absolute URLs with an allowed protocol and a public domain name, and
- * without embedded credentials. The value is the URL as the URL parser writes it, which is what a
+ * without embedded credentials unless a `credentials` validator accepts them. The value is the URL as the URL parser writes it, which is what a
  * request made with it will use.
  *
  * @remarks
@@ -106,7 +119,7 @@ type UrlParts<TOptions> = Extract<TOptions[keyof TOptions & ("host" | "port" | "
  * no scheme is guessed for text that lacks one. A host longer than 253 characters, not counting the
  * final dot of an absolute host such as `example.com.`, which is accepted and kept, is rejected.
  *
- * The `host`, `port`, `path` and `query` options check those parts with validators of your own, which
+ * The `credentials`, `host`, `port`, `path` and `query` options check those parts with validators of your own, which
  * only decide: the value is still the whole URL, and one that is asynchronous makes the validator
  * asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules. A
  * part that fails is one `invalid_format` issue at the URL's own place, `{ format: "url", part, issues }`,
@@ -134,8 +147,17 @@ export function url(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function url(...rest: unknown[]): AnyValidator {
   const [options, checks] = split<UrlOptions, string>(rest);
-  const { host, port, path, query, repeated = false, message, protocols: listed = ["http", "https"] } = options;
-  assertParts({ host, port, path, query });
+  const {
+    credentials,
+    host,
+    port,
+    path,
+    query,
+    repeated = false,
+    message,
+    protocols: listed = ["http", "https"],
+  } = options;
+  assertParts({ credentials, host, port, path, query });
   assertOption("repeated", repeated, "boolean");
   if (!Array.isArray(listed) || listed.length === 0) {
     // An empty list would make a validator that rejects every URL without saying why.
@@ -158,10 +180,13 @@ export function url(...rest: unknown[]): AnyValidator {
     }
     const parsed = new URL(text);
     const scheme = parsed.protocol.slice(0, -1);
-    if (!protocols.includes(scheme) || parsed.username !== "" || parsed.password !== "") {
+    const isHostless = parsed.host === "" || HOSTLESS_SCHEMES.includes(scheme);
+    const hasCredentials = parsed.username !== "" || parsed.password !== "";
+    // A credentials validator decides for a URL with a host; one without a host never takes them.
+    if (!protocols.includes(scheme) || (hasCredentials && (credentials === undefined || isHostless))) {
       return notFormat("url");
     }
-    if (parsed.host === "" || HOSTLESS_SCHEMES.includes(scheme)) {
+    if (isHostless) {
       const hostless = toHostlessUrl(scheme, parsed.href.slice(parsed.protocol.length), false);
       return hostless === undefined ? notFormat("url") : { value: `${parsed.protocol}${hostless}`, parts: [] };
     }
@@ -179,6 +204,13 @@ export function url(...rest: unknown[]): AnyValidator {
       return notFormat("url");
     }
     const parts: Part[] = [];
+    if (credentials !== undefined) {
+      parts.push([
+        "credentials",
+        credentials,
+        hasCredentials ? { username: parsed.username, password: parsed.password } : undefined,
+      ]);
+    }
     if (host !== undefined) {
       // An IPv6 host is given as `ip()` spells it, its IPv4 part dotted when it is IPv4-mapped or NAT64, so
       // `host: ip()` and a list of addresses `ip()` produced agree. The value keeps the parser's hex groups.

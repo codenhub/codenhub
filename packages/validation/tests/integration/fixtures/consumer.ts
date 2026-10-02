@@ -119,8 +119,11 @@ export const checkedLater: AsyncValidator<string[]> = array(
   check(async (list) => list.length > 0),
 );
 
-// Guards accept only synchronous validators.
+// is() accepts only synchronous validators, and answers whether the input passes without narrowing it,
+// since a validator may produce another value than it was given.
 export const raw: unknown = "text";
+export const passes: boolean = is(string(), raw);
+// @ts-expect-error is() does not narrow its input
 export const narrowed: string = is(string(), raw) ? raw : "";
 // @ts-expect-error a validator that may finish later cannot be used as a synchronous guard
 export const badGuard = is(username, raw);
@@ -407,6 +410,12 @@ export const handlerValue: Infer<typeof handler> = (value: string) => void value
 export const localUrl: Validator<string> = url({ host: hostname(), port: optional(portNumber()) });
 export const apiUrl: Validator<string> = url({ protocols: ["https"], path: string(startsWith("/api/")) });
 export const remoteHost: AsyncValidator<string> = url({ host: username });
+export const databaseUrl: Validator<string> = url({
+  protocols: ["postgres"],
+  credentials: optional(object({ username: string(), password: string() })),
+});
+// @ts-expect-error an asynchronous credentials validator makes the URL validator asynchronous
+export const checkedCredentials: Validator<string> = url({ credentials: username });
 // @ts-expect-error an asynchronous part makes an asynchronous validator
 export const remoteHostSync: Validator<string> = url({ host: username });
 export const companyEmail: Validator<string> = email({ domain: oneOf(["company.com"]), allowPlus: false });

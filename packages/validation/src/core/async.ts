@@ -6,53 +6,76 @@
  * They are named `chain` and `collect`, never `then`: a module exporting `then` is a thenable, and
  * importing it can hang in some loaders.
  *
- * It also marks a run: one synchronous stretch of a validation, from the call of a composer to its
- * return, or one continuation after an await. `lazy` counts its calls per run, so a whole validation
- * shares one limit however many `lazy` validators it reaches.
+ * It also tracks a validation: a call such as `schema(input)` and everything it reaches, the
+ * continuations after its awaits included. Each `lazy` counts its calls per validation against its own
+ * limit, whatever other `lazy` validators the validation reaches, and waiting resets nothing.
  */
 
 /** A value that may still be pending. */
 export type Maybe<T> = T | PromiseLike<T>;
 
-/** How many runs are open on the stack. Only the outermost one starts a count. */
-let openRuns = 0;
+/** One validation: how many calls each `lazy` it reached has made, and the results each kept, keyed by that `lazy`. */
+interface Validation {
+  readonly calls: Map<object, number>;
+  readonly results: Map<object, Map<unknown, unknown>>;
+}
 
-/** How many `lazy` calls the current run has made. */
-let runCalls = 0;
-
-/** The `maxCalls` of the first `lazy` the current run reached, which holds the whole run. */
-let runLimit: number | undefined;
+/** The validation running now, or undefined between validations and in a consumer's callback. */
+let current: Validation | undefined;
 
 /**
- * Runs `work` as part of a run, starting one when none is open, so everything it reaches synchronously
- * shares one count of `lazy` calls.
+ * Runs `work` with `validation` as the one running, and restores the one that was running when it
+ * returns. Undefined runs it outside any, and a composer it reaches starts one of its own.
  */
-export function within<A, R>(work: (argument: A) => R, argument: A): R {
-  if (openRuns === 0) {
-    runCalls = 0;
-    runLimit = undefined;
-  }
-  openRuns += 1;
+function enter<A, R>(validation: Validation | undefined, work: (argument: A) => R, argument: A): R {
+  const previous = current;
+  current = validation;
   try {
     return work(argument);
   } finally {
-    openRuns -= 1;
+    current = previous;
   }
 }
 
 /**
- * Counts a `lazy` call in the current run and returns the limit when the run has now made more calls
- * than it allows, or undefined while it has not. The first `lazy` a run reaches sets the limit.
+ * Runs `work` as part of the validation running now, starting one when none is, so everything it
+ * reaches shares each `lazy`'s count. Only composers start one, so a leaf never carries this.
  */
-export function spendCall(maxCalls: number): number | undefined {
-  if (openRuns === 0) {
-    // Every composer opens a run, so this is only a guard against a stale count.
-    runCalls = 0;
-    runLimit = undefined;
+export const within = <A, R>(work: (argument: A) => R, argument: A): R =>
+  enter(current ?? { calls: new Map(), results: new Map() }, work, argument);
+
+/**
+ * Runs a callback the consumer wrote, such as a check's test or a transform's function, apart from
+ * the validation running now, so a validator it calls is a validation of its own, with counts of its own.
+ */
+export const detached = <A, R>(callback: (argument: A) => R, argument: A): R => enter(undefined, callback, argument);
+
+/**
+ * The results the `lazy` named by `key` has kept in the validation running now, which it alone reads
+ * and writes, or undefined outside a validation.
+ */
+export function resultsOf(key: object): Map<unknown, unknown> | undefined {
+  if (current === undefined) {
+    return undefined;
   }
-  runCalls += 1;
-  runLimit ??= maxCalls;
-  return runCalls > runLimit ? runLimit : undefined;
+  const { results } = current;
+  const kept = results.get(key) ?? new Map<unknown, unknown>();
+  results.set(key, kept);
+  return kept;
+}
+
+/**
+ * Counts a call of the `lazy` named by `key` in the validation running now, and tests whether that
+ * `lazy` has now made more calls than `maxCalls`, its own limit.
+ */
+export function spendCall(key: object, maxCalls: number): boolean {
+  if (current === undefined) {
+    // Every composer runs within a validation, so this only guards a call made outside one.
+    return false;
+  }
+  const spent = (current.calls.get(key) ?? 0) + 1;
+  current.calls.set(key, spent);
+  return spent > maxCalls;
 }
 
 /** Tests whether a value is a promise, or anything else with a `then` method. */
@@ -63,16 +86,20 @@ export const isThenable = (value: unknown): value is PromiseLike<unknown> =>
 
 /**
  * Applies `next` to a value that may still be pending, staying synchronous when it is not. A pending
- * value's continuation is a run of its own.
+ * value's continuation stays part of the validation that was running when it was chained.
  *
  * A validator's own result is a plain object, so a value with a `then` inside it is not mistaken
  * for a pending result. What `transform` and `check` get back from the consumer's callback is
  * another matter: a value with a `then` method is treated as a promise there, as `await` would.
  */
 export function chain<T, R>(value: Maybe<T>, next: (resolved: T) => Maybe<R>): Maybe<R> {
+  if (!isThenable(value)) {
+    return next(value);
+  }
+  const validation = current;
   // A thenable has to be unwrapped with `then`; the alternative to `await` is the point of this helper.
   // oxlint-disable-next-line promise/prefer-await-to-then, promise/no-callback-in-promise
-  return isThenable(value) ? value.then((resolved) => within(next, resolved)) : next(value);
+  return value.then((resolved) => enter(validation, next, resolved));
 }
 
 /**

@@ -15,12 +15,6 @@ describe("is", () => {
     expect(is(number(), "text")).toBe(false);
   });
 
-  it("should narrow the type of the input", () => {
-    const input: unknown = "text";
-    const narrowed = is(string(), input) ? input.toUpperCase() : undefined;
-    expect(narrowed).toBe("TEXT");
-  });
-
   it("should throw a TypeError naming the fix when the validator is asynchronous", () => {
     const asynchronous = (async (input) => pass(input)) as AsyncValidator<unknown> as Validator<unknown>;
     expect(() => is(asynchronous, 1)).toThrow(/needs a synchronous validator/);

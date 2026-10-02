@@ -105,6 +105,38 @@ const describeFormat = (issue: ValidationIssue, messages: Messages): string => {
   }
 };
 
+/**
+ * Tests whether what an option of a union found says only that the input is not of its kind: one issue
+ * at the value itself, of the wrong type, or naming the values a `literal` or `oneOf` accepts.
+ */
+const isOtherKind = (issues: readonly ValidationIssue[]): boolean => {
+  const [only] = issues;
+  return (
+    issues.length === 1 &&
+    only !== undefined &&
+    only.path.length === 0 &&
+    (only.code === "invalid_type" ||
+      (only.code === "invalid_value" &&
+        only.params !== undefined &&
+        ("expected" in only.params || Array.isArray(only.params["options"]))))
+  );
+};
+
+/**
+ * Words a union that no option accepted. When the input was of the kind of exactly one option, such as
+ * text for `union([literal(""), email()])`, that option's first issue says what is wrong, "Invalid email
+ * address"; otherwise no option is the one meant, and the wording is generic.
+ */
+const describeUnion = (issue: ValidationIssue, messages: Messages): string => {
+  if (Array.isArray(issue.params?.options)) {
+    return `Expected ${param(issue, "discriminator")} to be one of ${issue.params.options.map(formatValue).join(", ")}`;
+  }
+  const found = (issue.params?.["issues"] ?? []) as readonly (readonly ValidationIssue[])[];
+  const meant = Array.isArray(found) ? found.filter((issues) => Array.isArray(issues) && !isOtherKind(issues)) : [];
+  const [first] = meant.length === 1 ? (meant[0] as readonly ValidationIssue[]) : [];
+  return first === undefined ? "Does not match any of the allowed types" : formatIssue(first, messages);
+};
+
 const describeValue = (issue: ValidationIssue): string => {
   // A bigint is reported as its digits, and `type: "bigint"` says so.
   const word = issue.params?.type === "bigint" ? (value: unknown) => `${String(value)}n` : formatValue;
@@ -151,6 +183,10 @@ export const englishMessages: Messages = {
     if (issue.params?.coerced === true) {
       return `Cannot convert ${param(issue, "received")} to ${param(issue, "expected")}`;
     }
+    if (issue.params?.received === "non-plain object") {
+      // Such as `process.env` or a class instance, which a copy into a plain object passes.
+      return "Expected a plain object; copy it first, as in { ...value }";
+    }
     return issue.params?.expected === "never"
       ? "Not allowed"
       : `Expected ${param(issue, "expected")}, received ${param(issue, "received")}`;
@@ -173,8 +209,5 @@ export const englishMessages: Messages = {
   // Quoted as a literal, since the key is text the sender chose and may hold quotes or line breaks.
   unrecognized_key: (issue) => `Unrecognized key ${formatValue(issue.params?.key)}`,
   invalid_intersection: "Conflicting values",
-  invalid_union: (issue) =>
-    Array.isArray(issue.params?.options)
-      ? `Expected ${param(issue, "discriminator")} to be one of ${issue.params.options.map(formatValue).join(", ")}`
-      : "Does not match any of the allowed types",
+  invalid_union: describeUnion,
 };

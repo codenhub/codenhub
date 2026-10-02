@@ -1,3 +1,4 @@
+import { detached } from "../core/async";
 import { call, composed } from "../core/nesting";
 import { assertFunction, assertUnshared, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer } from "../core/types";
@@ -54,7 +55,7 @@ export function optional(validator: AnyValidator, value?: Fallback<unknown>): An
   assertUnshared("A default object", value);
   return composed((input, place) =>
     input === undefined
-      ? pass(typeof value === "function" ? (value as () => unknown)() : value)
+      ? pass(typeof value === "function" ? detached(value as () => unknown, undefined) : value)
       : call(validator, input, place),
   );
 }

@@ -420,21 +420,17 @@ intersection(named, aged)({ name: "Ada", age: 36 }); // { ok: true, value: { nam
 ### is
 
 ```ts
-export declare function is<T>(validator: Validator<T>, input: unknown): input is T;
+export declare function is(validator: Validator<unknown>, input: unknown): boolean;
 ```
 
-Tests whether an input passes a validator, narrowing its type when it does.
+Tests whether an input passes a validator.
 
-The narrowing is only accurate for a validator that does not change the value. A validator that trims, coerces or transforms produces a different value than it was given, so read `result.value` from calling the validator instead.
+It does not narrow the type of the input. A validator that trims, coerces or transforms produces another value than it was given, such as a number from the text `"5"`, so the input is not of the type the validator produces; read `result.value` from calling the validator for that. Where a validator keeps the value as it is, write the guard yourself, as below.
 
 **Parameters**
 
 - `validator` — A synchronous validator.
 - `input` — The value to test.
-
-**Type parameters**
-
-- `T` — The type the validator produces.
 
 **Returns** — `true` when the validator accepts the input.
 
@@ -489,9 +485,9 @@ Creates a validator that looks up another validator the first time it runs, so a
 
 TypeScript cannot infer a validator that refers to itself, so annotate the variable with the type it produces. The getter runs once and its result is reused.
 
-Every level of nesting is a level of recursion, and input nested past the stack, or a cyclic object, would throw. `maxDepth` stops that first: a value found more than that many levels down fails with `too_big` and `{ maximum, type: "depth" }` at its own path, so untrusted input can be checked without a size cap tuned to the stack. The count is of calls on the stack, so it bounds recursion that happens in one synchronous run, which is where the stack can overflow; a rule that awaits between levels starts the next from a fresh stack, and is not counted. So `maxDepth` does not bound an asynchronous recursive schema: it follows input of any depth, and a cyclic object until memory runs out. Give such a schema a bound of its own.
+Every level of nesting is a level of recursion, and input nested past the stack, or a cyclic object, would throw. `maxDepth` stops that first: a value found more than that many levels down fails with `too_big` and `{ maximum, type: "depth" }` at its own path, so untrusted input can be checked without a size cap tuned to the stack. The count is of calls on the stack, so it bounds recursion that happens in one synchronous run, which is where the stack can overflow; a rule that awaits between levels starts the next from a fresh stack, and is not counted. So `maxDepth` does not bound an asynchronous recursive schema; `maxCalls` does, below, since each level is a `lazy` call and the count of calls lasts across awaits, so even a cyclic object stops.
 
-Work can also grow faster than the input. A `union` tries every option, and an `object` checks every property even after one fails, so a recursive `union` of objects recurses through every option at every level, and its work doubles with each: a few hundred bytes can take hours. `maxCalls` stops that: past that many `lazy` calls in one validation, every further one fails with `too_big` and `{ maximum, type: "calls" }`. A validation is a call such as `schema(input)` and everything it reaches before it returns, whatever validator its root is, so the items of an `array` share one count. Unlike `maxDepth`, the limit is read from the first `lazy` the validation reaches, and holds the whole of it. Like `maxDepth`, it counts one synchronous run: what runs after an await counts afresh. The issues of the options that failed are kept, about 1 KB per call, so the default holds a validation stopped by the limit to about 10 MB and a few tens of milliseconds. Raise it for trusted recursive data with more nodes than that in one validation. For recursive objects told apart by a property, `tagged` reads that property first and does no such work.
+Work can also grow faster than the input. A `union` tries every option, and an `object` checks every property even after one fails, so in a recursive `union` of objects every option reaches the children. A `lazy` keeps what it found for each object at each path in one validation, and gives it again when the same object is reached at the same path, so those options share the children's result and the work grows with the input. An asynchronous check under it runs once for each such object and path, however many options reach it. Work that makes new objects at every level, such as a `transform` that copies its value, cannot be shared and doubles with each level. `maxCalls` stops that: past that many calls of one `lazy` in one validation, every further one fails with `too_big` and `{ maximum, type: "calls" }`. A validation is a call such as `schema(input)` and everything it reaches before it settles, whatever validator its root is, so the items of an `array` share each `lazy`'s count. Unlike `maxDepth`, each `lazy` counts its own calls against its own limit, so a limit set on one is never overridden by another that the validation reaches. Unlike `maxDepth` too, it lasts across awaits: what runs after an await counts toward the same validation, so an asynchronous recursive schema is held to it as well. That holds for the awaits of this package, such as an asynchronous check's: an await inside a validator you write yourself is not seen, so what that validator calls after it starts a validation of its own, with fresh counts, and `maxCalls` does not bound recursion through it. Put asynchronous work in a check, or bound such a validator yourself. The issues of the options that failed are kept, about 1 KB per call, so the default holds a validation stopped by the limit to about 10 MB and a few tens of milliseconds for each `lazy`. Raise it for trusted recursive data with more nodes than that in one validation. For recursive objects told apart by a property, `tagged` reads that property first and validates only the matching variant.
 
 **Parameters**
 
@@ -1299,11 +1295,11 @@ export declare function url(...checks: AsyncCheck<string>[]): AsyncValidator<str
 export declare function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 ```
 
-Creates a validator for absolute URLs with an allowed protocol and a public domain name, and without embedded credentials. The value is the URL as the URL parser writes it, which is what a request made with it will use.
+Creates a validator for absolute URLs with an allowed protocol and a public domain name, and without embedded credentials unless a `credentials` validator accepts them. The value is the URL as the URL parser writes it, which is what a request made with it will use.
 
 The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters, not counting the final dot of an absolute host such as `example.com.`, which is accepted and kept, is rejected.
 
-The `host`, `port`, `path` and `query` options check those parts with validators of your own, which only decide: the value is still the whole URL, and one that is asynchronous makes the validator asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules. A part that fails is one `invalid_format` issue at the URL's own place, `{ format: "url", part, issues }`, so a form shows it beside the field, and the `message` option words it as every other issue of the URL.
+The `credentials`, `host`, `port`, `path` and `query` options check those parts with validators of your own, which only decide: the value is still the whole URL, and one that is asynchronous makes the validator asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules. A part that fails is one `invalid_format` issue at the URL's own place, `{ format: "url", part, issues }`, so a form shows it beside the field, and the `message` option words it as every other issue of the URL.
 
 **Returns** — A validator that produces the URL as the parser writes it.
 
@@ -1642,7 +1638,7 @@ Options for [lazy](#lazy).
 maxCalls?: number;
 ```
 
-The most `lazy` calls one validation may make, counting every `lazy` validator, those of the options a `union` tries and fails included. Past it, every further call fails with `too_big`, so a schema whose work grows faster than its input, such as a recursive `union` of objects, which doubles with each level, stops instead of running for hours on a few hundred bytes. A validation is a call such as `schema(input)` and everything it reaches before it returns, so an `array` of recursive items shares one count, and validations made one after another have one each. The limit of the first `lazy` a validation reaches holds the whole of it, so set it on the outermost one. Recursive data with more nodes than this in one validation needs it raised.
+The most calls this `lazy` may make in one validation, those made for the options a `union` tries and fails included; a result this `lazy` already found for an object at a path is not a call. Past it, every further call fails with `too_big`, so a schema whose work grows faster than its input stops instead of running for hours on a few hundred bytes. A validation is a call such as `schema(input)` and everything it reaches before it settles, after any await included, so an `array` of recursive items shares this `lazy`'s count, and validations made one after another, or from a callback such as a check's test, or after an await inside a validator you write yourself, have counts of their own. Each `lazy` counts its own calls against its own limit, so no other `lazy` overrides it. Recursive data with more nodes than this in one validation needs it raised.
 
 #### maxDepth
 
@@ -2145,6 +2141,14 @@ export interface UrlOptions extends MessageOptions
 ```
 
 Options for [url](#url).
+
+#### credentials
+
+```ts
+credentials?: AnyValidator;
+```
+
+Validates the credentials, a user and a password written before the host, as in `postgres://app:secret@db.example.com`, which are rejected without it. It receives `{ username, password }` as the parser writes them, percent-encoded, with `password` empty when only a user is written, or `undefined` when the URL names neither, so `credentials: optional(object({ username: string(), password: string() }))` accepts a URL with or without them. The URL produced keeps them. A URL without a host, `mailto`, `tel` or `urn`, never takes credentials. Its failure is reported as the URL's, with `params.part` `"credentials"`.
 
 #### host
 

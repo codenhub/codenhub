@@ -1,4 +1,4 @@
-import { chain, collect, type Maybe } from "./async";
+import { chain, collect, detached, type Maybe } from "./async";
 import { placeAll, type Place } from "./nesting";
 import { isPlainObject } from "./objects";
 import { failWith, issue, pass, typeIssue } from "./result";
@@ -81,7 +81,7 @@ export function finish<T>(
   if (issues.length > 0) {
     return failWith(word(issues, message));
   }
-  return chain(collect(checks.map((check) => check(value))), (found) => {
+  return chain(collect(checks.map((check) => detached(check, value))), (found) => {
     for (const list of found) {
       if (list !== undefined && !Array.isArray(list)) {
         throw new TypeError("A check must return undefined or a list of issues");
