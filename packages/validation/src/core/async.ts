@@ -14,12 +14,13 @@
 /** A value that may still be pending. */
 export type Maybe<T> = T | PromiseLike<T>;
 
-/** One validation: how many calls each `lazy` it reached has made, keyed by that `lazy`. */
+/** One validation: how many calls each `lazy` it reached has made, and the results each kept, keyed by that `lazy`. */
 interface Validation {
   readonly calls: Map<object, number>;
+  readonly results: Map<object, Map<unknown, unknown>>;
 }
 
-const newValidation = (): Validation => ({ calls: new Map() });
+const newValidation = (): Validation => ({ calls: new Map(), results: new Map() });
 
 /** The validation running now, or undefined between validations. */
 let current: Validation | undefined;
@@ -56,6 +57,20 @@ export function detached<A, R>(callback: (argument: A) => R, argument: A): R {
   } finally {
     current = previous;
   }
+}
+
+/**
+ * The results the `lazy` named by `key` has kept in the validation running now, which it alone reads
+ * and writes, or undefined outside a validation.
+ */
+export function resultsOf(key: object): Map<unknown, unknown> | undefined {
+  if (current === undefined) {
+    return undefined;
+  }
+  const { results } = current;
+  const kept = results.get(key) ?? new Map<unknown, unknown>();
+  results.set(key, kept);
+  return kept;
 }
 
 /**

@@ -202,29 +202,25 @@ describe("lazy", () => {
       expect([linked(chain(3)).ok, linked(chain(3)).ok, linked(chain(3)).ok]).toEqual([true, true, true]);
     });
 
-    it("should count the calls a union makes for options that fail, which is where the work multiplies", () => {
-      const node: Validator<unknown> = union([
-        object({ type: literal("a"), kids: array(lazy(() => node, { maxCalls: 10 })) }),
-        object({ type: literal("b"), kids: array(lazy(() => node, { maxCalls: 10 })) }),
-      ]);
-      let input: unknown = { type: "b", kids: [] };
-      for (let level = 0; level < 5; level += 1) {
-        input = { type: "b", kids: [input] };
-      }
-      expect(node(input).ok).toBe(false);
-    });
-
-    /** A recursive union of objects, whose work doubles with each level, and a count of its lazy calls. */
-    const doubling = (): { node: Validator<unknown>; calls: () => number } => {
+    /** A recursive union of objects, whose work doubles with each level unless it is shared, and a count of its lazy calls. */
+    const doubling = (copy = false): { node: Validator<unknown>; calls: () => number } => {
       let calls = 0;
       // Counts every call a lazy validator lets through to the union.
       const counted: Validator<unknown> = (input) => {
         calls += 1;
         return node(input);
       };
+      // A copy is a new value each time, so no result can be shared for it.
+      const kid = (): Validator<unknown> =>
+        copy
+          ? pipe(
+              transform(unknown(), (value) => ({ ...(value as object) })),
+              lazy(() => counted),
+            )
+          : lazy(() => counted);
       const node: Validator<unknown> = union([
-        object({ type: literal("a"), kids: array(lazy(() => counted)) }),
-        object({ type: literal("b"), kids: array(lazy(() => counted)) }),
+        object({ type: literal("a"), kids: array(kid()) }),
+        object({ type: literal("b"), kids: array(kid()) }),
       ]);
       return { node, calls: () => calls };
     };
@@ -236,38 +232,39 @@ describe("lazy", () => {
       return input;
     };
 
-    // Up to 10,000 calls, which a loaded machine may take a while over.
+    it("should validate a value once for each lazy validator and path, so a recursive union does linear work", () => {
+      const { node, calls } = doubling();
+      // 2^60 calls if every option validated the children again; two per level once each is shared.
+      expect(lazy(() => node)(deep(60)).ok).toBe(true);
+      expect(calls()).toBeLessThanOrEqual(2 * 61);
+    });
+
+    it("should share results across the items of a validation, wherever its root is", () => {
+      const { node, calls } = doubling();
+      const items = Array.from({ length: 50 }, () => deep(30));
+      expect(array(node)(items).ok).toBe(true);
+      expect(calls()).toBeLessThanOrEqual(50 * 2 * 31);
+    });
+
+    it("should report a value reached at two paths at each of them", () => {
+      const point = lazy(() => object({ x: number() }));
+      const shared = { x: "1" };
+      expect(
+        issuesOf(object({ from: point, to: point })({ from: shared, to: shared })).map(({ path }) => path),
+      ).toEqual([
+        ["from", "x"],
+        ["to", "x"],
+      ]);
+    });
+
+    // Up to 10,000 calls for each of the two lazy validators, which a loaded machine may take a while over.
     it(
-      "should stop a recursive union whose work doubles with each level by default, long before it would finish",
+      "should stop a recursive union whose work doubles with each level and cannot be shared, long before it would finish",
       { timeout: 60_000 },
       () => {
-        const { node, calls } = doubling();
-        // 2^60 calls without the limit; at most 10,000 for each of its two lazy validators.
+        const { node, calls } = doubling(true);
         expect(lazy(() => node)(deep(60)).ok).toBe(false);
         expect(calls()).toBeGreaterThan(0);
-        expect(calls()).toBeLessThanOrEqual(20_000);
-      },
-    );
-
-    it(
-      "should hold a whole validation that fans out to the limits when its root is wrapped in lazy",
-      { timeout: 60_000 },
-      () => {
-        const { node, calls } = doubling();
-        const items = Array.from({ length: 5 }, () => deep(30));
-        expect(lazy(() => array(node))(items).ok).toBe(false);
-        expect(calls()).toBeLessThanOrEqual(20_000);
-      },
-    );
-
-    it(
-      "should hold a whole validation to the limits when its root is not a lazy validator",
-      { timeout: 60_000 },
-      () => {
-        const { node, calls } = doubling();
-        // Each item used to start a count of its own, so the work, and the issues kept, grew with the items.
-        const items = Array.from({ length: 50 }, () => deep(30));
-        expect(array(node)(items).ok).toBe(false);
         expect(calls()).toBeLessThanOrEqual(20_000);
       },
     );
@@ -299,7 +296,8 @@ describe("lazy", () => {
       const linked: Validator<Link> = object({ next: optional(lazy(() => linked, { maxCalls: 3 })) });
       const twice: Validator<unknown> = (input) => {
         const first = linked(input);
-        return first.ok ? linked(input) : first;
+        // A copy, so the second call is new work rather than a result already found.
+        return first.ok ? linked(structuredClone(input)) : first;
       };
       // Inside one validation, the two calls share its count.
       expect(object({ a: twice })({ a: chain(2) }).ok).toBe(false);
