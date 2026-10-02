@@ -1408,6 +1408,34 @@ min?: bigint;
 
 Requires a value of at least this.
 
+### CoerceDateOptions
+
+```ts
+export interface CoerceDateOptions extends DateOptions
+```
+
+Options for [coerceDate](#coercedate): the bounds of `date`, and how to read text without a zone.
+
+#### max
+
+Inherited from [DateOptions](#dateoptions).
+
+#### message
+
+Inherited from [DateOptions](#dateoptions).
+
+#### min
+
+Inherited from [DateOptions](#dateoptions).
+
+#### zoneless
+
+```ts
+zoneless?: "utc";
+```
+
+How to read a date-time written without a zone, such as `2026-09-28T14:30` from an HTML `datetime-local` input. Such text names a time on some clock, not a moment, so without this option it fails: reading it in any one zone would move the moment, without a word, for everyone in another. `"utc"` reads it as UTC, for text you know is written in UTC. A date alone, `2026-09-28`, is always midnight UTC, as JavaScript reads it.
+
 ### DateOptions
 
 ```ts
@@ -2691,18 +2719,18 @@ coerceBoolean()("maybe"); // { ok: false, ... }, code "invalid_type"
 ### coerceDate
 
 ```ts
-export declare const coerceDate: Factory<Date, DateOptions>;
+export declare const coerceDate: Factory<Date, CoerceDateOptions>;
 ```
 
-Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28`, `2026-09-28T14:30` from an HTML `datetime-local` input, or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [date](#date).
+Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [date](#date).
 
-Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM` or `HH:MM:SS` with an optional fraction, and an optional zone: `Z`, or an offset written `+HH`, `+HHMM` or `+HH:MM`. That is wider than `datetime`, which checks one exact spelling. Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`. Fractions of a second beyond milliseconds are cut, not rounded. A date without a time and a date-time without an offset are both read as UTC, so the result never depends on the timezone of the machine. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM` or `HH:MM:SS` with an optional fraction, and an optional zone: `Z`, or an offset written `+HH`, `+HHMM` or `+HH:MM`. That is wider than `datetime`, which checks one exact spelling. Free-form text such as `"yesterday"` or `"09/28/2026"` is rejected, because how it is read depends on the runtime, and so is a date or time that does not exist, such as `2026-02-30` or `25:00:00`. Fractions of a second beyond milliseconds are cut, not rounded. A date without a time is read as midnight UTC. A date-time without a zone, such as `2026-09-28T14:30` from an HTML `datetime-local` input, fails unless `zoneless: "utc"` says to read it as UTC: it names a time on some clock, and reading it in a zone the text does not name would give a moment hours off. Add the user's offset to such a value before converting it. The result never depends on the timezone of the machine. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
 
 **Returns** — A validator that produces a `Date`.
 
 **Throws**
 
-- When `min` or `max` is not a `Date`.
+- When `min` or `max` is not a `Date`, or `zoneless` is given and is not `"utc"`.
 - When `min` or `max` is an invalid `Date`, or `min` is after `max`.
 
 **Example**
@@ -2711,6 +2739,8 @@ Text is read as `YYYY-MM-DD`, alone or followed by `T` or a space, `HH:MM` or `H
 coerceDate()("2026-09-28"); // { ok: true, value: Date 2026-09-28T00:00:00.000Z }
 coerceDate()(0); // { ok: true, value: Date 1970-01-01T00:00:00.000Z }
 coerceDate()("yesterday"); // { ok: false, ... }, code "invalid_type"
+coerceDate()("2026-09-28T14:30"); // { ok: false, ... }: no zone says which 14:30
+coerceDate({ zoneless: "utc" })("2026-09-28T14:30"); // { ok: true, value: Date 2026-09-28T14:30:00.000Z }
 ```
 
 ### coerceNumber
