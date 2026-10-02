@@ -1,3 +1,4 @@
+import { call, composed } from "../core/nesting";
 import { assertFunction, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer } from "../core/types";
 import type { AnyFunction } from "../primitives/func";
@@ -46,6 +47,9 @@ export function optional<TValidator extends AnyValidator>(
 ): Composed<TValidator, Exclude<Infer<TValidator>, undefined>>;
 export function optional(validator: AnyValidator, value?: Fallback<unknown>): AnyValidator {
   assertFunction("validator", validator);
-  return (input) =>
-    input === undefined ? pass(typeof value === "function" ? (value as () => unknown)() : value) : validator(input);
+  return composed((input, place) =>
+    input === undefined
+      ? pass(typeof value === "function" ? (value as () => unknown)() : value)
+      : call(validator, input, place),
+  );
 }

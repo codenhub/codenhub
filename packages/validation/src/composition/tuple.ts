@@ -1,5 +1,6 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { below, call, composed } from "../core/nesting";
 import { isArray } from "../core/objects";
 import { assertFunction, assertList, assertOrder, assertSize, issue, typeIssue } from "../core/result";
 import type {
@@ -103,30 +104,33 @@ export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyVa
     assertOrder("the fixed items", length, "max", max);
   }
 
-  return (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return composed((input, place): Maybe<ValidationResult<unknown>> => {
     if (!isArray(input)) {
-      return reject([typeIssue("array", input)]);
+      return reject([typeIssue("array", input)], place);
     }
     const size = input.length;
     if (max !== undefined && size > max) {
-      return reject([issue("too_big", { maximum: max, type: "array" })]);
+      return reject([issue("too_big", { maximum: max, type: "array" })], place);
     }
     if (size < length || (rest === undefined && size > length)) {
       const isShort = size < length;
-      return reject([
-        issue(isShort ? "too_small" : "too_big", {
-          [isShort ? "minimum" : "maximum"]: length,
-          type: "array",
-          ...(rest === undefined && { exact: true }),
-        }),
-      ]);
+      return reject(
+        [
+          issue(isShort ? "too_small" : "too_big", {
+            [isShort ? "minimum" : "maximum"]: length,
+            type: "array",
+            ...(rest === undefined && { exact: true }),
+          }),
+        ],
+        place,
+      );
     }
     return settle(
       // By index up to the length that was checked, never through the array's own iterator, as in `array`.
       Array.from({ length: size }, (_, index) =>
-        ((index < length ? fixed[index] : rest) as AnyValidator)(input[index]),
+        call((index < length ? fixed[index] : rest) as AnyValidator, input[index], below(place, index)),
       ),
-      accept,
+      (values) => accept(values, place),
     );
-  };
+  });
 }

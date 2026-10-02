@@ -1290,6 +1290,7 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 - **Breaking.** `fallback`'s types accept only a function that returns the fallback when the wrapped validator can produce a function, such as `func()`, so `fallback(func(), () => noop)` and not `fallback(func(), noop)`, which 0.1.0 accepted and which called `noop` with the issues and used what it returned. Behavior is unchanged.
 - `record` reads every value when called, before any key or value validator runs, where 0.1.0 read a value only once its key had passed, so with an asynchronous key a change made to the input meanwhile reached the output unchecked, as `object` did.
 - **Breaking.** `url()` rejects port 0, `https://example.com:0/`, which nothing can connect to and which `port()` rejects, where 0.1.0 accepted it. A `port` validator replaces the rule, as a `host` validator replaces the public-host one.
+- A composer reports an issue deep inside recursive input in time that grows with the input, where 0.1.0 copied the path of every issue at every level, which cost the square of the depth for each: 400 KB of input nested 100 levels deep with 100,000 issues took about eight seconds, and takes about half a second. Paths are unchanged.
 
 ## Removed
 

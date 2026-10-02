@@ -1,5 +1,6 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { below, call, composed } from "../core/nesting";
 import { isArray } from "../core/objects";
 import { assertFunction, typeIssue } from "../core/result";
 import type {
@@ -55,20 +56,20 @@ export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   const [options, reject, accept] = tail<ArrayOptions, unknown[]>(rest);
   assertSizeOptions(options);
 
-  return (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return composed((input, place): Maybe<ValidationResult<unknown>> => {
     if (!isArray(input)) {
-      return reject([typeIssue("array", input)]);
+      return reject([typeIssue("array", input)], place);
     }
     const { length } = input;
     const oversize = sizeIssues(length, "array", options);
     if (oversize.length > 0) {
-      return reject(oversize);
+      return reject(oversize, place);
     }
     return settle(
       // Read by index up to the length that was checked, never through the array's own iterator, which
       // the input can replace to yield other items or never stop.
-      Array.from({ length }, (_, index) => item(input[index])),
-      accept,
+      Array.from({ length }, (_, index) => call(item, input[index], below(place, index))),
+      (values) => accept(values, place),
     );
-  };
+  });
 }

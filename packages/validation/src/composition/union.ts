@@ -1,5 +1,6 @@
 import { chain, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { composed } from "../core/nesting";
 import { assertFunction, assertList, issue } from "../core/result";
 import type {
   AnyValidator,
@@ -55,18 +56,20 @@ export function union(options: readonly AnyValidator[], ...rest: unknown[]): Any
   }
   tried.forEach((option, index) => assertFunction(`options[${index}]`, option));
   const [, reject, accept] = tail<MessageOptions, unknown>(rest);
-  return (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return composed((input, place): Maybe<ValidationResult<unknown>> => {
     const found: (readonly ValidationIssue[])[] = [];
+    // Each option is called on its own, so what it found is relative to the value, as `params.issues`
+    // holds it.
     const attempt = (index: number): Maybe<ValidationResult<unknown>> =>
       index === tried.length
-        ? reject([issue("invalid_union", { issues: found })])
+        ? reject([issue("invalid_union", { issues: found })], place)
         : chain((tried[index] as AnyValidator)(input), (result) => {
             if (result.ok) {
-              return accept(result.value);
+              return accept(result.value, place);
             }
             found.push(result.error.issues);
             return attempt(index + 1);
           });
     return attempt(0);
-  };
+  });
 }

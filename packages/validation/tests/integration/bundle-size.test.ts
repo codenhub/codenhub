@@ -46,14 +46,14 @@ const scenarios: Scenario[] = [
     name: "object of three fields",
     source: `import { email, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });`,
-    budget: 3670,
+    budget: 3920,
   },
   {
     name: "object of three fields with messages",
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 5070,
+    budget: 5330,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 1240 },
   { name: "url", source: `import { url } from "DIST"; export const check = url();`, budget: 3400 },
@@ -76,40 +76,40 @@ export const describe = (input: unknown) => { const result = check(input); retur
   {
     name: "array",
     source: `import { array, string } from "DIST"; export const check = array(string(), { max: 5 });`,
-    budget: 1930,
+    budget: 2170,
   },
   {
     name: "set",
     source: `import { number, set } from "DIST"; export const check = set(number());`,
-    budget: 2330,
+    budget: 2580,
   },
   {
     name: "map",
     source: `import { map, number, string } from "DIST"; export const check = map(string(), number());`,
-    budget: 2720,
+    budget: 2970,
   },
   {
     name: "tuple",
     source: `import { number, tuple } from "DIST"; export const check = tuple([number(), number()]);`,
-    budget: 2240,
+    budget: 2480,
   },
   {
     name: "record",
     source: `import { number, record, string } from "DIST"; export const check = record(string(), number());`,
-    budget: 2710,
+    budget: 2950,
   },
   {
     name: "union",
     source: `import { literal, union } from "DIST"; export const check = union([literal("a"), literal("b")]);`,
-    budget: 1120,
+    budget: 1320,
   },
   {
     name: "tagged",
     source: `import { object, string, tagged } from "DIST";
 export const check = tagged("type", { a: object({ a: string() }), b: object({ b: string() }) });`,
-    budget: 2320,
+    budget: 2570,
   },
-  { name: "json", source: `import { json } from "DIST"; export const check = json();`, budget: 1080 },
+  { name: "json", source: `import { json } from "DIST"; export const check = json();`, budget: 1320 },
   {
     name: "coerceNumber",
     source: `import { coerceNumber } from "DIST"; export const check = coerceNumber({ int: true });`,
@@ -149,7 +149,7 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 14790,
+    budget: 15130,
   },
 ];
 

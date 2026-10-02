@@ -1,4 +1,5 @@
 import { chain, type Maybe } from "../core/async";
+import { call, composed } from "../core/nesting";
 import { assertFunction, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
 
@@ -36,10 +37,12 @@ export function pipe<const TValidators extends readonly [AnyValidator, ...AnyVal
     throw new TypeError("pipe() needs at least one validator");
   }
   validators.forEach((validator, index) => assertFunction(`validators[${index}]`, validator));
-  const validate = (input: unknown): Maybe<ValidationResult<unknown>> =>
-    validators.reduce<Maybe<ValidationResult<unknown>>>(
-      (previous, next) => chain(previous, (result) => (result.ok ? next(result.value) : result)),
-      pass(input),
-    );
+  const validate = composed(
+    (input, place): Maybe<ValidationResult<unknown>> =>
+      validators.reduce<Maybe<ValidationResult<unknown>>>(
+        (previous, next) => chain(previous, (result) => (result.ok ? call(next, result.value, place) : result)),
+        pass(input),
+      ),
+  );
   return validate as unknown as Composed<TValidators[number], Output<TValidators>>;
 }

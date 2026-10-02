@@ -1,5 +1,6 @@
 import { chain } from "../core/async";
 import { tail } from "../core/checks";
+import { call, composed } from "../core/nesting";
 import { assertFunction, assertOption, issue } from "../core/result";
 import type {
   AnyValidator,
@@ -132,7 +133,7 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
   assertLimit("maxDepth", maxDepth);
   assertLimit("maxCalls", maxCalls);
   let resolved: AnyValidator | undefined;
-  return (input: unknown) => {
+  return composed((input, place) => {
     if (openDepth === 0) {
       runCalls = 1;
       runLimit = maxCalls;
@@ -140,10 +141,10 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
       runCalls += 1;
     }
     if (runCalls > runLimit) {
-      return reject([issue("too_big", { maximum: runLimit, type: "calls" })]);
+      return reject([issue("too_big", { maximum: runLimit, type: "calls" })], place);
     }
     if (openDepth >= maxDepth) {
-      return reject([issue("too_big", { maximum: maxDepth, type: "depth" })]);
+      return reject([issue("too_big", { maximum: maxDepth, type: "depth" })], place);
     }
     openDepth += 1;
     try {
@@ -154,9 +155,11 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
         }
         resolved = found as AnyValidator;
       }
-      return chain(resolved(input), (result: ValidationResult<unknown>) => (result.ok ? accept(result.value) : result));
+      return chain(call(resolved, input, place), (result: ValidationResult<unknown>) =>
+        result.ok ? accept(result.value, place) : result,
+      );
     } finally {
       openDepth -= 1;
     }
-  };
+  });
 }

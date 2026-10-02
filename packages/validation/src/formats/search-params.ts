@@ -1,5 +1,6 @@
 import { chain, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { call, composed } from "../core/nesting";
 import { queryOf } from "../core/objects";
 import { assertFunction, assertOption, typeIssue } from "../core/result";
 import type {
@@ -62,16 +63,18 @@ export function searchParams(validator: AnyValidator, ...rest: unknown[]): AnyVa
   assertFunction("validator", validator);
   const [{ repeated = false }, reject, accept] = tail<SearchParamsOptions, unknown>(rest);
   assertOption("repeated", repeated, "boolean");
-  return (input: unknown): Maybe<ValidationResult<unknown>> => {
+  return composed((input, place): Maybe<ValidationResult<unknown>> => {
     // A `URLSearchParams` is read as its text, so one from another realm is read as one from this.
     const query = typeof input === "string" ? input : queryOf(input);
     if (query === undefined) {
-      return reject([typeIssue("query string", input)]);
+      return reject([typeIssue("query string", input)], place);
     }
     const { value, issues } = readQuery(new URLSearchParams(query), repeated);
     if (issues.length > 0) {
-      return reject(issues);
+      return reject(issues, place);
     }
-    return chain(validator(value), (result: ValidationResult<unknown>) => (result.ok ? accept(result.value) : result));
-  };
+    return chain(call(validator, value, place), (result: ValidationResult<unknown>) =>
+      result.ok ? accept(result.value, place) : result,
+    );
+  });
 }
