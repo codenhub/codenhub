@@ -62,9 +62,34 @@ export interface IpOptions extends MessageOptions {
 }
 
 /**
+ * An IPv4-mapped address (`::ffff:0:0/96`, RFC 4291) or one under the NAT64 well-known prefix
+ * (`64:ff9b::/96`, RFC 6052) as the URL parser writes it, capturing its last two groups. The parser
+ * always shortens the zeros of the prefix, so a mapped address is `::ffff:` and two groups, and a NAT64
+ * one `64:ff9b::` and up to two, since a zero high group joins the run.
+ */
+const EMBEDDED_PATTERN = /^(::ffff:(?=[^:]+:[^:]+$)|64:ff9b::)(?:([\da-f]+):)?([\da-f]*)$/;
+
+/**
+ * Writes an IPv6 address in the canonical spelling the URL parser gives, with the last two groups as a
+ * dotted IPv4 address when it is IPv4-mapped or under the NAT64 well-known prefix, as RFC 5952 section 5
+ * recommends. Every other address, the deprecated IPv4-compatible `::/96` included, which holds `::1`,
+ * keeps its hex groups.
+ */
+export function toCanonicalIpv6(canonical: string): string {
+  const match = EMBEDDED_PATTERN.exec(canonical);
+  if (match === null) {
+    return canonical;
+  }
+  const [, prefix, high = "0", low] = match;
+  const word = Number.parseInt(high, 16) * 0x1_00_00 + Number.parseInt(low || "0", 16);
+  return `${prefix}${[24, 16, 8, 0].map((shift) => (word >>> shift) & 0xff).join(".")}`;
+}
+
+/**
  * The canonical spelling of an IP address the family allows, or undefined when the text is not one:
  * an IPv4 address as written, which has one spelling, and an IPv6 address as the URL parser writes it,
- * lowercase with the longest run of zero groups shortened (RFC 5952), and its zone as written.
+ * lowercase with the longest run of zero groups shortened (RFC 5952), its IPv4 part dotted when it is
+ * IPv4-mapped or NAT64, and its zone as written.
  */
 export function toIpAddress(text: string, version: "v4" | "v6" | undefined): string | undefined {
   if (version !== "v6" && IPV4_PATTERN.test(text)) {
@@ -76,7 +101,7 @@ export function toIpAddress(text: string, version: "v4" | "v6" | undefined): str
   const zoneStart = text.indexOf("%");
   const address = zoneStart === -1 ? text : text.slice(0, zoneStart);
   const zone = zoneStart === -1 ? "" : text.slice(zoneStart);
-  return `${new URL(`http://[${address}]`).hostname.slice(1, -1)}${zone}`;
+  return `${toCanonicalIpv6(new URL(`http://[${address}]`).hostname.slice(1, -1))}${zone}`;
 }
 
 /**
@@ -85,8 +110,10 @@ export function toIpAddress(text: string, version: "v4" | "v6" | undefined): str
  * the longest run of zero groups shortened to `::`, as RFC 5952 and the URL parser write it.
  *
  * @remarks
- * An IPv6 address that embeds an IPv4 one, such as `::ffff:192.0.2.1`, is written in hex groups,
- * `::ffff:c000:201`, as the URL parser writes it.
+ * An IPv4-mapped address (`::ffff:0:0/96`) or one under the NAT64 well-known prefix (`64:ff9b::/96`) is
+ * written with its IPv4 part dotted, as RFC 5952 section 5 recommends, so `::ffff:c000:201` produces
+ * `::ffff:192.0.2.1`. Every other IPv6 address is written in hex groups, the deprecated IPv4-compatible
+ * ones such as `::1.2.3.4` included, which produce `::102:304`, since that range also holds `::1`.
  *
  * @example
  * ```ts

@@ -2119,7 +2119,7 @@ Options for [url](#url).
 host?: AnyValidator;
 ```
 
-Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets. For a scheme the parser has no rules for, such as `ssh`, it reads a name as written, and the host is that name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part` `"host"`.
+Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets, spelled as `ip()` spells it, which the URL produced follows too. For a scheme the parser has no rules for, such as `ssh`, it reads a name as written, and the host is that name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part` `"host"`.
 
 #### message
 
@@ -2925,7 +2925,7 @@ export declare const ip: Factory<string, IpOptions>;
 
 Creates a validator for IPv4 and IPv6 addresses. The value is the canonical spelling, so one address is one value however it was written: an IPv4 address as written, and an IPv6 address lowercase with the longest run of zero groups shortened to `::`, as RFC 5952 and the URL parser write it.
 
-An IPv6 address that embeds an IPv4 one, such as `::ffff:192.0.2.1`, is written in hex groups, `::ffff:c000:201`, as the URL parser writes it.
+An IPv4-mapped address (`::ffff:0:0/96`) or one under the NAT64 well-known prefix (`64:ff9b::/96`) is written with its IPv4 part dotted, as RFC 5952 section 5 recommends, so `::ffff:c000:201` produces `::ffff:192.0.2.1`. Every other IPv6 address is written in hex groups, the deprecated IPv4-compatible ones such as `::1.2.3.4` included, which produce `::102:304`, since that range also holds `::1`.
 
 **Throws** — When `version` is given and is not `"v4"` or `"v6"`.
 
