@@ -53,6 +53,41 @@ describe("url parts", () => {
     ]);
   });
 
+  it("should give the credentials as the parser writes them, or undefined when the URL names none", () => {
+    const seen: unknown[] = [];
+    const spy = url({
+      protocols: ["postgres", "https"],
+      host: hostname(),
+      credentials: unknown(check((found) => (seen.push(found), true))),
+    });
+    expect(valueOf(spy("postgres://app:p%40ss@db.example.com:5432/main"))).toBe(
+      "postgres://app:p%40ss@db.example.com:5432/main",
+    );
+    spy("https://app@example.com/");
+    spy("https://example.com/");
+    expect(seen).toEqual([{ username: "app", password: "p%40ss" }, { username: "app", password: "" }, undefined]);
+  });
+
+  it("should report a credentials validator's failure as the URL's, with part credentials", () => {
+    const database = url({ credentials: object({ username: literal("app"), password: string({ min: 1 }) }) });
+    expect(accepts(database, "https://app:secret@example.com/", "https://example.com/")).toEqual([true, false]);
+    expect(issuesOf(database("https://other:secret@example.com/"))).toEqual([
+      {
+        code: "invalid_format",
+        path: [],
+        params: {
+          format: "url",
+          part: "credentials",
+          issues: [{ code: "invalid_value", path: ["username"], params: { expected: "app" } }],
+        },
+      },
+    ]);
+  });
+
+  it("should still refuse credentials in a URL without a host, whose own rules apply, with a credentials validator", () => {
+    expect(url({ protocols: ["mailto"], credentials: unknown() })("mailto://app:secret@example.com").ok).toBe(false);
+  });
+
   it("should give the path as the parser writes it", () => {
     const api = url({ path: string(startsWith("/api/")) });
     expect(

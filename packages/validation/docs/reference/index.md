@@ -1295,11 +1295,11 @@ export declare function url(...checks: AsyncCheck<string>[]): AsyncValidator<str
 export declare function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 ```
 
-Creates a validator for absolute URLs with an allowed protocol and a public domain name, and without embedded credentials. The value is the URL as the URL parser writes it, which is what a request made with it will use.
+Creates a validator for absolute URLs with an allowed protocol and a public domain name, and without embedded credentials unless a `credentials` validator accepts them. The value is the URL as the URL parser writes it, which is what a request made with it will use.
 
 The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters, not counting the final dot of an absolute host such as `example.com.`, which is accepted and kept, is rejected.
 
-The `host`, `port`, `path` and `query` options check those parts with validators of your own, which only decide: the value is still the whole URL, and one that is asynchronous makes the validator asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules. A part that fails is one `invalid_format` issue at the URL's own place, `{ format: "url", part, issues }`, so a form shows it beside the field, and the `message` option words it as every other issue of the URL.
+The `credentials`, `host`, `port`, `path` and `query` options check those parts with validators of your own, which only decide: the value is still the whole URL, and one that is asynchronous makes the validator asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules. A part that fails is one `invalid_format` issue at the URL's own place, `{ format: "url", part, issues }`, so a form shows it beside the field, and the `message` option words it as every other issue of the URL.
 
 **Returns** — A validator that produces the URL as the parser writes it.
 
@@ -2141,6 +2141,14 @@ export interface UrlOptions extends MessageOptions
 ```
 
 Options for [url](#url).
+
+#### credentials
+
+```ts
+credentials?: AnyValidator;
+```
+
+Validates the credentials, a user and a password written before the host, as in `postgres://app:secret@db.example.com`, which are rejected without it. It receives `{ username, password }` as the parser writes them, percent-encoded, with `password` empty when only a user is written, or `undefined` when the URL names neither, so `credentials: optional(object({ username: string(), password: string() }))` accepts a URL with or without them. The URL produced keeps them. A URL without a host, `mailto`, `tel` or `urn`, never takes credentials. Its failure is reported as the URL's, with `params.part` `"credentials"`.
 
 #### host
 
