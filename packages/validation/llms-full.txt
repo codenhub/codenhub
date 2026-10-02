@@ -577,7 +577,7 @@ if (!result.ok) {
 }
 ```
 
-The English wording is a separate value you import, and `formatIssue` does not carry it. A program that words its own issues, or never shows one, does not bundle it, which is about 1 kB gzipped. It also means `formatIssue(issue)` with no map says only "Invalid value", so pass a map wherever you show text.
+The English wording is a separate value you import, and `formatIssue` does not carry it. A program that words its own issues, or never shows one, does not bundle it, which is about 1 kB gzipped. The map is required, so forgetting it is a compile error, and a `TypeError` in JavaScript, rather than a form that says "Invalid value" for everything. A program whose issues all carry their own `message` passes `{}`.
 
 The text comes from the first of these that exists:
 
@@ -623,7 +623,7 @@ if (!result.ok) {
 }
 ```
 
-It takes the same message map as `formatIssue`, and without one every message is "Invalid value". Field keys use the notation of `formatPath`. `fieldErrors` has no prototype, so a field named `constructor` or `toString` cannot be mistaken for an inherited member and `fieldErrors["toString"]` is `undefined` when there is no such field. The price is that it has no methods: ask with `"name" in fieldErrors` or `Object.hasOwn(fieldErrors, "name")`, not `fieldErrors.hasOwnProperty("name")`.
+It takes the same message map as `formatIssue`, which it requires too. Field keys use the notation of `formatPath`. `fieldErrors` has no prototype, so a field named `constructor` or `toString` cannot be mistaken for an inherited member and `fieldErrors["toString"]` is `undefined` when there is no such field. The price is that it has no methods: ask with `"name" in fieldErrors` or `Object.hasOwn(fieldErrors, "name")`, not `fieldErrors.hasOwnProperty("name")`.
 
 ## Reading the result
 
@@ -1294,6 +1294,7 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 - `record` reads every value when called, before any key or value validator runs, where 0.1.0 read a value only once its key had passed, so with an asynchronous key a change made to the input meanwhile reached the output unchecked, as `object` did.
 - **Breaking.** `url()` rejects port 0, `https://example.com:0/`, which nothing can connect to and which `port()` rejects, where 0.1.0 accepted it. A `port` validator replaces the rule, as a `host` validator replaces the public-host one.
 - A composer reports an issue deep inside recursive input in time that grows with the input, where 0.1.0 copied the path of every issue at every level, which cost the square of the depth for each: 400 KB of input nested 100 levels deep with 100,000 issues took about eight seconds, and takes about half a second. Paths are unchanged.
+- **Breaking.** `formatIssue(issue, messages)` and `flatten(failure, messages)` require a message map, and throw a `TypeError` without one, where 0.1.0 worded every issue "Invalid value" when it was left out, which a form showed without a word. Pass `englishMessages`, a map of your own, or `{}` when every issue carries its own `message`.
 
 ## Removed
 
@@ -1322,6 +1323,7 @@ Everything not listed carries over unchanged.
 | `refine(object(shape, options), test, issue)`               | `object(shape, options, check(test, issue))`                                    |
 | `withDefault(validator, value)`                             | `optional(validator, value)`                                                    |
 | `nativeEnum(Enum)`                                          | `oneOf(Enum)`                                                                   |
+| `formatIssue(issue)`, `flatten(failure)`                    | `formatIssue(issue, englishMessages)`, `flatten(failure, englishMessages)`      |
 | `discriminatedUnion(key, variants)`                         | `tagged(key, variants)`                                                         |
 | `url({ allowLocal: true })`                                 | `url({ host: hostname() })`, or `url({ host: unknown() })` for IP addresses too |
 | `refine(unknown(), (value) => typeof value === "function")` | `func()`                                                                        |

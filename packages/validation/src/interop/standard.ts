@@ -1,7 +1,7 @@
 import { isThenable } from "../core/async";
-import { assertFunction, describeType } from "../core/result";
+import { assertFunction } from "../core/result";
 import type { AnyValidator, Infer, ValidationResult } from "../core/types";
-import { formatIssue, type Messages } from "../messages/format-issue";
+import { assertMessages, formatIssue, type Messages } from "../messages/format-issue";
 import type { StandardSchemaV1 } from "./standard-schema";
 
 /**
@@ -37,10 +37,7 @@ export function standard<TValidator extends AnyValidator>(
   messages: Messages,
 ): TValidator & StandardSchemaV1<unknown, Infer<TValidator>> {
   assertFunction("validator", validator);
-  if (typeof messages !== "object" || messages === null || Array.isArray(messages)) {
-    // Without a map every issue would be worded "Invalid value", silently.
-    throw new TypeError(`messages must be a message map, such as englishMessages, received ${describeType(messages)}`);
-  }
+  assertMessages(messages);
   const wrapped = (input: unknown) => validator(input);
   type Output = Infer<TValidator>;
   const toStandard = (result: ValidationResult<Output>): StandardSchemaV1.Result<Output> =>

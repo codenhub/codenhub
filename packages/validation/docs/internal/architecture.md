@@ -170,7 +170,7 @@ An issue is `{ code, path, params?, message? }` and nothing else.
 
 ### Messages are on demand, and the English is separate
 
-Text is not built when an issue is created. `formatIssue(issue, messages?)` builds it from a message map, taking the first of: the issue's own `message`, an entry for its `code` in the map, then the generic "Invalid value". `flatten` groups formatted messages by path for forms.
+Text is not built when an issue is created. `formatIssue(issue, messages)` builds it from a message map, which it requires, as `flatten` and `standard` do, because a forgotten map would word every issue "Invalid value" without a word, taking the first of: the issue's own `message`, an entry for its `code` in the map, then the generic "Invalid value". `flatten` groups formatted messages by path for forms.
 
 The built-in English wording is not inside `formatIssue`. It is `englishMessages`, a map in its own module that a consumer imports and passes in. That is what keeps a program that words its own issues from bundling about 1 kB gzipped of English it never shows, and it makes rewording and localization the same operation: spread `englishMessages` and override some codes, or write a whole map. It also means a bare `formatIssue(issue)` is deliberately unhelpful, so `standard`, which the specification obliges to produce text, takes the map as a required argument instead of falling back silently.
 

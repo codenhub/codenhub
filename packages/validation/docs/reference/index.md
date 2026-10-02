@@ -179,7 +179,7 @@ pageSize("lots"); // { ok: true, value: 20 }
 ### flatten
 
 ```ts
-export declare function flatten(failure: ValidationFailure, messages?: Messages): FlattenedErrors;
+export declare function flatten(failure: ValidationFailure, messages: Messages): FlattenedErrors;
 ```
 
 Groups the messages of a failure for display: issues at the root go to `formErrors`, the rest are keyed by their [formatPath](#formatpath) notation in `fieldErrors`, an object with no prototype so that a field named like an `Object.prototype` member cannot collide with it. Test for a field with `in` or `Object.hasOwn`, since it has no `hasOwnProperty`.
@@ -190,6 +190,8 @@ Groups the messages of a failure for display: issues at the root go to `formErro
 - `messages` — Text for the codes it names, as for [formatIssue](#formatissue).
 
 **Returns** — The grouped messages.
+
+**Throws** — When `messages` is not a message map, such as when it was left out.
 
 ### format
 
@@ -221,19 +223,21 @@ slug({ message: "Use lowercase words and hyphens" })("Hello World"); // { ok: fa
 ### formatIssue
 
 ```ts
-export declare function formatIssue(issue: ValidationIssue, messages?: Messages): string;
+export declare function formatIssue(issue: ValidationIssue, messages: Messages): string;
 ```
 
 Turns an issue into text a person can read.
 
-The text comes from the first of these that exists: the issue's own `message`, an entry for its `code` in `messages`, then the generic "Invalid value". The built-in English wording is not carried here, so a program that words its own issues does not bundle it: pass `englishMessages` for it, or a map of your own, or both spread together.
+The text comes from the first of these that exists: the issue's own `message`, an entry for its `code` in `messages`, then the generic "Invalid value". The built-in English wording is not carried here, so a program that words its own issues does not bundle it: pass `englishMessages` for it, or a map of your own, or both spread together. The map is required, so leaving it out is a compile error and not a form that says "Invalid value" for everything; a program whose issues all carry their own `message` passes `{}`.
 
 **Parameters**
 
 - `issue` — The issue to describe.
-- `messages` — Text for the codes it names, such as `englishMessages`.
+- `messages` — Text for the codes it names, such as `englishMessages`, or `{}` for none.
 
 **Returns** — The message.
+
+**Throws** — When `messages` is not a message map, such as when it was left out.
 
 **Example**
 

@@ -45,6 +45,17 @@ export function formatPath(path: readonly ValidationPathSegment[]): string {
   return formatted;
 }
 
+/**
+ * Rejects a message map that is not an object, such as one left out, which would word every issue
+ * "Invalid value" without a word, since it is a mistake in the program and not in the input.
+ */
+export function assertMessages(messages: unknown): void {
+  if (typeof messages !== "object" || messages === null || Array.isArray(messages)) {
+    const received = messages === null ? "null" : Array.isArray(messages) ? "array" : typeof messages;
+    throw new TypeError(`messages must be a message map, such as englishMessages, received ${received}`);
+  }
+}
+
 /** What {@link formatIssue} says when nothing supplies text for an issue. */
 const FALLBACK_MESSAGE = "Invalid value";
 
@@ -55,7 +66,9 @@ const FALLBACK_MESSAGE = "Invalid value";
  * The text comes from the first of these that exists: the issue's own `message`, an entry for its
  * `code` in `messages`, then the generic "Invalid value". The built-in English wording is not carried
  * here, so a program that words its own issues does not bundle it: pass `englishMessages` for it, or a
- * map of your own, or both spread together.
+ * map of your own, or both spread together. The map is required, so leaving it out is a compile error
+ * and not a form that says "Invalid value" for everything; a program whose issues all carry their own
+ * `message` passes `{}`.
  *
  * @example
  * ```ts
@@ -66,18 +79,20 @@ const FALLBACK_MESSAGE = "Invalid value";
  * ```
  *
  * @param issue - The issue to describe.
- * @param messages - Text for the codes it names, such as `englishMessages`.
+ * @param messages - Text for the codes it names, such as `englishMessages`, or `{}` for none.
  * @returns The message.
+ * @throws {TypeError} When `messages` is not a message map, such as when it was left out.
  */
-export function formatIssue(issue: ValidationIssue, messages?: Messages): string {
+export function formatIssue(issue: ValidationIssue, messages: Messages): string {
+  assertMessages(messages);
   if (issue.message !== undefined) {
     return issue.message;
   }
-  const custom = messages !== undefined && Object.hasOwn(messages, issue.code) ? messages[issue.code] : undefined;
+  const custom = Object.hasOwn(messages, issue.code) ? messages[issue.code] : undefined;
   if (custom === undefined) {
     return FALLBACK_MESSAGE;
   }
-  return typeof custom === "function" ? custom(issue, messages as Messages) : custom;
+  return typeof custom === "function" ? custom(issue, messages) : custom;
 }
 
 /** Issue messages grouped for display next to form fields. */
@@ -97,8 +112,10 @@ export interface FlattenedErrors {
  * @param failure - The `error` of a failed result.
  * @param messages - Text for the codes it names, as for {@link formatIssue}.
  * @returns The grouped messages.
+ * @throws {TypeError} When `messages` is not a message map, such as when it was left out.
  */
-export function flatten(failure: ValidationFailure, messages?: Messages): FlattenedErrors {
+export function flatten(failure: ValidationFailure, messages: Messages): FlattenedErrors {
+  assertMessages(messages);
   // No prototype, so a field named like an Object.prototype member cannot collide with it.
   const fieldErrors = Object.create(null) as Record<string, string[]>;
   const flattened: FlattenedErrors = { formErrors: [], fieldErrors };
