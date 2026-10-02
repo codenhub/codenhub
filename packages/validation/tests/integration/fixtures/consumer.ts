@@ -186,6 +186,24 @@ export const badUsers = array(
   // @ts-expect-error the item has no `name`
   unique((user) => user.name),
 );
+// Without `by`, items are compared as a `Set` compares them, so only primitives can repeat.
+export const uniqueWords = array(string(), unique(undefined, "No repeats"));
+export const uniqueFlags = array(nullable(boolean()), unique());
+export const objectsWithoutKey = array(
+  object({ id: number() }),
+  // @ts-expect-error every validated object is new, so an object needs `by`
+  unique(),
+);
+export const datesWithoutKey = array(
+  date(),
+  // @ts-expect-error two Dates of one moment are two objects, so a Date needs `by`
+  unique(),
+);
+export const listsWithoutKey = array(
+  array(string()),
+  // @ts-expect-error every validated list is new, so a list needs `by`
+  unique(),
+);
 export const point = tuple([number(), number()]);
 export const pointValue: Infer<typeof point> = [1, 2];
 // @ts-expect-error a tuple has a fixed length

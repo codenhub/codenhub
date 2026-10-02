@@ -1237,12 +1237,13 @@ id(true); // { ok: false, ... }, code "invalid_union"
 ### unique
 
 ```ts
-export declare function unique<T>(by?: (item: T) => unknown, message?: Message): Check<readonly T[]>;
+export declare function unique<T extends LiteralValue>(by?: undefined, message?: Message): Check<readonly T[]>;
+export declare function unique<T>(by: (item: T) => unknown, message?: Message): Check<readonly T[]>;
 ```
 
 Requires the items of an array to be distinct, reporting each repeat at its own index with `invalid_value` and `params` `{ unique: true }`.
 
-Without `by` it compares the validated items themselves; with it, the value `by` returns for each, so `unique((user) => user.id)` makes ids unique. Comparison is SameValueZero, as for a `Set`.
+Without `by` it compares the validated items themselves; with it, the value `by` returns for each, so `unique((user) => user.id)` makes ids unique. Comparison is SameValueZero, as for a `Set`, so two objects are equal only when they are the same object. Every object or list a validator produces is new, and two `Date`s of one moment are two objects, so `unique()` without `by` would never find a repeat among them: the types accept it only for an array of primitives, and an array of objects, lists or dates needs `by`, such as `unique((user) => user.id)` or `unique((day) => day.getTime())`.
 
 **Parameters**
 
@@ -1251,7 +1252,7 @@ Without `by` it compares the validated items themselves; with it, the value `by`
 
 **Type parameters**
 
-- `T` — The type of an item.
+- `T` — The type of an item, a primitive when `by` is omitted.
 
 **Returns** — A check of arrays.
 

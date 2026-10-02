@@ -324,7 +324,7 @@ The size options `min`, `max` and `length` are non-negative integers. Each throw
 
 `array(item, options?, ...checks)` accepts arrays whose every item passes `item` and produces a new array of what it produced. It takes `min`, `max` and `length`. A sparse array's holes are validated as `undefined`.
 
-The `unique(by?, message?)` check rejects repeats, comparing the validated items the way a `Set` does, or the key `by` returns for each, so `unique((user) => user.id)` makes ids unique. Each repeat is reported at its own index as `invalid_value` with `{ unique: true }`, and the first occurrence is kept. Like every check, it runs only once every item is valid.
+The `unique(by?, message?)` check rejects repeats, comparing the validated items the way a `Set` does, or the key `by` returns for each, so `unique((user) => user.id)` makes ids unique. Each repeat is reported at its own index as `invalid_value` with `{ unique: true }`, and the first occurrence is kept. Like every check, it runs only once every item is valid. A `Set` finds two objects equal only when they are the same object, and every object or list a validator produces is new, as two `Date`s of one moment are two objects, so `unique()` without `by` would never find a repeat among them. Its types accept it only for an array of primitives; an array of objects, lists or dates needs `by`, such as `unique((user) => user.id)` or `unique((day) => day.getTime())`.
 
 ```ts
 import { array, string, unique } from "@codenhub/validation";

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { unique } from "../checks/unique";
+import type { Check } from "../core/types";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { accepts, codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
@@ -107,7 +108,11 @@ describe("array", () => {
       );
       expect(users([{ id: 1 }, { id: 2 }]).ok).toBe(true);
       expect(users([{ id: 1 }, { id: 1 }]).ok).toBe(false);
-      expect(array(object({ id: number() }), unique())([{ id: 1 }, { id: 1 }]).ok).toBe(true);
+    });
+
+    it("should compare objects as themselves without a key, which the types forbid since each is new", () => {
+      const byIdentity = unique() as unknown as Check<readonly unknown[]>;
+      expect(array(object({ id: number() }), byIdentity)([{ id: 1 }, { id: 1 }]).ok).toBe(true);
     });
 
     it("should compare validated items, so clean-up is applied first", () => {
