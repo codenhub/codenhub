@@ -554,7 +554,7 @@ An issue that carries a message is worded by it first, before any message map, s
 
 ### `is`
 
-`is(validator, input)` returns whether `input` passes, and narrows it to the validator's output type. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise. The narrowing is exact for a validator that does not change the value; for one that trims, clamps or transforms, read `result.value` from calling the validator.
+`is(validator, input)` returns whether `input` passes, as a `boolean`. It does not narrow the type of `input`: a validator that trims, coerces or transforms produces another value than it was given, such as a number from the text `"5"`, so the input is not of the type the validator produces. Read `result.value` from calling the validator for that, or, where the validator keeps the value as it is, write the guard yourself: `(input: unknown): input is number => is(number(), input)`. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise.
 
 ### `pass` and `fail`
 

@@ -119,8 +119,11 @@ export const checkedLater: AsyncValidator<string[]> = array(
   check(async (list) => list.length > 0),
 );
 
-// Guards accept only synchronous validators.
+// is() accepts only synchronous validators, and answers whether the input passes without narrowing it,
+// since a validator may produce another value than it was given.
 export const raw: unknown = "text";
+export const passes: boolean = is(string(), raw);
+// @ts-expect-error is() does not narrow its input
 export const narrowed: string = is(string(), raw) ? raw : "";
 // @ts-expect-error a validator that may finish later cannot be used as a synchronous guard
 export const badGuard = is(username, raw);

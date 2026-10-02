@@ -1231,7 +1231,7 @@ An issue that carries a message is worded by it first, before any message map, s
 
 ### `is`
 
-`is(validator, input)` returns whether `input` passes, and narrows it to the validator's output type. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise. The narrowing is exact for a validator that does not change the value; for one that trims, clamps or transforms, read `result.value` from calling the validator.
+`is(validator, input)` returns whether `input` passes, as a `boolean`. It does not narrow the type of `input`: a validator that trims, coerces or transforms produces another value than it was given, such as a number from the text `"5"`, so the input is not of the type the validator produces. Read `result.value` from calling the validator for that, or, where the validator keeps the value as it is, write the guard yourself: `(input: unknown): input is number => is(number(), input)`. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise.
 
 ### `pass` and `fail`
 
@@ -1276,6 +1276,7 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 - **Breaking.** `email()` and `url()` reject a domain whose top-level label is longer than 63 characters, which no domain name can have, where 0.1.0 accepted it, as `hostname()` already rejected it.
 - **Breaking.** `url()` produces the host of a listed scheme the URL parser has no rules for, such as `ssh` or `postgres`, in lowercase with its escapes in uppercase, and gives it so to a `host` validator, where 0.1.0 produced it as written, so two spellings of one URL were two values.
 - **Breaking.** `tagged` throws a `TypeError` when its key is not text, its variants are not a plain object or it has no variant, `standard` when its message map is not an object, `union` when its options and `tuple` when its items are not a list, and `tuple` when it has no item, where 0.1.0 named the property `"undefined"`, took a list's indexes for tags, rejected every value, worded every issue "Invalid value", threw that the value is not iterable, or made a `tuple` that accepts only the empty list. The types already forbade each.
+- **Breaking.** `is(validator, input)` returns a `boolean` and no longer narrows the type of `input`, where 0.1.0 typed it `input is T`. The narrowing was false for every validator that produces another value than it was given: `is(coerceNumber(), "5")` typed the text as a number, and `is(json(schema), text)` a string as an object. Read `result.value` from calling the validator, or write the guard yourself where the validator keeps the value: `(input: unknown): input is number => is(number(), input)`.
 - `intersection` merges `0` and `-0` as `0`, where 0.1.0 reported them as `invalid_intersection`.
 - **Breaking.** `multipleOf` reads a whole number beyond `Number.MAX_SAFE_INTEGER` as it is written, as it reads a fraction, where 0.1.0 compared the double it is held as. So `1e23` is a multiple of `10`, which 0.1.0 rejected, since the double is `99999999999999991611392`, and `2 ** 60`, written `1152921504606847000`, is not one of `1024`, which 0.1.0 accepted.
 - **Breaking.** `base64()` rejects the empty string, as `hex()` does, where 0.1.0 accepted it as the encoding of no bytes.
