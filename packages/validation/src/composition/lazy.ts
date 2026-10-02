@@ -34,13 +34,13 @@ export interface LazyOptions extends MessageOptions {
    * validation reaches holds the whole of it, so set it on the outermost one. Recursive data with more
    * nodes than this in one validation needs it raised.
    *
-   * @defaultValue 100000
+   * @defaultValue 10000
    */
   maxCalls?: number;
 }
 
 const DEFAULT_MAX_DEPTH = 128;
-const DEFAULT_MAX_CALLS = 100_000;
+const DEFAULT_MAX_CALLS = 10_000;
 
 /** Rejects a limit that is not a positive integer, since it is a mistake in the schema and not in the input. */
 function assertLimit(name: string, value: number): void {
@@ -82,9 +82,10 @@ let openDepth = 0;
  * before it returns, whatever validator its root is, so the items of an `array` share one count. Unlike
  * `maxDepth`, the limit is read from the first `lazy` the validation reaches, and holds the whole of it.
  * Like `maxDepth`, it counts one synchronous run: what runs after an await counts afresh. The issues of
- * the options that failed are kept, so at the default a validation stopped by the limit can hold about
- * 100 MB of them: lower `maxCalls` for untrusted input whose data is small. For recursive objects told
- * apart by a property, `tagged` reads that property first and does no such work.
+ * the options that failed are kept, about 1 KB per call, so the default holds a validation stopped by the
+ * limit to about 10 MB and a few tens of milliseconds. Raise it for trusted recursive data with more nodes
+ * than that in one validation. For recursive objects told apart by a property, `tagged` reads that
+ * property first and does no such work.
  *
  * @example
  * ```ts
