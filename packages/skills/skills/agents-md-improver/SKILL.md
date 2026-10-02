@@ -58,12 +58,12 @@ Report before changing anything. Number every item so the user can approve by nu
 
 ```markdown
 **Files:** `AGENTS.md`, `packages/api/AGENTS.md`, `CLAUDE.md` (imports `AGENTS.md`).
-**Summary:** 3 cut, 1 move, 1 fix, 1 reword, 1 addition. Net: −15 lines.
+**Summary:** 2 cut, 1 point, 1 fix, 1 reword, 1 addition. Net: −12 lines.
 
 ### AGENTS.md
 
 1. `cut` L12 "Write clean, readable code.": generic; no agent does anything differently because of it.
-2. `move` L20–31, the command table: `CONTRIBUTING.md` already documents these commands. Replace with "Commands and workflow: `CONTRIBUTING.md`."
+2. `point` L20–31, the command table: `CONTRIBUTING.md` already documents these commands. Replace with "Commands and workflow: `CONTRIBUTING.md`."
 3. `fix` L40 "`npm run e2e`": no such script in `package.json`; the browser tests run with `pnpm test:browser`.
 4. `add` "Ask before adding or changing a public export." Evidence: in three of the last ten pull requests, an agent added an export that review then removed.
 
@@ -73,7 +73,7 @@ Report before changing anything. Number every item so the user can approve by nu
 
 ### Conflicts
 
-- `AGENTS.md` L8 allows committing typo fixes to `main`; `CONTRIBUTING.md` forbids any commit to `main`. The contributor guide owns the workflow, so cut L8.
+6. `cut` `AGENTS.md` L8 allows committing typo fixes to `main`; `CONTRIBUTING.md` forbids any commit to `main`. The contributor guide owns the workflow.
 ```
 
 ## Apply
