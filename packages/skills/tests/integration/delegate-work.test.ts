@@ -924,6 +924,809 @@ describe("delegate-work", () => {
     expect(r.batch.map((t: { isolation: string }) => t.isolation)).toEqual(["worktree", "inplace"]);
   });
 
+  it("shouldRunAModelTheConfigDoesntListOnlyOnTheHarnessNamed", async () => {
+    const R = await import(runner);
+    const scout = { cwd: repo, role: "scout", brief: "Look.", plan: true };
+
+    const unknown = await R.run({ ...scout, model: "fake/model-2" });
+    expect(unknown.status).toBe("not_available");
+    expect(unknown.hint).toContain("give --harness");
+    // Pool and family come from the configured route of the same model line.
+    const adhoc = await R.run({ ...scout, model: "fake/model-2", harness: "opencode" });
+    expect(adhoc.worker).toMatchObject({ route: "adhoc", model: "fake/model-2", family: "fake" });
+    const unlisted = await R.run({ ...scout, model: "fake/nope", harness: "opencode" });
+    expect(unlisted.hint).toContain("opencode doesn't list this model");
+  });
+
+  it("shouldRunExternallyOnTheHarnessAndEffortNamed", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    fs.writeFileSync(
+      configFile,
+      JSON.stringify({ ...JSON.parse(original), orchestrators: { test: { pools: ["fake-pool"] } } }),
+    );
+    const scout = { cwd: repo, role: "scout", brief: "Look.", plan: true, orchestrator: "test" };
+
+    try {
+      expect((await R.run(scout)).status).toBe("use_native");
+      // A native subagent takes neither a harness nor an effort level.
+      const high = await R.run({ ...scout, harness: "opencode", effort: "high" });
+      expect(high.status).toBe("planned");
+      expect(high.worker).toMatchObject({ modelId: "fake", effort: "high" });
+      const none = await R.run({ ...scout, harness: "codex" });
+      expect(none.status).toBe("not_available");
+      expect(none.hint).toContain("fake (no codex route)");
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
+  it("shouldKeepTheOverridesOnARebriefWithoutEscalating", async () => {
+    const R = await import(runner);
+    const fixer = { cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line." };
+
+    const first = await R.run({ ...fixer, model: "fake", effort: "low" });
+    expect(first.worker.effort).toBe("low");
+    const again = await R.run({ cwd: repo, rebriefOf: first.id, brief: "Better.", plan: true });
+    expect(again.worker).toMatchObject({ modelId: "fake", tier: "light", effort: "low" });
+    // A tier routes by tier again, one the config leaves empty here.
+    const byTier = await R.run({ cwd: repo, rebriefOf: first.id, brief: "Better.", tier: "strong", plan: true });
+    expect(byTier.status).toBe("not_available");
+    await R.discard(first.id);
+  });
+
+  it("shouldFollowUpOnTheRouteTheRunUsed", async () => {
+    const R = await import(runner);
+
+    const first = await R.run({
+      cwd: repo,
+      role: "fixer",
+      allow: ["src/a.txt"],
+      brief: "Add a line.",
+      model: "fake/model-2",
+      harness: "opencode",
+    });
+    expect(first.status).toBe("ok");
+    const second = await R.followup(first.id, "FOLLOW-UP: add another line.");
+    expect(second.status).toBe("ok");
+    expect(second.worker.route).toBe("adhoc");
+    await R.discard(first.id);
+  });
+
+  it("shouldTryAKindsModelsBeforeTheTiersOwn", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    config.models.other = { ...config.models.fake, family: "other" };
+    config.kinds = { ui: { light: ["other"] } };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+
+    try {
+      const r = await R.run({ cwd: repo, role: "scout", brief: "Look.", kind: "ui", plan: true });
+      expect(r.worker.modelId).toBe("other");
+      expect(r.fallbacks).toEqual([{ modelId: "fake", route: "fake-route" }]);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
+  it("shouldReviewAChangeMadeOutsideDispatchWithAnotherFamily", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    // The orchestrator's own models are fake's family; other runs on another pool.
+    const route = { ...config.models.fake.routes[0], id: "other-route", quotaPool: "other-pool" };
+    config.models.other = { family: "other", context: 0, routes: [route] };
+    config.tiers.light = ["fake", "other"];
+    config.orchestrators = { test: { pools: ["fake-pool"] } };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+    const diff =
+      "diff --git a/src/a.txt b/src/a.txt\n--- a/src/a.txt\n+++ b/src/a.txt\n@@ -1 +1,2 @@\n start\n+native\n";
+    const review = { cwd: repo, role: "reviewer", brief: "Review. SHORT", reviewDiff: diff, orchestrator: "test" };
+
+    try {
+      const r = await R.run({ ...review, tier: "light" });
+      expect(r.status).toBe("ok");
+      expect(r.worker.modelId).toBe("other");
+      expect(r.worker.skipped).toContainEqual(
+        expect.objectContaining({ reason: "same family as reviewed work (fake)" }),
+      );
+      await expect(R.run({ ...review, role: "scout" })).rejects.toThrow("--review-diff requires --role reviewer");
+      // A rebrief of the review reviews the same diff, by the same rule.
+      const again = await R.run({
+        cwd: repo,
+        rebriefOf: r.id,
+        brief: "Again.",
+        orchestrator: "test",
+        tier: "light",
+        plan: true,
+      });
+      expect(again.worker.modelId).toBe("other");
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
+  it("shouldRefuseBadInvocationsAsUsageErrors", () => {
+    const dispatch = path.resolve(runner, "../../dispatch.mjs");
+    const cli = (args: string[], cwd = repo) =>
+      spawnSync(process.execPath, [dispatch, ...args], { cwd, input: "Look.", encoding: "utf8", env: process.env });
+    const batchFile = path.join(tmp, "string-allow.json");
+    fs.writeFileSync(batchFile, JSON.stringify([{ role: "fixer", allow: "src/a.txt", brief: "Edit." }]));
+
+    const noId = cli(["apply"]);
+    expect([noId.status, noId.stderr]).toEqual([1, "dispatch: apply needs a run id\n"]);
+    const stringAllow = cli(["run", "--batch", batchFile, "--plan"]);
+    expect([stringAllow.status, stringAllow.stderr]).toEqual([
+      1,
+      "dispatch: task 0: allow must be an array of globs\n",
+    ]);
+    const outside = cli(["run", "--role", "scout", "--brief", "-"], tmp);
+    expect(outside.status).toBe(1);
+    expect(outside.stderr).toContain("not in a git repository");
+    fs.writeFileSync(batchFile, JSON.stringify([{ role: "scout", brief: 7 }]));
+    const numberBrief = cli(["run", "--batch", batchFile, "--plan"]);
+    expect([numberBrief.status, numberBrief.stderr]).toEqual([1, "dispatch: task 0: brief must be text\n"]);
+    expect(cli(["run", "--role", "scout", "--efort", "high", "--brief", "-"]).stderr).toBe(
+      "dispatch: unknown option --efort; run with --help\n",
+    );
+    fs.writeFileSync(batchFile, JSON.stringify([{ role: "scout", brief: "a", briefFile: "b" }]));
+    expect(cli(["run", "--batch", batchFile, "--plan"]).stderr).toBe(
+      "dispatch: task 0: give brief or briefFile, not both\n",
+    );
+    fs.writeFileSync(batchFile, JSON.stringify([{ role: "scout", briefFile: 7 }]));
+    expect(cli(["run", "--batch", batchFile, "--plan"]).stderr).toBe("dispatch: task 0: briefFile must be a path\n");
+    fs.writeFileSync(batchFile, JSON.stringify([{ role: "scout", briefFile: path.join(tmp, "missing.txt") }]));
+    expect(cli(["run", "--batch", batchFile, "--plan"]).stderr).toContain("task 0: file not found");
+    expect(cli(["run", "--batch", tmp, "--plan"]).stderr).toContain("batch file not found");
+    for (const args of [
+      ["run", "--role", "scout", "--brief", tmp],
+      ["run", "--role", "reviewer", "--brief", "-", "--review-diff", ""],
+      ["run", "--role", "scout", "--tier", "huge", "--brief", "-"],
+    ]) {
+      expect(cli(args).status).toBe(1);
+    }
+  });
+
+  it("shouldRefuseAReviewWithoutABrief", async () => {
+    const R = await import(runner);
+    const diff = "+++ b/src/a.txt\n+x\n";
+
+    await expect(R.run({ cwd: repo, role: "reviewer", reviewDiff: diff, model: "fake" })).rejects.toThrow(
+      "empty brief",
+    );
+  });
+
+  it("shouldNotRunAConfigModelIdAsAHarnessModelId", async () => {
+    const R = await import(runner);
+
+    const r = await R.run({ cwd: repo, role: "scout", brief: "Look.", model: "fake", harness: "codex", plan: true });
+    expect(r.status).toBe("not_available");
+    expect(r.worker.skipped).toEqual([{ modelId: "fake", reason: "no codex route" }]);
+  });
+
+  it("shouldGiveAnIdThatIsAllVersionNoModelLine", async () => {
+    const { adhocRoute } = await import(path.resolve(runner, "../route.mjs"));
+    const cfg = {
+      models: {
+        old: { family: "acme", routes: [{ id: "r", harness: "agy", model: "2.0-flash", quotaPool: "p" }] },
+      },
+    };
+
+    expect(adhocRoute(cfg, "agy", "4o")).toMatchObject({ family: "unknown", route: { quotaPool: "p" } });
+  });
+
+  it("shouldNotRepeatTheVerdictAtTheTopOfTheReport", async () => {
+    const R = await import(runner);
+
+    const r = await R.run({ cwd: repo, role: "reviewer", brief: "Review. SHORT ECHO VERDICT reject", model: "fake" });
+    expect(r.report).toBe("verdict: reject\none finding");
+  });
+
+  it("shouldKeepAnExternalRunExternalOnItsRebrief", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    fs.writeFileSync(
+      configFile,
+      JSON.stringify({ ...JSON.parse(original), orchestrators: { test: { pools: ["fake-pool"] } } }),
+    );
+    const fixer = { cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", orchestrator: "test" };
+
+    try {
+      const first = await R.run({ ...fixer, external: true });
+      expect(first.status).toBe("ok");
+      // The light tier's only model is the orchestrator's own: native, but for the carried-over --external.
+      const rebrief = { cwd: repo, rebriefOf: first.id, brief: "Better.", orchestrator: "test", tier: "light" };
+      const again = await R.run({ ...rebrief, plan: true });
+      expect(again.status).toBe("planned");
+      await R.discard(first.id);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
+  it("shouldDropTheWorktreeOfAnEditingRunNoWorkerCouldRun", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    config.models.broken = {
+      family: "fake",
+      context: 0,
+      routes: [{ id: "broken-route", harness: "opencode", model: "fake/broken", quotaPool: "broken-pool" }],
+    };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+
+    try {
+      const r = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt"],
+        brief: "Add a line.",
+        model: "broken",
+        isolation: "worktree",
+      });
+      expect(r.status).toBe("harness_error");
+      expect(r.worktree).toBeNull();
+      expect(fs.existsSync(path.join(process.env.DELEGATE_WORK_STATE as string, "runs", r.id, "wt"))).toBe(false);
+    } finally {
+      fs.writeFileSync(configFile, original);
+      fs.rmSync(path.join(process.env.DELEGATE_WORK_STATE as string, "cooldowns.json"), { force: true });
+    }
+  });
+
+  it("shouldRefuseToReviewARunThatChangedNothing", async () => {
+    const R = await import(runner);
+
+    const scout = await R.run({ cwd: repo, role: "scout", brief: "Look. SHORT", model: "fake" });
+    await expect(R.run({ cwd: repo, role: "reviewer", review: scout.id, brief: "Review." })).rejects.toThrow(
+      "has no change to review",
+    );
+  });
+
+  it("shouldReviewTheSameChangeOnARebriefOfAReview", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    config.models.other = { ...config.models.fake, family: "other" };
+    config.tiers.light = ["fake", "other"];
+    fs.writeFileSync(configFile, JSON.stringify(config));
+
+    try {
+      const fixed = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt"],
+        brief: "Add a line.",
+        model: "fake",
+      });
+      const review = await R.run({ cwd: repo, role: "reviewer", review: fixed.id, tier: "light", brief: "SHORT" });
+      const again = await R.run({ cwd: repo, rebriefOf: review.id, brief: "SHORT again", tier: "light", plan: true });
+      expect(again.lineage.reviewOf).toBe(fixed.id);
+      expect(again.worker.modelId).toBe("other");
+      await R.discard(fixed.id);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
+  it("shouldKeepTheRetryWhenRebriefingARunThatNeverRan", async () => {
+    const R = await import(runner);
+    const fixer = { cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line." };
+
+    // Nothing is configured for the strong tier.
+    const none = await R.run({ ...fixer, tier: "strong" });
+    expect(none.status).toBe("not_available");
+    // Same tier, not the role's default nor one up.
+    const planned = await R.run({ cwd: repo, rebriefOf: none.id, brief: "Add a line.", plan: true });
+    expect(planned.worker.tier).toBe("strong");
+    const first = await R.run({ cwd: repo, rebriefOf: none.id, brief: "Add a line.", model: "fake" });
+    expect(first.status).toBe("ok");
+    expect(first.retryAvailable).toBe(true);
+    expect(first.lineage.rebriefOf).toBe(none.id);
+    await R.discard(first.id);
+    const noneAgain = await R.run({ cwd: repo, rebriefOf: first.id, brief: "Better.", tier: "strong" });
+    await expect(R.run({ cwd: repo, rebriefOf: noneAgain.id, brief: "Better." })).rejects.toThrow(
+      `run ${noneAgain.id} never ran; rebrief ${first.id} instead`,
+    );
+  });
+
+  it("shouldRunTheConfigModelNamedOverOneWhoseRouteHasThatId", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    // "alias" comes first and runs a harness model whose id is another config model's name.
+    const route = config.models.fake.routes[0];
+    config.models = {
+      alias: { family: "fake", context: 0, routes: [{ ...route, id: "alias-route", model: "other" }] },
+      ...config.models,
+      other: { family: "other", context: 0, routes: [{ ...route, id: "other-route" }] },
+    };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+
+    try {
+      const r = await R.run({ cwd: repo, role: "scout", brief: "Look.", model: "other", plan: true });
+      expect(r.worker).toMatchObject({ modelId: "other", route: "other-route" });
+      expect(r.fallbacks).toEqual([]);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
+  it("shouldGiveAProviderIdThatIsAllVersionNoModelLine", async () => {
+    const { adhocRoute } = await import(path.resolve(runner, "../route.mjs"));
+    const route = { id: "r", harness: "opencode", model: "openrouter/2.0-flash", quotaPool: "or" };
+    const cfg = { models: { flash: { family: "google", routes: [route] } } };
+
+    // Same provider: its pool, but not its family.
+    expect(adhocRoute(cfg, "opencode", "openrouter/4o")).toMatchObject({
+      family: "unknown",
+      route: { quotaPool: "or" },
+    });
+  });
+
+  it("shouldKeepAWorktreeAReviewIsReading", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+
+    const fixed = await R.run({
+      cwd: repo,
+      role: "fixer",
+      allow: ["src/a.txt"],
+      brief: "Add a line.",
+      model: "fake",
+      isolation: "worktree",
+    });
+    const reviewer = S.newRun();
+    const reading = { id: reviewer, reviewOf: fixed.id, sharedWorkDir: true, phase: "running", pid: process.pid };
+    S.saveMeta(reviewer, reading);
+    try {
+      for (const r of [await R.discard(fixed.id), R.apply(fixed.id)]) {
+        expect(r.status).toBe("conflict");
+        expect(r.hint).toContain(`Review ${reviewer} is still reading`);
+      }
+    } finally {
+      S.saveMeta(reviewer, { ...reading, phase: "done" });
+    }
+    expect((await R.discard(fixed.id)).worktree).toBeNull();
+  });
+
+  it("shouldRefuseEditingRunsWhileAnotherWorksInPlace", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+    const fixer = { cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" };
+
+    const first = await R.run(fixer);
+    const { root } = S.loadMeta(first.id);
+    await R.discard(first.id);
+    const holder = S.newRun();
+    const held = { id: holder, root, editing: true, isolation: "inplace", phase: "running", pid: process.pid };
+    S.saveMeta(holder, { ...held, claimedAt: 0 });
+    try {
+      for (const isolation of ["auto", "worktree"]) {
+        // oxlint-disable-next-line no-await-in-loop -- each refusal must leave no run claiming the tree for the next.
+        await expect(R.run({ ...fixer, isolation })).rejects.toThrow("would build on its unfinished changes");
+      }
+      await expect(R.batch([fixer, { ...fixer, allow: ["src/b.txt"] }], { cwd: repo })).rejects.toThrow(
+        `In-place run ${holder} is still working`,
+      );
+      // Reading goes ahead.
+      expect((await R.run({ cwd: repo, role: "scout", brief: "Look. SHORT", model: "fake" })).status).toBe("ok");
+    } finally {
+      S.saveMeta(holder, { ...held, phase: "done" });
+    }
+  });
+
+  it("shouldRestoreAFileTheWorkerTurnedIntoAFolder", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+    const file = path.join(repo, "src", "a.txt");
+    const before = fs.readFileSync(file, "utf8");
+
+    const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/**"], brief: "Add a line.", model: "fake" });
+    // Cut short, after the worker made the file a folder.
+    S.saveMeta(r.id, { ...S.loadMeta(r.id), phase: "interrupted" });
+    fs.rmSync(file);
+    fs.mkdirSync(file);
+    fs.writeFileSync(path.join(file, "inner.txt"), "x\n");
+    await R.discard(r.id);
+    expect(fs.readFileSync(file, "utf8")).toBe(before);
+  });
+
+  it("shouldPutBackWhatAnApplyWroteWhenItFailsHalfway", async () => {
+    const R = await import(runner);
+    const a = path.join(repo, "src", "a.txt");
+    const locked = path.join(repo, "src", "locked.txt");
+    fs.writeFileSync(locked, "mine\n");
+    const before = fs.readFileSync(a, "utf8");
+
+    const r = await R.run({
+      cwd: repo,
+      role: "fixer",
+      allow: ["src/a.txt", "src/locked.txt"],
+      brief: "Add a line. ALSO-WRITE src/locked.txt",
+      model: "fake",
+      isolation: "worktree",
+    });
+    expect(r.status).toBe("ok");
+    // Read-only (on Windows, the attribute): src/a.txt is written first, then this one fails.
+    fs.chmodSync(locked, 0o444);
+    try {
+      const applied = R.apply(r.id);
+      expect(applied.status).toBe("conflict");
+      expect(applied.hint).toContain("back as they were");
+      expect(fs.readFileSync(a, "utf8")).toBe(before);
+      expect(fs.existsSync(r.worktree)).toBe(true);
+    } finally {
+      fs.chmodSync(locked, 0o644);
+      await R.discard(r.id);
+      fs.rmSync(locked, { force: true });
+    }
+  });
+
+  it("shouldRestoreAFileTheChecksTurnedIntoAFolder", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    const fold = path.join(tmp, "fold.js");
+    fs.writeFileSync(
+      fold,
+      'const fs = require("fs"); fs.rmSync("src/folded.txt"); fs.mkdirSync("src/folded.txt"); fs.writeFileSync("src/folded.txt/in.txt", "x");',
+    );
+    config.projects = { [`${repo.replaceAll("\\", "/")}/**`]: { checks: { fast: [`node "${fold}"`] } } };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+    const folded = path.join(repo, "src", "folded.txt");
+    fs.writeFileSync(folded, "kept\n");
+
+    try {
+      const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+      expect(r.status).toBe("out_of_scope");
+      expect(fs.readFileSync(folded, "utf8")).toBe("kept\n");
+      await R.discard(r.id);
+    } finally {
+      fs.writeFileSync(configFile, original);
+      fs.rmSync(folded, { recursive: true, force: true });
+    }
+  });
+
+  it("shouldCallAFileTurnedIntoAFolderAConflict", async () => {
+    const R = await import(runner);
+    const a = path.join(repo, "src", "a.txt");
+
+    const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+    const after = fs.readFileSync(a, "utf8");
+    fs.rmSync(a);
+    fs.mkdirSync(a);
+    try {
+      const d = await R.discard(r.id);
+      expect(d.status).toBe("conflict");
+      expect(d.hint).toContain("src/a.txt");
+    } finally {
+      fs.rmdirSync(a);
+      fs.writeFileSync(a, after);
+    }
+    await R.discard(r.id);
+  });
+
+  it("shouldKeepACopyAndPutBackWhenADiscardFailsHalfway", async () => {
+    const R = await import(runner);
+    const a = path.join(repo, "src", "a.txt");
+    const locked = path.join(repo, "src", "locked2.txt");
+    fs.writeFileSync(locked, "mine\n");
+    const before = fs.readFileSync(a, "utf8");
+
+    const r = await R.run({
+      cwd: repo,
+      role: "fixer",
+      allow: ["src/a.txt", "src/locked2.txt"],
+      brief: "Add a line. ALSO-WRITE src/locked2.txt",
+      model: "fake",
+    });
+    expect(r.status).toBe("ok");
+    const after = fs.readFileSync(a, "utf8");
+    fs.chmodSync(locked, 0o444);
+    try {
+      const stopped = await R.discard(r.id);
+      expect(stopped.status).toBe("conflict");
+      expect(stopped.hint).toContain("back as they were");
+      expect(fs.readFileSync(a, "utf8")).toBe(after);
+    } finally {
+      fs.chmodSync(locked, 0o644);
+    }
+    const done = await R.discard(r.id);
+    expect(fs.readFileSync(a, "utf8")).toBe(before);
+    const copy = done.hint.match(/are in (\S+?)\.$/)[1];
+    expect(fs.readFileSync(path.join(copy, "src", "a.txt"), "utf8")).toBe(after);
+    fs.rmSync(locked, { force: true });
+  });
+
+  it("shouldRefuseEditingRunsWhileARunCutShortHoldsTheTree", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+    const fixer = { cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" };
+
+    const first = await R.run(fixer);
+    const { root } = S.loadMeta(first.id);
+    await R.discard(first.id);
+    const done = await R.run({ ...fixer, isolation: "worktree" });
+    expect(done.status).toBe("ok");
+    const cut = S.newRun();
+    const meta = { id: cut, root, editing: true, isolation: "inplace", phase: "interrupted", pid: 0 };
+    S.saveMeta(cut, meta);
+    try {
+      await expect(R.run(fixer)).rejects.toThrow(`In-place run ${cut} was cut short`);
+      // Its discard would take back what an apply wrote into its files.
+      const applied = R.apply(done.id);
+      expect(applied.status).toBe("conflict");
+      expect(applied.hint).toContain("was cut short");
+      // Refused before the attempt it retries is dropped.
+      await expect(R.run({ cwd: repo, rebriefOf: done.id, brief: "Again." })).rejects.toThrow("was cut short");
+      expect(S.loadMeta(done.id).discarded).toBeFalsy();
+    } finally {
+      S.saveMeta(cut, { ...meta, discarded: true });
+      await R.discard(done.id);
+    }
+  });
+
+  it("shouldKeepTheKindOnARebrief", async () => {
+    const R = await import(runner);
+
+    const first = await R.run({ cwd: repo, role: "scout", brief: "Look. SHORT", model: "fake", kind: "ui" });
+    const again = await R.run({ cwd: repo, rebriefOf: first.id, brief: "Again.", model: "fake", plan: true });
+    expect(again.worker.kind).toBe("ui");
+  });
+
+  it("shouldReviewOnlyAChangeThatIsInSomeTree", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    config.models.other = { ...config.models.fake, family: "other" };
+    config.tiers.light = ["fake", "other"];
+    fs.writeFileSync(configFile, JSON.stringify(config));
+    const fixer = { cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" };
+    const review = (id: string) => R.run({ cwd: repo, role: "reviewer", review: id, tier: "light", brief: "SHORT" });
+
+    try {
+      const dropped = await R.run(fixer);
+      await R.discard(dropped.id);
+      await expect(review(dropped.id)).rejects.toThrow("was discarded");
+      // Applied, the change is in the working tree: read there, in place.
+      const applied = await R.run({ ...fixer, isolation: "worktree" });
+      R.apply(applied.id);
+      expect((await review(applied.id)).isolation).toBe("inplace");
+      R.unapply(applied.id);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
+  it("shouldTellANativeReviewerTheDiffWasCut", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    const route = { ...config.models.fake.routes[0], id: "other-route", quotaPool: "other-pool" };
+    config.models.other = { family: "other", context: 0, routes: [route] };
+    config.tiers.light = ["fake", "other"];
+    config.orchestrators = { test: { pools: ["other-pool"] } };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+
+    try {
+      const big = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt", "src/big.txt"],
+        brief: "Add a line. BIG-DIFF",
+        model: "fake",
+      });
+      const r = await R.run({
+        cwd: repo,
+        role: "reviewer",
+        review: big.id,
+        tier: "light",
+        brief: "R",
+        orchestrator: "test",
+      });
+      expect(r.status).toBe("use_native");
+      expect(r.hint).toContain("diff cut at 60000 characters");
+      await R.discard(big.id);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
+  it("shouldCountTheChecksInTheDuration", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    const wait = path.join(tmp, "wait.js");
+    fs.writeFileSync(wait, "setTimeout(() => {}, 1500);");
+    config.projects = { [`${repo.replaceAll("\\", "/")}/**`]: { checks: { fast: [`node "${wait}"`] } } };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+
+    try {
+      const r = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+      expect(r.status).toBe("ok");
+      expect(r.durationMs).toBeGreaterThanOrEqual(1500);
+      await R.discard(r.id);
+    } finally {
+      fs.writeFileSync(configFile, original);
+    }
+  });
+
+  it("shouldSkipANativePoolThatIsCoolingDown", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    const route = { ...config.models.fake.routes[0], id: "other-route", quotaPool: "other-pool" };
+    config.models.other = { family: "other", context: 0, routes: [route] };
+    config.tiers.light = ["fake", "other"];
+    config.orchestrators = { test: { pools: ["fake-pool"] } };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+    S.setCooldown("fake-pool", 60000, "rate limit");
+
+    try {
+      const r = await R.run({ cwd: repo, role: "scout", brief: "Look.", orchestrator: "test", plan: true });
+      expect(r.status).toBe("planned");
+      expect(r.worker.modelId).toBe("other");
+      expect(r.worker.skipped).toContainEqual(
+        expect.objectContaining({ modelId: "fake", reason: expect.stringContaining("cooling down") }),
+      );
+    } finally {
+      fs.writeFileSync(configFile, original);
+      fs.rmSync(path.join(process.env.DELEGATE_WORK_STATE as string, "cooldowns.json"), { force: true });
+    }
+  });
+
+  it("shouldBlockAnUnlistedModelWhoseProviderHasNoDataPolicy", async () => {
+    const R = await import(runner);
+
+    // Claude Code lists no models, so nothing else rules the id out first.
+    const r = await R.run({ cwd: repo, role: "scout", brief: "Look.", harness: "claude", model: "x", plan: true });
+    expect(r.status).toBe("not_available");
+    expect(r.hint).toContain("data policy: unknown for this provider");
+  });
+
+  it("shouldSayWhenNoOrchestratorFamilyWasExcluded", async () => {
+    const R = await import(runner);
+    const diff = "diff --git a/src/a.txt b/src/a.txt\n--- a/src/a.txt\n+++ b/src/a.txt\n@@ -1 +1,2 @@\n start\n+x\n";
+
+    const r = await R.run({
+      cwd: repo,
+      role: "reviewer",
+      reviewDiff: diff,
+      brief: "R",
+      model: "fake",
+      orchestrator: "none",
+      plan: true,
+    });
+    expect(r.status).toBe("planned");
+    expect(r.hint).toContain("No orchestrator was recognized");
+  });
+
+  it("shouldDropTheOldEffortWhenARebriefNamesAModel", async () => {
+    const R = await import(runner);
+    const fixer = { cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line." };
+
+    const first = await R.run({ ...fixer, model: "fake", effort: "high" });
+    expect(first.worker.effort).toBe("high");
+    const kept = await R.run({ cwd: repo, rebriefOf: first.id, brief: "Again.", plan: true });
+    expect(kept.worker.effort).toBe("high");
+    const dropped = await R.run({ cwd: repo, rebriefOf: first.id, brief: "Again.", model: "fake", plan: true });
+    expect(dropped.worker.effort).toBeNull();
+    await R.discard(first.id);
+  });
+
+  it("shouldRefuseAFolderInTheAllowlist", async () => {
+    const R = await import(runner);
+    const fixer = { cwd: repo, role: "fixer", brief: "Add a line.", model: "fake", plan: true };
+
+    await expect(R.run({ ...fixer, allow: ["src"] })).rejects.toThrow(
+      "--allow src names a folder; to allow the files in it, use src/**",
+    );
+    await expect(R.run({ ...fixer, allow: ["new/"] })).rejects.toThrow("use new/**");
+    expect((await R.run({ ...fixer, allow: ["src/**"] })).status).toBe("planned");
+  });
+
+  it("shouldLeaveTheResultWhenAFollowUpsHarnessIsGone", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+    const first = await R.run({ cwd: repo, role: "fixer", allow: ["src/a.txt"], brief: "Add a line.", model: "fake" });
+    const briefFile = path.join(tmp, "followup.txt");
+    fs.writeFileSync(briefFile, "FOLLOW-UP: more.");
+
+    // A fresh dispatch: the harness check is cached per process.
+    const dispatch = path.resolve(runner, "../../dispatch.mjs");
+    const r = spawnSync(process.execPath, [dispatch, "followup", first.id, "--brief", briefFile], {
+      cwd: repo,
+      encoding: "utf8",
+      env: { ...process.env, DELEGATE_WORK_BIN_OPENCODE: path.join(tmp, "missing-opencode") },
+    });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("the result stands and the retry is unused");
+    expect(S.loadMeta(first.id)).toMatchObject({ status: "ok", retryUsed: false });
+    await R.discard(first.id);
+  });
+
+  it("shouldKeepTheDiffOfAReviewThatNeverRan", async () => {
+    const R = await import(runner);
+    const S = await import(state);
+    const diff = "diff --git a/src/a.txt b/src/a.txt\n--- a/src/a.txt\n+++ b/src/a.txt\n@@ -1 +1,2 @@\n start\n+x\n";
+
+    const r = await R.run({
+      cwd: repo,
+      role: "reviewer",
+      reviewDiff: diff,
+      brief: "R",
+      harness: "opencode",
+      model: "fake/absent",
+    });
+    expect(r.status).toBe("not_available");
+    expect(fs.readFileSync(path.join(S.runDir(r.id), "review.diff"), "utf8")).toBe(diff);
+  });
+
+  it("shouldFenceADiffThatHoldsAFence", async () => {
+    const R = await import(runner);
+    const configFile = process.env.DELEGATE_WORK_CONFIG as string;
+    const original = fs.readFileSync(configFile, "utf8");
+    const config = JSON.parse(original);
+    const route = { ...config.models.fake.routes[0], id: "other-route", quotaPool: "other-pool" };
+    config.models.other = { family: "other", context: 0, routes: [route] };
+    config.tiers.light = ["fake", "other"];
+    config.orchestrators = { test: { pools: ["other-pool"] } };
+    fs.writeFileSync(configFile, JSON.stringify(config));
+    const a = path.join(repo, "src", "a.txt");
+    const before = fs.readFileSync(a, "utf8");
+    // In the diff's context: a Markdown fence in the changed file.
+    fs.writeFileSync(a, `${before}\`\`\`js\n\`\`\`\n`);
+
+    try {
+      const fixed = await R.run({
+        cwd: repo,
+        role: "fixer",
+        allow: ["src/a.txt"],
+        brief: "Add a line.",
+        model: "fake",
+      });
+      const r = await R.run({
+        cwd: repo,
+        role: "reviewer",
+        review: fixed.id,
+        tier: "light",
+        brief: "R",
+        orchestrator: "test",
+      });
+      expect(r.status).toBe("use_native");
+      const prompt = fs.readFileSync(r.promptPath, "utf8");
+      expect(prompt).toContain("````diff\n");
+      expect(prompt).toMatch(/\n````$|\n````\n/);
+      await R.discard(fixed.id);
+    } finally {
+      fs.writeFileSync(configFile, original);
+      fs.writeFileSync(a, before);
+    }
+  });
+
+  it("shouldNotTakeTheTemplateVerdictLineForAVerdict", async () => {
+    const R = await import(runner);
+
+    const r = await R.run({ cwd: repo, role: "reviewer", brief: "Review. SHORT TEMPLATE-VERDICT", model: "fake" });
+    expect(r.status).toBe("ok");
+    expect(r.report).not.toMatch(/^verdict:/);
+    expect(r.hint).toContain("no valid verdict");
+  });
+
   describe("with a harness that can't be contained in place", () => {
     let opencode: { containedInPlace?: boolean };
 

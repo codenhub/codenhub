@@ -27,18 +27,57 @@ for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
   });
 }
 
-const BATCH_FIELDS = new Set(["role", "allow", "read", "tier", "kind", "model", "brief", "briefFile"]);
+const BATCH_FIELDS = new Set([
+  "role",
+  "allow",
+  "read",
+  "tier",
+  "kind",
+  "model",
+  "harness",
+  "effort",
+  "brief",
+  "briefFile",
+]);
+
+const SWITCHES = new Set(["external", "path", "help", "all", "dryRun", "plan"]);
+const OPTIONS = new Set([
+  "role",
+  "allow",
+  "read",
+  "brief",
+  "tier",
+  "kind",
+  "model",
+  "harness",
+  "effort",
+  "isolation",
+  "orchestrator",
+  "rebriefOf",
+  "review",
+  "reviewDiff",
+  "batch",
+  "olderThan",
+]);
 
 const HELP = `dispatch — delegate scoped tasks to worker agents
 
   run       --role <scout|fixer|builder|reviewer> --brief <file|->
             [--allow <glob>]... [--read <glob>]... [--tier light|standard|strong]
-            [--kind code|ui|text] [--model <id>] [--external]
+            [--kind code|ui|text] [--model <id>] [--harness <name>]
+            [--effort <level>] [--external]
             [--isolation auto|inplace|worktree] [--orchestrator <name>]
-            [--rebrief-of <id>] [--review <id>] [--plan]
+            [--rebrief-of <id>] [--review <id> | --review-diff <file|->] [--plan]
+            --model: a config model id, or a harness's own model id; with
+            --harness, a model the config doesn't list runs as named.
+            --harness, --effort: run externally on that harness, at that
+            effort level (low, medium, high, ...).
+            --review-diff: review a change made outside dispatch, by a model
+            of another family than the orchestrator's own.
   run       --batch <file.json> [--external] [--plan] [--isolation auto|worktree]
+            [--orchestrator <name>]
                                     tasks: [{ role, allow, read, tier, kind, model,
-                                    brief | briefFile }]
+                                    harness, effort, brief | briefFile }]
             --plan: route only, run nothing (status use_native, planned or
             not_available)
   followup  <id> --brief <file|->   one follow-up in the same worker session
@@ -55,7 +94,7 @@ const HELP = `dispatch — delegate scoped tasks to worker agents
   init                              create the user config if missing
   config    --path                  print config file locations
 
-Output: one JSON document on stdout. Exit 0 = result produced (read "status"),
+Output: one JSON document on stdout (diff prints the patch itself). Exit 0 = result produced (read "status"),
 1 = bad invocation, 2 = dispatch itself failed.`;
 
 function parse(argv) {
@@ -68,9 +107,13 @@ function parse(argv) {
       continue;
     }
     const key = a.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-    if (["external", "path", "help", "all", "dryRun", "plan"].includes(key)) {
+    if (SWITCHES.has(key)) {
       o[key] = true;
       continue;
+    }
+    // A misspelled option ignored would run the task some other way without a word.
+    if (!OPTIONS.has(key)) {
+      throw new R.UsageError(`unknown option ${a}; run with --help`);
     }
     const val = rest[++i];
     if (val === undefined) {
@@ -86,19 +129,34 @@ function parse(argv) {
 }
 
 const readBrief = (src) => {
-  if (!src) {
+  if (src === undefined) {
     return undefined;
   }
   if (src === "-") {
     return fs.readFileSync(0, "utf8");
   }
-  if (!fs.existsSync(src)) {
-    throw new R.UsageError(`brief file not found: ${src}`);
+  if (typeof src !== "string" || !fs.existsSync(src) || !fs.statSync(src).isFile()) {
+    throw new R.UsageError(`file not found: ${src}`);
   }
   return fs.readFileSync(src, "utf8");
 };
 
 const out = (obj) => process.stdout.write(`${JSON.stringify(obj, null, 2)}\n`);
+
+const taskBrief = (i, file) => {
+  try {
+    return readBrief(file);
+  } catch (e) {
+    throw e instanceof R.UsageError ? new R.UsageError(`task ${i}: ${e.message}`) : e;
+  }
+};
+
+const runId = (o) => {
+  if (!o.pos[0]) {
+    throw new R.UsageError(`${o.cmd} needs a run id`);
+  }
+  return o.pos[0];
+};
 
 /** Undecided results and stale state, so leftovers from earlier sessions surface. */
 function runSummary(cfg) {
@@ -229,7 +287,7 @@ async function main() {
   switch (o.cmd) {
     case "run": {
       if (o.batch) {
-        if (!fs.existsSync(o.batch)) {
+        if (!fs.existsSync(o.batch) || !fs.statSync(o.batch).isFile()) {
           throw new R.UsageError(`batch file not found: ${o.batch}`);
         }
         let spec;
@@ -251,6 +309,20 @@ async function main() {
           if (unknown.length) {
             throw new R.UsageError(`task ${i}: unknown field ${unknown.join(", ")}`);
           }
+          if (t.brief !== undefined && typeof t.brief !== "string") {
+            throw new R.UsageError(`task ${i}: brief must be text`);
+          }
+          if (t.brief !== undefined && t.briefFile !== undefined) {
+            throw new R.UsageError(`task ${i}: give brief or briefFile, not both`);
+          }
+          if (t.briefFile !== undefined && typeof t.briefFile !== "string") {
+            throw new R.UsageError(`task ${i}: briefFile must be a path`);
+          }
+          for (const k of ["allow", "read"]) {
+            if (t[k] !== undefined && !(Array.isArray(t[k]) && t[k].every((g) => typeof g === "string"))) {
+              throw new R.UsageError(`task ${i}: ${k} must be an array of globs`);
+            }
+          }
           return {
             role: t.role,
             allow: t.allow ?? [],
@@ -258,7 +330,9 @@ async function main() {
             tier: t.tier,
             kind: t.kind,
             model: t.model,
-            brief: t.brief ?? readBrief(t.briefFile),
+            harness: t.harness,
+            effort: t.effort,
+            brief: t.brief ?? taskBrief(i, t.briefFile),
           };
         });
         if (o.isolation !== undefined && !["auto", "worktree"].includes(o.isolation)) {
@@ -275,6 +349,9 @@ async function main() {
         );
         return 0;
       }
+      if (o.brief === "-" && o.reviewDiff === "-") {
+        throw new R.UsageError("--brief and --review-diff can't both read stdin");
+      }
       out(
         await R.run({
           cwd,
@@ -285,6 +362,9 @@ async function main() {
           tier: o.tier,
           kind: o.kind,
           model: o.model,
+          harness: o.harness,
+          effort: o.effort,
+          reviewDiff: readBrief(o.reviewDiff),
           external: o.external,
           isolation: o.isolation,
           orchestrator: o.orchestrator,
@@ -296,22 +376,22 @@ async function main() {
       return 0;
     }
     case "followup":
-      out(await R.followup(o.pos[0], readBrief(o.brief)));
+      out(await R.followup(runId(o), readBrief(o.brief)));
       return 0;
     case "apply":
-      out(R.apply(o.pos[0]));
+      out(R.apply(runId(o)));
       return 0;
     case "discard":
-      out(await R.discard(o.pos[0]));
+      out(await R.discard(runId(o)));
       return 0;
     case "unapply":
-      out(R.unapply(o.pos[0]));
+      out(R.unapply(runId(o)));
       return 0;
     case "diff":
-      process.stdout.write(R.diff(o.pos[0]));
+      process.stdout.write(R.diff(runId(o)));
       return 0;
     case "show":
-      out(R.show(o.pos[0]));
+      out(R.show(runId(o)));
       return 0;
     case "prune": {
       const hours = load(null).limits?.pruneAfterHours ?? 24;

@@ -143,8 +143,13 @@ export function blobId(ref, file, cwd) {
 }
 
 export function fileId(cwd, file) {
-  if (!fs.existsSync(path.join(cwd, file))) {
+  const full = path.join(cwd, file);
+  if (!fs.existsSync(full)) {
     return null;
+  }
+  // git can't hash a folder; one where a file was differs from every version.
+  if (fs.statSync(full).isDirectory()) {
+    return "(folder)";
   }
   return git(["hash-object", "--", file], { cwd });
 }

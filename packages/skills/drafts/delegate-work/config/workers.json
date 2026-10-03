@@ -12,7 +12,7 @@
       "scout": 40,
       "fixer": 40,
       "builder": 150,
-      "reviewer": 30
+      "reviewer": 60
     },
     "checkTimeoutSec": 900,
     "pruneAfterHours": 24,

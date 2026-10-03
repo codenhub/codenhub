@@ -229,8 +229,8 @@ export function working(meta, seen = {}) {
   );
 }
 
-/** Editing runs currently active in place on this repo (for isolation: auto). */
-export function activeInplace(root) {
+/** Reviews still working in this run's worktree: it can't go while they read it. */
+export function reviewersOf(id) {
   const dir = runsDir();
   if (!fs.existsSync(dir)) {
     return [];
@@ -238,7 +238,25 @@ export function activeInplace(root) {
   return fs
     .readdirSync(dir)
     .map(loadMeta)
-    .filter((m) => m && m.isolation === "inplace" && m.editing && m.root === root && working(m));
+    .filter((m) => m && m.reviewOf === id && m.sharedWorkDir && working(m));
+}
+
+/**
+ * Editing runs currently active in place on this repo (for isolation: auto).
+ * With unfinished, also those cut short and not yet discarded: their partial
+ * edits are still in the tree.
+ */
+export function activeInplace(root, { unfinished = false } = {}) {
+  const dir = runsDir();
+  if (!fs.existsSync(dir)) {
+    return [];
+  }
+  const cutShort = (m) =>
+    unfinished && (m.phase === "running" || m.phase === "interrupted") && !m.discarded && !m.applied;
+  return fs
+    .readdirSync(dir)
+    .map(loadMeta)
+    .filter((m) => m && m.isolation === "inplace" && m.editing && m.root === root && (working(m) || cutShort(m)));
 }
 
 export const promptsDir = () => path.join(baseDir(), "prompts");

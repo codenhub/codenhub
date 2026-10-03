@@ -43,7 +43,12 @@ export function parseResult(text) {
   out.notes = (acc.notes ?? [])
     .map((l) => l.replace(/^\s*[-*]\s*/, "").trim())
     .filter((l) => l && !/^(none|n\/a|nothing)\.?$/i.test(l));
-  out.verdict = word("verdict");
+  // The template's line copied as is names every verdict, and picks none.
+  const named =
+    join("verdict")
+      ?.split("\n")[0]
+      .match(/approve-with-nits|approve|reject/gi) ?? [];
+  out.verdict = named.length > 1 ? null : word("verdict");
   const report = join("report");
   // Some workers write the answer above the block and only point at it under
   // report ("findings are listed above"). A short report under a longer text
@@ -53,6 +58,9 @@ export function parseResult(text) {
   out.report = short && above.length > (report?.length ?? 0) ? [above, report].filter(Boolean).join("\n\n") : report;
   return out;
 }
+
+/** Whether a run is its task's retry; runs from before `retry` was kept tell by their lineage. */
+export const isRetry = (meta) => meta.retry ?? !!meta.rebriefOf;
 
 export function envelope(meta, extra = {}) {
   return {
@@ -79,7 +87,7 @@ export function envelope(meta, extra = {}) {
     durationMs: meta.durationMs ?? null,
     applied: !!meta.applied,
     // A rebrief is the task's retry even when it couldn't run.
-    retryAvailable: !meta.retryUsed && !meta.rebriefOf,
+    retryAvailable: !meta.retryUsed && !isRetry(meta),
     logPath: meta.logPath ?? null,
     ...extra,
   };
