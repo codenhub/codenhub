@@ -319,7 +319,7 @@ After a successful publish it reads the version npm serves back and reports it, 
 
 ## Issue labels
 
-`hub labels` creates or updates the repository's GitHub labels through `gh`, which must be installed and authenticated. The list is `.github/labels.json` plus one `pkg:<unscoped name>` label per workspace package and one `app:<directory>` label per app, derived on every run. A package nested inside another, such as `packages/icons/demo`, belongs to its parent and gets none. `CONTRIBUTING.md` says what each group means.
+`hub labels` creates or updates the repository's GitHub labels through `gh`, which must be installed and authenticated. It resolves the repository from the checkout once and passes it to every call with `--repo`, ignoring `GH_REPO`, so a value exported for other work cannot send these labels to another repository. The list is `.github/labels.json` plus one `pkg:<unscoped name>` label per workspace package and one `app:<directory>` label per app, derived on every run. A package nested inside another, such as `packages/icons/demo`, belongs to its parent and gets none. `CONTRIBUTING.md` says what each group means.
 
 Every label is written with `gh label create --force`, so a run is safe to repeat and updates colors and descriptions in place. It never deletes one: deleting a label strips it from every issue that carries it, so a label on GitHub that the list no longer has is reported for a maintainer to remove by hand. `--dry-run` prints the `gh` commands without running them.
 

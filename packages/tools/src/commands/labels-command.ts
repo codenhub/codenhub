@@ -67,17 +67,51 @@ export function deriveWorkspaceLabels(packages: readonly WorkspacePackage[]): La
   });
 }
 
-function buildCreateSpec(label: Label, cwd: string): CommandSpec {
-  return {
-    args: ["label", "create", label.name, "--color", label.color, "--description", label.description, "--force"],
-    command: "gh",
-    cwd,
-  };
+/**
+ * Builds a `gh` invocation that cannot be pointed at another repository.
+ *
+ * `gh` prefers `GH_REPO` over the checkout it runs in, so an exported value left
+ * over from other work would sync this repository's labels into that one.
+ * @param args Arguments after `gh`.
+ * @param cwd Repository root.
+ * @returns Command spec with `GH_REPO` removed from its environment.
+ */
+export function buildGhSpec(args: readonly string[], cwd: string): CommandSpec {
+  return { args, command: "gh", cwd, env: { ...process.env, GH_REPO: undefined } };
 }
 
-async function listRemoteLabels(cwd: string): Promise<string[] | undefined> {
+async function resolveRepository(cwd: string): Promise<string | undefined> {
   const outcome = await execute(
-    { args: ["label", "list", "--limit", "1000", "--json", "name", "--jq", ".[].name"], command: "gh", cwd },
+    buildGhSpec(["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"], cwd),
+    {
+      stdio: "pipe",
+    },
+  );
+  const repository = (outcome.stdout ?? "").trim();
+  return outcome.isSuccess && repository !== "" ? repository : undefined;
+}
+
+function buildCreateSpec(label: Label, repository: string, cwd: string): CommandSpec {
+  return buildGhSpec(
+    [
+      "label",
+      "create",
+      label.name,
+      "--repo",
+      repository,
+      "--color",
+      label.color,
+      "--description",
+      label.description,
+      "--force",
+    ],
+    cwd,
+  );
+}
+
+async function listRemoteLabels(repository: string, cwd: string): Promise<string[] | undefined> {
+  const outcome = await execute(
+    buildGhSpec(["label", "list", "--repo", repository, "--limit", "1000", "--json", "name", "--jq", ".[].name"], cwd),
     { stdio: "pipe" },
   );
   if (!outcome.isSuccess) {
@@ -95,23 +129,30 @@ async function runLabelsCommand(context: CommandContext): Promise<number> {
     ...parseLabels(await readFile(join(workspace.root, LABELS_FILE), "utf8")),
     ...deriveWorkspaceLabels(workspace.packages),
   ];
-  const specs = labels.map((label) => buildCreateSpec(label, workspace.root));
+  // Resolved once from the checkout and passed to every call, so the list and
+  // the writes cannot land on two different repositories.
+  const repository = await resolveRepository(workspace.root);
+  if (repository === undefined) {
+    reporter.error("Could not resolve this checkout's GitHub repository. Is `gh` installed and authenticated?");
+    return EXIT_FAILURE;
+  }
+  const specs = labels.map((label) => buildCreateSpec(label, repository, workspace.root));
 
   if (context.options.isDryRun) {
-    reporter.step(`Would create or update ${specs.length} label(s)`);
+    reporter.step(`Would create or update ${specs.length} label(s) in ${repository}`);
     for (const spec of specs) {
       reporter.detail(`  ${formatCommand(spec)}`);
     }
     return EXIT_SUCCESS;
   }
 
-  const remote = await listRemoteLabels(workspace.root);
+  const remote = await listRemoteLabels(repository, workspace.root);
   if (remote === undefined) {
-    reporter.error("Could not list the repository's labels. Is `gh` installed and authenticated?");
+    reporter.error(`Could not list the labels of ${repository}.`);
     return EXIT_FAILURE;
   }
 
-  reporter.step(`Syncing ${specs.length} label(s)`);
+  reporter.step(`Syncing ${specs.length} label(s) to ${repository}`);
   // `--force` updates an existing label in place, so a run is safe to repeat.
   const outcomes = await mapConcurrent(specs, LABEL_CONCURRENCY, async (spec) => execute(spec, { stdio: "pipe" }));
   let failures = 0;

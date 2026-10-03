@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
-import { deriveWorkspaceLabels, parseLabels } from "./labels-command.ts";
+import { buildGhSpec, deriveWorkspaceLabels, parseLabels } from "./labels-command.ts";
 
 function createPackage(location: string, name: string): WorkspacePackage {
   const directoryName = location.slice(location.lastIndexOf("/") + 1);
@@ -55,5 +55,16 @@ describe("deriveWorkspaceLabels", () => {
     ]);
 
     expect(labels.map(({ name }) => name)).toEqual(["pkg:icons"]);
+  });
+});
+
+describe("buildGhSpec", () => {
+  it("drops GH_REPO so gh targets the checkout it runs in", () => {
+    process.env.GH_REPO = "someone/elsewhere";
+    try {
+      expect(buildGhSpec(["label", "list"], "/repo").env?.GH_REPO).toBeUndefined();
+    } finally {
+      delete process.env.GH_REPO;
+    }
   });
 });
