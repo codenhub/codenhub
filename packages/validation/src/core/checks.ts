@@ -63,6 +63,16 @@ export function word(issues: ValidationIssue[], message: Message | undefined): V
 }
 
 /**
+ * Words issues a composer found itself, written relative to its value, and then moves them to the `place`
+ * it was reached at, so a message function is given the issue as that composer reports it, as a leaf's is.
+ */
+export const report = (
+  issues: readonly ValidationIssue[],
+  place: Place,
+  message: Message | undefined,
+): ValidationIssue[] => placeAll(word([...issues], message), place);
+
+/**
  * Finishes a validator whose value has its type. When the validator found issues of its own, such as a
  * string longer than `max`, it reports them and runs no check, so a bound keeps a long value from a costly
  * check and an invalid one from a lookup. Otherwise it runs every check on the value, words every issue
@@ -164,7 +174,7 @@ export function tail<TOptions extends MessageOptions, T>(
   const [options, checks] = split<TOptions, T>(args);
   return [
     options,
-    (issues, place) => failWith(word(placeAll(issues, place), options.message)),
+    (issues, place) => failWith(report(issues, place, options.message)),
     // A check reports relative to the value, as for a leaf, and its issues are moved to the place after.
     (value, place) =>
       chain(finish(value, [], options.message, checks), (result) =>

@@ -324,7 +324,7 @@ The size options `min`, `max` and `length` are non-negative integers. Each throw
 
 ### `array`
 
-`array(item, options?, ...checks)` accepts arrays whose every item passes `item` and produces a new array of what it produced. It takes `min`, `max` and `length`. A sparse array's holes are validated as `undefined`.
+`array(item, options?, ...checks)` accepts arrays whose every item passes `item` and produces a new array of what it produced. It takes `min`, `max` and `length`. A sparse array's holes are validated as `undefined`, so the work grows with its `length`, not with the items it holds: a value received by structured clone, such as `event.data` from `postMessage`, a worker or Electron IPC, can be a 28-byte message holding an array of 4,294,967,295 holes. Give untrusted input a `max`, which is checked before any item.
 
 The `unique(by?, message?)` check rejects repeats, comparing the validated items the way a `Set` does, or the key `by` returns for each, so `unique((user) => user.id)` makes ids unique. Each repeat is reported at its own index as `invalid_value` with `{ unique: true }`, and the first occurrence is kept. Like every check, it runs only once every item is valid. A `Set` finds two objects equal only when they are the same object, every object or list a composer such as `object` or `array` produces is new, and two `Date`s of one moment are two objects, so `unique()` without `by` would find a repeat among them only where a validator passed the same object through twice, such as one `Date` given twice to `date()`. Its types accept it only for an array of primitives; an array of objects, lists or dates needs `by`, such as `unique((user) => user.id)` or `unique((day) => day.getTime())`.
 
@@ -500,7 +500,7 @@ const body = array(node, { max: 100 });
 
 Raise `maxCalls` for recursive data with more nodes than that in one validation. Like `maxDepth`, it must be a positive integer, or `lazy` throws when created. For objects told apart by a property, use [`tagged`](#tagged), which reads the property first and validates only the matching variant.
 
-The limits are about the stack and the work per node and not about size, so they do not stop a large flat input: cap the size of untrusted input, for instance with `pipe(string({ max: 100_000 }), json(category))`, and give `array` a `max`.
+The limits are about the stack and the work per node and not about size, so they do not stop a large flat input: cap the size of untrusted input, for instance with `pipe(string({ max: 100_000 }), json(category))`, and give `array` a `max`. A value received by structured clone, such as `event.data` from `postMessage`, needs the `max` whatever its size in bytes, since it can hold a sparse array or one array at many places, so its items are not bounded by its bytes.
 
 ### `json`
 

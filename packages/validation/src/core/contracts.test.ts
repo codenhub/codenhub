@@ -11,7 +11,10 @@ import { unique } from "../checks/unique";
 import { coerceDate } from "../coercion/coerce-date";
 import { array } from "../composition/array";
 import { intersection } from "../composition/intersection";
+import { map } from "../composition/map";
 import { object } from "../composition/object";
+import { record } from "../composition/record";
+import { union } from "../composition/union";
 import { base64 } from "../formats/base64";
 import { datetime } from "../formats/datetime";
 import { email } from "../formats/email";
@@ -30,7 +33,7 @@ import { oneOf } from "../primitives/one-of";
 import { string } from "../primitives/string";
 import { unknown } from "../primitives/unknown";
 import { issuesOf, valueOf } from "../test-utils";
-import type { Validator } from "./types";
+import type { ValidationIssue, Validator } from "./types";
 
 describe("a mistake in the schema", () => {
   const mistakes: [string, () => unknown][] = [
@@ -165,6 +168,54 @@ describe("a message function", () => {
       },
     ]);
     expect(paths).toEqual([[]]);
+  });
+
+  it("should be given a composer's own issue with a path relative to that composer, however deep it sits", () => {
+    const paths: unknown[] = [];
+    const message = (issue: ValidationIssue): string => {
+      paths.push(issue.path);
+      return "Fix this";
+    };
+    const nested = object({
+      list: array(string(), { max: 1, message }),
+      strict: object({}, { unknownKeys: "strict", message }),
+      dictionary: record(string({ min: 2 }), number(), { message }),
+      renamed: record(string({ case: "lower" }), number(), { message }),
+      either: union([number()], { message }),
+    });
+    const result = nested({
+      list: ["a", "b"],
+      strict: { extra: 1 },
+      dictionary: { z: 1 },
+      renamed: { A: 1, a: 2 },
+      either: "x",
+    });
+    expect(issuesOf(result).map(({ path, message: text }) => ({ path, text }))).toEqual([
+      { path: ["list"], text: "Fix this" },
+      { path: ["strict", "extra"], text: "Fix this" },
+      { path: ["dictionary", "z"], text: "Fix this" },
+      { path: ["renamed", "a"], text: "Fix this" },
+      { path: ["either"], text: "Fix this" },
+    ]);
+    expect(paths).toEqual([[], ["extra"], ["z"], ["a"], []]);
+  });
+
+  it("should be given a map's repeated key with a path relative to the map", () => {
+    const paths: unknown[] = [];
+    const lookup = map(string({ case: "lower" }), number(), {
+      message: (issue) => {
+        paths.push(issue.path);
+        return "Repeated";
+      },
+    });
+    const result = object({ lookup })({
+      lookup: new Map([
+        ["A", 1],
+        ["a", 2],
+      ]),
+    });
+    expect(issuesOf(result).map(({ path }) => path)).toEqual([["lookup", "a"]]);
+    expect(paths).toEqual([["a"]]);
   });
 });
 
