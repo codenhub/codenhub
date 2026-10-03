@@ -50,6 +50,15 @@ describe("resolveLatestPublishedTag", () => {
     expect(resolveLatestPublishedTag("@codenhub/error", ["@codenhub/icons@1.0.0"])).toBeUndefined();
   });
 
+  it("skips a pre-release newer than the latest stable release", () => {
+    const tags = ["@codenhub/error@0.3.0", "@codenhub/error@0.3.1-beta.1", "@codenhub/error@1.0.0-rc.1"];
+    expect(resolveLatestPublishedTag("@codenhub/error", tags)).toBe("@codenhub/error@0.3.0");
+  });
+
+  it("treats a package with only pre-release tags as unpublished", () => {
+    expect(resolveLatestPublishedTag("@codenhub/error", ["@codenhub/error@0.1.0-beta.1"])).toBeUndefined();
+  });
+
   it("ignores tags that are not release tags", () => {
     expect(resolveLatestPublishedTag("@codenhub/error", ["v1.0.0", "release"])).toBeUndefined();
   });

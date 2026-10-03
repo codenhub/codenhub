@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { parseReleaseTag } from "../release/publish.ts";
-import { listTags } from "../release/published-tags.ts";
+import { isStableVersion, listTags } from "../release/published-tags.ts";
 import { compareVersions } from "../release/readiness.ts";
 import { findDependencyCycles } from "../workspace/dependency-order.ts";
 import { parseCatalog, type WorkspacePackage } from "../workspace/discover.ts";
@@ -19,8 +19,6 @@ const DECLARED_FIELDS = [...INSTALLED_FIELDS, "peerDependencies"];
 const CONSUMER_FIELDS = ["dependencies", "peerDependencies"];
 const CATALOG_RANGE = "catalog:";
 const WORKSPACE_RANGE = "workspace:";
-// `major.minor.patch` and nothing more: no pre-release, no build metadata.
-const STABLE_VERSION = /^\d+\.\d+\.\d+$/;
 // One package installing a dependency has no version to drift from. Two do, and
 // two majors of the same library in one install tree is what this prevents.
 const SHARED_DEPENDENCY_THRESHOLD = 2;
@@ -152,7 +150,7 @@ export function findLatestStableReleases(tags: readonly string[]): Map<string, s
   const latest = new Map<string, string>();
   for (const tag of tags) {
     const release = parseReleaseTag(tag);
-    if (release === undefined || !STABLE_VERSION.test(release.version)) {
+    if (release === undefined || !isStableVersion(release.version)) {
       continue;
     }
     const current = latest.get(release.name);
