@@ -5,6 +5,8 @@ const WORKSPACE_MANIFEST = "pnpm-workspace.yaml";
 const PACKAGES_KEY = /^packages:\s*$/;
 const LIST_ITEM = /^\s+-\s*(?<entry>.+?)\s*$/;
 const TOP_LEVEL_KEY = /^\S/;
+const CATALOG_KEY = /^catalog:\s*(?:#.*)?$/;
+const MAP_ENTRY = /^\s+(?<key>"[^"]+"|'[^']+'|[^\s:#]+)\s*:\s*(?<value>[^#]+?)\s*(?:#.*)?$/;
 const WORKSPACE_PROTOCOL = "workspace:";
 const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const;
 
@@ -89,6 +91,36 @@ export function parseWorkspacePatterns(manifest: string): string[] {
     throw new Error(`Invalid ${WORKSPACE_MANIFEST}: "packages:" declares no globs.`);
   }
   return patterns;
+}
+
+/**
+ * Reads the default `catalog` from a pnpm workspace manifest.
+ *
+ * Only a flat map of package names to ranges is understood, which is the shape
+ * the default catalog takes, so no YAML dependency is needed.
+ * @param manifest Raw `pnpm-workspace.yaml` contents.
+ * @returns Package name to catalog range, empty when the manifest has no catalog.
+ */
+export function parseCatalog(manifest: string): Map<string, string> {
+  const lines = manifest.split(/\r?\n/);
+  const startIndex = lines.findIndex((line) => CATALOG_KEY.test(line));
+  const catalog = new Map<string, string>();
+  if (startIndex === -1) {
+    return catalog;
+  }
+  for (const line of lines.slice(startIndex + 1)) {
+    if (line.trim() === "" || line.trimStart().startsWith("#")) {
+      continue;
+    }
+    if (TOP_LEVEL_KEY.test(line)) {
+      break;
+    }
+    const groups = MAP_ENTRY.exec(line)?.groups;
+    if (groups?.key !== undefined && groups.value !== undefined) {
+      catalog.set(unquote(groups.key), unquote(groups.value));
+    }
+  }
+  return catalog;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

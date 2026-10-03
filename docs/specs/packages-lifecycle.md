@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-30
+last_updated: 2026-10-03
 scope: Public workspace packages.
 ---
 
@@ -121,7 +121,7 @@ A package MAY inline a dependency into its own build output instead of asking ev
 
 ```json
 {
-  "devDependencies": { "@codenhub/validation": "workspace:*" },
+  "devDependencies": { "@codenhub/validation": "catalog:" },
   "codenhub": { "bundled": ["@codenhub/validation"] }
 }
 ```
@@ -140,11 +140,15 @@ Three cases the check cannot settle, which reviewers MUST watch for:
 
 ### Ranges
 
-Workspace-internal dependencies SHOULD use `workspace:*`.
+A public package that depends on another public package SHOULD install it from its release, through a `catalog:` range, not from the working tree. It is then built and tested against the same code its consumers install, so a defect in the dependency shows up the way a consumer meets it, and no build order or cycle ties the two together. The cost is accepted on purpose: a change that needs new behavior from another package waits for that package to release it, rather than landing on code no consumer has yet. pnpm installs a `catalog:` range from the registry even when the workspace holds a matching version, and `pnpm-workspace.yaml` sets `linkWorkspacePackages: false` so that stays true if pnpm's default changes.
+
+The catalog entry for a workspace package SHOULD be `^<version>`, naming that package's latest stable release tag. A release lands after the merge that prepared it, so `main` trails each release until a pull request raises the entry; `hub check` reports the gap as a warning rather than an error so it never fails unrelated pull requests in the meantime.
+
+Every other workspace-internal dependency SHOULD use `workspace:*`: one where either side is private, such as `@codenhub/tools`, `@codenhub/app-shell`, an app, or a `dev`, `debug`, or `demo` package. A private package has no release to install, and those environments exist to run the working tree.
 
 An external dependency that two or more workspace packages install MUST use `catalog:`. Sharing is what the catalog is for: a dependency declared twice can drift to two versions, and two majors of the same library in one install tree is a failure no other check would catch. A dependency only one package installs MAY pin its own range, because it has no second declaration to drift from.
 
-`peerDependencies` are exempt from both rules. A peer range is a contract with the consumer, and a `workspace:` or `catalog:` range would publish it pinned.
+`peerDependencies` are exempt from all of these rules. A peer range is a contract with the consumer, and a `workspace:` or `catalog:` range would publish it pinned.
 
 Workspace dependencies MUST NOT form a cycle. A cycle has no valid build order, so the tooling falls back to the declaration order and builds something before its own dependency.
 

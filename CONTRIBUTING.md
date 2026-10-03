@@ -171,6 +171,8 @@ git push origin "@codenhub/error@0.3.0"
 
 The tag must name the version already in the package manifest on `main`; `.github/workflows/publish.yml` refuses the run otherwise. Bump the version and write its changelog entry in an ordinary pull request first, then tag the merge commit.
 
+Once npm has the version, raise the package's entry in the `pnpm-workspace.yaml` catalog to it, in another ordinary pull request, if other packages install it from there. `hub check` warns about an entry that trails the latest release; `docs/specs/packages-lifecycle.md` explains why public packages install each other from releases.
+
 A package's first release is the exception and is published from a maintainer's machine, because npm cannot configure a trusted publisher for a name that does not exist yet. It is tagged all the same, and tagged first — `hub publish` refuses to run without the tag on the commit being published — then the tag is pushed once npm has the version:
 
 ```sh

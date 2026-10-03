@@ -58,7 +58,7 @@
     "typecheck": "tsc -b"
   },
   "devDependencies": {
-    "@codenhub/styles": "workspace:*",
+    "@codenhub/styles": "catalog:",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitest/coverage-v8": "catalog:",

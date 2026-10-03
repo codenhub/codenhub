@@ -1,7 +1,11 @@
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { parseReleaseTag } from "../release/publish.ts";
+import { listTags } from "../release/published-tags.ts";
+import { compareVersions } from "../release/readiness.ts";
 import { findDependencyCycles } from "../workspace/dependency-order.ts";
-import type { WorkspacePackage } from "../workspace/discover.ts";
+import { parseCatalog, type WorkspacePackage } from "../workspace/discover.ts";
 import { findBuiltImports, readBinaryNames, readDependencyUsage, SCENARIO_DIRECTORY } from "./dependency-usage.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
@@ -15,6 +19,8 @@ const DECLARED_FIELDS = [...INSTALLED_FIELDS, "peerDependencies"];
 const CONSUMER_FIELDS = ["dependencies", "peerDependencies"];
 const CATALOG_RANGE = "catalog:";
 const WORKSPACE_RANGE = "workspace:";
+// `major.minor.patch` and nothing more: no pre-release, no build metadata.
+const STABLE_VERSION = /^\d+\.\d+\.\d+$/;
 // One package installing a dependency has no version to drift from. Two do, and
 // two majors of the same library in one install tree is what this prevents.
 const SHARED_DEPENDENCY_THRESHOLD = 2;
@@ -121,10 +127,70 @@ export function findScenarioDirectories(
   return parent === undefined ? [] : [join(parent.directory, SCENARIO_DIRECTORY)];
 }
 
+/**
+ * Where the dependency rule reads the catalog and the released versions from.
+ *
+ * Both are read only when a package depends on a workspace package through the
+ * catalog, and at most once per run.
+ */
+export interface ReleaseSources {
+  /** The default catalog of `pnpm-workspace.yaml`, by package name. */
+  readCatalog(): Promise<ReadonlyMap<string, string>>;
+  /** The newest stable release tag's version, by package name. */
+  readLatestReleases(): Promise<ReadonlyMap<string, string>>;
+}
+
+/**
+ * Picks each package's newest stable version out of a set of release tags.
+ *
+ * A pre-release is left out: the catalog follows what `npm install` resolves by
+ * default, and a pre-release publishes under `next` rather than `latest`.
+ * @param tags Tag names, such as the output of `git tag --list`.
+ * @returns Package name to its newest stable released version.
+ */
+export function findLatestStableReleases(tags: readonly string[]): Map<string, string> {
+  const latest = new Map<string, string>();
+  for (const tag of tags) {
+    const release = parseReleaseTag(tag);
+    if (release === undefined || !STABLE_VERSION.test(release.version)) {
+      continue;
+    }
+    const current = latest.get(release.name);
+    if (current === undefined || compareVersions(release.version, current) > 0) {
+      latest.set(release.name, release.version);
+    }
+  }
+  return latest;
+}
+
+/**
+ * Reads the catalog and release tags of a repository, once each.
+ * @param root Absolute repository root.
+ * @returns Sources backed by `pnpm-workspace.yaml` and `git tag --list`.
+ */
+export function createReleaseSources(root: string): ReleaseSources {
+  let catalog: Promise<ReadonlyMap<string, string>> | undefined;
+  let releases: Promise<ReadonlyMap<string, string>> | undefined;
+  return {
+    readCatalog: async () => {
+      catalog ??= (async () => parseCatalog(await readFile(join(root, "pnpm-workspace.yaml"), "utf8")))();
+      return catalog;
+    },
+    readLatestReleases: async () => {
+      releases ??= (async () => findLatestStableReleases(await listTags(root)))();
+      return releases;
+    },
+  };
+}
+
 /** What the dependency rule needs to know about the rest of the workspace. */
 export interface DependencyContext {
   /** Every workspace package name. */
   workspaceNames: ReadonlySet<string>;
+  /** Every workspace package, keyed by name. */
+  byName: ReadonlyMap<string, WorkspacePackage>;
+  /** The catalog and released versions internal catalog ranges are compared against. */
+  sources: ReleaseSources;
   /** External dependencies installed by more than one package. */
   sharedNames: ReadonlySet<string>;
   /** One cycle per package that takes part in any. */
@@ -154,8 +220,20 @@ function readBundled(workspacePackage: WorkspacePackage): BundledDeclaration {
 function checkRanges(workspacePackage: WorkspacePackage, context: DependencyContext): Finding[] {
   const findings: Finding[] = [];
   for (const { field, name, range } of readDependencies(workspacePackage, INSTALLED_FIELDS)) {
-    if (context.workspaceNames.has(name)) {
-      if (!range.startsWith(WORKSPACE_RANGE)) {
+    const dependency = context.byName.get(name);
+    if (dependency !== undefined) {
+      // A public package consumes another public one as it is released, the way
+      // any consumer would. Anything private has no release to consume, and a
+      // private package such as a demo exists to run the working tree.
+      const consumesRelease = !workspacePackage.isPrivate && !dependency.isPrivate;
+      if (consumesRelease && range !== CATALOG_RANGE) {
+        findings.push({
+          code: "dependencies/published-range",
+          location: MANIFEST_LOCATION,
+          message: `"${field}.${name}" should use a "catalog:" range, so it installs the released version.`,
+          severity: "warning",
+        });
+      } else if (!consumesRelease && !range.startsWith(WORKSPACE_RANGE)) {
         findings.push({
           code: "dependencies/workspace-range",
           location: MANIFEST_LOCATION,
@@ -173,6 +251,50 @@ function checkRanges(workspacePackage: WorkspacePackage, context: DependencyCont
     }
   }
   return findings;
+}
+
+async function checkCatalogReleases(
+  workspacePackage: WorkspacePackage,
+  context: DependencyContext,
+): Promise<Finding[]> {
+  const internal = readDependencies(workspacePackage, INSTALLED_FIELDS).filter(
+    ({ name, range }) => range === CATALOG_RANGE && context.workspaceNames.has(name),
+  );
+  if (internal.length === 0) {
+    return [];
+  }
+  const [catalog, releases] = await Promise.all([context.sources.readCatalog(), context.sources.readLatestReleases()]);
+  return internal.flatMap(({ field, name }): Finding[] => {
+    const range = catalog.get(name);
+    const latest = releases.get(name);
+    if (range === `^${latest}`) {
+      return [];
+    }
+    if (range === undefined) {
+      return [
+        {
+          code: "dependencies/catalog-release",
+          location: MANIFEST_LOCATION,
+          message: `"${field}.${name}" installs from the catalog, but pnpm-workspace.yaml has no catalog entry for it.`,
+          severity: "warning",
+        },
+      ];
+    }
+    // A release lands after the merge that prepared it, so `main` trails it until
+    // someone raises the entry. That is reported, never failed, because it would
+    // otherwise fail every open pull request until then.
+    return [
+      {
+        code: "dependencies/catalog-release",
+        location: MANIFEST_LOCATION,
+        message:
+          latest === undefined
+            ? `"${field}.${name}" installs from the catalog, but ${name} has no stable release tag.`
+            : `"${field}.${name}" installs catalog range "${range}"; the latest release is ${latest}, so pnpm-workspace.yaml should say "^${latest}".`,
+        severity: "warning",
+      },
+    ];
+  });
 }
 
 function escapeRegExp(value: string): string {
@@ -316,13 +438,19 @@ async function checkUsage(workspacePackage: WorkspacePackage, context: Dependenc
  * prefix: every finding is something wrong with the dependency list, and the
  * exception register waives them by the same `dependencies/` codes.
  * @param workspacePackages Every workspace package, needed by the checks that compare one against the rest.
+ * @param sources Catalog and released versions that internal catalog ranges are compared against.
  * @returns Dependency rules ready for registration.
  */
-export function createDependencyRules(workspacePackages: readonly WorkspacePackage[]): CheckRule[] {
+export function createDependencyRules(
+  workspacePackages: readonly WorkspacePackage[],
+  sources: ReleaseSources,
+): CheckRule[] {
   const context: DependencyContext = {
+    byName: new Map(workspacePackages.map((workspacePackage) => [workspacePackage.name, workspacePackage])),
     byLocation: new Map(workspacePackages.map((workspacePackage) => [workspacePackage.location, workspacePackage])),
     cyclesByPackage: mapCyclesByPackage(workspacePackages),
     sharedNames: findSharedDependencies(workspacePackages, new Set(workspacePackages.map(({ name }) => name))),
+    sources,
     workspaceNames: new Set(workspacePackages.map(({ name }) => name)),
   };
 
@@ -334,6 +462,7 @@ export function createDependencyRules(workspacePackages: readonly WorkspacePacka
         const cycle = context.cyclesByPackage.get(workspacePackage.name);
         return [
           ...checkRanges(workspacePackage, context),
+          ...(await checkCatalogReleases(workspacePackage, context)),
           ...(cycle === undefined
             ? []
             : [

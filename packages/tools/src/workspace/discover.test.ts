@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseWorkspacePatterns } from "./discover.ts";
+import { parseCatalog, parseWorkspacePatterns } from "./discover.ts";
 
 describe("parseWorkspacePatterns", () => {
   it("shouldReadQuotedAndUnquotedGlobs", () => {
@@ -31,5 +31,30 @@ describe("parseWorkspacePatterns", () => {
 
   it("shouldRejectAnEmptyPackagesList", () => {
     expect(() => parseWorkspacePatterns("packages:\ncatalog:\n")).toThrow(/declares no globs/);
+  });
+});
+
+describe("parseCatalog", () => {
+  it("shouldReadQuotedAndUnquotedEntriesUntilTheNextTopLevelKey", () => {
+    const manifest = [
+      "packages:",
+      '  - "packages/*"',
+      "",
+      "catalog: # shared versions",
+      '  "@codenhub/error": ^0.2.1 # released',
+      "  vitest: ^4.1.10",
+      "",
+      "allowBuilds:",
+      "  esbuild: true",
+    ].join("\n");
+
+    expect([...parseCatalog(manifest)]).toEqual([
+      ["@codenhub/error", "^0.2.1"],
+      ["vitest", "^4.1.10"],
+    ]);
+  });
+
+  it("shouldReturnAnEmptyCatalogWhenThereIsNone", () => {
+    expect(parseCatalog(["packages:", "  - packages/*"].join("\n")).size).toBe(0);
   });
 });
