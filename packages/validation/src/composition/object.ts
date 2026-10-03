@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
-import { tail, word } from "../core/checks";
-import { append, below, call, composed, pathAt } from "../core/nesting";
+import { report, tail } from "../core/checks";
+import { append, below, call, composed } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, failWith, issue } from "../core/result";
 import type {
@@ -108,12 +108,10 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
 
     const issues: ValidationIssue[] = [];
     if (unknownKeys === "strict") {
-      for (const key of Object.keys(input)) {
-        if (!known.has(key)) {
-          issues.push(issue("unrecognized_key", { key }, pathAt(place, [key])));
-        }
-      }
-      word(issues, options.message);
+      const unrecognized = Object.keys(input)
+        .filter((key) => !known.has(key))
+        .map((key) => issue("unrecognized_key", { key }, [key]));
+      append(issues, report(unrecognized, place, options.message));
     }
 
     // Everything the output takes from the input is read before any child runs, so neither a child that

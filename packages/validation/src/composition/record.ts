@@ -1,6 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
-import { tail, word } from "../core/checks";
-import { append, below, call, composed, placeAll } from "../core/nesting";
+import { report, tail } from "../core/checks";
+import { append, below, call, composed } from "../core/nesting";
 import { isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, failWith, issue, repeatedKey } from "../core/result";
 import type {
@@ -103,10 +103,7 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
         if (!keyResult.ok) {
           // Wrapped, so a bad key is not mistaken for a bad value at the same path.
           issues.push(
-            ...word(
-              placeAll([issue("invalid_key", { issues: keyResult.error.issues }, [name])], place),
-              options.message,
-            ),
+            ...report([issue("invalid_key", { issues: keyResult.error.issues }, [name])], place, options.message),
           );
         }
         if (!valueResult.ok) {
@@ -114,7 +111,7 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
         }
         if (keyResult.ok && valueResult.ok) {
           if (Object.hasOwn(output, keyResult.value as string)) {
-            issues.push(...word(placeAll([repeatedKey(name)], place), options.message));
+            issues.push(...report([repeatedKey(name)], place, options.message));
           } else {
             setOwn(output, keyResult.value as string, valueResult.value);
           }
