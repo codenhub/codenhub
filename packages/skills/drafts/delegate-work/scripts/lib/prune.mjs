@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { removeDirSafe, removeWorktree } from "./links.mjs";
 import { APPLICABLE, EDITING } from "./runner.mjs";
-import { loadMeta, promptsDir, reviewersOf, runDir, runsDir, working } from "./state.mjs";
+import { promptsDir, readMeta, reviewersOf, runDir, runsDir, working } from "./state.mjs";
 
 /** "90m", "24h", "7d", "0" → ms. */
 export function parseAge(s) {
@@ -37,14 +37,6 @@ function pending(meta) {
   return meta.isolation === "worktree"
     ? "unapplied worktree result"
     : "undecided in-place change (already in the working tree)";
-}
-
-function readMeta(id) {
-  try {
-    return loadMeta(id);
-  } catch {
-    return null;
-  }
 }
 
 /**

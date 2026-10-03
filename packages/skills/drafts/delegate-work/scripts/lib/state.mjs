@@ -92,6 +92,15 @@ export function loadMeta(id) {
   return JSON.parse(fs.readFileSync(f, "utf8"));
 }
 
+/** loadMeta for a scan of every run: unreadable state is skipped, not a reason for the scan to fail. */
+export function readMeta(id) {
+  try {
+    return loadMeta(id);
+  } catch {
+    return null;
+  }
+}
+
 export const alive = (pid) => {
   try {
     process.kill(pid, 0);
@@ -237,7 +246,7 @@ export function reviewersOf(id) {
   }
   return fs
     .readdirSync(dir)
-    .map(loadMeta)
+    .map(readMeta)
     .filter((m) => m && m.reviewOf === id && m.sharedWorkDir && working(m));
 }
 
@@ -255,7 +264,7 @@ export function activeInplace(root, { unfinished = false } = {}) {
     unfinished && (m.phase === "running" || m.phase === "interrupted") && !m.discarded && !m.applied;
   return fs
     .readdirSync(dir)
-    .map(loadMeta)
+    .map(readMeta)
     .filter((m) => m && m.isolation === "inplace" && m.editing && m.root === root && (working(m) || cutShort(m)));
 }
 
