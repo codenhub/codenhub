@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-30
+last_updated: 2026-10-03
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -49,7 +49,7 @@ Root scripts map directly onto it:
 
 `pnpm format` duplicates `pnpm format:check` on purpose. When a name matches no script, pnpm runs the executable of that name from `PATH` instead, and on Windows `format` is the system disk formatter; the alias keeps the obvious name pointed at the repository's formatter.
 
-`hub browsers`, `hub assets`, `hub new`, `hub release`, `hub publish`, and `hub preview:deploy` have no root script of their own. They are occasional commands rather than part of a change loop, and they read as what they are through `pnpm hub <command>`.
+`hub browsers`, `hub assets`, `hub new`, `hub release`, `hub publish`, `hub preview:deploy`, and `hub labels` have no root script of their own. They are occasional commands rather than part of a change loop, and they read as what they are through `pnpm hub <command>`.
 
 A command name without its own definition runs the package script of that name, so package-specific scripts such as `dev` and `debug` work without registration. Package scripts also accept the package-first form, such as `hub styles dev`, when the first token identifies one package and the second names one of its scripts. `dev`, `debug`, and `preview` keep that package attached to the terminal, stream output as it arrives, and run without the default timeout.
 
@@ -316,6 +316,12 @@ A normal release publishes under npm's `latest` dist-tag. A pre-release version 
 Authentication is never configured here. In `.github/workflows/publish.yml` it comes from npm trusted publishing, which exchanges the job's OIDC token for a short-lived credential; on a maintainer's machine it comes from their own `npm login`. No npm token exists in this repository. No `--provenance` flag is passed either: trusted publishing attaches provenance on its own, and the flag is rejected outside a supported CI provider, so passing it would buy nothing in the workflow and break the same command locally.
 
 After a successful publish it reads the version npm serves back and reports it, which is the confirmation `docs/specs/packages-lifecycle.md` asks for. That read is a report and never a gate. A version npm accepted can stay unreadable for minutes, while registry metadata propagates or while npm's automated review holds it — the package's versions page on npmjs.com shows it as "Validating" meanwhile, and the command prints that page's URL. A version that has not appeared yet means "look again later", not "the publish failed".
+
+## Issue labels
+
+`hub labels` creates or updates the repository's GitHub labels through `gh`, which must be installed and authenticated. The list is `.github/labels.json` plus one `pkg:<unscoped name>` label per workspace package and one `app:<directory>` label per app, derived on every run. A package nested inside another, such as `packages/icons/demo`, belongs to its parent and gets none. `CONTRIBUTING.md` says what each group means.
+
+Every label is written with `gh label create --force`, so a run is safe to repeat and updates colors and descriptions in place. It never deletes one: deleting a label strips it from every issue that carries it, so a label on GitHub that the list no longer has is reported for a maintainer to remove by hand. `--dry-run` prints the `gh` commands without running them.
 
 ## Cleaning
 
