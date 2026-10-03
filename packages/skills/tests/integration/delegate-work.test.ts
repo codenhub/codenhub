@@ -1339,7 +1339,10 @@ describe("delegate-work", () => {
     expect(fs.readFileSync(file, "utf8")).toBe(before);
   });
 
-  it("shouldPutBackWhatAnApplyWroteWhenItFailsHalfway", async () => {
+  // Root writes through a read-only mode, so nothing would fail halfway.
+  const asRoot = process.getuid?.() === 0;
+
+  it.skipIf(asRoot)("shouldPutBackWhatAnApplyWroteWhenItFailsHalfway", async () => {
     const R = await import(runner);
     const a = path.join(repo, "src", "a.txt");
     const locked = path.join(repo, "src", "locked.txt");
@@ -1415,7 +1418,7 @@ describe("delegate-work", () => {
     await R.discard(r.id);
   });
 
-  it("shouldPutBackAFileTheUserRevertedAsTheyLeftIt", async () => {
+  it.skipIf(asRoot)("shouldPutBackAFileTheUserRevertedAsTheyLeftIt", async () => {
     const R = await import(runner);
     const a = path.join(repo, "src", "a.txt");
     const locked = path.join(repo, "src", "locked3.txt");
@@ -1444,7 +1447,7 @@ describe("delegate-work", () => {
     fs.rmSync(locked, { force: true });
   });
 
-  it("shouldKeepACopyAndPutBackWhenADiscardFailsHalfway", async () => {
+  it.skipIf(asRoot)("shouldKeepACopyAndPutBackWhenADiscardFailsHalfway", async () => {
     const R = await import(runner);
     const a = path.join(repo, "src", "a.txt");
     const locked = path.join(repo, "src", "locked2.txt");
