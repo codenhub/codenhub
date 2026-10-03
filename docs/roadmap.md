@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-30
+last_updated: 2026-10-03
 scope: repo-wide direction for the workspace's packages and deploy surfaces
 ---
 
@@ -18,7 +18,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
 
 ## Planned
 
-- **Repository governance.** `SECURITY.md` is the one with a real trigger: provenance-attested packages invite an audit and this repository answers nowhere for a report. `CODEOWNERS` and a pull-request template pay off once more than one person reviews here.
+- **Repository governance.** `SECURITY.md`, the issue forms, the label list, and the pull-request template have landed. `CODEOWNERS` pays off once more than one person reviews here.
 - **Backfill package demos.** `apps/demo` aggregates `packages/*/demo/`, and only `icons` and `styles` have one, so the deployed surface shows two of thirteen public packages.
 - **Bootstrap the unpublished packages.** `components`, `i18n`, `kbd`, `toaster`, `tauri-plugin-webview`, and `tauri-plugin-window` have never been published; each needs one manual `hub publish` from a maintainer's machine before its trusted publisher can be configured on npm.
 - **Documentation MCP server.**

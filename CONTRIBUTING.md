@@ -22,6 +22,42 @@ pnpm install
 - Update affected documentation alongside changes to behavior, public APIs, exports, conventions, or lifecycle rules. Each technical contract has one owning document; references identify that owner rather than repeat its requirements.
 - Do not commit secrets, build artifacts, or unrelated changes.
 
+## Issues
+
+Defects and requests are tracked as GitHub issues, opened through the bug and feature forms. A vulnerability is the exception: report it privately as `SECURITY.md` describes.
+
+Each issue carries one label from each group that applies:
+
+| Group       | Labels                                      | Says                                             |
+| ----------- | ------------------------------------------- | ------------------------------------------------ |
+| `type:`     | `bug`, `feature`, `docs`, `chore`           | What kind of work it is                          |
+| `pkg:`      | one per workspace package, by unscoped name | Which package it is in                           |
+| `app:`      | one per app, by directory name              | Which app it is in                               |
+| `status:`   | `needs-triage`, `blocked`                   | Why it is not moving, when it is not             |
+| `found-in:` | `repo`, `external`                          | Whether it surfaced in this repository or an app |
+
+`.github/labels.json` holds the fixed groups; the `pkg:` and `app:` labels are derived from the workspace. `pnpm hub labels` creates or updates all of them on GitHub, and is run after adding a package or editing the list. `docs/tooling.md` describes the command.
+
+### A defect found mid-task
+
+A defect in a package, hit while working on something else, is filed and worked around, not fixed on the spot. Fixing it in place mixes two subjects in one branch, for the reason the [commit](#atomic-commits) and [pull request](#pull-requests) rules already reject, and for a published package it also means a release in the middle of unrelated work.
+
+File it with what triage needs, from the terminal:
+
+```sh
+gh issue create --title "error: <what is wrong>" --label "type:bug,pkg:error,found-in:repo" --body "<what happened, what was expected, and the workaround>"
+```
+
+Then mark the workaround where it lives, naming the issue in full so the reference reads the same in this repository and in an app outside it:
+
+```ts
+// Workaround for codenhub/codenhub#123: <what it works around>.
+```
+
+Once the fix is released, searching for `codenhub/codenhub#123` finds every workaround to remove. A defect with no workaround blocks the task; say so, and the fix goes first, in its own pull request.
+
+Opening an issue is outward-facing. An agent drafts it and asks before filing, as it does before pushing.
+
 ## Branches
 
 Work happens on a branch. Do not commit to `main`.
@@ -118,6 +154,8 @@ Every change reaches `main` through a pull request. CI verifies what the branch 
 Pushing a branch and opening a pull request are outward-facing actions. An agent asks first and does neither on its own initiative.
 
 Keep a pull request to one subject. A branch that fixes a bug and also restructures a doc is two pull requests, for the same reason a commit that does both is two commits.
+
+A pull request that resolves an issue says `Fixes #123` in its description, so merging it closes the issue. Merging is not releasing: a fix to a published package reaches consumers with that package's next release, whose changelog entry links the issue (`docs/specs/packages-changelog.md`).
 
 ## Releasing
 
