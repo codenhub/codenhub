@@ -86,17 +86,36 @@ describe("deep input with many issues", () => {
     items: optional(array(number())),
   });
 
-  // Each composer used to copy the path of every issue below it, which cost the square of the depth for
-  // each issue: this input took seconds.
-  it("should report every issue at its full path in time that grows with the input", () => {
-    let input: Level = { items: Array.from({ length: 40_000 }, () => "x") };
-    for (let depth = 0; depth < 100; depth += 1) {
+  const nested = (depth: number): Level => {
+    let input: Level = { items: Array.from({ length: 20_000 }, () => "x") };
+    for (let count = 0; count < depth; count += 1) {
       input = { next: input };
     }
-    const start = performance.now();
-    const issues = issuesOf(level(input));
-    expect(performance.now() - start).toBeLessThan(1500);
-    expect(issues).toHaveLength(40_000);
+    return input;
+  };
+
+  /** The fastest of three runs, in milliseconds, so a pause of the machine during one does not count. */
+  const fastest = (input: Level): number =>
+    Math.min(
+      ...Array.from({ length: 3 }, () => {
+        const start = performance.now();
+        level(input);
+        return performance.now() - start;
+      }),
+    );
+
+  const deep = nested(100);
+
+  it("should report every issue at its full path", () => {
+    const issues = issuesOf(level(deep));
+    expect(issues).toHaveLength(20_000);
     expect(issues[0]?.path).toEqual([...Array.from({ length: 100 }, () => "next"), "items", 0]);
+  });
+
+  // Each composer used to copy the path of every issue below it, which cost the square of the depth for
+  // each issue: 100 levels took about 100 times what one level took, and take under 10 times now. The
+  // two are compared, not timed alone, so a slower or busier machine changes both and not the answer.
+  it("should report them in time that grows with the input", { timeout: 30_000 }, () => {
+    expect(fastest(deep)).toBeLessThan(30 * fastest(nested(1)));
   });
 });

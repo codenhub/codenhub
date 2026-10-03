@@ -1,3 +1,6 @@
+import { isBidiHost } from "./bidi";
+import { isPunycodeHost } from "./punycode";
+
 /** Dot-separated labels of letters, digits and hyphens, at most 253 characters, single labels included. */
 export const HOSTNAME_PATTERN =
   /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i;
@@ -23,12 +26,25 @@ const DOMAIN_NAME_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z
 const SPECIAL_USE_NAME_PATTERN =
   /(?:^|\.)(?:localhost|local|internal|test|example|invalid|alt|onion|arpa|xn--(?:kgbechtv|hgbk6aj7f53bba|0zwm56d|g6w251d|80akhbyknj4f|11b5bs3a9aj6g|jxalpdlp|9t4b11yi5a|deba0ad|zckzah|hlcj6aya9esc7a))$/i;
 
+/** A label in punycode, the ASCII form of an internationalized one. */
+const PUNYCODE_LABEL_PATTERN = /(?:^|\.)xn--/i;
+
 /**
- * Tests whether a host is a public domain name, which is what "public" means for email and URL hosts. An
- * absolute name, ending in a dot, is not one here; {@link isPublicName} accepts it.
+ * Tests the internationalized labels of an ASCII host as every browser does: each `xn--` label decodes
+ * to the label it spells, and the host keeps the bidi rule. Not every parser checks either, so it is
+ * checked here, for a host the parser has already read too. A host with no `xn--` label has nothing to
+ * check, which is most of them, so they pay one test.
+ */
+const isIdnHost = (host: string): boolean =>
+  !PUNYCODE_LABEL_PATTERN.test(host) || (isPunycodeHost(host) && isBidiHost(host));
+
+/**
+ * Tests whether a host is a public domain name, which is what "public" means for email and URL hosts,
+ * its internationalized labels included. An absolute name, ending in a dot, is not one here;
+ * {@link isPublicName} accepts it.
  */
 export const isPublicHost = (host: string): boolean =>
-  DOMAIN_NAME_PATTERN.test(host) && !SPECIAL_USE_NAME_PATTERN.test(host);
+  DOMAIN_NAME_PATTERN.test(host) && !SPECIAL_USE_NAME_PATTERN.test(host) && isIdnHost(host);
 
 /** A host without the final dot of an absolute name, such as `example.com.`, which names the same host. */
 export const withoutFinalDot = (host: string): string => (host.endsWith(".") ? host.slice(0, -1) : host);
@@ -47,14 +63,6 @@ export const isPublicName = (host: string): boolean => isPublicHost(withoutFinal
  * is read by the parser as a host and nothing else: never a port, a path, credentials or an escape.
  */
 const DOMAIN_TEXT_PATTERN = /^[\p{L}\p{M}\p{N}.。．｡-]+$/u;
-/** A label in punycode, the ASCII form of an internationalized one. */
-const PUNYCODE_LABEL_PATTERN = /(?:^|\.)xn--/i;
-/**
- * Tests whether every punycode label of a host decodes, which the URL parser checks and a pattern
- * cannot: `xn--zz` is no label. Call it only on text `HOSTNAME_PATTERN` accepts, so nothing but
- * letters, digits, hyphens and dots reaches the parser.
- */
-const decodes = (host: string): boolean => !PUNYCODE_LABEL_PATTERN.test(host) || URL.canParse(`http://${host}`);
 /** The longest a domain name can be, in its ASCII form. */
 export const HOST_MAX_LENGTH = 253;
 
@@ -82,18 +90,18 @@ const NUMERIC_LAST_LABEL_PATTERN = /(?:^|\.)(?:\d+|0x[0-9a-f]*)$/i;
 
 /**
  * A hostname, without a final dot, whose last label is not one the URL parser reads as a number, since
- * a name ending that way is an IPv4 address. Its punycode is not tested: for a host the parser has
- * already read, it decodes.
+ * a name ending that way is an IPv4 address, and whose internationalized labels are valid in every
+ * browser.
  */
 export const isNamedHost = (name: string): boolean =>
-  HOSTNAME_PATTERN.test(name) && !NUMERIC_LAST_LABEL_PATTERN.test(name);
+  HOSTNAME_PATTERN.test(name) && !NUMERIC_LAST_LABEL_PATTERN.test(name) && isIdnHost(name);
 
 /**
  * A hostname whose last label is not one the URL parser reads as a number, since a name ending that
- * way is an IPv4 address, and whose punycode labels decode. An absolute name, ending in one dot, is the
- * same name, and its dot is not counted.
+ * way is an IPv4 address, and whose internationalized labels are valid in every browser. An absolute
+ * name, ending in one dot, is the same name, and its dot is not counted.
  */
 export const isHostname = (text: string): boolean => {
   const name = text.endsWith(".") ? text.slice(0, -1) : text;
-  return isNamedHost(name) && decodes(name);
+  return isNamedHost(name);
 };

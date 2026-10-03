@@ -2513,7 +2513,7 @@ A value a validator can require exactly: any primitive, including `null` and `un
 export type Message = string | ((issue: ValidationIssue) => string);
 ```
 
-Wording for the issues one validator reports itself: the text, or a function that words an issue. A function is called when the issue is reported.
+Wording for the issues one validator reports itself: the text, or a function that words an issue. A function is called when the issue is reported, with the issue as that validator reports it, so its `path` is relative to the validator's own value, `[]` for the value itself, even where the result places the issue deeper, such as at `["user", "email"]` inside an `object`.
 
 ### Messages
 

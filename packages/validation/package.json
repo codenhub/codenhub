@@ -37,15 +37,19 @@
     "status:npm": "npm view @codenhub/validation version dist-tags time --json && npm dist-tag ls @codenhub/validation && npm access get status @codenhub/validation",
     "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
+    "test:browser": "playwright test",
+    "test:browser:watch": "playwright test --ui",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "typecheck": "tsc -b"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
   },
   "engines": {
