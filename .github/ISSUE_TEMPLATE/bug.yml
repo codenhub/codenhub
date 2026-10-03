@@ -1,0 +1,51 @@
+name: Bug
+description: A package does not behave the way its documentation says.
+labels: ["type:bug", "status:needs-triage"]
+body:
+  - type: input
+    id: package
+    attributes:
+      label: Package
+      placeholder: "@codenhub/error"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The installed version, or the commit when you hit it inside this repository.
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: found-in
+    attributes:
+      label: Found in
+      options:
+        - This repository
+        - An app outside this repository
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: The smallest code or steps that show it.
+      render: ts
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround in place
+      description: What you did to keep going, and where, so it can be removed once this is fixed.

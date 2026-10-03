@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-30
+last_updated: 2026-10-03
 scope: Recommended changelog documentation for workspace packages.
 ---
 
@@ -73,6 +73,8 @@ Structure each version page's content with [Keep a Changelog](https://keepachang
 
 Each heading's content is a short bullet list. Describe the change from the consumer's point of view, the same way `docs/specs/packages-lifecycle.md` expects breaking changes to be documented — what changed and why it matters to someone upgrading, not which files moved.
 
+A bullet for a change that resolves an issue SHOULD end with a link to it. Write the link as a full URL, because the page is also served by the documentation site, where a bare `#123` resolves to nothing. That link is how someone who reported a defect learns which version fixes it.
+
 Putting the frontmatter and headings together, a complete `docs/changelog/1.2.0.md`:
 
 ```markdown
@@ -89,7 +91,7 @@ date: 2026-09-05
 
 ## Fixed
 
-- `resolvePath` no longer throws on a trailing separator; it returns the normalized directory path.
+- `resolvePath` no longer throws on a trailing separator; it returns the normalized directory path. ([#123](https://github.com/codenhub/codenhub/issues/123))
 ```
 
 ## Linking from the README
