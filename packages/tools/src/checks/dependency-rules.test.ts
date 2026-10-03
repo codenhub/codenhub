@@ -96,7 +96,13 @@ describe("dependency ranges", () => {
     );
     const other = await createPackage("@fixture/other");
 
-    expect(await runRuleForCodes(workspacePackage, [other])).toEqual(["dependencies/workspace-range"]);
+    expect(
+      await runRuleForCodes(
+        workspacePackage,
+        [other],
+        createSources({ "@fixture/other": "^1.0.0" }, { "@fixture/other": "1.0.0" }),
+      ),
+    ).toEqual(["dependencies/workspace-range"]);
   });
 
   it("keeps a public package on the working tree of a private sibling", async () => {
@@ -177,11 +183,21 @@ describe("catalog releases", () => {
     expect(await runRuleForCodes(workspacePackage!, [other!], sources)).toEqual(["dependencies/catalog-release"]);
   });
 
+  it("reports a catalog reference with no catalog entry", async () => {
+    const [workspacePackage, other] = await createConsumer();
+    const sources = createSources({}, { "@fixture/other": "1.2.0" });
+
+    expect((await runRule(workspacePackage!, [other!], sources)).map(({ message }) => message)).toEqual([
+      `"dependencies.@fixture/other" installs from the catalog, but pnpm-workspace.yaml has no catalog entry for it.`,
+    ]);
+  });
+
   it("reads only stable versions as releases", () => {
     const releases = findLatestStableReleases([
       "@fixture/other@1.2.0",
       "@fixture/other@1.10.0",
       "@fixture/other@2.0.0-beta.1",
+      "@fixture/draft@draft",
       "not-a-release",
     ]);
 

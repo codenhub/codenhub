@@ -40,7 +40,7 @@ describe("parseCatalog", () => {
       "packages:",
       '  - "packages/*"',
       "",
-      "catalog:",
+      "catalog: # shared versions",
       '  "@codenhub/error": ^0.2.1 # released',
       "  vitest: ^4.1.10",
       "",

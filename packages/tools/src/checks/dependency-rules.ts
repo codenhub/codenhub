@@ -19,6 +19,8 @@ const DECLARED_FIELDS = [...INSTALLED_FIELDS, "peerDependencies"];
 const CONSUMER_FIELDS = ["dependencies", "peerDependencies"];
 const CATALOG_RANGE = "catalog:";
 const WORKSPACE_RANGE = "workspace:";
+// `major.minor.patch` and nothing more: no pre-release, no build metadata.
+const STABLE_VERSION = /^\d+\.\d+\.\d+$/;
 // One package installing a dependency has no version to drift from. Two do, and
 // two majors of the same library in one install tree is what this prevents.
 const SHARED_DEPENDENCY_THRESHOLD = 2;
@@ -150,7 +152,7 @@ export function findLatestStableReleases(tags: readonly string[]): Map<string, s
   const latest = new Map<string, string>();
   for (const tag of tags) {
     const release = parseReleaseTag(tag);
-    if (release === undefined || release.version.includes("-")) {
+    if (release === undefined || !STABLE_VERSION.test(release.version)) {
       continue;
     }
     const current = latest.get(release.name);
@@ -265,8 +267,18 @@ async function checkCatalogReleases(
   return internal.flatMap(({ field, name }): Finding[] => {
     const range = catalog.get(name);
     const latest = releases.get(name);
-    if (range === undefined || range === `^${latest}`) {
+    if (range === `^${latest}`) {
       return [];
+    }
+    if (range === undefined) {
+      return [
+        {
+          code: "dependencies/catalog-release",
+          location: MANIFEST_LOCATION,
+          message: `"${field}.${name}" installs from the catalog, but pnpm-workspace.yaml has no catalog entry for it.`,
+          severity: "warning",
+        },
+      ];
     }
     // A release lands after the merge that prepared it, so `main` trails it until
     // someone raises the entry. That is reported, never failed, because it would
