@@ -60,7 +60,7 @@ Opening an issue is outward-facing. An agent drafts it and asks before filing, a
 
 ### Trying a fix before its release
 
-A fix merged to `main` reaches an app outside this repository only once the package is released, and a release cannot be taken back. When the app that found the defect should confirm the fix first, there are two ways to put it in the app's hands.
+A fix merged to `main` reaches an app that installs from npm only once the package is released, and a release cannot be taken back. When the app that found the defect should confirm the fix first, there are two ways to put it in the app's hands before a stable release.
 
 To confirm one fix in one app, install a tarball. It leaves nothing behind on npm:
 
