@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { check } from "../builders/check";
 import { format } from "../builders/format";
@@ -163,13 +163,19 @@ describe("input large enough to be slow", () => {
     expect(performance.now() - start).toBeLessThan(2000);
   });
 
+  // Every value was once tested for a date by calling `getTime` on it and catching what it threw, which
+  // took about 1.5 seconds for 200,000 numbers. The calls are counted, not timed, so a busy machine
+  // cannot fail the test.
   it("should merge equal values in an intersection without testing each for a date", () => {
     const both = intersection(array(unknown()), array(unknown()));
-    const items = Array.from({ length: 200_000 }, (_, index) => index);
-    const start = performance.now();
-    expect(both(items).ok).toBe(true);
-    // About 1.5 seconds when every value was first tested for a date by throwing.
-    expect(performance.now() - start).toBeLessThan(750);
+    const getTime = vi.spyOn(Date.prototype, "getTime");
+    try {
+      expect(both(Array.from({ length: 1000 }, (_, index) => index)).ok).toBe(true);
+      // Once for the list, which is an object, and never for a number in it.
+      expect(getTime).toHaveBeenCalledTimes(1);
+    } finally {
+      getTime.mockRestore();
+    }
   });
 });
 

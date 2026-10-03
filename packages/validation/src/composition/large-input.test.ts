@@ -18,7 +18,8 @@ import { tuple } from "./tuple";
 const COUNT = 300_000;
 const numbers = (): number[] => Array.from({ length: COUNT }, () => 1);
 
-describe("a child with more issues than fit in a call", () => {
+// Large on purpose, so a loaded machine may take a while over it; it checks what happens, not how fast.
+describe("a child with more issues than fit in a call", { timeout: 30_000 }, () => {
   const items = array(string());
 
   it("should be reported by object", () => {

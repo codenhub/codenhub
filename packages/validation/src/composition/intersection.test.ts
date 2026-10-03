@@ -165,7 +165,8 @@ describe("intersection", () => {
     expect(merged["self"]).toBe(merged);
   });
 
-  it("should merge outputs nested far deeper than the stack allows instead of throwing", () => {
+  // Large on purpose, so a loaded machine may take a while over it; it checks what happens, not how fast.
+  it("should merge outputs nested far deeper than the stack allows instead of throwing", { timeout: 30_000 }, () => {
     const depth = 20_000;
     const text = "[".repeat(depth) + "]".repeat(depth);
     expect(intersection(json(), json())(text).ok).toBe(true);

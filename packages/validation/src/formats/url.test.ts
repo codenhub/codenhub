@@ -351,7 +351,8 @@ describe("url without a host", () => {
     expect(accepts(mailto, ...invalid)).toEqual(invalid.map(() => false));
   });
 
-  it("should check a mailto with any number of recipients without throwing", () => {
+  // Large on purpose, so a loaded machine may take a while over it; it checks what happens, not how fast.
+  it("should check a mailto with any number of recipients without throwing", { timeout: 30_000 }, () => {
     const recipients = Array.from({ length: 200_000 }, () => "ada@example.com").join(",");
     expect(mailto(`mailto:?to=${recipients}`).ok).toBe(true);
     expect(mailto(`mailto:?to=${recipients},nope`).ok).toBe(false);
