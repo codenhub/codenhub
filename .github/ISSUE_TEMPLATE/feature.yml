@@ -1,0 +1,28 @@
+name: Feature
+description: Something a package should do that it does not do today.
+labels: ["type:feature", "status:needs-triage"]
+body:
+  - type: input
+    id: package
+    attributes:
+      label: Package
+      placeholder: "@codenhub/error"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you are trying to do, and what gets in the way.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: The API or behavior you have in mind, if any.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: What you tried or considered instead.

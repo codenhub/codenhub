@@ -7,6 +7,7 @@ import { createCleanCommand } from "./clean-command.ts";
 import type { CommandDefinition } from "./definition.ts";
 import { createFormatCommand } from "./format-command.ts";
 import { createGenerateCommand } from "./generate-command.ts";
+import { createLabelsCommand } from "./labels-command.ts";
 import { createListCommand } from "./list-command.ts";
 import { createNewCommand } from "./new-command.ts";
 import { createPublishCommand } from "./publish-command.ts";
@@ -101,6 +102,7 @@ const COMMANDS: readonly CommandDefinition[] = [
   createBrowsersCommand(),
   createAssetsCommand(),
   createNewCommand(),
+  createLabelsCommand(),
   createListCommand(),
 ];
 
