@@ -12,11 +12,15 @@
  *                                                                        allow, bashAllow, depDirs, sessionId }
  *                                                                        depDirs: dependency folders, relative
  * parseLine(line, acc)    -> void                                  fills acc.{sessionId, edits[], denied[],
- *                                                                        texts[], errors[], steps}
+ *                                                                        texts[], errors[], steps, ended?}
+ *                                                                        ended: the harness cut the session
+ *                                                                        short (an approval it couldn't ask)
  * finalText(acc)          -> string                                the worker's last message
  * parseStderr(text, acc) -> void                                  optional: facts only logged on stderr
  * models()               -> Map | null                            optional: id -> { context }; cached by
  *                                                                        scripts/lib/models.mjs
+ * withEffort(route, effort) -> { route } | { reason }            optional: the route at another effort level;
+ *                                                                        default sets route.variant
  * probe(route)           -> string[]                              optional: doctor notes about this machine
  * classify({ code, acc, stderrTail }) -> { kind, retryAfterMs?, message }
  *                            kind: ok | billing | rate_limit | auth | unavailable | transient | fatal

@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { removeDirSafe, removeWorktree } from "./links.mjs";
 import { APPLICABLE, EDITING } from "./runner.mjs";
-import { loadMeta, promptsDir, runDir, runsDir, working } from "./state.mjs";
+import { promptsDir, readMeta, reviewersOf, runDir, runsDir, working } from "./state.mjs";
 
 /** "90m", "24h", "7d", "0" → ms. */
 export function parseAge(s) {
@@ -39,14 +39,6 @@ function pending(meta) {
     : "undecided in-place change (already in the working tree)";
 }
 
-function readMeta(id) {
-  try {
-    return loadMeta(id);
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Remove run state older than maxAgeMs: worktrees, logs, patches, quarantine.
  * An unapplied worktree result is discarded with it. An undecided in-place
@@ -77,6 +69,10 @@ export function prune({ maxAgeMs, dryRun = false }) {
 
     if (meta && working(meta)) {
       out.kept.push({ ...entry, reason: "running" });
+      continue;
+    }
+    if (meta?.worktree && reviewersOf(id).length) {
+      out.kept.push({ ...entry, reason: "a review is reading its worktree" });
       continue;
     }
     if (age < maxAgeMs) {

@@ -17,7 +17,7 @@ Edit that file, not the one in this repo. It holds your models, routes, tiers, a
 
 ## Data policy
 
-Routes marked `trainsOnData` (e.g. free API tiers) are blocked unless `allowTraining` is true globally or for the project path.
+Routes marked `trainsOnData` (e.g. free API tiers) are blocked unless `allowTraining` is true globally or for the project path. A model run with `--harness` that the config doesn't list takes the data policy of a configured route for the same provider; with none, it counts as `trainsOnData`.
 
 ## What stays out of your repos
 

@@ -12,7 +12,7 @@ Needs 1.1.1 or later: earlier headless runs hang in a subprocess and print nothi
       [--conversation <conversation_id>]
 
 - The prompt goes through **stdin** as one line, `{"event":"user","message":{"content":"..."}}`; closing stdin ends the session. `--input-format stream-json` starts print mode by itself. Not `-p`: it takes the next argument as its prompt.
-- Model ids come from `agy models` (`gemini-3.8-flash-high`, ...); the effort level is part of most ids. An unknown id fails at once with "is not recognized as a known model" (`unavailable`).
+- Model ids come from `agy models` (`gemini-3.8-flash-high`, ...); the effort level is part of most ids, so `dispatch run --effort` picks the id with that level, if agy lists it, and passes `--effort` only for an id without one. An unknown id fails at once with "is not recognized as a known model" (`unavailable`).
 - Follow-ups resume with `--conversation`.
 
 ## Worker home

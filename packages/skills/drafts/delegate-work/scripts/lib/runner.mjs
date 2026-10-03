@@ -3,18 +3,19 @@ import path from "node:path";
 
 import { adapters, harnessNames } from "../../adapters/index.mjs";
 import { checkEnv, resolveChecks, runChecks } from "./checks.mjs";
-import { load, skillDir, validate } from "./config.mjs";
+import { KINDS, load, skillDir, TIERS, validate } from "./config.mjs";
 import * as G from "./git.mjs";
 import { canonical, matchAny, toPosix } from "./glob.mjs";
 import { linkDeps, linksTo, removeDirSafe, removeWorktree, stripLinks, unlinkSafe } from "./links.mjs";
 import { start, withoutSecrets } from "./proc.mjs";
-import { envelope, parseResult } from "./result.mjs";
-import { candidates, nextTier, orchestratorPools } from "./route.mjs";
+import { envelope, isRetry, parseResult } from "./result.mjs";
+import { candidates, nextTier, orchestratorFamilies, orchestratorPools } from "./route.mjs";
 import {
   activeInplace,
   BEAT_MS,
   loadMeta,
   newRun,
+  reviewersOf,
   runDir,
   savePrompt,
   saveMeta,
@@ -25,12 +26,21 @@ import {
 export const EDITING = new Set(["fixer", "builder"]);
 export const APPLICABLE = new Set(["ok", "failed_checks", "blocked"]);
 const VERDICTS = new Set(["approve", "approve-with-nits", "reject"]);
-const DEFAULT_STEPS = { scout: 40, fixer: 40, builder: 150, reviewer: 30 };
+const DEFAULT_STEPS = { scout: 40, fixer: 40, builder: 150, reviewer: 60 };
 const DEFAULT_TIMEOUT = { scout: 300, fixer: 600, builder: 1800, reviewer: 600 };
 // A reviewer's brief carries the diff up to this size; the changed files are readable anyway.
 const REVIEW_DIFF_CAP = 60000;
 
 export class UsageError extends Error {}
+
+/** The repository of cwd; outside one, the invocation is what's wrong. */
+function rootOf(cwd) {
+  try {
+    return G.repoRoot(cwd);
+  } catch {
+    throw new UsageError(`not in a git repository: ${cwd}`);
+  }
+}
 
 // Snapshots and worktree creation share git's lock files; serialize them.
 let setupLock = Promise.resolve();
@@ -164,32 +174,110 @@ const linksIn = (ref, files, cwd) => files.filter((f) => G.mode(ref, f, cwd) ===
  * tree), executable bit and links included where the OS has them. Git on
  * Windows checks a link out as a file holding its target, and so does this.
  */
-function writeFrom(root, ref, files) {
+function writeFrom(root, ref, files, done = []) {
   const linked = throughLinks(root, files);
   if (linked.length) {
     // Callers check first; this is the last guard.
     throw new Error(linkHint(linked));
   }
-  for (const f of files) {
-    const data = G.blob(ref, f, root);
-    const full = path.join(root, f);
+  const blobs = files.map((f) => [f, G.blob(ref, f, root)]);
+  // Removals first: a file the worker turned into a folder (or back) frees its path.
+  for (const [f, data] of blobs) {
     if (!data) {
-      fs.rmSync(full, { force: true });
+      // Never a folder that holds a file: only empty ones go, and rmSync fails on the rest.
+      removeEmptyDirs(path.join(root, f));
+      fs.rmSync(path.join(root, f), { force: true });
+      done.push(f);
+    }
+  }
+  for (const [f, data] of blobs) {
+    if (!data) {
       continue;
     }
+    const full = path.join(root, f);
+    // Folders left with no files in them, never one that holds a file.
+    removeEmptyDirs(full);
     fs.mkdirSync(path.dirname(full), { recursive: true });
     const mode = WIN ? null : G.mode(ref, f, root);
     if (mode === "120000") {
       fs.rmSync(full, { force: true });
       fs.symlinkSync(data.toString("utf8"), full);
+      done.push(f);
       continue;
     }
     fs.writeFileSync(full, data);
+    done.push(f);
     if (mode) {
       const now = fs.statSync(full).mode & 0o777;
       // Executable wherever readable, as git checks it out; otherwise not executable at all.
       fs.chmodSync(full, mode === "100755" ? now | ((now & 0o444) >> 2) : now & ~0o111);
     }
+  }
+}
+
+/**
+ * Writes files from ref; should a write fail partway (a locked file), puts
+ * back what it had written as the tree held it before, so the tree is never
+ * left half written. Returns null, or why it stopped.
+ */
+function writeOrPutBack(root, ref, files, id) {
+  // The tree as it is, not a ref: a file may already be at ref (the user
+  // reverted it by hand), and putting back must leave it so.
+  const back = G.workingTree(root, path.join(runDir(id), "putback.index"));
+  const written = [];
+  try {
+    writeFrom(root, ref, files, written);
+    return null;
+  } catch (e) {
+    try {
+      writeFrom(root, back, written);
+    } catch (e2) {
+      throw new Error(
+        `writing stopped (${e.message}), and putting back ${written.join(", ")} failed too (${e2.message}); restore them with \`dispatch diff ${id}\``,
+        { cause: e },
+      );
+    }
+    return `Stopped at an error (${e.message}); the files it had written are back as they were. Fix the cause and try again.`;
+  }
+}
+
+/** A copy kept for the user: content only, so a read-only file's copy doesn't block the next one. */
+function keepCopy(src, dest) {
+  fs.writeFileSync(dest, fs.readFileSync(src));
+}
+
+/** A regular file: a folder a worker made where a file was has nothing to copy. */
+function isFile(p) {
+  try {
+    return fs.lstatSync(p).isFile();
+  } catch {
+    return false;
+  }
+}
+
+function isDir(p) {
+  try {
+    return fs.statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function removeEmptyDirs(dir) {
+  let st;
+  try {
+    st = fs.lstatSync(dir);
+  } catch {
+    return;
+  }
+  if (!st.isDirectory()) {
+    return;
+  }
+  for (const e of fs.readdirSync(dir)) {
+    removeEmptyDirs(path.join(dir, e));
+  }
+  if (!fs.readdirSync(dir).length) {
+    fs.rmdirSync(dir);
   }
 }
 
@@ -313,15 +401,18 @@ async function resetWork(meta) {
     writeFrom(meta.workDir, base, files);
   } else {
     const tree = G.workingTree(meta.root, path.join(runDir(meta.id), "reset.index"));
-    const files = G.numstat(base, tree, meta.root).map((c) => c.path);
+    // A path through a link is left alone, as discard leaves it.
+    const files = G.numstat(base, tree, meta.root)
+      .map((c) => c.path)
+      .filter((f) => !throughLinks(meta.root, [f]).length);
     // Anything edited in the tree meanwhile is restored too; keep a copy.
     meta.resets = (meta.resets ?? 0) + 1;
     const copy = path.join(runDir(meta.id), `reset-${meta.resets}`);
     for (const f of files) {
       const src = path.join(meta.root, f);
-      if (fs.existsSync(src) && !throughLinks(meta.root, [f]).length) {
+      if (isFile(src)) {
         fs.mkdirSync(path.dirname(path.join(copy, f)), { recursive: true });
-        fs.copyFileSync(src, path.join(copy, f));
+        keepCopy(src, path.join(copy, f));
       }
     }
     if (fs.existsSync(copy)) {
@@ -418,11 +509,14 @@ async function runAttempts(meta, cfg, list, prompt, sessionId) {
     guardGitFile(meta);
     c.adapter.parseStderr?.(res.stderrTail, acc);
     meta.logPath = logPath;
+    // The route as it ran: an ad-hoc or effort-changed one isn't in the config.
+    meta.route = c.route;
     meta.worker = {
       modelId: c.modelId,
       route: c.route.id,
       harness: c.route.harness,
       model: c.route.model,
+      effort: c.route.variant ?? null,
       family: c.family,
       tier: meta.tier,
       kind: meta.kind,
@@ -468,10 +562,14 @@ async function runAttempts(meta, cfg, list, prompt, sessionId) {
   meta.durationMs = Date.now() - t0;
   if (!outcome) {
     meta.status = lastFailure ? "harness_error" : "not_available";
-    meta.hint = lastFailure ? hintFor(lastFailure.kind, lastFailure.harness) : noRouteHint(meta.skipped);
+    meta.hint = lastFailure
+      ? hintFor(lastFailure.kind, lastFailure.harness)
+      : noRouteHint(meta.skipped, meta.overrides?.model);
     meta.files = { changed: [], outOfScope: [] };
   } else {
     await evaluate(meta, cfg, outcome);
+    // The worker and its checks.
+    meta.durationMs = Date.now() - t0;
   }
   if (meta.resetCopies?.length) {
     const note = `A failed attempt's changes were undone in the working tree; the files it restored were copied first to ${meta.resetCopies.join(", ")}.`;
@@ -524,7 +622,11 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
   meta.summary = parsed.summary;
   if (!meta.editing) {
     const verdict = meta.role === "reviewer" && VERDICTS.has(parsed.verdict) ? parsed.verdict : null;
-    meta.report = [verdict && `verdict: ${verdict}`, parsed.report].filter(Boolean).join("\n") || parsed.summary;
+    // Workers often open the report with the verdict again.
+    const report = verdict
+      ? parsed.report?.replace(/^\s*(verdict\s*:\s*)?(approve-with-nits|approve|reject)\s*(\n|$)/i, "")
+      : parsed.report;
+    meta.report = [verdict && `verdict: ${verdict}`, report].filter(Boolean).join("\n") || parsed.summary;
     if (meta.role === "reviewer" && !verdict) {
       meta.hint = "The reviewer gave no valid verdict (approve, approve-with-nits or reject); judge from the report.";
     }
@@ -548,9 +650,9 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
     const qdir = path.join(runDir(meta.id), dir);
     for (const f of files) {
       const src = path.join(meta.workDir, f);
-      if (fs.existsSync(src)) {
+      if (isFile(src)) {
         fs.mkdirSync(path.dirname(path.join(qdir, f)), { recursive: true });
-        fs.copyFileSync(src, path.join(qdir, f));
+        keepCopy(src, path.join(qdir, f));
       }
     }
     writeFrom(meta.workDir, ref, files);
@@ -583,6 +685,10 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
     quarantine();
   } else if (parsed.status === "blocked") {
     meta.status = "blocked";
+  } else if (acc.ended && !parsed.status) {
+    meta.status = "blocked";
+    meta.hint =
+      "The harness ended the worker's session before its RESULT block, at an action that needed approval (see denied).";
   } else if (meta.editing && !changed.length) {
     meta.status = "no_changes";
   } else if (meta.editing) {
@@ -656,7 +762,9 @@ async function evaluate(meta, cfg, { acc, parsed, killed, depsBefore, depDirs, g
  */
 function interrupted(meta, e) {
   meta.phase = "interrupted";
-  return new Error(`run ${meta.id} was interrupted (discard it to restore its files): ${e.message}`, { cause: e });
+  const err = new Error(`run ${meta.id} was interrupted (discard it to restore its files): ${e.message}`, { cause: e });
+  err.runId = meta.id;
+  return err;
 }
 
 /** The run itself is still working (a first run or a follow-up): its result isn't final. */
@@ -675,18 +783,51 @@ const workingHint = (id) => {
 };
 
 /** Another run still working in this tree: writing into it now would be counted as that run's change. */
-function busyTree(meta) {
-  const [other] = activeInplace(meta.root).filter((m) => m.id !== meta.id);
-  return other ? `In-place run ${other.id} is still working in this tree; try again when it finishes.` : null;
+function reviewingHint(id) {
+  const [r] = reviewersOf(id);
+  return r ? `Review ${r.id} is still reading this run's worktree; try again when it finishes.` : null;
+}
+
+/** The diff a --review-diff run was given, for a rebrief of it. */
+function reviewDiffOf(id) {
+  const file = path.join(runDir(id), "review.diff");
+  return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : undefined;
+}
+
+function busyTree(meta, { unfinished = false } = {}) {
+  const [other] = activeInplace(meta.root, { unfinished }).filter((m) => m.id !== meta.id);
+  if (!other) {
+    return null;
+  }
+  return working(other)
+    ? `In-place run ${other.id} is still working in this tree; try again when it finishes.`
+    : `In-place run ${other.id} was cut short and its partial edits are still in this tree; discard it first.`;
 }
 
 /** Why nothing could run: each route left out and its reason, which doctor alone wouldn't say. */
-function noRouteHint(skipped) {
+function noRouteHint(skipped, model) {
+  const what = model ? `for ${model}` : "for this tier";
   const why = skipped
     .slice(0, 6)
     .map((s) => `${s.modelId}${s.route ? ` via ${s.route}` : ""} (${s.reason})`)
     .join("; ");
-  return why ? `No usable route for this tier: ${why}.` : "No usable route for this tier. Run `dispatch doctor`.";
+  return why ? `No usable route ${what}: ${why}.` : `No usable route ${what}. Run \`dispatch doctor\`.`;
+}
+
+const NO_HOST_NOTE =
+  "No orchestrator was recognized, so no model family was excluded: the reviewer may share the reviewed change's family. Pass --orchestrator <name> to exclude your own models'.";
+
+const DIFF_CUT_NOTE = `The reviewer got the diff cut at ${REVIEW_DIFF_CAP} characters and was told to read the changed files for the rest; check that the report covers every file.`;
+
+/** The diff for a reviewer's brief, cut to a size a light context can hold. */
+function changeUnderReview(whole) {
+  const diff =
+    whole.length > REVIEW_DIFF_CAP
+      ? `${whole.slice(0, REVIEW_DIFF_CAP)}\n[diff cut at ${REVIEW_DIFF_CAP} of ${whole.length} characters: read the changed files for the rest]`
+      : whole;
+  // Longer than any backtick run in it: a changed Markdown fence can't close it.
+  const fence = "`".repeat(Math.max(3, ...(diff.match(/`+/g) ?? []).map((r) => r.length + 1)));
+  return `CHANGE UNDER REVIEW\n${fence}diff\n${diff}\n${fence}`;
 }
 
 const nativeHint = (model) =>
@@ -723,7 +864,7 @@ function isolationFor(o, editing, candidates) {
 }
 
 /** What `run` would do, without running anything or touching run state. */
-function plan(o, { editing, tier, kind, picked, workDirOverride, lineage, prompt }) {
+function plan(o, { editing, tier, kind, picked, workDirOverride, lineage, prompt, reviewNotes }) {
   const base = {
     v: 1,
     id: null,
@@ -738,7 +879,7 @@ function plan(o, { editing, tier, kind, picked, workDirOverride, lineage, prompt
       isolation: null,
       fallbacks: [],
       promptPath: savePrompt(prompt),
-      hint: nativeHint(picked.native.model),
+      hint: [nativeHint(picked.native.model), ...reviewNotes].filter(Boolean).join(" "),
     };
   }
   const iso = isolationFor(o, editing, picked.candidates);
@@ -751,7 +892,7 @@ function plan(o, { editing, tier, kind, picked, workDirOverride, lineage, prompt
       worker: { tier, kind, skipped },
       isolation: null,
       fallbacks: [],
-      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : noRouteHint(skipped),
+      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : noRouteHint(skipped, o.model),
     };
   }
   return {
@@ -762,6 +903,7 @@ function plan(o, { editing, tier, kind, picked, workDirOverride, lineage, prompt
       route: first.route.id,
       harness: first.route.harness,
       model: first.route.model,
+      effort: first.route.variant ?? null,
       family: first.family,
       tier,
       kind,
@@ -770,24 +912,32 @@ function plan(o, { editing, tier, kind, picked, workDirOverride, lineage, prompt
     // "auto" works in place unless another in-place run holds the tree then.
     isolation: workDirOverride ? "worktree" : iso.isolation === "auto" ? "inplace" : iso.isolation,
     fallbacks: rest.map((c) => ({ modelId: c.modelId, route: c.route.id })),
-    hint: "Nothing ran. Dispatch it without --plan.",
+    hint: ["Nothing ran. Dispatch it without --plan.", ...reviewNotes].join(" "),
   };
 }
 
 // ---------- public commands ----------
 
 export async function run(options) {
-  // A rebrief is the same task: its role comes with it unless given.
-  const inherited = options.rebriefOf && !options.role ? loadMeta(options.rebriefOf) : null;
-  if (options.rebriefOf && !options.role && !inherited) {
+  // A rebrief is the same task: its role, and what a review reviewed, come with it unless given.
+  const inherited = options.rebriefOf ? loadMeta(options.rebriefOf) : null;
+  if (options.rebriefOf && !inherited) {
     throw new UsageError(`unknown run ${options.rebriefOf}`);
   }
-  const o = inherited ? { ...options, role: inherited.role } : options;
+  const reviewed = inherited && !options.review && options.reviewDiff === undefined;
+  const o = inherited
+    ? {
+        ...options,
+        role: options.role ?? inherited.role,
+        review: reviewed ? (inherited.reviewOf ?? undefined) : options.review,
+        reviewDiff: reviewed ? reviewDiffOf(inherited.id) : options.reviewDiff,
+      }
+    : options;
   const problem = G.gitProblem();
   if (problem) {
     throw new UsageError(problem);
   }
-  const root = G.repoRoot(o.cwd);
+  const root = rootOf(o.cwd);
   const cfg = load(root);
   const errors = validate(cfg, harnessNames);
   if (errors.length) {
@@ -799,16 +949,33 @@ export async function run(options) {
   if (o.isolation !== undefined && !["auto", "inplace", "worktree"].includes(o.isolation)) {
     throw new UsageError("--isolation must be auto, inplace or worktree");
   }
+  if (o.tier !== undefined && !TIERS.includes(o.tier)) {
+    throw new UsageError(`--tier must be one of ${TIERS.join(", ")}`);
+  }
+  if (o.kind !== undefined && !KINDS.includes(o.kind)) {
+    throw new UsageError(`--kind must be one of ${KINDS.join(", ")}`);
+  }
+  if (o.harness !== undefined && !harnessNames.includes(o.harness)) {
+    throw new UsageError(`--harness must be one of ${harnessNames.join(", ")}`);
+  }
+  if (o.reviewDiff !== undefined && (o.review || o.role !== "reviewer")) {
+    throw new UsageError("--review-diff requires --role reviewer and no --review");
+  }
   const editing = EDITING.has(o.role);
   let allow = o.allow ?? [];
   let read = o.read ?? [];
   let brief = o.brief;
+  if (!o.brief?.trim()) {
+    throw new UsageError("empty brief");
+  }
   let tier = o.tier;
+  let { model, harness, effort, external } = o;
   let excludeFamilies = [];
   let workDirOverride = null;
   let prev = null;
   let target = null;
-  let diffCut = false;
+  // Said with the result of a review, whatever it is.
+  const reviewNotes = [];
 
   if (o.rebriefOf) {
     prev = loadMeta(o.rebriefOf);
@@ -818,7 +985,10 @@ export async function run(options) {
     if (stillWorking(prev)) {
       throw new UsageError(workingHint(prev.id));
     }
-    if (prev.retryUsed || prev.rebriefOf) {
+    if (prev.status === "not_available" && isRetry(prev)) {
+      throw new UsageError(`run ${prev.id} never ran; rebrief ${prev.rebriefOf} instead`);
+    }
+    if (prev.retryUsed || isRetry(prev)) {
       throw new UsageError("retry limit reached for this task: fix it yourself, drop it, or ask the user");
     }
     if (prev.applied) {
@@ -830,8 +1000,24 @@ export async function run(options) {
     if (!read.length) {
       read = prev.read;
     }
-    tier ??= prev.worker?.tier ? nextTier(prev.worker.tier) : undefined;
+    // The same overrides unless given anew (a tier routes by tier again); a
+    // model picked by hand isn't escalated.
+    if (!tier) {
+      model ??= prev.overrides?.model;
+    }
+    harness ??= prev.overrides?.harness;
+    // A model named anew names its own effort (on agy, in its id).
+    if (!o.model) {
+      effort ??= prev.overrides?.effort;
+    }
+    external ||= prev.overrides?.external;
+    // A run that never ran tried nothing to go up from: same tier.
+    if (!model) {
+      tier ??= prev.status === "not_available" ? prev.tier : prev.worker?.tier ? nextTier(prev.worker.tier) : undefined;
+    }
   }
+  // Retrying a run that never ran is the task's first try: it keeps the retry.
+  const retrying = !!prev && prev.status !== "not_available";
   if (o.review) {
     target = loadMeta(o.review);
     if (!target) {
@@ -843,32 +1029,58 @@ export async function run(options) {
     if (stillWorking(target)) {
       throw new UsageError(workingHint(target.id));
     }
+    if (target.discarded) {
+      throw new UsageError(`run ${target.id} was discarded; its change is in no tree to review`);
+    }
     const patchFile = path.join(runDir(target.id), "patch.diff");
-    if (!target.files || !fs.existsSync(patchFile)) {
+    if (!target.files?.changed?.length || !fs.existsSync(patchFile)) {
       throw new UsageError(`run ${target.id} has no change to review (status ${target.status})`);
     }
     if (target.worker?.family) {
       excludeFamilies = [target.worker.family];
     }
+    // The user's ask for an external run covers its review.
+    external ||= target.overrides?.external;
     read = [...new Set([...read, ...target.files.changed.map((c) => c.path)])];
     const whole = fs.readFileSync(patchFile, "utf8");
-    diffCut = whole.length > REVIEW_DIFF_CAP;
-    const diff = diffCut
-      ? `${whole.slice(0, REVIEW_DIFF_CAP)}\n[diff cut at ${REVIEW_DIFF_CAP} of ${whole.length} characters: read the changed files for the rest]`
-      : whole;
-    brief = `${brief}\n\nORIGINAL TASK (what the change under review was asked to do; for reference, not for you to do)\n${target.brief}\n\nCHANGE UNDER REVIEW\n\`\`\`diff\n${diff}\n\`\`\``;
+    if (whole.length > REVIEW_DIFF_CAP) {
+      reviewNotes.push(DIFF_CUT_NOTE);
+    }
+    brief = `${brief}\n\nORIGINAL TASK (what the change under review was asked to do; for reference, not for you to do)\n${target.brief}\n\n${changeUnderReview(whole)}`;
     if (target.isolation === "worktree" && !target.applied && fs.existsSync(target.worktree)) {
       workDirOverride = target.worktree;
     }
   }
+  if (o.reviewDiff !== undefined) {
+    // A change made outside dispatch, most often by a native subagent: the
+    // reviewer comes from another family than the orchestrator's own models.
+    if (!o.reviewDiff.trim()) {
+      throw new UsageError("empty diff");
+    }
+    excludeFamilies = orchestratorFamilies(cfg, orchestratorPools(cfg, o.orchestrator));
+    if (!excludeFamilies.length) {
+      reviewNotes.push(NO_HOST_NOTE);
+    }
+    // git quotes a path with unusual characters: +++ "b/a\"b.ts".
+    const changed = [...o.reviewDiff.matchAll(/^\+\+\+ (?:"b\/(.+?)"|b\/(.+?))\s*$/gm)].map((m) => m[1] ?? m[2]);
+    read = [...new Set([...read, ...changed])];
+    if (o.reviewDiff.length > REVIEW_DIFF_CAP) {
+      reviewNotes.push(DIFF_CUT_NOTE);
+    }
+    brief = `${brief}\n\n${changeUnderReview(o.reviewDiff)}`;
+  }
+  // A folder alone matches no file in it: every edit would be out of scope.
+  const folder = allow.find((g) => !/[*?]/.test(g) && (/[\\/]$/.test(g) || isDir(path.join(root, g))));
+  if (folder) {
+    throw new UsageError(
+      `--allow ${folder} names a folder; to allow the files in it, use ${toPosix(folder).replace(/\/?$/, "/**")}`,
+    );
+  }
   if (editing && !allow.length) {
     throw new UsageError(`${o.role} requires --allow`);
   }
-  if (!brief?.trim()) {
-    throw new UsageError("empty brief");
-  }
   tier ??= cfg.roles?.[o.role]?.tier ?? "standard";
-  const kind = o.kind ?? "code";
+  const kind = o.kind ?? prev?.kind ?? "code";
   const level = o.role === "builder" ? "full" : o.role === "fixer" ? "fast" : "none";
   const checkList = resolveChecks(root, level, cfg.project);
   const prompt = `${preamble({ role: o.role, allow, read, checks: checkList })}\n\n---\n\n${brief}`;
@@ -878,20 +1090,30 @@ export async function run(options) {
   const picked = candidates(cfg, adapters, {
     tier,
     kind,
-    model: o.model,
+    model,
+    harness,
+    effort,
     excludeFamilies,
     estimate,
     pools: orchestratorPools(cfg, o.orchestrator),
-    external: o.external,
+    external,
   });
 
   if (o.plan) {
-    return plan(o, { editing, tier, kind, picked, workDirOverride, lineage: { prev, target }, prompt });
+    return plan(
+      { ...o, model },
+      { editing, tier, kind, picked, workDirOverride, lineage: { prev, target }, prompt, reviewNotes },
+    );
   }
 
   const iso = picked.native ? null : isolationFor(o, editing, picked.candidates);
   const unavailable = !picked.native && !iso.candidates.length;
 
+  // Refused later anyway: don't drop the previous attempt for nothing.
+  const held = editing && !unavailable && busyTree({ id: prev?.id, root }, { unfinished: true });
+  if (held) {
+    throw new UsageError(`${held} An editing run started now would build on its unfinished changes.`);
+  }
   // The new attempt starts from a tree without the previous one's change.
   if (prev && !unavailable && !prev.discarded) {
     const d = await discard(prev.id);
@@ -902,13 +1124,17 @@ export async function run(options) {
   // Only once something runs it, here (set up) or natively, does a rebrief
   // use up the task's retry.
   const useRetry = () => {
-    if (prev) {
+    if (retrying) {
       const p = loadMeta(prev.id);
       saveMeta(p.id, { ...p, retryUsed: true });
     }
   };
 
   const id = newRun();
+  // Kept even when nothing runs, for a rebrief of this run.
+  if (o.reviewDiff !== undefined) {
+    fs.writeFileSync(path.join(runDir(id), "review.diff"), o.reviewDiff);
+  }
   const meta = {
     id,
     role: o.role,
@@ -920,8 +1146,10 @@ export async function run(options) {
     tier,
     kind,
     rebriefOf: prev?.id ?? null,
+    retry: retrying,
     reviewOf: target?.id ?? null,
-    retryUsed: !!prev && !unavailable,
+    overrides: Object.fromEntries(Object.entries({ model, harness, effort, external }).filter(([, v]) => v)),
+    retryUsed: retrying && !unavailable,
     skipped: [...(picked.skipped ?? []), ...(iso?.skipped ?? [])],
     checkList,
     checkCmds: checkList.map((c) => c.cmd),
@@ -935,7 +1163,7 @@ export async function run(options) {
       phase: "done",
       worker: { ...picked.native, tier, kind, skipped: meta.skipped },
       promptPath: savePrompt(prompt),
-      hint: nativeHint(picked.native.model),
+      hint: [nativeHint(picked.native.model), ...reviewNotes].filter(Boolean).join(" "),
     });
     saveMeta(id, meta);
     useRetry();
@@ -947,21 +1175,27 @@ export async function run(options) {
       isolation: null,
       phase: "done",
       worker: { tier, kind, skipped: meta.skipped },
-      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : noRouteHint(meta.skipped),
+      hint: picked.candidates.length ? IN_PLACE_ONLY_HINT : noRouteHint(meta.skipped, model),
     });
     saveMeta(id, meta);
     return envelope(meta);
   }
   let isolation = iso.isolation;
-  if (isolation === "auto") {
-    isolation = claimInplace(meta);
-  } else if (isolation === "inplace" && editing && claimInplace(meta) !== "inplace") {
-    // Asked for in place, but another editing run holds the tree.
+  // Beside an in-place editing run, another editing run would start from its
+  // half-made changes, in place or copied into a worktree: it waits instead.
+  const busy = !editing
+    ? null
+    : (busyTree(meta, { unfinished: true }) ??
+      (isolation === "worktree" || claimInplace(meta) === "inplace"
+        ? null
+        : (busyTree(meta) ?? "Another in-place run holds this tree.")));
+  if (busy) {
     Object.assign(meta, { phase: "done", discarded: true });
     saveMeta(id, meta);
-    throw new UsageError(
-      `${busyTree(meta) ?? "Another in-place run holds this tree."} Or rerun with --isolation worktree.`,
-    );
+    throw new UsageError(`${busy} An editing run started now would build on its unfinished changes.`);
+  }
+  if (isolation === "auto") {
+    isolation = "inplace";
   }
   meta.isolation = workDirOverride ? "worktree" : isolation;
   meta.phase = "running";
@@ -1004,20 +1238,22 @@ export async function run(options) {
     throw interrupted(meta, e);
   } finally {
     meta.phase = meta.phase === "interrupted" ? meta.phase : "done";
-    // Nothing to apply or discard later; the report is all there is.
-    if (!editing && meta.worktree) {
+    // Nothing to apply or discard later: the report is all there is, or no
+    // worker got as far as a change.
+    if (meta.worktree && (!editing || meta.status === "harness_error" || meta.status === "not_available")) {
       cleanupWorktree(meta);
       meta.discarded = true;
     }
     saveMeta(id, meta);
   }
-  if (target) {
+  if (workDirOverride) {
     // The reviewer ran in the target's worktree; don't treat its snapshot as ours.
     meta.isolation = target.isolation;
-    if (diffCut) {
-      const note = `The reviewer got the diff cut at ${REVIEW_DIFF_CAP} characters and was told to read the changed files for the rest; check that the report covers every file.`;
-      meta.hint = [meta.hint, note].filter(Boolean).join(" ");
-    }
+  }
+  if (reviewNotes.length) {
+    meta.hint = [meta.hint, ...reviewNotes].filter(Boolean).join(" ");
+  }
+  if (workDirOverride || reviewNotes.length) {
     saveMeta(id, meta);
   }
   return envelope(meta);
@@ -1034,7 +1270,7 @@ export async function followup(id, brief) {
   if (stillWorking(meta)) {
     throw new UsageError(workingHint(id));
   }
-  if (meta.retryUsed || meta.rebriefOf) {
+  if (meta.retryUsed || isRetry(meta)) {
     throw new UsageError("retry limit reached for this task");
   }
   if (meta.applied || meta.discarded) {
@@ -1047,13 +1283,19 @@ export async function followup(id, brief) {
     throw new UsageError(`cannot follow up a run with status ${meta.status}`);
   }
   const cfg = load(meta.root);
-  const m = cfg.models[meta.worker.modelId];
-  const route = m?.routes.find((r) => r.id === meta.worker.route);
+  // Runs from before meta.route was kept name their route only.
+  const route = meta.route ?? cfg.models[meta.worker.modelId]?.routes.find((r) => r.id === meta.worker.route);
   if (!route) {
     throw new UsageError("the route used by this run is no longer configured");
   }
   if (!brief?.trim()) {
     throw new UsageError("empty brief");
+  }
+  const avail = adapters[route.harness]?.detect();
+  if (!avail?.ok) {
+    throw new UsageError(
+      `${route.harness}: ${avail?.reason ?? "unknown harness"}; the result stands and the retry is unused`,
+    );
   }
   if (!fs.existsSync(meta.workDir)) {
     throw new UsageError("the tree this run worked in is gone (applied or discarded since); use --rebrief-of instead");
@@ -1097,7 +1339,7 @@ export async function followup(id, brief) {
     await execute(
       meta,
       cfg,
-      [{ modelId: meta.worker.modelId, family: m.family, route, adapter: adapters[route.harness] }],
+      [{ modelId: meta.worker.modelId, family: meta.worker.family, route, adapter: adapters[route.harness] }],
       brief,
       meta.sessionId,
     );
@@ -1135,7 +1377,8 @@ export function apply(id) {
   }
   const files = meta.files.changed.map((c) => c.path);
   if (meta.isolation === "worktree") {
-    const busy = busyTree(meta);
+    // A cut-short run's discard would take back what lands in its allowed files.
+    const busy = busyTree(meta, { unfinished: true });
     if (busy) {
       return envelope(meta, { status: "conflict", hint: busy });
     }
@@ -1159,8 +1402,23 @@ export function apply(id) {
         hint: `Changed in the working tree since the run started: ${moved.join(", ")}`,
       });
     }
-    writeFrom(meta.root, meta.post, files);
-    cleanupWorktree(meta);
+    const reading = reviewingHint(id);
+    if (reading) {
+      return envelope(meta, { status: "conflict", hint: reading });
+    }
+    // Should a write fail, the worktree stays to apply again.
+    const stopped = writeOrPutBack(meta.root, meta.post, files, id);
+    if (stopped) {
+      return envelope(meta, { status: "conflict", hint: stopped });
+    }
+    // Recorded first: the change is in the tree whether or not the worktree goes.
+    Object.assign(meta, { applied: true, workerPid: null, checkPid: null });
+    saveMeta(id, meta);
+    try {
+      cleanupWorktree(meta);
+    } catch (e) {
+      meta.hint = `Applied; its worktree couldn't be removed (${e.code ?? e.message}), and prune will remove it later.`;
+    }
   } else {
     const touched = differsFrom(meta.root, meta.post, files);
     if (touched.length) {
@@ -1189,6 +1447,10 @@ export async function discard(id) {
     return envelope(meta, { status: "conflict", hint: workingHint(id) });
   }
   if (meta.isolation === "worktree") {
+    const reading = reviewingHint(id);
+    if (reading) {
+      return envelope(meta, { status: "conflict", hint: reading });
+    }
     cleanupWorktree(meta);
   } else if (meta.editing && meta.phase !== "done" && meta.snap) {
     // Cut short (dispatch killed or failed): no result says what the worker
@@ -1207,12 +1469,15 @@ export async function discard(id) {
     }
     const copy = path.join(runDir(id), "discarded");
     for (const f of files) {
-      if (fs.existsSync(path.join(meta.root, f))) {
+      if (isFile(path.join(meta.root, f))) {
         fs.mkdirSync(path.dirname(path.join(copy, f)), { recursive: true });
-        fs.copyFileSync(path.join(meta.root, f), path.join(copy, f));
+        keepCopy(path.join(meta.root, f), path.join(copy, f));
       }
     }
-    writeFrom(meta.root, meta.snap, files);
+    const stopped = writeOrPutBack(meta.root, meta.snap, files, id);
+    if (stopped) {
+      return envelope(meta, { status: "conflict", hint: stopped });
+    }
     meta.hint = files.length
       ? `The run was cut short; restored the allowed files that differed from its start: ${files.slice(0, 10).join(", ")}. Their versions before this discard are in ${copy}.`
       : "The run was cut short; none of its allowed files differed from its start.";
@@ -1230,7 +1495,21 @@ export async function discard(id) {
     if (touched.length) {
       return envelope(meta, { status: "conflict", hint: `Edited since the run, not restored: ${touched.join(", ")}` });
     }
-    writeFrom(meta.root, meta.snap, files);
+    // The run's version may hold edits made in the tree while it ran: keep it.
+    const copy = path.join(runDir(id), "discarded");
+    for (const f of files) {
+      if (isFile(path.join(meta.root, f))) {
+        fs.mkdirSync(path.dirname(path.join(copy, f)), { recursive: true });
+        keepCopy(path.join(meta.root, f), path.join(copy, f));
+      }
+    }
+    const stopped = writeOrPutBack(meta.root, meta.snap, files, id);
+    if (stopped) {
+      return envelope(meta, { status: "conflict", hint: stopped });
+    }
+    if (files.length) {
+      meta.hint = `Restored ${files.slice(0, 10).join(", ")}; their versions before this discard are in ${copy}.`;
+    }
   }
   meta.discarded = true;
   Object.assign(meta, { workerPid: null, checkPid: null });
@@ -1246,7 +1525,7 @@ export function unapply(id) {
   if (!meta.applied) {
     throw new UsageError("run is not applied");
   }
-  const busy = busyTree(meta);
+  const busy = busyTree(meta, { unfinished: true });
   if (busy) {
     return envelope(meta, { status: "conflict", hint: busy });
   }
@@ -1260,7 +1539,10 @@ export function unapply(id) {
   if (touched.length) {
     return envelope(meta, { status: "conflict", hint: `Edited since the run: ${touched.join(", ")}` });
   }
-  writeFrom(meta.root, meta.snap, files);
+  const stopped = writeOrPutBack(meta.root, meta.snap, files, id);
+  if (stopped) {
+    return envelope(meta, { status: "conflict", hint: stopped });
+  }
   meta.applied = false;
   meta.discarded = true;
   saveMeta(id, meta);
@@ -1311,12 +1593,13 @@ function overlappingTask(root, tasks) {
 }
 
 export async function batch(tasks, { isolation, ...common }) {
-  const cfg = load(G.repoRoot(common.cwd));
+  const root = rootOf(common.cwd);
+  const cfg = load(root);
   const limit = Math.max(1, cfg.limits?.maxParallel ?? 4);
   const editingCount = tasks.filter((t) => EDITING.has(t.role)).length;
   // Editing tasks side by side, or beside other edits (native subagents), each get a worktree.
   const forceWorktree = editingCount > 1 || isolation === "worktree";
-  const overlap = overlappingTask(G.repoRoot(common.cwd), tasks);
+  const overlap = overlappingTask(root, tasks);
   if (overlap) {
     throw new UsageError(overlap);
   }
@@ -1334,6 +1617,11 @@ export async function batch(tasks, { isolation, ...common }) {
   if (common.plan) {
     return { v: 1, batch: planned, totals: totalsOf(planned, true) };
   }
+  // Refused here once, rather than as each editing task's result.
+  const busy = editingCount ? busyTree({ id: null, root }, { unfinished: true }) : null;
+  if (busy) {
+    throw new UsageError(`${busy} An editing run started now would build on its unfinished changes.`);
+  }
   const results = Array.from({ length: tasks.length });
   let next = 0;
   const worker = async () => {
@@ -1343,7 +1631,14 @@ export async function batch(tasks, { isolation, ...common }) {
         // oxlint-disable-next-line no-await-in-loop -- each pool slot runs its tasks in turn; slots run in parallel.
         results[i] = await run({ ...common, ...tasks[i], forceWorktree });
       } catch (e) {
-        results[i] = { v: 1, id: null, role: tasks[i].role, status: "harness_error", hint: String(e.message ?? e) };
+        // A full result, and the run's id when there is one: it may need a discard.
+        results[i] = envelope({
+          id: e.runId ?? null,
+          role: tasks[i].role,
+          status: "harness_error",
+          isolation: null,
+          hint: String(e.message ?? e),
+        });
       }
     }
   };

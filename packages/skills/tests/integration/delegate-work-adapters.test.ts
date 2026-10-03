@@ -88,6 +88,7 @@ describe("agy adapter", () => {
       "list_dir: C:\\Users\\me\\other",
       "read_file: needs approval, which headless agy can't ask for; the worker's session ended there",
     ]);
+    expect(acc.ended).toBe(true);
     expect(agy.finalText(acc)).toBe("RESULT\nstatus: done\n");
     expect(agy.classify({ code: 0, acc, stderrTail: "" }).kind).toBe("ok");
   });
@@ -106,6 +107,40 @@ describe("agy adapter", () => {
     expect(failed('invalid model selection (--model "x"): model x is not recognized as a known model')).toBe(
       "unavailable",
     );
+  });
+
+  it("shouldRecordAWriteADenyRuleRefused", async () => {
+    const { default: agy } = await import(adapter("agy"));
+    const acc = newAcc();
+    agy.parseLine(
+      JSON.stringify({
+        event: "step_update",
+        step_update: {
+          step_index: 3,
+          state: "ERROR",
+          step_type: "tool",
+          tool_name: "write_to_file",
+          tool_info: {
+            parameters: { TargetFile: `${wt}\\.git\\config` },
+            error: { message: "Matches user-configured deny rule" },
+          },
+        },
+      }),
+      acc,
+    );
+
+    expect(acc.denied).toHaveLength(1);
+  });
+
+  it("shouldNameAnotherEffortByAnotherModelId", async () => {
+    const { default: agy } = await import(adapter("agy"));
+    const listed = { detect: () => ({ ok: true, models: ["g-3-flash-high", "g-3-flash-medium", "g-3-pro-high"] }) };
+    const at = (model: string, effort: string) => agy.withEffort.call(listed, { id: "r", model }, effort);
+
+    expect(at("g-3-flash-high", "medium").route).toMatchObject({ model: "g-3-flash-medium", variant: undefined });
+    expect(at("g-3-pro-high", "medium").reason).toBe("agy has no g-3-pro-medium (it lists g-3-pro-high)");
+    // An id without a level takes agy's --effort.
+    expect(at("gpt-oss", "low").route).toMatchObject({ model: "gpt-oss", variant: "low" });
   });
 
   it("shouldDenyWritesToGitAndDependencyFoldersForEditingWorkersOnly", async () => {

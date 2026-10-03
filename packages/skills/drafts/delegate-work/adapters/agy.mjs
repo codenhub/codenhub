@@ -17,7 +17,7 @@ const EDIT_TOOLS = new Set([
   "sed_file",
   "notebook_edit",
 ]);
-const DENIAL = /permission check failed|denied permission|permission denied for/i;
+const DENIAL = /permission check failed|denied permission|permission denied for|deny rule/i;
 // A `deny` is refused and the turn goes on. Anything that resolves to "ask"
 // (no rule either way) is refused too, but it ends the whole turn.
 const DENY = ["read_url(*)", "execute_url(*)", "mcp(*)"];
@@ -303,11 +303,31 @@ export default {
     const m = (stderr ?? "").match(/a tool required the "([^"]+)" permission that headless mode cannot prompt for/);
     if (m) {
       acc.denied.push(`${m[1]}: needs approval, which headless agy can't ask for; the worker's session ended there`);
+      acc.ended = true;
     }
   },
 
   // The result's response concatenates every message; the RESULT block is in the last.
   finalText: (acc) => acc.texts.join("\n") || acc.result?.response || "",
+
+  /**
+   * Most agy ids name their effort (gemini-3.8-flash-high): another level is
+   * another id, which must be one agy lists. An id without a level takes --effort.
+   */
+  withEffort(route, effort) {
+    const level = /-(minimal|low|medium|high|xhigh|max)$/;
+    if (!level.test(route.model)) {
+      return { route: { ...route, variant: effort } };
+    }
+    const model = route.model.replace(level, `-${effort}`);
+    const ids = this.detect().models ?? [];
+    if (ids.includes(model)) {
+      return { route: { ...route, model, variant: undefined } };
+    }
+    const stem = route.model.replace(level, "");
+    const levels = ids.filter((id) => id.replace(level, "") === stem);
+    return { reason: `agy has no ${model} (it lists ${levels.join(", ") || "none of this model"})` };
+  },
 
   /** Ids only: agy doesn't report context windows. */
   models() {

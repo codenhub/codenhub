@@ -8,15 +8,22 @@ const [cmd] = process.argv.slice(2);
 if (cmd === "--version") {
   console.log("opencode v2.0.0");
 } else if (cmd === "models") {
-  console.log("fake/model");
+  console.log("fake/model\nfake/model-2");
 } else if (cmd === "run") {
   const prompt = fs.readFileSync(0, "utf8");
   const sessionID = "ses_fake";
   const emit = (ev) => console.log(JSON.stringify({ sessionID, ...ev }));
   emit({ type: "step_start", part: {} });
   if (prompt.includes("read-only task")) {
-    const report = prompt.includes("SHORT") ? "one finding" : `${"finding\n".repeat(600)}end of report`;
-    const verdict = prompt.match(/VERDICT (\S+)/)?.[1];
+    // TEMPLATE-VERDICT: the preamble's verdict line copied as is.
+    const verdict = prompt.includes("TEMPLATE-VERDICT")
+      ? "approve | approve-with-nits | reject"
+      : prompt.match(/VERDICT (\S+)/)?.[1];
+    let report = prompt.includes("SHORT") ? "one finding" : `${"finding\n".repeat(600)}end of report`;
+    // ECHO: the verdict again at the top of the report, as workers often write it.
+    if (prompt.includes("ECHO")) {
+      report = `verdict: ${verdict}\n${report}`;
+    }
     let text = `RESULT\nstatus: done\nsummary: read the code\n${verdict ? `verdict: ${verdict}\n` : ""}report:\n${report}`;
     if (prompt.includes("[diff cut at")) {
       text += "\n(diff was cut)";
