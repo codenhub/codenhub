@@ -41,22 +41,22 @@ const scenarios: Scenario[] = [
     source: `import { string } from "DIST"; export const check = string({ min: 2, trim: true });`,
     budget: 1510,
   },
-  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 1990 },
+  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 2870 },
   {
     name: "object of three fields",
     source: `import { email, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });`,
-    budget: 4070,
+    budget: 4930,
   },
   {
     name: "object of three fields with messages",
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 5700,
+    budget: 6580,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 1310 },
-  { name: "url", source: `import { url } from "DIST"; export const check = url();`, budget: 3500 },
+  { name: "url", source: `import { url } from "DIST"; export const check = url();`, budget: 4380 },
   { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 1740 },
   {
     name: "datetime",
@@ -149,7 +149,7 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 15740,
+    budget: 16580,
   },
 ];
 

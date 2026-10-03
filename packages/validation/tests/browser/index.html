@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>validation browser tests</title>
+  </head>
+  <body>
+    <script type="module">
+      import * as validation from "/dist/index.js";
+
+      window.validation = validation;
+      document.documentElement.dataset.ready = "true";
+    </script>
+  </body>
+</html>
