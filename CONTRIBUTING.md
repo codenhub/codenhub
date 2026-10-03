@@ -58,6 +58,27 @@ Once the fix is released, searching for `codenhub/codenhub#123` finds every work
 
 Opening an issue is outward-facing. An agent drafts it and asks before filing, as it does before pushing.
 
+### Trying a fix before its release
+
+A fix merged to `main` reaches an app outside this repository only once the package is released, and a release cannot be taken back. When the app that found the defect should confirm the fix first, there are two ways to put it in the app's hands.
+
+To confirm one fix in one app, install a tarball. It leaves nothing behind on npm:
+
+```sh
+pnpm hub build error
+cd packages/error && pnpm pack
+```
+
+The app then installs the `.tgz` file by path, and goes back to a released version once one carries the fix.
+
+To let more than one app, or more than one person, try it, release a pre-release. It is an ordinary release with a SemVer suffix, cut and tagged the way "Releasing" below describes:
+
+```sh
+pnpm hub release error --cut=0.3.1-beta.1
+```
+
+A pre-release publishes under the `next` dist-tag, so `npm install` without a version keeps resolving the current stable release, and the documentation site keeps showing it. An app opts in with `pnpm add @codenhub/error@next` or the exact version. Each pre-release still uses up its version number on npm, and a package that keeps a changelog gets a page for it. The stable release that follows is cut with its explicit version, `--cut=0.3.1`.
+
 ## Branches
 
 Work happens on a branch. Do not commit to `main`.
