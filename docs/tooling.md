@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-30
+last_updated: 2026-10-03
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -348,7 +348,7 @@ The `changelog` rule applies only to a package that already has `docs/changelog/
 
 The `exports` rule reads import statements, not prose: naming a path in a sentence is not a promise that it resolves, but showing it in an `import` is. The reverse direction — a supported path the package never documents — is not mechanically knowable and stays a review responsibility.
 
-The `dependencies` rule reads installed fields only for ranges. A `peerDependencies` range is a contract with the consumer rather than an installation, so neither the `workspace:` nor the `catalog:` requirement applies to it. A cycle is reported on every package that takes part in it, naming one cycle per package: breaking that one re-runs the check against whatever remains.
+The `dependencies` rule reads installed fields only for ranges. A `peerDependencies` range is a contract with the consumer rather than an installation, so none of the range requirements apply to it. A dependency between two public packages is expected to be `catalog:` (`dependencies/published-range`) and any other internal one `workspace:` (`dependencies/workspace-range`), both as warnings. `dependencies/catalog-release` warns when a public package installs a sibling through a catalog entry that is not `^` followed by that sibling's newest stable release tag; it reads `pnpm-workspace.yaml` and `git tag --list`, only when some package has such an entry, and leaves pre-release tags out because they publish under `next`. A cycle is reported on every package that takes part in it, naming one cycle per package: breaking that one re-runs the check against whatever remains.
 
 The same rule reads the package's own files, in two scopes that answer different questions:
 

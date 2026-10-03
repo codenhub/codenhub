@@ -5,7 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
-import { createDependencyRules } from "./dependency-rules.ts";
+import { createDependencyRules, findLatestStableReleases, type ReleaseSources } from "./dependency-rules.ts";
 import type { Finding } from "./rule.ts";
 
 /**
@@ -41,12 +41,20 @@ async function createPackage(
   };
 }
 
+function createSources(catalog: Record<string, string> = {}, releases: Record<string, string> = {}): ReleaseSources {
+  return {
+    readCatalog: async () => new Map(Object.entries(catalog)),
+    readLatestReleases: async () => new Map(Object.entries(releases)),
+  };
+}
+
 async function runRule(
   workspacePackage: WorkspacePackage,
   siblings: readonly WorkspacePackage[] = [],
+  sources: ReleaseSources = createSources(),
 ): Promise<Finding[]> {
   const results = await Promise.all(
-    createDependencyRules([workspacePackage, ...siblings]).map(async (rule) =>
+    createDependencyRules([workspacePackage, ...siblings], sources).map(async (rule) =>
       rule.run({ includePack: false, package: workspacePackage }),
     ),
   );
@@ -56,27 +64,50 @@ async function runRule(
 async function runRuleForCodes(
   workspacePackage: WorkspacePackage,
   siblings: readonly WorkspacePackage[] = [],
+  sources?: ReleaseSources,
 ): Promise<string[]> {
-  return (await runRule(workspacePackage, siblings)).map(({ code }) => code);
+  return (await runRule(workspacePackage, siblings, sources)).map(({ code }) => code);
 }
 
 describe("dependency ranges", () => {
-  it("reports an internal dependency without a workspace range", async () => {
+  it("asks a public package to install a public sibling from its release", async () => {
     const workspacePackage = await createPackage(
       "@fixture/example",
-      { dependencies: { "@fixture/other": "^1.0.0" }, peerDependencies: { "@fixture/other": ">=1" } },
+      { dependencies: { "@fixture/other": "workspace:*" }, peerDependencies: { "@fixture/other": ">=1" } },
       { "src/index.ts": `import { a } from "@fixture/other";` },
     );
     const other = await createPackage("@fixture/other");
 
     expect(await runRule(workspacePackage, [other])).toEqual([
       {
-        code: "dependencies/workspace-range",
+        code: "dependencies/published-range",
         location: "package.json",
-        message: `"dependencies.@fixture/other" should use a "workspace:" range.`,
+        message: `"dependencies.@fixture/other" should use a "catalog:" range, so it installs the released version.`,
         severity: "warning",
       },
     ]);
+  });
+
+  it("keeps a private package on the working tree of its siblings", async () => {
+    const workspacePackage = await createPackage(
+      "@fixture/example",
+      { devDependencies: { "@fixture/other": "catalog:" }, private: true },
+      { "src/index.ts": `import { a } from "@fixture/other";` },
+    );
+    const other = await createPackage("@fixture/other");
+
+    expect(await runRuleForCodes(workspacePackage, [other])).toEqual(["dependencies/workspace-range"]);
+  });
+
+  it("keeps a public package on the working tree of a private sibling", async () => {
+    const workspacePackage = await createPackage(
+      "@fixture/example",
+      { devDependencies: { "@fixture/tools": "workspace:*" } },
+      { "src/index.test.ts": `import { a } from "@fixture/tools";` },
+    );
+    const tools = await createPackage("@fixture/tools", { private: true });
+
+    expect(await runRuleForCodes(workspacePackage, [tools])).toEqual([]);
   });
 
   it("requires a catalog range for a dependency two packages install", async () => {
@@ -110,6 +141,51 @@ describe("dependency ranges", () => {
     const other = await createPackage("@fixture/other", { peerDependencies: { vite: ">=8.0.0" } });
 
     expect(await runRuleForCodes(workspacePackage, [other])).toEqual([]);
+  });
+});
+
+describe("catalog releases", () => {
+  async function createConsumer(): Promise<WorkspacePackage[]> {
+    const workspacePackage = await createPackage(
+      "@fixture/example",
+      { dependencies: { "@fixture/other": "catalog:" } },
+      { "src/index.ts": `import { a } from "@fixture/other";` },
+    );
+    return [workspacePackage, await createPackage("@fixture/other")];
+  }
+
+  it("accepts a catalog entry that starts at the latest release", async () => {
+    const [workspacePackage, other] = await createConsumer();
+    const sources = createSources({ "@fixture/other": "^1.2.0" }, { "@fixture/other": "1.2.0" });
+
+    expect(await runRuleForCodes(workspacePackage!, [other!], sources)).toEqual([]);
+  });
+
+  it("reports a catalog entry behind the latest release", async () => {
+    const [workspacePackage, other] = await createConsumer();
+    const sources = createSources({ "@fixture/other": "^1.1.0" }, { "@fixture/other": "1.2.0" });
+
+    expect((await runRule(workspacePackage!, [other!], sources)).map(({ message }) => message)).toEqual([
+      `"dependencies.@fixture/other" installs catalog range "^1.1.0"; the latest release is 1.2.0, so pnpm-workspace.yaml should say "^1.2.0".`,
+    ]);
+  });
+
+  it("reports a catalog entry for a package that was never released", async () => {
+    const [workspacePackage, other] = await createConsumer();
+    const sources = createSources({ "@fixture/other": "^0.1.0" });
+
+    expect(await runRuleForCodes(workspacePackage!, [other!], sources)).toEqual(["dependencies/catalog-release"]);
+  });
+
+  it("reads only stable versions as releases", () => {
+    const releases = findLatestStableReleases([
+      "@fixture/other@1.2.0",
+      "@fixture/other@1.10.0",
+      "@fixture/other@2.0.0-beta.1",
+      "not-a-release",
+    ]);
+
+    expect([...releases]).toEqual([["@fixture/other", "1.10.0"]]);
   });
 });
 
