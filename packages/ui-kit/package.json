@@ -55,10 +55,10 @@
     "typecheck": "tsc -b"
   },
   "dependencies": {
-    "@codenhub/error": "workspace:*",
-    "@codenhub/store": "workspace:*",
-    "@codenhub/styles": "workspace:*",
-    "@codenhub/theme": "workspace:*"
+    "@codenhub/error": "catalog:",
+    "@codenhub/store": "catalog:",
+    "@codenhub/styles": "catalog:",
+    "@codenhub/theme": "catalog:"
   },
   "devDependencies": {
     "@tailwindcss/cli": "catalog:",

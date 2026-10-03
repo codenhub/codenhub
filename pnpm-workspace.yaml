@@ -6,6 +6,10 @@ packages:
   - "packages/plugins/**"
 
 catalog:
+  "@codenhub/error": ^0.2.1
+  "@codenhub/store": ^0.0.2
+  "@codenhub/styles": ^0.6.0
+  "@codenhub/theme": ^0.1.2
   "@tauri-apps/api": ^2.0.0
   "@tailwindcss/cli": ^4.3.2
   "@tailwindcss/vite": ^4.3.2
@@ -32,3 +36,9 @@ allowBuilds:
   "@parcel/watcher": true
   esbuild: true
   workerd: true
+
+# A public package installs its public siblings from npm through the catalog,
+# never from the working tree (docs/specs/packages-lifecycle.md, "Ranges").
+# Pinned rather than left to pnpm's default, which already behaves this way, so
+# a change of default cannot start linking them silently.
+linkWorkspacePackages: false

@@ -6,6 +6,18 @@ settings:
 
 catalogs:
   default:
+    '@codenhub/error':
+      specifier: ^0.2.1
+      version: 0.2.1
+    '@codenhub/store':
+      specifier: ^0.0.2
+      version: 0.0.2
+    '@codenhub/styles':
+      specifier: ^0.6.0
+      version: 0.6.0
+    '@codenhub/theme':
+      specifier: ^0.1.2
+      version: 0.1.2
     '@playwright/test':
       specifier: ^1.61.1
       version: 1.61.1
@@ -248,8 +260,8 @@ importers:
         version: 5.56.5
     devDependencies:
       '@codenhub/styles':
-        specifier: workspace:*
-        version: link:../styles
+        specifier: 'catalog:'
+        version: 0.6.0(tailwindcss@4.3.2)
       '@types/react':
         specifier: ^19.0.0
         version: 19.2.17
@@ -794,8 +806,8 @@ importers:
   packages/toaster:
     devDependencies:
       '@codenhub/styles':
-        specifier: workspace:*
-        version: link:../styles
+        specifier: 'catalog:'
+        version: 0.6.0(tailwindcss@4.3.2)
       '@codenhub/tools':
         specifier: workspace:*
         version: link:../tools
@@ -918,17 +930,17 @@ importers:
   packages/ui-kit:
     dependencies:
       '@codenhub/error':
-        specifier: workspace:*
-        version: link:../error
+        specifier: 'catalog:'
+        version: 0.2.1
       '@codenhub/store':
-        specifier: workspace:*
-        version: link:../store
+        specifier: 'catalog:'
+        version: 0.0.2
       '@codenhub/styles':
-        specifier: workspace:*
-        version: link:../styles
+        specifier: 'catalog:'
+        version: 0.6.0(tailwindcss@4.3.2)
       '@codenhub/theme':
-        specifier: workspace:*
-        version: link:../theme
+        specifier: 'catalog:'
+        version: 0.1.2
     devDependencies:
       '@tailwindcss/cli':
         specifier: 'catalog:'
@@ -1203,6 +1215,24 @@ packages:
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
+
+  '@codenhub/error@0.2.1':
+    resolution: {integrity: sha512-LQm9qgdxwfEaMrUhPpjvAOo0VN+cxj/shyQFadVrQeZy9+HX49jtY/wOt7VoMntGoPLnbJr3BK2QDLTfR6tC+Q==}
+    engines: {node: '>=22'}
+
+  '@codenhub/store@0.0.2':
+    resolution: {integrity: sha512-iXhHcUAOl7u3Kp4odYypuq9XPTvHp2CI98YWQWJI3awTLAH0i4tr8hW37Q7nybCKHX5jBHS9D2Ng/9jxMJrl1A==}
+
+  '@codenhub/styles@0.6.0':
+    resolution: {integrity: sha512-9N+XLJFlhr6TdiRkKNk5qJKt2tzKokVPGOUg90vEz+UHuUoi9npbpAOA/fO388lAiO14/jcIDkQ/6ZpraObYRg==}
+    peerDependencies:
+      tailwindcss: '>=4.3.2 <5'
+    peerDependenciesMeta:
+      tailwindcss:
+        optional: true
+
+  '@codenhub/theme@0.1.2':
+    resolution: {integrity: sha512-IaRD4hKv7PVijJNj4mHLC1JkwJxtQtXbDioa3v+kmxFur9XqmiDiuvSXWiIKVvnwVMPhbl1VL22D2SSPvu+7Ng==}
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -4322,6 +4352,16 @@ snapshots:
 
   '@cloudflare/workerd-windows-64@1.20260801.1':
     optional: true
+
+  '@codenhub/error@0.2.1': {}
+
+  '@codenhub/store@0.0.2': {}
+
+  '@codenhub/styles@0.6.0(tailwindcss@4.3.2)':
+    optionalDependencies:
+      tailwindcss: 4.3.2
+
+  '@codenhub/theme@0.1.2': {}
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
