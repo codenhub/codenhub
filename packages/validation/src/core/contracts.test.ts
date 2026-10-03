@@ -146,6 +146,28 @@ describe("coerceDate", () => {
   });
 });
 
+describe("a message function", () => {
+  it("should be given the issue as its validator reports it, with a path relative to that validator", () => {
+    const paths: unknown[] = [];
+    const field = number({
+      message: (issue) => {
+        paths.push(issue.path);
+        return "Enter a number";
+      },
+    });
+    const result = object({ items: array(object({ count: field })) })({ items: [{ count: "x" }] });
+    expect(issuesOf(result)).toEqual([
+      {
+        code: "invalid_type",
+        path: ["items", 0, "count"],
+        params: { expected: "number", received: "string" },
+        message: "Enter a number",
+      },
+    ]);
+    expect(paths).toEqual([[]]);
+  });
+});
+
 describe("a validator written by hand", () => {
   it("should have an issue without a path placed at the child it came from", () => {
     const pathless = (() => ({ ok: false, error: { issues: [{ code: "x" }] } })) as unknown as Validator<string>;
