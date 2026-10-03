@@ -26,12 +26,17 @@ const DOMAIN_NAME_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z
 const SPECIAL_USE_NAME_PATTERN =
   /(?:^|\.)(?:localhost|local|internal|test|example|invalid|alt|onion|arpa|xn--(?:kgbechtv|hgbk6aj7f53bba|0zwm56d|g6w251d|80akhbyknj4f|11b5bs3a9aj6g|jxalpdlp|9t4b11yi5a|deba0ad|zckzah|hlcj6aya9esc7a))$/i;
 
+/** A label in punycode, the ASCII form of an internationalized one. */
+const PUNYCODE_LABEL_PATTERN = /(?:^|\.)xn--/i;
+
 /**
  * Tests the internationalized labels of an ASCII host as every browser does: each `xn--` label decodes
  * to the label it spells, and the host keeps the bidi rule. Not every parser checks either, so it is
- * checked here, for a host the parser has already read too.
+ * checked here, for a host the parser has already read too. A host with no `xn--` label has nothing to
+ * check, which is most of them, so they pay one test.
  */
-const isIdnHost = (host: string): boolean => isPunycodeHost(host) && isBidiHost(host);
+const isIdnHost = (host: string): boolean =>
+  !PUNYCODE_LABEL_PATTERN.test(host) || (isPunycodeHost(host) && isBidiHost(host));
 
 /**
  * Tests whether a host is a public domain name, which is what "public" means for email and URL hosts,
