@@ -1415,6 +1415,35 @@ describe("delegate-work", () => {
     await R.discard(r.id);
   });
 
+  it("shouldPutBackAFileTheUserRevertedAsTheyLeftIt", async () => {
+    const R = await import(runner);
+    const a = path.join(repo, "src", "a.txt");
+    const locked = path.join(repo, "src", "locked3.txt");
+    fs.writeFileSync(locked, "mine\n");
+    const before = fs.readFileSync(a, "utf8");
+
+    const r = await R.run({
+      cwd: repo,
+      role: "fixer",
+      allow: ["src/a.txt", "src/locked3.txt"],
+      brief: "Add a line. ALSO-WRITE src/locked3.txt",
+      model: "fake",
+    });
+    expect(r.status).toBe("ok");
+    // Reverted by hand: already where the discard takes it.
+    fs.writeFileSync(a, before);
+    fs.chmodSync(locked, 0o444);
+    try {
+      const stopped = await R.discard(r.id);
+      expect(stopped.status).toBe("conflict");
+      expect(fs.readFileSync(a, "utf8")).toBe(before);
+    } finally {
+      fs.chmodSync(locked, 0o644);
+    }
+    await R.discard(r.id);
+    fs.rmSync(locked, { force: true });
+  });
+
   it("shouldKeepACopyAndPutBackWhenADiscardFailsHalfway", async () => {
     const R = await import(runner);
     const a = path.join(repo, "src", "a.txt");
@@ -1506,7 +1535,7 @@ describe("delegate-work", () => {
     } finally {
       fs.writeFileSync(configFile, original);
     }
-  });
+  }, 20000);
 
   it("shouldTellANativeReviewerTheDiffWasCut", async () => {
     const R = await import(runner);

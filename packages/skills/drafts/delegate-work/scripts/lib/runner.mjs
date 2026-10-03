@@ -217,10 +217,13 @@ function writeFrom(root, ref, files, done = []) {
 
 /**
  * Writes files from ref; should a write fail partway (a locked file), puts
- * back from `back` what it had written, so the tree is never left half
- * written. Returns null, or why it stopped.
+ * back what it had written as the tree held it before, so the tree is never
+ * left half written. Returns null, or why it stopped.
  */
-function writeOrPutBack(root, ref, back, files, id) {
+function writeOrPutBack(root, ref, files, id) {
+  // The tree as it is, not a ref: a file may already be at ref (the user
+  // reverted it by hand), and putting back must leave it so.
+  const back = G.workingTree(root, path.join(runDir(id), "putback.index"));
   const written = [];
   try {
     writeFrom(root, ref, files, written);
@@ -1404,7 +1407,7 @@ export function apply(id) {
       return envelope(meta, { status: "conflict", hint: reading });
     }
     // Should a write fail, the worktree stays to apply again.
-    const stopped = writeOrPutBack(meta.root, meta.post, meta.snap, files, id);
+    const stopped = writeOrPutBack(meta.root, meta.post, files, id);
     if (stopped) {
       return envelope(meta, { status: "conflict", hint: stopped });
     }
@@ -1471,7 +1474,7 @@ export async function discard(id) {
         keepCopy(path.join(meta.root, f), path.join(copy, f));
       }
     }
-    const stopped = writeOrPutBack(meta.root, meta.snap, now, files, id);
+    const stopped = writeOrPutBack(meta.root, meta.snap, files, id);
     if (stopped) {
       return envelope(meta, { status: "conflict", hint: stopped });
     }
@@ -1500,7 +1503,7 @@ export async function discard(id) {
         keepCopy(path.join(meta.root, f), path.join(copy, f));
       }
     }
-    const stopped = writeOrPutBack(meta.root, meta.snap, meta.post, files, id);
+    const stopped = writeOrPutBack(meta.root, meta.snap, files, id);
     if (stopped) {
       return envelope(meta, { status: "conflict", hint: stopped });
     }
@@ -1536,7 +1539,7 @@ export function unapply(id) {
   if (touched.length) {
     return envelope(meta, { status: "conflict", hint: `Edited since the run: ${touched.join(", ")}` });
   }
-  const stopped = writeOrPutBack(meta.root, meta.snap, meta.post, files, id);
+  const stopped = writeOrPutBack(meta.root, meta.snap, files, id);
   if (stopped) {
     return envelope(meta, { status: "conflict", hint: stopped });
   }
