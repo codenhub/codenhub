@@ -30,111 +30,111 @@ interface Scenario {
 }
 
 const scenarios: Scenario[] = [
-  { name: "boolean", source: `import { boolean } from "DIST"; export const check = boolean();`, budget: 1020 },
+  { name: "boolean", source: `import { boolean } from "DIST"; export const check = boolean();`, budget: 1030 },
   {
     name: "number",
     source: `import { number } from "DIST"; export const check = number({ int: true, min: 0 });`,
-    budget: 1760,
+    budget: 1870,
   },
   {
     name: "string",
     source: `import { string } from "DIST"; export const check = string({ min: 2, trim: true });`,
-    budget: 1510,
+    budget: 1700,
   },
-  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 2870 },
+  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 3160 },
   {
     name: "object of three fields",
     source: `import { email, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });`,
-    budget: 4930,
+    budget: 5420,
   },
   {
     name: "object of three fields with messages",
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 6580,
+    budget: 7270,
   },
-  { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 1310 },
-  { name: "url", source: `import { url } from "DIST"; export const check = url();`, budget: 4380 },
-  { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 1740 },
+  { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 1320 },
+  { name: "url", source: `import { url } from "DIST"; export const check = url();`, budget: 4850 },
+  { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 1750 },
   {
     name: "datetime",
     source: `import { datetime } from "DIST"; export const check = datetime({ offset: true });`,
-    budget: 1510,
+    budget: 1530,
   },
   {
     name: "date",
     source: `import { date } from "DIST"; export const check = date({ min: new Date(0) });`,
-    budget: 1310,
+    budget: 1320,
   },
   {
     name: "oneOf",
     source: `import { oneOf } from "DIST"; export const check = oneOf(["admin", "user"]);`,
-    budget: 1130,
+    budget: 1140,
   },
   {
     name: "array",
     source: `import { array, string } from "DIST"; export const check = array(string(), { max: 5 });`,
-    budget: 2260,
+    budget: 2520,
   },
   {
     name: "set",
     source: `import { number, set } from "DIST"; export const check = set(number());`,
-    budget: 2670,
+    budget: 2800,
   },
   {
     name: "map",
     source: `import { map, number, string } from "DIST"; export const check = map(string(), number());`,
-    budget: 3050,
+    budget: 3540,
   },
   {
     name: "tuple",
     source: `import { number, tuple } from "DIST"; export const check = tuple([number(), number()]);`,
-    budget: 2560,
+    budget: 2700,
   },
   {
     name: "record",
     source: `import { number, record, string } from "DIST"; export const check = record(string(), number());`,
-    budget: 3030,
+    budget: 3520,
   },
   {
     name: "union",
     source: `import { literal, union } from "DIST"; export const check = union([literal("a"), literal("b")]);`,
-    budget: 1440,
+    budget: 1730,
   },
   {
     name: "tagged",
     source: `import { object, string, tagged } from "DIST";
 export const check = tagged("type", { a: object({ a: string() }), b: object({ b: string() }) });`,
-    budget: 2650,
+    budget: 2860,
   },
-  { name: "json", source: `import { json } from "DIST"; export const check = json();`, budget: 1420 },
+  { name: "json", source: `import { json } from "DIST"; export const check = json();`, budget: 1450 },
   {
     name: "coerceNumber",
     source: `import { coerceNumber } from "DIST"; export const check = coerceNumber({ int: true });`,
-    budget: 1940,
+    budget: 2060,
   },
   {
     name: "coerceString",
     source: `import { coerceString } from "DIST"; export const check = coerceString();`,
-    budget: 1610,
+    budget: 1810,
   },
   {
     name: "coerceBoolean",
     source: `import { coerceBoolean } from "DIST"; export const check = coerceBoolean();`,
-    budget: 1210,
+    budget: 1230,
   },
   {
     name: "coerceBigint",
     source: `import { coerceBigint } from "DIST"; export const check = coerceBigint();`,
-    budget: 1550,
+    budget: 1560,
   },
-  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1850 },
+  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 1870 },
   {
     name: "standard",
     source: `import { englishMessages, number, standard } from "DIST"; export const check = standard(number(), englishMessages);`,
-    budget: 3550,
+    budget: 3910,
   },
   {
     name: "formatIssue with your own wording",
@@ -144,12 +144,12 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
   {
     name: "formatIssue with the English wording",
     source: `import { englishMessages, formatIssue } from "DIST"; export const describe = (issue: Parameters<typeof formatIssue>[0]) => formatIssue(issue, englishMessages);`,
-    budget: 1910,
+    budget: 2190,
   },
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 16580,
+    budget: 17360,
   },
 ];
 

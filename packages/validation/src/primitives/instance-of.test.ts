@@ -49,3 +49,38 @@ describe("instanceOf", () => {
     });
   });
 });
+
+describe("instanceOf, given a target with a Symbol.hasInstance of its own", () => {
+  it("should decide by that rule, without trying it on an object made up when created", () => {
+    let calls = 0;
+    class Even {
+      static [Symbol.hasInstance](value: unknown): boolean {
+        calls += 1;
+        return typeof value === "number" && value % 2 === 0;
+      }
+    }
+    const even = Even as unknown as abstract new () => number;
+    const isEven = instanceOf(even);
+    expect(calls).toBe(0);
+    expect(accepts(isEven, 2, 3, "2")).toEqual([true, false, false]);
+  });
+
+  it("should treat a rule of null as absent and refuse one that is not a function", () => {
+    class Plain {}
+    Object.defineProperty(Plain, Symbol.hasInstance, { value: null });
+    expect(accepts(instanceOf(Plain), new Plain(), {})).toEqual([true, false]);
+    class Broken {}
+    Object.defineProperty(Broken, Symbol.hasInstance, { value: 1 });
+    expect(() => instanceOf(Broken)).toThrow(TypeError);
+  });
+
+  it("should reject a value its rule throws for, rather than throw", () => {
+    class Throwing {
+      static [Symbol.hasInstance](): boolean {
+        throw new Error("boom");
+      }
+    }
+    const throwing = Throwing;
+    expect(accepts(instanceOf(throwing), {})).toEqual([false]);
+  });
+});

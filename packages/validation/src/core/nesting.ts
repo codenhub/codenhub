@@ -80,7 +80,8 @@ export function composed(run: Run): (input: unknown) => Maybe<ValidationResult<u
 /**
  * Validates a value found at `place` with any validator, and returns its result with every issue at
  * its full path: a composer of this package writes them so itself, and any other validator's issues are
- * moved there once. An issue written by hand without a path is at the value.
+ * moved there once. An issue written by hand without a path is given the place as its path; at the root
+ * it is returned as the validator wrote it.
  */
 export function call(validator: AnyValidator, input: unknown, place: Place): Maybe<ValidationResult<unknown>> {
   const run = runs.get(validator);

@@ -104,7 +104,9 @@ describe("a part of a URL or an address that fails", () => {
 
   it("should be worded in English with what the part's validator found first", () => {
     const [found] = issuesOf(url({ query: object({ page: string() }) })("https://example.com/?x=1"));
-    expect(found && formatIssue(found, englishMessages)).toBe("Invalid URL query: Expected string, received undefined");
+    expect(found && formatIssue(found, englishMessages)).toBe(
+      "Invalid URL query: page: Expected string, received undefined",
+    );
   });
 });
 
@@ -244,8 +246,8 @@ describe("input large enough to be slow", () => {
     const getTime = vi.spyOn(Date.prototype, "getTime");
     try {
       expect(both(Array.from({ length: 1000 }, (_, index) => index)).ok).toBe(true);
-      // Once for the list, which is an object, and never for a number in it.
-      expect(getTime).toHaveBeenCalledTimes(1);
+      // Never: not for the list, which is an array, and not for a number in it.
+      expect(getTime).not.toHaveBeenCalled();
     } finally {
       getTime.mockRestore();
     }

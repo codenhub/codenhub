@@ -363,6 +363,10 @@ export const asStandard: StandardSchemaV1<unknown, { email: string }> = exposed;
 export const standardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: "a@example.com" };
 // @ts-expect-error the output type is the validator's output
 export const badStandardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: 1 };
+// One type argument is input and output alike, as the specification defaults it.
+export const sameShape: StandardSchemaV1.InferOutput<StandardSchemaV1<{ id: string }>> = { id: "a" };
+// @ts-expect-error the output defaults to the input, not to unknown
+export const badSameShape: StandardSchemaV1.InferOutput<StandardSchemaV1<{ id: string }>> = 5;
 
 // Checks follow the options, which can be left out. A validator stays synchronous while every check
 // is, and becomes asynchronous with one asynchronous check.

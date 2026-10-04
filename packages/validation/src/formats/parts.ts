@@ -1,7 +1,7 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { finish, word } from "../core/checks";
 import { setOwn } from "../core/objects";
-import { assertFunction, failWith, issue, repeatedKey, typeIssue } from "../core/result";
+import { assertFunction, failWith, issue, nested, repeatedKey, typeIssue } from "../core/result";
 import type { AnyValidator, AsyncCheck, Message, ValidationIssue, ValidationResult } from "../core/types";
 
 /** A part of a format given to the validator the consumer chose for it: its name, the validator, and what the parser read. */
@@ -19,7 +19,7 @@ export type Reading = { value: string; parts: Part[] } | { issues: ValidationIss
  * to the part. A form shows it beside the field the text came from, since a path into text names nothing.
  */
 export const partIssue = (format: string, part: string, issues: readonly ValidationIssue[]): ValidationIssue =>
-  issue("invalid_format", { format, part, issues });
+  issue("invalid_format", { format, part, issues: issues.map(nested) });
 
 /** Rejects a part validator that is given and is not a function, such as a hostname written as text. */
 export function assertParts(parts: Readonly<Record<string, unknown>>): void {

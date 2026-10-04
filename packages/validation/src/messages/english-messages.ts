@@ -1,5 +1,6 @@
+import { timeOf } from "../core/objects";
 import type { ValidationIssue } from "../core/types";
-import { formatIssue, type Messages } from "./format-issue";
+import { formatIssue, formatPath, type Messages } from "./format-issue";
 
 const FORMAT_NAMES: Readonly<Record<string, string>> = {
   email: "email address",
@@ -43,6 +44,27 @@ const COLLECTIONS: Readonly<Record<string, readonly [string, string]>> = {
   record: ["key", "keys"],
 };
 
+/** Reads an entry of one of the tables above, so a name such as `constructor` is no entry of `Object.prototype`. */
+const entryOf = <T>(table: Readonly<Record<string, T>>, key: string): T | undefined =>
+  Object.hasOwn(table, key) ? table[key] : undefined;
+
+/** The most allowed values a message lists before it says how many more there are. */
+const LISTED_VALUES = 10;
+
+/** Lists allowed values for a sentence, the first ten and a count of the rest, so a long list stays a sentence. */
+const listOf = (values: readonly unknown[], word: (value: unknown) => string): string => {
+  const listed = values.slice(0, LISTED_VALUES).map(word).join(", ");
+  return values.length > LISTED_VALUES ? `${listed} or ${values.length - LISTED_VALUES} more` : listed;
+};
+
+/**
+ * Words an issue quoted inside another, such as an option's inside a union or a part's inside a URL, with
+ * where it sits inside the value the outer issue is shown at, so `width: Must be at least 1` says which
+ * property of the box to fix.
+ */
+const quote = (found: ValidationIssue, messages: Messages): string =>
+  `${found.path?.length > 0 ? `${formatPath(found.path)}: ` : ""}${formatIssue(found, messages)}`;
+
 /** Reads a parameter as text, so a missing or unusual one degrades to a readable message and not a crash. */
 const param = (issue: ValidationIssue, name: string): string => String(issue.params?.[name]);
 
@@ -55,8 +77,13 @@ const describeLimit = ({ code, params }: ValidationIssue): string => {
   const limit = params?.[isMin ? "minimum" : "maximum"];
   const bound = String(limit);
   const type = String(params?.type);
-  if (limit instanceof Date) {
-    return `Must be on or ${isMin ? "after" : "before"} ${limit.toISOString()}`;
+  // A `Date` of any realm is written as its moment, whatever `type` says, and the bound of a date as it is
+  // otherwise: the ISO text `JSON.stringify` made of a `Date` when the issue was sent on reads the same,
+  // and text is never read as a date, which would depend on the clock of the machine wording it.
+  const time = timeOf(limit);
+  if (type === "date" || time !== undefined) {
+    const moment = time === undefined || Number.isNaN(time) ? bound : new Date(time).toISOString();
+    return `Must be on or ${isMin ? "after" : "before"} ${moment}`;
   }
   if (type === "depth") {
     return `Must be nested at most ${bound} levels deep`;
@@ -64,12 +91,12 @@ const describeLimit = ({ code, params }: ValidationIssue): string => {
   if (type === "calls") {
     return `Too complex to check within ${bound} recursive steps`;
   }
-  const counts = COLLECTIONS[type];
+  const counts = entryOf(COLLECTIONS, type);
   if (counts !== undefined) {
     const wording = params?.exact === true ? "exactly" : isMin ? "at least" : "at most";
     return `Must contain ${wording} ${bound} ${counts[limit === 1 ? 0 : 1]}`;
   }
-  const unit = UNITS[type];
+  const unit = entryOf(UNITS, type);
   const counted = (count: unknown): string => (unit === undefined ? "items" : unit[count === 1 ? 0 : 1]);
   if (params?.exact === true) {
     return `Must be exactly ${bound} ${counted(limit)}`;
@@ -81,11 +108,11 @@ const describeLimit = ({ code, params }: ValidationIssue): string => {
 
 const describeFormat = (issue: ValidationIssue, messages: Messages): string => {
   const format = param(issue, "format");
-  const name = FORMAT_NAMES[format] ?? format;
+  const name = entryOf(FORMAT_NAMES, format) ?? format;
   // A part of a URL or an address that failed is worded with what its validator found first.
   const [found] = (issue.params?.["issues"] ?? []) as readonly ValidationIssue[];
   if (found !== undefined) {
-    return `Invalid ${name} ${param(issue, "part")}: ${formatIssue(found, messages)}`;
+    return `Invalid ${name} ${param(issue, "part")}: ${quote(found, messages)}`;
   }
   switch (format) {
     case "regex":
@@ -129,12 +156,12 @@ const isOtherKind = (issues: readonly ValidationIssue[]): boolean => {
  */
 const describeUnion = (issue: ValidationIssue, messages: Messages): string => {
   if (Array.isArray(issue.params?.options)) {
-    return `Expected ${param(issue, "discriminator")} to be one of ${issue.params.options.map(formatValue).join(", ")}`;
+    return `Expected ${param(issue, "discriminator")} to be one of ${listOf(issue.params.options, formatValue)}`;
   }
   const found = (issue.params?.["issues"] ?? []) as readonly (readonly ValidationIssue[])[];
   const meant = Array.isArray(found) ? found.filter((issues) => Array.isArray(issues) && !isOtherKind(issues)) : [];
   const [first] = meant.length === 1 ? (meant[0] as readonly ValidationIssue[]) : [];
-  return first === undefined ? "Does not match any of the allowed types" : formatIssue(first, messages);
+  return first === undefined ? "Does not match any of the allowed types" : quote(first, messages);
 };
 
 const describeValue = (issue: ValidationIssue): string => {
@@ -144,7 +171,7 @@ const describeValue = (issue: ValidationIssue): string => {
     return `Expected ${word(issue.params.expected)}`;
   }
   if (Array.isArray(issue.params?.options)) {
-    return `Expected one of ${issue.params.options.map(word).join(", ")}`;
+    return `Expected one of ${listOf(issue.params.options, word)}`;
   }
   switch (issue.params?.format) {
     case "multipleOf":
@@ -199,12 +226,14 @@ export const englishMessages: Messages = {
       ? "Must be unique"
       : issue.params?.encodedSeparator === true
         ? "Must not hold an encoded / or \\"
-        : describeValue(issue),
+        : issue.params?.dotSegment === true
+          ? "Must not hold . or .. followed by ;"
+          : describeValue(issue),
   // Worded with what the key validator found first, so a form says why the key is wrong, not only that it
   // is, and with the map in use, so a map that overrides some of this wording reaches that issue too.
   invalid_key: (issue, messages) => {
     const [found] = (issue.params?.issues ?? []) as readonly ValidationIssue[];
-    return found === undefined ? "Invalid key" : `Invalid key: ${formatIssue(found, messages)}`;
+    return found === undefined ? "Invalid key" : `Invalid key: ${quote(found, messages)}`;
   },
   // Quoted as a literal, since the key is text the sender chose and may hold quotes or line breaks.
   unrecognized_key: (issue) => `Unrecognized key ${formatValue(issue.params?.key)}`,

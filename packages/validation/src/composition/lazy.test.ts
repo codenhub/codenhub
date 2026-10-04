@@ -239,6 +239,21 @@ describe("lazy", () => {
       expect(calls()).toBeLessThanOrEqual(2 * 61);
     });
 
+    it("should report a failure of a recursive union in issues whose serialized size grows with the input", () => {
+      const { node } = doubling();
+      const failing = (levels: number): unknown => {
+        let input: unknown = { type: "c", kids: [] };
+        for (let level = 0; level < levels; level += 1) {
+          input = { type: "a", kids: [input] };
+        }
+        return input;
+      };
+      // Each option holds the children's failure, shared, so serializing it took 2^levels copies: 22 MB at 16 levels.
+      const sizes = [8, 16].map((levels) => JSON.stringify(lazy(() => node)(failing(levels))).length);
+      expect(sizes[0]).toBeLessThan(10_000);
+      expect(sizes[1]).toBe(sizes[0]);
+    });
+
     it("should share results across the items of a validation, wherever its root is", () => {
       const { node, calls } = doubling();
       const items = Array.from({ length: 50 }, () => deep(30));
@@ -335,6 +350,25 @@ describe("lazy", () => {
       expect((await node(input)).ok).toBe(true);
       // 2^30 leaf checks without a limit that lasts across awaits.
       expect(calls).toBeLessThan(1_000);
+    });
+
+    it("should report a failure of an asynchronous recursive union in issues nested at most two unions deep", async () => {
+      const node: Validator<unknown> = union([
+        pipe(
+          transform(unknown(), async (value) => value),
+          object({ next: lazy(() => node) }),
+        ),
+        object({ end: literal(1) }),
+      ]) as Validator<unknown>;
+      let input: unknown = { end: 2 };
+      for (let level = 0; level < 2_000; level += 1) {
+        input = { next: input };
+      }
+      const result = await node(input);
+      expect(result.ok).toBe(false);
+      // Nested once per level, 2,000 unions deep, the issues overflowed the stack of a serializer.
+      expect(JSON.stringify(result).length).toBeLessThan(2_000);
+      expect(() => structuredClone(result)).not.toThrow();
     });
 
     it("should allow 10,000 calls in one validation by default, a tree of 10,000 nodes", () => {

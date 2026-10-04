@@ -2,7 +2,7 @@ import { chain, collect, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
 import { append, below, call, composed } from "../core/nesting";
 import { entriesOf, sizeOfMap } from "../core/objects";
-import { assertFunction, failWith, issue, repeatedKey, typeIssue } from "../core/result";
+import { assertFunction, failWith, issue, nested, repeatedKey, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -87,7 +87,11 @@ export function map(key: AnyValidator, value: AnyValidator, ...rest: unknown[]):
         if (!keyResult.ok) {
           // Wrapped, so a bad key is not mistaken for a bad value at the same path.
           issues.push(
-            ...report([issue("invalid_key", { issues: keyResult.error.issues }, [segment])], place, options.message),
+            ...report(
+              [issue("invalid_key", { issues: keyResult.error.issues.map(nested) }, [segment])],
+              place,
+              options.message,
+            ),
           );
         }
         if (!valueResult.ok) {

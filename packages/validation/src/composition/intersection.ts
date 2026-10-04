@@ -60,21 +60,18 @@ function mergeOne(pending: Pending, inner: Step[], conflicts: ValidationIssue[],
   if (left === right) {
     return 0;
   }
-  // Only an object can be a Date, and asking anything else would throw and catch for every value.
-  const time = typeof left === "object" ? timeOf(left) : undefined;
-  if (time !== undefined && time === timeOf(right)) {
+  // Two values that differ and are not both objects can be nothing but a conflict.
+  if (typeof left !== "object" || left === null || typeof right !== "object" || right === null) {
+    conflicts.push(issue("invalid_intersection", undefined, pathOf(pending)));
     return right;
   }
-  const isPair = typeof left === "object" && left !== null && typeof right === "object" && right !== null;
-  if (isPair && merged.get(left)?.has(right) === true) {
+  if (merged.get(left)?.has(right) === true) {
     return merged.get(left)?.get(right);
   }
   const remember = <T>(output: T): T => {
-    if (isPair) {
-      const byRight = merged.get(left) ?? new Map<object, unknown>();
-      byRight.set(right, output);
-      merged.set(left, byRight);
-    }
+    const byRight = merged.get(left) ?? new Map<object, unknown>();
+    byRight.set(right, output);
+    merged.set(left, byRight);
     return output;
   };
   const queue = (pair: Omit<Pending, "parent">): void => {
@@ -106,6 +103,12 @@ function mergeOne(pending: Pending, inner: Step[], conflicts: ValidationIssue[],
       }
     }
     return output;
+  }
+  // Asked only now: asking whether a value is a Date, a Map or a Set throws and catches inside for a value
+  // that is not, which for every array or plain object cost ten times the validation itself.
+  const time = timeOf(left);
+  if (time !== undefined && time === timeOf(right)) {
+    return right;
   }
   const mapSize = sizeOfMap(left);
   if (mapSize !== undefined && mapSize === sizeOfMap(right)) {

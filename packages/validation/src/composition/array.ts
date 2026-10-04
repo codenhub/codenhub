@@ -2,7 +2,7 @@ import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { below, call, composed } from "../core/nesting";
 import { isArray } from "../core/objects";
-import { assertFunction, typeIssue } from "../core/result";
+import { assertFunction, assertMigrated, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -54,6 +54,7 @@ export function array<TItem extends AnyValidator>(
 export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("item", item);
   const [options, reject, accept] = tail<ArrayOptions, unknown[]>(rest);
+  assertMigrated("array", options, { unique: "the check array(item, unique()), or unique((item) => key) for objects" });
   assertSizeOptions(options);
 
   return composed((input, place): Maybe<ValidationResult<unknown>> => {

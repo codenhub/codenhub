@@ -1,5 +1,8 @@
+import { runInNewContext } from "node:vm";
+
 import { describe, expect, it } from "vitest";
 
+import { format } from "../builders/format";
 import { endsWith } from "../checks/ends-with";
 import { includes } from "../checks/includes";
 import { lowercase } from "../checks/lowercase";
@@ -12,6 +15,7 @@ import { uppercase } from "../checks/uppercase";
 import { array } from "../composition/array";
 import { json } from "../composition/json";
 import { map } from "../composition/map";
+import { object } from "../composition/object";
 import { record } from "../composition/record";
 import { set } from "../composition/set";
 import { tuple } from "../composition/tuple";
@@ -245,6 +249,17 @@ describe("formatIssue", () => {
     );
   });
 
+  it("should word a date bound the same after the issue is sent as JSON", () => {
+    const earliest = new Date("2026-01-01T00:00:00Z");
+    const [found] = issuesOf(date({ min: earliest })(new Date("2025-01-01")));
+    const received = JSON.parse(JSON.stringify(found)) as ValidationIssue;
+    expect(formatIssue(received)).toBe("Must be on or after 2026-01-01T00:00:00.000Z");
+    const [late] = issuesOf(date({ max: earliest })(new Date("2027-01-01")));
+    expect(formatIssue(JSON.parse(JSON.stringify(late)) as ValidationIssue)).toBe(
+      "Must be on or before 2026-01-01T00:00:00.000Z",
+    );
+  });
+
   it("should describe literals and lists of allowed values, writing values as they appear in code", () => {
     expect(formatIssue(issuesOf(literal("admin")("x"))[0] as ValidationIssue)).toBe('Expected "admin"');
     expect(formatIssue(issuesOf(literal(1n)(1))[0] as ValidationIssue)).toBe("Expected 1n");
@@ -346,6 +361,8 @@ describe("formatIssue", () => {
   it("should word an encoded separator in a URL path", () => {
     const [encoded] = issuesOf(url({ path: string() })("https://example.com/a%2fb"));
     expect(formatIssue(encoded as ValidationIssue)).toBe("Invalid URL path: Must not hold an encoded / or \\");
+    const [dotted] = issuesOf(url({ path: string() })("https://example.com/a/..;/b"));
+    expect(formatIssue(dotted as ValidationIssue)).toBe("Invalid URL path: Must not hold . or .. followed by ;");
     const custom = issue({ code: "invalid_key", params: { issues: [issue({ code: "x", message: "Reserved" })] } });
     expect(formatIssue(custom)).toBe("Invalid key: Reserved");
     expect(formatIssue(issue({ code: "invalid_key" }))).toBe("Invalid key");
@@ -439,6 +456,49 @@ describe("englishMessages, for issues no other test words", () => {
   it("should word a limit on recursive calls", () => {
     expect(formatWith({ code: "too_big", path: [], params: { maximum: 10, type: "calls" } }, englishMessages)).toBe(
       "Too complex to check within 10 recursive steps",
+    );
+  });
+});
+
+describe("English wording of nested and unusual issues", () => {
+  it("should name where a quoted issue sits inside the value it is shown at", () => {
+    const box = object({ box: union([literal("auto"), object({ width: number({ min: 1 }), height: number() })]) });
+    const [found] = issuesOf(box({ box: { width: 0, height: 1 } }));
+    expect(formatIssue(found as ValidationIssue)).toBe("width: Must be at least 1");
+    const link = url({ query: object({ page: string(), limit: string() }) });
+    const [query] = issuesOf(link("https://example.com/?page=1"));
+    expect(formatIssue(query as ValidationIssue)).toBe("Invalid URL query: limit: Expected string, received undefined");
+  });
+
+  it("should word a date bound of any kind without throwing, and only a moment as a date", () => {
+    const bound = (minimum: unknown): string =>
+      formatIssue(issue({ code: "too_small", params: { type: "date", minimum, inclusive: true } }));
+    expect(bound(runInNewContext("new Date(0)"))).toBe("Must be on or after 1970-01-01T00:00:00.000Z");
+    expect(bound("2026-01-01T00:00:00.000Z")).toBe("Must be on or after 2026-01-01T00:00:00.000Z");
+    // Text is shown as it is, never read on the clock of the machine wording it.
+    expect(bound("1")).toBe("Must be on or after 1");
+    expect(bound(Symbol("x"))).toBe("Must be on or after Symbol(x)");
+    expect(bound(null)).toBe("Must be on or after null");
+    // A Date bound a check reports without `type: "date"` is still a moment, never local clock text.
+    const earliest = new Date("2026-01-01T00:00:00Z");
+    expect(formatIssue(issue({ code: "too_small", params: { minimum: earliest, inclusive: true } }))).toBe(
+      "Must be on or after 2026-01-01T00:00:00.000Z",
+    );
+  });
+
+  it("should list at most ten allowed values, and say how many more there are", () => {
+    const codes = Array.from({ length: 25 }, (_, index) => `c${index}`);
+    expect(formatIssue(issuesOf(oneOf(codes)("x"))[0] as ValidationIssue)).toBe(
+      'Expected one of "c0", "c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9" or 15 more',
+    );
+    expect(formatIssue(issuesOf(oneOf(["a", "b"])("x"))[0] as ValidationIssue)).toBe('Expected one of "a", "b"');
+  });
+
+  it("should not take a name for a member of Object.prototype", () => {
+    const [named] = issuesOf(format("constructor", () => false)()("x"));
+    expect(formatIssue(named as ValidationIssue)).toBe("Invalid constructor");
+    expect(formatIssue(issue({ code: "too_small", params: { minimum: 3, type: "toString" } }))).toBe(
+      "Must be at least 3",
     );
   });
 });

@@ -88,6 +88,70 @@ export const issue = (
   path: readonly ValidationPathSegment[] = ROOT_PATH,
 ): ValidationIssue => (params === undefined ? { code, path } : { code, path, params });
 
+/** Tests whether an issue is a limit of `lazy` that stopped a validation, rather than a fault of the input. */
+const isLimit = ({ code, params }: ValidationIssue): boolean =>
+  code === "too_big" && (params?.["type"] === "depth" || params?.["type"] === "calls");
+
+/**
+ * The limit of `lazy` held somewhere among the issues behind an issue, moved to a path in that issue's frame:
+ * through a union, whose issues are relative to its value, to the limit's own place, and through a part or
+ * a key, whose issues are relative to text a path cannot lead into, to the issue's place. The issues behind
+ * have nested at most three deep already, so the search is short.
+ */
+function limitIn(found: ValidationIssue): ValidationIssue | undefined {
+  if (isLimit(found)) {
+    return found;
+  }
+  const behind: unknown = found.params?.["issues"];
+  for (const each of Array.isArray(behind) ? (behind.flat() as ValidationIssue[]) : []) {
+    const limit = typeof each === "object" && each !== null ? limitIn(each) : undefined;
+    if (limit !== undefined) {
+      // A path a validator written by hand left out is the value's own, as everywhere else.
+      const place = found.path ?? ROOT_PATH;
+      const path = found.code === "invalid_union" ? [...place, ...(limit.path ?? ROOT_PATH)] : place;
+      return { ...limit, path };
+    }
+  }
+  return undefined;
+}
+
+/**
+ * An issue as another issue holds it in `params.issues`: as it is when the issues behind it carry none of
+ * their own, such as a part's `{ minimum: 3 }` or a repeated key's `{ unique: true }`, and otherwise with
+ * everything but those issues, as a `union`, whose issues are its options' lists, always is. So issues nest
+ * at most three deep whatever composes them. A recursive schema otherwise nests them once per level, an
+ * asynchronous one 10,000 times, past what a serializer can write, and where the levels share a result, as
+ * the options of a recursive `union` share the children's through one `lazy`, each path through the
+ * nesting writes it out again: 2^20 copies, 350 MB of JSON, for 430 bytes of input. Every built-in issue
+ * that carries the issues behind it holds them this way: `invalid_union`, `invalid_key` and a failed part
+ * of a URL or an email address.
+ */
+export function nested(found: ValidationIssue): ValidationIssue {
+  const behind: unknown = found.params?.["issues"];
+  if (
+    behind === undefined ||
+    (Array.isArray(behind) &&
+      behind.every(
+        (each: unknown) =>
+          typeof each === "object" &&
+          each !== null &&
+          !Array.isArray(each) &&
+          (each as ValidationIssue).params?.["issues"] === undefined,
+      ))
+  ) {
+    return found;
+  }
+  // A limit stopped the validation somewhere behind it, so the limit stands in its place, and a caller
+  // still sees `too_big` with its `maximum` to raise, however deep it was found.
+  const limit = limitIn(found);
+  if (limit !== undefined) {
+    return limit;
+  }
+  const { params: all, ...rest } = found;
+  const params = Object.fromEntries(Object.entries(all ?? {}).filter(([name]) => name !== "issues"));
+  return Object.keys(params).length > 0 ? { ...rest, params } : rest;
+}
+
 /** The issue for an item equal to an earlier one, where a collection requires them distinct. */
 export const repeatedItem = (segment: ValidationPathSegment): ValidationIssue =>
   issue("invalid_value", { unique: true }, [segment]);
@@ -210,6 +274,24 @@ export function assertSize(name: string, value: number): void {
   assertOption(name, value, "number");
   if (!Number.isInteger(value) || value < 0) {
     throw new RangeError(`${name} must be a non-negative integer, received ${value}`);
+  }
+}
+
+/**
+ * Rejects an option 0.1.0 had and 0.2.0 removed, naming what replaces it. Unknown options are otherwise
+ * ignored, so a call not yet migrated, such as `string({ pattern: re })` through a variable or from
+ * JavaScript, would accept the input the option was meant to reject. Only the validators that had such an
+ * option check for it, each for its own.
+ */
+export function assertMigrated(
+  validator: string,
+  options: object,
+  replacements: Readonly<Record<string, string>>,
+): void {
+  for (const [name, replacement] of Object.entries(replacements)) {
+    if (Object.hasOwn(options, name)) {
+      throw new TypeError(`${validator}({ ${name} }) was removed in 0.2.0: use ${replacement}`);
+    }
   }
 }
 

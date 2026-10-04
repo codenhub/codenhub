@@ -1,3 +1,5 @@
+import { runInNewContext } from "node:vm";
+
 import { describe, expect, it } from "vitest";
 
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
@@ -103,5 +105,13 @@ describe("coerceDate", () => {
     expect(valueOf(validator("2026-09-28T14:30:00.1234567890123456789012345Z")).toISOString()).toBe(
       "2026-09-28T14:30:00.123Z",
     );
+  });
+});
+
+describe("coerceDate, given a Date from another realm", () => {
+  it("should take a valid one as it is, and reject an invalid one", () => {
+    const foreign = runInNewContext("new Date('2026-06-01T00:00:00Z')") as Date;
+    expect(valueOf(coerceDate()(foreign))).toBe(foreign);
+    expect(codesOf(coerceDate()(runInNewContext("new Date(NaN)")))).toEqual(["invalid_type"]);
   });
 });

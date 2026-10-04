@@ -63,6 +63,15 @@ describe("lowercase and uppercase", () => {
 });
 
 describe("multipleOf", () => {
+  it("should report NaN and the infinities, which a validator of numbers built with guard lets through", () => {
+    const step = multipleOf(2);
+    expect([NaN, Infinity, -Infinity].map((value) => step(value)?.[0]?.code)).toEqual([
+      "invalid_value",
+      "invalid_value",
+      "invalid_value",
+    ]);
+  });
+
   it("should compare decimals as they are written", () => {
     expect(accepts(number(multipleOf(0.1)), 0.3, 1.2, 0.35)).toEqual([true, true, false]);
     expect(accepts(number(multipleOf(0.1)), 0.1 + 0.2)).toEqual([false]);
