@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-03
+last_updated: 2026-10-04
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -337,6 +337,7 @@ Findings carry a `<rule>/<detail>` code and a severity. Only `error` findings fa
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `metadata`            | Required and recommended manifest fields, and the LICENSE file, of published packages.                                  |
 | `scripts`             | Required scripts, a self-contained `prepublishOnly`, no chained builds, and browser tests kept out of the unit scripts. |
+| `engines`             | A declared `engines.node` is a lower bound within the pinned Node.js major, and the README and public docs state it.    |
 | `dependencies`        | Declared where used, in the right field, with catalog ranges and no cycles.                                             |
 | `exports`             | Import paths shown in the README and public docs are declared in `exports`.                                             |
 | `documentation`       | Required surfaces, frontmatter, single H1, link targets, and slug uniqueness.                                           |
@@ -351,6 +352,8 @@ The `undocumented-export` rule reports `undocumented-export/missing-jsdoc` error
 Typed export targets include `.d.ts`, `.d.mts`, and `.d.cts`; missing CommonJS declarations can be emitted from `.cts` sources. A namespace re-export such as `export * as utilities from "./utilities.js"` is documented on that export declaration. Its members are not checked as top-level exports, and subsequent barrel aliases follow back to that namespace declaration.
 
 The `changelog` rule applies only to a package that already has `docs/changelog/`, because `docs/specs/packages-changelog.md` makes keeping one recommended rather than required and the directory is the opt-in. What it enforces is the part that stops being optional once a package has opted in: `changelog/missing-entry` when the manifest version has no page, and `changelog/unlinked-entry` when it has one the curated `index.md` does not link, which on the documentation site means no route, no navigation entry, and no search result. Only the current version is required to be linked — the spec permits dropping an older version's link deliberately, and this rule leaves that alone. It is what makes a version bump and the document describing it land in the same change; without it, a released version a consumer cannot read about is invisible until someone goes looking.
+
+The `engines` rule applies to a published package that declares `engines.node`, and compares it with the root `.nvmrc`, the version CI runs. `engines/node-range` reports anything but a bare lower bound, `engines/node-below-pin` a floor below the pinned major, which no run tests, and `engines/node-above-pin` one above the pinned version, which no run satisfies. A floor between the two, such as `>=24.14.1`, passes: the lifecycle spec allows it when the README names the API that needs it, and that reason is a review responsibility. `engines/readme` and `engines/docs` report a README that states no floor, and a README or public document stating a different one in the form `Node.js 24 or newer`; internal docs and changelog pages are skipped, because a changelog page describes the release it belongs to. Whether a package runs on Node.js at all, and so whether it should declare a floor, is not knowable from its files, so a browser-only package that declares one is left to review too.
 
 The `exports` rule reads import statements, not prose: naming a path in a sentence is not a promise that it resolves, but showing it in an `import` is. The reverse direction — a supported path the package never documents — is not mechanically knowable and stays a review responsibility.
 

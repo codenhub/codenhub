@@ -20,6 +20,11 @@ import { unknown } from "../primitives/unknown";
 import { issuesOf } from "../test-utils";
 import type { ValidationIssue, Validator } from "./types";
 
+// The asynchronous recursion has to nest thousands of URLs deep to reach the depth that
+// once broke JSON.stringify, which takes 2 to 3 seconds alone and more beside the other
+// files on a CI runner, close to Vitest's 5-second default.
+const DEEP_INPUT_TIMEOUT = 30_000;
+
 // An issue that carries the issues behind it in `params.issues` holds each of them without the issues
 // behind that one, so nesting stops at one level whatever composes it: a recursive schema otherwise nests
 // once per level, which an asynchronous one does 10,000 times, past what a serializer can write.
@@ -59,21 +64,25 @@ describe("issues held in params.issues", () => {
     ]);
   });
 
-  it("should keep the failure of an asynchronous recursive URL schema serializable", async () => {
-    const later = transform(unknown(), async (value) => value);
-    const link: Validator<unknown> = lazy(() =>
-      url({ host: unknown(), query: pipe(later, object({ next: optional(link) })) }),
-    ) as Validator<unknown>;
-    const nested: Validator<unknown> = lazy(() =>
-      union([url({ query: pipe(later, object({ next: nested })) }), literal("x")]),
-    ) as Validator<unknown>;
-    const input = `${"https://example.com/?next=".repeat(3_000)}zzz`;
-    const results = await Promise.all([link(input), nested(input)]);
-    for (const result of results) {
-      expect(result.ok).toBe(false);
-      expect(JSON.stringify(result).length).toBeLessThan(1_000);
-    }
-  });
+  it(
+    "should keep the failure of an asynchronous recursive URL schema serializable",
+    async () => {
+      const later = transform(unknown(), async (value) => value);
+      const link: Validator<unknown> = lazy(() =>
+        url({ host: unknown(), query: pipe(later, object({ next: optional(link) })) }),
+      ) as Validator<unknown>;
+      const nested: Validator<unknown> = lazy(() =>
+        union([url({ query: pipe(later, object({ next: nested })) }), literal("x")]),
+      ) as Validator<unknown>;
+      const input = `${"https://example.com/?next=".repeat(3_000)}zzz`;
+      const results = await Promise.all([link(input), nested(input)]);
+      for (const result of results) {
+        expect(result.ok).toBe(false);
+        expect(JSON.stringify(result).length).toBeLessThan(1_000);
+      }
+    },
+    DEEP_INPUT_TIMEOUT,
+  );
 
   it("should keep a limit of lazy that stopped the validation, in place of the issue that held it", () => {
     const value: Validator<unknown> = lazy(() => union([string(), number(), array(value)])) as Validator<unknown>;

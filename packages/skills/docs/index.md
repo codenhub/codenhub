@@ -36,7 +36,7 @@ Use `--local`, `--global`, or `--both` to select scope. Select skills with `--sk
 
 ## Requirements
 
-- Node.js 22 or newer.
+- Node.js 24 or newer.
 - Filesystem permission to read source skills and modify every selected destination.
 - A TTY for the interactive wizard. Explicit CLI options support automation.
 
