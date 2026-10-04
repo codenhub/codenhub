@@ -25,7 +25,8 @@ export interface Base64Options extends MessageOptions {
 
 /**
  * Creates a validator for base64 as an encoder writes it: the bits past the last byte are zero, and the
- * standard alphabet is correctly padded. An empty string, which encodes nothing, is rejected, as `hex`
+ * standard alphabet is correctly padded. Whitespace and line breaks are rejected, so base64 wrapped at
+ * 64 or 76 columns, as PEM and MIME write it, fails. An empty string, which encodes nothing, is rejected, as `hex`
  * rejects one. The value is not modified.
  *
  * @example

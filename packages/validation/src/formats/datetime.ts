@@ -47,7 +47,8 @@ export interface DatetimeOptions extends MessageOptions {
 
 /**
  * Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a day that
- * exists. The value is not modified.
+ * exists. The value is not modified. The `T` and `Z` are uppercase, so the lowercase `t` and `z` and the
+ * space RFC 3339 also allows fail, and `+00:00` is an offset, which needs `offset: true`.
  *
  * @example
  * ```ts

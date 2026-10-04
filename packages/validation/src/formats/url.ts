@@ -103,7 +103,9 @@ export interface UrlOptions extends MessageOptions {
    * punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets, spelled as
    * `ip()` spells it, while the URL produced keeps the parser's spelling. For a scheme the parser has no rules for, such
    * as `ssh`, it reads a name as written, and the host is that
-   * name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them. So
+   * name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them, and not
+   * read as an address, so `redis://2130706433/` gives `"2130706433"`, which a client may read as
+   * `127.0.0.1`: check it with `hostname()`, `domain()` or `ip()`, never a list of strings. So
    * `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])`
    * accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part`
    * `"host"`.

@@ -24,7 +24,7 @@ const MAX_DIGITS = 15;
  * @remarks
  * Only the international form is accepted, since a national number means nothing without knowing its
  * country. A national trunk prefix in parentheses, as in `+44 (0)20 7946 0958`, is rejected: it is no
- * part of the international number, and dropping it would rewrite what was written. Whether the number exists, and whether it fits its country's numbering plan, is not checked.
+ * part of the international number, and dropping it would rewrite what was written. Whether the number exists, and whether it fits its country's numbering plan, is not checked, so the value is the digits as given: `+44 020 7946 0958`, with the trunk prefix written without parentheses, produces `+4402079460958`, which no one can dial, where the number is `+442079460958`.
  *
  * @example
  * ```ts

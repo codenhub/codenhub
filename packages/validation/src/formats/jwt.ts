@@ -78,7 +78,8 @@ const readSegment = (segment: string): unknown => {
  *
  * @remarks
  * Only the structure is checked. The signature is not verified and the claims, such as the expiry, are
- * not read: a token that passes may be forged or expired. Verify it with the key before trusting it. A
+ * not read: a token that passes may be forged or expired, and an unsigned one, whose `alg` is `none`
+ * and whose signature is empty, passes too. Verify it with the key before trusting it. A
  * key given twice, as in `{"alg":"none","alg":"HS256"}`, is rejected, since JSON parsers disagree on which
  * one it means.
  *
