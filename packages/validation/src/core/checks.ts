@@ -1,7 +1,7 @@
 import { chain, collect, detached, runEach, type Maybe } from "./async";
 import { placeAll, type Place } from "./nesting";
 import { isPlainObject } from "./objects";
-import { assertText, failWith, issue, pass, typeIssue } from "./result";
+import { assertText, failWith, isPath, issue, pass, typeIssue } from "./result";
 import type {
   AsyncCheck,
   Check,
@@ -39,7 +39,9 @@ export function split<TOptions extends MessageOptions, T>(
     // since every validator carries them.
     throw new TypeError("Options must be an object whose message is text or a function, and checks functions");
   }
-  const unknown = Object.keys(options).find((name) => !`message ${known}`.split(" ").includes(name));
+  // Splitting no names gives one empty name, which no option is.
+  const names = `message ${known}`.split(" ");
+  const unknown = Object.keys(options).find((name) => name === "" || !names.includes(name));
   if (unknown !== undefined) {
     throw new TypeError(`Unknown option ${unknown}`);
   }
@@ -99,8 +101,8 @@ export const report = (
  * a list the check reuses is never changed, and one written by hand without a path, or with an undefined
  * one, is at the value, and without a code is `"custom"`, as `fail()` gives it. A check written by hand
  * that returns anything but nothing or a list, such as `false`, or a list holding something that is not
- * an object, such as `null`, is a bug, and throws saying so rather than failing later on what it
- * returned.
+ * an object, such as `null`, or an issue whose path is not a list of keys and indexes, such as `"confirm"`,
+ * is a bug, and throws saying so rather than failing later on what it returned.
  */
 export function finish<T>(
   value: T,
@@ -118,8 +120,14 @@ export function finish<T>(
       }
       // Pushed one by one: spreading a long list into `push` would overflow the stack.
       for (const each of list ?? []) {
-        // An array is an object too, and spread into an issue would give it keys `0`, `1` and so on.
-        if (typeof each !== "object" || each === null || Array.isArray(each)) {
+        // An array is an object too, and spread into an issue would give it keys `0`, `1` and so on. A path
+        // that is not a list, such as `"confirm"`, would break a composer that moves the issue to its place.
+        if (
+          typeof each !== "object" ||
+          each === null ||
+          Array.isArray(each) ||
+          (each.path !== undefined && !isPath(each.path))
+        ) {
           throw new TypeError(CHECK_RESULT_ERROR);
         }
         issues.push({ ...each, code: each.code ?? "custom", path: each.path ?? [] });

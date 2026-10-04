@@ -51,6 +51,11 @@ describe("an option the factory does not read", () => {
     expect(create).toThrow(new TypeError(`Unknown option ${name}`));
   });
 
+  it("should throw for an option named by empty text, on a factory that reads no option of its own too", () => {
+    expect(() => literal("a", { "": 1 } as never)).toThrow(new TypeError("Unknown option "));
+    expect(() => string({ "": 1 } as never)).toThrow(new TypeError("Unknown option "));
+  });
+
   it("should still name the replacement of an option 0.1.0 had", () => {
     expect(() => string({ pattern: /a/ } as never)).toThrow("string(pattern(re))");
   });

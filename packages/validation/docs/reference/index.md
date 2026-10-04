@@ -958,7 +958,7 @@ Each key passes `key` and each value passes `value`. An issue's path ends at the
 
 **Throws**
 
-- When `key` or `value` is not a function, or `min`, `max` or `length` is not a number.
+- When `key` or `value` is not a function, or `min`, `max` or `length` is not a number, and, from the returned validator, when `key` produces something other than text.
 - When `min`, `max` or `length` is not a non-negative integer, or no size satisfies them together.
 
 **Example**
@@ -2998,7 +2998,7 @@ isoDate()("2026-02-29"); // { ok: false, ... }: 2026 is not a leap year
 export declare const jwt: Factory<string, MessageOptions>;
 ```
 
-Creates a validator for JSON Web Tokens in compact form: three base64url segments separated by dots, whose header and payload decode to JSON objects with no key twice in any object, and whose header names an algorithm in `alg`. The value is not modified.
+Creates a validator for JSON Web Tokens in compact form: three base64url segments separated by dots, whose header and payload decode to JSON objects with no key twice in any object, and whose header names an algorithm in `alg`, as text that is not empty. The value is not modified.
 
 Only the structure is checked. The signature is not verified and the claims, such as the expiry, are not read: a token that passes may be forged or expired, and an unsigned one, whose `alg` is `none` and whose signature is empty, passes too. Verify it with the key before trusting it. A key given twice, as in `{"alg":"none","alg":"HS256"}`, is rejected, since JSON parsers disagree on which one it means.
 

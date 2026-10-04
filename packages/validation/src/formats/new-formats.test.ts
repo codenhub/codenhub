@@ -199,25 +199,27 @@ describe("jwt", () => {
 
   it("should reject what is not a token", () => {
     const noAlg = "e30"; // {}
+    const emptyAlg = "eyJhbGciOiIifQ"; // {"alg":""}
     const notObject = "WzFd"; // [1]
     expect(
       accepts(
         jwt(),
         "a.b",
         `${header}.${payload}`,
-        `${noAlg}.${payload}.x`,
-        `${header}.${notObject}.x`,
-        `${header}.@@.x`,
+        `${noAlg}.${payload}.c2ln`,
+        `${emptyAlg}.${payload}.c2ln`,
+        `${header}.${notObject}.c2ln`,
+        `${header}.@@.c2ln`,
         `${header}.${payload}.x.y`,
-        `${header}.a.x`,
-        `${header}.aGVsbG8.x`,
+        `${header}.a.c2ln`,
+        `${header}.aGVsbG8.c2ln`,
       ),
-    ).toEqual(Array(8).fill(false));
+    ).toEqual(Array(9).fill(false));
   });
 
   it("should reject a segment that is not UTF-8, as JSON text must be", () => {
     const badUtf8 = "eyJhbGciOiL_In0"; // {"alg":"<0xff>"}
-    expect(accepts(jwt(), `${badUtf8}.${payload}.x`, `${header}.${badUtf8}.x`)).toEqual([false, false]);
+    expect(accepts(jwt(), `${badUtf8}.${payload}.c2ln`, `${header}.${badUtf8}.c2ln`)).toEqual([false, false]);
   });
 });
 

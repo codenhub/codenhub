@@ -328,6 +328,13 @@ describe("formatIssue", () => {
     expect(messageOf(union([oneOf(["a", "b"]), number({ int: true })])(1.5))).toBe("Must be an integer");
   });
 
+  it("should read an option's issue written by hand without a path as one at the value", () => {
+    const pathless = (() => ({ ok: false, error: { issues: [{ code: "invalid_type" }] } })) as never;
+    const messageOf = (result: ValidationResult<unknown>): string =>
+      formatIssue(issuesOf(result)[0] as ValidationIssue);
+    expect(messageOf(union([pathless, string({ min: 3 })])("ab"))).toBe("Must be at least 3 characters");
+  });
+
   it("should word a union generically when no option or more than one had the input's type", () => {
     const messageOf = (result: ValidationResult<unknown>): string =>
       formatIssue(issuesOf(result)[0] as ValidationIssue);
