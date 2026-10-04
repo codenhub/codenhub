@@ -143,7 +143,7 @@ Builds a failed result from one or more issues.
 
 **Returns** — A failed result holding every issue, in order.
 
-**Throws** — When called without an issue, or with a `path` that is not a list of keys and indexes, such as `"confirm"`, which would be split into one segment per letter. The types forbid both.
+**Throws** — When called without an issue, with a `path` that is not a list of keys and indexes, such as `"confirm"`, which would be split into one segment per letter, or with a `code` or `message` that is not text. The types forbid all of them.
 
 ### fallback
 
@@ -153,7 +153,7 @@ export declare function fallback<TValidator extends AnyValidator>(validator: TVa
 
 Wraps a validator so a value that fails it is replaced by a fallback instead of being rejected. The result never fails.
 
-The fallback is trusted and is not validated. A function is called with the issues that were found, so it can log them, and its return value becomes the result. A primitive is used as it is. An object or an array must come from a function, such as `() => []`, since one value would be shared by every result and a change to one would show up in the next: the types reject it, and so does `fallback` when it is created. A fallback that is itself a function has to be returned from one, `fallback(func(), () => noop)`, which the types require when the wrapped validator can produce a function. Use this sparingly: it turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
+The fallback is trusted and is not validated. A function is called with the issues that were found, so it can log them, and its return value becomes the result. A function that reads an argument, such as `Array` or `String`, is given those issues too, so wrap it: `() => []`, not `Array`. A primitive is used as it is. An object or an array must come from a function, such as `() => []`, since one value would be shared by every result and a change to one would show up in the next: the types reject it, and so does `fallback` when it is created. A fallback that is itself a function has to be returned from one, `fallback(func(), () => noop)`, which the types require when the wrapped validator can produce a function. Use this sparingly: it turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
 
 **Parameters**
 
@@ -256,7 +256,7 @@ export declare function formatPath(path: readonly ValidationPathSegment[]): stri
 
 Formats a path as dot-and-bracket notation.
 
-A key that is empty or holds `.`, `[`, `]` or `"` is written quoted in brackets, as `["a.b"]`, so no two different paths format the same.
+A key that is empty or holds `.`, `[`, `]` or `"` is written quoted in brackets, as `["a.b"]`, so no two different paths format the same, and so is one holding a control character or a line separator, escaped, so a key the sender chose cannot break a log line: `["a\\nb"]`. A segment that is neither text nor a number, which only a validator written by hand can put in a path, is written as `String` writes it.
 
 **Parameters**
 
@@ -527,7 +527,7 @@ export declare function literal<const T extends LiteralValue>(value: T, ...rest:
 export declare function literal<const T extends LiteralValue>(value: T, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
 ```
 
-Creates a validator that accepts exactly one value, compared with `===`. The type is the value itself, so `literal("admin")` produces `"admin"` and not `string`. It is also how `null` and `undefined` are validated: `literal(null)`.
+Creates a validator that accepts exactly one value, compared with `===`. The type is the value itself, so `literal("admin")` produces `"admin"` and not `string`, and the value produced is the one declared, so `literal(0)` produces `0` for `-0`, which `===` matches. It is also how `null` and `undefined` are validated: `literal(null)`.
 
 **Parameters**
 
@@ -760,7 +760,7 @@ export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike
 export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike>(values: T, ...rest: AsyncRest<ValuesOf<T>, MessageOptions>): AsyncValidator<ValuesOf<T>>;
 ```
 
-Creates a validator that accepts any one value of a list or of a TypeScript `enum`, compared with `===`. The type is the union of the values, so `oneOf(["admin", "user"])` produces `"admin" | "user"`. The entries TypeScript adds to a numeric enum to map values back to names are not values and are ignored.
+Creates a validator that accepts any one value of a list or of a TypeScript `enum`, compared with `===`. The type is the union of the values, so `oneOf(["admin", "user"])` produces `"admin" | "user"`, and the value produced is the one listed, so `oneOf([0])` produces `0` for `-0`, which `===` matches. The entries TypeScript adds to a numeric enum to map values back to names are not values and are ignored, in an object written like an enum too, so `{ a: 1, "1": "a" }` holds `1` alone.
 
 **Parameters**
 
@@ -775,7 +775,7 @@ Creates a validator that accepts any one value of a list or of a TypeScript `enu
 
 **Throws**
 
-- When `values` is neither a list nor an enum, such as text, which would be read as its characters, there is no value, so the validator would accept nothing, or a value is an object or a function, which equals only itself.
+- When `values` is neither a list nor an enum, such as text, which would be read as its characters, or a `Set`, the list has a hole, there is no value, so the validator would accept nothing, or a value is an object or a function, which equals only itself.
 - When a value is `NaN`, which no value equals.
 
 **Example**
@@ -798,7 +798,7 @@ export declare function optional<TValidator extends AnyValidator>(validator: TVa
 
 Wraps a validator so `undefined` is accepted, and every other value goes to the wrapped validator. Inside `object`, the property then becomes optional in the inferred type.
 
-Given a default, `undefined` is replaced by it instead, the output type no longer includes `undefined`, and inside `object` the property is always present in the output. The default is trusted and is not run through the wrapped validator. A primitive is used as it is, and a function is called for every use to produce the default. An object or an array must come from a function, such as `() => []`, since one value would be shared by every result and a change to one would show up in the next: the types reject it, and so does `optional` when it is created. To use a function as the default value itself, return it from a function, `optional(func(), () => noop)`, which the types require when the wrapped validator can produce a function.
+Given a default, `undefined` is replaced by it instead, the output type no longer includes `undefined`, and inside `object` the property is always present in the output. The default is trusted and is not run through the wrapped validator. A primitive is used as it is, and a function is called for every use, with no argument, to produce the default. An object or an array must come from a function, such as `() => []`, since one value would be shared by every result and a change to one would show up in the next: the types reject it, and so does `optional` when it is created. To use a function as the default value itself, return it from a function, `optional(func(), () => noop)`, which the types require when the wrapped validator can produce a function.
 
 **Parameters**
 
@@ -1298,7 +1298,7 @@ export declare function url(options: UrlOptions, ...checks: AsyncCheck<string>[]
 
 Creates a validator for absolute URLs with an allowed protocol and a public domain name, and without embedded credentials unless a `credentials` validator accepts them. The value is the URL as the URL parser writes it, which is what a request made with it will use.
 
-The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters, not counting the final dot of an absolute host such as `example.com.`, which is accepted and kept, is rejected.
+The text is read by the standard URL parser, and every check is made on what it read: the scheme, the credentials and the host. The value is that reading, serialized, so a check made later on the value sees the URL a request will reach: `https://Example.com/a/../b` is `https://example.com/b`, a host spelled with fullwidth letters or invisible characters is the host they spell, an internationalized host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected, and so is an absolute host such as `example.com.`, whatever the host validator: it names the same host as `example.com`, and a second spelling of one host would let it past a check that compares the value as a string, such as a list of blocked hosts.
 
 The `credentials`, `host`, `port`, `path` and `query` options check those parts with validators of your own, which only decide: the value is still the whole URL, and one that is asynchronous makes the validator asynchronous. They apply to URLs with a host; a `mailto`, `tel` or `urn` URL keeps its own rules. A part that fails is one `invalid_format` issue at the URL's own place, `{ format: "url", part, issues }`, so a form shows it beside the field, and the `message` option words it as every other issue of the URL.
 
@@ -2157,7 +2157,7 @@ Validates the credentials, a user and a password written before the host, as in 
 host?: AnyValidator;
 ```
 
-Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets, spelled as `ip()` spells it, while the URL produced keeps the parser's spelling. For a scheme the parser has no rules for, such as `ssh`, it reads a name as written, and the host is that name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part` `"host"`.
+Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets, spelled as `ip()` spells it, while the URL produced keeps the parser's spelling. For a scheme the parser has no rules for, such as `ssh`, it reads a name as written, and the host is that name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them, and not read as an address, so `redis://2130706433/` gives `"2130706433"`, which a client may read as `127.0.0.1`: check it with `hostname()`, `domain()` or `ip()`, never a list of strings. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part` `"host"`.
 
 #### message
 
@@ -2608,7 +2608,7 @@ The variants of a tagged union: a validator for each value the tag can have.
 export declare const base64: Factory<string, Base64Options>;
 ```
 
-Creates a validator for base64 as an encoder writes it: the bits past the last byte are zero, and the standard alphabet is correctly padded. An empty string, which encodes nothing, is rejected, as `hex` rejects one. The value is not modified.
+Creates a validator for base64 as an encoder writes it: the bits past the last byte are zero, and the standard alphabet is correctly padded. Whitespace and line breaks are rejected, so base64 wrapped at 64 or 76 columns, as PEM and MIME write it, fails. An empty string, which encodes nothing, is rejected, as `hex` rejects one. The value is not modified.
 
 **Throws** — When `url` is not a boolean.
 
@@ -2756,7 +2756,7 @@ export declare const coerceNumber: Factory<number, NumberOptions>;
 
 Creates a validator for numbers that also accepts text holding a decimal number, converting it, then applies the same constraints as [number](#number).
 
-Surrounding whitespace is ignored, and a dot with no digits on one side, as in `".5"` or `"5."`, is read as people type it. Empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and `"NaN"` are rejected, and so is text holding a whole number beyond `Number.MAX_SAFE_INTEGER`, which could not be read exactly (use `coerceBigint` for those). So are booleans, `null`, objects and arrays: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
+Surrounding whitespace, as `String.prototype.trim` reads it, is ignored, and a dot with no digits on one side, as in `".5"` or `"5."`, is read as people type it. Empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and `"NaN"` are rejected, and so is text holding a whole number beyond `Number.MAX_SAFE_INTEGER`, which could not be read exactly (use `coerceBigint` for those), or a decimal too small for a double, such as `"0." + "0".repeat(400) + "1"`, which would be read as `0`. A number is passed through as it is, `-0` included, as `number` does. So are booleans, `null`, objects and arrays: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with `invalid_type` and `coerced: true` in `params`.
 
 **Returns** — A validator that produces a number.
 
@@ -2859,7 +2859,7 @@ birthday(new Date("nope")); // { ok: false, ... }, code "invalid_type"
 export declare const datetime: Factory<string, DatetimeOptions>;
 ```
 
-Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a day that exists. The value is not modified.
+Creates a validator for ISO 8601 date-times such as `2026-09-28T14:30:00Z`, on a day that exists. The value is not modified. The `T` and `Z` are uppercase, so the lowercase `t` and `z` and the space RFC 3339 also allows fail, and `+00:00` is an offset, which needs `offset: true`.
 
 **Throws**
 
@@ -2881,7 +2881,7 @@ datetime({ local: true })("2026-09-28T14:30"); // { ok: true, ... }, a datetime-
 export declare const domain: Factory<string, MessageOptions>;
 ```
 
-Creates a validator for public domain names, such as `example.com` or `münchen.de`: at least two labels, a last label of 2 to 63 letters or a punycode label, and none of the special-use names that never name a public host, such as `localhost`, `.local`, `.internal`, `.test`, `.arpa`, `.home`, `.corp`, `.mail`, `.localdomain` or an IDN test top-level domain such as `.テスト`. Whether the top-level domain exists is not checked, so a name under any other label, such as `nas.lan`, passes. An absolute name, `example.com.`, is accepted and keeps its dot, which the 253-character limit does not count. This is the rule `email` and `url` apply to their host by default, except that an email address has no absolute form. The value is the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
+Creates a validator for public domain names, such as `example.com` or `münchen.de`: at least two labels, a last label of 2 to 63 letters or a punycode label, and none of the special-use names that never name a public host, such as `localhost`, `.local`, `.internal`, `.test`, `.arpa`, `.home`, `.corp`, `.mail`, `.localdomain`, Kubernetes' `.svc` and `.cluster`, or an IDN test top-level domain such as `.テスト`. Whether the top-level domain exists is not checked, so a name under any other label passes, private ones in common use such as `nas.lan`, `a.private` or `a.intranet` included: block those with a check of your own when they matter, and remember that a public name can still resolve to a private address. An absolute name, `example.com.`, is rejected: it names the same host as `example.com`, and a second spelling of one host would let it past a check that compares the value as a string, such as a list of blocked hosts. This is the rule `email` and `url` apply to their host by default. The value is the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
 
 To accept any hostname, such as `localhost` or `intranet`, use `hostname`. Whether the domain resolves, or is registered, is not checked.
 
@@ -2898,7 +2898,7 @@ domain()("localhost"); // { ok: false, ... }, code "invalid_format"
 export declare const duration: Factory<string, MessageOptions>;
 ```
 
-Creates a validator for ISO 8601 durations such as `P1Y2M`, `PT30M` or `P1DT12H`. The value is not modified.
+Creates a validator for ISO 8601 durations such as `P1Y2M`, `PT30M` or `P1DT12H`. The value is not modified. Only the seconds may have a fraction, written with a dot, which is stricter than ISO 8601 and the same as `Temporal.Duration`, weeks may be combined with other units, as in `P1W2D`, and a negative duration, `-P1D`, is rejected.
 
 **Example**
 
@@ -2947,7 +2947,7 @@ hex()("xyz"); // { ok: false, ... }, code "invalid_format"
 export declare const hostname: Factory<string, MessageOptions>;
 ```
 
-Creates a validator for hostnames: dot-separated labels of letters, digits and hyphens, at most 253 characters, whose last label is not a number, all digits or `0x` and hex digits, since the URL parser reads a name that ends that way as an IPv4 address (`0x7f000001` is `127.0.0.1`), and whose punycode labels, such as `xn--mnchen-3ya`, decode. An absolute name ending in one dot, such as `example.com.`, is accepted. Unlike `url`, single-label hosts such as `localhost` are accepted. The value is the hostname in lowercase, since letter case does not change the host it names, so one host is one value however it was written; an absolute name keeps its dot.
+Creates a validator for hostnames: dot-separated labels of letters, digits and hyphens, at most 253 characters, whose last label is not a number, all digits or `0x` and hex digits, since the URL parser reads a name that ends that way as an IPv4 address (`0x7f000001` is `127.0.0.1`), and whose punycode labels, such as `xn--mnchen-3ya`, decode. An absolute name ending in a dot, such as `example.com.`, is rejected, since it names the same host as `example.com` and a second spelling would let one host past a check that compares the value as a string. Unlike `url`, single-label hosts such as `localhost` are accepted. The value is the hostname in lowercase, since letter case does not change the host it names, so one host is one value however it was written.
 
 **Example**
 
@@ -3000,7 +3000,7 @@ export declare const jwt: Factory<string, MessageOptions>;
 
 Creates a validator for JSON Web Tokens in compact form: three base64url segments separated by dots, whose header and payload decode to JSON objects with no key twice in any object, and whose header names an algorithm in `alg`. The value is not modified.
 
-Only the structure is checked. The signature is not verified and the claims, such as the expiry, are not read: a token that passes may be forged or expired. Verify it with the key before trusting it. A key given twice, as in `{"alg":"none","alg":"HS256"}`, is rejected, since JSON parsers disagree on which one it means.
+Only the structure is checked. The signature is not verified and the claims, such as the expiry, are not read: a token that passes may be forged or expired, and an unsigned one, whose `alg` is `none` and whose signature is empty, passes too. Verify it with the key before trusting it. A key given twice, as in `{"alg":"none","alg":"HS256"}`, is rejected, since JSON parsers disagree on which one it means.
 
 **Example**
 
@@ -3085,7 +3085,7 @@ export declare const phone: Factory<string, MessageOptions>;
 
 Creates a validator for international phone numbers in E.164 form: a `+`, the country code and the number, 7 to 15 digits in all, optionally with spaces, hyphens, dots or parentheses between digits. The value is the canonical E.164 spelling, `+` and the digits alone, so one number is one value however it was written.
 
-Only the international form is accepted, since a national number means nothing without knowing its country. A national trunk prefix in parentheses, as in `+44 (0)20 7946 0958`, is rejected: it is no part of the international number, and dropping it would rewrite what was written. Whether the number exists, and whether it fits its country's numbering plan, is not checked.
+Only the international form is accepted, since a national number means nothing without knowing its country. A national trunk prefix in parentheses, as in `+44 (0)20 7946 0958`, is rejected: it is no part of the international number, and dropping it would rewrite what was written. Whether the number exists, and whether it fits its country's numbering plan, is not checked, so the value is the digits as given: `+44 020 7946 0958`, with the trunk prefix written without parentheses, produces `+4402079460958`, which no one can dial, where the number is `+442079460958`.
 
 **Example**
 
