@@ -35,8 +35,12 @@ const SCRIPT_SCHEMES = ["javascript", "vbscript", "data"];
 /** The schemes the URL Standard gives rules for a host, which parsers apply differently to unusual text. */
 const SPECIAL_SCHEMES = ["ftp", "file", "http", "https", "ws", "wss"];
 
-/** A host every parser reads alike: lowercase ASCII letters, digits, dots, hyphens and underscores. */
-const PLAIN_HOST_PATTERN = /^[a-z\d._-]+$/;
+/**
+ * A host every parser reads alike: labels of lowercase ASCII letters, digits, hyphens and underscores,
+ * none empty, with the final dot of an absolute name. Node.js reads `ㅤ.com`, whose Hangul filler IDNA
+ * drops, as `.com`, which WebKit refuses.
+ */
+const PLAIN_HOST_PATTERN = /^[a-z\d_-]+(?:\.[a-z\d_-]+)*\.?$/;
 
 /**
  * The host as a URL of a special scheme writes it: after the slashes, which may be backslashes, and any

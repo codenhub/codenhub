@@ -99,8 +99,11 @@ describe("url", () => {
         "http://[::01.2.3.4]/",
         "http://0x/",
         "http://1.0X/",
+        // A Hangul filler, which IDNA drops, leaves an empty label: Node.js reads `.com`, and WebKit refuses it.
+        `http://${String.fromCodePoint(0x31_64)}.com/`,
+        "http://a..b/",
       ),
-    ).toEqual([false, false, false, false, false, false, false]);
+    ).toEqual([false, false, false, false, false, false, false, false, false]);
     expect(
       ["http://a_b.example/", "http://ex%61mple.com/", "http://0x.com/", "http://0x7f.1/", "http://[::1.2.3.4]/"].map(
         (text) => valueOf(anyHost(text)),
