@@ -9,6 +9,11 @@ const toDecimal = (value: number): { digits: bigint; exponent: number } => {
 };
 
 const isMultipleOf = (value: number, step: number): boolean => {
+  // NaN and the infinities are numbers, so a guard or a hand-made validator can hand them over, and no
+  // decimal reads them: they are a multiple of nothing.
+  if (!Number.isFinite(value)) {
+    return false;
+  }
   // A safe integer is written as the number it holds, and `%` is exact, so it is compared as it is.
   if (Number.isSafeInteger(value) && Number.isSafeInteger(step)) {
     return value % step === 0;

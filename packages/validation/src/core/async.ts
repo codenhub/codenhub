@@ -97,9 +97,11 @@ export function chain<T, R>(value: Maybe<T>, next: (resolved: T) => Maybe<R>): M
     return next(value);
   }
   const validation = current;
-  // A thenable has to be unwrapped with `then`; the alternative to `await` is the point of this helper.
+  // Adopted as `await` adopts it, so a thenable whose `then` returns nothing, or calls back at once, still
+  // gives a promise of what `next` returns; `Promise.resolve` returns a native promise as it is. A thenable
+  // has to be unwrapped with `then`; the alternative to `await` is the point of this helper.
   // oxlint-disable-next-line promise/prefer-await-to-then, promise/no-callback-in-promise
-  return value.then((resolved) => enter(validation, next, resolved));
+  return Promise.resolve(value).then((resolved) => enter(validation, next, resolved));
 }
 
 /**

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { coerceDate } from "../coercion/coerce-date";
 import { date } from "../primitives/date";
@@ -189,5 +189,38 @@ describe("intersection", () => {
     expect(isPending(result)).toBe(true);
     expect(codesOf(await result)).toEqual(["taken"]);
     expect(isPending(both({ name: "a", age: 1 }))).toBe(false);
+  });
+});
+
+describe("intersection, merging many values", () => {
+  it("should ask whether a value is a date, map or set only of a pair that is no array or plain object", () => {
+    // Each ask of a value that is not one throws inside, which cost ten times the validation itself.
+    const getTime = vi.spyOn(Date.prototype, "getTime");
+    try {
+      const items = Array.from({ length: 50 }, (_, index) => ({ id: index, tags: ["a"] }));
+      const both = intersection(json(), json());
+      expect(both(JSON.stringify(items)).ok).toBe(true);
+      expect(codesOf(both(JSON.stringify([1, 2])) as never)).toEqual([]);
+      expect(getTime).not.toHaveBeenCalled();
+    } finally {
+      getTime.mockRestore();
+    }
+  });
+
+  it("should report two different primitives as a conflict without asking what they are", () => {
+    const getTime = vi.spyOn(Date.prototype, "getTime");
+    const mapSize = vi.spyOn(Map.prototype, "size", "get");
+    try {
+      const differ = intersection(
+        transform(number(), () => [1, 2]),
+        transform(number(), () => [3, 4]),
+      );
+      expect(issuesOf(differ(0)).map(({ path }) => path)).toEqual([[0], [1]]);
+      expect(getTime).not.toHaveBeenCalled();
+      expect(mapSize).not.toHaveBeenCalled();
+    } finally {
+      getTime.mockRestore();
+      mapSize.mockRestore();
+    }
   });
 });

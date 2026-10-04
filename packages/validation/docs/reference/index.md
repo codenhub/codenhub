@@ -724,7 +724,7 @@ export declare function object<TShape extends Shape>(shape: TShape, ...rest: Asy
 
 Creates a validator for plain objects with the given properties.
 
-Only own enumerable properties are read, and class instances and arrays are not objects here. Every property is validated even when an earlier one failed, so the result lists every problem. Issue paths lead from the object down to the property. The output is a new object; the input is never modified. It is synchronous when every property validator is, and asynchronous otherwise. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
+Only own properties are read, a listed one whether or not it is enumerable and an unlisted one only when it is, and class instances and arrays are not objects here. Every property is validated even when an earlier one failed, so the result lists every problem. Issue paths lead from the object down to the property. The output is a new object; the input is never modified. It is synchronous when every property validator is, and asynchronous otherwise. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
 
 **Parameters**
 
@@ -1212,7 +1212,7 @@ export declare function union<const TOptions extends readonly [AnyValidator, ...
 
 Creates a validator that accepts a value passing any one of several validators.
 
-The validators are tried in order and the first that accepts the value wins, so put the more specific ones first, and the value it produced is the result. If none accepts it, the result is one `invalid_union` issue at the value's own location whose `params.issues` lists, per option in order, the issues that option found; their paths are relative to the value the union received. For objects that share a tag property, `tagged` reports the failing variant's own issues instead. It is synchronous when every option is, and asynchronous otherwise.
+The validators are tried in order and the first that accepts the value wins, so put the more specific ones first, and the value it produced is the result. If none accepts it, the result is one `invalid_union` issue at the value's own location whose `params.issues` lists, per option in order, the issues that option found; their paths are relative to the value the union received. An issue an option found that carries issues of its own, such as another union's, is held without them when one of those carries more, so the result of a recursive union stays as small as its input; a limit of `lazy` found behind it stands in its place. For objects that share a tag property, `tagged` reports the failing variant's own issues instead. It is synchronous when every option is, and asynchronous otherwise.
 
 **Parameters**
 
@@ -1811,7 +1811,7 @@ Requires at least this many items. A non-negative integer.
 ### StandardSchemaV1
 
 ```ts
-export interface StandardSchemaV1<TInput = unknown, TOutput = unknown>
+export interface StandardSchemaV1<TInput = unknown, TOutput = TInput>
 export declare namespace StandardSchemaV1
 ```
 
@@ -1907,7 +1907,7 @@ The key or index segment.
 #### StandardSchemaV1.Props
 
 ```ts
-interface Props<TInput = unknown, TOutput = unknown>
+interface Props<TInput = unknown, TOutput = TInput>
 ```
 
 Properties defined on the `~standard` object of a compliant schema.
@@ -1980,7 +1980,7 @@ The validated and coerced output value.
 #### StandardSchemaV1.Types
 
 ```ts
-interface Types<TInput = unknown, TOutput = unknown>
+interface Types<TInput = unknown, TOutput = TInput>
 ```
 
 Container carrying phantom input and output types.
@@ -2168,7 +2168,7 @@ Inherited from [MessageOptions](#messageoptions).
 path?: AnyValidator;
 ```
 
-Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such as `ssh://example.com`, that names no path. A path holding an encoded `/` or `\`, `%2F` or `%5C`, fails before it runs, with `{ encodedSeparator: true }`, since a server that decodes it before routing would read another path than the validator saw. Its failure is reported as the URL's, with `params.part` `"path"`.
+Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such as `ssh://example.com`, that names no path. A path holding an encoded `/` or `\`, `%2F` or `%5C`, fails before it runs, with `{ encodedSeparator: true }`, since a server that decodes it before routing would read another path than the validator saw, and so does one holding a segment `.` or `..` followed by `;`, such as `/api/..;/admin`, with `{ dotSegment: true }`, since a server that drops the parameters before resolving dot segments would read `..`. Write it as an allowlist, such as `string(startsWith("/api/"))`: a server may also decode an escape, merge `//` or drop `;` and its parameters from a segment, which a denylist such as "not under `/admin`" does not foresee. Its failure is reported as the URL's, with `params.part` `"path"`.
 
 #### port
 
@@ -2880,7 +2880,7 @@ datetime({ local: true })("2026-09-28T14:30"); // { ok: true, ... }, a datetime-
 export declare const domain: Factory<string, MessageOptions>;
 ```
 
-Creates a validator for public domain names, such as `example.com` or `münchen.de`: at least two labels, a real top-level domain, and none of the special-use names that never name a public host, such as `localhost`, `.local`, `.internal`, `.test`, `.arpa` or an IDN test top-level domain such as `.テスト`. An absolute name, `example.com.`, is accepted and keeps its dot, which the 253-character limit does not count. This is the rule `email` and `url` apply to their host by default, except that an email address has no absolute form. The value is the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
+Creates a validator for public domain names, such as `example.com` or `münchen.de`: at least two labels, a last label of 2 to 63 letters or a punycode label, and none of the special-use names that never name a public host, such as `localhost`, `.local`, `.internal`, `.test`, `.arpa`, `.home`, `.corp`, `.mail`, `.localdomain` or an IDN test top-level domain such as `.テスト`. Whether the top-level domain exists is not checked, so a name under any other label, such as `nas.lan`, passes. An absolute name, `example.com.`, is accepted and keeps its dot, which the 253-character limit does not count. This is the rule `email` and `url` apply to their host by default, except that an email address has no absolute form. The value is the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
 
 To accept any hostname, such as `localhost` or `intranet`, use `hostname`. Whether the domain resolves, or is registered, is not checked.
 

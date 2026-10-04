@@ -51,7 +51,8 @@ export interface ObjectOptions extends MessageOptions {
  * Creates a validator for plain objects with the given properties.
  *
  * @remarks
- * Only own enumerable properties are read, and class instances and arrays are not objects here. Every
+ * Only own properties are read, a listed one whether or not it is enumerable and an unlisted one only when it
+ * is, and class instances and arrays are not objects here. Every
  * property is validated even when an earlier one failed, so the result lists every problem. Issue
  * paths lead from the object down to the property. The output is a new object; the input is never
  * modified. It is synchronous when every property validator is, and asynchronous otherwise.

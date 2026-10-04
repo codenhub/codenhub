@@ -1,3 +1,5 @@
+import { runInNewContext } from "node:vm";
+
 import { describe, expect, it } from "vitest";
 
 import { check } from "../builders/check";
@@ -69,5 +71,14 @@ describe("date", () => {
     });
     expect(codesOf(date({ min: day("2026-01-01") }, counted)(day("2025-01-01")))).toEqual(["too_small"]);
     expect(calls).toBe(0);
+  });
+});
+
+describe("date, given a Date from another realm", () => {
+  it("should accept a valid one, as it is, against its bounds, and reject an invalid one", () => {
+    const foreign = runInNewContext("new Date('2026-06-01T00:00:00Z')") as Date;
+    expect(valueOf(date({ min: day("2026-01-01") })(foreign))).toBe(foreign);
+    expect(codesOf(date({ max: day("2026-01-01") })(foreign))).toEqual(["too_big"]);
+    expect(codesOf(date()(runInNewContext("new Date(NaN)")))).toEqual(["invalid_type"]);
   });
 });

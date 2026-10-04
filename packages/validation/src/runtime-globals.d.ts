@@ -43,7 +43,7 @@ interface TextDecoder {
 
 declare const TextDecoder: {
   prototype: TextDecoder;
-  new (label?: string, options?: { fatal?: boolean }): TextDecoder;
+  new (label?: string, options?: { fatal?: boolean; ignoreBOM?: boolean }): TextDecoder;
 };
 
 declare function atob(data: string): string;

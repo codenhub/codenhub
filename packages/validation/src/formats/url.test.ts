@@ -110,17 +110,28 @@ describe("url", () => {
       "http://router.home.arpa",
       "http://1.0.0.127.in-addr.arpa",
       "http://example.テスト",
+      "http://db.corp",
+      "http://nas.home",
+      "http://smtp.mail",
+      "http://localhost.localdomain",
     ];
     expect(accepts(url(), ...reserved)).toEqual(Array(reserved.length).fill(false));
     expect(accepts(url({ host: unknown() }), ...reserved)).toEqual(Array(reserved.length).fill(true));
   });
 
   it("should still accept public names that only contain a reserved word", () => {
-    expect(accepts(url(), "https://localhost.com", "https://test.example.com", "https://arpa.net")).toEqual([
-      true,
-      true,
-      true,
-    ]);
+    expect(
+      accepts(
+        url(),
+        "https://localhost.com",
+        "https://test.example.com",
+        "https://arpa.net",
+        "https://mail.example.com",
+        "https://corp.example.com",
+        "https://home.example.com",
+        "https://localdomain.org",
+      ),
+    ).toEqual(Array(7).fill(true));
   });
 
   it("should accept local hosts only with a host validator that does", () => {

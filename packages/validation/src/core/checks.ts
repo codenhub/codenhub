@@ -34,7 +34,9 @@ export function split<TOptions extends MessageOptions, T>(
     // since every validator carries them.
     throw new TypeError("Options must be an object whose message is text or a function, and checks functions");
   }
-  return [options as TOptions, checks as AsyncCheck<T>[]];
+  // Copied, so changing the object after the validator is made changes nothing, whether the validator reads
+  // an option once or, as a composer reads its message and sizes, on every call.
+  return [{ ...(options as object) } as TOptions, checks as AsyncCheck<T>[]];
 }
 
 /**

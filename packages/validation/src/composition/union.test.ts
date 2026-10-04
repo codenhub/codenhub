@@ -53,6 +53,25 @@ describe("union", () => {
     expect(issuesOf(form({ id: true }))[0]?.path).toEqual(["id"]);
   });
 
+  it("should keep the code and path of a union that failed inside an option, without its own options' issues", () => {
+    const inner = union([literal("x"), literal("y")]);
+    const outer = union([literal("auto"), object({ mode: inner })]);
+    expect(issuesOf(outer({ mode: "z" }))).toEqual([
+      {
+        code: "invalid_union",
+        path: [],
+        params: {
+          issues: [
+            [{ code: "invalid_value", path: [], params: { expected: "auto" } }],
+            [{ code: "invalid_union", path: ["mode"] }],
+          ],
+        },
+      },
+    ]);
+    // Called on its own, the inner union still lists what each of its options found.
+    expect(issuesOf(inner("z"))[0]?.params?.["issues"]).toHaveLength(2);
+  });
+
   it("should work with a single option", () => {
     expect(accepts(union([literal("a")]), "a", "b")).toEqual([true, false]);
   });

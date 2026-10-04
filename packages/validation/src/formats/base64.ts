@@ -10,7 +10,7 @@ const BASE64_PATTERN = /^(?!$)(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/][AQgw]==|[A-Z
 
 // The URL-safe alphabet of RFC 4648 section 5, `-` and `_` for `+` and `/`, with the padding optional,
 // since most producers leave it out, and the same rule for the last character.
-const BASE64URL_PATTERN = /^(?!$)(?:[\w-]{4})*(?:[\w-][AQgw](?:==)?|[\w-]{2}[AEIMQUYcgkosw048]=?)?$/;
+export const BASE64URL_PATTERN = /^(?!$)(?:[\w-]{4})*(?:[\w-][AQgw](?:==)?|[\w-]{2}[AEIMQUYcgkosw048]=?)?$/;
 
 /** Options for {@link base64}. */
 export interface Base64Options extends MessageOptions {

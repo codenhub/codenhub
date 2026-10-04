@@ -130,6 +130,58 @@ describe("url parts", () => {
     );
   });
 
+  it("should reject a dot segment with parameters before running the path validator", () => {
+    const seen: string[] = [];
+    const api = url({
+      path: string(
+        startsWith("/api/"),
+        check((path) => (seen.push(path), true)),
+      ),
+    });
+    expect(
+      accepts(
+        api,
+        "https://example.com/api/..;/admin",
+        "https://example.com/api/..;x=1/admin",
+        "https://example.com/api/%2e%2e;/admin",
+        "https://example.com/api/.%2E;/admin",
+        "https://example.com/api/.;/admin",
+        "https://example.com/api/a;b=1/c",
+        "https://example.com/api/...;/c",
+        "https://example.com/api/a..;/c",
+      ),
+    ).toEqual([false, false, false, false, false, true, true, true]);
+    expect(seen).toEqual(["/api/a;b=1/c", "/api/...;/c", "/api/a..;/c"]);
+    expect(issuesOf(api("https://example.com/api/..;/admin"))).toEqual([
+      {
+        code: "invalid_format",
+        path: [],
+        params: {
+          format: "url",
+          part: "path",
+          issues: [{ code: "invalid_value", path: [], params: { dotSegment: true } }],
+        },
+      },
+    ]);
+  });
+
+  it("should find a dot segment with parameters at either end of the path and under any scheme", () => {
+    const dotted = (text: string, protocols?: string[]): unknown =>
+      issuesOf(url({ path: string(), ...(protocols && { protocols }) })(text))[0]?.params?.["issues"];
+    const dotSegment = [{ code: "invalid_value", path: [], params: { dotSegment: true } }];
+    expect(dotted("https://example.com/..;")).toEqual(dotSegment);
+    expect(dotted("https://example.com/api/..;")).toEqual(dotSegment);
+    expect(dotted("foo://example.com/api/..;/x", ["foo"])).toEqual(dotSegment);
+    // An encoded separator is reported first, as the structure it is.
+    expect(dotted("https://example.com/api/..;%2fadmin")).toEqual([
+      { code: "invalid_value", path: [], params: { encodedSeparator: true } },
+    ]);
+  });
+
+  it("should keep accepting a dot segment with parameters when no path validator is given", () => {
+    expect(valueOf(url()("https://example.com/api/..;/admin"))).toBe("https://example.com/api/..;/admin");
+  });
+
   it("should keep accepting an encoded slash when no path validator is given", () => {
     expect(valueOf(url()("https://example.com/a%2Fb"))).toBe("https://example.com/a%2Fb");
   });

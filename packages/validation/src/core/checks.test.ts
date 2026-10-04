@@ -166,7 +166,7 @@ describe("split, given something other than options or a check first", () => {
 
   it("should accept options without a prototype", () => {
     const options = Object.assign(Object.create(null) as object, { message: "Bad" });
-    expect(split([options])[0]).toBe(options);
+    expect(split([options])[0]).toEqual({ message: "Bad" });
   });
 });
 

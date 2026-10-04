@@ -12,7 +12,7 @@ export const HOSTNAME_PATTERN =
 export const IPV4_PATTERN =
   /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/;
 
-/** A domain name with at least one dot and a real top-level domain. */
+/** A domain name with at least one dot and a last label of 2 to 63 letters or a punycode label. */
 const DOMAIN_NAME_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/i;
 
 /**
@@ -20,11 +20,13 @@ const DOMAIN_NAME_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z
  * `internal` and `home.arpa` resolve on the local network or machine, the rest of `.arpa` holds the
  * infrastructure of the DNS itself, such as the reverse names in `in-addr.arpa`, and the rest are reserved
  * for testing, documentation or other networks (RFC 3172, 6761, 6762, 7686, 8375 and 9476, and ICANN's
- * `.internal`), the eleven IDN test top-level domains IANA listed included, in their ASCII form: `إختبار`,
+ * `.internal`). `home`, `corp` and `mail` are the names ICANN resolved in 2018 never to delegate, since
+ * private networks already use them, and `localdomain` is the name many systems give the local machine,
+ * as in `localhost.localdomain`. The list also holds the eleven IDN test top-level domains IANA listed, in their ASCII form: `إختبار`,
  * `آزمایشی`, `测试`, `測試`, `испытание`, `परीक्षा`, `δοκιμή`, `테스트`, `טעסט`, `テスト` and `பரிட்சை`.
  */
 const SPECIAL_USE_NAME_PATTERN =
-  /(?:^|\.)(?:localhost|local|internal|test|example|invalid|alt|onion|arpa|xn--(?:kgbechtv|hgbk6aj7f53bba|0zwm56d|g6w251d|80akhbyknj4f|11b5bs3a9aj6g|jxalpdlp|9t4b11yi5a|deba0ad|zckzah|hlcj6aya9esc7a))$/i;
+  /(?:^|\.)(?:localhost|localdomain|local|internal|home|corp|mail|test|example|invalid|alt|onion|arpa|xn--(?:kgbechtv|hgbk6aj7f53bba|0zwm56d|g6w251d|80akhbyknj4f|11b5bs3a9aj6g|jxalpdlp|9t4b11yi5a|deba0ad|zckzah|hlcj6aya9esc7a))$/i;
 
 /** A label in punycode, the ASCII form of an internationalized one. */
 const PUNYCODE_LABEL_PATTERN = /(?:^|\.)xn--/i;

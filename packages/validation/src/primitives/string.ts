@@ -1,5 +1,5 @@
 import { leaf, split } from "../core/checks";
-import { assertOption, assertOrder, assertSize, issue } from "../core/result";
+import { assertMigrated, assertOption, assertOrder, assertSize, issue } from "../core/result";
 import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
 
 /**
@@ -57,7 +57,16 @@ const lengthIssue = (code: "too_small" | "too_big", bound: number, isExact: bool
  * is not a boolean, or a check is not a function.
  */
 export const string = ((...args: unknown[]) => {
-  const [{ min, max, length, trim, case: letterCase, message }, checks] = split<StringOptions, string>(args);
+  const [options, checks] = split<StringOptions, string>(args);
+  assertMigrated("string", options, {
+    pattern: "the check string(pattern(re))",
+    startsWith: "the check string(startsWith(text))",
+    endsWith: "the check string(endsWith(text))",
+    includes: "the check string(includes(text))",
+    lowercase: 'string({ case: "lower" }), or the check lowercase() to require it unchanged',
+    uppercase: 'string({ case: "upper" }), or the check uppercase() to require it unchanged',
+  });
+  const { min, max, length, trim, case: letterCase, message } = options;
   for (const [name, size] of [
     ["Minimum length", min],
     ["Maximum length", max],

@@ -1,5 +1,5 @@
 import { split } from "../core/checks";
-import { assertOption, issue } from "../core/result";
+import { assertMigrated, assertOption, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncCheck,
@@ -34,6 +34,13 @@ const SCRIPT_SCHEMES = ["javascript", "vbscript", "data"];
 
 /** A percent-encoded path separator, `%2F` for `/` or `%5C` for `\`, in either letter case. */
 const ENCODED_SEPARATOR_PATTERN = /%(?:2f|5c)/i;
+
+/**
+ * A segment that is `.` or `..`, a dot written plain or as `%2E`, followed by `;` and its parameters, as in
+ * `/api/..;/admin`. The parser reads it as an ordinary segment, while a server that drops the parameters
+ * before resolving dot segments, as Tomcat and Jetty do, reads `..`.
+ */
+const DOT_SEGMENT_PATTERN = /(?:^|\/)(?:\.|%2e){1,2};/i;
 
 /** Options for {@link url}. */
 export interface UrlOptions extends MessageOptions {
@@ -78,8 +85,12 @@ export interface UrlOptions extends MessageOptions {
    * percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such
    * as `ssh://example.com`, that names no path. A path holding an encoded `/` or `\`, `%2F` or `%5C`, fails
    * before it runs, with `{ encodedSeparator: true }`, since a server that decodes it before routing would
-   * read another path than the validator saw. Its failure is reported as the URL's, with `params.part`
-   * `"path"`.
+   * read another path than the validator saw, and so does one holding a segment `.` or `..` followed by
+   * `;`, such as `/api/..;/admin`, with `{ dotSegment: true }`, since a server that drops the parameters
+   * before resolving dot segments would read `..`. Write it as an allowlist, such as
+   * `string(startsWith("/api/"))`: a server may also decode an escape, merge `//` or drop `;` and its
+   * parameters from a segment, which a denylist such as "not under `/admin`" does not foresee. Its failure
+   * is reported as the URL's, with `params.part` `"path"`.
    */
   path?: AnyValidator;
   /**
@@ -147,6 +158,9 @@ export function url(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function url(...rest: unknown[]): AnyValidator {
   const [options, checks] = split<UrlOptions, string>(rest);
+  assertMigrated("url", options, {
+    allowLocal: "a host validator: url({ host: hostname() }), or url({ host: unknown() }) for IP addresses too",
+  });
   const {
     credentials,
     host,
@@ -229,6 +243,11 @@ export function url(...rest: unknown[]): AnyValidator {
       // `/admin`. It fails before the path validator runs, as a repeated query key does.
       if (ENCODED_SEPARATOR_PATTERN.test(parsed.pathname)) {
         return { issues: [partIssue("url", "path", [issue("invalid_value", { encodedSeparator: true })])] };
+      }
+      // So is `..;`: one segment to the parser, and `..` to a server that drops parameters first, so
+      // `/api/..;/admin` would reach `/admin` too.
+      if (DOT_SEGMENT_PATTERN.test(parsed.pathname)) {
+        return { issues: [partIssue("url", "path", [issue("invalid_value", { dotSegment: true })])] };
       }
       parts.push(["path", path, parsed.pathname]);
     }

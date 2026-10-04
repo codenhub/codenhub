@@ -122,3 +122,16 @@ describe("checks on composers", () => {
     expect(child(1)).toEqual({ ok: true, value: 1 });
   });
 });
+
+describe("composer options", () => {
+  it("should be read once, when the validator is made, so changing the object later changes nothing", () => {
+    const options: { message?: string; min?: number } = { message: "a", min: 1 };
+    const list = array(string(), options);
+    const shape = object({}, options as never);
+    options.message = "b";
+    options.min = 5;
+    expect(issuesOf(list(1))[0]?.message).toBe("a");
+    expect(issuesOf(shape(1))[0]?.message).toBe("a");
+    expect(list(["x"]).ok).toBe(true);
+  });
+});

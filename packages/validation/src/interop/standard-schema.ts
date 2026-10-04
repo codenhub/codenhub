@@ -13,7 +13,7 @@
  * @typeParam TInput - The input type accepted by the schema.
  * @typeParam TOutput - The output type produced after validation.
  */
-export interface StandardSchemaV1<TInput = unknown, TOutput = unknown> {
+export interface StandardSchemaV1<TInput = unknown, TOutput = TInput> {
   /** The Standard Schema metadata and execution properties. */
   readonly "~standard": StandardSchemaV1.Props<TInput, TOutput>;
 }
@@ -25,7 +25,7 @@ export declare namespace StandardSchemaV1 {
    * @typeParam TInput - Inferred input type.
    * @typeParam TOutput - Inferred output type.
    */
-  export interface Props<TInput = unknown, TOutput = unknown> {
+  export interface Props<TInput = unknown, TOutput = TInput> {
     /** The version number of the Standard Schema specification (always 1). */
     readonly version: 1;
     /** The vendor identifier of the schema library. */
@@ -93,7 +93,7 @@ export declare namespace StandardSchemaV1 {
    * @typeParam TInput - Inferred input type.
    * @typeParam TOutput - Inferred output type.
    */
-  export interface Types<TInput = unknown, TOutput = unknown> {
+  export interface Types<TInput = unknown, TOutput = TInput> {
     /** Phantom input type. */
     readonly input: TInput;
     /** Phantom output type. */

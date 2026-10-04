@@ -137,6 +137,19 @@ describe("jwt", () => {
     expect(accepts(jwt(), `${header}.${payload}.c2ln`, `${header}.${payload}.`)).toEqual([true, true]);
   });
 
+  it("should hold every segment to base64url as an encoder writes it", () => {
+    // A segment of one character mod four is no encoding, and `e31` decodes to `{}` only by ignoring set
+    // bits that `e30` leaves clear, so two spellings would be one token.
+    expect(
+      accepts(jwt(), `${header}.${payload}.A`, `${header}.${payload}.AB`, `${header}.e31.c2ln`, `${header}.e30.c2ln`),
+    ).toEqual([false, false, false, true]);
+  });
+
+  it("should reject a header whose text starts with a byte order mark, which a JSON parser reads as text", () => {
+    const withMark = "77u_eyJhbGciOiJhIn0"; // ﻿{"alg":"a"}
+    expect(accepts(jwt(), `${withMark}.${payload}.c2ln`, `eyJhbGciOiJhIn0.${payload}.c2ln`)).toEqual([false, true]);
+  });
+
   it("should reject what is not a token", () => {
     const noAlg = "e30"; // {}
     const notObject = "WzFd"; // [1]
