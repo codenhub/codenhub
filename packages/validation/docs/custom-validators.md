@@ -43,7 +43,7 @@ const signup = object(
 
 `data` needs no annotation: its type comes from the object. A check of the wrong type, such as a number check given to `string`, is a compile error.
 
-A check can also be written by hand, as a function that returns nothing for a value it accepts or the issues it found. An issue it returns follows the rules of `fail()`: an object whose `code` and `message` are text when given, and whose `path` is a list of keys and indexes; anything else, such as `null` or a number as the message, throws a `TypeError` when the check reports it, and an issue without a `code` has code `custom`. Type it as `Check<T>`, which is how it reports several issues at once or chooses a path per failure:
+A check can also be written by hand, as a function that returns nothing for a value it accepts or the issues it found. Each issue it returns is an object, as `fail()` makes one: anything else in the list, such as `null`, throws a `TypeError` when the check reports it, and an issue without a `code` has code `custom`. Its `code` and `message` are text and its `path` a list of keys and indexes, as the `ValidationIssue` type says; build issues with `fail()` to have that checked when they are made. Type it as `Check<T>`, which is how it reports several issues at once or chooses a path per failure:
 
 ```ts
 import { string, type Check } from "@codenhub/validation";

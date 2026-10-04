@@ -1,7 +1,7 @@
 import { chain, collect, detached, runEach, type Maybe } from "./async";
 import { placeAll, type Place } from "./nesting";
 import { isPlainObject } from "./objects";
-import { assertIssue, failWith, issue, pass, typeIssue } from "./result";
+import { assertText, failWith, issue, pass, typeIssue } from "./result";
 import type {
   AsyncCheck,
   Check,
@@ -48,6 +48,9 @@ export function split<TOptions extends MessageOptions, T>(
   return [{ ...(options as object) } as TOptions, checks as AsyncCheck<T>[]];
 }
 
+/** What a check written by hand that returns something it may not is told. */
+const CHECK_RESULT_ERROR = "A check must return undefined or a list of issues";
+
 /**
  * Rejects wording that is neither text nor a function, such as a translation that turned out to be a
  * group of them, which would otherwise reach a form as `[object Object]`. Undefined is no wording.
@@ -69,12 +72,8 @@ export function word(issues: ValidationIssue[], message: Message | undefined): V
         const worded: unknown = typeof message === "function" ? message(found) : message;
         // A function that returns anything but text, such as a translation lookup that missed, would put it
         // in the issue, and a form would show `undefined` or `[object Object]`.
-        if (typeof worded !== "string") {
-          throw new TypeError(
-            `A message function must return text, received ${worded === null ? "null" : typeof worded}`,
-          );
-        }
-        issues[index] = { ...found, message: worded };
+        assertText("message", worded);
+        issues[index] = { ...found, message: worded as string };
       }
     });
   }
@@ -100,8 +99,8 @@ export const report = (
  * a list the check reuses is never changed, and one written by hand without a path, or with an undefined
  * one, is at the value, and without a code is `"custom"`, as `fail()` gives it. A check written by hand
  * that returns anything but nothing or a list, such as `false`, or a list holding something that is not
- * an issue, such as `null`, a symbol in a path or a number as a message, is a bug, and throws saying so
- * rather than failing later on what it returned.
+ * an object, such as `null`, is a bug, and throws saying so rather than failing later on what it
+ * returned.
  */
 export function finish<T>(
   value: T,
@@ -115,11 +114,13 @@ export function finish<T>(
   return chain(collect(runEach(checks.length, (index) => detached(checks[index] as AsyncCheck<T>, value))), (found) => {
     for (const list of found) {
       if (list !== undefined && !Array.isArray(list)) {
-        throw new TypeError("A check must return undefined or a list of issues");
+        throw new TypeError(CHECK_RESULT_ERROR);
       }
       // Pushed one by one: spreading a long list into `push` would overflow the stack.
       for (const each of list ?? []) {
-        assertIssue(each);
+        if (typeof each !== "object" || each === null) {
+          throw new TypeError(CHECK_RESULT_ERROR);
+        }
         issues.push({ ...each, code: each.code ?? "custom", path: each.path ?? [] });
       }
     }

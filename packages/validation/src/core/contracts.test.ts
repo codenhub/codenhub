@@ -180,7 +180,7 @@ describe("coerceDate", () => {
 describe("a message function", () => {
   it("should throw when it returns anything but text, which a form would show as it is", () => {
     expect(() => number({ message: () => 5 as never })("x")).toThrow(
-      new TypeError("A message function must return text, received number"),
+      new TypeError("message must be text, received number"),
     );
     expect(() =>
       number(
@@ -189,15 +189,12 @@ describe("a message function", () => {
           () => undefined as never,
         ),
       )(1),
-    ).toThrow(new TypeError("A message function must return text, received undefined"));
+    ).toThrow(new TypeError("message must be text, received undefined"));
   });
 
   it("should throw when a check written by hand returns something that is not an issue", () => {
     expect(() => number((() => [null]) as never)(1)).toThrow(
-      new TypeError("An issue must be an object, received null"),
-    );
-    expect(() => number((() => [{ path: [Symbol("a")] }]) as never)(1)).toThrow(
-      new TypeError("issue.path must be a list of keys and indexes"),
+      new TypeError("A check must return undefined or a list of issues"),
     );
     expect(issuesOf(number((() => [{}]) as never)(1))).toEqual([{ code: "custom", path: [] }]);
   });
