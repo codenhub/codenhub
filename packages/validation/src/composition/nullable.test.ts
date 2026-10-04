@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { string } from "../primitives/string";
-import { accepts, codesOf, isFree, isPending, valueOf } from "../test-utils";
+import { accepts, codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { nullable } from "./nullable";
 import { nullish } from "./nullish";
 
@@ -43,5 +43,23 @@ describe("nullish", () => {
     const shape = object({ nickname });
     const output: { nickname?: string | null | undefined } = valueOf(shape({}));
     expect(output).toEqual({});
+  });
+
+  it("should stay asynchronous for an asynchronous validator, and answer at once for null and undefined", async () => {
+    const validator = nullish(isFree);
+    expect(isPending(validator(null))).toBe(false);
+    expect(isPending(validator(undefined))).toBe(false);
+    expect(codesOf(await validator("taken"))).toEqual(["taken"]);
+  });
+
+  it("should report the wrapped validator's issues at the property's path inside an object", async () => {
+    const { object } = await import("./object");
+    expect(issuesOf(object({ nickname })({ nickname: "A" }))).toEqual([
+      { code: "too_small", path: ["nickname"], params: { minimum: 2, type: "string" } },
+    ]);
+  });
+
+  it("should refuse a validator that is not a function when created", () => {
+    expect(() => nullish(undefined as never)).toThrow(TypeError);
   });
 });

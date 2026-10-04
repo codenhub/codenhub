@@ -56,6 +56,16 @@ describe("duration", () => {
     expect(accepts(duration(), "P1Y", "P1Y2M3W4D", "PT1H30M", "PT0.5S", "P1DT12H")).toEqual(Array(5).fill(true));
     expect(accepts(duration(), "P", "PT", "P1H", "1Y", "PT1.5H", "P-1D", "p1d")).toEqual(Array(7).fill(false));
   });
+
+  it("should let only the seconds carry a fraction, with a dot, as Temporal.Duration does", () => {
+    expect(accepts(duration(), "PT1.123456789S", "PT0.000001S", "P1DT0.5S")).toEqual([true, true, true]);
+    expect(accepts(duration(), "P0.5Y", "PT0.5H", "PT0.5M", "PT1,5S", "PT.5S", "PT1.S")).toEqual(Array(6).fill(false));
+  });
+
+  it("should accept weeks combined with other units, and reject a sign or an empty time part", () => {
+    expect(accepts(duration(), "P1W2D", "P1W", "P2WT3H")).toEqual([true, true, true]);
+    expect(accepts(duration(), "-P1D", "+P1D", "P1DT", "PT1H.5S")).toEqual(Array(4).fill(false));
+  });
 });
 
 describe("time", () => {
@@ -112,6 +122,11 @@ describe("phone", () => {
     expect(valueOf(phone()("+55 (11) 98765-4321"))).toBe("+5511987654321");
     expect(valueOf(phone()("+1.201.555.0123"))).toBe("+12015550123");
     expect(valueOf(phone()("+442079460958"))).toBe("+442079460958");
+  });
+
+  it("should keep a trunk prefix written without parentheses, since the numbering plan is not checked", () => {
+    expect(valueOf(phone()("+44 020 7946 0958"))).toBe("+4402079460958");
+    expect(phone()("+44 (0)20 7946 0958").ok).toBe(false);
   });
 
   it("should reject a missing or zero country code, too few or too many digits, and stray characters", () => {

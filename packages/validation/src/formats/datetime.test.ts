@@ -35,6 +35,23 @@ describe("datetime", () => {
     expect(accepts(datetime(), "2016-12-31T23:59:60Z", "2016-12-31T23:59:59Z")).toEqual([false, true]);
   });
 
+  it("should require an uppercase T and Z, rejecting the lowercase and space forms RFC 3339 also allows", () => {
+    expect(
+      accepts(
+        datetime({ offset: true }),
+        "2026-09-28t14:30:00Z",
+        "2026-09-28T14:30:00z",
+        "2026-09-28 14:30:00Z",
+        "2026-09-28T14:30:00,5Z",
+      ),
+    ).toEqual(Array(4).fill(false));
+  });
+
+  it("should read +00:00 as an offset, which needs offset: true", () => {
+    expect(accepts(datetime(), "2026-09-28T14:30:00+00:00")).toEqual([false]);
+    expect(accepts(datetime({ offset: true }), "2026-09-28T14:30:00+00:00")).toEqual([true]);
+  });
+
   it("should accept offsets when asked", () => {
     const withOffset = datetime({ offset: true });
     expect(
