@@ -85,6 +85,22 @@ export const isThenable = (value: unknown): value is PromiseLike<unknown> =>
   typeof (value as { then?: unknown }).then === "function";
 
 /**
+ * Runs a test the consumer wrote, as {@link detached} does, and gives its answer. A promise is refused
+ * with a `TypeError` naming `builder`, since a pending answer is truthy and would accept every value: a
+ * rule that waits belongs in a check, whose promise is awaited.
+ */
+export function decided<A, R>(builder: string, test: (argument: A) => R, argument: A): R {
+  const answer = detached(test, argument);
+  if (isThenable(answer)) {
+    // The promise is abandoned, so a later rejection is not reported as unhandled.
+    // oxlint-disable-next-line promise/prefer-await-to-then
+    answer.then(undefined, () => undefined);
+    throw new TypeError(`${builder}() needs a synchronous test. Put a rule that waits in a check.`);
+  }
+  return answer;
+}
+
+/**
  * Applies `next` to a value that may still be pending, staying synchronous when it is not. A pending
  * value's continuation stays part of the validation that was running when it was chained.
  *
@@ -102,6 +118,27 @@ export function chain<T, R>(value: Maybe<T>, next: (resolved: T) => Maybe<R>): M
   // has to be unwrapped with `then`; the alternative to `await` is the point of this helper.
   // oxlint-disable-next-line promise/prefer-await-to-then, promise/no-callback-in-promise
   return Promise.resolve(value).then((resolved) => enter(validation, next, resolved));
+}
+
+/**
+ * Runs `work` for each index below `length` and gives what each returned, as `Array.from` would. When one
+ * throws, what the earlier ones returned may be pending, and nothing will wait for it now, so a rejection
+ * of it is handled before the exception propagates: unhandled, it is reported apart from the exception
+ * and, by default, ends a Node.js process.
+ */
+export function runEach<R>(length: number, work: (index: number) => R): R[] {
+  const results: R[] = [];
+  try {
+    for (let index = 0; index < length; index += 1) {
+      results.push(work(index));
+    }
+  } catch (error) {
+    // Waiting on all of them handles a rejection of each, and a result that is not pending is ignored.
+    // oxlint-disable-next-line promise/prefer-await-to-then, promise/catch-or-return
+    Promise.all(results).catch(() => undefined);
+    throw error;
+  }
+  return results;
 }
 
 /**

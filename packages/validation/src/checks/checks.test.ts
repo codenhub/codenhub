@@ -14,6 +14,16 @@ import { pattern } from "./pattern";
 import { startsWith } from "./starts-with";
 import { uppercase } from "./uppercase";
 
+describe("built-in checks", () => {
+  it("should report params of their own on every failure, so changing one changes no later failure", () => {
+    const prefixed = string(startsWith("a"));
+    const first = issuesOf(prefixed("b"))[0]?.params as Record<string, unknown>;
+    first["value"] = "changed";
+    expect(issuesOf(prefixed("c"))[0]?.params).toEqual({ format: "startsWith", value: "a" });
+    expect(issuesOf(number(nonZero())(0))[0]?.params).not.toBe(issuesOf(number(nonZero())(0))[0]?.params);
+  });
+});
+
 describe("pattern", () => {
   it("should test the pattern, and ignore the g and y flags so answers do not depend on earlier calls", () => {
     const validator = string(pattern(/^a/g));

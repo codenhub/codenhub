@@ -1,6 +1,7 @@
 import { chain } from "../core/async";
-import { assertFunction, assertOption, toIssue, type IssueInput } from "../core/result";
-import type { AsyncCheck, Check } from "../core/types";
+import { word } from "../core/checks";
+import { assertFunction, assertOption, isPath, toIssue, type IssueInput } from "../core/result";
+import type { AsyncCheck, Check, Message } from "../core/types";
 
 /**
  * Makes a check from a test of a typed value, for a rule a validator's options do not express.
@@ -24,30 +25,33 @@ import type { AsyncCheck, Check } from "../core/types";
  *
  * @typeParam T - The type of the value it checks.
  * @param test - Returns `true` when the value is acceptable.
- * @param issue - What to report when it is not: an issue, or a string as its message. Defaults to code
- * `"custom"` at the value's own location.
+ * @param issue - What to report when it is not: an issue, or a message, text or a function of the
+ * issue, as a built-in check takes. Defaults to code `"custom"` at the value's own location.
  * @returns A check that reports the issue when `test` returns `false`.
- * @throws {TypeError} When `test` is not a function, or `issue` is neither text nor an issue: one whose
- * `code` and `message` are text when given, and whose `path` is a list.
+ * @throws {TypeError} When `test` is not a function, or `issue` is neither a message nor an issue: one
+ * whose `code` and `message` are text when given, and whose `path` is a list.
  */
-export function check<T>(test: (value: T) => boolean, issue?: IssueInput | string): Check<T>;
+export function check<T>(test: (value: T) => boolean, issue?: IssueInput | Message): Check<T>;
 export function check<T>(
   test: (value: T) => boolean | PromiseLike<boolean>,
-  issue?: IssueInput | string,
+  issue?: IssueInput | Message,
 ): AsyncCheck<T>;
 export function check<T>(
   test: (value: T) => boolean | PromiseLike<boolean>,
-  issue: IssueInput | string = {},
+  issue: IssueInput | Message = {},
 ): AsyncCheck<T> {
   assertFunction("test", test);
+  if (typeof issue === "function") {
+    // Worded when it fails, from the issue, as a built-in check's message function is.
+    return (value) => chain(test(value), (isAccepted) => (isAccepted ? undefined : word([toIssue({})], issue)));
+  }
   if (typeof issue !== "string" && (typeof issue !== "object" || issue === null)) {
-    throw new TypeError("issue must be text or an issue object");
+    throw new TypeError("issue must be a message or an issue object");
   }
   const { path, params, ...rest } = typeof issue === "string" ? { message: issue } : issue;
   assertOption("code", rest.code, "string");
   assertOption("message", rest.message, "string");
-  // A path written as text, such as "confirm", would be spread into one segment per letter.
-  if (path !== undefined && !Array.isArray(path)) {
+  if (path !== undefined && !isPath(path)) {
     throw new TypeError("issue.path must be a list of keys and indexes");
   }
   // Copied and frozen once, so neither the caller nor a result can change what a later failure reports.

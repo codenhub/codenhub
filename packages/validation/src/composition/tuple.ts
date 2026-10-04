@@ -1,4 +1,4 @@
-import type { Maybe } from "../core/async";
+import { runEach, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { below, call, composed } from "../core/nesting";
 import { isArray } from "../core/objects";
@@ -82,7 +82,7 @@ export function tuple<
   ...rest: AsyncRest<InferTuple<TItems, TRest>, TupleOptions<TRest>>
 ): AsyncValidator<InferTuple<TItems, TRest>>;
 export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyValidator {
-  const [options, reject, accept] = tail<TupleOptions<AnyValidator | undefined>, unknown[]>(args);
+  const [options, reject, accept] = tail<TupleOptions<AnyValidator | undefined>, unknown[]>(args, "rest max");
   const { rest, max } = options;
   assertList("items", items);
   // Copied, so changing the list after the validator is made changes nothing.
@@ -127,7 +127,7 @@ export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyVa
     }
     return settle(
       // By index up to the length that was checked, never through the array's own iterator, as in `array`.
-      Array.from({ length: size }, (_, index) =>
+      runEach(size, (index) =>
         call((index < length ? fixed[index] : rest) as AnyValidator, input[index], below(place, index)),
       ),
       (values) => accept(values, place),

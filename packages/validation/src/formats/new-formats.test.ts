@@ -127,6 +127,16 @@ describe("phone", () => {
       ),
     ).toEqual(Array(6).fill(false));
   });
+
+  it("should reject the national trunk prefix written in parentheses, which E.164 has no digit for", () => {
+    expect(accepts(phone(), "+44 (0)20 7946 0958", "+49 (0) 30 123456", "+44(0)2079460958")).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    // An Italian number keeps its leading 0 in E.164, so a group that starts with it is part of the number.
+    expect(valueOf(phone()("+39 (06) 6982 1234"))).toBe("+390669821234");
+  });
 });
 
 describe("jwt", () => {
@@ -148,6 +158,23 @@ describe("jwt", () => {
   it("should reject a header whose text starts with a byte order mark, which a JSON parser reads as text", () => {
     const withMark = "77u_eyJhbGciOiJhIn0"; // ﻿{"alg":"a"}
     expect(accepts(jwt(), `${withMark}.${payload}.c2ln`, `eyJhbGciOiJhIn0.${payload}.c2ln`)).toEqual([false, true]);
+  });
+
+  it("should reject a key given twice in any object of the header or payload, however it is spelled", () => {
+    const encode = (json: string): string => btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const escaped = `"${"\\"}u0061lg"`; // alg, its first letter as a JSON escape
+    expect(
+      accepts(
+        jwt(),
+        `${encode('{"alg":"none","alg":"HS256"}')}.${payload}.c2ln`,
+        `${encode(`{"alg":"none",${escaped}:"HS256"}`)}.${payload}.c2ln`,
+        `${header}.${encode('{"sub":"1","sub":"2"}')}.c2ln`,
+        `${header}.${encode('{"a":{"b":1,"b":2}}')}.c2ln`,
+      ),
+    ).toEqual([false, false, false, false]);
+    expect(accepts(jwt(), `${header}.${encode('{"a":{"b":1},"c":[{"b":2},{"b":3}],"s":"a,\\"b\\":"}')}.c2ln`)).toEqual([
+      true,
+    ]);
   });
 
   it("should reject what is not a token", () => {
@@ -245,6 +272,7 @@ describe("cidr", () => {
 describe("domain", () => {
   it("should accept public domain names and return them as the parser reads them", () => {
     expect(valueOf(domain()("Example.COM"))).toBe("example.com");
+    expect(accepts(domain(), "éxn--.com", "xn--xn---9oa.com")).toEqual([false, false]);
     expect(valueOf(domain()("münchen.de"))).toBe("xn--mnchen-3ya.de");
   });
 

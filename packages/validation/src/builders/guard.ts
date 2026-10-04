@@ -1,4 +1,4 @@
-import { detached } from "../core/async";
+import { decided } from "../core/async";
 import { leaf, split } from "../core/checks";
 import { assertFunction, assertText } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
@@ -20,13 +20,14 @@ import type { Factory, MessageOptions } from "../core/types";
  * @param expected - The name of the type, for the issue.
  * @param accepts - Returns `true` for a value of the type.
  * @returns The factory of the validator.
- * @throws {TypeError} When `expected` is not text or `accepts` is not a function.
+ * @throws {TypeError} When `expected` is not text or `accepts` is not a function, and, from the
+ * validator, when `accepts` returns a promise, which would accept every value: a rule that waits is a check.
  */
 export function guard<T>(expected: string, accepts: (input: unknown) => input is T): Factory<T, MessageOptions> {
   assertText("guard(expected)", expected);
   assertFunction("accepts", accepts);
   return ((...args: unknown[]) => {
     const [{ message }, checks] = split<MessageOptions, T>(args);
-    return leaf(expected, (input) => detached(accepts, input), message, checks);
+    return leaf(expected, (input) => decided("guard", accepts, input), message, checks);
   }) as Factory<T, MessageOptions>;
 }

@@ -26,11 +26,18 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
 
 /**
  * Rejects a shape that is not a plain object, such as a list of validators, whose properties would be
- * named `0`, `1` and on, since it is a mistake in the schema and not in the input.
+ * named `0`, `1` and on, or one with a key that is never read, a symbol or a key that is not enumerable,
+ * whose validator would never run, since each is a mistake in the schema and not in the input.
  */
 export function assertShape(shape: unknown, name = "shape"): void {
   if (!isPlainObject(shape)) {
     throw new TypeError(`${name} must be a plain object of validators, received ${describeType(shape)}`);
+  }
+  const hidden = Reflect.ownKeys(shape).find(
+    (key) => typeof key === "symbol" || !Object.prototype.propertyIsEnumerable.call(shape, key),
+  );
+  if (hidden !== undefined) {
+    throw new TypeError(`${name} key ${String(hidden)} is never read: a ${name} holds enumerable text keys only`);
   }
 }
 

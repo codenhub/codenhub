@@ -48,8 +48,8 @@ tags(["a", "a"]); // { ok: false, ... }, code "invalid_value" at path [1]
 ### check
 
 ```ts
-export declare function check<T>(test: (value: T) => boolean, issue?: IssueInput | string): Check<T>;
-export declare function check<T>(test: (value: T) => boolean | PromiseLike<boolean>, issue?: IssueInput | string): AsyncCheck<T>;
+export declare function check<T>(test: (value: T) => boolean, issue?: IssueInput | Message): Check<T>;
+export declare function check<T>(test: (value: T) => boolean | PromiseLike<boolean>, issue?: IssueInput | Message): AsyncCheck<T>;
 ```
 
 Makes a check from a test of a typed value, for a rule a validator's options do not express.
@@ -59,7 +59,7 @@ Give it to a validator after its options. It runs once the value has its type an
 **Parameters**
 
 - `test` — Returns `true` when the value is acceptable.
-- `issue` — What to report when it is not: an issue, or a string as its message. Defaults to code `"custom"` at the value's own location.
+- `issue` — What to report when it is not: an issue, or a message, text or a function of the issue, as a built-in check takes. Defaults to code `"custom"` at the value's own location.
 
 **Type parameters**
 
@@ -67,7 +67,7 @@ Give it to a validator after its options. It runs once the value has its type an
 
 **Returns** — A check that reports the issue when `test` returns `false`.
 
-**Throws** — When `test` is not a function, or `issue` is neither text nor an issue: one whose `code` and `message` are text when given, and whose `path` is a list.
+**Throws** — When `test` is not a function, or `issue` is neither a message nor an issue: one whose `code` and `message` are text when given, and whose `path` is a list.
 
 **Example**
 
@@ -143,7 +143,7 @@ Builds a failed result from one or more issues.
 
 **Returns** — A failed result holding every issue, in order.
 
-**Throws** — When called without an issue, or with a `path` that is not a list, such as `"confirm"`, which would be split into one segment per letter. The types already forbid both.
+**Throws** — When called without an issue, or with a `path` that is not a list of keys and indexes, such as `"confirm"`, which would be split into one segment per letter. The types forbid both.
 
 ### fallback
 
@@ -210,7 +210,7 @@ A value that is not a string fails with `invalid_type`, and a string the test re
 
 **Returns** — The factory of the validator.
 
-**Throws** — When `name` is not text or `test` is not a function.
+**Throws** — When `name` is not text or `test` is not a function, and, from the validator, when `test` returns a promise, which would accept every value: a rule that waits is a check.
 
 **Example**
 
@@ -322,7 +322,7 @@ A value the guard rejects fails with `invalid_type` and `params.expected` set to
 
 **Returns** — The factory of the validator.
 
-**Throws** — When `expected` is not text or `accepts` is not a function.
+**Throws** — When `expected` is not text or `accepts` is not a function, and, from the validator, when `accepts` returns a promise, which would accept every value: a rule that waits is a check.
 
 **Example**
 
@@ -445,7 +445,8 @@ const isPort = (input: unknown): input is number => is(number({ int: true, min: 
 ### json
 
 ```ts
-export declare function json(options?: MessageOptions): Validator<unknown>;
+export declare function json(): Validator<unknown>;
+export declare function json(options: MessageOptions): Validator<unknown>;
 export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, MessageOptions>): Composed<TValidator, Infer<TValidator>>;
 export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, MessageOptions>): AsyncValidator<Infer<TValidator>>;
 ```
@@ -464,7 +465,7 @@ A non-string fails with `invalid_type`, and text that is not valid JSON fails wi
 
 **Returns** — A validator that produces what `validator` produces, or `unknown` without one.
 
-**Throws** — When `validator` is given and is not a function.
+**Throws** — When `validator` is given and is not a function, `undefined` included.
 
 **Example**
 
@@ -487,7 +488,7 @@ TypeScript cannot infer a validator that refers to itself, so annotate the varia
 
 Every level of nesting is a level of recursion, and input nested past the stack, or a cyclic object, would throw. `maxDepth` stops that first: a value found more than that many levels down fails with `too_big` and `{ maximum, type: "depth" }` at its own path, so untrusted input can be checked without a size cap tuned to the stack. The count is of calls on the stack, so it bounds recursion that happens in one synchronous run, which is where the stack can overflow; a rule that awaits between levels starts the next from a fresh stack, and is not counted. So `maxDepth` does not bound an asynchronous recursive schema; `maxCalls` does, below, since each level is a `lazy` call and the count of calls lasts across awaits, so even a cyclic object stops.
 
-Work can also grow faster than the input. A `union` tries every option, and an `object` checks every property even after one fails, so in a recursive `union` of objects every option reaches the children. A `lazy` keeps what it found for each object at each path in one validation, and gives it again when the same object is reached at the same path, so those options share the children's result and the work grows with the input. An asynchronous check under it runs once for each such object and path, however many options reach it. Work that makes new objects at every level, such as a `transform` that copies its value, cannot be shared and doubles with each level. `maxCalls` stops that: past that many calls of one `lazy` in one validation, every further one fails with `too_big` and `{ maximum, type: "calls" }`. A validation is a call such as `schema(input)` and everything it reaches before it settles, whatever validator its root is, so the items of an `array` share each `lazy`'s count. Unlike `maxDepth`, each `lazy` counts its own calls against its own limit, so a limit set on one is never overridden by another that the validation reaches. Unlike `maxDepth` too, it lasts across awaits: what runs after an await counts toward the same validation, so an asynchronous recursive schema is held to it as well. That holds for the awaits of this package, such as an asynchronous check's: an await inside a validator you write yourself is not seen, so what that validator calls after it starts a validation of its own, with fresh counts, and `maxCalls` does not bound recursion through it. Put asynchronous work in a check, or bound such a validator yourself. The issues of the options that failed are kept, about 1 KB per call, so the default holds a validation stopped by the limit to about 10 MB and a few tens of milliseconds for each `lazy`. Raise it for trusted recursive data with more nodes than that in one validation. For recursive objects told apart by a property, `tagged` reads that property first and validates only the matching variant.
+Work can also grow faster than the input. A `union` tries every option, and an `object` checks every property even after one fails, so in a recursive `union` of objects every option reaches the children. A `lazy` keeps what it found for each object at each path in one validation, and gives it again when the same object is reached at the same path, so those options share the children's result and the work grows with the input. An asynchronous check under it runs once for each such object and path, however many options reach it. Work that makes new objects at every level, such as a `transform` that copies its value, cannot be shared and doubles with each level. `maxCalls` stops that: past that many calls of one `lazy` in one validation, every further one fails with `too_big` and `{ maximum, type: "calls" }`. A validation is a call such as `schema(input)` and everything it reaches before it settles, whatever validator its root is, so the items of an `array` share each `lazy`'s count. Unlike `maxDepth`, each `lazy` counts its own calls against its own limit, so a limit set on one is never overridden by another that the validation reaches. Unlike `maxDepth` too, it lasts across awaits: what runs after an await counts toward the same validation, so an asynchronous recursive schema is held to it as well. That holds for the awaits of this package, such as an asynchronous check's: an await inside a validator you write yourself is not seen, so what that validator calls after it starts a validation of its own, with fresh counts, and `maxCalls` does not bound recursion through it. Put asynchronous work in a check, or bound such a validator yourself. The issues of the options that failed are kept, about 1 KB per call, so the default holds a validation stopped by the limit to about 10 MB and a few tenths of a second for each `lazy`. Raise it for trusted recursive data with more nodes than that in one validation. For recursive objects told apart by a property, `tagged` reads that property first and validates only the matching variant.
 
 **Parameters**
 
@@ -2914,7 +2915,7 @@ export declare const englishMessages: Messages;
 
 The built-in English wording for every issue the validators can report, as a message map.
 
-Pass it to `formatIssue`, `flatten` or `standard` to get text such as "Must be at least 18". It is a separate value, not something `formatIssue` carries, so a program that words its own issues, or that never shows one, does not bundle it. To change some of the wording, spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. A custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
+Pass it to `formatIssue`, `flatten` or `standard` to get text such as "Must be at least 18". It is a separate value, not something `formatIssue` carries, so a program that words its own issues, or that never shows one, does not bundle it. To change some of the wording, spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is frozen, so no code can reword the messages of every other user of it in the process. A custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
 
 **Example**
 
@@ -2997,9 +2998,9 @@ isoDate()("2026-02-29"); // { ok: false, ... }: 2026 is not a leap year
 export declare const jwt: Factory<string, MessageOptions>;
 ```
 
-Creates a validator for JSON Web Tokens in compact form: three base64url segments separated by dots, whose header and payload decode to JSON objects, and whose header names an algorithm in `alg`. The value is not modified.
+Creates a validator for JSON Web Tokens in compact form: three base64url segments separated by dots, whose header and payload decode to JSON objects with no key twice in any object, and whose header names an algorithm in `alg`. The value is not modified.
 
-Only the structure is checked. The signature is not verified and the claims, such as the expiry, are not read: a token that passes may be forged or expired. Verify it with the key before trusting it.
+Only the structure is checked. The signature is not verified and the claims, such as the expiry, are not read: a token that passes may be forged or expired. Verify it with the key before trusting it. A key given twice, as in `{"alg":"none","alg":"HS256"}`, is rejected, since JSON parsers disagree on which one it means.
 
 **Example**
 
@@ -3060,12 +3061,12 @@ export declare const number: Factory<number, NumberOptions>;
 
 Creates a validator for finite numbers. `NaN` and the infinities are always rejected.
 
-`clamp` runs first, then every constraint on the clamped number, and each failing one reports its own issue. The checks run on it once every constraint has passed, and each failing one reports its own.
+`clamp` runs first, then every constraint on the clamped number, each failing one reporting its own issue, and the checks once every constraint has passed. `clamp` moves a finite number into its range; an infinity is rejected before it, as by every `number`, since it more often means a fault upstream than a value to clamp.
 
 **Throws**
 
 - When a bound is not a number, `int` or `safeInt` is not a boolean, or `clamp` is not a range with a number `min` and `max`.
-- When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and reject every input.
+- When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`, no number can satisfy the bounds together, or `clamp` has a `NaN` bound, a minimum of `Infinity` or a maximum of `-Infinity`, a minimum above its maximum, or a range whose every value breaks a bound. Bounds that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and reject every input.
 
 **Example**
 
@@ -3084,7 +3085,7 @@ export declare const phone: Factory<string, MessageOptions>;
 
 Creates a validator for international phone numbers in E.164 form: a `+`, the country code and the number, 7 to 15 digits in all, optionally with spaces, hyphens, dots or parentheses between digits. The value is the canonical E.164 spelling, `+` and the digits alone, so one number is one value however it was written.
 
-Only the international form is accepted, since a national number means nothing without knowing its country. Whether the number exists, and whether it fits its country's numbering plan, is not checked.
+Only the international form is accepted, since a national number means nothing without knowing its country. A national trunk prefix in parentheses, as in `+44 (0)20 7946 0958`, is rejected: it is no part of the international number, and dropping it would rewrite what was written. Whether the number exists, and whether it fits its country's numbering plan, is not checked.
 
 **Example**
 

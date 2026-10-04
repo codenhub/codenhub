@@ -77,6 +77,13 @@ describe("without the English wording", () => {
 });
 
 describe("englishMessages", () => {
+  it("should be frozen, so no code can reword the messages of everyone else who uses it", () => {
+    expect(Object.isFrozen(englishMessages)).toBe(true);
+    expect(() => {
+      (englishMessages as Record<string, unknown>)["too_small"] = "Changed";
+    }).toThrow(TypeError);
+  });
+
   it("should have wording for every code the built-in validators report", () => {
     for (const code of [
       "invalid_type",
@@ -330,7 +337,12 @@ describe("formatIssue", () => {
     expect(formatIssue(issue({ code: "unrecognized_key", params: { key: "x" } }))).toBe('Unrecognized key "x"');
     expect(
       formatIssue(issue({ code: "invalid_type", params: { expected: "number", received: "string", coerced: true } })),
-    ).toBe("Cannot convert string to number");
+    ).toBe("Cannot convert string to a number");
+    expect(
+      formatIssue(
+        issue({ code: "invalid_type", params: { expected: "valid date", received: "string", coerced: true } }),
+      ),
+    ).toBe("Cannot convert string to a valid date");
     expect(formatIssue(issue({ code: "invalid_union" }))).toBe("Does not match any of the allowed types");
     expect(formatIssue(issue({ code: "invalid_intersection" }))).toBe("Conflicting values");
   });
@@ -395,6 +407,11 @@ describe("formatIssue", () => {
 });
 
 describe("flatten", () => {
+  it("should take an issue without a path, from a validator written by hand, for one about the whole value", () => {
+    const failure = { issues: [{ code: "custom", message: "Broken" }] } as never;
+    expect(flatten(failure, englishMessages)).toEqual({ formErrors: ["Broken"], fieldErrors: {} });
+  });
+
   it("should put root issues in formErrors and the rest under their path", () => {
     const failure = fail(
       { message: "Form is invalid" },

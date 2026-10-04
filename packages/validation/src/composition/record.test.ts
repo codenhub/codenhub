@@ -11,6 +11,15 @@ import { record } from "./record";
 describe("record", () => {
   const scores = record(string({ min: 1 }), number({ int: true }));
 
+  it("should throw for a key validator that produces anything but text, a mistake in the schema", () => {
+    const numbered = record((() => pass(1)) as unknown as Validator<string>, number());
+    const symbolic = record((() => pass(Symbol("a"))) as unknown as Validator<string>, number());
+    expect(() => numbered({ a: 1 })).toThrow(
+      new TypeError("A record's key validator must produce text, received number"),
+    );
+    expect(() => symbolic({ a: 1 })).toThrow(TypeError);
+  });
+
   it("should validate every key and value and return a new object", () => {
     const input = { ada: 3, alan: 5 };
     const output = valueOf(scores(input));

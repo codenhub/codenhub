@@ -29,7 +29,7 @@ export interface UuidOptions extends MessageOptions {
  * @throws {RangeError} When `version` is not an integer from 1 to 8.
  */
 export const uuid = ((...args: unknown[]) => {
-  const [{ version, message }, checks] = split<UuidOptions, string>(args);
+  const [{ version, message }, checks] = split<UuidOptions, string>(args, "version");
   assertOption("version", version, "number");
   if (version !== undefined && !(Number.isInteger(version) && version >= 1 && version <= 8)) {
     throw new RangeError(`version must be an integer from 1 to 8, received ${String(version)}`);

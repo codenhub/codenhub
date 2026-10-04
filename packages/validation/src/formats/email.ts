@@ -70,7 +70,10 @@ export function email<const TOptions extends EmailOptions>(
 export function email(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function email(options: EmailOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function email(...rest: unknown[]): AnyValidator {
-  const [{ allowPlus = true, domain, local, message }, checks] = split<EmailOptions, string>(rest);
+  const [{ allowPlus = true, domain, local, message }, checks] = split<EmailOptions, string>(
+    rest,
+    "allowPlus domain local",
+  );
   assertOption("allowPlus", allowPlus, "boolean");
   assertParts({ domain, local });
   return partsFormat(

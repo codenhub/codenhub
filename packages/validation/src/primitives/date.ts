@@ -53,7 +53,7 @@ const readBound = (name: string, bound: Date | undefined): number | undefined =>
  * @throws {RangeError} When `min` or `max` is an invalid `Date`, or `min` is after `max`.
  */
 export const date = ((...args: unknown[]) => {
-  const [options, checks] = split<DateOptions, Date>(args);
+  const [options, checks] = split<DateOptions, Date>(args, "min max");
   // Bounds are read as times now and reported as new Dates, so neither changing the options later
   // nor changing a reported bound can move them.
   const min = readBound("Minimum date", options.min);

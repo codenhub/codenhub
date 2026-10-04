@@ -1,4 +1,4 @@
-import { detached } from "../core/async";
+import { decided } from "../core/async";
 import { assertFunction, assertText } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
 import { formatFactory } from "../formats/text-format";
@@ -22,10 +22,11 @@ import { formatFactory } from "../formats/text-format";
  * @param name - The name of the format, for the issue. Treat it as part of the format's contract.
  * @param test - Returns `true` for a string of the format.
  * @returns The factory of the validator.
- * @throws {TypeError} When `name` is not text or `test` is not a function.
+ * @throws {TypeError} When `name` is not text or `test` is not a function, and, from the validator,
+ * when `test` returns a promise, which would accept every value: a rule that waits is a check.
  */
 export function format(name: string, test: (text: string) => boolean): Factory<string, MessageOptions> {
   assertText("format(name)", name);
   assertFunction("test", test);
-  return formatFactory(name, (text) => (detached(test, text) ? text : undefined));
+  return formatFactory(name, (text) => (decided("format", test, text) ? text : undefined));
 }

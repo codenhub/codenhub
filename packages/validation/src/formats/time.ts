@@ -27,7 +27,7 @@ export interface TimeOptions extends MessageOptions {
  * @throws {RangeError} When `precision` is not an integer from 0 to 9.
  */
 export const time = ((...args: unknown[]) => {
-  const [{ precision, message }, checks] = split<TimeOptions, string>(args);
+  const [{ precision, message }, checks] = split<TimeOptions, string>(args, "precision");
   const pattern = new RegExp(
     precision === undefined
       ? `^(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d${fractionPattern(undefined)})?$`

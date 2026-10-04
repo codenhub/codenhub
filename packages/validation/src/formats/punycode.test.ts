@@ -37,4 +37,14 @@ describe("isPunycodeHost", () => {
       ),
     ).toEqual(Array(7).fill(false));
   });
+
+  // Node.js writes a letter before `xn--` as such a label, which its own parser then refuses to read.
+  it("should reject a punycode label whose own text starts with xn--, which Node.js cannot read", () => {
+    expect(["xn--xn---9oa.com", "XN--XN--A-9RA.com", "a.xn--xn---9oaa"].map(isPunycodeHost)).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    expect(isPunycodeHost("xn--xnxn---cva.com")).toBe(true);
+  });
 });

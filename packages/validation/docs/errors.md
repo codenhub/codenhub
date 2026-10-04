@@ -74,7 +74,7 @@ The validator reference lists the exact code and `params` each validator reports
 
 ## Turning an issue into text
 
-Validators do not build message text when they fail. That keeps them small, and it means text is a choice you make where you show it. `formatIssue` builds it from a message map, and `englishMessages` is the built-in English one:
+Validators do not build message text when they fail. That keeps them small, and it means text is a choice you make where you show it. `formatIssue` builds it from a message map, and `englishMessages` is the built-in English one. Both word the issues validators return; an issue received from elsewhere, such as JSON from a server you do not control, is input like any other, and a malformed one may throw, so validate it before wording it:
 
 ```ts
 import { englishMessages, formatIssue, number } from "@codenhub/validation";
@@ -101,7 +101,7 @@ An issue held in another's `params.issues` keeps the issues behind it only when 
 
 ### Rewording and localizing
 
-A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`, and the map it was found in, so it can word an issue nested in `params` with `formatIssue(nested, messages)` and the same map. To change some of the English, spread `englishMessages` and override the codes you want; to translate, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
+A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`, and the map it was found in, so it can word an issue nested in `params` with `formatIssue(nested, messages)` and the same map. To change some of the English, spread `englishMessages` and override the codes you want, since it is frozen and cannot be changed in place; to translate, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
 
 ```ts
 import { englishMessages, formatIssue, type Messages } from "@codenhub/validation";

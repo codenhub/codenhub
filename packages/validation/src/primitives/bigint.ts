@@ -41,7 +41,7 @@ const isBigint = (input: unknown): boolean => typeof input === "bigint";
  * @throws {RangeError} When no bigint can satisfy the bounds together.
  */
 export const bigint = ((...args: unknown[]) => {
-  const [options, checks] = split<BigintOptions, bigint>(args);
+  const [options, checks] = split<BigintOptions, bigint>(args, "min max gt lt");
   const { min, max, gt, lt, message } = options;
   for (const [name, bound] of Object.entries({ min, max, gt, lt })) {
     assertOption(name, bound, "bigint");

@@ -61,7 +61,10 @@ export interface DatetimeOptions extends MessageOptions {
  * @throws {RangeError} When `precision` is not an integer from 0 to 9.
  */
 export const datetime = ((...args: unknown[]) => {
-  const [{ offset, local, precision, message }, checks] = split<DatetimeOptions, string>(args);
+  const [{ offset, local, precision, message }, checks] = split<DatetimeOptions, string>(
+    args,
+    "offset local precision",
+  );
   assertOption("offset", offset, "boolean");
   assertOption("local", local, "boolean");
   const fraction = fractionPattern(precision);

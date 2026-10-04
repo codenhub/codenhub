@@ -1,4 +1,4 @@
-import { chain, collect, type Maybe } from "../core/async";
+import { chain, collect, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
 import { append, below, call, composed } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
@@ -96,7 +96,7 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
     return shape[key] as AnyValidator;
   });
   const known = new Set(keys);
-  const [options, reject, accept] = tail<ObjectOptions, Record<string, unknown>>(rest);
+  const [options, reject, accept] = tail<ObjectOptions, Record<string, unknown>>(rest, "unknownKeys");
   const unknownKeys = options.unknownKeys ?? "strip";
   if (unknownKeys !== "strip" && unknownKeys !== "strict" && unknownKeys !== "passthrough") {
     throw new TypeError(`unknownKeys must be "strip", "strict" or "passthrough", received "${String(unknownKeys)}"`);
@@ -125,8 +125,8 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
             .filter((key) => !known.has(key))
             .map((key) => [key, input[key]] as const)
         : [];
-    const results = values.map((value, index) =>
-      call(validators[index] as AnyValidator, value, below(place, keys[index] as string)),
+    const results = runEach(values.length, (index) =>
+      call(validators[index] as AnyValidator, values[index], below(place, keys[index] as string)),
     );
     return chain(collect(results), (settled) => {
       const output: Record<string, unknown> = {};

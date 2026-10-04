@@ -59,6 +59,13 @@ function assertLimit(name: string, value: number): void {
  */
 let openDepth = 0;
 
+/**
+ * The count of the `lazy` whose getter is running, which a `lazy` made by that getter shares. A schema
+ * built anew at every level, by a getter that calls the function that builds it, would otherwise make
+ * a `lazy` with a fresh count at every level, and its work would have no bound.
+ */
+let building: object | undefined;
+
 /** A result a `lazy` kept, and the place it was found at. */
 interface Kept {
   readonly place: Place;
@@ -120,7 +127,7 @@ function isSamePath(left: Place, right: Place): boolean {
  * `maxCalls` does not bound recursion through it. Put asynchronous work in a check, or bound such a
  * validator yourself. The issues of
  * the options that failed are kept, about 1 KB per call, so the default holds a validation stopped by the
- * limit to about 10 MB and a few tens of milliseconds for each `lazy`. Raise it for trusted recursive data with more nodes
+ * limit to about 10 MB and a few tenths of a second for each `lazy`. Raise it for trusted recursive data with more nodes
  * than that in one validation. For recursive objects told apart by a property, `tagged` reads that
  * property first and validates only the matching variant.
  *
@@ -155,15 +162,18 @@ export function lazy<TValidator extends AnyValidator>(
 ): AsyncValidator<Infer<TValidator>>;
 export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("getter", getter);
-  const [options, reject, accept] = tail<LazyOptions, unknown>(rest);
+  const [options, reject, accept] = tail<LazyOptions, unknown>(rest, "maxDepth maxCalls");
   const { maxDepth = DEFAULT_MAX_DEPTH, maxCalls = DEFAULT_MAX_CALLS } = options;
   assertLimit("maxDepth", maxDepth);
   assertLimit("maxCalls", maxCalls);
   let resolved: AnyValidator | undefined;
-  // Names this `lazy` to the count of calls, which keeps one per `lazy`.
+  // Names this `lazy` to the results it keeps, which are its own, since another `lazy` may validate
+  // the same object at the same path otherwise.
   const self = {};
+  // Names this `lazy` to the count of calls: its own, or that of the `lazy` whose getter made it.
+  const counted = building ?? self;
   const validate = (input: unknown, place: Place): Maybe<ValidationResult<unknown>> => {
-    if (spendCall(self, maxCalls)) {
+    if (spendCall(counted, maxCalls)) {
       return reject([issue("too_big", { maximum: maxCalls, type: "calls" })], place);
     }
     if (openDepth >= maxDepth) {
@@ -172,7 +182,14 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
     openDepth += 1;
     try {
       if (resolved === undefined) {
-        const found: unknown = detached(getter, undefined);
+        const previous = building;
+        building = counted;
+        let found: unknown;
+        try {
+          found = detached(getter, undefined);
+        } finally {
+          building = previous;
+        }
         if (typeof found !== "function") {
           throw new TypeError(`getter() must return a function, received ${found === null ? "null" : typeof found}`);
         }

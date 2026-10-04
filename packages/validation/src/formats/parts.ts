@@ -1,4 +1,4 @@
-import { chain, collect, type Maybe } from "../core/async";
+import { chain, collect, runEach, type Maybe } from "../core/async";
 import { finish, word } from "../core/checks";
 import { setOwn } from "../core/objects";
 import { assertFunction, failWith, issue, nested, repeatedKey, typeIssue } from "../core/result";
@@ -83,7 +83,11 @@ export function partsFormat(
       return failWith(word(reading.issues, message));
     }
     const { value, parts } = reading;
-    return chain(collect(parts.map(([, validator, part]) => validator(part))), (results) => {
+    const pending = runEach(parts.length, (index) => {
+      const [, validator, part] = parts[index] as Part;
+      return validator(part);
+    });
+    return chain(collect(pending), (results) => {
       const issues: ValidationIssue[] = [];
       results.forEach((result, index) => {
         if (!result.ok) {

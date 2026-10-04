@@ -28,7 +28,7 @@ string(
 );
 ```
 
-The test receives the value the validator produced, after its clean-up, and returns `true` when the value is acceptable. The second argument is the issue to report when it returns `false`: a string is its message, and an object can set a `code`, `path`, `params` and `message`. Without it the issue has code `custom` at the value's own location. An issue without a message of its own is worded by the `message` option of the validator the check is given to, when it has one.
+The test receives the value the validator produced, after its clean-up, and returns `true` when the value is acceptable. The second argument is the issue to report when it returns `false`: a string is its message, a function of the issue words it when it is reported, as the message of a built-in check does, and an object can set a `code`, `path`, `params` and `message`. A `path` is a list of keys and indexes; anything else, such as text or a symbol, throws a `TypeError` when the check is made. Without it the issue has code `custom` at the value's own location. An issue without a message of its own is worded by the `message` option of the validator the check is given to, when it has one.
 
 A check runs once the value has its type and has passed the validator's own options, so `string({ max: 30 }, check(isFree))` never asks about a name longer than 30 characters. For an object that means once every property has passed, so a check can compare them and rely on their types. Point the issue at the field the user should fix with `path`:
 
@@ -66,7 +66,7 @@ const password = string({ min: 12 }, strongPassword);
 
 ### A format with `format`
 
-`format(name, test)` makes the factory of a string format, which behaves as `email()` or `uuid()` do: a non-string fails with `invalid_type`, and a string the test rejects with `invalid_format` and `params.format` set to `name`. The string is produced as written.
+`format(name, test)` makes the factory of a string format, which behaves as `email()` or `uuid()` do: a non-string fails with `invalid_type`, and a string the test rejects with `invalid_format` and `params.format` set to `name`. The string is produced as written. The test must answer at once: one that returns a promise throws a `TypeError` when the validator runs, since a pending answer would pass every value, and a rule that waits is a check, [below](#asynchronous-rules).
 
 ```ts
 import { format } from "@codenhub/validation";
@@ -81,7 +81,7 @@ postcode({ message: "Enter a ZIP code" })("abc"); // { ok: false, ... }
 
 ### A type with `guard`
 
-`guard(expected, typeGuard)` makes the factory of a validator for any type from a type guard. A value the guard rejects fails with `invalid_type` and `params.expected` set to `expected`:
+`guard(expected, typeGuard)` makes the factory of a validator for any type from a type guard. A value the guard rejects fails with `invalid_type` and `params.expected` set to `expected`. The guard must answer at once, as the test of `format` must:
 
 ```ts
 import { guard, object } from "@codenhub/validation";
@@ -175,6 +175,8 @@ const existingUser: AsyncValidator<User> = async (input) => {
   return user ? pass(user) : fail({ code: "unknown_user" });
 };
 ```
+
+What such a validator calls after its own await is a validation of its own, apart from the one that reached it, since the package cannot follow an await it did not make: a `lazy` it reaches counts its `maxCalls` afresh, so recursion through it is not bounded. Keep the await in a check, whose awaits the package makes, when the validator leads back to a recursive schema.
 
 Things to know about asynchronous validation:
 

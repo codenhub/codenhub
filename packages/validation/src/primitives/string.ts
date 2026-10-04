@@ -57,7 +57,10 @@ const lengthIssue = (code: "too_small" | "too_big", bound: number, isExact: bool
  * is not a boolean, or a check is not a function.
  */
 export const string = ((...args: unknown[]) => {
-  const [options, checks] = split<StringOptions, string>(args);
+  const [options, checks] = split<StringOptions, string>(
+    args,
+    "min max length trim case pattern startsWith endsWith includes lowercase uppercase",
+  );
   assertMigrated("string", options, {
     pattern: "the check string(pattern(re))",
     startsWith: "the check string(startsWith(text))",

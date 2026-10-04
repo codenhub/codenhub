@@ -35,6 +35,31 @@ describe("coerceDate", () => {
     expect(valueOf(utc("2026-09-28T14:30+02:00")).toISOString()).toBe("2026-09-28T12:30:00.000Z");
   });
 
+  it("should read every text and number the same under any timezone of the machine", () => {
+    const inputs = ["2026-09-28", "2026-09-28T14:30", "2026-09-28T14:30:00+02:00", "2026-09-28 23:59:59.999Z", 0];
+    const read = (): unknown[] =>
+      inputs
+        .flatMap((input) => [coerceDate()(input), coerceDate({ zoneless: "utc" })(input)])
+        .map((result) => (result.ok ? result.value.toISOString() : result.error.issues[0]?.code));
+    const original = process.env["TZ"];
+    try {
+      const readings = ["UTC", "Pacific/Kiritimati", "America/Sao_Paulo", "Australia/Lord_Howe"].map((zone) => {
+        // Node.js reads the timezone again whenever TZ is set.
+        process.env["TZ"] = zone;
+        return read();
+      });
+      for (const reading of readings) {
+        expect(reading).toEqual(readings[0]);
+      }
+    } finally {
+      if (original === undefined) {
+        delete process.env["TZ"];
+      } else {
+        process.env["TZ"] = original;
+      }
+    }
+  });
+
   it("should reject a zoneless option other than utc when created", () => {
     expect(() => coerceDate({ zoneless: "local" as never })).toThrow(
       new TypeError('zoneless must be "utc", received string'),

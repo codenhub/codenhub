@@ -4,6 +4,7 @@ import { unique } from "../checks/unique";
 import type { Check } from "../core/types";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
+import { unknown } from "../primitives/unknown";
 import { accepts, codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { array } from "./array";
 import { object } from "./object";
@@ -99,6 +100,24 @@ describe("array", () => {
         path: [1],
         params: { unique: true },
       });
+    });
+
+    it("should compare as a Set does, so NaN repeats NaN and -0 repeats 0", () => {
+      expect(
+        issuesOf(array(unknown(), unique() as Check<unknown[]>)([Number.NaN, Number.NaN, 0, -0])).map(
+          ({ path }) => path,
+        ),
+      ).toEqual([[1], [3]]);
+    });
+
+    it("should let an exception from the key function propagate, as from any callback", () => {
+      const broken = array(
+        number(),
+        unique(() => {
+          throw new Error("no key");
+        }),
+      );
+      expect(() => broken([1])).toThrow("no key");
     });
 
     it("should compare by the key a function returns", () => {

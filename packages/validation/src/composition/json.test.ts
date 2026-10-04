@@ -7,6 +7,11 @@ import { json } from "./json";
 import { object } from "./object";
 
 describe("json", () => {
+  it("should parse text nested far deeper than any stack without throwing", () => {
+    const levels = 1_000_000;
+    expect(json()(`${"[".repeat(levels)}${"]".repeat(levels)}`).ok).toBe(true);
+  });
+
   it("should parse text holding JSON and produce unknown without a validator", () => {
     expect(valueOf(json()('{"a":[1,2]}'))).toEqual({ a: [1, 2] });
     expect(valueOf(json()("42"))).toBe(42);

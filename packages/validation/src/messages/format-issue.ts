@@ -121,7 +121,9 @@ export function flatten(failure: ValidationFailure, messages: Messages): Flatten
   const flattened: FlattenedErrors = { formErrors: [], fieldErrors };
   for (const issue of failure.issues) {
     const message = formatIssue(issue, messages);
-    if (issue.path.length === 0) {
+    // An issue without a path, which a validator written by hand may report, is about the whole value,
+    // as everywhere else.
+    if (issue.path === undefined || issue.path.length === 0) {
       flattened.formErrors.push(message);
     } else {
       (fieldErrors[formatPath(issue.path)] ??= []).push(message);
