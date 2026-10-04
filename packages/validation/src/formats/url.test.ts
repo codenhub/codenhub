@@ -360,6 +360,16 @@ describe("url without a host", () => {
     ).toEqual([false, false, false, true]);
   });
 
+  it("should reject any other encoded control character or line separator in the subject", () => {
+    const subjects = ["%00", "%1b", "%09", "%7F", "%C2%85", "%e2%80%a8", "%E2%80%A9"];
+    expect(accepts(mailto, ...subjects.map((code) => `mailto:ada@example.com?subject=Hi${code}`))).toEqual(
+      Array(subjects.length).fill(false),
+    );
+    expect(
+      accepts(mailto, "mailto:ada@example.com?subject=%C3%A9t%C3%A9%20%E2%82%AC", "mailto:a@example.com?body=a%09b"),
+    ).toEqual([true, true]);
+  });
+
   it("should reject a repeated subject or body, and accept repeated recipient fields", () => {
     expect(
       accepts(

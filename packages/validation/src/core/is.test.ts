@@ -15,6 +15,11 @@ describe("is", () => {
     expect(is(number(), "text")).toBe(false);
   });
 
+  it("should give a boolean even when a validator written by hand sets ok to something else", () => {
+    expect(is((() => ({ ok: 1 })) as never, "text")).toBe(false);
+    expect(is((() => ({ ok: true, value: 1 })) as never, "text")).toBe(true);
+  });
+
   it("should throw a TypeError naming the fix when the validator is asynchronous", () => {
     const asynchronous = (async (input) => pass(input)) as AsyncValidator<unknown> as Validator<unknown>;
     expect(() => is(asynchronous, 1)).toThrow(/needs a synchronous validator/);

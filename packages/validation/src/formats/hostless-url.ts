@@ -34,11 +34,13 @@ const RECIPIENT_FIELD_PATTERN = /^(?:to|cc|bcc)$/;
  */
 const TEXT_VALUE_PATTERN = /^(?:[\w.~!$'()*+,;:@/?-]|%[0-9a-f]{2})*$/i;
 /**
- * An encoded line break, which RFC 6068 expects in a `body` alone. In a `subject` it would end the header
- * line, so a mail program that writes it into the message unescaped would read what follows, such as
- * `Bcc: …`, as another header.
+ * An encoded control character, as UTF-8 escapes: the C0 controls and `DEL`, the C1 controls, and the line
+ * and paragraph separators. RFC 6068 expects a line break in a `body` alone. In a `subject` it would end
+ * the header line, so a mail program that writes it into the message unescaped would read what follows,
+ * such as `Bcc: …`, as another header, and the rest, such as `%00`, which a program may read as the end of
+ * the text, or a line separator, which some read as a line break, have no place in one line either.
  */
-const LINE_BREAK_PATTERN = /%0[ad]/i;
+const CONTROL_PATTERN = /%(?:[01][\da-f]|7f|c2%[89][\da-f]|e2%80%a[89])/i;
 /**
  * Characters of an address that a mailto URL must escape (RFC 6068): all but letters, digits, `@` and
  * `_ . ~ ! $ ' * + -`. Only a local part holds any, such as `?`, `&`, `#` or `%`, which would end the
@@ -51,8 +53,8 @@ const MAILTO_ESCAPED_PATTERN = /[^\w.~!$'*+@-]/g;
  * it and every field name in lowercase, or undefined when it is not a mailto. Every field of the query
  * must be `name=value` with a name from an allowlist: `to`, `cc` and `bcc`, whose recipients must pass
  * as addresses like those in the path, and `subject` and `body`, each at most once, whose text must be
- * written as RFC 6068 allows and is kept as written, encoded line breaks included in `body` and refused in
- * `subject`.
+ * written as RFC 6068 allows and is kept as written, encoded line breaks included in `body`, while
+ * `subject` refuses every encoded control character.
  */
 function toMailto(rest: string, allowLocal: boolean): string | undefined {
   const queryStart = rest.indexOf("?");
@@ -79,7 +81,7 @@ function toMailto(rest: string, allowLocal: boolean): string | undefined {
     isMailto &&= separator !== -1 && FIELD_PATTERN.test(name);
     if (!RECIPIENT_FIELD_PATTERN.test(name)) {
       isMailto &&=
-        TEXT_VALUE_PATTERN.test(value) && !texts.has(name) && (name !== "subject" || !LINE_BREAK_PATTERN.test(value));
+        TEXT_VALUE_PATTERN.test(value) && !texts.has(name) && (name !== "subject" || !CONTROL_PATTERN.test(value));
       texts.add(name);
       return `${name}=${value}`;
     }

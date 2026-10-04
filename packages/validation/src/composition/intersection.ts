@@ -1,7 +1,7 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { call, composed } from "../core/nesting";
-import { entriesOf, isPlainObject, setOwn, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "../core/objects";
+import { entriesOf, isArray, isPlainObject, setOwn, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "../core/objects";
 import { assertFunction, failWith, issue } from "../core/result";
 import type {
   AnyValidator,
@@ -78,7 +78,8 @@ function mergeOne(pending: Pending, inner: Step[], conflicts: ValidationIssue[],
     inner.push({ ...pair, parent: pending });
   };
 
-  if (Array.isArray(left) && Array.isArray(right) && left.length === right.length) {
+  // `isArray` and not `Array.isArray`, which throws for a revoked proxy one side passed through as it is.
+  if (isArray(left) && isArray(right) && left.length === right.length) {
     const output = remember<unknown[]>(Array.from({ length: left.length }));
     for (let index = 0; index < left.length; index += 1) {
       const place = (value: unknown): void => {

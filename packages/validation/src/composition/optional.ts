@@ -20,7 +20,7 @@ type Fallback<T> = [Extract<T, AnyFunction>] extends [never] ? (T & LiteralValue
  * Given a default, `undefined` is replaced by it instead, the output type no longer includes
  * `undefined`, and inside `object` the property is always present in the output. The default is
  * trusted and is not run through the wrapped validator. A primitive is used as it is, and a function is
- * called for every use to produce the default. An object or an array must come from a function, such as
+ * called for every use, with no argument, to produce the default. An object or an array must come from a function, such as
  * `() => []`, since one value would be shared by every result and a change to one would show up in the
  * next: the types reject it, and so does `optional` when it is created. To use a function as the default
  * value itself, return it from a function, `optional(func(), () => noop)`, which the types require when
@@ -55,7 +55,9 @@ export function optional(validator: AnyValidator, value?: Fallback<unknown>): An
   assertUnshared("A default object", value);
   return composed((input, place) =>
     input === undefined
-      ? pass(typeof value === "function" ? detached(value as () => unknown, undefined) : value)
+      ? // Called with no argument, as its type says, so a function that reads one, such as `Array` or
+        // `String`, produces its default and not one made from `undefined`.
+        pass(typeof value === "function" ? detached(() => (value as () => unknown)(), undefined) : value)
       : call(validator, input, place),
   );
 }
