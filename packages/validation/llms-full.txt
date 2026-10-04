@@ -78,8 +78,8 @@ Write a rule of your own with `check`, including one that needs to `await` somet
 
 ## Requirements
 
-- Node.js 22 or newer, or a current browser, worker or edge runtime. The code relies on `Object.hasOwn`, and `url()`, `email()`, `domain()` and `hostname()` on `URL.canParse`, which a runtime without it, such as Safari before 17, lacks, so they throw there. `ip()` and `cidr()` use the `URL` parser too.
-- ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`, so a bundler removes the validators you do not import. CommonJS code can `require()` it on Node.js 22.12 or newer, which load ES modules that way.
+- Node.js 24 or newer, or a current browser, worker or edge runtime. The code relies on `Object.hasOwn`, and `url()`, `email()`, `domain()` and `hostname()` on `URL.canParse`, which a runtime without it, such as Safari before 17, lacks, so they throw there. `ip()` and `cidr()` use the `URL` parser too.
+- ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`, so a bundler removes the validators you do not import. CommonJS code can `require()` it, since every supported Node.js version loads ES modules that way.
 
 Runtime code uses only standard JavaScript and the standard `URL` global, and nothing specific to a browser or to Node.js, so it runs in the browser, on the server and in workers.
 
@@ -1285,6 +1285,7 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 
 ## Changed
 
+- **Breaking.** The package requires Node.js 24 or newer, where it declared 22. CI had only ever run it on 24, so the 22 claim was untested; it now names the line CI runs. Browser, worker and edge runtimes are unaffected. ([#203](https://github.com/codenhub/codenhub/issues/203))
 - **Breaking.** Every factory throws a `TypeError` naming an option it does not read, such as `array(item, { maxx: 3 })` or `string({ mni: 2 })`, where 0.1.0 ignored it and left the limit it was meant to set unset. TypeScript already reported such a name, but not one passed through a loosely typed variable, read from configuration or written in JavaScript.
 - **Breaking.** `url({ host })` gives a host validator, for `http`, `https` and the other schemes the URL Standard has rules for, only a host of lowercase letters, digits, `.`, `-` and `_`, an IPv4 address not written with a bare `0x` part, or an IPv6 address without a leading zero in its IPv4 tail, where 0.1.0's `allowLocal` passed `a*b.com`, which Firefox refuses and Chromium writes as `a%2Ab.com`, and passed in Chromium `a%20.com` and `[::01.2.3.4]`, which Node.js refuses.
 - **Breaking.** `jwt()` rejects a token whose header or payload holds a key twice in any object, as in `{"alg":"none","alg":"HS256"}`, which JSON parsers read as different algorithms or claims.

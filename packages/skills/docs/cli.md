@@ -10,7 +10,7 @@ The `codenhub-skills` executable copies bundled skill directories into supported
 pnpm dlx @codenhub/skills@latest
 ```
 
-Use `npx @codenhub/skills@latest` for the npm equivalent. Node.js 22 or newer is required.
+Use `npx @codenhub/skills@latest` for the npm equivalent. Node.js 24 or newer is required.
 
 ## Modes
 

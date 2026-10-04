@@ -5,7 +5,7 @@ import vitestConfig from "../vitest.config";
 
 describe("package configuration", () => {
   it("should declare the supported Node.js baseline", () => {
-    expect(packageJson.engines?.node).toBe(">=22");
+    expect(packageJson.engines?.node).toBe(">=24");
   });
 
   it("should not silently exclude conventional source tests", () => {

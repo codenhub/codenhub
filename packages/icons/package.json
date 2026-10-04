@@ -167,7 +167,7 @@
     }
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "codenhub": {
     "docs": {

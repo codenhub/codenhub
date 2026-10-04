@@ -63,7 +63,7 @@
     "vitest": "catalog:"
   },
   "engines": {
-    "node": ">=24.14.1"
+    "node": ">=24"
   },
   "codenhub": {
     "docs": {

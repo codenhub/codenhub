@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-03
+last_updated: 2026-10-04
 scope: Continuous integration workflows, the pinned workspace toolchain, and the checks that report on pull requests.
 ---
 
@@ -20,6 +20,8 @@ Local and CI runs resolve the same versions, declared once each:
 | `.npmrc` `engine-strict`        | Makes an install outside `engines` fail        |
 
 CI reads those same files rather than repeating a version: `pnpm/action-setup` takes the pnpm version from `packageManager`, and `actions/setup-node` takes the Node version from `.nvmrc`. A version is therefore raised in one place, and a machine that cannot satisfy it is told at install time instead of failing later in a way nobody can reproduce.
+
+CI runs that one Node.js version and no other, for the packages as for the repository. A published package's `engines.node` floor is therefore the pinned major, so it names a line CI tests. `docs/specs/packages-lifecycle.md`, "Node.js support", owns that rule, why no job tests an older floor, and what moving `.nvmrc` to a new major requires.
 
 `engine-strict` is deliberate friction. A patch-level Node difference rarely matters, and the one time it does, the failure looks like a bug in the change being reviewed rather than a difference in the runtime.
 

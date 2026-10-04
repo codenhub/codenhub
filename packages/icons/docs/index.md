@@ -36,7 +36,7 @@ Four delivery methods understand the same classes — plain CSS, Tailwind CSS v4
 
 | Requirement  | Details                                                                               |
 | ------------ | ------------------------------------------------------------------------------------- |
-| Node.js      | 22.0.0 or newer, for the build-time plugins and helpers.                              |
+| Node.js      | 24 or newer, for the build-time plugins and helpers.                                  |
 | CSS imports  | Consumer tooling must resolve package CSS imports.                                    |
 | Browsers     | Must support CSS `mask-image`; icons render through masks tinted with `currentColor`. |
 | Tailwind CSS | Version 4 or newer, and only for the `/tw` and `/tailwind` entry points.              |

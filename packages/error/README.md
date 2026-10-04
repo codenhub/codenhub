@@ -35,7 +35,7 @@ Unmatched values become `type: "unknown"` and use `"An unexpected error occurred
 
 ## Requirements
 
-- Node.js 22 or newer, or an ES2022-compatible browser, worker, or edge runtime.
+- Node.js 24 or newer, or an ES2022-compatible browser, worker, or edge runtime.
 - Native `Error` cause support.
 - ESM-aware package resolution.
 - No runtime dependencies.

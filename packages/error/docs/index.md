@@ -37,7 +37,7 @@ Configure the mutable global registry during application initialization, or crea
 
 ## Requirements
 
-- Node.js 22 or newer, or an ES2022-compatible browser, worker, or edge runtime, is required.
+- Node.js 24 or newer, or an ES2022-compatible browser, worker, or edge runtime, is required.
 - Native `Error` cause support is required.
 - ESM-aware package resolution is required.
 - The package has no runtime dependencies.

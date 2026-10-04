@@ -69,7 +69,7 @@ describe("built declarations", () => {
 });
 
 describe("built package", () => {
-  it("loads with require, as the README promises for Node.js 22.12 and later", () => {
+  it("loads with require, as the README promises for every supported Node.js version", () => {
     expect(existsSync(`${packageRoot}dist/index.js`), "run `pnpm build validation` first: this test reads dist/").toBe(
       true,
     );

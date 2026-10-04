@@ -37,7 +37,7 @@ Unmatched values become `type: "unknown"` and use `"An unexpected error occurred
 
 ## Requirements
 
-- Node.js 22 or newer, or an ES2022-compatible browser, worker, or edge runtime.
+- Node.js 24 or newer, or an ES2022-compatible browser, worker, or edge runtime.
 - Native `Error` cause support.
 - ESM-aware package resolution.
 - No runtime dependencies.
@@ -99,7 +99,7 @@ Configure the mutable global registry during application initialization, or crea
 
 ## Requirements
 
-- Node.js 22 or newer, or an ES2022-compatible browser, worker, or edge runtime, is required.
+- Node.js 24 or newer, or an ES2022-compatible browser, worker, or edge runtime, is required.
 - Native `Error` cause support is required.
 - ESM-aware package resolution is required.
 - The package has no runtime dependencies.
@@ -285,6 +285,7 @@ const output = match(doubled, {
 
 ## Changed
 
+- **Breaking.** The package requires Node.js 24 or newer, where it declared 22. CI had only ever run it on 24, so the 22 claim was untested; it now names the line CI runs. Browser, worker and edge runtimes are unaffected. ([#203](https://github.com/codenhub/codenhub/issues/203))
 - **Breaking.** Strings are classified against the registry at every wrapper depth. Previously only a top-level string bypassed matching, so `err("Failed to fetch")` resolved to the generic fallback while `err({ cause: "Failed to fetch" })` resolved through the registry. A message, prefix, or pattern mapping that matches a top-level string passed to `createAppError` or `err()` now produces a known or unexpected result instead of `unknown`. Registry messages are curated and an unmatched string still resolves to the fallback, so nothing raw reaches a consumer either way.
 - **Breaking.** `ok` and `err` results are frozen, so code that mutated one now fails.
 - **Breaking.** The browser fetch and network pattern uses its own `error.browser.requestFailed` key rather than `error.browser.network`, so no translation key has to cover two different fallback messages. A translation map covering the old key needs the new one.

@@ -40,7 +40,7 @@ console.log(i18n.translate("home.title")); // "Bem-vindo"
 ## Requirements
 
 - ESM-aware package resolution.
-- Node.js 24.14.1 or newer, or a current Chromium, Firefox, WebKit, or browser Web Worker runtime with the required standard globals.
+- Node.js 24 or newer, or a current Chromium, Firefox, WebKit, or browser Web Worker runtime with the required standard globals.
 - Core requires standard `Event` and `EventTarget` globals and has no runtime dependencies.
 - Browser features require `navigator`, `document`, `localStorage`, or `MutationObserver` only when their related behavior is enabled.
 - Do not overlap `initializeBrowserI18n()` with direct `init()` calls on the same manager; a superseded browser initialization rejects and releases its binding.

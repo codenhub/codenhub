@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-03
+last_updated: 2026-10-04
 scope: Public workspace packages.
 ---
 
@@ -36,6 +36,20 @@ Public package `package.json` files MUST include:
 Public package metadata SHOULD include `description`, `license`, and repository links when package publishing is ready.
 
 Public packages SHOULD also ship a `LICENSE` file at the package root, carrying the terms the `license` field names. The field states the terms; the file is what a consumer receives, and npm packs it whether or not `files` lists it. The repository root ships the same file for the repository itself.
+
+## Node.js support
+
+A public package that runs on Node.js, whether as a library, a CLI, or a build-time plugin, MUST declare `engines.node` as `>=<major>`, where `<major>` is the Node.js major line pinned in `.nvmrc`, today `>=24`. Its README `Requirements` section and public docs MUST state the same floor. Packages run on Node.js 24 or newer for the same reason the repository's own toolchain does: it is the only version CI runs.
+
+- **Floor tracks what CI tests.** CI runs the pinned version and nothing else (`docs/ci.md`, "Toolchain"), so the pinned major is the only line a floor can name and still be tested. A floor below it is a claim no run checks. Before this rule, four packages declared `>=22` and their READMEs repeated it, but no CI run had ever used Node.js 22.
+- **The major, not the patch.** The floor names the line, `>=24`, not the pinned patch, `>=24.14.1`. The patch is a toolchain choice, not something a package needs, so naming it would turn away consumers on earlier 24.x releases for no reason. The cost is that CI tests one patch of the line, not its first.
+- **A higher floor needs a reason.** A package MAY declare a higher floor when it needs an API the pinned major lacks. It MUST name that API next to the floor in its README `Requirements`, so the next person can tell when the reason no longer applies.
+- **No upper bound.** Packages declare no `<25`. CI does not test a newer major either, but blocking an install on one would only break a consumer whose code most likely works. The repository root keeps its upper bound, because the root bound guards the toolchain, not a consumer.
+- **Browser-only packages declare nothing.** A package that runs only in a browser, worker, or edge runtime MUST NOT declare `engines.node`. Its unit tests run under Node.js, but that is test infrastructure, not a promise to consumers. A package that runs on Node.js as well as in browsers, such as `@codenhub/validation`, falls under the rule above.
+
+Narrowing `engines` is a breaking change, so the pinned major moves deliberately. A change that moves `.nvmrc` to a new major MUST either raise every floor with it, which makes each affected package's next release breaking, or add a CI job that keeps testing the old floor until those packages raise theirs.
+
+Rejected alternative: the oldest maintained Node.js LTS as the floor (22 until its end of life in April 2027), with a CI job that reads each package's `engines` and runs a changed package's unit tests on its floor. It would have kept Node.js 22 consumers six months longer. In exchange it added a second runtime to the runs of every changed package, plus scoping logic to skip the others, and the job's work would disappear when 22 reached end of life. A trial of that job in [#202](https://github.com/codenhub/codenhub/pull/202) passed on 22, so the cost was not breakage, only CI weight for a short window. Decided in [#203](https://github.com/codenhub/codenhub/issues/203).
 
 ## Required scripts
 
