@@ -118,7 +118,8 @@ export function finish<T>(
       }
       // Pushed one by one: spreading a long list into `push` would overflow the stack.
       for (const each of list ?? []) {
-        if (typeof each !== "object" || each === null) {
+        // An array is an object too, and spread into an issue would give it keys `0`, `1` and so on.
+        if (typeof each !== "object" || each === null || Array.isArray(each)) {
           throw new TypeError(CHECK_RESULT_ERROR);
         }
         issues.push({ ...each, code: each.code ?? "custom", path: each.path ?? [] });

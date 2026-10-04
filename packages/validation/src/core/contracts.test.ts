@@ -196,6 +196,9 @@ describe("a message function", () => {
     expect(() => number((() => [null]) as never)(1)).toThrow(
       new TypeError("A check must return undefined or a list of issues"),
     );
+    expect(() => number((() => [[]]) as never)(1)).toThrow(
+      new TypeError("A check must return undefined or a list of issues"),
+    );
     expect(issuesOf(number((() => [{}]) as never)(1))).toEqual([{ code: "custom", path: [] }]);
   });
 

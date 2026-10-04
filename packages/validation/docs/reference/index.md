@@ -2898,7 +2898,7 @@ domain()("localhost"); // { ok: false, ... }, code "invalid_format"
 export declare const duration: Factory<string, MessageOptions>;
 ```
 
-Creates a validator for ISO 8601 durations such as `P1Y2M`, `PT30M` or `P1DT12H`. The value is not modified. Only the seconds may have a fraction, written with a dot, which is stricter than ISO 8601 and the same as `Temporal.Duration`, weeks may be combined with other units, as in `P1W2D`, and a negative duration, `-P1D`, is rejected.
+Creates a validator for ISO 8601 durations such as `P1Y2M`, `PT30M` or `P1DT12H`. The value is not modified. Only the seconds may have a fraction, written with a dot, which is stricter than ISO 8601 and than `Temporal.Duration`, both of which accept `PT1.5H` and `PT1,5S`, weeks may be combined with other units, as in `P1W2D`, and a negative duration, `-P1D`, is rejected.
 
 **Example**
 
