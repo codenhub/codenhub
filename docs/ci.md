@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-03
+last_updated: 2026-10-04
 scope: Continuous integration workflows, the pinned workspace toolchain, and the checks that report on pull requests.
 ---
 
@@ -44,17 +44,20 @@ The verification sequence builds declarations before `hub check` inspects them. 
 
 The jobs run in parallel except that `browser` and `drift` wait for `playwright`, which takes seconds, and `browser-result` waits on `browser`, so a stale generated file is reported without waiting for the slowest test suite.
 
-| Job              | Runs                                                                                                                     |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `verify`         | `pnpm verify --skip=test:browser <selector>`                                                                             |
-| `playwright`     | Reads the `playwright-core` version from `pnpm-lock.yaml` and names the Playwright image for it                          |
-| `browser`        | In that image: `pnpm hub browsers <selector> -- <engine>`, then `pnpm test:browser <selector> -- --project='*<engine>*'` |
-| `drift`          | `pnpm generate --dry-run`, then an assertion that the working tree is unchanged                                          |
-| `browser-result` | Nothing; it passes only when every `browser` job passed                                                                  |
+| Job                   | Runs                                                                                                                     |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `verify`              | `pnpm verify --skip=test:browser <selector>`                                                                             |
+| `playwright`          | Reads the `playwright-core` version from `pnpm-lock.yaml` and names the Playwright image for it                          |
+| `browser`             | In that image: `pnpm hub browsers <selector> -- <engine>`, then `pnpm test:browser <selector> -- --project='*<engine>*'` |
+| `drift`               | `pnpm generate --dry-run`, then an assertion that the working tree is unchanged                                          |
+| `browser-result`      | Nothing; it passes only when every `browser` job passed                                                                  |
+| `validation-runtimes` | The unit tests of `@codenhub/validation` on Node.js 22 and 24.19, after installing with the pinned version               |
 
 `verify` skips the browser step because the `browser` job owns it. Running it in both would double the slowest part of the run for no extra signal.
 
-`browser` is a matrix of one job per engine — `chromium`, `firefox`, `webkit` — so the workflow runs six jobs in total. The browser suites are by far the slowest thing in a run and the three engines share nothing, so splitting them trades runner minutes, which are cheap, for wall-clock time, which is what anyone waits on. The engines are no longer far apart. Firefox once cost roughly five times what Chromium did on the `styles` suite, which was a fixture problem rather than an engine one: every test took a fresh browser context, and Firefox charges far more for one than the others do. `packages/styles` now shares a context per worker, which brought that suite from 285s to 84s on Firefox. WebKit is the slowest engine on it today, and the matrix is what keeps the slowest one off everybody else’s critical path.
+`validation-runtimes` exists because `@codenhub/validation` is the one package whose answers depend on the Node.js it runs on: `url`, `domain`, `email` and the other formats read text with the runtime's own URL parser, and the package promises one answer in every runtime it supports. Its engines allow Node.js 22, and Node.js 24.16 to 24.19 parse some hosts into URLs whose setters abort the process, which a regression test covers only when it runs on such a version. The pinned version tests neither, so the job installs with it, which `engine-strict` requires, and then runs the package's unit tests on the other: the tests import the source, and Vitest supports both. It runs on every pull request, since it takes about a minute, and the matrix keeps `fail-fast` off for the same reason as the browser jobs.
+
+`browser` is a matrix of one job per engine — `chromium`, `firefox`, `webkit` — so the workflow runs eight jobs in total, counting the two of `validation-runtimes`. The browser suites are by far the slowest thing in a run and the three engines share nothing, so splitting them trades runner minutes, which are cheap, for wall-clock time, which is what anyone waits on. The engines are no longer far apart. Firefox once cost roughly five times what Chromium did on the `styles` suite, which was a fixture problem rather than an engine one: every test took a fresh browser context, and Firefox charges far more for one than the others do. `packages/styles` now shares a context per worker, which brought that suite from 285s to 84s on Firefox. WebKit is the slowest engine on it today, and the matrix is what keeps the slowest one off everybody else’s critical path.
 
 `fail-fast` is off for the matrix. "Firefox broke" and "WebKit broke" are different findings, and cancelling one to report the other hides half of what a run was started to learn.
 

@@ -155,6 +155,43 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # `@codenhub/validation` declares Node.js 22 in its engines and reads URLs and
+  # domains with the runtime's own URL parser, which changes between Node.js
+  # versions, while the workspace runs one pinned version. Its unit tests run here
+  # on the oldest Node.js its engines allow and on 24.19, whose parser aborts the
+  # process when some hosts are written back; `docs/ci.md` has the reasons. The
+  # workspace is installed with the pinned version, which `engine-strict`
+  # requires, and the tests are run with the other one. They are cheap, so they
+  # run on every pull request rather than only when the package changed.
+  validation-runtimes:
+    name: Validation on Node.js ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22", "24.19"]
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+
+      - name: Switch to Node.js ${{ matrix.node }}
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: ${{ matrix.node }}
+
+      # The unit tests import the source, so nothing is built; `npx` runs the
+      # installed Vitest with the Node.js now on the path, where `pnpm` would
+      # check the workspace's engines first.
+      - name: Run the unit tests
+        working-directory: packages/validation
+        run: |
+          node --version
+          npx --no-install vitest run src
+
   # The name a protected `main` requires. A matrix reports one check per engine,
   # so the single check the branch rule names would never arrive and every pull
   # request would wait on it forever. This job carries that name and passes only
