@@ -1,7 +1,7 @@
 import { chain, collect, detached, runEach, type Maybe } from "./async";
 import { placeAll, type Place } from "./nesting";
 import { isPlainObject } from "./objects";
-import { failWith, issue, pass, typeIssue } from "./result";
+import { assertIssue, failWith, issue, pass, typeIssue } from "./result";
 import type {
   AsyncCheck,
   Check,
@@ -66,7 +66,15 @@ export function word(issues: ValidationIssue[], message: Message | undefined): V
   if (message !== undefined) {
     issues.forEach((found, index) => {
       if (found.message === undefined) {
-        issues[index] = { ...found, message: typeof message === "function" ? message(found) : message };
+        const worded: unknown = typeof message === "function" ? message(found) : message;
+        // A function that returns anything but text, such as a translation lookup that missed, would put it
+        // in the issue, and a form would show `undefined` or `[object Object]`.
+        if (typeof worded !== "string") {
+          throw new TypeError(
+            `A message function must return text, received ${worded === null ? "null" : typeof worded}`,
+          );
+        }
+        issues[index] = { ...found, message: worded };
       }
     });
   }
@@ -90,8 +98,10 @@ export const report = (
  * that has no wording of its own, and returns the value or every issue. It stays synchronous while every
  * check is, and while its own issues stop the checks. A check's issues are copied, so
  * a list the check reuses is never changed, and one written by hand without a path, or with an undefined
- * one, is at the value. A check written by hand that returns anything but nothing or a list, such as
- * `false`, is a bug, and throws saying so rather than failing later on what it returned.
+ * one, is at the value, and without a code is `"custom"`, as `fail()` gives it. A check written by hand
+ * that returns anything but nothing or a list, such as `false`, or a list holding something that is not
+ * an issue, such as `null`, a symbol in a path or a number as a message, is a bug, and throws saying so
+ * rather than failing later on what it returned.
  */
 export function finish<T>(
   value: T,
@@ -109,7 +119,8 @@ export function finish<T>(
       }
       // Pushed one by one: spreading a long list into `push` would overflow the stack.
       for (const each of list ?? []) {
-        issues.push({ ...each, path: each.path ?? [] });
+        assertIssue(each);
+        issues.push({ ...each, code: each.code ?? "custom", path: each.path ?? [] });
       }
     }
     return issues.length > 0 ? failWith(word(issues, message)) : pass(value);

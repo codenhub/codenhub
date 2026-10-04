@@ -56,18 +56,34 @@ export const isPath = (path: unknown): boolean =>
  *
  * @param issues - What went wrong. Each defaults to code `"custom"` and to the value's own location.
  * @returns A failed result holding every issue, in order.
- * @throws {TypeError} When called without an issue, or with a `path` that is not a list of keys and
- * indexes, such as `"confirm"`, which would be split into one segment per letter. The types forbid both.
+ * @throws {TypeError} When called without an issue, with a `path` that is not a list of keys and
+ * indexes, such as `"confirm"`, which would be split into one segment per letter, or with a `code` or
+ * `message` that is not text. The types forbid all of them.
  */
 export function fail(...issues: [IssueInput, ...IssueInput[]]): ValidationErr {
   if (issues.length === 0) {
     // The types forbid it, but a failure with no issue says nothing and breaks `issues[0]`.
     throw new TypeError("fail() needs at least one issue");
   }
-  if (issues.some(({ path }) => path !== undefined && !isPath(path))) {
+  issues.forEach(assertIssue);
+  return failWith(issues.map(toIssue));
+}
+
+/**
+ * Rejects an issue written by hand that is not one: not an object, or with a `code` or `message` that is
+ * not text, or a `path` that is not a list of keys and indexes. An issue is plain data a form or a log
+ * shows, so a number as its message, or a symbol in its path, would surface as a bug far from its cause.
+ */
+export function assertIssue(each: unknown): asserts each is IssueInput {
+  if (typeof each !== "object" || each === null) {
+    throw new TypeError(`An issue must be an object, received ${each === null ? "null" : typeof each}`);
+  }
+  const { code, message, path } = each as IssueInput;
+  assertOption("issue.code", code, "string");
+  assertOption("issue.message", message, "string");
+  if (path !== undefined && !isPath(path)) {
     throw new TypeError("issue.path must be a list of keys and indexes");
   }
-  return failWith(issues.map(toIssue));
 }
 
 /** Wraps issues that are already complete into a failed result. Every caller passes at least one. */
