@@ -11,13 +11,20 @@ const PHONE_PATTERN = /^\+[1-9](?:[ .-]?(?:\(\d+\)|\d))*$/;
  * the country, so it has no digit in E.164, and keeping it would make another number.
  */
 const TRUNK_PREFIX_PATTERN = /\(0\)/;
+/**
+ * A second group in parentheses. People write one, around an area code as in `+55 (11) 98765-4321`;
+ * more, as in `+1(2)(3)(4)`, is no way a number is written, and a display that reads the group as the
+ * area code would show the wrong one.
+ */
+const SECOND_GROUP_PATTERN = /\(.*\(/;
 /** E.164 allows at most 15 digits; the shortest numbers in use have 7. */
 const MIN_DIGITS = 7;
 const MAX_DIGITS = 15;
 
 /**
  * Creates a validator for international phone numbers in E.164 form: a `+`, the country code and the
- * number, 7 to 15 digits in all, optionally with spaces, hyphens, dots or parentheses between digits.
+ * number, 7 to 15 digits in all, optionally with spaces, hyphens or dots between digits and one group
+ * of them in parentheses.
  * The value is the canonical E.164 spelling, `+` and the digits alone, so one number is one value
  * however it was written.
  *
@@ -33,7 +40,7 @@ const MAX_DIGITS = 15;
  * ```
  */
 export const phone = /* @__PURE__ */ formatFactory("phone", (text) => {
-  if (!PHONE_PATTERN.test(text) || TRUNK_PREFIX_PATTERN.test(text)) {
+  if (!PHONE_PATTERN.test(text) || TRUNK_PREFIX_PATTERN.test(text) || SECOND_GROUP_PATTERN.test(text)) {
     return undefined;
   }
   const digits = text.replace(/\D/g, "");

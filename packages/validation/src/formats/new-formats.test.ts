@@ -124,6 +124,11 @@ describe("phone", () => {
     expect(valueOf(phone()("+442079460958"))).toBe("+442079460958");
   });
 
+  it("should accept at most one group in parentheses", () => {
+    expect(accepts(phone(), "+55 (11) 98765-4321", "+1 (201) 555-0123")).toEqual([true, true]);
+    expect(accepts(phone(), "+1(2)(3)(4)(5)(6)(7)", "+55 (11) (98765) 4321")).toEqual([false, false]);
+  });
+
   it("should keep a trunk prefix written without parentheses, since the numbering plan is not checked", () => {
     expect(valueOf(phone()("+44 020 7946 0958"))).toBe("+4402079460958");
     expect(phone()("+44 (0)20 7946 0958").ok).toBe(false);
