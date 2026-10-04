@@ -292,12 +292,11 @@ describe("domain", () => {
     ).toEqual(Array(8).fill(false));
   });
 
-  it("should accept an absolute name, keeping its final dot, which the length does not count", () => {
-    expect(valueOf(domain()("Example.COM."))).toBe("example.com.");
-    expect(valueOf(domain()("münchen.de."))).toBe("xn--mnchen-3ya.de.");
+  it("should reject an absolute name ending in a dot, a second spelling of the same host", () => {
+    expect(accepts(domain(), "Example.COM.", "münchen.de.", "example.com..")).toEqual([false, false, false]);
     const longest = `${Array.from({ length: 4 }, () => "a".repeat(61)).join(".")}.abcde`;
     expect(longest).toHaveLength(253);
-    expect(accepts(domain(), `${longest}.`, `${longest}f.`)).toEqual([true, false]);
+    expect(accepts(domain(), longest, `${longest}.`)).toEqual([true, false]);
     expect(accepts(email(), "ada@example.com.")).toEqual([false]);
   });
 

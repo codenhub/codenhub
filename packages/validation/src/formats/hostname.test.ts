@@ -32,14 +32,9 @@ describe("hostname", () => {
     expect(accepts(hostname(), "0x7f.com", "foo.0xg", "foo.x0")).toEqual([true, true, true]);
   });
 
-  it("should accept an absolute name ending in one dot and leave it unchanged", () => {
-    expect(valueOf(hostname()("example.com."))).toBe("example.com.");
-    expect(accepts(hostname(), "localhost.", ".", "example.com..", `${"a".repeat(63)}.${"b".repeat(63)}.`)).toEqual([
-      true,
-      false,
-      false,
-      true,
-    ]);
+  it("should reject an absolute name ending in a dot, a second spelling of the same host", () => {
+    expect(accepts(hostname(), "example.com.", "localhost.", ".", "example.com..")).toEqual(Array(4).fill(false));
+    expect(accepts(hostname(), "example.com", "localhost")).toEqual([true, true]);
   });
 
   it("should accept only names the URL parser reads as a name, never as an IPv4 address", () => {

@@ -12,7 +12,7 @@ import type {
 import { HOSTLESS_SCHEMES, toHostlessUrl } from "./hostless-url";
 import { toCanonicalIpv6 } from "./ip";
 import { assertParts, notFormat, partIssue, partsFormat, readQuery, type Part, type Reading } from "./parts";
-import { HOST_MAX_LENGTH, isIdnHost, isPublicName, withoutFinalDot } from "./patterns";
+import { HOST_MAX_LENGTH, isIdnHost, isPublicHost } from "./patterns";
 
 /**
  * No whitespace and no control characters: a written URL holds neither (RFC 3986), and the parser would
@@ -37,10 +37,10 @@ const SPECIAL_SCHEMES = ["ftp", "file", "http", "https", "ws", "wss"];
 
 /**
  * A host every parser reads alike: labels of lowercase ASCII letters, digits, hyphens and underscores,
- * none empty, with the final dot of an absolute name. Node.js reads `ㅤ.com`, whose Hangul filler IDNA
+ * none empty. Node.js reads `ㅤ.com`, whose Hangul filler IDNA
  * drops, as `.com`, which WebKit refuses.
  */
-const PLAIN_HOST_PATTERN = /^[a-z\d_-]+(?:\.[a-z\d_-]+)*\.?$/;
+const PLAIN_HOST_PATTERN = /^[a-z\d_-]+(?:\.[a-z\d_-]+)*$/;
 
 /**
  * The host as a URL of a special scheme writes it: after the slashes, which may be backslashes, and any
@@ -172,8 +172,10 @@ type UrlParts<TOptions> = Extract<
  * spelled with fullwidth letters or invisible characters is the host they spell, an internationalized
  * host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules
  * for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and
- * no scheme is guessed for text that lacks one. A host longer than 253 characters, not counting the
- * final dot of an absolute host such as `example.com.`, which is accepted and kept, is rejected.
+ * no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected, and so is
+ * an absolute host such as `example.com.`, whatever the host validator: it names the same host as
+ * `example.com`, and a second spelling of one host would let it past a check that compares the value as a
+ * string, such as a list of blocked hosts.
  *
  * The `credentials`, `host`, `port`, `path` and `query` options check those parts with validators of your own, which
  * only decide: the value is still the whole URL, and one that is asynchronous makes the validator
@@ -263,11 +265,13 @@ export function url(...rest: unknown[]): AnyValidator {
     const { hostname } = parsed;
     // A host validator replaces the rule of which hosts are public, and never the rules that every runtime
     // reads the host the same: its characters, for a scheme the parser has rules for, and its
-    // internationalized labels.
+    // internationalized labels. Nor does it replace the rule that one host has one spelling, so the final
+    // dot of an absolute host, `example.com.`, is rejected for every scheme, as `hostname()` rejects it.
     if (
-      withoutFinalDot(hostname).length > HOST_MAX_LENGTH ||
+      hostname.length > HOST_MAX_LENGTH ||
+      hostname.endsWith(".") ||
       (host === undefined
-        ? !isPublicName(hostname)
+        ? !isPublicHost(hostname)
         : !isIdnHost(hostname) || (SPECIAL_SCHEMES.includes(scheme) && !isPlainHost(text, hostname)))
     ) {
       return notFormat("url");

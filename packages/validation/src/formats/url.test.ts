@@ -69,12 +69,19 @@ describe("url", () => {
     expect(url()(`https://${longest}/`).ok).toBe(true);
     expect(url()(`https://${longest}f/`).ok).toBe(false);
     expect(url({ host: unknown() })(`https://${labels(20)}/`).ok).toBe(false);
-    expect(url()(`https://${longest}./`).ok).toBe(true);
   });
 
-  it("should accept an absolute host, keeping its final dot", () => {
-    expect(valueOf(url()("https://Example.com./a"))).toBe("https://example.com./a");
-    expect(accepts(url(), "https://localhost./", "https://example.com../")).toEqual([false, false]);
+  it("should reject an absolute host ending in a dot, whatever the host validator or scheme", () => {
+    expect(accepts(url(), "https://Example.com./a", "https://localhost./", "https://example.com../")).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    expect(
+      accepts(url({ host: unknown(), protocols: ["http", "ssh"] }), "http://localhost./", "ssh://db.internal./"),
+    ).toEqual([false, false]);
+    // The parser drops the final dot of an IPv4 address itself, so its value has one spelling already.
+    expect(valueOf(url({ host: unknown() })("http://127.0.0.1./"))).toBe("http://127.0.0.1/");
   });
 
   it("should reject a punycode host that does not decode", () => {
