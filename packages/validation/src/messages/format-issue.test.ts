@@ -130,6 +130,17 @@ describe("formatPath", () => {
     expect(formatPath(["x", ""])).toBe('x[""]');
     expect(formatPath(["first-name", "0"])).toBe("first-name.0");
   });
+
+  it("should quote and escape a key holding a control character or a line separator, so it cannot break a line", () => {
+    expect(formatPath(["a\nb"])).toBe('["a\\nb"]');
+    expect(formatPath(["a\u2028b", "c\u2029"])).toBe('["a\\u2028b"]["c\\u2029"]');
+    expect(formatPath(["\u007f\u0085", "\u0000"])).toBe('["\\u007f\\u0085"]["\\u0000"]');
+    expect(formatPath(["é", "日本"])).toBe("é.日本");
+  });
+
+  it("should write a segment that is neither text nor a number as String does, never throw", () => {
+    expect(formatPath(["x", Symbol("s"), 1] as never)).toBe("x[Symbol(s)][1]");
+  });
 });
 
 describe("formatIssue", () => {
@@ -407,6 +418,11 @@ describe("formatIssue", () => {
 });
 
 describe("flatten", () => {
+  it("should not throw on a path segment a validator written by hand made a symbol", () => {
+    const failure = { issues: [{ code: "x", path: [Symbol("s")] }] } as never;
+    expect(Object.keys(flatten(failure, {}).fieldErrors)).toEqual(["[Symbol(s)]"]);
+  });
+
   it("should take an issue without a path, from a validator written by hand, for one about the whole value", () => {
     const failure = { issues: [{ code: "custom", message: "Broken" }] } as never;
     expect(flatten(failure, englishMessages)).toEqual({ formErrors: ["Broken"], fieldErrors: {} });

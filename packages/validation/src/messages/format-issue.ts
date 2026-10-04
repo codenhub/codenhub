@@ -11,15 +11,35 @@ export type Messages = Readonly<
   Record<string, string | ((issue: ValidationIssue, messages: Messages) => string) | undefined>
 >;
 
-/** Characters that would make a key read as more than one segment, or as an index. */
-const AMBIGUOUS_KEY_PATTERN = /[.[\]"]/;
+/**
+ * Characters that would make a key read as more than one segment or as an index, and characters that
+ * would end or hide a line where the path is written, such as a log line: control characters and the
+ * line and paragraph separators. A key holding any of them is quoted, with them escaped.
+ */
+const AMBIGUOUS_KEY_PATTERN = /[.[\]"\p{Cc}\u2028\u2029]/u;
+
+/**
+ * The control characters `JSON.stringify` leaves as they are, `DEL` and the C1 controls, and the line and
+ * paragraph separators. It escapes the rest itself.
+ */
+const UNESCAPED_PATTERN = /[\u007f-\u009f\u2028\u2029]/g;
+
+/** A key as a quoted string literal, every control character and line separator escaped. */
+const quote = (key: string): string =>
+  JSON.stringify(key).replace(
+    UNESCAPED_PATTERN,
+    (character) => `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
 
 /**
  * Formats a path as dot-and-bracket notation.
  *
  * @remarks
  * A key that is empty or holds `.`, `[`, `]` or `"` is written quoted in brackets, as
- * `["a.b"]`, so no two different paths format the same.
+ * `["a.b"]`, so no two different paths format the same, and so is one holding a control character or a
+ * line separator, escaped, so a key the sender chose cannot break a log line: `["a\\nb"]`. A segment
+ * that is neither text nor a number, which only a validator written by hand can put in a path, is
+ * written as `String` writes it.
  *
  * @example
  * ```ts
@@ -36,8 +56,10 @@ export function formatPath(path: readonly ValidationPathSegment[]): string {
   for (const segment of path) {
     if (typeof segment === "number") {
       formatted += `[${segment}]`;
+    } else if (typeof segment !== "string") {
+      formatted += `[${String(segment)}]`;
     } else if (segment === "" || AMBIGUOUS_KEY_PATTERN.test(segment)) {
-      formatted += `[${JSON.stringify(segment)}]`;
+      formatted += `[${quote(segment)}]`;
     } else {
       formatted += formatted.length > 0 ? `.${segment}` : segment;
     }
