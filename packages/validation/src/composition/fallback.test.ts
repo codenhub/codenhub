@@ -70,9 +70,9 @@ describe("fallback", () => {
     const seen: string[] = [];
     const safe = fallback(node, (issues) => {
       seen.push(...issues.map((issue) => `${issue.code}:${String(issue.params?.["type"])}`));
-      return null;
+      return {};
     });
-    expect(valueOf(safe(cyclic))).toBeNull();
+    expect(valueOf(safe(cyclic))).toEqual({});
     expect(seen).toEqual(["too_big:depth"]);
   });
 });
