@@ -55,7 +55,7 @@ Clean-up (`trim`, `case`) always happens first, and every constraint and check t
 
 ## Numbers
 
-`number(options?)` accepts finite numbers and produces a number. `NaN`, the infinities and every other type fail with `invalid_type`.
+`number(options?)` accepts finite numbers and produces a number, `-0` included as it was given, since it is a number of its own. `NaN`, the infinities and every other type fail with `invalid_type`.
 
 ```ts
 import { number } from "@codenhub/validation";
@@ -106,8 +106,8 @@ The options `min` and `max` are `Date`s, both inclusive, and throw a `TypeError`
 
 ## Fixed values
 
-- `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`. The one exception is `NaN`: `NaN === NaN` is false, so `literal(NaN)` could accept nothing, and it throws a `RangeError` when created.
-- `oneOf(values)` accepts any one value of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The values may be any primitives `literal` accepts, so `oneOf([true, false, null])` is a three-state flag. It also takes a TypeScript `enum`, and then ignores the reverse-mapping names TypeScript adds to a numeric enum, so only the numbers are values. The values are copied when the validator is created. No values throws a `TypeError` and one holding `NaN`, which no value equals, a `RangeError`, since either is a mistake in the schema.
+- `literal(value)` accepts exactly one value, compared with `===`, and produces that value with its exact type, so `literal("admin")` produces `"admin"` and not `string`. It produces the declared value, not the input, which differs only for zero: `===` matches `-0` to `0`, and `literal(0)` produces `0` either way. Any primitive works, and this is how `null` and `undefined` are validated: `literal(null)`. The one exception is `NaN`: `NaN === NaN` is false, so `literal(NaN)` could accept nothing, and it throws a `RangeError` when created.
+- `oneOf(values)` accepts any one value of a list and produces their union: `oneOf(["admin", "user"])` produces `"admin" | "user"`. The values may be any primitives `literal` accepts, so `oneOf([true, false, null])` is a three-state flag. It also takes a TypeScript `enum`, and then ignores the reverse-mapping names TypeScript adds to a numeric enum, so only the numbers are values; an object written like an enum is read the same way, so `{ a: 1, "1": "a" }` holds `1` alone. It produces the listed value, so `oneOf([0])` produces `0` for `-0`. The values are copied when the validator is created. No values, a list with a hole such as `[, "a"]`, which would otherwise accept `undefined`, or a `Set` or other object of a class, which would be read as an enum with no members, throws a `TypeError`, and one holding `NaN`, which no value equals, a `RangeError`, since either is a mistake in the schema.
 
 Both fail with `invalid_value`. `literal` reports `{ expected }` and `oneOf` reports `{ options }`, the list of accepted values. A bigint is reported as its decimal digits, so the issue can be sent as JSON: `literal(1n)` reports `{ expected: "1", type: "bigint" }`, and a `oneOf` of bigints alone adds `type: "bigint"` too. In a `oneOf` that mixes bigints with other values, a bigint option is its digits, as text, with nothing to tell it from a string.
 

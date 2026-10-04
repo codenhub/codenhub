@@ -17,8 +17,10 @@ const isReverseMapping = (enumObject: EnumLike, key: string): boolean => {
 /**
  * Creates a validator that accepts any one value of a list or of a TypeScript `enum`, compared with
  * `===`. The type is the union of the values, so `oneOf(["admin", "user"])` produces
- * `"admin" | "user"`. The entries TypeScript adds to a numeric enum to map values back to names are
- * not values and are ignored.
+ * `"admin" | "user"`, and the value produced is the one listed, so `oneOf([0])` produces `0` for `-0`,
+ * which `===` matches. The entries TypeScript adds to a numeric enum to map values back to names are
+ * not values and are ignored, in an object written like an enum too, so `{ a: 1, "1": "a" }` holds `1`
+ * alone.
  *
  * @example
  * ```ts
@@ -36,7 +38,7 @@ const isReverseMapping = (enumObject: EnumLike, key: string): boolean => {
  * @param rest - Options, then checks.
  * @returns A validator that produces one of the values.
  * @throws {TypeError} When `values` is neither a list nor an enum, such as text, which would be read as
- * its characters, there is no value, so the validator would accept nothing, or a value is an object or a
+ * its characters, or a `Set`, the list has a hole, there is no value, so the validator would accept nothing, or a value is an object or a
  * function, which equals only itself.
  * @throws {RangeError} When a value is `NaN`, which no value equals.
  */
@@ -50,8 +52,14 @@ export function oneOf<const T extends readonly LiteralValue[] | EnumLike>(
 ): AsyncValidator<ValuesOf<T>>;
 export function oneOf(values: readonly LiteralValue[] | EnumLike, ...rest: unknown[]): AnyValidator {
   // Text would be read as a list of its characters. `Object(value) === value` holds for objects alone.
-  if (Object(values) !== values) {
+  // A `Set` or any other object of a class would be read as an enum with no members.
+  const prototype: unknown = Object(values) === values ? Object.getPrototypeOf(values) : undefined;
+  if (!Array.isArray(values) && prototype !== Object.prototype && prototype !== null) {
     throw new TypeError("oneOf() needs a list or an enum of primitives");
+  }
+  // A hole in a list, `[, "a"]`, would be copied as `undefined` and accepted, which no one wrote.
+  if (Array.isArray(values) && values.filter(() => true).length < values.length) {
+    throw new TypeError("oneOf() needs a list without holes");
   }
   const options: readonly unknown[] = Array.isArray(values)
     ? [...values]
@@ -75,7 +83,10 @@ export function oneOf(values: readonly LiteralValue[] | EnumLike, ...rest: unkno
   // A copy per failure, so changing an issue's list cannot change what the validator accepts. indexOf
   // compares with ===, as documented, where includes would also match NaN.
   return member(
-    (input) => options.indexOf(input) !== -1,
+    (input) => {
+      const index = options.indexOf(input);
+      return index === -1 ? undefined : [options[index]];
+    },
     () => (isBigints ? { options: [...reported], type: "bigint" } : { options: [...reported] }),
     rest,
   );

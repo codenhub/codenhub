@@ -153,20 +153,24 @@ export function rule<T>(
 }
 
 /**
- * Builds a validator that accepts the values `accepts` names, and reports any other with one
- * `invalid_value` issue whose params `params` makes afresh for each failure, as `literal` and `oneOf`
- * do, where `leaf` would report the type.
+ * Builds a validator that accepts the values `find` names, producing the declared value `find` returns
+ * rather than the input, and reports any other with one `invalid_value` issue whose params `params`
+ * makes afresh for each failure, as `literal` and `oneOf` do, where `leaf` would report the type. The
+ * declared value is produced because `===` also matches `-0` to `0`, and the type promises the one
+ * declared.
  */
 export function member<T>(
-  accepts: (input: unknown) => boolean,
+  find: (input: unknown) => readonly [value: T] | undefined,
   params: () => Readonly<Record<string, unknown>>,
   args: readonly unknown[],
 ): (input: unknown) => Maybe<ValidationResult<T>> {
   const [{ message }, checks] = split<MessageOptions, T>(args);
-  return (input) =>
-    accepts(input)
-      ? finish(input as T, [], message, checks)
-      : failWith(word([issue("invalid_value", params())], message));
+  return (input) => {
+    const found = find(input);
+    return found === undefined
+      ? failWith(word([issue("invalid_value", params())], message))
+      : finish(found[0], [], message, checks);
+  };
 }
 
 /**

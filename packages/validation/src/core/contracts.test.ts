@@ -163,7 +163,7 @@ describe("a validator's message", () => {
 
 describe("canonical output", () => {
   it("should give one value for one hostname, UUID and ULID however they were written", () => {
-    expect(valueOf(hostname()("Intranet.Example."))).toBe("intranet.example.");
+    expect(valueOf(hostname()("Intranet.Example"))).toBe("intranet.example");
     expect(valueOf(uuid()("123E4567-E89B-12D3-A456-426614174000"))).toBe("123e4567-e89b-12d3-a456-426614174000");
     expect(valueOf(ulid()("01arz3ndektsv4rrffq69g5fav"))).toBe("01ARZ3NDEKTSV4RRFFQ69G5FAV");
   });

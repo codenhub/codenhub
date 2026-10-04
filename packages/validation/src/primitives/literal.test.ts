@@ -29,6 +29,11 @@ describe("literal", () => {
     expect(valueOf(literal("admin")("admin"))).toBe("admin");
   });
 
+  it("should produce the declared value for -0, which === matches to 0", () => {
+    expect(Object.is(valueOf(literal(0)(-0)), 0)).toBe(true);
+    expect(Object.is(valueOf(literal(-0)(0)), -0)).toBe(true);
+  });
+
   it("should report the expected value in params", () => {
     expect(issuesOf(literal("admin")("user"))).toEqual([
       { code: "invalid_value", path: [], params: { expected: "admin" } },

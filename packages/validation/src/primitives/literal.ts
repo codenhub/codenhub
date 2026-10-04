@@ -6,7 +6,8 @@ export type LiteralValue = string | number | boolean | bigint | symbol | null | 
 
 /**
  * Creates a validator that accepts exactly one value, compared with `===`. The type is the value
- * itself, so `literal("admin")` produces `"admin"` and not `string`. It is also how `null` and
+ * itself, so `literal("admin")` produces `"admin"` and not `string`, and the value produced is the one
+ * declared, so `literal(0)` produces `0` for `-0`, which `===` matches. It is also how `null` and
  * `undefined` are validated: `literal(null)`.
  *
  * @example
@@ -40,7 +41,7 @@ export function literal(value: LiteralValue, ...rest: unknown[]): AnyValidator {
   }
   // A bigint is reported as its decimal digits and `type: "bigint"`, since `JSON.stringify` throws on one.
   return member(
-    (input) => input === value,
+    (input) => (input === value ? [value] : undefined),
     () => (typeof value === "bigint" ? { expected: String(value), type: "bigint" } : { expected: value }),
     rest,
   );
