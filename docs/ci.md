@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-04
+last_updated: 2026-10-03
 scope: Continuous integration workflows, the pinned workspace toolchain, and the checks that report on pull requests.
 ---
 
@@ -44,21 +44,17 @@ The verification sequence builds declarations before `hub check` inspects them. 
 
 The jobs run in parallel except that `browser` and `drift` wait for `playwright`, which takes seconds, and `browser-result` waits on `browser`, so a stale generated file is reported without waiting for the slowest test suite.
 
-| Job                   | Runs                                                                                                                                        |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `verify`              | `pnpm verify --skip=test:browser <selector>`                                                                                                |
-| `playwright`          | Reads the `playwright-core` version from `pnpm-lock.yaml` and names the Playwright image for it                                             |
-| `browser`             | In that image: `pnpm hub browsers <selector> -- <engine>`, then `pnpm test:browser <selector> -- --project='*<engine>*'`                    |
-| `drift`               | `pnpm generate --dry-run`, then an assertion that the working tree is unchanged                                                             |
-| `browser-result`      | Nothing; it passes only when every `browser` job passed                                                                                     |
-| `validation-scope`    | Decides whether a pull request changes what `validation-runtimes` tests                                                                     |
-| `validation-runtimes` | The unit tests of `@codenhub/validation` on Node.js 22 and 24.19, after installing with the pinned version, when `validation-scope` says so |
+| Job              | Runs                                                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `verify`         | `pnpm verify --skip=test:browser <selector>`                                                                             |
+| `playwright`     | Reads the `playwright-core` version from `pnpm-lock.yaml` and names the Playwright image for it                          |
+| `browser`        | In that image: `pnpm hub browsers <selector> -- <engine>`, then `pnpm test:browser <selector> -- --project='*<engine>*'` |
+| `drift`          | `pnpm generate --dry-run`, then an assertion that the working tree is unchanged                                          |
+| `browser-result` | Nothing; it passes only when every `browser` job passed                                                                  |
 
 `verify` skips the browser step because the `browser` job owns it. Running it in both would double the slowest part of the run for no extra signal.
 
-`validation-runtimes` exists because `@codenhub/validation` is the one package whose answers depend on the Node.js it runs on: `url`, `domain`, `email` and the other formats read text with the runtime's own URL parser, and the package promises one answer in every runtime it supports. Its engines allow Node.js 22, and Node.js 24.16 to 24.19 parse some hosts into URLs whose setters abort the process, which a regression test covers only when it runs on such a version. The pinned version tests neither, so the job installs with it, which `engine-strict` requires, and then runs the package's unit tests on the other: the tests import the source, and Vitest supports both. It runs on a pull request only when the pull request changes `packages/validation/`, the files that decide the package's dependencies and toolchain (`pnpm-lock.yaml`, `pnpm-workspace.yaml`, the root `package.json` and `tsconfig.json`, `.nvmrc`), or `.github/`: `validation-scope` compares the changed files against the base branch, and on any other pull request the job is skipped without starting a runner, so a pull request that has nothing to do with validation never waits on it or sees it fail. A merge into `main` runs it always, as it verifies the whole workspace. The matrix keeps `fail-fast` off for the same reason as the browser jobs.
-
-`browser` is a matrix of one job per engine — `chromium`, `firefox`, `webkit` — so the workflow runs nine jobs in total, counting `validation-scope` and the two of `validation-runtimes`, which a pull request that does not concern validation skips. The browser suites are by far the slowest thing in a run and the three engines share nothing, so splitting them trades runner minutes, which are cheap, for wall-clock time, which is what anyone waits on. The engines are no longer far apart. Firefox once cost roughly five times what Chromium did on the `styles` suite, which was a fixture problem rather than an engine one: every test took a fresh browser context, and Firefox charges far more for one than the others do. `packages/styles` now shares a context per worker, which brought that suite from 285s to 84s on Firefox. WebKit is the slowest engine on it today, and the matrix is what keeps the slowest one off everybody else’s critical path.
+`browser` is a matrix of one job per engine — `chromium`, `firefox`, `webkit` — so the workflow runs six jobs in total. The browser suites are by far the slowest thing in a run and the three engines share nothing, so splitting them trades runner minutes, which are cheap, for wall-clock time, which is what anyone waits on. The engines are no longer far apart. Firefox once cost roughly five times what Chromium did on the `styles` suite, which was a fixture problem rather than an engine one: every test took a fresh browser context, and Firefox charges far more for one than the others do. `packages/styles` now shares a context per worker, which brought that suite from 285s to 84s on Firefox. WebKit is the slowest engine on it today, and the matrix is what keeps the slowest one off everybody else’s critical path.
 
 `fail-fast` is off for the matrix. "Firefox broke" and "WebKit broke" are different findings, and cancelling one to report the other hides half of what a run was started to learn.
 
