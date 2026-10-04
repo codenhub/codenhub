@@ -134,14 +134,15 @@ const describeFormat = (issue: ValidationIssue, messages: Messages): string => {
 
 /**
  * Tests whether what an option of a union found says only that the input is not of its kind: one issue
- * at the value itself, of the wrong type, or naming the values a `literal` or `oneOf` accepts.
+ * at the value itself, of the wrong type, or naming the values a `literal` or `oneOf` accepts. An issue
+ * without a path, which a validator written by hand may report, is at the value, as everywhere else.
  */
 const isOtherKind = (issues: readonly ValidationIssue[]): boolean => {
   const [only] = issues;
   return (
     issues.length === 1 &&
     only !== undefined &&
-    only.path.length === 0 &&
+    !(only.path?.length > 0) &&
     (only.code === "invalid_type" ||
       (only.code === "invalid_value" &&
         only.params !== undefined &&
