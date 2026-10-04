@@ -1,4 +1,4 @@
-import { chain, collect, detached, type Maybe } from "./async";
+import { chain, collect, detached, runEach, type Maybe } from "./async";
 import { placeAll, type Place } from "./nesting";
 import { isPlainObject } from "./objects";
 import { failWith, issue, pass, typeIssue } from "./result";
@@ -18,9 +18,14 @@ import type {
  * first place, such as a string, a list or a regular expression, is a mistake in the schema: read as
  * options, `string("abc")` would take the string's `length` as its own, `array(item, [unique()])` would
  * drop the check, and `string(/^a/)` would accept every string. `null` is no options, as `undefined` is.
+ * An option whose name is not `message` or one of `known`, the names the factory reads separated by
+ * spaces, is a mistake too, such as `max` written `maxx`, which would otherwise leave the limit unset.
+ * The names of options 0.1.0 had are among them, so the factory can name their replacement. The error
+ * names the option and not the ones there are, which the types list, since every validator carries it.
  */
 export function split<TOptions extends MessageOptions, T>(
   args: readonly unknown[],
+  known = "",
 ): [options: TOptions, checks: AsyncCheck<T>[]] {
   const [first, ...rest] = args;
   const [options, checks] = typeof first === "function" ? [{}, args] : [first ?? {}, rest];
@@ -33,6 +38,10 @@ export function split<TOptions extends MessageOptions, T>(
     // A mistake in the schema, reported now rather than on the first input. One condition and one text,
     // since every validator carries them.
     throw new TypeError("Options must be an object whose message is text or a function, and checks functions");
+  }
+  const unknown = Object.keys(options).find((name) => !`message ${known}`.split(" ").includes(name));
+  if (unknown !== undefined) {
+    throw new TypeError(`Unknown option ${unknown}`);
   }
   // Copied, so changing the object after the validator is made changes nothing, whether the validator reads
   // an option once or, as a composer reads its message and sizes, on every call.
@@ -93,7 +102,7 @@ export function finish<T>(
   if (issues.length > 0) {
     return failWith(word(issues, message));
   }
-  return chain(collect(checks.map((check) => detached(check, value))), (found) => {
+  return chain(collect(runEach(checks.length, (index) => detached(checks[index] as AsyncCheck<T>, value))), (found) => {
     for (const list of found) {
       if (list !== undefined && !Array.isArray(list)) {
         throw new TypeError("A check must return undefined or a list of issues");
@@ -169,12 +178,13 @@ export function member<T>(
  */
 export function tail<TOptions extends MessageOptions, T>(
   args: readonly unknown[],
+  known?: string,
 ): [
   options: TOptions,
   reject: (issues: readonly ValidationIssue[], place: Place) => ValidationErr,
   accept: (value: T, place: Place) => Maybe<ValidationResult<T>>,
 ] {
-  const [options, checks] = split<TOptions, T>(args);
+  const [options, checks] = split<TOptions, T>(args, known);
   return [
     options,
     (issues, place) => failWith(report(issues, place, options.message)),

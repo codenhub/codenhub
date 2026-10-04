@@ -121,6 +121,27 @@ export function chain<T, R>(value: Maybe<T>, next: (resolved: T) => Maybe<R>): M
 }
 
 /**
+ * Runs `work` for each index below `length` and gives what each returned, as `Array.from` would. When one
+ * throws, what the earlier ones returned may be pending, and nothing will wait for it now, so a rejection
+ * of it is handled before the exception propagates: unhandled, it is reported apart from the exception
+ * and, by default, ends a Node.js process.
+ */
+export function runEach<R>(length: number, work: (index: number) => R): R[] {
+  const results: R[] = [];
+  try {
+    for (let index = 0; index < length; index += 1) {
+      results.push(work(index));
+    }
+  } catch (error) {
+    // Waiting on all of them handles a rejection of each, and a result that is not pending is ignored.
+    // oxlint-disable-next-line promise/prefer-await-to-then, promise/catch-or-return
+    Promise.all(results).catch(() => undefined);
+    throw error;
+  }
+  return results;
+}
+
+/**
  * Gathers the results of several validators, synchronously when none is pending and as one promise
  * otherwise. Results keep the order of the input, never the order in which promises settled.
  */

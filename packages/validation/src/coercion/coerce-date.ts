@@ -78,13 +78,15 @@ const readIso = (text: string, isUtc: boolean): Date | undefined => {
  * @throws {RangeError} When `min` or `max` is an invalid `Date`, or `min` is after `max`.
  */
 export const coerceDate = ((...args: unknown[]) => {
-  const [first] = args;
-  const zoneless: unknown = isPlainObject(first) ? first["zoneless"] : undefined;
+  const [first, ...checks] = args;
+  // `zoneless` is this validator's own, so `date` is given the rest, and rejects an option it does not know.
+  const { zoneless, ...options }: Record<string, unknown> = isPlainObject(first) ? first : {};
   if (zoneless !== undefined && zoneless !== "utc") {
     throw new TypeError(`zoneless must be "utc", received ${describeType(zoneless)}`);
   }
   const isUtc = zoneless === "utc";
-  return coercing("valid date", date(...(args as [])), args, (input) => {
+  const strict = isPlainObject(first) ? date(options, ...(checks as [])) : date(...(args as []));
+  return coercing("valid date", strict, args, (input) => {
     if (timeOf(input) !== undefined) {
       return [input];
     }

@@ -32,6 +32,46 @@ const SCHEME_PATTERN = /^[a-z][a-z0-9+.-]*$/i;
  */
 const SCRIPT_SCHEMES = ["javascript", "vbscript", "data"];
 
+/** The schemes the URL Standard gives rules for a host, which parsers apply differently to unusual text. */
+const SPECIAL_SCHEMES = ["ftp", "file", "http", "https", "ws", "wss"];
+
+/** A host every parser reads alike: lowercase ASCII letters, digits, dots, hyphens and underscores. */
+const PLAIN_HOST_PATTERN = /^[a-z\d._-]+$/;
+
+/**
+ * The host as a URL of a special scheme writes it: after the slashes, which may be backslashes, and any
+ * credentials, up to the port, path, query or fragment. An IPv6 address keeps its brackets.
+ */
+const WRITTEN_HOST_PATTERN = /^[^:]+:[/\\]*(?:[^/\\?#]*@)?(\[[^\]]*\]|[^/\\?#:]*)/;
+
+/** An IPv4 address as the parser writes one, four decimal parts. */
+const DOTTED_IPV4_PATTERN = /^\d+\.\d+\.\d+\.\d+$/;
+
+/**
+ * An IPv6 address as written in a URL that every parser reads alike: hex groups and colons, and an IPv4
+ * tail in decimal parts without a leading zero, which Chromium reads and Node.js refuses. The parser has
+ * already read the address, so only how it was spelled is left to check.
+ */
+const WRITTEN_IPV6_PATTERN =
+  /^\[[\da-f:]*(?::(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d))?\]$/i;
+
+/** A part of a host written as `0x` with no digit, which some parsers read as 0 and Firefox refuses. */
+const BARE_HEX_PATTERN = /(?:^|\.)0x(?:\.|$)/i;
+
+/**
+ * Tests whether a host a special scheme's URL was read with is one every runtime reads alike, for a URL
+ * whose host a host validator decides: a name of plain characters, an IPv4 address not written with a bare
+ * `0x` part, or an IPv6 address spelled as every parser reads it. Chromium writes `a*b.com` as `a%2Ab.com` and
+ * Firefox refuses it, and Chromium reads `[::01.2.3.4]` and `a%20.com`, which Node.js refuses.
+ */
+function isPlainHost(text: string, hostname: string): boolean {
+  const written = WRITTEN_HOST_PATTERN.exec(text)?.[1] ?? "";
+  if (hostname.startsWith("[")) {
+    return WRITTEN_IPV6_PATTERN.test(written);
+  }
+  return PLAIN_HOST_PATTERN.test(hostname) && !(DOTTED_IPV4_PATTERN.test(hostname) && BARE_HEX_PATTERN.test(written));
+}
+
 /** A percent-encoded path separator, `%2F` for `/` or `%5C` for `\`, in either letter case. */
 const ENCODED_SEPARATOR_PATTERN = /%(?:2f|5c)/i;
 
@@ -158,7 +198,10 @@ export function url<const TOptions extends UrlOptions>(
 export function url(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function url(...rest: unknown[]): AnyValidator {
-  const [options, checks] = split<UrlOptions, string>(rest);
+  const [options, checks] = split<UrlOptions, string>(
+    rest,
+    "protocols credentials host port path query repeated allowLocal",
+  );
   assertMigrated("url", options, {
     allowLocal: "a host validator: url({ host: hostname() }), or url({ host: unknown() }) for IP addresses too",
   });
@@ -214,11 +257,14 @@ export function url(...rest: unknown[]): AnyValidator {
       parsed.hostname = normalized;
     }
     const { hostname } = parsed;
-    // A host validator replaces the rule of which hosts are public, and never the check of the
-    // internationalized labels, which every runtime has to read the same.
+    // A host validator replaces the rule of which hosts are public, and never the rules that every runtime
+    // reads the host the same: its characters, for a scheme the parser has rules for, and its
+    // internationalized labels.
     if (
       withoutFinalDot(hostname).length > HOST_MAX_LENGTH ||
-      (host === undefined ? !isPublicName(hostname) : !isIdnHost(hostname))
+      (host === undefined
+        ? !isPublicName(hostname)
+        : !isIdnHost(hostname) || (SPECIAL_SCHEMES.includes(scheme) && !isPlainHost(text, hostname)))
     ) {
       return notFormat("url");
     }

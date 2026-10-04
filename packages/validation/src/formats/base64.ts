@@ -38,7 +38,7 @@ export interface Base64Options extends MessageOptions {
  * @throws {TypeError} When `url` is not a boolean.
  */
 export const base64 = ((...args: unknown[]) => {
-  const [{ url, message }, checks] = split<Base64Options, string>(args);
+  const [{ url, message }, checks] = split<Base64Options, string>(args, "url");
   assertOption("url", url, "boolean");
   const pattern = url === true ? BASE64URL_PATTERN : BASE64_PATTERN;
   return stringFormat(

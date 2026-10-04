@@ -1,4 +1,4 @@
-import type { Maybe } from "../core/async";
+import { runEach, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { below, call, composed } from "../core/nesting";
 import { isArray } from "../core/objects";
@@ -53,7 +53,7 @@ export function array<TItem extends AnyValidator>(
 ): AsyncValidator<Infer<TItem>[]>;
 export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("item", item);
-  const [options, reject, accept] = tail<ArrayOptions, unknown[]>(rest);
+  const [options, reject, accept] = tail<ArrayOptions, unknown[]>(rest, "min max length unique");
   assertMigrated("array", options, { unique: "the check array(item, unique()), or unique((item) => key) for objects" });
   assertSizeOptions(options);
 
@@ -69,7 +69,7 @@ export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
     return settle(
       // Read by index up to the length that was checked, never through the array's own iterator, which
       // the input can replace to yield other items or never stop.
-      Array.from({ length }, (_, index) => call(item, input[index], below(place, index))),
+      runEach(length, (index) => call(item, input[index], below(place, index))),
       (values) => accept(values, place),
     );
   });

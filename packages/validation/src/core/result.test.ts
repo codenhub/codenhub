@@ -14,6 +14,12 @@ describe("pass", () => {
 });
 
 describe("fail", () => {
+  it("should reject a path holding a symbol, which no path or field name can write", () => {
+    expect(() => fail({ path: ["a", Symbol("b")] as never })).toThrow(
+      new TypeError("issue.path must be a list of keys and indexes"),
+    );
+  });
+
   it("should default to code custom at the value's own location", () => {
     expect(fail({})).toEqual({ ok: false, error: { issues: [{ code: "custom", path: [] }] } });
   });

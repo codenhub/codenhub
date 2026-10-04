@@ -1,8 +1,8 @@
-import { chain, collect, type Maybe } from "../core/async";
+import { chain, collect, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
 import { append, below, call, composed } from "../core/nesting";
 import { isPlainObject, objectIssue, setOwn } from "../core/objects";
-import { assertFunction, failWith, issue, nested, repeatedKey } from "../core/result";
+import { assertFunction, describeType, failWith, issue, nested, repeatedKey } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -14,7 +14,7 @@ import type {
   ValidationIssue,
   ValidationResult,
 } from "../core/types";
-import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
+import { SIZE_OPTIONS, assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
 /**
  * The object type a record produces. A record with open string keys always has every key it lists;
@@ -76,7 +76,7 @@ export function record<TKey extends AnyValidator<string>, TValue extends AnyVali
 export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("key", key);
   assertFunction("value", value);
-  const [options, reject, accept] = tail<SizeOptions & MessageOptions, Record<string, unknown>>(rest);
+  const [options, reject, accept] = tail<SizeOptions & MessageOptions, Record<string, unknown>>(rest, SIZE_OPTIONS);
   assertSizeOptions(options);
   return composed((input, place): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
@@ -90,11 +90,12 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
     // Every value is read before any validator runs, as in `object`, so neither a key validator that
     // changes the input nor a change made while one waits can reach the output.
     const values = names.map((name) => input[name]);
-    const entries = names.map((name, index) =>
-      chain(key(name), (keyResult) =>
+    const entries = runEach(names.length, (index) => {
+      const name = names[index] as string;
+      return chain(key(name), (keyResult) =>
         chain(call(value, values[index], below(place, name)), (valueResult) => ({ keyResult, valueResult })),
-      ),
-    );
+      );
+    });
     return chain(collect(entries), (settled) => {
       const issues: ValidationIssue[] = [];
       const output: Record<string, unknown> = {};
@@ -112,6 +113,10 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
         }
         if (!valueResult.ok) {
           append(issues, valueResult.error.issues);
+        }
+        if (keyResult.ok && typeof keyResult.value !== "string") {
+          // The types forbid it, but a number would become text and a symbol a key no `Object.keys` lists.
+          throw new TypeError(`A record's key validator must produce text, received ${describeType(keyResult.value)}`);
         }
         if (keyResult.ok && valueResult.ok) {
           if (Object.hasOwn(output, keyResult.value as string)) {

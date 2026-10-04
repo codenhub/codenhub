@@ -74,7 +74,7 @@ The validator reference lists the exact code and `params` each validator reports
 
 ## Turning an issue into text
 
-Validators do not build message text when they fail. That keeps them small, and it means text is a choice you make where you show it. `formatIssue` builds it from a message map, and `englishMessages` is the built-in English one:
+Validators do not build message text when they fail. That keeps them small, and it means text is a choice you make where you show it. `formatIssue` builds it from a message map, and `englishMessages` is the built-in English one. Both word the issues validators return; an issue received from elsewhere, such as JSON from a server you do not control, is input like any other, and a malformed one may throw, so validate it before wording it:
 
 ```ts
 import { englishMessages, formatIssue, number } from "@codenhub/validation";

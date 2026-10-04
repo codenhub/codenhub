@@ -162,7 +162,7 @@ export function lazy<TValidator extends AnyValidator>(
 ): AsyncValidator<Infer<TValidator>>;
 export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("getter", getter);
-  const [options, reject, accept] = tail<LazyOptions, unknown>(rest);
+  const [options, reject, accept] = tail<LazyOptions, unknown>(rest, "maxDepth maxCalls");
   const { maxDepth = DEFAULT_MAX_DEPTH, maxCalls = DEFAULT_MAX_CALLS } = options;
   assertLimit("maxDepth", maxDepth);
   assertLimit("maxCalls", maxCalls);

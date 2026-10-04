@@ -46,8 +46,10 @@ const isNumber = (input: unknown): boolean => typeof input === "number" && Numbe
  * Creates a validator for finite numbers. `NaN` and the infinities are always rejected.
  *
  * @remarks
- * `clamp` runs first, then every constraint on the clamped number, and each failing one reports its own
- * issue. The checks run on it once every constraint has passed, and each failing one reports its own.
+ * `clamp` runs first, then every constraint on the clamped number, each failing one reporting its own
+ * issue, and the checks once every constraint has passed. `clamp` moves a finite number into its range;
+ * an infinity is rejected before it, as by every `number`, since it more often means a fault upstream
+ * than a value to clamp.
  *
  * @example
  * ```ts
@@ -67,7 +69,7 @@ const isNumber = (input: unknown): boolean => typeof input === "number" && Numbe
  * reject every input.
  */
 export const number = ((...args: unknown[]) => {
-  const [options, checks] = split<NumberOptions, number>(args);
+  const [options, checks] = split<NumberOptions, number>(args, "min max gt lt int safeInt clamp multipleOf nonZero");
   assertMigrated("number", options, {
     multipleOf: "the check number(multipleOf(step))",
     nonZero: "the check number(nonZero())",

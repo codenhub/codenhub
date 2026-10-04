@@ -1,6 +1,9 @@
 import { assertOrder, assertSize, toIssue } from "../core/result";
 import type { ValidationIssue } from "../core/types";
 
+/** The names of the size options, for the options a collection reads. */
+export const SIZE_OPTIONS = "min max length";
+
 /** Size constraints shared by arrays, sets, maps and records, where the size of a record is its number of keys. Every option is optional. */
 export interface SizeOptions {
   /** Requires at least this many items. A non-negative integer. */

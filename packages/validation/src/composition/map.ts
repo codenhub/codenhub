@@ -1,4 +1,4 @@
-import { chain, collect, type Maybe } from "../core/async";
+import { chain, collect, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
 import { append, below, call, composed } from "../core/nesting";
 import { entriesOf, sizeOfMap } from "../core/objects";
@@ -15,7 +15,7 @@ import type {
   ValidationPathSegment,
   ValidationResult,
 } from "../core/types";
-import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
+import { SIZE_OPTIONS, assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
 /**
  * Creates a validator for `Map`s whose every key passes `key` and every value passes `value`.
@@ -57,7 +57,7 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
 export function map(key: AnyValidator, value: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("key", key);
   assertFunction("value", value);
-  const [options, reject, accept] = tail<SizeOptions & MessageOptions, Map<unknown, unknown>>(rest);
+  const [options, reject, accept] = tail<SizeOptions & MessageOptions, Map<unknown, unknown>>(rest, SIZE_OPTIONS);
   assertSizeOptions(options);
   return composed((input, place): Maybe<ValidationResult<unknown>> => {
     const size = sizeOfMap(input);
@@ -71,14 +71,15 @@ export function map(key: AnyValidator, value: AnyValidator, ...rest: unknown[]):
     const entries = entriesOf(input);
     // A string key is its own segment; any other is the position, a number, so segments never collide.
     const segments = entries.map(([name], index) => (typeof name === "string" ? name : index));
-    const results = entries.map(([name, item], index) =>
-      chain(key(name), (keyResult) =>
+    const results = runEach(entries.length, (index) => {
+      const [name, item] = entries[index] as [unknown, unknown];
+      return chain(key(name), (keyResult) =>
         chain(call(value, item, below(place, segments[index] as ValidationPathSegment)), (valueResult) => ({
           keyResult,
           valueResult,
         })),
-      ),
-    );
+      );
+    });
     return chain(collect(results), (settled) => {
       const issues: ValidationIssue[] = [];
       const output = new Map<unknown, unknown>();

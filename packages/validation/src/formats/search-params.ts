@@ -61,7 +61,7 @@ export function searchParams<TValidator extends AnyValidator>(
 ): AsyncValidator<Infer<TValidator>>;
 export function searchParams(validator: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("validator", validator);
-  const [{ repeated = false }, reject, accept] = tail<SearchParamsOptions, unknown>(rest);
+  const [{ repeated = false }, reject, accept] = tail<SearchParamsOptions, unknown>(rest, "repeated");
   assertOption("repeated", repeated, "boolean");
   return composed((input, place): Maybe<ValidationResult<unknown>> => {
     // A `URLSearchParams` is read as its text, so one from another realm is read as one from this.

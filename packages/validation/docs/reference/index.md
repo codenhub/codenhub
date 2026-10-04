@@ -48,8 +48,8 @@ tags(["a", "a"]); // { ok: false, ... }, code "invalid_value" at path [1]
 ### check
 
 ```ts
-export declare function check<T>(test: (value: T) => boolean, issue?: IssueInput | string): Check<T>;
-export declare function check<T>(test: (value: T) => boolean | PromiseLike<boolean>, issue?: IssueInput | string): AsyncCheck<T>;
+export declare function check<T>(test: (value: T) => boolean, issue?: IssueInput | Message): Check<T>;
+export declare function check<T>(test: (value: T) => boolean | PromiseLike<boolean>, issue?: IssueInput | Message): AsyncCheck<T>;
 ```
 
 Makes a check from a test of a typed value, for a rule a validator's options do not express.
@@ -59,7 +59,7 @@ Give it to a validator after its options. It runs once the value has its type an
 **Parameters**
 
 - `test` — Returns `true` when the value is acceptable.
-- `issue` — What to report when it is not: an issue, or a string as its message. Defaults to code `"custom"` at the value's own location.
+- `issue` — What to report when it is not: an issue, or a message, text or a function of the issue, as a built-in check takes. Defaults to code `"custom"` at the value's own location.
 
 **Type parameters**
 
@@ -67,7 +67,7 @@ Give it to a validator after its options. It runs once the value has its type an
 
 **Returns** — A check that reports the issue when `test` returns `false`.
 
-**Throws** — When `test` is not a function, or `issue` is neither text nor an issue: one whose `code` and `message` are text when given, and whose `path` is a list.
+**Throws** — When `test` is not a function, or `issue` is neither a message nor an issue: one whose `code` and `message` are text when given, and whose `path` is a list.
 
 **Example**
 
@@ -143,7 +143,7 @@ Builds a failed result from one or more issues.
 
 **Returns** — A failed result holding every issue, in order.
 
-**Throws** — When called without an issue, or with a `path` that is not a list, such as `"confirm"`, which would be split into one segment per letter. The types already forbid both.
+**Throws** — When called without an issue, or with a `path` that is not a list of keys and indexes, such as `"confirm"`, which would be split into one segment per letter. The types forbid both.
 
 ### fallback
 
@@ -445,7 +445,8 @@ const isPort = (input: unknown): input is number => is(number({ int: true, min: 
 ### json
 
 ```ts
-export declare function json(options?: MessageOptions): Validator<unknown>;
+export declare function json(): Validator<unknown>;
+export declare function json(options: MessageOptions): Validator<unknown>;
 export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, MessageOptions>): Composed<TValidator, Infer<TValidator>>;
 export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, MessageOptions>): AsyncValidator<Infer<TValidator>>;
 ```
@@ -2997,9 +2998,9 @@ isoDate()("2026-02-29"); // { ok: false, ... }: 2026 is not a leap year
 export declare const jwt: Factory<string, MessageOptions>;
 ```
 
-Creates a validator for JSON Web Tokens in compact form: three base64url segments separated by dots, whose header and payload decode to JSON objects, and whose header names an algorithm in `alg`. The value is not modified.
+Creates a validator for JSON Web Tokens in compact form: three base64url segments separated by dots, whose header and payload decode to JSON objects with no key twice in any object, and whose header names an algorithm in `alg`. The value is not modified.
 
-Only the structure is checked. The signature is not verified and the claims, such as the expiry, are not read: a token that passes may be forged or expired. Verify it with the key before trusting it.
+Only the structure is checked. The signature is not verified and the claims, such as the expiry, are not read: a token that passes may be forged or expired. Verify it with the key before trusting it. A key given twice, as in `{"alg":"none","alg":"HS256"}`, is rejected, since JSON parsers disagree on which one it means.
 
 **Example**
 
@@ -3060,7 +3061,7 @@ export declare const number: Factory<number, NumberOptions>;
 
 Creates a validator for finite numbers. `NaN` and the infinities are always rejected.
 
-`clamp` runs first, then every constraint on the clamped number, and each failing one reports its own issue. The checks run on it once every constraint has passed, and each failing one reports its own.
+`clamp` runs first, then every constraint on the clamped number, each failing one reporting its own issue, and the checks once every constraint has passed. `clamp` moves a finite number into its range; an infinity is rejected before it, as by every `number`, since it more often means a fault upstream than a value to clamp.
 
 **Throws**
 

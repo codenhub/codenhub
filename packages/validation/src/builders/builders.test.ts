@@ -17,6 +17,20 @@ describe("check", () => {
     expect(even(3)).toEqual([{ code: "custom", path: [] }]);
   });
 
+  it("should take a function as the message, as the message of a built-in check, given the issue", () => {
+    const positive = check(
+      (n: number) => n > 0,
+      (found) => `Must be positive (${found.code})`,
+    );
+    expect(positive(0)).toEqual([{ code: "custom", path: [], message: "Must be positive (custom)" }]);
+  });
+
+  it("should reject a path that is not a list of keys and indexes, such as one holding a symbol", () => {
+    expect(() => check(() => true, { path: [Symbol("a")] as never })).toThrow(
+      new TypeError("issue.path must be a list of keys and indexes"),
+    );
+  });
+
   it("should take a string as the message", () => {
     expect(check((n: number) => n > 0, "Must be positive")(0)).toEqual([
       { code: "custom", path: [], message: "Must be positive" },

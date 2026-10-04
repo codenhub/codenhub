@@ -35,6 +35,32 @@ import { unknown } from "../primitives/unknown";
 import { issuesOf, valueOf } from "../test-utils";
 import type { ValidationIssue, Validator } from "./types";
 
+describe("an option the factory does not read", () => {
+  it.each([
+    ["string", () => string({ minn: 3 } as never), "minn"],
+    ["number", () => number({ integer: true } as never), "integer"],
+    ["array", () => array(string(), { maxx: 3 } as never), "maxx"],
+    ["object", () => object({}, { unknownkeys: "strict" } as never), "unknownkeys"],
+    ["record", () => record(string(), string(), { maximum: 3 } as never), "maximum"],
+    ["url", () => url({ hosts: hostname() } as never), "hosts"],
+    ["email", () => email({ allowplus: false } as never), "allowplus"],
+    ["ulid", () => ulid({ version: 4 } as never), "version"],
+    ["literal", () => literal("a", { strict: true } as never), "strict"],
+    ["coerceDate", () => coerceDate({ zone: "utc" } as never), "zone"],
+  ])("%s should throw a TypeError naming it", (_, create, name) => {
+    expect(create).toThrow(new TypeError(`Unknown option ${name}`));
+  });
+
+  it("should still name the replacement of an option 0.1.0 had", () => {
+    expect(() => string({ pattern: /a/ } as never)).toThrow("string(pattern(re))");
+  });
+
+  it("should take the options each factory reads, coerceDate's zoneless included", () => {
+    expect(() => coerceDate({ zoneless: "utc", min: new Date(0) })).not.toThrow();
+    expect(() => url({ protocols: ["https"], repeated: true, message: "x" })).not.toThrow();
+  });
+});
+
 describe("a mistake in the schema", () => {
   const mistakes: [string, () => unknown][] = [
     ["number min as text", () => number({ min: "5" as never })],

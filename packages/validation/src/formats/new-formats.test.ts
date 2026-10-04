@@ -160,6 +160,23 @@ describe("jwt", () => {
     expect(accepts(jwt(), `${withMark}.${payload}.c2ln`, `eyJhbGciOiJhIn0.${payload}.c2ln`)).toEqual([false, true]);
   });
 
+  it("should reject a key given twice in any object of the header or payload, however it is spelled", () => {
+    const encode = (json: string): string => btoa(json).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const escaped = `"${"\\"}u0061lg"`; // alg, its first letter as a JSON escape
+    expect(
+      accepts(
+        jwt(),
+        `${encode('{"alg":"none","alg":"HS256"}')}.${payload}.c2ln`,
+        `${encode(`{"alg":"none",${escaped}:"HS256"}`)}.${payload}.c2ln`,
+        `${header}.${encode('{"sub":"1","sub":"2"}')}.c2ln`,
+        `${header}.${encode('{"a":{"b":1,"b":2}}')}.c2ln`,
+      ),
+    ).toEqual([false, false, false, false]);
+    expect(accepts(jwt(), `${header}.${encode('{"a":{"b":1},"c":[{"b":2},{"b":3}],"s":"a,\\"b\\":"}')}.c2ln`)).toEqual([
+      true,
+    ]);
+  });
+
   it("should reject what is not a token", () => {
     const noAlg = "e30"; // {}
     const notObject = "WzFd"; // [1]

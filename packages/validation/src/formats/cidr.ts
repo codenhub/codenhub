@@ -36,7 +36,7 @@ const toCidr = (text: string, version: "v4" | "v6" | undefined): string | undefi
  * @throws {TypeError} When `version` is given and is not `"v4"` or `"v6"`.
  */
 export const cidr = ((...args: unknown[]) => {
-  const [{ version, message }, checks] = split<IpOptions, string>(args);
+  const [{ version, message }, checks] = split<IpOptions, string>(args, "version");
   if (version !== undefined && version !== "v4" && version !== "v6") {
     throw new TypeError(`version must be "v4" or "v6", received "${String(version)}"`);
   }

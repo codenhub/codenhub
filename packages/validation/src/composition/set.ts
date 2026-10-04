@@ -1,4 +1,4 @@
-import type { Maybe } from "../core/async";
+import { runEach, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { below, call, composed } from "../core/nesting";
 import { sizeOfSet, valuesOf } from "../core/objects";
@@ -15,7 +15,7 @@ import type {
   ValidationResult,
 } from "../core/types";
 import { settle } from "./settle";
-import { assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
+import { SIZE_OPTIONS, assertSizeOptions, sizeIssues, type SizeOptions } from "./size";
 
 /**
  * Creates a validator for `Set`s whose every value passes `item`.
@@ -52,7 +52,7 @@ export function set<TItem extends AnyValidator>(
 ): AsyncValidator<Set<Infer<TItem>>>;
 export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("item", item);
-  const [options, reject, accept] = tail<SizeOptions & MessageOptions, Set<unknown>>(rest);
+  const [options, reject, accept] = tail<SizeOptions & MessageOptions, Set<unknown>>(rest, SIZE_OPTIONS);
   assertSizeOptions(options);
   return composed((input, place): Maybe<ValidationResult<unknown>> => {
     const size = sizeOfSet(input);
@@ -63,8 +63,9 @@ export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
     if (oversize.length > 0) {
       return reject(oversize, place);
     }
+    const values = valuesOf(input);
     return settle(
-      valuesOf(input).map((value, index) => call(item, value, below(place, index))),
+      runEach(values.length, (index) => call(item, values[index], below(place, index))),
       (values) => {
         // A value that validation made equal to an earlier one is reported, not merged, so the output
         // holds as many values as the size options were checked against.

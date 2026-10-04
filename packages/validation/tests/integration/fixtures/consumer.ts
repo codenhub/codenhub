@@ -328,6 +328,10 @@ export const indexedWithOptionalTag = tagged("type", {
 export const both = intersection(object({ name: string() }), object({ age: number() }));
 export const bothValue: Infer<typeof both> = { name: "Ada", age: 36 };
 export const settingsFromText = json(object({ theme: oneOf(["light", "dark"]) }));
+export const anyJson = json();
+export const anyJsonWorded = json({ message: "Not JSON" });
+// @ts-expect-error a missing validator is a mistake, which json() throws for rather than accepting any JSON
+export const missingJson = json(undefined);
 export const settingsFromTextValue: Infer<typeof settingsFromText> = { theme: "dark" };
 
 // A recursive validator names its own type.

@@ -86,6 +86,36 @@ describe("url", () => {
     expect(accepts(url({ host: unknown() }), "http://éxn--.com", "http://äxn--")).toEqual([false, false]);
   });
 
+  it("should give a host validator only a host every runtime reads alike, of letters, digits, . - and _ or an IP address", () => {
+    // Chromium and Firefox read or refuse each of these differently from Node.js.
+    const anyHost = url({ protocols: ["http", "ssh"], host: unknown() });
+    expect(
+      accepts(
+        anyHost,
+        "http://a*b.com/",
+        'http://a"b.com/',
+        "http://a%2a.com/",
+        "http://a%20.com/",
+        "http://[::01.2.3.4]/",
+        "http://0x/",
+        "http://1.0X/",
+      ),
+    ).toEqual([false, false, false, false, false, false, false]);
+    expect(
+      ["http://a_b.example/", "http://ex%61mple.com/", "http://0x.com/", "http://0x7f.1/", "http://[::1.2.3.4]/"].map(
+        (text) => valueOf(anyHost(text)),
+      ),
+    ).toEqual([
+      "http://a_b.example/",
+      "http://example.com/",
+      "http://0x.com/",
+      "http://127.0.0.1/",
+      "http://[::102:304]/",
+    ]);
+    // A scheme the parser has no rules for keeps its host as written, and every runtime reads it so.
+    expect(valueOf(anyHost("ssh://a*b.com/"))).toBe("ssh://a*b.com/");
+  });
+
   it("should hold the internationalized labels of a host to the browsers' rules whatever the host validator", () => {
     // Node.js 24 reads the first two, which break the bidi rule, and refuses the last two, which do not
     // decode, where Chromium and WebKit read them.

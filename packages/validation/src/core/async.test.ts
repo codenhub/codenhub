@@ -1,10 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import { check } from "../builders/check";
+import { array } from "../composition/array";
+import { intersection } from "../composition/intersection";
+import { map } from "../composition/map";
+import { object } from "../composition/object";
+import { record } from "../composition/record";
+import { set } from "../composition/set";
 import { transform } from "../composition/transform";
+import { tuple } from "../composition/tuple";
 import { string } from "../primitives/string";
 import { issuesOf } from "../test-utils";
 import { chain, collect, isThenable } from "./async";
+import type { AsyncValidator, Validator } from "./types";
 
 // The thenables below are the subject of these tests, not accidents.
 /* oxlint-disable unicorn/no-thenable */
@@ -87,5 +95,60 @@ describe("chain, given a thenable that is not a promise", () => {
   it("should pass on a rejection from one", async () => {
     const rejecting = { then: (_resolve: unknown, reject: (reason: Error) => void) => reject(new Error("boom")) };
     await expect(transform(string(), () => rejecting as PromiseLike<never>)("a")).rejects.toThrow("boom");
+  });
+});
+
+describe("a composer whose child throws after another returned a pending result", () => {
+  it("should leave no rejection of the pending one unhandled, whichever composer it is", async () => {
+    const rejecting: AsyncValidator<unknown> = async () => Promise.reject(new Error("lookup failed"));
+    const throwing: Validator<unknown> = () => {
+      throw new Error("bug");
+    };
+    // Pending for the first item, and throwing for the next.
+    const mixed: AsyncValidator<unknown> = (input) => (input === 1 ? rejecting(input) : throwing(input));
+    const unhandled: unknown[] = [];
+    const listen = (reason: unknown): void => {
+      unhandled.push(reason);
+    };
+    process.on("unhandledRejection", listen);
+    try {
+      const composers: [string, () => unknown][] = [
+        ["object", () => object({ a: rejecting, b: throwing })({ a: 1, b: 2 })],
+        ["array", () => array(mixed)([1, 2])],
+        ["tuple", () => tuple([rejecting, throwing])([1, 2])],
+        ["record", () => record(string(), mixed)({ a: 1, b: 2 })],
+        ["set", () => set(mixed)(new Set([1, 2]))],
+        [
+          "map",
+          () =>
+            map(
+              string(),
+              mixed,
+            )(
+              new Map([
+                ["a", 1],
+                ["b", 2],
+              ]),
+            ),
+        ],
+        ["intersection", () => intersection(rejecting, throwing)(1)],
+        [
+          "checks",
+          () =>
+            string(
+              check(async () => Promise.reject(new Error("x"))),
+              check(() => throwing(1) as never),
+            )("a"),
+        ],
+      ];
+      for (const [, run] of composers) {
+        expect(run).toThrow("bug");
+      }
+      // Unhandled rejections are reported after the microtasks, so a macrotask lets them surface.
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    } finally {
+      process.off("unhandledRejection", listen);
+    }
+    expect(unhandled).toEqual([]);
   });
 });

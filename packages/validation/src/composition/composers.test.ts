@@ -126,10 +126,12 @@ describe("checks on composers", () => {
 describe("composer options", () => {
   it("should be read once, when the validator is made, so changing the object later changes nothing", () => {
     const options: { message?: string; min?: number } = { message: "a", min: 1 };
+    const shapeOptions = { message: "a" };
     const list = array(string(), options);
-    const shape = object({}, options as never);
+    const shape = object({}, shapeOptions);
     options.message = "b";
     options.min = 5;
+    shapeOptions.message = "b";
     expect(issuesOf(list(1))[0]?.message).toBe("a");
     expect(issuesOf(shape(1))[0]?.message).toBe("a");
     expect(list(["x"]).ok).toBe(true);

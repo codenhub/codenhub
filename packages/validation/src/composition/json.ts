@@ -36,7 +36,8 @@ import type {
  * @returns A validator that produces what `validator` produces, or `unknown` without one.
  * @throws {TypeError} When `validator` is given and is not a function, `undefined` included.
  */
-export function json(options?: MessageOptions): Validator<unknown>;
+export function json(): Validator<unknown>;
+export function json(options: MessageOptions): Validator<unknown>;
 export function json<TValidator extends AnyValidator>(
   validator: TValidator,
   ...rest: Rest<Infer<TValidator>, MessageOptions>
