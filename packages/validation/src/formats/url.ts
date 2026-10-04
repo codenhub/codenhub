@@ -37,10 +37,11 @@ const ENCODED_SEPARATOR_PATTERN = /%(?:2f|5c)/i;
 
 /**
  * A segment that is `.` or `..`, a dot written plain or as `%2E`, followed by `;` and its parameters, as in
- * `/api/..;/admin`. The parser reads it as an ordinary segment, while a server that drops the parameters
- * before resolving dot segments, as Tomcat and Jetty do, reads `..`.
+ * `/api/..;/admin`, or by `%3B`, the `;` a proxy that decodes the path, such as nginx, passes on as one.
+ * The parser reads it as an ordinary segment, while a server that drops the parameters before resolving
+ * dot segments, as Tomcat and Jetty do, reads `..`.
  */
-const DOT_SEGMENT_PATTERN = /(?:^|\/)(?:\.|%2e){1,2};/i;
+const DOT_SEGMENT_PATTERN = /(?:^|\/)(?:\.|%2e){1,2}(?:;|%3b)/i;
 
 /** Options for {@link url}. */
 export interface UrlOptions extends MessageOptions {
@@ -86,7 +87,7 @@ export interface UrlOptions extends MessageOptions {
    * as `ssh://example.com`, that names no path. A path holding an encoded `/` or `\`, `%2F` or `%5C`, fails
    * before it runs, with `{ encodedSeparator: true }`, since a server that decodes it before routing would
    * read another path than the validator saw, and so does one holding a segment `.` or `..` followed by
-   * `;`, such as `/api/..;/admin`, with `{ dotSegment: true }`, since a server that drops the parameters
+   * `;` or `%3B`, such as `/api/..;/admin`, with `{ dotSegment: true }`, since a server that drops the parameters
    * before resolving dot segments would read `..`. Write it as an allowlist, such as
    * `string(startsWith("/api/"))`: a server may also decode an escape, merge `//` or drop `;` and its
    * parameters from a segment, which a denylist such as "not under `/admin`" does not foresee. Its failure

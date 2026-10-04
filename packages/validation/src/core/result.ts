@@ -88,17 +88,6 @@ export const issue = (
   path: readonly ValidationPathSegment[] = ROOT_PATH,
 ): ValidationIssue => (params === undefined ? { code, path } : { code, path, params });
 
-/**
- * An issue as another issue holds it in `params.issues`: as it is when the issues behind it carry none of
- * their own, such as a part's `{ minimum: 3 }` or a repeated key's `{ unique: true }`, and otherwise with
- * everything but those issues, as a `union`, whose issues are its options' lists, always is. So issues nest
- * at most three deep whatever composes them. A recursive schema otherwise nests them once per level, an
- * asynchronous one 10,000 times, past what a serializer can write, and where the levels share a result, as
- * the options of a recursive `union` share the children's through one `lazy`, each path through the
- * nesting writes it out again: 2^20 copies, 350 MB of JSON, for 430 bytes of input. Every built-in issue
- * that carries the issues behind it holds them this way: `invalid_union`, `invalid_key` and a failed part
- * of a URL or an email address.
- */
 /** Tests whether an issue is a limit of `lazy` that stopped a validation, rather than a fault of the input. */
 const isLimit = ({ code, params }: ValidationIssue): boolean =>
   code === "too_big" && (params?.["type"] === "depth" || params?.["type"] === "calls");
@@ -117,13 +106,26 @@ function limitIn(found: ValidationIssue): ValidationIssue | undefined {
   for (const each of Array.isArray(behind) ? (behind.flat() as ValidationIssue[]) : []) {
     const limit = typeof each === "object" && each !== null ? limitIn(each) : undefined;
     if (limit !== undefined) {
-      const path = found.code === "invalid_union" ? [...found.path, ...limit.path] : found.path;
+      // A path a validator written by hand left out is the value's own, as everywhere else.
+      const place = found.path ?? ROOT_PATH;
+      const path = found.code === "invalid_union" ? [...place, ...(limit.path ?? ROOT_PATH)] : place;
       return { ...limit, path };
     }
   }
   return undefined;
 }
 
+/**
+ * An issue as another issue holds it in `params.issues`: as it is when the issues behind it carry none of
+ * their own, such as a part's `{ minimum: 3 }` or a repeated key's `{ unique: true }`, and otherwise with
+ * everything but those issues, as a `union`, whose issues are its options' lists, always is. So issues nest
+ * at most three deep whatever composes them. A recursive schema otherwise nests them once per level, an
+ * asynchronous one 10,000 times, past what a serializer can write, and where the levels share a result, as
+ * the options of a recursive `union` share the children's through one `lazy`, each path through the
+ * nesting writes it out again: 2^20 copies, 350 MB of JSON, for 430 bytes of input. Every built-in issue
+ * that carries the issues behind it holds them this way: `invalid_union`, `invalid_key` and a failed part
+ * of a URL or an email address.
+ */
 export function nested(found: ValidationIssue): ValidationIssue {
   const behind: unknown = found.params?.["issues"];
   if (

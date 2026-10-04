@@ -91,4 +91,21 @@ describe("issues held in params.issues", () => {
       `${"[0]".repeat(128)}: Must be nested at most 128 levels deep`,
     );
   });
+
+  it("should keep a limit found behind a union written by hand without a path, at the root", () => {
+    const handWritten = (() => ({
+      ok: false,
+      error: {
+        issues: [
+          {
+            code: "invalid_union",
+            params: { issues: [[{ code: "too_big", path: [], params: { maximum: 1, type: "depth" } }]] },
+          },
+        ],
+      },
+    })) as unknown as Validator<unknown>;
+    expect(issuesOf(union([handWritten])("x"))[0]?.params?.["issues"]).toEqual([
+      [{ code: "too_big", path: [], params: { maximum: 1, type: "depth" } }],
+    ]);
+  });
 });

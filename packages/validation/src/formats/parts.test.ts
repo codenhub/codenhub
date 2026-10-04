@@ -146,11 +146,13 @@ describe("url parts", () => {
         "https://example.com/api/%2e%2e;/admin",
         "https://example.com/api/.%2E;/admin",
         "https://example.com/api/.;/admin",
+        "https://example.com/api/..%3B/admin",
+        "https://example.com/api/%2e%2e%3b/admin",
         "https://example.com/api/a;b=1/c",
         "https://example.com/api/...;/c",
         "https://example.com/api/a..;/c",
       ),
-    ).toEqual([false, false, false, false, false, true, true, true]);
+    ).toEqual([false, false, false, false, false, false, false, true, true, true]);
     expect(seen).toEqual(["/api/a;b=1/c", "/api/...;/c", "/api/a..;/c"]);
     expect(issuesOf(api("https://example.com/api/..;/admin"))).toEqual([
       {
