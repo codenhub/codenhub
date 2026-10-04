@@ -20,6 +20,11 @@ describe("fail", () => {
     );
   });
 
+  it("should reject a path with a hole, which holds no key or index", () => {
+    // oxlint-disable-next-line unicorn/no-new-array -- a sparse list is the subject of the test
+    expect(() => fail({ path: new Array(1) })).toThrow(new TypeError("issue.path must be a list of keys and indexes"));
+  });
+
   it("should default to code custom at the value's own location", () => {
     expect(fail({})).toEqual({ ok: false, error: { issues: [{ code: "custom", path: [] }] } });
   });

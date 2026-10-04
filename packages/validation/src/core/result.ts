@@ -46,10 +46,10 @@ export function pass<T>(value: T): ValidationOk<T> {
 /**
  * Tests whether a path written by a validator author is one: a list of keys and indexes. Text, such as
  * `"confirm"`, would be spread into one segment per letter, and a symbol cannot be written in a path or
- * a field name.
+ * a field name. The list is spread first, so a hole, which `every` would skip, is read as undefined.
  */
 export const isPath = (path: unknown): boolean =>
-  Array.isArray(path) && path.every((segment) => typeof segment === "string" || typeof segment === "number");
+  Array.isArray(path) && [...path].every((segment) => typeof segment === "string" || typeof segment === "number");
 
 /**
  * Builds a failed result from one or more issues.
