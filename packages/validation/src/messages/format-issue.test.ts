@@ -378,7 +378,12 @@ describe("formatIssue", () => {
     const [short] = issuesOf(record(string({ min: 3 }), number())({ ab: 1 }));
     expect(formatIssue(short as ValidationIssue)).toBe("Invalid key: Must be at least 3 characters");
     const [repeated] = issuesOf(record(string({ case: "lower" }), number())({ A: 1, a: 2 }));
-    expect(formatIssue(repeated as ValidationIssue)).toBe("Invalid key: Must be unique");
+    expect(formatIssue(repeated as ValidationIssue)).toBe("Must be given only once");
+  });
+
+  it("should word a query key given twice as such, inside the URL's own issue", () => {
+    const [repeated] = issuesOf(url({ query: object({ a: string() }) })("http://example.com/?a=1&a=2"));
+    expect(formatIssue(repeated as ValidationIssue)).toBe("Invalid URL query: a: Must be given only once");
   });
 
   it("should word an encoded separator in a URL path", () => {
