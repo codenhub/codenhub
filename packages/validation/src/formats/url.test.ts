@@ -168,6 +168,8 @@ describe("url", () => {
       "http://nas.home",
       "http://smtp.mail",
       "http://localhost.localdomain",
+      "http://kubernetes.default.svc",
+      "http://api.prod.svc.cluster",
     ];
     expect(accepts(url(), ...reserved)).toEqual(Array(reserved.length).fill(false));
     expect(accepts(url({ host: unknown() }), ...reserved)).toEqual(Array(reserved.length).fill(true));
@@ -183,9 +185,11 @@ describe("url", () => {
         "https://mail.example.com",
         "https://corp.example.com",
         "https://home.example.com",
+        "https://svc.example.com",
+        "https://cluster.example.com",
         "https://localdomain.org",
       ),
-    ).toEqual(Array(7).fill(true));
+    ).toEqual(Array(9).fill(true));
   });
 
   it("should accept local hosts only with a host validator that does", () => {

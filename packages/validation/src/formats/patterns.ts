@@ -22,11 +22,13 @@ const DOMAIN_NAME_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z
  * for testing, documentation or other networks (RFC 3172, 6761, 6762, 7686, 8375 and 9476, and ICANN's
  * `.internal`). `home`, `corp` and `mail` are the names ICANN resolved in 2018 never to delegate, since
  * private networks already use them, and `localdomain` is the name many systems give the local machine,
- * as in `localhost.localdomain`. The list also holds the eleven IDN test top-level domains IANA listed, in their ASCII form: `إختبار`,
+ * as in `localhost.localdomain`. `svc` and `cluster` end the names Kubernetes gives services inside a
+ * cluster, such as `kubernetes.default.svc`, a known target for requests forged to reach inside it. The
+ * list also holds the eleven IDN test top-level domains IANA listed, in their ASCII form: `إختبار`,
  * `آزمایشی`, `测试`, `測試`, `испытание`, `परीक्षा`, `δοκιμή`, `테스트`, `טעסט`, `テスト` and `பரிட்சை`.
  */
 const SPECIAL_USE_NAME_PATTERN =
-  /(?:^|\.)(?:localhost|localdomain|local|internal|home|corp|mail|test|example|invalid|alt|onion|arpa|xn--(?:kgbechtv|hgbk6aj7f53bba|0zwm56d|g6w251d|80akhbyknj4f|11b5bs3a9aj6g|jxalpdlp|9t4b11yi5a|deba0ad|zckzah|hlcj6aya9esc7a))$/i;
+  /(?:^|\.)(?:localhost|localdomain|local|internal|home|corp|mail|svc|cluster|test|example|invalid|alt|onion|arpa|xn--(?:kgbechtv|hgbk6aj7f53bba|0zwm56d|g6w251d|80akhbyknj4f|11b5bs3a9aj6g|jxalpdlp|9t4b11yi5a|deba0ad|zckzah|hlcj6aya9esc7a))$/i;
 
 /** A label in punycode, the ASCII form of an internationalized one. */
 const PUNYCODE_LABEL_PATTERN = /(?:^|\.)xn--/i;
