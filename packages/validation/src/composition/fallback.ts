@@ -20,7 +20,8 @@ type Replacement<T> = [Extract<T, AnyFunction>] extends [never]
  *
  * @remarks
  * The fallback is trusted and is not validated. A function is called with the issues that were
- * found, so it can log them, and its return value becomes the result. A primitive is used as it is. An
+ * found, so it can log them, and its return value becomes the result. A function that reads an argument,
+ * such as `Array` or `String`, is given those issues too, so wrap it: `() => []`, not `Array`. A primitive is used as it is. An
  * object or an array must come from a function, such as `() => []`, since one value would be shared by
  * every result and a change to one would show up in the next: the types reject it, and so does
  * `fallback` when it is created. A fallback that is itself a function has to be

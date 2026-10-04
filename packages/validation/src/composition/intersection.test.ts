@@ -4,6 +4,7 @@ import { coerceDate } from "../coercion/coerce-date";
 import { date } from "../primitives/date";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
+import { unknown } from "../primitives/unknown";
 import { codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { array } from "./array";
 import { intersection } from "./intersection";
@@ -14,6 +15,19 @@ import { set } from "./set";
 import { transform } from "./transform";
 
 describe("intersection", () => {
+  it("should report a revoked proxy one side passed through as a conflict, not throw", () => {
+    const { proxy, revoke } = Proxy.revocable([], {});
+    revoke();
+    expect(
+      codesOf(
+        intersection(
+          unknown(),
+          transform(unknown(), () => ({})),
+        )(proxy),
+      ),
+    ).toEqual(["invalid_intersection"]);
+  });
+
   const named = object({ name: string() });
   const aged = object({ age: number() });
   const both = intersection(named, aged);

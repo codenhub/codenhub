@@ -13,6 +13,7 @@ import { unknown } from "../primitives/unknown";
 import { isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { array } from "./array";
 import { fallback } from "./fallback";
+import { intersection } from "./intersection";
 import { lazy } from "./lazy";
 import { object } from "./object";
 import { optional } from "./optional";
@@ -437,5 +438,31 @@ describe("lazy", () => {
 describe("lazy, given a getter that returns null", () => {
   it("should throw a TypeError naming null on first use", () => {
     expect(() => lazy(() => null as never)(1)).toThrow("getter() must return a function, received null");
+  });
+
+  it("should report a shared object at each path it is reached at, under parents with the same last key", () => {
+    type Node = { k?: Node; v?: number };
+    const node: Validator<Node> = lazy(() => object({ k: optional(node), v: optional(number()) }));
+    const shared = { v: "x" };
+    const issues = issuesOf(object({ a: node, b: node })({ a: { k: shared }, b: { k: shared } }));
+    expect(issues.map((found) => found.path)).toEqual([
+      ["a", "k", "v"],
+      ["b", "k", "v"],
+    ]);
+  });
+
+  it("should validate an object once when two options of a union reach it at the same place", () => {
+    let calls = 0;
+    const counted: Validator<{ n: number }> = (input) => {
+      calls += 1;
+      return object({ n: number() })(input);
+    };
+    const node = lazy(() => counted);
+    const either = union([object({ child: node, tag: literal("a") }), object({ child: node, tag: literal("b") })]);
+    expect(valueOf(either({ child: { n: 1 }, tag: "b" }))).toEqual({ child: { n: 1 }, tag: "b" });
+    expect(calls).toBe(1);
+    // Both sides of an intersection are given the very place they are at, and it is found at once.
+    expect(valueOf(object({ wrap: intersection(node, node) })({ wrap: { n: 1 } }))).toEqual({ wrap: { n: 1 } });
+    expect(calls).toBe(2);
   });
 });

@@ -28,7 +28,7 @@ string(
 );
 ```
 
-The test receives the value the validator produced, after its clean-up, and returns `true` when the value is acceptable. The second argument is the issue to report when it returns `false`: a string is its message, a function of the issue words it when it is reported, as the message of a built-in check does, and an object can set a `code`, `path`, `params` and `message`. A `path` is a list of keys and indexes; anything else, such as text or a symbol, throws a `TypeError` when the check is made. Without it the issue has code `custom` at the value's own location. An issue without a message of its own is worded by the `message` option of the validator the check is given to, when it has one.
+The test receives the value the validator produced, after its clean-up, and returns `true` when the value is acceptable. The second argument is the issue to report when it returns `false`: a string is its message, a function of the issue words it when it is reported, as the message of a built-in check does, and must return text, or the validator throws a `TypeError` when it reports the issue, and an object can set a `code`, `path`, `params` and `message`. A `path` is a list of keys and indexes; anything else, such as text or a symbol, throws a `TypeError` when the check is made. Without it the issue has code `custom` at the value's own location. An issue without a message of its own is worded by the `message` option of the validator the check is given to, when it has one. Otherwise `formatIssue` has only its code, `custom`, which `englishMessages` has no wording for, since a failed check carries nothing to word, and says "Invalid value": give a check a message wherever people read what it reports.
 
 A check runs once the value has its type and has passed the validator's own options, so `string({ max: 30 }, check(isFree))` never asks about a name longer than 30 characters. For an object that means once every property has passed, so a check can compare them and rely on their types. Point the issue at the field the user should fix with `path`:
 
@@ -43,7 +43,7 @@ const signup = object(
 
 `data` needs no annotation: its type comes from the object. A check of the wrong type, such as a number check given to `string`, is a compile error.
 
-A check can also be written by hand, as a function that returns nothing for a value it accepts or the issues it found. Type it as `Check<T>`, which is how it reports several issues at once or chooses a path per failure:
+A check can also be written by hand, as a function that returns nothing for a value it accepts or the issues it found. Each issue it returns is an object, as `fail()` makes one: anything else in the list, such as `null`, throws a `TypeError` when the check reports it, and an issue without a `code` has code `custom`. Its `code` and `message` are text and its `path` a list of keys and indexes, as the `ValidationIssue` type says; build issues with `fail()` to have that checked when they are made. Type it as `Check<T>`, which is how it reports several issues at once or chooses a path per failure:
 
 ```ts
 import { string, type Check } from "@codenhub/validation";

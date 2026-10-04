@@ -1,7 +1,7 @@
 import { chain, collect, detached, runEach, type Maybe } from "./async";
 import { placeAll, type Place } from "./nesting";
 import { isPlainObject } from "./objects";
-import { failWith, issue, pass, typeIssue } from "./result";
+import { assertText, failWith, issue, pass, typeIssue } from "./result";
 import type {
   AsyncCheck,
   Check,
@@ -48,6 +48,9 @@ export function split<TOptions extends MessageOptions, T>(
   return [{ ...(options as object) } as TOptions, checks as AsyncCheck<T>[]];
 }
 
+/** What a check written by hand that returns something it may not is told. */
+const CHECK_RESULT_ERROR = "A check must return undefined or a list of issues";
+
 /**
  * Rejects wording that is neither text nor a function, such as a translation that turned out to be a
  * group of them, which would otherwise reach a form as `[object Object]`. Undefined is no wording.
@@ -66,7 +69,11 @@ export function word(issues: ValidationIssue[], message: Message | undefined): V
   if (message !== undefined) {
     issues.forEach((found, index) => {
       if (found.message === undefined) {
-        issues[index] = { ...found, message: typeof message === "function" ? message(found) : message };
+        const worded: unknown = typeof message === "function" ? message(found) : message;
+        // A function that returns anything but text, such as a translation lookup that missed, would put it
+        // in the issue, and a form would show `undefined` or `[object Object]`.
+        assertText("message", worded);
+        issues[index] = { ...found, message: worded as string };
       }
     });
   }
@@ -90,8 +97,10 @@ export const report = (
  * that has no wording of its own, and returns the value or every issue. It stays synchronous while every
  * check is, and while its own issues stop the checks. A check's issues are copied, so
  * a list the check reuses is never changed, and one written by hand without a path, or with an undefined
- * one, is at the value. A check written by hand that returns anything but nothing or a list, such as
- * `false`, is a bug, and throws saying so rather than failing later on what it returned.
+ * one, is at the value, and without a code is `"custom"`, as `fail()` gives it. A check written by hand
+ * that returns anything but nothing or a list, such as `false`, or a list holding something that is not
+ * an object, such as `null`, is a bug, and throws saying so rather than failing later on what it
+ * returned.
  */
 export function finish<T>(
   value: T,
@@ -105,11 +114,15 @@ export function finish<T>(
   return chain(collect(runEach(checks.length, (index) => detached(checks[index] as AsyncCheck<T>, value))), (found) => {
     for (const list of found) {
       if (list !== undefined && !Array.isArray(list)) {
-        throw new TypeError("A check must return undefined or a list of issues");
+        throw new TypeError(CHECK_RESULT_ERROR);
       }
       // Pushed one by one: spreading a long list into `push` would overflow the stack.
       for (const each of list ?? []) {
-        issues.push({ ...each, path: each.path ?? [] });
+        // An array is an object too, and spread into an issue would give it keys `0`, `1` and so on.
+        if (typeof each !== "object" || each === null || Array.isArray(each)) {
+          throw new TypeError(CHECK_RESULT_ERROR);
+        }
+        issues.push({ ...each, code: each.code ?? "custom", path: each.path ?? [] });
       }
     }
     return issues.length > 0 ? failWith(word(issues, message)) : pass(value);
@@ -153,20 +166,24 @@ export function rule<T>(
 }
 
 /**
- * Builds a validator that accepts the values `accepts` names, and reports any other with one
- * `invalid_value` issue whose params `params` makes afresh for each failure, as `literal` and `oneOf`
- * do, where `leaf` would report the type.
+ * Builds a validator that accepts the values `find` names, producing the declared value `find` returns
+ * rather than the input, and reports any other with one `invalid_value` issue whose params `params`
+ * makes afresh for each failure, as `literal` and `oneOf` do, where `leaf` would report the type. The
+ * declared value is produced because `===` also matches `-0` to `0`, and the type promises the one
+ * declared.
  */
 export function member<T>(
-  accepts: (input: unknown) => boolean,
+  find: (input: unknown) => readonly [value: T] | undefined,
   params: () => Readonly<Record<string, unknown>>,
   args: readonly unknown[],
 ): (input: unknown) => Maybe<ValidationResult<T>> {
   const [{ message }, checks] = split<MessageOptions, T>(args);
-  return (input) =>
-    accepts(input)
-      ? finish(input as T, [], message, checks)
-      : failWith(word([issue("invalid_value", params())], message));
+  return (input) => {
+    const found = find(input);
+    return found === undefined
+      ? failWith(word([issue("invalid_value", params())], message))
+      : finish(found[0], [], message, checks);
+  };
 }
 
 /**

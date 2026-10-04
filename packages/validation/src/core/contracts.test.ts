@@ -163,7 +163,7 @@ describe("a validator's message", () => {
 
 describe("canonical output", () => {
   it("should give one value for one hostname, UUID and ULID however they were written", () => {
-    expect(valueOf(hostname()("Intranet.Example."))).toBe("intranet.example.");
+    expect(valueOf(hostname()("Intranet.Example"))).toBe("intranet.example");
     expect(valueOf(uuid()("123E4567-E89B-12D3-A456-426614174000"))).toBe("123e4567-e89b-12d3-a456-426614174000");
     expect(valueOf(ulid()("01arz3ndektsv4rrffq69g5fav"))).toBe("01ARZ3NDEKTSV4RRFFQ69G5FAV");
   });
@@ -178,6 +178,30 @@ describe("coerceDate", () => {
 });
 
 describe("a message function", () => {
+  it("should throw when it returns anything but text, which a form would show as it is", () => {
+    expect(() => number({ message: () => 5 as never })("x")).toThrow(
+      new TypeError("message must be text, received number"),
+    );
+    expect(() =>
+      number(
+        check(
+          () => false,
+          () => undefined as never,
+        ),
+      )(1),
+    ).toThrow(new TypeError("message must be text, received undefined"));
+  });
+
+  it("should throw when a check written by hand returns something that is not an issue", () => {
+    expect(() => number((() => [null]) as never)(1)).toThrow(
+      new TypeError("A check must return undefined or a list of issues"),
+    );
+    expect(() => number((() => [[]]) as never)(1)).toThrow(
+      new TypeError("A check must return undefined or a list of issues"),
+    );
+    expect(issuesOf(number((() => [{}]) as never)(1))).toEqual([{ code: "custom", path: [] }]);
+  });
+
   it("should be given the issue as its validator reports it, with a path relative to that validator", () => {
     const paths: unknown[] = [];
     const field = number({

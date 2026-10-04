@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 
+import type { Validator } from "../core/types";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { codesOf, isFree, isPending, valueOf } from "../test-utils";
 import { array } from "./array";
 import { fallback } from "./fallback";
+import { lazy } from "./lazy";
+import { object } from "./object";
+import { optional } from "./optional";
 
 describe("fallback", () => {
   const pageSize = fallback(number({ int: true, min: 1, max: 100 }), 20);
@@ -56,5 +60,19 @@ describe("fallback", () => {
     const first = valueOf(fresh(1));
     first.push("x");
     expect(valueOf(fresh(1))).toEqual([]);
+  });
+
+  it("should replace a value whose validation lazy stopped at a limit, cyclic input included", () => {
+    type Node = { next?: Node };
+    const node: Validator<Node> = lazy(() => object({ next: optional(node) }));
+    const cyclic: { next?: unknown } = {};
+    cyclic.next = cyclic;
+    const seen: string[] = [];
+    const safe = fallback(node, (issues) => {
+      seen.push(...issues.map((issue) => `${issue.code}:${String(issue.params?.["type"])}`));
+      return {};
+    });
+    expect(valueOf(safe(cyclic))).toEqual({});
+    expect(seen).toEqual(["too_big:depth"]);
   });
 });

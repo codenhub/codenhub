@@ -29,5 +29,6 @@ export function is(validator: Validator<unknown>, input: unknown): boolean {
     result.then(undefined, () => undefined);
     throw new TypeError("is() needs a synchronous validator. Call the validator and await its result instead.");
   }
-  return (result as { ok: boolean }).ok;
+  // Compared, not returned, so a validator written by hand that sets `ok` to `1` still gives a boolean.
+  return (result as { ok: unknown }).ok === true;
 }

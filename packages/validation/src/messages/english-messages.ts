@@ -232,8 +232,13 @@ export const englishMessages: Messages = /* @__PURE__ */ Object.freeze({
           : describeValue(issue),
   // Worded with what the key validator found first, so a form says why the key is wrong, not only that it
   // is, and with the map in use, so a map that overrides some of this wording reaches that issue too.
+  // A key given twice, in a query or by two keys a key validator made the same, is said as such, since
+  // "must be unique" names no rule a person broke.
   invalid_key: (issue, messages) => {
     const [found] = (issue.params?.issues ?? []) as readonly ValidationIssue[];
+    if (found?.code === "invalid_value" && found.params?.unique === true) {
+      return "Must be given only once";
+    }
     return found === undefined ? "Invalid key" : `Invalid key: ${quote(found, messages)}`;
   },
   // Quoted as a literal, since the key is text the sender chose and may hold quotes or line breaks.

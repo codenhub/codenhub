@@ -69,12 +69,19 @@ describe("url", () => {
     expect(url()(`https://${longest}/`).ok).toBe(true);
     expect(url()(`https://${longest}f/`).ok).toBe(false);
     expect(url({ host: unknown() })(`https://${labels(20)}/`).ok).toBe(false);
-    expect(url()(`https://${longest}./`).ok).toBe(true);
   });
 
-  it("should accept an absolute host, keeping its final dot", () => {
-    expect(valueOf(url()("https://Example.com./a"))).toBe("https://example.com./a");
-    expect(accepts(url(), "https://localhost./", "https://example.com../")).toEqual([false, false]);
+  it("should reject an absolute host ending in a dot, whatever the host validator or scheme", () => {
+    expect(accepts(url(), "https://Example.com./a", "https://localhost./", "https://example.com../")).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    expect(
+      accepts(url({ host: unknown(), protocols: ["http", "ssh"] }), "http://localhost./", "ssh://db.internal./"),
+    ).toEqual([false, false]);
+    // The parser drops the final dot of an IPv4 address itself, so its value has one spelling already.
+    expect(valueOf(url({ host: unknown() })("http://127.0.0.1./"))).toBe("http://127.0.0.1/");
   });
 
   it("should reject a punycode host that does not decode", () => {
@@ -161,6 +168,8 @@ describe("url", () => {
       "http://nas.home",
       "http://smtp.mail",
       "http://localhost.localdomain",
+      "http://kubernetes.default.svc",
+      "http://api.prod.svc.cluster",
     ];
     expect(accepts(url(), ...reserved)).toEqual(Array(reserved.length).fill(false));
     expect(accepts(url({ host: unknown() }), ...reserved)).toEqual(Array(reserved.length).fill(true));
@@ -176,9 +185,11 @@ describe("url", () => {
         "https://mail.example.com",
         "https://corp.example.com",
         "https://home.example.com",
+        "https://svc.example.com",
+        "https://cluster.example.com",
         "https://localdomain.org",
       ),
-    ).toEqual(Array(7).fill(true));
+    ).toEqual(Array(9).fill(true));
   });
 
   it("should accept local hosts only with a host validator that does", () => {
@@ -347,6 +358,16 @@ describe("url without a host", () => {
         "mailto:ada@example.com?subject=100%25%20done&body=Line%0D%0Aline",
       ),
     ).toEqual([false, false, false, true]);
+  });
+
+  it("should reject any other encoded control character or line separator in the subject", () => {
+    const subjects = ["%00", "%1b", "%09", "%7F", "%C2%85", "%e2%80%a8", "%E2%80%A9"];
+    expect(accepts(mailto, ...subjects.map((code) => `mailto:ada@example.com?subject=Hi${code}`))).toEqual(
+      Array(subjects.length).fill(false),
+    );
+    expect(
+      accepts(mailto, "mailto:ada@example.com?subject=%C3%A9t%C3%A9%20%E2%82%AC", "mailto:a@example.com?body=a%09b"),
+    ).toEqual([true, true]);
   });
 
   it("should reject a repeated subject or body, and accept repeated recipient fields", () => {

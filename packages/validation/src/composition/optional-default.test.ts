@@ -33,6 +33,17 @@ describe("optional with a default", () => {
     expect(valueOf(tags(undefined))).toEqual([]);
   });
 
+  it("should call a function default with no argument, so one that reads an argument makes its own default", () => {
+    const received: unknown[][] = [];
+    optional(string(), (...args: unknown[]) => {
+      received.push(args);
+      return "x";
+    })(undefined);
+    expect(received).toEqual([[]]);
+    expect(valueOf(optional(array(number()), Array)(undefined))).toEqual([]);
+    expect(valueOf(optional(string(), String)(undefined))).toBe("");
+  });
+
   it("should refuse an object or array default, which every result would share, when created", () => {
     const error = new TypeError(
       "A default object would be shared by every result: pass a function that returns it, such as () => []",

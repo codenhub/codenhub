@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -127,4 +128,117 @@ describe("documentation examples", () => {
     },
     COMPILE_TIMEOUT,
   );
+
+  it("run against the built package, and give the results their comments show", async () => {
+    expect(existsSync(declarations), "run `pnpm build validation` first: this test reads dist/").toBe(true);
+    const module = (await import(`${packageRoot}dist/index.js`)) as Record<string, unknown>;
+    const exportNames = Object.keys(module);
+    const failures: string[] = [];
+    let checked = 0;
+    for (const example of examples(exportNames)) {
+      const annotated: { line: number; comment: string }[] = [];
+      // A line written as `expression; // { ok: true, value: … }` states what the expression gives. It is
+      // wrapped so the test receives what it gave, and every other line runs as written.
+      const body = example.code
+        .split("\n")
+        .map((line, index) => {
+          const found = ANNOTATED_LINE.exec(line);
+          if (found === null || /^(?:const|let|return|await|export|import)\b/.test(found[2] as string)) {
+            return line;
+          }
+          annotated.push({ line: example.lines[index] ?? -1, comment: found[3] as string });
+          return `${found[1]}await __check(${annotated.length - 1}, () => (${found[2]}));`;
+        })
+        .join("\n");
+      if (annotated.length === 0) {
+        continue;
+      }
+      const results = new Map<number, unknown>();
+      const javascript = ts
+        .transpileModule(body, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } })
+        .outputText.replace(/^import .*$/gm, "")
+        .replace(/^export \{\};?$/gm, "")
+        // An example may export what it declares, as a module of an app would; here it is only declared.
+        .replace(/^export (?=(?:const|let|function|class|async)\b)/gm, "");
+      try {
+        // In a block of its own, so an example may declare a name an export has, as `const port = …` does.
+        const run = new AsyncFunction("__check", ...exportNames, ...STUB_NAMES, `{\n${javascript}\n}`) as (
+          ...args: unknown[]
+        ) => Promise<void>;
+        // One example at a time, in order, so a failure names the example that caused it.
+        // oxlint-disable-next-line no-await-in-loop -- the examples run one after another on purpose
+        await run(
+          async (index: number, evaluate: () => unknown) => {
+            results.set(index, await evaluate());
+          },
+          ...exportNames.map((name) => module[name]),
+          ...STUB_NAMES.map((name) => STUBS[name]),
+        );
+      } catch (error) {
+        failures.push(`${example.where}: threw ${String(error)}`);
+      }
+      for (const [index, { line, comment }] of annotated.entries()) {
+        checked += 1;
+        const where = `${example.where.split(":")[0]}:${line}`;
+        if (!results.has(index)) {
+          failures.push(`${where}: never ran`);
+          continue;
+        }
+        const problem = compare(results.get(index), comment);
+        if (problem !== undefined) {
+          failures.push(`${where}: ${problem}`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+    // So a change to how lines are recognized cannot quietly check none of them.
+    expect(checked).toBeGreaterThan(25);
+  });
 });
+
+/** A line of code that ends with a comment stating its result, the expression and the comment captured. */
+const ANNOTATED_LINE = /^(\s*)(.+?);\s*\/\/\s*(\{ ok: (?:true|false)\b.*|ok|fails\b.*|".*")$/;
+
+const AsyncFunction = (async () => undefined).constructor as new (...args: string[]) => unknown;
+
+/** What the fragments take from the text around them, as `context` declares it for the types. */
+const STUBS: Record<string, unknown> = {
+  // The examples that read `input` show what an invalid one gives, such as "Invalid email address".
+  input: "not an email",
+  requestBody: undefined,
+  save: () => undefined,
+  t: (key: string) => key,
+  isTaken: async () => false,
+  findUser: async () => undefined,
+};
+const STUB_NAMES = Object.keys(STUBS);
+
+/**
+ * Compares a result with the comment that states it: `{ ok: true, value: … }` with that value when it is
+ * written out, `{ ok: false, … }` with a failure and, when it names one, the code of its first issue,
+ * `ok` and `fails` with either, and quoted text with the text the expression gave.
+ */
+function compare(actual: unknown, comment: string): string | undefined {
+  if (comment.startsWith('"')) {
+    const text = JSON.parse(comment) as string;
+    return actual === text ? undefined : `gave ${JSON.stringify(actual)}, the comment says ${comment}`;
+  }
+  const result = actual as { ok?: unknown; value?: unknown; error?: { issues?: { code?: string }[] } };
+  const isOk = comment === "ok" || comment.startsWith("{ ok: true");
+  if (result.ok !== isOk) {
+    return `gave ${JSON.stringify(result)}, the comment says ${comment}`;
+  }
+  const value = /^\{ ok: true, value: (.*) \}$/.exec(comment)?.[1];
+  if (value !== undefined && !value.includes("...")) {
+    // The comment is a TypeScript literal, so it is read as one.
+    const expected: unknown = new Function(`return (${value});`)();
+    if (!isDeepStrictEqual(result.value, expected)) {
+      return `gave ${JSON.stringify(result.value)}, the comment says ${value}`;
+    }
+  }
+  const code = /code "([^"]+)"/.exec(comment)?.[1];
+  if (code !== undefined && result.error?.issues?.[0]?.code !== code) {
+    return `gave code ${String(result.error?.issues?.[0]?.code)}, the comment says ${code}`;
+  }
+  return undefined;
+}

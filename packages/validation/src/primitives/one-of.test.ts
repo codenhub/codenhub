@@ -61,8 +61,25 @@ describe("oneOf", () => {
     expect(() => oneOf([1, Number.NaN])).toThrow(RangeError);
   });
 
-  it("should compare with ===, so -0 matches 0", () => {
-    expect(oneOf([0])(-0).ok).toBe(true);
+  it("should compare with ===, so -0 matches 0, and produce the listed value", () => {
+    expect(Object.is(valueOf(oneOf([0])(-0)), 0)).toBe(true);
+    expect(Object.is(valueOf(oneOf([-0, 1])(0)), -0)).toBe(true);
+  });
+
+  it("should refuse a list with a hole, which would be read as undefined", () => {
+    // oxlint-disable-next-line no-sparse-arrays -- the hole is the case under test
+    expect(() => oneOf([, "a"])).toThrow(new TypeError("oneOf() needs a list without holes"));
+    expect(accepts(oneOf([undefined, "a"]), undefined)).toEqual([true]);
+  });
+
+  it("should refuse a Set or another object of a class, which would be read as an enum with no members", () => {
+    expect(() => oneOf(new Set([1]) as never)).toThrow(new TypeError("oneOf() needs a list or an enum of primitives"));
+    expect(() => oneOf(new Date() as never)).toThrow(TypeError);
+    expect(accepts(oneOf(Object.assign(Object.create(null), { a: "a" })), "a")).toEqual([true]);
+  });
+
+  it("should read an object written like a numeric enum as one, ignoring what looks like a reverse mapping", () => {
+    expect(accepts(oneOf({ a: 1, "1": "a" }), 1, "a")).toEqual([true, false]);
   });
 
   it("should report bigint options as their digits, so the issue can be sent as JSON", () => {

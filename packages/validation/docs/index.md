@@ -15,7 +15,7 @@ This matters wherever data crosses a boundary you do not control: a request, a f
 pnpm add @codenhub/validation
 ```
 
-The package is ESM only and has no dependencies. Everything is imported by name from `@codenhub/validation`; there are no subpath exports.
+The package is ESM only and has no dependencies. Its types need TypeScript 5.0 or newer. Everything is imported by name from `@codenhub/validation`; the only other export is `@codenhub/validation/package.json`, for tools that read the version.
 
 ## A validator is a function
 

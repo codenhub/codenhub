@@ -14,6 +14,14 @@ describe("pass", () => {
 });
 
 describe("fail", () => {
+  it("should reject a code or a message that is not text, as check() does", () => {
+    expect(() => fail({ code: 5 as never })).toThrow(new TypeError("issue.code must be a string, received number"));
+    expect(() => fail({ message: {} as never })).toThrow(
+      new TypeError("issue.message must be a string, received object"),
+    );
+    expect(() => fail(null as never)).toThrow(new TypeError("An issue must be an object, received null"));
+  });
+
   it("should reject a path holding a symbol, which no path or field name can write", () => {
     expect(() => fail({ path: ["a", Symbol("b")] as never })).toThrow(
       new TypeError("issue.path must be a list of keys and indexes"),

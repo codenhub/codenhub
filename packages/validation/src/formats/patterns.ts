@@ -22,11 +22,13 @@ const DOMAIN_NAME_PATTERN = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z
  * for testing, documentation or other networks (RFC 3172, 6761, 6762, 7686, 8375 and 9476, and ICANN's
  * `.internal`). `home`, `corp` and `mail` are the names ICANN resolved in 2018 never to delegate, since
  * private networks already use them, and `localdomain` is the name many systems give the local machine,
- * as in `localhost.localdomain`. The list also holds the eleven IDN test top-level domains IANA listed, in their ASCII form: `إختبار`,
+ * as in `localhost.localdomain`. `svc` and `cluster` end the names Kubernetes gives services inside a
+ * cluster, such as `kubernetes.default.svc`, a known target for requests forged to reach inside it. The
+ * list also holds the eleven IDN test top-level domains IANA listed, in their ASCII form: `إختبار`,
  * `آزمایشی`, `测试`, `測試`, `испытание`, `परीक्षा`, `δοκιμή`, `테스트`, `טעסט`, `テスト` and `பரிட்சை`.
  */
 const SPECIAL_USE_NAME_PATTERN =
-  /(?:^|\.)(?:localhost|localdomain|local|internal|home|corp|mail|test|example|invalid|alt|onion|arpa|xn--(?:kgbechtv|hgbk6aj7f53bba|0zwm56d|g6w251d|80akhbyknj4f|11b5bs3a9aj6g|jxalpdlp|9t4b11yi5a|deba0ad|zckzah|hlcj6aya9esc7a))$/i;
+  /(?:^|\.)(?:localhost|localdomain|local|internal|home|corp|mail|svc|cluster|test|example|invalid|alt|onion|arpa|xn--(?:kgbechtv|hgbk6aj7f53bba|0zwm56d|g6w251d|80akhbyknj4f|11b5bs3a9aj6g|jxalpdlp|9t4b11yi5a|deba0ad|zckzah|hlcj6aya9esc7a))$/i;
 
 /** A label in punycode, the ASCII form of an internationalized one. */
 const PUNYCODE_LABEL_PATTERN = /(?:^|\.)xn--/i;
@@ -44,20 +46,12 @@ export const isIdnHost = (host: string): boolean =>
 
 /**
  * Tests whether a host is a public domain name, which is what "public" means for email and URL hosts,
- * its internationalized labels included. An absolute name, ending in a dot, is not one here;
- * {@link isPublicName} accepts it.
+ * its internationalized labels included. An absolute name, ending in a dot, is not one: `example.com.`
+ * names the same host as `example.com`, and a second spelling of one host would let it past a check that
+ * compares the value as a string, such as a list of blocked hosts.
  */
 export const isPublicHost = (host: string): boolean =>
   DOMAIN_NAME_PATTERN.test(host) && !SPECIAL_USE_NAME_PATTERN.test(host) && isIdnHost(host);
-
-/** A host without the final dot of an absolute name, such as `example.com.`, which names the same host. */
-export const withoutFinalDot = (host: string): string => (host.endsWith(".") ? host.slice(0, -1) : host);
-
-/**
- * Tests whether a host is a public domain name, written relative or absolute: `example.com.` is the same
- * host as `example.com`. For `domain` and `url`; an email address has no absolute form.
- */
-export const isPublicName = (host: string): boolean => isPublicHost(withoutFinalDot(host));
 
 /**
  * Letters, combining marks and digits from any script, joined by hyphens and dots: what a domain is
@@ -82,8 +76,7 @@ export function toAsciiHost(host: string): string | undefined {
     return undefined;
   }
   const { hostname } = new URL(`http://${host}`);
-  // The final dot of an absolute name is not counted, as `hostname` does not count it.
-  return withoutFinalDot(hostname).length <= HOST_MAX_LENGTH ? hostname : undefined;
+  return hostname.length <= HOST_MAX_LENGTH ? hostname : undefined;
 }
 
 /**
@@ -93,19 +86,9 @@ export function toAsciiHost(host: string): string | undefined {
 const NUMERIC_LAST_LABEL_PATTERN = /(?:^|\.)(?:\d+|0x[0-9a-f]*)$/i;
 
 /**
- * A hostname, without a final dot, whose last label is not one the URL parser reads as a number, since
- * a name ending that way is an IPv4 address, and whose internationalized labels are valid in every
- * browser.
- */
-export const isNamedHost = (name: string): boolean =>
-  HOSTNAME_PATTERN.test(name) && !NUMERIC_LAST_LABEL_PATTERN.test(name) && isIdnHost(name);
-
-/**
  * A hostname whose last label is not one the URL parser reads as a number, since a name ending that
  * way is an IPv4 address, and whose internationalized labels are valid in every browser. An absolute
- * name, ending in one dot, is the same name, and its dot is not counted.
+ * name, ending in a dot, is not one, as {@link isPublicHost} says.
  */
-export const isHostname = (text: string): boolean => {
-  const name = text.endsWith(".") ? text.slice(0, -1) : text;
-  return isNamedHost(name);
-};
+export const isHostname = (name: string): boolean =>
+  HOSTNAME_PATTERN.test(name) && !NUMERIC_LAST_LABEL_PATTERN.test(name) && isIdnHost(name);
