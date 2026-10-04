@@ -127,6 +127,16 @@ describe("phone", () => {
       ),
     ).toEqual(Array(6).fill(false));
   });
+
+  it("should reject the national trunk prefix written in parentheses, which E.164 has no digit for", () => {
+    expect(accepts(phone(), "+44 (0)20 7946 0958", "+49 (0) 30 123456", "+44(0)2079460958")).toEqual([
+      false,
+      false,
+      false,
+    ]);
+    // An Italian number keeps its leading 0 in E.164, so a group that starts with it is part of the number.
+    expect(valueOf(phone()("+39 (06) 6982 1234"))).toBe("+390669821234");
+  });
 });
 
 describe("jwt", () => {
@@ -245,6 +255,7 @@ describe("cidr", () => {
 describe("domain", () => {
   it("should accept public domain names and return them as the parser reads them", () => {
     expect(valueOf(domain()("Example.COM"))).toBe("example.com");
+    expect(accepts(domain(), "éxn--.com", "xn--xn---9oa.com")).toEqual([false, false]);
     expect(valueOf(domain()("münchen.de"))).toBe("xn--mnchen-3ya.de");
   });
 

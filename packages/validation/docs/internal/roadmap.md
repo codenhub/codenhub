@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-30
+last_updated: 2026-10-04
 scope: What `@codenhub/validation` must contain to be released as 0.2.0, how the work is ordered, and what it takes to reach 1.0.
 ---
 
@@ -33,8 +33,8 @@ Everything follows the [architecture](architecture.md): a factory with the signa
 - **Parts.** `hostname`, `domain` (a public domain name), `ip` and `port` (numbers) as validators on their own. `url({ protocols, credentials, host, path, port, query, repeated })`, with `host` replacing `allowLocal`. `email({ domain, local, allowPlus })`. `searchParams(validator, { repeated })`.
 - **Formats.** The 0.1.0 formats, with `ip` returning the canonical form, plus `phone` (E.164, returned canonical), `slug`, `semver`, `jwt` (its structure, not its signature), `creditCard` (the Luhn check), `cidr`, `mac`, `time`, `duration`, `base64({ url })` and `uuid({ version })`.
 - **`is` returns a `boolean`.** It no longer narrows, since its narrowing was false for any validator that changes the value.
-- **Unchanged.** Coercion, `pass` and `fail`, the result shape, `formatIssue`, `flatten`, `formatPath`, `englishMessages` with wording for every new code, and `standard`.
-- **Types.** Every type a public signature names is exported, as `hub check` requires. The docs present `Validator`, `AsyncValidator`, `Check`, `AsyncCheck`, `Message`, `Infer`, `ValidationResult`, `ValidationIssue`, `Messages` and the options interfaces as the ones a consumer writes, and the rest as the machinery of signatures.
+- **Unchanged.** Coercion, `pass` and `fail`, the result shape, `formatIssue`, `flatten`, `formatPath`, `englishMessages` with wording for every new code, and `standard`, apart from the breaking fixes the changelog lists: `formatIssue`, `flatten` and `standard` require a message map, and `fail` throws for a `path` that is not a list.
+- **Types.** The types a consumer names are exported, and a helper type that only shapes a signature may stay internal, as `hub check` allows (see [architecture](architecture.md)). The docs present `Validator`, `AsyncValidator`, `Check`, `AsyncCheck`, `Message`, `Infer`, `ValidationResult`, `ValidationIssue`, `Messages` and the options interfaces as the ones a consumer writes, and the rest as the machinery of signatures.
 
 ### Quality
 
@@ -46,7 +46,7 @@ Everything follows the [architecture](architecture.md): a factory with the signa
 ### Documentation
 
 - `README.md` and every public page describe 0.2.0 only, with examples that compile against the built declarations.
-- A page on checks and custom validators built with `check`, `format` and `guard`, and a page on URL and email parts and `searchParams`.
+- A page on checks and custom validators built with `check`, `format` and `guard`, and a section on URL and email parts and `searchParams` in the validators page.
 - A migration table from 0.1.0 to 0.2.0, the changelog entry, and current `llms.txt` and `llms-full.txt`.
 - `docs/internal/` matches the code (done).
 

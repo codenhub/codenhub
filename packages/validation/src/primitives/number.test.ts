@@ -123,6 +123,14 @@ describe("number", () => {
       expect(() => number({ clamp: { min: 0, max: 10 }, min: 10, lt: 11 })).not.toThrow();
     });
 
+    it("should reject a range from Infinity or to -Infinity, which would clamp every number to an infinity", () => {
+      expect(() => number({ clamp: { min: Infinity, max: Infinity } })).toThrow(
+        new RangeError("No finite number can satisfy clamp Infinity to Infinity"),
+      );
+      expect(() => number({ clamp: { min: -Infinity, max: -Infinity } })).toThrow(RangeError);
+      expect(valueOf(number({ clamp: { min: -Infinity, max: Infinity } })(5))).toBe(5);
+    });
+
     it("should still reject non-numbers", () => {
       expect(number({ clamp: { min: 0, max: 10 } })("5").ok).toBe(false);
     });

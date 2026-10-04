@@ -66,7 +66,7 @@ const password = string({ min: 12 }, strongPassword);
 
 ### A format with `format`
 
-`format(name, test)` makes the factory of a string format, which behaves as `email()` or `uuid()` do: a non-string fails with `invalid_type`, and a string the test rejects with `invalid_format` and `params.format` set to `name`. The string is produced as written.
+`format(name, test)` makes the factory of a string format, which behaves as `email()` or `uuid()` do: a non-string fails with `invalid_type`, and a string the test rejects with `invalid_format` and `params.format` set to `name`. The string is produced as written. The test must answer at once: one that returns a promise throws a `TypeError` when the validator runs, since a pending answer would pass every value, and a rule that waits is a check, [below](#asynchronous-rules).
 
 ```ts
 import { format } from "@codenhub/validation";
@@ -81,7 +81,7 @@ postcode({ message: "Enter a ZIP code" })("abc"); // { ok: false, ... }
 
 ### A type with `guard`
 
-`guard(expected, typeGuard)` makes the factory of a validator for any type from a type guard. A value the guard rejects fails with `invalid_type` and `params.expected` set to `expected`:
+`guard(expected, typeGuard)` makes the factory of a validator for any type from a type guard. A value the guard rejects fails with `invalid_type` and `params.expected` set to `expected`. The guard must answer at once, as the test of `format` must:
 
 ```ts
 import { guard, object } from "@codenhub/validation";
@@ -175,6 +175,8 @@ const existingUser: AsyncValidator<User> = async (input) => {
   return user ? pass(user) : fail({ code: "unknown_user" });
 };
 ```
+
+What such a validator calls after its own await is a validation of its own, apart from the one that reached it, since the package cannot follow an await it did not make: a `lazy` it reaches counts its `maxCalls` afresh, so recursion through it is not bounded. Keep the await in a check, whose awaits the package makes, when the validator leads back to a recursive schema.
 
 Things to know about asynchronous validation:
 

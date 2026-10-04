@@ -51,6 +51,8 @@ describe("composer arguments", () => {
     ["transform convert", () => transform(valid, missing as never), "convert"],
     ["lazy", () => lazy(missing as never), "getter"],
     ["json", () => json(null as never), "validator", "null"],
+    ["json given undefined", () => json(missing), "validator"],
+    ["json given undefined and options", () => json(missing, {}), "validator"],
     ["standard", () => standard(missing, {}), "validator"],
   ])(
     "%s should reject a child that is not a function when it is created",
@@ -83,6 +85,21 @@ describe("composer arguments", () => {
     ["partial", () => partial([valid] as never)],
   ])("%s should reject a list as its shape, which would name its properties 0, 1 and on", (_, create) => {
     expect(create).toThrow(new TypeError("shape must be a plain object of validators, received array"));
+  });
+
+  it.each([
+    ["object", (shape: object) => object(shape as never)],
+    ["partial", (shape: object) => partial(shape as never)],
+    ["tagged", (shape: object) => tagged("type", shape as never)],
+  ])("%s should reject a key of its shape that it would never read, a symbol or one not enumerable", (name, create) => {
+    const hidden = Object.defineProperty({}, "secret", { value: object({}), enumerable: false });
+    const label = name === "tagged" ? "variants" : "shape";
+    expect(() => create({ [Symbol.for("a")]: object({}) })).toThrow(
+      new TypeError(`${label} key Symbol(a) is never read: a ${label} holds enumerable text keys only`),
+    );
+    expect(() => create(hidden)).toThrow(
+      new TypeError(`${label} key secret is never read: a ${label} holds enumerable text keys only`),
+    );
   });
 
   it.each([

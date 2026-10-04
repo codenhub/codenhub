@@ -23,6 +23,10 @@ describe("email", () => {
     ]);
   });
 
+  it("should reject a domain the parser writes as a label it cannot read again", () => {
+    expect(email()("a@éxn--.com").ok).toBe(false);
+  });
+
   it("should reject a punycode label that does not decode, in any position", () => {
     const invalid = ["a@example.xn--zz", "a@xn--zz.com", "a@XN--ZZ.example.com", "a@a.xn--a"];
     expect(accepts(email(), ...invalid)).toEqual(invalid.map(() => false));

@@ -12,6 +12,15 @@ import { optional } from "./optional";
 describe("object", () => {
   const user = object({ name: string({ min: 2 }), age: optional(number({ int: true })) });
 
+  it("should read a listed key that is not enumerable, and leave out unlisted ones and symbols whatever unknownKeys", () => {
+    const input = Object.defineProperty({ [Symbol.for("extra")]: 1 }, "name", { value: "Ada", enumerable: false });
+    Object.defineProperty(input, "hidden", { value: 1, enumerable: false });
+    expect(valueOf(object({ name: string() })(input))).toEqual({ name: "Ada" });
+    expect(object({ name: string() }, { unknownKeys: "strict" })(input).ok).toBe(true);
+    const kept = valueOf(object({ name: string() }, { unknownKeys: "passthrough" })(input)) as object;
+    expect(Reflect.ownKeys(kept)).toEqual(["name"]);
+  });
+
   it("should validate each property and return a new object", () => {
     const input = { name: "Ada", age: 36 };
     const output = valueOf(user(input));

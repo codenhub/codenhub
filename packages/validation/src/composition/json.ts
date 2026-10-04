@@ -34,7 +34,7 @@ import type {
  * @typeParam TValidator - The validator for the parsed value.
  * @param validator - Validates the parsed value.
  * @returns A validator that produces what `validator` produces, or `unknown` without one.
- * @throws {TypeError} When `validator` is given and is not a function.
+ * @throws {TypeError} When `validator` is given and is not a function, `undefined` included.
  */
 export function json(options?: MessageOptions): Validator<unknown>;
 export function json<TValidator extends AnyValidator>(
@@ -46,10 +46,11 @@ export function json<TValidator extends AnyValidator>(
   ...rest: AsyncRest<Infer<TValidator>, MessageOptions>
 ): AsyncValidator<Infer<TValidator>>;
 export function json(...args: unknown[]): AnyValidator {
-  // A function in first place is the validator of the parsed value, and an object or nothing is the
-  // options. Anything else, such as an import that resolved to null, is a mistake in the schema.
+  // A function in first place is the validator of the parsed value, and an object or no argument at all
+  // is the options. Anything else, such as an import that resolved to null or a key with no validator,
+  // undefined, is a mistake in the schema, which would otherwise accept any JSON.
   const [first] = args;
-  const isOptions = first === undefined || (typeof first === "object" && first !== null);
+  const isOptions = args.length === 0 || (typeof first === "object" && first !== null);
   const [validator, rest] = isOptions ? [pass as AnyValidator, args] : [first as AnyValidator, args.slice(1)];
   assertFunction("validator", validator);
   const [, reject, accept] = tail<MessageOptions, unknown>(rest);

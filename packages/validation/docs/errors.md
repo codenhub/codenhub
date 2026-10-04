@@ -101,7 +101,7 @@ An issue held in another's `params.issues` keeps the issues behind it only when 
 
 ### Rewording and localizing
 
-A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`, and the map it was found in, so it can word an issue nested in `params` with `formatIssue(nested, messages)` and the same map. To change some of the English, spread `englishMessages` and override the codes you want; to translate, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
+A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`, and the map it was found in, so it can word an issue nested in `params` with `formatIssue(nested, messages)` and the same map. To change some of the English, spread `englishMessages` and override the codes you want, since it is frozen and cannot be changed in place; to translate, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
 
 ```ts
 import { englishMessages, formatIssue, type Messages } from "@codenhub/validation";

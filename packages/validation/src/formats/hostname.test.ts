@@ -59,6 +59,7 @@ describe("hostname", () => {
 
   it("should reject a punycode label that does not decode, and accept one that does", () => {
     expect(accepts(hostname(), "xn--zz.com", "a.xn--zz", "XN--ZZ")).toEqual([false, false, false]);
+    expect(accepts(hostname(), "xn--xn---9oa.com")).toEqual([false]);
     expect(accepts(hostname(), "xn--mnchen-3ya.de", "a.xn--ls8h")).toEqual([true, true]);
   });
 

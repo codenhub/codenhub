@@ -90,6 +90,18 @@ describe("format", () => {
   });
 });
 
+describe("format and guard, given a test that returns a promise", () => {
+  it("should throw a TypeError pointing to check, instead of accepting every value", () => {
+    const pending = async (): Promise<boolean> => false;
+    expect(() => format("x", pending as never)()("anything")).toThrow(
+      new TypeError("format() needs a synchronous test. Put a rule that waits in a check."),
+    );
+    expect(() => guard("x", pending as never)()(5)).toThrow(
+      new TypeError("guard() needs a synchronous test. Put a rule that waits in a check."),
+    );
+  });
+});
+
 describe("guard", () => {
   class Widget {}
   const widget = guard("Widget", (input): input is Widget => input instanceof Widget);

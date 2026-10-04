@@ -31,6 +31,10 @@ describe("datetime", () => {
     expect(accepts(datetime(), "2024-02-29T00:00:00Z", "2026-02-29T00:00:00Z")).toEqual([true, false]);
   });
 
+  it("should reject a leap second, which Date cannot hold", () => {
+    expect(accepts(datetime(), "2016-12-31T23:59:60Z", "2016-12-31T23:59:59Z")).toEqual([false, true]);
+  });
+
   it("should accept offsets when asked", () => {
     const withOffset = datetime({ offset: true });
     expect(

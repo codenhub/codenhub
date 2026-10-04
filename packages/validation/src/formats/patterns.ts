@@ -35,9 +35,11 @@ const PUNYCODE_LABEL_PATTERN = /(?:^|\.)xn--/i;
  * Tests the internationalized labels of an ASCII host as every browser does: each `xn--` label decodes
  * to the label it spells, and the host keeps the bidi rule. Not every parser checks either, so it is
  * checked here, for a host the parser has already read too. A host with no `xn--` label has nothing to
- * check, which is most of them, so they pay one test.
+ * check, which is most of them, so they pay one test. `url` applies it whatever its host validator, so
+ * a host validator replaces the rule of which hosts are public, never the rule that every runtime reads
+ * the host the same.
  */
-const isIdnHost = (host: string): boolean =>
+export const isIdnHost = (host: string): boolean =>
   !PUNYCODE_LABEL_PATTERN.test(host) || (isPunycodeHost(host) && isBidiHost(host));
 
 /**

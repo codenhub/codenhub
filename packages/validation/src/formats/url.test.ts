@@ -81,6 +81,20 @@ describe("url", () => {
     expect(accepts(url(), "https://xn--zz.com", "https://example.xn--zz")).toEqual([false, false]);
   });
 
+  it("should reject a host the parser writes as a label it cannot read again, whatever the host validator", () => {
+    expect(accepts(url(), "http://éxn--.com", "http://xn--xn---9oa.com")).toEqual([false, false]);
+    expect(accepts(url({ host: unknown() }), "http://éxn--.com", "http://äxn--")).toEqual([false, false]);
+  });
+
+  it("should hold the internationalized labels of a host to the browsers' rules whatever the host validator", () => {
+    // Node.js 24 reads the first two, which break the bidi rule, and refuses the last two, which do not
+    // decode, where Chromium and WebKit read them.
+    expect(
+      accepts(url({ host: unknown() }), "http://٠.com", "http://1.ب", "http://xn--zz.com", "http://xn--a.com"),
+    ).toEqual([false, false, false, false]);
+    expect(valueOf(url({ host: unknown() })("http://münchen.de"))).toBe("http://xn--mnchen-3ya.de/");
+  });
+
   it("should reject other protocols, embedded credentials and non-public hosts", () => {
     expect(
       accepts(
@@ -204,10 +218,11 @@ describe("url", () => {
   });
 
   it("should read a host that some URL parsers cannot be written to again without ending the process", () => {
-    // Node.js 24.16 to 24.19 (ada 3.4.4) parse a non-ASCII letter before `xn--` into a URL whose every
-    // setter aborts the process, so a validator that wrote the host back would let one request end a server.
-    expect(accepts(url(), "http://äxn--")).toEqual([false]);
-    expect(valueOf(url({ host: unknown() })("http://äxn--"))).toBe("http://xn--xn---koa/");
+    // Node.js 24.14.1, and 24.16 to 24.19 (ada 3.4.4), parse a non-ASCII letter before `xn--` into a URL
+    // whose every setter aborts the process, so a validator that wrote the host back would let one request
+    // end a server. The host is read before it is checked, so these cases reach any setter that comes back.
+    expect(accepts(url(), "http://äxn--", "ssh://äxn--")).toEqual([false, false]);
+    expect(valueOf(url({ protocols: ["ssh"], host: unknown() })("ssh://ÄXN--"))).toBe("ssh://%C3%84xn--");
   });
 
   it("should give any IP address to a host validator, public or not, checking no ranges itself", () => {

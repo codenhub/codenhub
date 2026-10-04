@@ -194,7 +194,8 @@ const describeValue = (issue: ValidationIssue): string => {
  * Pass it to `formatIssue`, `flatten` or `standard` to get text such as "Must be at least 18". It is
  * a separate value, not something `formatIssue` carries, so a program that words its own issues, or
  * that never shows one, does not bundle it. To change some of the wording, spread it and override
- * the codes you want: `{ ...englishMessages, too_small: "Too short" }`. A custom validator's own codes
+ * the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is frozen, so no code
+ * can reword the messages of every other user of it in the process. A custom validator's own codes
  * are not in it; give them a `message` on the issue or an entry of your own.
  *
  * @example
@@ -205,10 +206,10 @@ const describeValue = (issue: ValidationIssue): string => {
  * }
  * ```
  */
-export const englishMessages: Messages = {
+export const englishMessages: Messages = /* @__PURE__ */ Object.freeze({
   invalid_type: (issue) => {
     if (issue.params?.coerced === true) {
-      return `Cannot convert ${param(issue, "received")} to ${param(issue, "expected")}`;
+      return `Cannot convert ${param(issue, "received")} to a ${param(issue, "expected")}`;
     }
     if (issue.params?.received === "non-plain object") {
       // Such as `process.env` or a class instance, which a copy into a plain object passes.
@@ -239,4 +240,4 @@ export const englishMessages: Messages = {
   unrecognized_key: (issue) => `Unrecognized key ${formatValue(issue.params?.key)}`,
   invalid_intersection: "Conflicting values",
   invalid_union: describeUnion,
-};
+});

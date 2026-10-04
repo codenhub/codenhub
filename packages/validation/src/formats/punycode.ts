@@ -92,17 +92,26 @@ export function fromPunycode(text: string): string | undefined {
 
 /** A label written in punycode. */
 const PUNYCODE_LABEL_PATTERN = /^xn--/i;
+/**
+ * A punycode label whose own text starts with `xn--` too, which Node.js writes for a letter before
+ * `xn--`, as `éxn--` is `xn--xn---9oa`, and then refuses to read, where the browsers read it.
+ */
+const NESTED_PUNYCODE_LABEL_PATTERN = /^xn--xn--/i;
 
 /**
  * Tests whether every `xn--` label of an ASCII host decodes to text that the URL parser writes back as
  * that same label: valid punycode, of a valid internationalized label, in the one spelling it has. The
  * parser checks the Unicode label the same way in every engine, where an `xn--` label it is given is
- * checked in some and read as written in others.
+ * checked in some and read as written in others. A label Node.js cannot read again is refused in every
+ * runtime, so a value that passes can be parsed wherever it is used.
  */
 export const isPunycodeHost = (host: string): boolean =>
   host.split(".").every((label) => {
     if (!PUNYCODE_LABEL_PATTERN.test(label)) {
       return true;
+    }
+    if (NESTED_PUNYCODE_LABEL_PATTERN.test(label)) {
+      return false;
     }
     const decoded = fromPunycode(label.slice(4));
     return (

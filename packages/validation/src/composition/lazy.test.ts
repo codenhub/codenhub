@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { check } from "../builders/check";
 import { format } from "../builders/format";
 import { guard } from "../builders/guard";
-import type { Validator } from "../core/types";
+import type { AsyncValidator, Validator } from "../core/types";
 import { boolean } from "../primitives/boolean";
 import { literal } from "../primitives/literal";
 import { never } from "../primitives/never";
@@ -283,6 +283,49 @@ describe("lazy", () => {
         expect(calls()).toBeLessThanOrEqual(20_000);
       },
     );
+
+    it("should hold a schema built anew at every level by its getter to the limit of the lazy that built it", () => {
+      // Each level's getter builds a new union with new lazy validators, which a count per lazy would
+      // give a fresh limit at every level: 29 seconds at 18 levels, and the heap exhausted at 22.
+      const node = (): Validator<unknown> =>
+        union([
+          object({ type: literal("a"), kids: array(lazy(node)) }),
+          object({ type: literal("a"), kids: array(lazy(node)) }),
+        ]) as Validator<unknown>;
+      let input: unknown = { type: "z", kids: [] };
+      for (let level = 0; level < 40; level += 1) {
+        input = { type: "a", kids: [input] };
+      }
+      const result = node()(input);
+      expect(result.ok).toBe(false);
+      expect(JSON.stringify(result)).toContain('"type":"calls"');
+    });
+
+    it("should keep the count of a lazy made outside a getter its own, however many are made", () => {
+      // One call each: a count shared between the two would be spent by the first.
+      const fresh = (): Validator<string> => lazy(() => string(), { maxCalls: 1 });
+      expect(object({ a: fresh(), b: fresh() })({ a: "x", b: "y" }).ok).toBe(true);
+    });
+
+    it("should keep separate counts for validations that run at the same time, and fresh ones after a rejection", async () => {
+      interface Named {
+        next?: Named;
+        name?: string;
+      }
+      const linked: AsyncValidator<Named> = object({
+        next: optional(lazy(() => linked, { maxCalls: 5 })),
+        name: optional(string(check(async (text: string) => (await isFree(text)).ok))),
+      });
+      const named = (links: number): Named => ({ ...chain(links), name: "free" });
+      const results = await Promise.all([3, 3, 10, 3].map((links) => linked(named(links))));
+      expect(results.map(({ ok }) => ok)).toEqual([true, true, false, true]);
+      const failing = object({
+        next: optional(lazy(() => linked, { maxCalls: 5 })),
+        name: string(check(async () => Promise.reject(new Error("lookup failed")))),
+      });
+      await expect(failing({ next: chain(4), name: "x" })).rejects.toThrow("lookup failed");
+      expect((await linked(named(5))).ok).toBe(true);
+    });
 
     it("should count a validation made from a callback on its own, apart from the one running the callback", async () => {
       // One call is allowed, and the outer validation spends it before any callback runs.

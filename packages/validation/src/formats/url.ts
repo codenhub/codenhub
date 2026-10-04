@@ -12,7 +12,7 @@ import type {
 import { HOSTLESS_SCHEMES, toHostlessUrl } from "./hostless-url";
 import { toCanonicalIpv6 } from "./ip";
 import { assertParts, notFormat, partIssue, partsFormat, readQuery, type Part, type Reading } from "./parts";
-import { HOST_MAX_LENGTH, isPublicName, withoutFinalDot } from "./patterns";
+import { HOST_MAX_LENGTH, isIdnHost, isPublicName, withoutFinalDot } from "./patterns";
 
 /**
  * No whitespace and no control characters: a written URL holds neither (RFC 3986), and the parser would
@@ -207,14 +207,19 @@ export function url(...rest: unknown[]): AnyValidator {
     }
     // A scheme the parser has no rules for, such as `ssh`, keeps its host as written, so the host is
     // normalized as RFC 3986 does it: letters in lowercase and escapes in uppercase. For any other scheme
-    // the parser has done so already, and the host is not written back: some parsers, such as Node.js 24.16
-    // to 24.19, read text like `http://äxn--` into a URL whose every setter aborts the process.
+    // the parser has done so already, and the host is not written back: some parsers, such as those of Node.js
+    // 24.14.1 and of 24.16 to 24.19, read text like `http://äxn--` into a URL whose every setter aborts the process.
     const normalized = parsed.hostname.toLowerCase().replace(/%[\da-f]{2}/g, (escape) => escape.toUpperCase());
     if (normalized !== parsed.hostname) {
       parsed.hostname = normalized;
     }
     const { hostname } = parsed;
-    if (withoutFinalDot(hostname).length > HOST_MAX_LENGTH || (host === undefined && !isPublicName(hostname))) {
+    // A host validator replaces the rule of which hosts are public, and never the check of the
+    // internationalized labels, which every runtime has to read the same.
+    if (
+      withoutFinalDot(hostname).length > HOST_MAX_LENGTH ||
+      (host === undefined ? !isPublicName(hostname) : !isIdnHost(hostname))
+    ) {
       return notFormat("url");
     }
     // Port 0 asks a system for any free port, so no URL can reach it, as `port()` says. A port

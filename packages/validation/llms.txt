@@ -12,4 +12,5 @@ A validator takes any input and returns `{ ok: true, value }` or `{ ok: false, e
 - [Coercion](docs/coercion.md): `coerceString`, `coerceNumber`, `coerceBoolean`, `coerceBigint` and `coerceDate` for text input such as environment variables and form fields.
 - [Standard Schema](docs/standard-schema.md): `standard(validator, messages)` for libraries that accept a Standard Schema.
 - [Issues and messages](docs/errors.md): The shape of an issue, built-in codes and params, message text, the `message` option, localization and form errors.
+- [API reference](docs/reference/index.md): Every export with its signature and documentation, generated from the source.
 - [Changelog](docs/changelog/index.md): Release notes, and the migrations from 0.1.0 and from 0.0.1.

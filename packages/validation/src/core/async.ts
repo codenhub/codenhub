@@ -85,6 +85,22 @@ export const isThenable = (value: unknown): value is PromiseLike<unknown> =>
   typeof (value as { then?: unknown }).then === "function";
 
 /**
+ * Runs a test the consumer wrote, as {@link detached} does, and gives its answer. A promise is refused
+ * with a `TypeError` naming `builder`, since a pending answer is truthy and would accept every value: a
+ * rule that waits belongs in a check, whose promise is awaited.
+ */
+export function decided<A, R>(builder: string, test: (argument: A) => R, argument: A): R {
+  const answer = detached(test, argument);
+  if (isThenable(answer)) {
+    // The promise is abandoned, so a later rejection is not reported as unhandled.
+    // oxlint-disable-next-line promise/prefer-await-to-then
+    answer.then(undefined, () => undefined);
+    throw new TypeError(`${builder}() needs a synchronous test. Put a rule that waits in a check.`);
+  }
+  return answer;
+}
+
+/**
  * Applies `next` to a value that may still be pending, staying synchronous when it is not. A pending
  * value's continuation stays part of the validation that was running when it was chained.
  *

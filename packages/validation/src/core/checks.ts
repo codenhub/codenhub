@@ -130,7 +130,8 @@ export function leaf<T>(
 
 /**
  * Builds a built-in check: a value `test` accepts passes, and any other reports one issue with `code`
- * and `params`, worded by `message` when there is one.
+ * and a copy of `params`, worded by `message` when there is one. A copy for each failure, so a caller
+ * that changes the params of one changes no other.
  */
 export function rule<T>(
   test: (value: T) => boolean,
@@ -139,7 +140,7 @@ export function rule<T>(
   message: Message | undefined,
 ): Check<T> {
   assertMessage(message);
-  return (value) => (test(value) ? undefined : word([issue(code, params)], message));
+  return (value) => (test(value) ? undefined : word([issue(code, { ...params })], message));
 }
 
 /**

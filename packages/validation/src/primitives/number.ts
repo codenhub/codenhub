@@ -61,7 +61,8 @@ const isNumber = (input: unknown): boolean => typeof input === "number" && Numbe
  * a number `min` and `max`.
  * @throws {RangeError} When a bound is `NaN`, a lower bound is `Infinity` or an upper one `-Infinity`,
  * no number can satisfy the bounds together, or `clamp`
- * has a `NaN` bound, a minimum above its maximum, or a range whose every value breaks a bound. Bounds
+ * has a `NaN` bound, a minimum of `Infinity` or a maximum of `-Infinity`, a minimum above its maximum,
+ * or a range whose every value breaks a bound. Bounds
  * that hold numbers but no whole one, such as `{ int: true, gt: 1, lt: 2 }`, are not caught here, and
  * reject every input.
  */
@@ -100,6 +101,11 @@ export const number = ((...args: unknown[]) => {
     }
     if (Number.isNaN(clamp.min) || Number.isNaN(clamp.max)) {
       throw new RangeError("clamp bounds must be numbers, received NaN");
+    }
+    // A range from Infinity, or up to -Infinity, would clamp every number to an infinity, which `number`
+    // never produces.
+    if (clamp.min === Infinity || clamp.max === -Infinity) {
+      throw new RangeError(`No finite number can satisfy clamp ${clamp.min} to ${clamp.max}`);
     }
     if (clamp.min > clamp.max) {
       throw new RangeError(`clamp minimum ${clamp.min} is greater than maximum ${clamp.max}`);
