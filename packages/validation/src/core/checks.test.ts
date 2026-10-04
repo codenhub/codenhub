@@ -175,4 +175,9 @@ describe("finish, given a check written by hand", () => {
     const wrong = (() => false) as unknown as Check<string>;
     expect(() => finish("x", [], undefined, [wrong])).toThrow("A check must return undefined or a list of issues");
   });
+
+  it("should throw when an issue's path is not a list of keys and indexes, which a composer could not place", () => {
+    const textPath = (() => [{ code: "x", path: "confirm" }]) as unknown as Check<string>;
+    expect(() => finish("x", [], undefined, [textPath])).toThrow("A check must return undefined or a list of issues");
+  });
 });
