@@ -2,6 +2,7 @@ import type { Workspace } from "../workspace/discover.ts";
 import { createChangelogRules } from "./changelog-rules.ts";
 import { createDependencyRules, createReleaseSources } from "./dependency-rules.ts";
 import { createDocumentationRules } from "./documentation-rules.ts";
+import { createEnginesRules } from "./engines-rules.ts";
 import { createExportsRules } from "./exports-rules.ts";
 import { createManifestRules } from "./manifest-rules.ts";
 import { createReadmeRules } from "./readme-rules.ts";
@@ -21,6 +22,7 @@ import { createUndocumentedExportRules } from "./undocumented-export-rules.ts";
 export function createCheckRules(workspace: Workspace): CheckRule[] {
   return [
     ...createManifestRules(workspace.root),
+    ...createEnginesRules(workspace.root),
     ...createDependencyRules(workspace.packages, createReleaseSources(workspace.root)),
     ...createExportsRules(),
     ...createDocumentationRules(workspace.packages),
