@@ -5,15 +5,20 @@ import { coercing } from "./coerce";
 // The fraction is one optional group so no two digit runs are adjacent, which keeps matching linear.
 const DECIMAL_NUMBER_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/;
 
+/** A digit other than zero, which text that converts to 0 cannot hold unless digits were lost. */
+const NONZERO_DIGIT_PATTERN = /[1-9]/;
+
 /**
  * Creates a validator for numbers that also accepts text holding a decimal number, converting it,
  * then applies the same constraints as {@link number}.
  *
  * @remarks
- * Surrounding whitespace is ignored, and a dot with no digits on one side, as in `".5"` or `"5."`,
+ * Surrounding whitespace, as `String.prototype.trim` reads it, is ignored, and a dot with no digits on one side, as in `".5"` or `"5."`,
  * is read as people type it. Empty strings, `"1e3"`, `"0x10"`, `"1,5"`, `"Infinity"` and
  * `"NaN"` are rejected, and so is text holding a whole number beyond `Number.MAX_SAFE_INTEGER`, which
- * could not be read exactly (use `coerceBigint` for those). So are booleans, `null`, objects and
+ * could not be read exactly (use `coerceBigint` for those), or a decimal too small for a double, such
+ * as `"0." + "0".repeat(400) + "1"`, which would be read as `0`. A number is passed through as it is,
+ * `-0` included, as `number` does. So are booleans, `null`, objects and
  * arrays: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with
  * `invalid_type` and `coerced: true` in `params`.
  *
@@ -41,11 +46,16 @@ export const coerceNumber = ((...args: unknown[]) =>
     if (typeof input !== "string" || !DECIMAL_NUMBER_PATTERN.test(input.trim())) {
       return undefined;
     }
-    const converted = Number(input.trim());
+    const text = input.trim();
+    const converted = Number(text);
     // A whole number past Number.MAX_SAFE_INTEGER has already lost digits, so reading it would
-    // produce a different number than the text says. "-0" is read as 0, since a minus sign in front of
-    // nothing is not a value anyone meant.
+    // produce a different number than the text says, and so has a decimal too small for a double, which
+    // becomes 0, the value a divisor or `nonZero()` treats apart. "-0" is read as 0, since a minus sign in
+    // front of nothing is not a value anyone meant.
+    if (converted === 0) {
+      return NONZERO_DIGIT_PATTERN.test(text) ? undefined : [0];
+    }
     return Number.isFinite(converted) && (!Number.isInteger(converted) || Number.isSafeInteger(converted))
-      ? [converted === 0 ? 0 : converted]
+      ? [converted]
       : undefined;
   })) as Factory<number, NumberOptions>;

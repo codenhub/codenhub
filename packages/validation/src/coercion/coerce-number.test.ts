@@ -67,4 +67,14 @@ describe("coerceNumber", () => {
     expect(Object.is(valueOf(coerceNumber()("-0")), 0)).toBe(true);
     expect(coerceNumber(nonZero())("-0").ok).toBe(false);
   });
+
+  it("should keep every zero written as zero, and pass the number -0 through as number does", () => {
+    expect(accepts(coerceNumber(), "0", "0.000", "-0.0", ".0", "0.")).toEqual(Array(5).fill(true));
+    expect(Object.is(valueOf(coerceNumber()(-0)), -0)).toBe(true);
+  });
+
+  it("should reject a nonzero decimal too small for a double, which would be read as 0", () => {
+    expect(accepts(coerceNumber(), `0.${"0".repeat(400)}1`, `-0.${"0".repeat(400)}1`)).toEqual([false, false]);
+    expect(valueOf(coerceNumber()(`0.${"0".repeat(300)}1`))).toBe(1e-301);
+  });
 });
