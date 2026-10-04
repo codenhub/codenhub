@@ -74,7 +74,7 @@ const readSegment = (segment: string): unknown => {
 /**
  * Creates a validator for JSON Web Tokens in compact form: three base64url segments separated by
  * dots, whose header and payload decode to JSON objects with no key twice in any object, and whose
- * header names an algorithm in `alg`. The value is not modified.
+ * header names an algorithm in `alg`, as text that is not empty. The value is not modified.
  *
  * @remarks
  * Only the structure is checked. The signature is not verified and the claims, such as the expiry, are
@@ -101,5 +101,8 @@ export const jwt = /* @__PURE__ */ formatFactory("jwt", (text) => {
     return undefined;
   }
   const header = readSegment(encodedHeader) as { alg?: unknown } | undefined;
-  return typeof header?.alg === "string" && readSegment(encodedPayload) !== undefined ? text : undefined;
+  // RFC 7515 §4.1.1: `alg` must not be empty.
+  return typeof header?.alg === "string" && header.alg !== "" && readSegment(encodedPayload) !== undefined
+    ? text
+    : undefined;
 });
