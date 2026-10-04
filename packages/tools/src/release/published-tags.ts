@@ -52,17 +52,31 @@ export async function listTags(cwd: string, git: GitRunner = runGit): Promise<st
     .filter((line) => line !== "");
 }
 
+// `major.minor.patch` and nothing more: no pre-release, no build metadata.
+const STABLE_VERSION = /^\d+\.\d+\.\d+$/;
+
 /**
- * Picks the newest release tag for a package out of a set of tags.
+ * Reports whether a version is a stable release rather than a pre-release.
+ * @param version Version as written in a release tag, such as `0.3.0` or `0.3.1-beta.1`.
+ * @returns `true` for a plain `major.minor.patch` version.
+ */
+export function isStableVersion(version: string): boolean {
+  return STABLE_VERSION.test(version);
+}
+
+/**
+ * Picks the newest stable release tag for a package out of a set of tags.
  *
  * A build that wants to show only published content resolves a package's name
- * against this rather than against the working tree. A package absent here has
- * never published; callers decide their own fallback for that case rather than
+ * against this rather than against the working tree. Pre-releases are skipped:
+ * they publish under the `next` dist-tag, so the version `npm install` resolves
+ * by default, and the one to document, is the newest stable one. A package
+ * absent here has never published a stable version; callers decide their own fallback for that case rather than
  * treating it as an error, since an unpublished package is a normal state
  * (`docs/roadmap.md` tracks several).
  * @param packageName Package name as it appears in a release tag, such as `@codenhub/error`.
  * @param tags Candidate tags, such as the output of {@link listTags}.
- * @returns The newest matching tag, or `undefined` when the package has never published.
+ * @returns The newest stable matching tag, or `undefined` when the package has none.
  */
 export function resolveLatestPublishedTag(packageName: string, tags: readonly string[]): string | undefined {
   const releases = tags
@@ -71,7 +85,7 @@ export function resolveLatestPublishedTag(packageName: string, tags: readonly st
       return release === undefined ? undefined : { release, tag };
     })
     .filter((candidate): candidate is { release: ReleaseTag; tag: string } => candidate !== undefined)
-    .filter(({ release }) => release.name === packageName);
+    .filter(({ release }) => release.name === packageName && isStableVersion(release.version));
 
   return releases.reduce<{ release: ReleaseTag; tag: string } | undefined>((latest, candidate) => {
     if (latest === undefined || compareVersions(candidate.release.version, latest.release.version) > 0) {

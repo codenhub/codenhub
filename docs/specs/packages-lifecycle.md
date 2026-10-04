@@ -178,7 +178,7 @@ A maintainer MAY run `hub publish <package>` from their own machine against thei
 
 Every version on npm MUST have its release tag in the repository. The tag is how the repository tells a released package from an unreleased one — the documentation site publishes a package only from its latest tag, and not at all without one — so a version published without a tag is invisible to everything that reads them. A manual publish therefore tags first: `hub publish <package>` refuses to run unless `<package name>@<version>` names the commit being published, and the maintainer pushes the tag once npm has the version. The workflow then runs on that tag and, finding the version already on npm, succeeds without publishing, which records the release the same way a workflow publish would.
 
-A pre-release version — one carrying a SemVer suffix such as `-beta.1` — MUST publish under the `next` dist-tag, not `latest`, so that `npm install` without a version keeps resolving the current stable release. `hub publish` derives this from the version and needs no extra flag.
+A pre-release version — one carrying a SemVer suffix such as `-beta.1` — MUST publish under the `next` dist-tag, not `latest`, so that `npm install` without a version keeps resolving the current stable release. `hub publish` derives this from the version and needs no extra flag. The documentation site follows the same split and keeps showing the newest stable release (`docs/ci.md`, "Publish-scoped content").
 
 Package `prepublishOnly` still runs the build and typecheck that npm requires at publish time.
 
