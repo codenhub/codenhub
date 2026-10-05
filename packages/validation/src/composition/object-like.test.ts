@@ -106,6 +106,18 @@ describe("objectLike", () => {
     expect(issuesOf(await pending)[0]?.path).toEqual(["name"]);
   });
 
+  it("should read each validator of the shape once, so the one it checked is the one it runs", () => {
+    let reads = 0;
+    const shape = {
+      get message() {
+        reads += 1;
+        return reads === 1 ? string() : (undefined as never);
+      },
+    };
+    expect(objectLike(shape)({ message: "a" }).ok).toBe(true);
+    expect(reads).toBe(1);
+  });
+
   it("should reject a shape that is not a plain object of validators, and options it does not read", () => {
     expect(() => objectLike([] as never)).toThrow(TypeError);
     expect(() => objectLike({ a: 1 as never })).toThrow(new TypeError("shape.a must be a function, received number"));
