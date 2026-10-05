@@ -137,7 +137,14 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
     return error;
   }
 
-  const errorCandidates = getErrorCandidates(isAppError(error) ? error.originalError : error, maxDepth);
+  // An AppError given options is classified again from its original value, so a new registry can
+  // reclassify it. Its own classification still stands when nothing outranks it: options that
+  // match nothing new, such as a lone fallbackMessage, must not downgrade it to unknown.
+  const existingAppError = isAppError(error) ? error : null;
+  const errorCandidates = getErrorCandidates(
+    existingAppError === null ? error : existingAppError.originalError,
+    maxDepth,
+  );
 
   // Single pass over candidates resolving by priority tier:
   // known > unexpected > appError fallback (any type).
@@ -175,6 +182,13 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
     }
   }
 
+  if (
+    knownResult === null &&
+    (existingAppError?.type === "known" || (existingAppError?.type === "unexpected" && unexpectedResult === null))
+  ) {
+    return existingAppError;
+  }
+
   return new AppErrorImpl(
     knownResult ??
       unexpectedResult ??
@@ -209,7 +223,8 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
  *
  * @param error - The raw error value to normalize, such as an `Error`, plain object, or string.
  * @param options - Configuration controlling fallback message, registry source, and wrapper depth.
- * @returns A frozen AppError. An existing AppError is returned as-is only when no options are supplied.
+ * @returns A frozen AppError. An existing AppError is returned as-is when no options are supplied,
+ * or when the supplied options find no match that outranks the classification it already has.
  * @throws TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string,
  * `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer
  * from 0 through 3.

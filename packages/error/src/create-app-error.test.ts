@@ -494,6 +494,52 @@ describe("createAppError — re-normalization with options", () => {
   });
 });
 
+describe("createAppError — re-normalization keeps an existing classification", () => {
+  const createKnownAppError = () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("invalid_credentials", { message: "Invalid email or password.", source: "my-app.auth" });
+    return createAppError({ code: "invalid_credentials" }, { registry });
+  };
+
+  it("should keep a known AppError when only a fallbackMessage is supplied", () => {
+    const known = createKnownAppError();
+
+    expect(createAppError(known, { fallbackMessage: "Login failed." })).toBe(known);
+  });
+
+  it("should keep a known AppError when the documented default maxDepth is supplied", () => {
+    const known = createKnownAppError();
+
+    expect(createAppError(known, { maxDepth: 3 })).toBe(known);
+  });
+
+  it("should keep a known AppError over a pattern match from the new registry", () => {
+    const known = createKnownAppError();
+    const registry = createErrorRegistry();
+    registry.patterns.add(/./, { message: "Heuristic." });
+
+    expect(createAppError(known, { registry })).toBe(known);
+  });
+
+  it("should keep an unexpected AppError when the new registry matches nothing", () => {
+    const patternRegistry = createErrorRegistry();
+    patternRegistry.patterns.add(/rate limit/i, { message: "Slow down." });
+    const unexpected = createAppError(new Error("Rate limit hit"), { registry: patternRegistry });
+
+    expect(createAppError(unexpected, { registry: createErrorRegistry() })).toBe(unexpected);
+  });
+
+  it("should upgrade an unexpected AppError when the new registry knows it", () => {
+    const patternRegistry = createErrorRegistry();
+    patternRegistry.patterns.add(/rate limit/i, { message: "Slow down." });
+    const unexpected = createAppError(new Error("Rate limit hit"), { registry: patternRegistry });
+
+    const registry = createErrorRegistry();
+    registry.messages.add("Rate limit hit", { message: "Too many requests." });
+
+    expect(createAppError(unexpected, { registry })).toMatchObject({ type: "known", message: "Too many requests." });
+  });
+});
 
 describe("createAppError — code", () => {
   it("should expose the matched code", () => {
