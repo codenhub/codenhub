@@ -19,7 +19,7 @@ export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: 
 
 Creates a validator for arrays whose every item passes `item`.
 
-A wrong size is reported at once, without validating the items, so a huge array is never worked through only to be rejected. Otherwise every item is validated, and each issue's path leads through the item's index. Checks, such as `unique()`, run on the validated items once every item has passed. The output is a new array; the input is never modified. It is synchronous when `item` is, and asynchronous otherwise. An array stops once its items have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
+A wrong size is reported at once, without validating the items, so a huge array is never worked through only to be rejected. Otherwise the items are validated, a later one even when an earlier one failed, and each issue's path leads through the item's index. Checks, such as `unique()`, run on the validated items once every item has passed. The output is a new array; the input is never modified. It is synchronous when `item` is, and asynchronous otherwise. An array stops once its items have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
 
 **Parameters**
 
@@ -429,7 +429,7 @@ export declare function intersection<TLeft extends AnyValidator, TRight extends 
 
 Creates a validator that accepts a value only when it passes both validators, and produces the two results merged.
 
-Both validators receive the same input and both run, so the issues of each are reported together. The outputs are merged: plain objects key by key, arrays of the same length item by item, and maps and sets of the same size entry by entry in iteration order, which both validators keep from the input, recursively, so maps keyed by objects and sets of objects merge too. Any other pair must be the same value, `0` and `-0` merging as `0`, or two dates holding the same moment. Where the outputs differ otherwise, such as `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path, rather than one side silently winning. Cyclic or shared objects in the outputs are merged once, and the merged output keeps their shape. Two `object`s with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and asynchronous otherwise.
+Both validators receive the same input and both run, so the issues of each are reported together. The outputs are merged: plain objects key by key, arrays of the same length item by item, and maps and sets of the same size entry by entry in iteration order, which both validators keep from the input, recursively, so maps keyed by objects and sets of objects merge too. Any other pair must be the same value, `0` and `-0` merging as `0`, or two dates holding the same moment. Where the outputs differ otherwise, such as `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path, rather than one side silently winning, up to the 1,000 issues a collection reports. Cyclic or shared objects in the outputs are merged once, and the merged output keeps their shape. Two `object`s with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and asynchronous otherwise.
 
 **Parameters**
 
@@ -1081,7 +1081,7 @@ export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: As
 
 Creates a validator for `Set`s whose every value passes `item`.
 
-A wrong size is reported at once, without validating the values. Otherwise every value is validated, and each issue's path leads through the value's position in iteration order. The output is a new `Set` of the validated values. When `item` changes values so that one becomes equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its position, rather than dropped, so the output never holds fewer values than the size options allow. It is synchronous when `item` is, and asynchronous otherwise. A set stops once its items have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
+A wrong size is reported at once, without validating the values. Otherwise every value is validated, and each issue's path leads through the value's position in iteration order. The output is a new `Set` of the validated values. When `item` changes values so that one becomes equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its position, rather than dropped, up to the 1,000 issues a collection reports, so the output never holds fewer values than the size options allow. It is synchronous when `item` is, and asynchronous otherwise. A set stops once its items have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
 
 **Parameters**
 
@@ -1313,7 +1313,7 @@ export declare function unique<T extends LiteralValue>(by?: undefined, message?:
 export declare function unique<T>(by: (item: T) => unknown, message?: Message): Check<readonly T[]>;
 ```
 
-Requires the items of an array to be distinct, reporting each repeat at its own index with `invalid_value` and `params` `{ unique: true }`.
+Requires the items of an array to be distinct, reporting each repeat at its own index with `invalid_value` and `params` `{ unique: true }`, up to the 1,000 issues a collection reports.
 
 Without `by` it compares the validated items themselves; with it, the value `by` returns for each, so `unique((user) => user.id)` makes ids unique. Comparison is SameValueZero, as for a `Set`, so two objects are equal only when they are the same object. Every object or list a composer such as `object` or `array` produces is new, and two `Date`s of one moment are two objects, so `unique()` without `by` would find a repeat among them only where a validator passed the same object through twice: the types accept it only for an array of primitives, and an array of objects, lists or dates needs `by`, such as `unique((user) => user.id)` or `unique((day) => day.getTime())`.
 
@@ -1849,7 +1849,7 @@ Inherited from [MessageOptions](#messageoptions).
 unknownKeys?: "strip" | "strict" | "passthrough";
 ```
 
-What to do with input properties the shape does not list. `"strip"` drops them from the output, `"strict"` rejects each with an `unrecognized_key` issue, and `"passthrough"` copies them to the output unchecked.
+What to do with input properties the shape does not list. `"strip"` drops them from the output, `"strict"` rejects each with an `unrecognized_key` issue, up to the 1,000 issues a collection reports, and `"passthrough"` copies them to the output unchecked.
 
 ### SearchParamsOptions
 

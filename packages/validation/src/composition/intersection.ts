@@ -196,7 +196,7 @@ function merge(left: unknown, right: unknown, conflicts: ValidationIssue[]): unk
  * input, recursively, so maps keyed by objects and sets of objects merge too. Any other pair must be the
  * same value, `0` and `-0` merging as `0`, or two dates holding the same moment. Where the outputs differ otherwise, such as
  * `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place
- * fails with `invalid_intersection` at its path, rather than one side silently winning. Cyclic or
+ * fails with `invalid_intersection` at its path, rather than one side silently winning, up to the 1,000 issues a collection reports. Cyclic or
  * shared objects in the outputs are merged once, and the merged output keeps their shape. Two `object`s
  * with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists;
  * spread their shapes into one strict object instead. It is synchronous when both validators are, and

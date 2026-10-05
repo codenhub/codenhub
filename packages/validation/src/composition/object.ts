@@ -40,7 +40,7 @@ export type InferShape<TShape extends Shape> = Simplify<
 export interface ObjectOptions extends MessageOptions {
   /**
    * What to do with input properties the shape does not list. `"strip"` drops them from the output,
-   * `"strict"` rejects each with an `unrecognized_key` issue, and `"passthrough"` copies them to the
+   * `"strict"` rejects each with an `unrecognized_key` issue, up to the 1,000 issues a collection reports, and `"passthrough"` copies them to the
    * output unchecked.
    *
    * @defaultValue "strip"

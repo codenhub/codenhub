@@ -24,7 +24,7 @@ export interface ArrayOptions extends SizeOptions, MessageOptions {}
  *
  * @remarks
  * A wrong size is reported at once, without validating the items, so a huge array is never
- * worked through only to be rejected. Otherwise every item is validated, and each issue's path
+ * worked through only to be rejected. Otherwise the items are validated, a later one even when an earlier one failed, and each issue's path
  * leads through the item's index. Checks, such as `unique()`, run on the validated items once every
  * item has passed. The output is a new array; the input is never modified. It is synchronous when
  * `item` is, and asynchronous otherwise.

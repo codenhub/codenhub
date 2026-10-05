@@ -26,7 +26,7 @@ import { SIZE_OPTIONS, assertSizeOptions, sizeIssues, type SizeOptions } from ".
  * validated, and each issue's path leads through the value's position in iteration order. The
  * output is a new `Set` of the validated values. When `item` changes values so that one becomes
  * equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its
- * position, rather than dropped, so the output never holds fewer values than the size options allow.
+ * position, rather than dropped, up to the 1,000 issues a collection reports, so the output never holds fewer values than the size options allow.
  * It is synchronous when `item` is, and asynchronous otherwise.
  * A set stops once its items have reported 1,000 issues: the rest are not validated, and one more
  * issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.

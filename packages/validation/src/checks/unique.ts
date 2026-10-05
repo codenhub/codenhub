@@ -6,7 +6,7 @@ import type { LiteralValue } from "../primitives/literal";
 
 /**
  * Requires the items of an array to be distinct, reporting each repeat at its own index with
- * `invalid_value` and `params` `{ unique: true }`.
+ * `invalid_value` and `params` `{ unique: true }`, up to the 1,000 issues a collection reports.
  *
  * @remarks
  * Without `by` it compares the validated items themselves; with it, the value `by` returns for each, so
