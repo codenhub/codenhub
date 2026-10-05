@@ -1077,7 +1077,7 @@ See [Reusing shapes](#reusing-shapes) for extending, omitting and making propert
 
 ### `objectLike`
 
-`objectLike(shape, options?, ...checks)` validates any object that has the listed properties, where `object` accepts plain objects only. Use it for a value handed over as an instance, such as an `Error` or an object with methods, and `object` for data.
+`objectLike(shape, options?, ...checks)` validates any object that has the listed properties, where `object` accepts plain objects only. Use it for a value handed over as an instance, such as an `Error` or an object with methods, and `object` for data. To choose between instances by a property, put the `objectLike` validators in a `union`: `tagged` reads the tag of a plain object only, and rejects an instance before any variant sees it.
 
 ```ts
 import { boolean, objectLike, optional, string } from "@codenhub/validation";

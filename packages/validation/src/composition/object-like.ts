@@ -22,7 +22,8 @@ import type { InferShape, Shape } from "./object";
  * Where {@link object} accepts plain objects and reads their own properties, this accepts every object
  * that is not an array and reads each listed property as `input[key]`, so one that is inherited, not
  * enumerable or computed by a getter counts. Use it for a value another program hands over as an
- * instance, such as an `Error` or an object with methods, and `object` for data.
+ * instance, such as an `Error` or an object with methods, and `object` for data. To choose between
+ * instances by a property, put these validators in a `union`: `tagged` accepts plain objects only.
  *
  * Every property is validated even when an earlier one failed. A property that throws while it is
  * read, as a getter or a `Proxy` trap may, is reported as an `invalid_value` issue with
