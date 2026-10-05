@@ -81,8 +81,14 @@
 
   /* Rounded variant: bounded elliptical corners, so the top and bottom edges of
      a wide element stay straight instead of bulging into an egg. On the region
-     with `.sketch`, or on one component inside it. Knobs follow R8. */
-  .sketch-rounded {
+     with `.sketch`, or on one component inside it. Knobs follow R8.
+
+     Never on a solo element, here or in the rotation below:
+     `.sketch-solo.sketch-rounded` paints its own outline, and a complete
+     radius declared on it would inherit into whatever it holds -- a `.btn`
+     inside a solo toast took a sketch outline on a page with no sketch in
+     scope. */
+  .sketch-rounded:not(.sketch-solo) {
     --ui-radius: var(--sketch-radius-rounded, 26px 10px 24px 11px / 12px 23px 11px 20px);
     --ui-radius-surface: var(--sketch-radius-surface-rounded, 38px 16px 36px 17px / 16px 34px 17px 32px);
     --ui-radius-pill: var(--sketch-radius-pill, 24px 16px 23px 17px / 17px 21px 16px 20px);
@@ -101,15 +107,15 @@
      given DOM order. A knob, when set, is one outline for every position. */
   :is(
     .sketch,
-    .sketch-rounded,
-    :is(.sketch, .sketch-rounded)
+    .sketch-rounded:not(.sketch-solo),
+    :is(.sketch, .sketch-rounded:not(.sketch-solo))
       :not(
-        :is(.sketch, .sketch-rounded) :is(.neobrutalism, .glass, .pixel, .chunky-tile, .cyber),
-        :is(.sketch, .sketch-rounded) :is(.neobrutalism, .glass, .pixel, .chunky-tile, .cyber) *
+        :is(.sketch, .sketch-rounded:not(.sketch-solo)) :is(.neobrutalism, .glass, .pixel, .chunky-tile, .cyber),
+        :is(.sketch, .sketch-rounded:not(.sketch-solo)) :is(.neobrutalism, .glass, .pixel, .chunky-tile, .cyber) *
       )
   ) {
     /* The pointed outlines: controls, fields, surfaces, and chips. */
-    &:is(.sketch, .sketch *):not(.sketch-rounded, .sketch-rounded *) {
+    &:is(.sketch, .sketch *):not(.sketch-rounded:not(.sketch-solo), .sketch-rounded:not(.sketch-solo) *) {
       &:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble) {
         &:nth-child(4n + 2) {
           --ui-radius: var(--sketch-radius, 18px 240px 15px 255px / 240px 15px 255px 18px);
@@ -172,7 +178,7 @@
     }
 
     /* The rounded outlines, in the same four places. */
-    &:is(.sketch-rounded, .sketch-rounded *) {
+    &:is(.sketch-rounded:not(.sketch-solo), .sketch-rounded:not(.sketch-solo) *) {
       &:is(.btn, .ipt, .textarea, .select, .input-group, .pre, .tooltip-bubble) {
         &:nth-child(4n + 2) {
           --ui-radius: var(--sketch-radius-rounded, 11px 25px 12px 24px / 23px 11px 22px 12px);
