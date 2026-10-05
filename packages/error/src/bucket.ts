@@ -7,8 +7,6 @@ import type {
   ErrorRegistryBucket,
 } from "./types";
 
-const ERROR_MESSAGE_KEY_PATTERN = /^error(?:\.[a-z][A-Za-z0-9]*)+$/;
-const ERROR_SOURCE_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)*$/;
 const ERROR_IDENTIFIER_TRAILING_PUNCTUATION = ".!?";
 
 /**
@@ -68,16 +66,12 @@ export const freezeFeedback = (feedback: ErrorFeedback): Readonly<ErrorFeedback>
     throw new TypeError("Error registry feedback.message must be a non-empty string.");
   }
 
-  if (messageKey !== undefined && (typeof messageKey !== "string" || !ERROR_MESSAGE_KEY_PATTERN.test(messageKey))) {
-    throw new TypeError(
-      "Error registry feedback.messageKey must be a dot-separated key under the error namespace when provided.",
-    );
+  if (messageKey !== undefined && (typeof messageKey !== "string" || messageKey.trim().length === 0)) {
+    throw new TypeError("Error registry feedback.messageKey must be a non-empty string when provided.");
   }
 
-  if (source !== undefined && (typeof source !== "string" || !ERROR_SOURCE_PATTERN.test(source))) {
-    throw new TypeError(
-      "Error registry feedback.source must use lowercase kebab-case namespace segments when provided.",
-    );
+  if (source !== undefined && (typeof source !== "string" || source.trim().length === 0)) {
+    throw new TypeError("Error registry feedback.source must be a non-empty string when provided.");
   }
 
   if (isRetryable !== undefined && typeof isRetryable !== "boolean") {

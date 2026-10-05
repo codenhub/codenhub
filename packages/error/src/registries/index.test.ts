@@ -53,6 +53,22 @@ describe("ready registries", () => {
     expect(presetFeedback.every((feedback) => typeof feedback.messageKey === "string")).toBe(true);
   });
 
+  it("should follow the repository's messageKey and source conventions", () => {
+    // The registry accepts any non-empty string, so the conventions of docs/specs/errors.md
+    // are held here for the built-in presets instead.
+    const presetFeedback = [
+      ...Object.values(browserErrorNames),
+      ...browserErrorPatterns.map(([, feedback]) => feedback),
+      ...Object.values(supabaseErrorCodes),
+      ...Object.values(supabaseErrorNames),
+    ];
+
+    for (const feedback of presetFeedback) {
+      expect(feedback.messageKey).toMatch(/^error(?:\.[a-z][A-Za-z0-9]*)+$/);
+      expect(feedback.source).toMatch(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)*$/);
+    }
+  });
+
   it("should preserve string-keyed access to raw mappings", () => {
     const browserName: string = "AbortError";
     const supabaseCode: string = "invalid_credentials";

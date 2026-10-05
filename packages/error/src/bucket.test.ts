@@ -197,27 +197,22 @@ describe("feedback map bucket (codes / names / messages)", () => {
     expect(() => registry.codes.add("code1", { message: "Msg", isRetryable: "yes" } as never)).toThrow(TypeError);
   });
 
-  it.each(["", "validation.required", "error.Validation.required", "error.validation.required-value"])(
-    "should reject invalid messageKey %j",
-    (messageKey) => {
-      const registry = createErrorRegistry();
-      expect(() => registry.codes.add("code1", { message: "Msg", messageKey })).toThrow(TypeError);
-    },
-  );
+  it.each(["", "   "])("should reject empty messageKey %j", (messageKey) => {
+    const registry = createErrorRegistry();
+    expect(() => registry.codes.add("code1", { message: "Msg", messageKey })).toThrow(TypeError);
+  });
 
-  it.each(["", "Supabase.auth", "supabase.Auth", "supabase_auth", "supabase..auth"])(
-    "should reject invalid source %j",
-    (source) => {
-      const registry = createErrorRegistry();
-      expect(() => registry.codes.add("code1", { message: "Msg", source })).toThrow(TypeError);
-    },
-  );
+  it.each(["", "   "])("should reject empty source %j", (source) => {
+    const registry = createErrorRegistry();
+    expect(() => registry.codes.add("code1", { message: "Msg", source })).toThrow(TypeError);
+  });
 
   it.each([
     ["error.myApp.api.rateLimit", "my-app.api"],
     ["error.supabase.auth.invalidCredentials", "supabase.auth"],
-    ["error.browser", "browser"],
-  ])("should accept documented messageKey %j with source %j", (messageKey, source) => {
+    ["errors.auth.invalid_credentials", "@acme/api"],
+    ["auth:invalidCredentials", "Billing"],
+  ])("should accept an application's own messageKey %j with source %j", (messageKey, source) => {
     const registry = createErrorRegistry();
     registry.codes.add("code1", { message: "Msg", messageKey, source });
 

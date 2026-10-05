@@ -102,13 +102,14 @@ export interface ErrorFeedback {
   message: string;
 
   /**
-   * An optional dot-separated localization key under the `error` namespace.
-   * Each segment after `error` uses lower camel case.
+   * An optional localization key; any non-empty string. Built-in presets use dot-separated
+   * lower-camel-case keys under the `error` namespace.
    */
   messageKey?: string;
 
   /**
-   * An optional dot-separated source namespace using lowercase kebab-case segments (e.g. `supabase.auth`).
+   * An optional source label; any non-empty string. Built-in presets use dot-separated
+   * lowercase kebab-case segments (e.g. `supabase.auth`).
    */
   source?: string;
 
