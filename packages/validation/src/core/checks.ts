@@ -20,8 +20,7 @@ import type {
  * drop the check, and `string(/^a/)` would accept every string. `null` is no options, as `undefined` is.
  * An option whose name is not `message` or one of `known`, the names the factory reads separated by
  * spaces, is a mistake too, such as `max` written `maxx`, which would otherwise leave the limit unset.
- * The names of options 0.1.0 had are among them, so the factory can name their replacement. The error
- * names the option and not the ones there are, which the types list, since every validator carries it.
+ * The error names the option and not the ones there are, which the types list, since every validator carries it.
  */
 export function split<TOptions extends MessageOptions, T>(
   args: readonly unknown[],

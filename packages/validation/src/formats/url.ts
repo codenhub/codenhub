@@ -1,5 +1,5 @@
 import { split } from "../core/checks";
-import { assertMigrated, assertOption, issue } from "../core/result";
+import { assertOption, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncCheck,
@@ -206,13 +206,7 @@ export function url<const TOptions extends UrlOptions>(
 export function url(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function url(...rest: unknown[]): AnyValidator {
-  const [options, checks] = split<UrlOptions, string>(
-    rest,
-    "protocols credentials host port path query repeated allowLocal",
-  );
-  assertMigrated("url", options, {
-    allowLocal: "a host validator: url({ host: hostname() }), or url({ host: unknown() }) for IP addresses too",
-  });
+  const [options, checks] = split<UrlOptions, string>(rest, "protocols credentials host port path query repeated");
   const {
     credentials,
     host,

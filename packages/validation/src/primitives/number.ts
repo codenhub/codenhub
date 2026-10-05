@@ -1,5 +1,5 @@
 import { leaf, split } from "../core/checks";
-import { assertBounds, assertMigrated, assertOption, assertOrder, describeType, issue } from "../core/result";
+import { assertBounds, assertOption, assertOrder, describeType, issue } from "../core/result";
 import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
 
 /**
@@ -69,11 +69,7 @@ const isNumber = (input: unknown): boolean => typeof input === "number" && Numbe
  * reject every input.
  */
 export const number = ((...args: unknown[]) => {
-  const [options, checks] = split<NumberOptions, number>(args, "min max gt lt int safeInt clamp multipleOf nonZero");
-  assertMigrated("number", options, {
-    multipleOf: "the check number(multipleOf(step))",
-    nonZero: "the check number(nonZero())",
-  });
+  const [options, checks] = split<NumberOptions, number>(args, "min max gt lt int safeInt clamp");
   const { min, max, gt, lt, int, safeInt, message } = options;
   const range: unknown = options.clamp;
   if (range !== undefined && (typeof range !== "object" || range === null || Array.isArray(range))) {

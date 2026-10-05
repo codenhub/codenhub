@@ -301,24 +301,6 @@ export function assertSize(name: string, value: number): void {
 }
 
 /**
- * Rejects an option 0.1.0 had and 0.2.0 removed, naming what replaces it. Unknown options are otherwise
- * ignored, so a call not yet migrated, such as `string({ pattern: re })` through a variable or from
- * JavaScript, would accept the input the option was meant to reject. Only the validators that had such an
- * option check for it, each for its own.
- */
-export function assertMigrated(
-  validator: string,
-  options: object,
-  replacements: Readonly<Record<string, string>>,
-): void {
-  for (const [name, replacement] of Object.entries(replacements)) {
-    if (Object.hasOwn(options, name)) {
-      throw new TypeError(`${validator}({ ${name} }) was removed in 0.2.0: use ${replacement}`);
-    }
-  }
-}
-
-/**
  * Rejects a default that is an object or a list, which every result would share, so a change to one
  * would show up in the next. A function that returns it makes a new one each time.
  */
