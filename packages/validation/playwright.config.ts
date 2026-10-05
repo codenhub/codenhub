@@ -9,6 +9,9 @@ const ENGINES = [
 export default defineConfig({
   testDir: "./tests/browser",
   fullyParallel: true,
+  // A worker for each core launched ten browsers at once, which ran a 16 GB machine out of memory.
+  // Given as text, which Playwright refuses unless it is a count; `Number` of other text is NaN, which it takes.
+  workers: process.env.PLAYWRIGHT_WORKERS ?? 3,
   reporter: "list",
   webServer: {
     command: "vite --host 127.0.0.1 --port 5193 --strictPort",

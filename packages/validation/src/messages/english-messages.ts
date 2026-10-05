@@ -154,18 +154,26 @@ const isOtherKind = (issues: readonly ValidationIssue[]): boolean => {
   );
 };
 
+/** Tests whether an issue is a limit of `lazy` that stopped the validation, rather than a fault of the input. */
+const isLazyLimit = (found: ValidationIssue | null | undefined): boolean =>
+  found?.code === "too_big" && (found.params?.["type"] === "depth" || found.params?.["type"] === "calls");
+
 /**
  * Words a union that no option accepted. When the input was of the kind of exactly one option, such as
  * text for `union([literal(""), email()])`, that option's first issue says what is wrong, "Invalid email
- * address"; otherwise no option is the one meant, and the wording is generic.
+ * address"; otherwise no option is the one meant, and the wording is generic. A limit of `lazy` an option
+ * found is worded before either, since it stopped the validation whatever the input holds.
  */
 const describeUnion = (issue: ValidationIssue, messages: Messages): string => {
   if (Array.isArray(issue.params?.options)) {
     return `Expected ${param(issue, "discriminator")} to be one of ${listOf(issue.params.options, formatValue)}`;
   }
   const found = (issue.params?.["issues"] ?? []) as readonly (readonly ValidationIssue[])[];
-  const meant = Array.isArray(found) ? found.filter((issues) => Array.isArray(issues) && !isOtherKind(issues)) : [];
-  const [first] = meant.length === 1 ? (meant[0] as readonly ValidationIssue[]) : [];
+  const lists = Array.isArray(found) ? found.filter((issues) => Array.isArray(issues)) : [];
+  // The input may be valid and only too large, which no other option's issue says.
+  const limit = lists.flat().find(isLazyLimit);
+  const meant = lists.filter((issues) => !isOtherKind(issues));
+  const [first] = limit === undefined ? (meant.length === 1 ? (meant[0] as readonly ValidationIssue[]) : []) : [limit];
   return first === undefined ? "Does not match any of the allowed types" : quote(first, messages);
 };
 
