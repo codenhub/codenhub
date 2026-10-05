@@ -9,6 +9,7 @@ interface NormalizedError {
 
 interface ErrorClassification {
   type: Exclude<AppErrorType, "unknown">;
+  code: string | null;
   message: string;
   messageKey: string | null;
   source: string | null;
@@ -41,13 +42,28 @@ const getStringField = (source: Record<string, unknown>, key: string): string | 
   return typeof value === "string" ? value : null;
 };
 
-const toClassification = (type: ErrorClassification["type"], feedback: ErrorFeedback): ErrorClassification => ({
-  type,
-  message: feedback.message,
-  messageKey: feedback.messageKey ?? null,
-  source: feedback.source ?? null,
-  isRetryable: feedback.isRetryable ?? false,
-});
+// Built-in buckets validate feedback on registration, but a hand-written registry can return
+// anything, so the fields are checked again before they reach an AppError.
+const toClassification = (
+  type: ErrorClassification["type"],
+  feedback: ErrorFeedback,
+  code: string | null = null,
+): ErrorClassification => {
+  const { message, messageKey, source, isRetryable } = feedback;
+
+  if (typeof message !== "string" || message.trim().length === 0) {
+    throw new TypeError("Error registry returned feedback without a non-empty message.");
+  }
+
+  return {
+    type,
+    code,
+    message,
+    messageKey: typeof messageKey === "string" ? messageKey : null,
+    source: typeof source === "string" ? source : null,
+    isRetryable: isRetryable === true,
+  };
+};
 
 const normalizeError = (error: unknown): NormalizedError => {
   if (typeof error === "string") {
@@ -159,7 +175,7 @@ const resolveDeterministicKnownError = (
     const feedback = registry.codes.get(code);
 
     if (feedback !== undefined) {
-      return toClassification("known", feedback);
+      return toClassification("known", feedback, code.trim());
     }
   }
 
@@ -167,7 +183,7 @@ const resolveDeterministicKnownError = (
     const feedback = registry.names.get(name);
 
     if (feedback !== undefined) {
-      return toClassification("known", feedback);
+      return toClassification("known", feedback, name.trim());
     }
   }
 

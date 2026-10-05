@@ -58,6 +58,7 @@ describe("createAppError — basic normalization", () => {
       name: "AppError",
       message: DEFAULT_APP_ERROR_MESSAGE,
       type: "unknown",
+      code: null,
       messageKey: null,
       source: null,
       isRetryable: false,
@@ -71,6 +72,7 @@ describe("createAppError — basic normalization", () => {
       name: "AppError",
       message: DEFAULT_APP_ERROR_MESSAGE,
       type: "unknown",
+      code: null,
       messageKey: null,
       source: null,
       isRetryable: false,
@@ -492,6 +494,54 @@ describe("createAppError — re-normalization with options", () => {
   });
 });
 
+
+describe("createAppError — code", () => {
+  it("should expose the matched code", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("23505", { message: "Already exists." });
+
+    const appError = createAppError({ code: " 23505 " }, { registry });
+
+    expect(appError.code).toBe("23505");
+    expect(appError.toJSON().code).toBe("23505");
+  });
+
+  it("should expose the matched name when no code matched", () => {
+    const registry = createErrorRegistry();
+    registry.names.add("AbortError", { message: "Cancelled." });
+
+    expect(createAppError({ code: "other", name: "AbortError" }, { registry }).code).toBe("AbortError");
+  });
+
+  it("should leave code null for message, prefix, pattern, and unknown results", () => {
+    const registry = createErrorRegistry();
+    registry.messages.add("Exact", { message: "Msg" });
+    registry.prefixes.add("Upload failed:", { message: "Msg" });
+    registry.patterns.add(/timeout/, { message: "Msg" });
+
+    expect(createAppError(new Error("Exact"), { registry }).code).toBeNull();
+    expect(createAppError(new Error("Upload failed: too big"), { registry }).code).toBeNull();
+    expect(createAppError(new Error("a timeout"), { registry }).code).toBeNull();
+    expect(createAppError({ code: "unregistered" }, { registry }).code).toBeNull();
+  });
+
+  it("should carry the code of a nested AppError", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("E1", { message: "Msg" });
+    const nested = createAppError({ code: "E1" }, { registry });
+
+    expect(createAppError(new Error("wrapper", { cause: nested })).code).toBe("E1");
+  });
+
+  it("should classify a serialized AppError again by its code", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("E1", { message: "Msg", isRetryable: true });
+    const serialized: unknown = JSON.parse(JSON.stringify(createAppError({ code: "E1" }, { registry })));
+
+    expect(createAppError(serialized, { registry })).toMatchObject({ type: "known", code: "E1", isRetryable: true });
+  });
+});
+
 describe("createAppError — appErrorFallback nested unknown AppError resolution", () => {
   it("should resolve using nested unknown AppError properties if no other match exists", () => {
     const registry = createErrorRegistry();
@@ -556,6 +606,19 @@ describe("createAppError — option validation", () => {
 
   it("should reject an invalid registry even when the error carries no identifiers", () => {
     expect(() => createAppError({}, { registry: {} } as never)).toThrow(TypeError);
+  });
+
+  it("should reject feedback without a message returned by a hand-written registry", () => {
+    const emptyBucket = { get: () => undefined, values: () => [][Symbol.iterator]() };
+    const registry = {
+      codes: { ...emptyBucket, get: () => ({ message: undefined }) },
+      names: emptyBucket,
+      messages: emptyBucket,
+      prefixes: { values: () => [] },
+      patterns: { values: () => [] },
+    };
+
+    expect(() => createAppError({ code: "any" }, { registry } as never)).toThrow(TypeError);
   });
 
   it("should accept a frozen read-only registry as a classification source", () => {

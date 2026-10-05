@@ -14,6 +14,13 @@ export interface AppError extends Error {
   readonly type: AppErrorType;
 
   /**
+   * The registry identifier that classified this error: the matched code, or the matched error
+   * name when no code matched. `null` for message, prefix, and pattern matches and for unknown
+   * errors. Use it to branch on a specific failure.
+   */
+  readonly code: string | null;
+
+  /**
    * An optional localization key from matched registry feedback,
    * suitable for displaying translated messages to consumers.
    */
@@ -47,6 +54,7 @@ export interface AppError extends Error {
     name: string;
     message: string;
     type: AppErrorType;
+    code: string | null;
     messageKey: string | null;
     source: AppErrorSource;
     isRetryable: boolean;
