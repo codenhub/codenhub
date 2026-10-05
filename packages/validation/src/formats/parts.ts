@@ -1,5 +1,6 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { finish, word } from "../core/checks";
+import { cap, MAX_ISSUES } from "../core/limit";
 import { setOwn } from "../core/objects";
 import { assertFunction, failWith, issue, nested, repeatedKey, typeIssue } from "../core/result";
 import type { AnyValidator, AsyncCheck, Message, ValidationIssue, ValidationResult } from "../core/types";
@@ -34,6 +35,7 @@ export function assertParts(parts: Readonly<Record<string, unknown>>): void {
  * The search parameters as an object: each key's value, or with `repeated` every value of every key as
  * an array. Without `repeated`, a key given twice is reported at its path, one issue per key, since a
  * validator that saw one of its values while a server read the other would pass a value nobody checked.
+ * The sender repeats as many keys as it likes, so they are listed up to the limit of a collection.
  * The parameters are read once, so the time it takes grows with their number and no faster.
  */
 export function readQuery(
@@ -52,13 +54,14 @@ export function readQuery(
   const value: Record<string, unknown> = {};
   const issues: ValidationIssue[] = [];
   for (const [key, all] of byKey) {
-    if (!repeated && all.length > 1) {
+    // One past the limit of a collection, which is how the list is known to be cut.
+    if (!repeated && all.length > 1 && issues.length <= MAX_ISSUES) {
       issues.push(repeatedKey(key));
     }
     // Defined as own data, so a key such as `__proto__` is a parameter and not a prototype.
     setOwn(value, key, repeated ? all : all[0]);
   }
-  return { value, issues };
+  return { value, issues: cap(issues, undefined, undefined) };
 }
 
 /**

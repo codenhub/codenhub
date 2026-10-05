@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { unique } from "../checks/unique";
 import { fail } from "../core/result";
 import type { AsyncValidator, Validator } from "../core/types";
+import { searchParams } from "../formats/search-params";
 import { englishMessages } from "../messages/english-messages";
 import { formatIssue } from "../messages/format-issue";
 import { boolean } from "../primitives/boolean";
@@ -97,6 +98,14 @@ describe("the most issues a collection reports", () => {
     };
     const issues = issuesOf(await array(heavy)([1, 2, 3, 4, 5]));
     expect(issues.map((issue) => issue.code)).toEqual(["outer", "outer", "too_big"]);
+  });
+
+  it("should list the keys a query repeats up to the limit", () => {
+    const query = Array.from({ length: COUNT }, (_, index) => `k${index}=1&k${index}=2`).join("&");
+    const issues = issuesOf(searchParams(record(string(), string()))(query));
+    // The issue of a key holds the one behind it, so each is two of the limit.
+    expect(issues).toHaveLength(LIMIT / 2 + 1);
+    expect(issues.at(-1)).toEqual(stopped());
   });
 
   it("should stop a tuple, a set, a map and a record the same way", () => {
