@@ -224,6 +224,28 @@ describe("feedback map bucket (codes / names / messages)", () => {
     expect(registry.codes.get("code1")).toEqual({ message: "Msg", messageKey, source });
   });
 
+  it("should normalize a long message with an inner punctuation run in linear time", () => {
+    const registry = createErrorRegistry();
+    const message = `Unknown command: ${"!".repeat(200_000)}x`;
+    registry.messages.add(`${message}...`, { message: "Msg" });
+
+    const startedAt = performance.now();
+    const feedback = registry.messages.get(message);
+    const elapsed = performance.now() - startedAt;
+
+    expect(feedback).toEqual({ message: "Msg" });
+    // The quadratic regex this replaced needed tens of seconds for this input.
+    expect(elapsed).toBeLessThan(1000);
+  });
+
+  it("should strip trailing punctuation and the whitespace before it", () => {
+    const registry = createErrorRegistry();
+    registry.messages.add("  Upload failed ?!. ", { message: "Msg" });
+
+    expect(registry.messages.get("Upload failed")).toEqual({ message: "Msg" });
+    expect(() => registry.messages.add(" ...!? ", { message: "Msg" })).toThrow(TypeError);
+  });
+
   it("should reject an empty or whitespace-only identifier on delete", () => {
     const registry = createErrorRegistry();
     expect(() => registry.codes.delete("   ")).toThrow(TypeError);
