@@ -23,6 +23,7 @@ Packages that do not expose errors do not need to follow this spec.
 - i18n-ready error messages via `messageKey`
 - Retry signaling via `isRetryable`
 - Composable registry presets that consumers can merge into their own registry
+- Messages that say what happened and what to do next, written to the conventions below
 - Diagnostic access through `AppError.originalError` while default JSON serialization retains normalized fields without including raw input
 
 `isAppError()` recognizes `AppError` instances created by the current `@codenhub/error` package runtime. It is an identity guard, not a mechanism for recognizing serialized errors or instances created by another package copy or runtime.
@@ -35,9 +36,11 @@ Packages that do not expose errors do not need to follow this spec.
 
 Wrapper traversal defaults to a maximum depth of `3`. A supplied `maxDepth` MUST be an integer from `0` through `3`; all other values are programmer errors and MUST throw `TypeError` before traversal begins, and before `attempt()` or `attemptAsync()` run their callback.
 
+`attempt()` MUST throw `TypeError` when its callback returns a promise or other thenable, and MUST NOT call `then` on a thenable that is not a native promise, since that would start it. `attempt()` and `attemptAsync()` MUST throw `TypeError` for a callback that is not a function.
+
 Normalizing error text MUST take time linear in its length. Error messages routinely embed input an attacker controls, so no step that runs on every message may backtrack.
 
-Passing options to `createAppError()` with an existing `AppError` classifies its original value again. The existing classification MUST be kept unless that finds a match of a higher tier: a known result replaces anything, an unexpected result replaces only an unknown one. Options that match nothing new, such as a lone `fallbackMessage`, MUST NOT downgrade a classified error.
+Passing options to `createAppError()` with an existing `AppError` classifies the raw value it started from again, unwinding any earlier `AppError` first. Re-normalization MUST only upgrade: an unexpected result replaces only an unknown error, and a known result replaces anything it differs from. In every other case the same `AppError` MUST be returned. A `fallbackMessage` MUST NOT replace the message an `AppError` already has, so an error passed through several layers keeps the wording of the first one that named it.
 
 Raw strings passed to `err()` MUST be treated as untrusted error values. They MUST NOT become user-facing messages unless the caller explicitly supplies a safe `fallbackMessage`.
 
@@ -60,7 +63,7 @@ import type { ErrorFeedback } from "@codenhub/error"; // Erased at runtime
 
 export const myPackageErrors: Record<string, ErrorFeedback> = {
   "my-package.invalid_credentials": {
-    message: "Invalid email or password.",
+    message: "We couldn't sign you in. The email or password is incorrect. Check them and try again.",
     source: "my-package",
   },
 };
@@ -130,6 +133,46 @@ Rules:
 - Use `null` (the default) only when the source is genuinely ambiguous or unknown.
 - Keep segments lowercase and hyphenated (`kebab-case`), matching the package naming convention.
 
+## `message` conventions
+
+The `message` is what a person using the application reads. A code translated into a sentence, such as "Invalid email or password.", is not enough: the message has to help that person get past the failure.
+
+Write one string of full sentences, in this order:
+
+1. **What happened**, in terms of what the person was trying to do when the identifier proves it, and as the plain fact when it does not.
+2. **Why**, when the identifier says why and knowing it helps.
+3. **What to do next.**
+
+```
+"We couldn't sign you in. The email or password is incorrect. Check them and try again."
+"We've sent too many emails to this address. Wait a few minutes before requesting another."
+```
+
+Rules:
+
+- Say only what the identifier proves. `invalid_credentials` proves a sign-in failed, so the message can name it. `23505` proves a duplicate value and nothing about which record, and `ECONNREFUSED` proves nothing about what the person was doing.
+- Advise only actions that always exist. A mapping cannot know that the application has a password reset, a support chat, or a retry button, so "check them and try again" is safe and "reset your password" is not. An application that has the feature registers its own message for the code.
+- Speak as the application, in the first person plural: "We couldn't…". Do not blame the reader, and do not use jargon, identifiers, or the raw error text.
+- "Try again" in a message is advice to a person and does not make the mapping `isRetryable`. When the operation may already have taken effect, say so: "Check whether it went through before trying again."
+- A failure with nothing to act on, such as a cancelled request, MAY be a single sentence.
+
+### Who can act on the failure
+
+Every mapping is written for one of two audiences, decided by who can make the failure go away:
+
+| Audience                 | The failure is                                                                                         | Examples                                                        | The message                                                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| The person using the app | Caused by their input, their account, their device, or a condition that passes on its own.             | `invalid_credentials`, `weak_password`, `23505`, `ECONNREFUSED` | Follows the three parts above.                                                                                                  |
+| The developer of the app | A defect or a misconfiguration: nothing the person does will fix it, and only a code or config change. | `42P01`, `42703`, `InvalidStateError`, `unexpected_failure`     | Says the problem is on the application's side and not the reader's doing, and names no table, column, state, or other internal. |
+
+Rules:
+
+- A developer-facing mapping MUST NOT describe the defect or suggest a fix the reader cannot make. What went wrong is diagnostic, and it stays on `AppError.originalError` for logs.
+- Developer-facing mappings in one package SHOULD share one message, so the reader is told the same thing whichever defect produced it. `@codenhub/error` uses a single sentence for all of its own.
+- Register a developer-facing identifier only when it is common enough that telling the reader "this is not your doing" is worth more than the generic fallback. Identifiers that only surface during development, such as a malformed token or a misconfigured hook, are left unmapped and resolve to an unknown error.
+- When the same identifier can be either, write for the person using the app. `23502`, a missing required value, is usually a form the application failed to validate, but the reader can still fill the field in.
+- The audience is a rule for writing mappings, not a field on `AppError`. Code that needs to tell the two apart branches on `AppError.code`.
+
 ## `messageKey` conventions
 
 The `messageKey` field is an optional i18n translation key. When provided, consumers can use it to look up localized messages instead of displaying the English fallback.
@@ -158,18 +201,18 @@ Rules:
 
 ## `isRetryable` guidance
 
-Set `isRetryable: true` only when retrying the same operation **without user intervention** is likely to succeed.
+Set `isRetryable: true` only when the same operation can be repeated **without user intervention** and **without the risk that it runs twice**. The flag describes the failure, and the code that reads it does not know whether the operation was idempotent, so it has to be safe to act on as it stands.
 
-| Should be retryable            | Should NOT be retryable      |
-| ------------------------------ | ---------------------------- |
-| Network timeouts               | Auth failures                |
-| Rate limit (with backoff)      | Permission denied            |
-| Transient service errors (5xx) | Validation errors            |
-| DNS failures                   | Unique constraint violations |
+| Should be retryable                       | Should NOT be retryable                             |
+| ----------------------------------------- | --------------------------------------------------- |
+| Connection refused, connection timeout    | Response timeout, connection reset, aborted request |
+| DNS failures                              | Auth failures, permission denied                    |
+| Rate limit (with backoff)                 | Validation errors, unique constraint violations     |
+| Service errors that reject before running | Service errors that may have run the request (5xx)  |
 
-When in doubt, omit `isRetryable` (defaults to `false`). Do not mark an error as retryable speculatively.
+When in doubt, omit `isRetryable` (defaults to `false`). Do not mark an error as retryable speculatively. A failure that is likely to pass on a second try but may follow a request the server already received is not retryable.
 
-Generic browser fetch messages such as `Failed to fetch` or `Load failed` SHOULD remain non-retryable because they can represent permanent failures such as CORS, invalid URLs, or TLS errors. More specific transient signals, such as connection refusal, DNS failure, or timeout, MAY be marked retryable when package behavior supports retrying without user intervention.
+Generic browser fetch messages such as `Failed to fetch` or `Load failed` SHOULD remain non-retryable because they can represent permanent failures such as CORS, invalid URLs, or TLS errors. A `TimeoutError` from `AbortSignal.timeout()` SHOULD remain non-retryable because it can fire after the request was sent. More specific signals that the request never arrived, such as connection refusal or DNS failure, MAY be marked retryable.
 
 ## Error-propagation pattern (throwing vs. returning Results)
 
