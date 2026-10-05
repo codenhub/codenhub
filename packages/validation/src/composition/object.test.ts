@@ -21,6 +21,18 @@ describe("object", () => {
     expect(Reflect.ownKeys(kept)).toEqual(["name"]);
   });
 
+  it("should read each validator of the shape once, so the one it checked is the one it runs", () => {
+    let reads = 0;
+    const shape = {
+      get name() {
+        reads += 1;
+        return reads === 1 ? string() : (undefined as never);
+      },
+    };
+    expect(object(shape)({ name: "Ada" }).ok).toBe(true);
+    expect(reads).toBe(1);
+  });
+
   it("should validate each property and return a new object", () => {
     const input = { name: "Ada", age: 36 };
     const output = valueOf(user(input));

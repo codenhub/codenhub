@@ -9,6 +9,7 @@ export { endsWith } from "./checks/ends-with";
 export { includes } from "./checks/includes";
 export { lowercase } from "./checks/lowercase";
 export { multipleOf } from "./checks/multiple-of";
+export { nonBlank } from "./checks/non-blank";
 export { nonZero } from "./checks/non-zero";
 export { pattern } from "./checks/pattern";
 export { startsWith } from "./checks/starts-with";
@@ -30,6 +31,7 @@ export { map } from "./composition/map";
 export { nullable } from "./composition/nullable";
 export { nullish } from "./composition/nullish";
 export { object, type InferShape, type ObjectOptions, type Shape } from "./composition/object";
+export { objectLike } from "./composition/object-like";
 export { optional } from "./composition/optional";
 export { partial, type PartialShape } from "./composition/partial";
 export { pipe } from "./composition/pipe";
@@ -40,6 +42,7 @@ export { tagged, type InferTagged, type Variants } from "./composition/tagged";
 export { transform } from "./composition/transform";
 export { tuple, type InferTuple, type TupleOptions } from "./composition/tuple";
 export { union } from "./composition/union";
+export { assert, type AssertOptions } from "./core/assert";
 export { is } from "./core/is";
 export { fail, pass, type IssueInput } from "./core/result";
 export type {
@@ -89,7 +92,18 @@ export { url, type UrlOptions } from "./formats/url";
 export { uuid, type UuidOptions } from "./formats/uuid";
 export { standard } from "./interop/standard";
 export { type StandardSchemaV1 } from "./interop/standard-schema";
-export { englishMessages } from "./messages/english-messages";
+export {
+  englishMessages,
+  invalidFormatMessage,
+  invalidIntersectionMessage,
+  invalidKeyMessage,
+  invalidTypeMessage,
+  invalidUnionMessage,
+  invalidValueMessage,
+  tooBigMessage,
+  tooSmallMessage,
+  unrecognizedKeyMessage,
+} from "./messages/english-messages";
 export { flatten, formatIssue, formatPath, type FlattenedErrors, type Messages } from "./messages/format-issue";
 export { bigint, type BigintOptions } from "./primitives/bigint";
 export { boolean } from "./primitives/boolean";

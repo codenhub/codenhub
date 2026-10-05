@@ -19,7 +19,7 @@ export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: 
 
 Creates a validator for arrays whose every item passes `item`.
 
-A wrong size is reported at once, without validating the items, so a huge array is never worked through only to be rejected. Otherwise every item is validated, and each issue's path leads through the item's index. Checks, such as `unique()`, run on the validated items once every item has passed. The output is a new array; the input is never modified. It is synchronous when `item` is, and asynchronous otherwise.
+A wrong size is reported at once, without validating the items, so a huge array is never worked through only to be rejected. Otherwise the items are validated, a later one even when an earlier one failed, and each issue's path leads through the item's index. Checks, such as `unique()`, run on the validated items once every item has passed. The output is a new array; the input is never modified. It is synchronous when `item` is, and asynchronous otherwise. An array stops once its items have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
 
 **Parameters**
 
@@ -43,6 +43,42 @@ A wrong size is reported at once, without validating the items, so a huge array 
 const tags = array(string({ trim: true, min: 1 }), { max: 5 }, unique());
 tags(["a", "b"]); // { ok: true, value: ["a", "b"] }
 tags(["a", "a"]); // { ok: false, ... }, code "invalid_value" at path [1]
+```
+
+### assert
+
+```ts
+export declare function assert<T>(validator: Validator<T>, input: unknown, options?: AssertOptions): T;
+```
+
+Returns the value a validator produces for an input, or throws when the input is invalid.
+
+It is for input whose being invalid is a mistake of the caller, such as a configuration object: the mistake is thrown where it was made, as any other bad argument is. Input a program is expected to receive invalid, such as a form or a request, is read from the result of calling the validator, which lists the issues instead of throwing for the first.
+
+The error names the first issue only. The others are on the failure the error carries as its `cause`.
+
+**Parameters**
+
+- `validator` — A synchronous validator.
+- `input` — The value to validate.
+- `options` — The subject of the message and the wording of its issues.
+
+**Type parameters**
+
+- `T` — The type the validator produces.
+
+**Returns** — The value the validator produced, which is not the input when the validator trims, coerces or transforms.
+
+**Throws** — When the validator rejects the input, with the subject, the path of the first issue and its wording as the message, and the failure as the `cause`. Also when the validator turns out to be asynchronous, or returns no result or a failure without an issue, and, whatever the input, when `options` is not a plain object or holds a name other than `subject` and `messages`, `subject` is not text, or `messages` is not a message map.
+
+**Example**
+
+```ts
+const config = object({ locales: array(string({ min: 1 })) });
+const messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+assert(config, { locales: ["en"] }, { subject: "[I18n]", messages }); // { locales: ["en"] }
+assert(config, { locales: ["en", 1] }, { subject: "[I18n]", messages });
+// TypeError: [I18n] locales[1]: Expected string, received number
 ```
 
 ### check
@@ -191,7 +227,7 @@ Groups the messages of a failure for display: issues at the root go to `formErro
 
 **Returns** — The grouped messages.
 
-**Throws** — When `messages` is not a message map, such as when it was left out.
+**Throws** — When `messages` is not a message map, such as when it was left out, or the entry that words an issue is neither text nor a function that returns text.
 
 ### format
 
@@ -237,7 +273,7 @@ The text comes from the first of these that exists: the issue's own `message`, a
 
 **Returns** — The message.
 
-**Throws** — When `messages` is not a message map, such as when it was left out.
+**Throws** — When `messages` is not a message map, such as when it was left out, or the entry that words an issue is neither text nor a function that returns text.
 
 **Example**
 
@@ -393,7 +429,7 @@ export declare function intersection<TLeft extends AnyValidator, TRight extends 
 
 Creates a validator that accepts a value only when it passes both validators, and produces the two results merged.
 
-Both validators receive the same input and both run, so the issues of each are reported together. The outputs are merged: plain objects key by key, arrays of the same length item by item, and maps and sets of the same size entry by entry in iteration order, which both validators keep from the input, recursively, so maps keyed by objects and sets of objects merge too. Any other pair must be the same value, `0` and `-0` merging as `0`, or two dates holding the same moment. Where the outputs differ otherwise, such as `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path, rather than one side silently winning. Cyclic or shared objects in the outputs are merged once, and the merged output keeps their shape. Two `object`s with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and asynchronous otherwise.
+Both validators receive the same input and both run, so the issues of each are reported together. The outputs are merged: plain objects key by key, arrays of the same length item by item, and maps and sets of the same size entry by entry in iteration order, which both validators keep from the input, recursively, so maps keyed by objects and sets of objects merge too. Any other pair must be the same value, `0` and `-0` merging as `0`, or two dates holding the same moment. Where the outputs differ otherwise, such as `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place fails with `invalid_intersection` at its path, rather than one side silently winning, up to the 1,000 issues a collection reports. Cyclic or shared objects in the outputs are merged once, and the merged output keeps their shape. Two `object`s with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists; spread their shapes into one strict object instead. It is synchronous when both validators are, and asynchronous otherwise.
 
 **Parameters**
 
@@ -584,7 +620,7 @@ export declare function map<TKey extends AnyValidator, TValue extends AnyValidat
 
 Creates a validator for `Map`s whose every key passes `key` and every value passes `value`.
 
-A wrong size is reported at once, without validating the entries. An issue's path ends at the entry's key when it is a string, and at its position in iteration order, a number, for any other key, so no two entries share a path, as a number key and the position of an object key could. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found. A key that the key validator changes must stay distinct: an entry that arrives at a key already taken is reported as `invalid_key`, so no value is silently replaced. The output is a new `Map`. It is synchronous when both validators are, and asynchronous otherwise.
+A wrong size is reported at once, without validating the entries. An issue's path ends at the entry's key when it is a string, and at its position in iteration order, a number, for any other key, so no two entries share a path, as a number key and the position of an object key could. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found. A key that the key validator changes must stay distinct: an entry that arrives at a key already taken is reported as `invalid_key`, so no value is silently replaced. The output is a new `Map`. It is synchronous when both validators are, and asynchronous otherwise. A map stops once its entries have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
 
 **Parameters**
 
@@ -637,6 +673,26 @@ Both are compared as the decimals they are written as, so `0.3` is a multiple of
 
 ```ts
 number(multipleOf(0.01, "At most two decimals"));
+```
+
+### nonBlank
+
+```ts
+export declare function nonBlank(message?: Message): Check<string>;
+```
+
+Requires a string to hold a character that is not white space, so an empty string and one of spaces alone fail. It changes nothing; to remove the white space around the string instead, and require what is left, use `string({ trim: true, min: 1 })`. It fails with `invalid_format` and `params` `{ format: "nonBlank" }`.
+
+**Parameters**
+
+- `message` — Wording for the issue.
+
+**Returns** — A check of strings.
+
+**Example**
+
+```ts
+string(nonBlank("Say something"));
 ```
 
 ### nonZero
@@ -751,6 +807,40 @@ const signup = object(
   { password: string({ min: 8 }), confirm: string() },
   check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
 );
+```
+
+### objectLike
+
+```ts
+export declare function objectLike<TShape extends Shape>(shape: TShape, ...rest: Rest<InferShape<TShape>, MessageOptions>): Composed<TShape[keyof TShape], InferShape<TShape>>;
+export declare function objectLike<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferShape<TShape>, MessageOptions>): AsyncValidator<InferShape<TShape>>;
+```
+
+Creates a validator for any object that has the given properties, such as a class instance.
+
+Where [object](#object) accepts plain objects and reads their own properties, this accepts every object that is not an array and reads each listed property as `input[key]`, so one that is inherited, not enumerable or computed by a getter counts. Use it for a value another program hands over as an instance, such as an `Error` or an object with methods, and `object` for data. To choose between instances by a property, put these validators in a `union`: `tagged` accepts plain objects only.
+
+Every property is validated even when an earlier one failed. A property that throws while it is read, as a getter or a `Proxy` trap may, is reported as an `invalid_value` issue with `params.unreadable`, and never throws. The output is a new plain object holding the listed properties only, without the ones whose value is `undefined`; the input is never modified. It is synchronous when every property validator is, and asynchronous otherwise.
+
+**Parameters**
+
+- `shape` — Validator of each property.
+- `rest` — Options, then checks, which run once every property has passed and see the output.
+
+**Type parameters**
+
+- `TShape` — Property validators.
+
+**Returns** — A validator that produces a plain object.
+
+**Throws** — When `shape` is not a plain object or a property validator is not a function.
+
+**Example**
+
+```ts
+const feedback = objectLike({ message: string({ min: 1 }), isRetryable: optional(boolean()) });
+feedback(new Error("Try again")); // { ok: true, value: { message: "Try again" } }
+feedback({ message: "" }); // { ok: false, error: { issues: [{ code: "too_small", path: ["message"], ... }] } }
 ```
 
 ### oneOf
@@ -941,7 +1031,7 @@ export declare function record<TKey extends AnyValidator<string>, TValue extends
 
 Creates a validator for plain objects used as a dictionary: any number of keys, all following the same rules.
 
-Each key passes `key` and each value passes `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it cannot be mistaken for a problem with the value; the value is still checked. Only own enumerable properties are read, and a getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does. Every value is read when the validator is called, before any key or value validator runs, so a change to the input made by a callback or while an asynchronous key waits never reaches the output. The output is a new object and the input is never modified. A key such as `__proto__` from parsed JSON is kept as data and never writes to a prototype. A key that the `key` validator changes, such as by lowercasing, must stay distinct: a second entry that arrives at a key already taken is reported as `invalid_key` with `{ issues: [{ code: "invalid_value", params: { unique: true } }] }` instead of silently replacing the first. A wrong number of keys is reported at once, as `too_small` or `too_big` with `type: "record"`, without validating any entry. It is synchronous when both validators are, and asynchronous otherwise.
+Each key passes `key` and each value passes `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it cannot be mistaken for a problem with the value; the value is still checked. Only own enumerable properties are read, and a getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does. Every value is read when the validator is called, before any key or value validator runs, so a change to the input made by a callback or while an asynchronous key waits never reaches the output. The output is a new object and the input is never modified. A key such as `__proto__` from parsed JSON is kept as data and never writes to a prototype. A key that the `key` validator changes, such as by lowercasing, must stay distinct: a second entry that arrives at a key already taken is reported as `invalid_key` with `{ issues: [{ code: "invalid_value", params: { unique: true } }] }` instead of silently replacing the first. A wrong number of keys is reported at once, as `too_small` or `too_big` with `type: "record"`, without validating any entry. It is synchronous when both validators are, and asynchronous otherwise. A record stops once its entries have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
 
 **Parameters**
 
@@ -978,7 +1068,7 @@ export declare function searchParams<TValidator extends AnyValidator>(validator:
 
 Creates a validator that reads a query string, or a `URLSearchParams`, into an object of its decoded parameters, and validates that object: each key's value as a string, or with `repeated` every value of every key as an array. The value is what the validator produces, so values can be converted as they are read.
 
-The parameters are read as `URLSearchParams` reads them, `+` as a space and escapes decoded, and a leading `?` is ignored. A `URLSearchParams` from another realm, such as an iframe, is read too. A key given more than once fails, at its path with `invalid_key`, unless `repeated` is set: a check that saw one of two values while a server read the other would pass a value nobody checked. It is the reading `url` gives its `query` option.
+The parameters are read as `URLSearchParams` reads them, `+` as a space and escapes decoded, and a leading `?` is ignored. A `URLSearchParams` from another realm, such as an iframe, is read too. A key given more than once fails, at its path with `invalid_key`, up to the 1,000 issues a collection reports, unless `repeated` is set: a check that saw one of two values while a server read the other would pass a value nobody checked. It is the reading `url` gives its `query` option.
 
 **Parameters**
 
@@ -1011,7 +1101,7 @@ export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: As
 
 Creates a validator for `Set`s whose every value passes `item`.
 
-A wrong size is reported at once, without validating the values. Otherwise every value is validated, and each issue's path leads through the value's position in iteration order. The output is a new `Set` of the validated values. When `item` changes values so that one becomes equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its position, rather than dropped, so the output never holds fewer values than the size options allow. It is synchronous when `item` is, and asynchronous otherwise.
+A wrong size is reported at once, without validating the values. Otherwise every value is validated, and each issue's path leads through the value's position in iteration order. The output is a new `Set` of the validated values. When `item` changes values so that one becomes equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its position, rather than dropped, up to the 1,000 issues a collection reports, so the output never holds fewer values than the size options allow. It is synchronous when `item` is, and asynchronous otherwise. A set stops once its items have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
 
 **Parameters**
 
@@ -1058,7 +1148,7 @@ The result is a validator that behaves exactly as the one you gave, plus the `~s
 
 **Returns** — A validator that is also a Standard Schema.
 
-**Throws** — When `validator` is not a function, or `messages` is not a message map.
+**Throws** — When `validator` is not a function, or `messages` is not a message map. Validating throws one too when the entry of `messages` that words an issue is neither text nor a function that returns text.
 
 **Example**
 
@@ -1101,7 +1191,7 @@ export declare function tagged<const TKey extends string, const TVariants extend
 
 Creates a validator for objects that share a tag property and differ in the rest, such as events with a `type`. The tag chooses the variant, so a failure reports that variant's own issues instead of a list of everything that did not match.
 
-The input's tag must be one of the keys of `variants`, and the variant validates the rest of the input, without the tag. The variant must not list the tag property: one that does, such as `object({ type: literal("click"), ... })`, never sees it and fails, so its type is rejected. That is also why a strict object works as a variant, and a `record` does too, checking every key but the tag. The tag is added back to the output, so the result is a proper tagged union. Each variant must produce a plain object: an array, a `Date`, a class instance or anything else would be taken apart by adding the tag, so a variant whose output type is an array or a function is a compile error, and one that produces any non-plain value throws a `TypeError` when it does, as a callback's bug does. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. It is synchronous when every variant is, and asynchronous otherwise. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
+The input's tag must be one of the keys of `variants`, and the variant validates the rest of the input, without the tag. The variant must not list the tag property: one that does, such as `object({ type: literal("click"), ... })`, never sees it and fails, so its type is rejected. That is also why a strict object works as a variant, and a `record` does too, checking every key but the tag. The tag is added back to the output, so the result is a proper tagged union. Each variant must produce a plain object: an array, a `Date`, a class instance or anything else would be taken apart by adding the tag, so a variant whose output type is an array or a function is a compile error, and one that produces any non-plain value throws a `TypeError` when it does, as a callback's bug does. The input must be a plain object too, whatever the variants accept: an instance fails with `invalid_type` before any variant sees it, so `objectLike` variants belong in a `union`. A missing, unknown or non-string tag fails with `invalid_union`, at the tag's path, with `params: { discriminator, options }` listing the accepted tags. It is synchronous when every variant is, and asynchronous otherwise. A getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does; data parsed from JSON has none.
 
 **Parameters**
 
@@ -1174,7 +1264,7 @@ export declare function tuple<const TItems extends readonly [AnyValidator, ...An
 
 Creates a validator for arrays of fixed length whose items each have their own validator.
 
-A wrong length is reported at once, without validating the items. With `rest`, the array may be longer, and every extra item must pass it; `max` caps how long, the fixed items included, and a longer array fails with `too_big` and `{ maximum, type: "array" }`. Each issue's path leads through the item's index.
+A wrong length is reported at once, without validating the items. With `rest`, the array may be longer, and every extra item must pass it; `max` caps how long, the fixed items included, and a longer array fails with `too_big` and `{ maximum, type: "array" }`. Each issue's path leads through the item's index. A tuple stops once its items have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
 
 **Parameters**
 
@@ -1243,7 +1333,7 @@ export declare function unique<T extends LiteralValue>(by?: undefined, message?:
 export declare function unique<T>(by: (item: T) => unknown, message?: Message): Check<readonly T[]>;
 ```
 
-Requires the items of an array to be distinct, reporting each repeat at its own index with `invalid_value` and `params` `{ unique: true }`.
+Requires the items of an array to be distinct, reporting each repeat at its own index with `invalid_value` and `params` `{ unique: true }`, up to the 1,000 issues a collection reports.
 
 Without `by` it compares the validated items themselves; with it, the value `by` returns for each, so `unique((user) => user.id)` makes ids unique. Comparison is SameValueZero, as for a `Set`, so two objects are equal only when they are the same object. Every object or list a composer such as `object` or `array` produces is new, and two `Date`s of one moment are two objects, so `unique()` without `by` would find a repeat among them only where a validator passed the same object through twice: the types accept it only for an array of primitives, and an array of objects, lists or dates needs `by`, such as `unique((user) => user.id)` or `unique((day) => day.getTime())`.
 
@@ -1340,6 +1430,30 @@ Inherited from [MessageOptions](#messageoptions).
 #### min
 
 Inherited from [SizeOptions](#sizeoptions).
+
+### AssertOptions
+
+```ts
+export interface AssertOptions
+```
+
+Options for [assert](#assert).
+
+#### messages
+
+```ts
+messages?: Messages;
+```
+
+Wording for issues that carry no message of their own, keyed by issue code, such as `englishMessages` or a map of the wordings the validator can report.
+
+#### subject
+
+```ts
+subject?: string;
+```
+
+What was being validated, written before the problem as it is, such as `"[I18n]"` or `"Router options:"`. Without it the message starts at the path.
 
 ### Base64Options
 
@@ -1755,7 +1869,7 @@ Inherited from [MessageOptions](#messageoptions).
 unknownKeys?: "strip" | "strict" | "passthrough";
 ```
 
-What to do with input properties the shape does not list. `"strip"` drops them from the output, `"strict"` rejects each with an `unrecognized_key` issue, and `"passthrough"` copies them to the output unchecked.
+What to do with input properties the shape does not list. `"strip"` drops them from the output, `"strict"` rejects each with an `unrecognized_key` issue, up to the 1,000 issues a collection reports, and `"passthrough"` copies them to the output unchecked.
 
 ### SearchParamsOptions
 
@@ -2915,7 +3029,7 @@ export declare const englishMessages: Messages;
 
 The built-in English wording for every issue the validators can report, as a message map.
 
-Pass it to `formatIssue`, `flatten` or `standard` to get text such as "Must be at least 18". It is a separate value, not something `formatIssue` carries, so a program that words its own issues, or that never shows one, does not bundle it. To change some of the wording, spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is frozen, so no code can reword the messages of every other user of it in the process. A custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
+Pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Must be at least 18". It is a separate value, not something `formatIssue` carries, so a program that words its own issues, or that never shows one, does not bundle it, and one that can report only a few codes takes the wording of each on its own, such as [invalidTypeMessage](#invalidtypemessage). To change some of the wording, spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is frozen, so no code can reword the messages of every other user of it in the process. A custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
 
 **Example**
 
@@ -2956,6 +3070,78 @@ hostname()("localhost"); // { ok: true, value: "localhost" }
 hostname()("Intranet.Example"); // { ok: true, value: "intranet.example" }
 hostname()("-bad.com"); // { ok: false, ... }, code "invalid_format"
 ```
+
+### invalidFormatMessage
+
+```ts
+export declare const invalidFormatMessage: QuotingWording;
+```
+
+Words an `invalid_format` issue in English, such as "Invalid email address" or "Must match /^a/".
+
+**Returns** — The wording, without the issue's path.
+
+### invalidIntersectionMessage
+
+```ts
+export declare const invalidIntersectionMessage = "Conflicting values";
+```
+
+The English wording of an `invalid_intersection` issue.
+
+### invalidKeyMessage
+
+```ts
+export declare const invalidKeyMessage: QuotingWording;
+```
+
+Words an `invalid_key` issue in English, with what the key's validator found first.
+
+A key given twice, in a query or by two keys a key validator made the same, is worded "Must be given only once", since "must be unique" names no rule a person broke.
+
+**Returns** — The wording, without the issue's path.
+
+### invalidTypeMessage
+
+```ts
+export declare const invalidTypeMessage: Wording;
+```
+
+Words an `invalid_type` issue in English, such as "Expected string, received number".
+
+Each code's wording is a value of its own, so a program that can report only a few codes builds a map of those and bundles no other wording: `{ invalid_type: invalidTypeMessage }`. Pass the map wherever [englishMessages](#englishmessages) goes. A code the map lacks is worded "Invalid value".
+
+**Returns** — The wording, without the issue's path.
+
+**Example**
+
+```ts
+const messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+const result = string({ min: 2 })(1);
+if (!result.ok) {
+  formatIssue(result.error.issues[0], messages); // "Expected string, received number"
+}
+```
+
+### invalidUnionMessage
+
+```ts
+export declare const invalidUnionMessage: QuotingWording;
+```
+
+Words an `invalid_union` issue in English: with what the one option the input was meant for found, and generically when no option is that one.
+
+**Returns** — The wording, without the issue's path.
+
+### invalidValueMessage
+
+```ts
+export declare const invalidValueMessage: Wording;
+```
+
+Words an `invalid_value` issue in English, such as "Expected one of "a", "b"" or "Must be unique".
+
+**Returns** — The wording, without the issue's path.
 
 ### ip
 
@@ -3200,6 +3386,26 @@ time()("24:00"); // { ok: false, ... }, code "invalid_format"
 time({ precision: 0 })("09:15"); // { ok: false, ... }: the seconds are required
 ```
 
+### tooBigMessage
+
+```ts
+export declare const tooBigMessage: Wording;
+```
+
+Words a `too_big` issue in English, such as "Must contain at most 10 items".
+
+**Returns** — The wording, without the issue's path.
+
+### tooSmallMessage
+
+```ts
+export declare const tooSmallMessage: Wording;
+```
+
+Words a `too_small` issue in English, such as "Must be at least 2 characters".
+
+**Returns** — The wording, without the issue's path.
+
 ### ulid
 
 ```ts
@@ -3230,6 +3436,16 @@ Creates a validator that accepts every value, unchanged. Checks given to it run 
 const metadata = object({ id: string(), extra: unknown() });
 const serializable = unknown(check((value) => JSON.stringify(value) !== undefined, "Must be serializable"));
 ```
+
+### unrecognizedKeyMessage
+
+```ts
+export declare const unrecognizedKeyMessage: Wording;
+```
+
+Words an `unrecognized_key` issue in English, with the key quoted as a literal, since it is text the sender chose and may hold quotes or line breaks.
+
+**Returns** — The wording, without the issue's path.
 
 ### uuid
 
@@ -3322,6 +3538,16 @@ The type produced by the last validator of a list.
 
 Not exported; declared in `src/composition/pipe.ts`.
 
+### QuotingWording
+
+```ts
+type QuotingWording = (issue: ValidationIssue, messages: Messages) => string;
+```
+
+The English wording of a code whose issue holds the issues behind it: it is also given the map in use, which words the issue it quotes.
+
+Not exported; declared in `src/messages/english-messages.ts`.
+
 ### Replacement
 
 ```ts
@@ -3361,3 +3587,13 @@ type ValuesOf<T> = T extends readonly unknown[] ? T[number] : T[keyof T];
 The values a list or an enum holds.
 
 Not exported; declared in `src/primitives/one-of.ts`.
+
+### Wording
+
+```ts
+type Wording = (issue: ValidationIssue) => string;
+```
+
+The English wording of one issue code, as a function of the issue alone.
+
+Not exported; declared in `src/messages/english-messages.ts`.

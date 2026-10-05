@@ -1,5 +1,6 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { cap, MAX_ISSUES } from "../core/limit";
 import { call, composed } from "../core/nesting";
 import { entriesOf, isArray, isPlainObject, setOwn, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "../core/objects";
 import { assertFunction, failWith, issue } from "../core/result";
@@ -41,6 +42,16 @@ function pathOf(pending: Pending): ValidationPathSegment[] {
 }
 
 /**
+ * Reports the place two outputs conflict, up to one past the limit of a collection, which is how the list
+ * is known to be cut: every item of two long lists may conflict, and only the first thousand are reported.
+ */
+function conflict(conflicts: ValidationIssue[], pending: Pending): void {
+  if (conflicts.length <= MAX_ISSUES) {
+    conflicts.push(issue("invalid_intersection", undefined, pathOf(pending)));
+  }
+}
+
+/**
  * Merges one pair, queueing the pairs inside it in `inner`. The same value on both sides is kept,
  * which is what a key both sides passed through unchecked holds, and so are two dates holding the same
  * moment. A pair of objects met before, as a cycle or a shared reference in the outputs meets it, gives
@@ -62,7 +73,7 @@ function mergeOne(pending: Pending, inner: Step[], conflicts: ValidationIssue[],
   }
   // Two values that differ and are not both objects can be nothing but a conflict.
   if (typeof left !== "object" || left === null || typeof right !== "object" || right === null) {
-    conflicts.push(issue("invalid_intersection", undefined, pathOf(pending)));
+    conflict(conflicts, pending);
     return right;
   }
   if (merged.get(left)?.has(right) === true) {
@@ -147,7 +158,7 @@ function mergeOne(pending: Pending, inner: Step[], conflicts: ValidationIssue[],
     inner.push(() => values.forEach((value) => output.add(value)));
     return output;
   }
-  conflicts.push(issue("invalid_intersection", undefined, pathOf(pending)));
+  conflict(conflicts, pending);
   return right;
 }
 
@@ -195,7 +206,7 @@ function merge(left: unknown, right: unknown, conflicts: ValidationIssue[]): unk
  * input, recursively, so maps keyed by objects and sets of objects merge too. Any other pair must be the
  * same value, `0` and `-0` merging as `0`, or two dates holding the same moment. Where the outputs differ otherwise, such as
  * `"  ab "` trimmed on one side and uppercased on the other, no value satisfies both, so each such place
- * fails with `invalid_intersection` at its path, rather than one side silently winning. Cyclic or
+ * fails with `invalid_intersection` at its path, rather than one side silently winning, up to the 1,000 issues a collection reports. Cyclic or
  * shared objects in the outputs are merged once, and the merged output keeps their shape. Two `object`s
  * with `unknownKeys: "strict"` never pass together, since each rejects the keys only the other lists;
  * spread their shapes into one strict object instead. It is synchronous when both validators are, and
@@ -235,7 +246,7 @@ export function intersection(left: AnyValidator, right: AnyValidator, ...rest: u
         if (first?.ok && second?.ok) {
           const conflicts: ValidationIssue[] = [];
           const merged = merge(first.value, second.value, conflicts);
-          return conflicts.length > 0 ? reject(conflicts, place) : accept(merged, place);
+          return conflicts.length > 0 ? reject(cap(conflicts, undefined, undefined), place) : accept(merged, place);
         }
         return failWith([first, second].flatMap((result) => (result?.ok === false ? result.error.issues : [])));
       }),

@@ -66,6 +66,8 @@ export type InferTagged<TKey extends string, TVariants extends Variants> = {
  * or anything else would be taken apart by adding the tag, so a variant whose output type is an array
  * or a function is a compile error, and one that produces any non-plain value throws a `TypeError`
  * when it does, as a callback's bug does.
+ * The input must be a plain object too, whatever the variants accept: an instance fails with
+ * `invalid_type` before any variant sees it, so `objectLike` variants belong in a `union`.
  * A missing, unknown or non-string tag fails with `invalid_union`, at the
  * tag's path, with `params: { discriminator, options }` listing the accepted tags. It is synchronous
  * when every variant is, and asynchronous otherwise.

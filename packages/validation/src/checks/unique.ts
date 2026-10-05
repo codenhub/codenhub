@@ -1,11 +1,12 @@
 import { assertMessage, word } from "../core/checks";
+import { cap, MAX_ISSUES } from "../core/limit";
 import { assertFunction, repeatedItem } from "../core/result";
 import type { Check, Message, ValidationIssue } from "../core/types";
 import type { LiteralValue } from "../primitives/literal";
 
 /**
  * Requires the items of an array to be distinct, reporting each repeat at its own index with
- * `invalid_value` and `params` `{ unique: true }`.
+ * `invalid_value` and `params` `{ unique: true }`, up to the 1,000 issues a collection reports.
  *
  * @remarks
  * Without `by` it compares the validated items themselves; with it, the value `by` returns for each, so
@@ -42,11 +43,12 @@ export function unique<T>(by?: (item: T) => unknown, message?: Message): Check<r
     const repeats: ValidationIssue[] = [];
     items.forEach((item, index) => {
       const key = keyOf(item);
-      if (seen.has(key)) {
+      // One past the limit of a collection, which is how the list is known to be cut.
+      if (seen.has(key) && repeats.length <= MAX_ISSUES) {
         repeats.push(repeatedItem(index));
       }
       seen.add(key);
     });
-    return repeats.length > 0 ? word(repeats, message) : undefined;
+    return repeats.length > 0 ? word(cap(repeats, undefined, message), message) : undefined;
   };
 }

@@ -4,6 +4,7 @@
  */
 import {
   array,
+  assert,
   bigint,
   boolean,
   check,
@@ -25,19 +26,24 @@ import {
   guard,
   hostname,
   intersection,
+  invalidKeyMessage,
+  invalidTypeMessage,
   is,
   json,
   lazy,
   literal,
   map,
+  nonBlank,
   nullable,
   number,
   object,
+  objectLike,
   startsWith,
   symbol,
   tagged,
   oneOf,
   optional,
+  tooSmallMessage,
   partial,
   pass,
   pipe,
@@ -57,7 +63,9 @@ import {
   type AsyncValidator,
   type Check,
   type Infer,
+  type Messages,
   type StandardSchemaV1,
+  type ValidationIssue,
   type Validator,
 } from "../../../dist/index";
 
@@ -432,3 +440,37 @@ export const query = searchParams(object({ page: coerceNumber({ int: true }), ta
   repeated: true,
 });
 export const queryValue: Infer<typeof query> = { page: 1, tags: ["a"] };
+
+// nonBlank() is a check of strings, as the checks of a case are.
+export const spoken = string(nonBlank("Say something"));
+// @ts-expect-error a number is never blank
+export const spokenNumber = number(nonBlank());
+
+// assert() returns what the validator produces, and takes only synchronous validators. The wording of a
+// code is an entry of a message map.
+export const wordings: Messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+export const asserted: string = assert(string(), raw, { subject: "name:", messages: wordings });
+// A wording that reads only the issue is called with it alone, and one that quotes the issue behind another
+// needs the map that words it.
+declare const reported: ValidationIssue;
+export const worded: string = invalidTypeMessage(reported);
+export const wordedLimit: string = tooSmallMessage(reported);
+export const wordedKey: string = invalidKeyMessage(reported, wordings);
+// @ts-expect-error the issue behind a key is worded with a map
+export const wordedKeyAlone: string = invalidKeyMessage(reported);
+export const assertedBare: number = assert(number(), raw);
+// @ts-expect-error a validator that may finish later cannot be asserted
+export const badAssert = assert(username, raw);
+// @ts-expect-error the subject is text
+export const badSubject = assert(string(), raw, { subject: 1 });
+
+// objectLike() produces the same type object() does for a shape, and is asynchronous when a property is.
+export const feedback = objectLike({ message: string(), isRetryable: optional(boolean()) });
+export const feedbackValue: Infer<typeof feedback> = { message: "Try again" };
+export const feedbackSync: Validator<{ message: string; isRetryable?: boolean | undefined }> = feedback;
+// @ts-expect-error message is required
+export const badFeedback: Infer<typeof feedback> = { isRetryable: true };
+// @ts-expect-error an asynchronous property makes an asynchronous validator
+export const feedbackAsync: Validator<{ name: string }> = objectLike({ name: username });
+// @ts-expect-error objectLike has no unknownKeys
+export const strictFeedback = objectLike({ message: string() }, { unknownKeys: "strict" });

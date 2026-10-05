@@ -1,5 +1,6 @@
-import { runEach, type Maybe } from "../core/async";
+import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { cap, MAX_ISSUES } from "../core/limit";
 import { below, call, composed } from "../core/nesting";
 import { sizeOfSet, valuesOf } from "../core/objects";
 import { assertFunction, repeatedItem, typeIssue } from "../core/result";
@@ -25,8 +26,10 @@ import { SIZE_OPTIONS, assertSizeOptions, sizeIssues, type SizeOptions } from ".
  * validated, and each issue's path leads through the value's position in iteration order. The
  * output is a new `Set` of the validated values. When `item` changes values so that one becomes
  * equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its
- * position, rather than dropped, so the output never holds fewer values than the size options allow.
+ * position, rather than dropped, up to the 1,000 issues a collection reports, so the output never holds fewer values than the size options allow.
  * It is synchronous when `item` is, and asynchronous otherwise.
+ * A set stops once its items have reported 1,000 issues: the rest are not validated, and one more
+ * issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
  *
  * @example
  * ```ts
@@ -65,7 +68,10 @@ export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
     }
     const values = valuesOf(input);
     return settle(
-      runEach(values.length, (index) => call(item, values[index], below(place, index))),
+      values.length,
+      (index) => call(item, values[index], below(place, index)),
+      place,
+      options.message,
       (values) => {
         // A value that validation made equal to an earlier one is reported, not merged, so the output
         // holds as many values as the size options were checked against.
@@ -73,12 +79,15 @@ export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
         const repeats: ValidationIssue[] = [];
         values.forEach((value, index) => {
           if (output.has(value)) {
-            repeats.push(repeatedItem(index));
+            // One past the limit, which is how the list is known to be cut.
+            if (repeats.length <= MAX_ISSUES) {
+              repeats.push(repeatedItem(index));
+            }
           } else {
             output.add(value);
           }
         });
-        return repeats.length > 0 ? reject(repeats, place) : accept(output, place);
+        return repeats.length > 0 ? reject(cap(repeats, undefined, undefined), place) : accept(output, place);
       },
     );
   });

@@ -1,4 +1,4 @@
-import { runEach, type Maybe } from "../core/async";
+import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { below, call, composed } from "../core/nesting";
 import { isArray } from "../core/objects";
@@ -47,6 +47,8 @@ export interface TupleOptions<TRest extends AnyValidator | undefined = undefined
  * longer, and every extra item must pass it; `max` caps how long, the fixed items included, and a longer
  * array fails with `too_big` and `{ maximum, type: "array" }`. Each issue's path leads through the item's
  * index.
+ * A tuple stops once its items have reported 1,000 issues: the rest are not validated, and one more
+ * issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
  *
  * @example
  * ```ts
@@ -126,10 +128,11 @@ export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyVa
       );
     }
     return settle(
+      size,
       // By index up to the length that was checked, never through the array's own iterator, as in `array`.
-      runEach(size, (index) =>
-        call((index < length ? fixed[index] : rest) as AnyValidator, input[index], below(place, index)),
-      ),
+      (index) => call((index < length ? fixed[index] : rest) as AnyValidator, input[index], below(place, index)),
+      place,
+      options.message,
       (values) => accept(values, place),
     );
   });

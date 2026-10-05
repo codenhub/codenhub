@@ -56,8 +56,8 @@ describe("an option the factory does not read", () => {
     expect(() => string({ "": 1 } as never)).toThrow(new TypeError("Unknown option "));
   });
 
-  it("should still name the replacement of an option 0.1.0 had", () => {
-    expect(() => string({ pattern: /a/ } as never)).toThrow("string(pattern(re))");
+  it("should treat an option an earlier version had as any other it does not read", () => {
+    expect(() => string({ pattern: /a/ } as never)).toThrow(new TypeError("Unknown option pattern"));
   });
 
   it("should take the options each factory reads, coerceDate's zoneless included", () => {

@@ -30,7 +30,9 @@ import type { StandardSchemaV1 } from "./standard-schema";
  * @param messages - Text for the issue codes, such as `englishMessages`. Required, because the specification
  * needs a message on every issue and there is no built-in default to fall back on.
  * @returns A validator that is also a Standard Schema.
- * @throws {TypeError} When `validator` is not a function, or `messages` is not a message map.
+ * @throws {TypeError} When `validator` is not a function, or `messages` is not a message map. Validating
+ * throws one too when the entry of `messages` that words an issue is neither text nor a function that
+ * returns text.
  */
 export function standard<TValidator extends AnyValidator>(
   validator: TValidator,

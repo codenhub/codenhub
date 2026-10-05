@@ -33,7 +33,7 @@ export interface SearchParamsOptions extends MessageOptions {
  *
  * @remarks
  * The parameters are read as `URLSearchParams` reads them, `+` as a space and escapes decoded, and a
- * leading `?` is ignored. A `URLSearchParams` from another realm, such as an iframe, is read too. A key given more than once fails, at its path with `invalid_key`, unless
+ * leading `?` is ignored. A `URLSearchParams` from another realm, such as an iframe, is read too. A key given more than once fails, at its path with `invalid_key`, up to the 1,000 issues a collection reports, unless
  * `repeated` is set: a check that saw one of two values while a server read the other would pass a
  * value nobody checked. It is the reading `url` gives its `query` option.
  *

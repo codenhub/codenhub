@@ -16,6 +16,7 @@ import { array } from "../composition/array";
 import { json } from "../composition/json";
 import { map } from "../composition/map";
 import { object } from "../composition/object";
+import { objectLike } from "../composition/object-like";
 import { record } from "../composition/record";
 import { set } from "../composition/set";
 import { tuple } from "../composition/tuple";
@@ -47,7 +48,18 @@ import { oneOf } from "../primitives/one-of";
 import { string } from "../primitives/string";
 import { unknown } from "../primitives/unknown";
 import { issuesOf } from "../test-utils";
-import { englishMessages } from "./english-messages";
+import {
+  englishMessages,
+  invalidFormatMessage,
+  invalidIntersectionMessage,
+  invalidKeyMessage,
+  invalidTypeMessage,
+  invalidUnionMessage,
+  invalidValueMessage,
+  tooBigMessage,
+  tooSmallMessage,
+  unrecognizedKeyMessage,
+} from "./english-messages";
 import { flatten, formatIssue as formatWith, formatPath, type Messages } from "./format-issue";
 
 const formatIssue = (issue: ValidationIssue, messages: Messages = englishMessages): string =>
@@ -76,7 +88,82 @@ describe("without the English wording", () => {
   });
 });
 
+describe("the wording of one code", () => {
+  it("should be the wording englishMessages has for that code", () => {
+    expect(englishMessages).toEqual({
+      invalid_type: invalidTypeMessage,
+      too_small: tooSmallMessage,
+      too_big: tooBigMessage,
+      invalid_format: invalidFormatMessage,
+      invalid_value: invalidValueMessage,
+      invalid_key: invalidKeyMessage,
+      unrecognized_key: unrecognizedKeyMessage,
+      invalid_intersection: invalidIntersectionMessage,
+      invalid_union: invalidUnionMessage,
+    });
+  });
+
+  it("should word its code in a map of a few, and leave a code the map lacks to the fallback", () => {
+    const messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+    expect(formatIssue(issuesOf(string({ min: 2 })(1))[0] as ValidationIssue, messages)).toBe(
+      "Expected string, received number",
+    );
+    expect(formatIssue(issuesOf(string({ min: 2 })("a"))[0] as ValidationIssue, messages)).toBe(
+      "Must be at least 2 characters",
+    );
+    expect(formatIssue(issuesOf(string({ max: 1 })("ab"))[0] as ValidationIssue, messages)).toBe("Invalid value");
+  });
+
+  it("should word the limit its name says, whatever code the issue has", () => {
+    const short: ValidationIssue = { code: "short", path: [], params: { minimum: 3, type: "string" } };
+    const long: ValidationIssue = { code: "long", path: [], params: { maximum: 3, type: "string" } };
+    expect(formatIssue(short, { short: tooSmallMessage })).toBe("Must be at least 3 characters");
+    expect(formatIssue(long, { long: tooBigMessage })).toBe("Must be at most 3 characters");
+  });
+
+  it("should word an issue quoted inside another with the map in use", () => {
+    const [found] = issuesOf(record(string({ min: 2 }), string())({ a: "x" }));
+    expect(formatIssue(found as ValidationIssue, { invalid_key: invalidKeyMessage })).toBe(
+      "Invalid key: Invalid value",
+    );
+    expect(formatIssue(found as ValidationIssue, { invalid_key: invalidKeyMessage, too_small: tooSmallMessage })).toBe(
+      "Invalid key: Must be at least 2 characters",
+    );
+  });
+});
+
+describe("a message map that holds something other than text", () => {
+  const issue: ValidationIssue = { code: "invalid_type", path: ["name"] };
+  const error = new TypeError("message must be text, received undefined");
+
+  it("should throw for a function that returns no text, such as a translation lookup that missed", () => {
+    expect(() => formatWith(issue, { invalid_type: () => undefined as never })).toThrow(error);
+    expect(() => flatten({ issues: [issue] }, { invalid_type: () => undefined as never })).toThrow(error);
+  });
+
+  it("should throw for an entry that is neither text nor a function", () => {
+    expect(() => formatWith(issue, { invalid_type: { one: "a" } as never })).toThrow(
+      new TypeError("message must be text, received object"),
+    );
+  });
+
+  it("should still word a code the map lacks with the fallback", () => {
+    expect(formatWith(issue, { invalid_type: undefined })).toBe("Invalid value");
+  });
+});
+
 describe("englishMessages", () => {
+  it("should say that a property could not be read", () => {
+    const input = {
+      get name(): string {
+        throw new Error("boom");
+      },
+    };
+    expect(formatIssue(issuesOf(objectLike({ name: string() })(input))[0] as ValidationIssue)).toBe(
+      "Could not be read",
+    );
+  });
+
   it("should be frozen, so no code can reword the messages of everyone else who uses it", () => {
     expect(Object.isFrozen(englishMessages)).toBe(true);
     expect(() => {

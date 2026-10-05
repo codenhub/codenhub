@@ -22,7 +22,7 @@ const result = {
 };
 ```
 
-`error.issues` lists every problem the validator found, in a fixed order, and is never empty. Its type says so too, so `result.error.issues[0]` is an issue and not `undefined`, even under `noUncheckedIndexedAccess`. A strict `object` reports its unrecognized keys first, then the issues of its properties in the order the shape lists them, whichever finished first.
+`error.issues` lists every problem the validator found, up to the [1,000 issues a collection reports](validators.md#collections), in a fixed order, and is never empty. Its type says so too, so `result.error.issues[0]` is an issue and not `undefined`, even under `noUncheckedIndexedAccess`. A strict `object` reports its unrecognized keys first, then the issues of its properties in the order the shape lists them, whichever finished first.
 
 ## The issue
 
@@ -55,18 +55,18 @@ A key that is empty or holds `.`, `[`, `]` or `"` is quoted in brackets, so a ke
 
 The code set is open: a custom validator reports whatever code it likes. These are the ones the built-in validators use.
 
-| Code                   | Meaning                                                                                                                                                                                                                                     | `params`                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `invalid_type`         | The value is not the type expected, or could not be converted to it.                                                                                                                                                                        | `expected` and `received`, both type names, and `coerced: true` when a coercing validator could not convert the value.                                                                                                                                                                                                                                                                                                      |
-| `invalid_format`       | A string does not have the required format.                                                                                                                                                                                                 | `format`, such as `"email"` or `"regex"`, plus what the rule needs. For a part of `url` or `email` that failed, `part` and `issues`, what the part validator found.                                                                                                                                                                                                                                                         |
-| `invalid_value`        | The value has the right type but a value that is not allowed.                                                                                                                                                                               | `expected` for a literal, `options` for a list of values, `unique: true` for a repeat in an array or a set, `encodedSeparator: true` for an encoded `/` or `\` and `dotSegment: true` for a segment `.` or `..` followed by `;` or `%3B` in a URL path given to a `path` validator, or, for a number, `type` and `format` (`"int"`, `"safeInt"`, `"nonZero"`, `"multipleOf"`), with the step in `value` for `"multipleOf"`. |
-| `too_small`            | Below a minimum: too short, too few items, or too small a number or date.                                                                                                                                                                   | `minimum`, `type`, and `inclusive` or `exact` where they apply.                                                                                                                                                                                                                                                                                                                                                             |
-| `too_big`              | Above a maximum, or nested deeper, or recursing more often, than `lazy` allows.                                                                                                                                                             | `maximum`, `type` (`"depth"` or `"calls"` for `lazy`), and `inclusive` or `exact` where they apply.                                                                                                                                                                                                                                                                                                                         |
-| `unrecognized_key`     | An object has a property its shape does not list, in strict mode.                                                                                                                                                                           | `key`. The issue's path ends at the key.                                                                                                                                                                                                                                                                                                                                                                                    |
-| `invalid_key`          | A key of a `record` or `map` failed its key validator, or its key validator turned it into a key an earlier entry already has.                                                                                                              | `issues`: what the key validator found, with paths relative to the key, or for a repeated key one `invalid_value` issue with `unique: true`. The issue's path ends at the key, so it is not mistaken for a problem with the value there.                                                                                                                                                                                    |
-| `invalid_intersection` | Both validators of an `intersection` passed, but produced values that cannot be merged into one.                                                                                                                                            | None. The issue's path is where the two outputs differ.                                                                                                                                                                                                                                                                                                                                                                     |
-| `invalid_union`        | A value matched none of the options of a `union`, or a tagged union got a missing or unknown tag.                                                                                                                                           | For `union`, `issues`: the issues each option found, in order, with paths relative to the union's value. For `tagged`, `discriminator` and `options`, and the issue's path is the tag's.                                                                                                                                                                                                                                    |
-| `custom`               | The default code of a `check` or `fail` call that names no code. `englishMessages` has no wording for it, since a failed check carries nothing to word, so `formatIssue` says "Invalid value": give a check a message where people read it. | Whatever the reporter set.                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Code                   | Meaning                                                                                                                                                                                                                                     | `params`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invalid_type`         | The value is not the type expected, or could not be converted to it.                                                                                                                                                                        | `expected` and `received`, both type names, and `coerced: true` when a coercing validator could not convert the value.                                                                                                                                                                                                                                                                                                                                                                                               |
+| `invalid_format`       | A string does not have the required format.                                                                                                                                                                                                 | `format`, such as `"email"` or `"regex"`, plus what the rule needs. For a part of `url` or `email` that failed, `part` and `issues`, what the part validator found.                                                                                                                                                                                                                                                                                                                                                  |
+| `invalid_value`        | The value has the right type but a value that is not allowed.                                                                                                                                                                               | `expected` for a literal, `options` for a list of values, `unreadable: true` for a property of an `objectLike` input that threw while it was read, `unique: true` for a repeat in an array or a set, `encodedSeparator: true` for an encoded `/` or `\` and `dotSegment: true` for a segment `.` or `..` followed by `;` or `%3B` in a URL path given to a `path` validator, or, for a number, `type` and `format` (`"int"`, `"safeInt"`, `"nonZero"`, `"multipleOf"`), with the step in `value` for `"multipleOf"`. |
+| `too_small`            | Below a minimum: too short, too few items, or too small a number or date.                                                                                                                                                                   | `minimum`, `type`, and `inclusive` or `exact` where they apply.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `too_big`              | Above a maximum, or nested deeper, or recursing more often, than `lazy` allows, or a collection that stopped at 1,000 issues.                                                                                                               | `maximum`, `type` (`"depth"` or `"calls"` for `lazy`, `"issues"` for a collection that stopped), and `inclusive` or `exact` where they apply.                                                                                                                                                                                                                                                                                                                                                                        |
+| `unrecognized_key`     | An object has a property its shape does not list, in strict mode.                                                                                                                                                                           | `key`. The issue's path ends at the key.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `invalid_key`          | A key of a `record` or `map` failed its key validator, or its key validator turned it into a key an earlier entry already has.                                                                                                              | `issues`: what the key validator found, with paths relative to the key, or for a repeated key one `invalid_value` issue with `unique: true`. The issue's path ends at the key, so it is not mistaken for a problem with the value there.                                                                                                                                                                                                                                                                             |
+| `invalid_intersection` | Both validators of an `intersection` passed, but produced values that cannot be merged into one.                                                                                                                                            | None. The issue's path is where the two outputs differ.                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `invalid_union`        | A value matched none of the options of a `union`, or a tagged union got a missing or unknown tag.                                                                                                                                           | For `union`, `issues`: the issues each option found, in order, with paths relative to the union's value. For `tagged`, `discriminator` and `options`, and the issue's path is the tag's.                                                                                                                                                                                                                                                                                                                             |
+| `custom`               | The default code of a `check` or `fail` call that names no code. `englishMessages` has no wording for it, since a failed check carries nothing to word, so `formatIssue` says "Invalid value": give a check a message where people read it. | Whatever the reporter set.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 `received` names kinds of value the same way everywhere: `null`, `array`, `nan`, `infinity`, `date`, `invalid date` for a `Date` holding no moment, `object` for any other object, a `Map`, a `Set` or a class instance included, or the `typeof` of anything else. It never names a class, since that would take reading the prototype of the input. Where a plain object is expected (`object`, `record`, `tagged`), any other object is `non-plain object`, which `englishMessages` words "Expected a plain object; copy it first, as in { ...value }", since a copy, such as `{ ...process.env }`, is what passes.
 
@@ -119,6 +119,90 @@ formatIssue(issue, pt);
 ```
 
 A custom validator's own codes belong in the map too, or can carry a `message` on the issue.
+
+An entry must be text or a function that returns text. Anything else, such as a translation lookup that returned `undefined` or an entry that is a group of translations, throws a `TypeError` when an issue of that code is worded, in `formatIssue`, `flatten`, `assert` and `standard` alike, rather than showing `undefined` in a form.
+
+### The wording of one code
+
+Each code's English wording is also an export of its own, so a program that can report only a few codes builds a map of those and bundles no other wording:
+
+| Code                   | Export                       |
+| ---------------------- | ---------------------------- |
+| `invalid_type`         | `invalidTypeMessage`         |
+| `invalid_format`       | `invalidFormatMessage`       |
+| `invalid_value`        | `invalidValueMessage`        |
+| `too_small`            | `tooSmallMessage`            |
+| `too_big`              | `tooBigMessage`              |
+| `unrecognized_key`     | `unrecognizedKeyMessage`     |
+| `invalid_key`          | `invalidKeyMessage`          |
+| `invalid_intersection` | `invalidIntersectionMessage` |
+| `invalid_union`        | `invalidUnionMessage`        |
+
+```ts
+import { formatIssue, invalidTypeMessage, string, tooSmallMessage, type Messages } from "@codenhub/validation";
+
+const messages: Messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+
+const result = string({ min: 2 })("a");
+if (!result.ok) {
+  formatIssue(result.error.issues[0], messages); // "Must be at least 2 characters"
+}
+```
+
+`englishMessages` is the map of all nine. A wording that quotes the issue behind another, as `invalidKeyMessage`, `invalidUnionMessage` and `invalidFormatMessage` do, words it with the map it was called with, so include the codes the quoted issue can have.
+
+## Throwing for invalid configuration
+
+Some input is not expected to be invalid: an options object another developer passes to your function is wrong only by mistake, and a mistake is thrown where it was made. `assert(validator, input, options?)` returns the value the validator produced, or throws a `TypeError`:
+
+```ts
+import { array, assert, invalidTypeMessage, object, string, tooSmallMessage } from "@codenhub/validation";
+
+const config = object({ locales: array(string({ trim: true, min: 1 }), { min: 1 }) });
+const messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+
+export function createI18n(input: unknown) {
+  const { locales } = assert(config, input, { subject: "[I18n]", messages });
+  return locales;
+}
+
+createI18n({ locales: ["en", 1] }); // TypeError: [I18n] locales[1]: Expected string, received number
+```
+
+- The message is the `subject`, written as you gave it, then the path of the first issue and its wording. Without a `subject` it starts at the path, and an issue at the value itself has no path.
+- The wording is the issue's own `message`, then the `messages` map, then "Invalid value". The map is optional here, since the path still says which option is wrong.
+- The error's `cause` is the failure, so `error.cause.issues` lists the issues the validator reported, not only the first.
+- It accepts synchronous validators only, and throws a `TypeError` if the validator returns a promise.
+
+### Keeping your own wording
+
+A package that already throws for its options has wording its users know. Give each validator its `message`, and `assert` needs no map, so no wording of this package is bundled:
+
+```ts
+import { assert, boolean, nonBlank, objectLike, optional, string } from "@codenhub/validation";
+
+const feedback = objectLike(
+  {
+    message: string({ message: "must be a non-empty string." }, nonBlank()),
+    isRetryable: optional(boolean({ message: "must be a boolean when provided." })),
+  },
+  { message: "must be an object whose fields can be read." },
+);
+
+export function register(input: unknown) {
+  return assert(feedback, input, { subject: "Registry feedback" });
+}
+
+register({ message: " " }); // TypeError: Registry feedback message: must be a non-empty string.
+register({ message: "Try again", isRetryable: "yes" }); // TypeError: Registry feedback isRetryable: must be a boolean when provided.
+register(null); // TypeError: Registry feedback must be an object whose fields can be read.
+```
+
+- A validator's `message` words every issue it reports itself and every issue of its checks that has no message, so one sentence covers a wrong type, a bound and `nonBlank()`. Give a check its own message where the sentences differ.
+- `assert` writes the path before the message, so the message does not name its field: it reads after `message:` or `locales[1]:`.
+- `objectLike` accepts what a class instance or an `Error` is, and reports a getter that throws with the message of the object, where `object` would accept plain objects only and let the exception through.
+
+Use `assert` for configuration and other arguments. For a form, a request or anything else a program expects to receive invalid, call the validator and read its result, which lists the issues instead of throwing for the first.
 
 ## Errors for a form
 

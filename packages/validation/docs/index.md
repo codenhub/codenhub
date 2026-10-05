@@ -58,7 +58,7 @@ if (result.ok) {
 }
 ```
 
-A validator never throws for invalid input, because invalid input is an expected outcome and not a bug. The one exception is input that runs code of its own while it is read, a getter or a `Proxy` trap that throws: that exception propagates, as one from your own callback does. Data parsed from JSON has no such code. If you would rather stop the program, that is one line: `if (!result.ok) throw new Error(...)`.
+A validator never throws for invalid input, because invalid input is an expected outcome and not a bug. The one exception is input that runs code of its own while it is read, a getter or a `Proxy` trap that throws: that exception propagates, as one from your own callback does, except in `objectLike`, which reports a property it could not read as an issue. Data parsed from JSON has no such code. If you would rather stop the program, that is one line: `if (!result.ok) throw new Error(...)`.
 
 `result.value` is not necessarily the input you passed in. It is the value after the validator has run, with any clean-up you asked for applied (`trim`, `case`, `clamp`) and, for an object, unlisted properties dropped. A format with several spellings produces one: `email` and `url` produce what the URL parser reads, such as a lowercase domain, and `phone` produces `+` and the digits, so a check made later on the value sees what a mail server or a request will, and one value is one string. The input is never modified.
 
@@ -113,6 +113,22 @@ const isPort = (input: unknown): input is number => is(number({ int: true, min: 
 ```
 
 `is` returns a `boolean` and does not narrow the input, since a validator that trims, coerces or transforms produces another value than it was given. Where the validator keeps the value as it is, write the guard yourself, as above; otherwise read `result.value` from calling the validator. `is` accepts synchronous validators only.
+
+## Throwing for invalid configuration
+
+A validator reports invalid input in its result instead of throwing, and only code the input carries, a getter or a `Proxy` trap that throws while it is read, propagates an exception. When invalid input is a mistake of the caller, such as an options object passed to your function, `assert` returns the value or throws a `TypeError` that names the problem and where it is:
+
+```ts
+import { assert, englishMessages, number, object } from "@codenhub/validation";
+
+const options = object({ port: number({ int: true, min: 1, max: 65535 }) });
+
+assert(options, { port: 8080 }, { subject: "createServer:", messages: englishMessages }); // { port: 8080 }
+assert(options, { port: 0 }, { subject: "createServer:", messages: englishMessages });
+// TypeError: createServer: port: Must be at least 1
+```
+
+[Issues and messages](errors.md#throwing-for-invalid-configuration) covers the message, and how to bundle only the wording you need.
 
 ## Next steps
 

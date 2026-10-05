@@ -1,8 +1,8 @@
-import { runEach, type Maybe } from "../core/async";
+import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { below, call, composed } from "../core/nesting";
 import { isArray } from "../core/objects";
-import { assertFunction, assertMigrated, typeIssue } from "../core/result";
+import { assertFunction, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -24,10 +24,12 @@ export interface ArrayOptions extends SizeOptions, MessageOptions {}
  *
  * @remarks
  * A wrong size is reported at once, without validating the items, so a huge array is never
- * worked through only to be rejected. Otherwise every item is validated, and each issue's path
+ * worked through only to be rejected. Otherwise the items are validated, a later one even when an earlier one failed, and each issue's path
  * leads through the item's index. Checks, such as `unique()`, run on the validated items once every
  * item has passed. The output is a new array; the input is never modified. It is synchronous when
  * `item` is, and asynchronous otherwise.
+ * An array stops once its items have reported 1,000 issues: the rest are not validated, and one more
+ * issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
  *
  * @example
  * ```ts
@@ -53,8 +55,7 @@ export function array<TItem extends AnyValidator>(
 ): AsyncValidator<Infer<TItem>[]>;
 export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("item", item);
-  const [options, reject, accept] = tail<ArrayOptions, unknown[]>(rest, "min max length unique");
-  assertMigrated("array", options, { unique: "the check array(item, unique()), or unique((item) => key) for objects" });
+  const [options, reject, accept] = tail<ArrayOptions, unknown[]>(rest, "min max length");
   assertSizeOptions(options);
 
   return composed((input, place): Maybe<ValidationResult<unknown>> => {
@@ -67,9 +68,12 @@ export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
       return reject(oversize, place);
     }
     return settle(
+      length,
       // Read by index up to the length that was checked, never through the array's own iterator, which
       // the input can replace to yield other items or never stop.
-      runEach(length, (index) => call(item, input[index], below(place, index))),
+      (index) => call(item, input[index], below(place, index)),
+      place,
+      options.message,
       (values) => accept(values, place),
     );
   });

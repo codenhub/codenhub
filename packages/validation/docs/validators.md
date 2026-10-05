@@ -5,11 +5,11 @@ description: Every validator and combinator, with its options, what it produces 
 
 # Validator reference
 
-Every validator here is created by calling a function and is then called with the value to check. Every one returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`, and never throws for invalid input, unless the input runs code of its own, such as a getter or a `Proxy` trap that throws while it is read, whose exception propagates. The code and `params` each failure reports are listed with the validator; [Issues and messages](errors.md) explains what they mean and how to turn them into text.
+Every validator here is created by calling a function and is then called with the value to check. Every one returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`, and never throws for invalid input, unless the input runs code of its own, such as a getter or a `Proxy` trap that throws while it is read, whose exception propagates; [`objectLike`](#objectlike) is the one validator that reports it as an issue instead. The code and `params` each failure reports are listed with the validator; [Issues and messages](errors.md) explains what they mean and how to turn them into text.
 
 Every validator takes its arguments in the same order: its own, such as the shape of `object` or the item of `array`, then an options object, then any number of [checks](#checks). The options can be left out when there are checks: `string(startsWith("a"))`. Every validator that reports an issue of its own takes a `message` option, [below](#wording-one-validator).
 
-Options are read once, when the validator is created. An option that makes no sense, such as a negative length, a `NaN` bound, or limits no value can satisfy together such as `{ min: 5, max: 2 }`, throws a `RangeError` or `TypeError` at that point, because it is a mistake in your code and not in the input. So do options that are not a plain object, such as `string(/^a/)` where `string(pattern(/^a/))` was meant, which would otherwise be ignored and accept every string, and a shape that is a list. So does a child that is not a function, such as `object({ name: undefined })` after an import that resolved to nothing: every combinator checks the validators and callbacks it is given, and names the one that is wrong. So does an option name the validator does not know, such as `string({ mni: 2 })` or `array(item, { maxx: 3 })`, with a `TypeError` naming it, since ignoring it would leave the limit it was meant to set unset and accept the input it was written to reject. TypeScript reports such a name too, but not for options passed through a variable typed loosely, read from configuration or written in JavaScript. The options 0.1.0 had and 0.2.0 removed throw a `TypeError` naming what replaces each: `string`'s `pattern`, `startsWith`, `endsWith`, `includes`, `lowercase` and `uppercase`, `number`'s `multipleOf` and `nonZero`, `array`'s `unique` and `url`'s `allowLocal`.
+Options are read once, when the validator is created. An option that makes no sense, such as a negative length, a `NaN` bound, or limits no value can satisfy together such as `{ min: 5, max: 2 }`, throws a `RangeError` or `TypeError` at that point, because it is a mistake in your code and not in the input. So do options that are not a plain object, such as `string(/^a/)` where `string(pattern(/^a/))` was meant, which would otherwise be ignored and accept every string, and a shape that is a list. So does a child that is not a function, such as `object({ name: undefined })` after an import that resolved to nothing: every combinator checks the validators and callbacks it is given, and names the one that is wrong. So does an option name the validator does not know, such as `string({ mni: 2 })` or `array(item, { maxx: 3 })`, with a `TypeError` naming it, since ignoring it would leave the limit it was meant to set unset and accept the input it was written to reject. TypeScript reports such a name too, but not for options passed through a variable typed loosely, read from configuration or written in JavaScript. An option 0.1.0 had is such a name, and throws `Unknown option <name>` as any other does: `string`'s `pattern`, `startsWith`, `endsWith`, `includes`, `lowercase` and `uppercase`, `number`'s `multipleOf` and `nonZero`, `array`'s `unique` and `url`'s `allowLocal`. The [0.2.0 changelog](changelog/0.2.0.md) maps each to what replaced it.
 
 ## Strings
 
@@ -35,7 +35,7 @@ The options, all optional:
 | `length`  | Exactly this many characters.                                                                                                                                                                                                                                                                                                |
 | `message` | Wording for the issues it reports itself.                                                                                                                                                                                                                                                                                    |
 
-Rarer rules are [checks](#checks): `pattern`, `startsWith`, `endsWith`, `includes`, and `lowercase` and `uppercase`, which require a case where the `case` option converts to one.
+Rarer rules are [checks](#checks): `pattern`, `startsWith`, `endsWith`, `includes`, `nonBlank`, which requires what `trim` with `min: 1` requires without trimming, and `lowercase` and `uppercase`, which require a case where the `case` option converts to one.
 
 ```ts
 import { pattern, string } from "@codenhub/validation";
@@ -316,17 +316,38 @@ const signup = object(
 
 See [Reusing shapes](#reusing-shapes) for extending, omitting and making properties optional.
 
+### `objectLike`
+
+`objectLike(shape, options?, ...checks)` validates any object that has the listed properties, where `object` accepts plain objects only. Use it for a value handed over as an instance, such as an `Error` or an object with methods, and `object` for data. To choose between instances by a property, put the `objectLike` validators in a `union`: `tagged` reads the tag of a plain object only, and rejects an instance before any variant sees it.
+
+```ts
+import { boolean, objectLike, optional, string } from "@codenhub/validation";
+
+const feedback = objectLike({ message: string({ min: 1 }), isRetryable: optional(boolean()) });
+
+feedback(new Error("Try again")); // { ok: true, value: { message: "Try again" } }
+feedback({ message: "" }); // one issue: too_small at ["message"]
+```
+
+- Every object that is not an array is accepted: a plain object, a class instance, a `Map`, a `Date`. Anything else, a function included, fails with `invalid_type` and `{ expected: "object", received }`.
+- Each listed property is read as `input[key]`, so one that is inherited, not enumerable or computed by a getter counts.
+- A property that throws while it is read, as a getter or a `Proxy` trap may, is reported as `invalid_value` with `params: { unreadable: true }` at the property's path, and the other properties are still validated. `object` lets such an exception propagate.
+- The output is a new plain object holding the listed properties only, without the ones whose value is `undefined`. There is no `unknownKeys` option.
+- Checks run once every property has passed, and see the output.
+
 ## Collections
 
 Every collection validator takes the validator for its items, then options and checks, checks every item, and reports each issue with a path that leads through the item's position. A wrong size is reported at once, without validating the items, so a huge input is never worked through only to be rejected.
 
 The size options `min`, `max` and `length` are non-negative integers; `tuple`, whose length its items set, takes only `max`, with `rest`. Each throws a `TypeError` when created with a value that is not a number, such as `"3"`, and a `RangeError` with a number that is not a non-negative integer, as do limits no size can satisfy together, such as `min` above `max` or a `length` outside them. `min` and `max` are inclusive. A size failure is `too_small` with `{ minimum, type }` or `too_big` with `{ maximum, type }`, where `type` is `"array"`, `"set"`, `"map"` or `"record"`, and `exact: true` is added for `length`. A record's size is its number of keys.
 
+A collection stops once its items have reported 1,000 issues. The items after that are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }` at the collection's path, says that it stopped. An issue that holds others in `params.issues` counts with them, so an item that fails a `union` counts once and once more for each issue of each option, and a key that fails counts with the issue behind it. The unknown keys of a strict `object`, the repeats `unique` and `set` find, the keys a query string repeats and the conflicts of an `intersection` are listed up to the same limit. Only issues are counted, so input that passes is never affected and input that fails still fails: what changes is that a long list of bad items is not reported in full, and does not cost the memory and time of reporting it. To report every bad row of a long list, such as an import, call the item validator on each row yourself. Items that are validated asynchronously have all started before any is counted, so the limit cuts what they report and not their work: give such a collection a `max`.
+
 ### `array`
 
 `array(item, options?, ...checks)` accepts arrays whose every item passes `item` and produces a new array of what it produced. It takes `min`, `max` and `length`. A sparse array's holes are validated as `undefined`, so the work grows with its `length`, not with the items it holds: a value received by structured clone, such as `event.data` from `postMessage`, a worker or Electron IPC, can be a 28-byte message holding an array of 4,294,967,295 holes. Give untrusted input a `max`, which is checked before any item.
 
-The `unique(by?, message?)` check rejects repeats, comparing the validated items the way a `Set` does, or the key `by` returns for each, so `unique((user) => user.id)` makes ids unique. Each repeat is reported at its own index as `invalid_value` with `{ unique: true }`, and the first occurrence is kept. Like every check, it runs only once every item is valid. A `Set` finds two objects equal only when they are the same object, every object or list a composer such as `object` or `array` produces is new, and two `Date`s of one moment are two objects, so `unique()` without `by` would find a repeat among them only where a validator passed the same object through twice, such as one `Date` given twice to `date()`. Its types accept it only for an array of primitives; an array of objects, lists or dates needs `by`, such as `unique((user) => user.id)` or `unique((day) => day.getTime())`.
+The `unique(by?, message?)` check rejects repeats, comparing the validated items the way a `Set` does, or the key `by` returns for each, so `unique((user) => user.id)` makes ids unique. Each repeat is reported at its own index as `invalid_value` with `{ unique: true }`, up to the limit of issues described above, and the first occurrence is kept. Like every check, it runs only once every item is valid. A `Set` finds two objects equal only when they are the same object, every object or list a composer such as `object` or `array` produces is new, and two `Date`s of one moment are two objects, so `unique()` without `by` would find a repeat among them only where a validator passed the same object through twice, such as one `Date` given twice to `date()`. Its types accept it only for an array of primitives; an array of objects, lists or dates needs `by`, such as `unique((user) => user.id)` or `unique((day) => day.getTime())`.
 
 ```ts
 import { array, string, unique } from "@codenhub/validation";
@@ -416,6 +437,7 @@ The built-in checks, each its own import, take their message last:
 | `includes(text)`   | strings | This text anywhere.                                                                                                                                                                                                                                                     | `invalid_format`, `{ format: "includes", value }`                  |
 | `lowercase()`      | strings | Unchanged by `toLowerCase()`, so a string with no letters passes. It changes nothing; `string({ case: "lower" })` converts.                                                                                                                                             | `invalid_format`, `{ format: "lowercase" }`                        |
 | `uppercase()`      | strings | Unchanged by `toUpperCase()`.                                                                                                                                                                                                                                           | `invalid_format`, `{ format: "uppercase" }`                        |
+| `nonBlank()`       | strings | A character that is not white space, so `""` and `"  "` fail. It changes nothing; `string({ trim: true, min: 1 })` trims.                                                                                                                                               | `invalid_format`, `{ format: "nonBlank" }`                         |
 | `multipleOf(step)` | numbers | A multiple of the step, compared as the decimals both are written as, so `0.3` is a multiple of `0.1` at any size.                                                                                                                                                      | `invalid_value`, `{ type: "number", format: "multipleOf", value }` |
 | `nonZero()`        | numbers | Anything but zero.                                                                                                                                                                                                                                                      | `invalid_value`, `{ type: "number", format: "nonZero" }`           |
 | `unique(by?)`      | arrays  | Distinct items, [above](#array).                                                                                                                                                                                                                                        | `invalid_value`, `{ unique: true }`, at each repeat's index        |
@@ -516,7 +538,7 @@ const thread = (maxCalls: number): Validator<Comment> => {
 
 Raise `maxCalls` for recursive data with more nodes than that in one validation. Every value that reaches the `lazy` is a call, not only every level, so a schema for any JSON value, whose arrays and records hold `lazy` items, stops at 10,000 values however flat they are. A `lazy` under a `union` fails as that option, so the code the caller sees is the union's `invalid_union`, with the `too_big` issue inside `params.issues`, and `englishMessages` words it with "Too complex to check within 10000 recursive steps" when it is the one option meant. Like `maxDepth`, it must be a positive integer, or `lazy` throws when created. For objects told apart by a property, use [`tagged`](#tagged), which reads the property first and validates only the matching variant.
 
-The limits are about the stack and the work per node and not about size, so they do not stop a large flat input. A failing value's issues grow with it too: a `union` lists every option's issues, so a union of several `array` options given a long array of bad items reports each item once per option. Cap the size of untrusted input, for instance with `pipe(string({ max: 100_000 }), json(category))`, and give `array` a `max`. A value received by structured clone, such as `event.data` from `postMessage`, needs the `max` whatever its size in bytes, since it can hold a sparse array or one array at many places, so its items are not bounded by its bytes.
+The limits are about the stack and the work per node and not about size, so they do not stop a large flat input. The issues of a failing value do not grow with it, since each collection stops at 1,000 of them, as described with the size options. The work on a value that passes, or that fails only near its end, still grows with its size, so cap the size of untrusted input, for instance with `pipe(string({ max: 100_000 }), json(category))`, and give `array` a `max`. A value received by structured clone, such as `event.data` from `postMessage`, needs the `max` whatever its size in bytes, since it can hold a sparse array or one array at many places, so its items are not bounded by its bytes.
 
 ### `json`
 
@@ -564,7 +586,11 @@ An issue that carries a message is worded by it first, before any message map, s
 
 ### `formatIssue`, `flatten`, `formatPath` and `englishMessages`
 
-`formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then a message map you pass, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. [Issues and messages](errors.md) explains all four.
+`formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then a message map you pass, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](errors.md) explains all of them.
+
+### `assert`
+
+`assert(validator, input, { subject?, messages? })` returns the value the validator produced, or throws a `TypeError` naming the first issue, for input whose being invalid is a mistake of the caller, such as configuration. It accepts synchronous validators only. See [Throwing for invalid configuration](errors.md#throwing-for-invalid-configuration).
 
 ### `Infer`
 

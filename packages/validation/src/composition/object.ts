@@ -1,5 +1,6 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
+import { cap, MAX_ISSUES } from "../core/limit";
 import { append, below, call, composed } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, failWith, issue } from "../core/result";
@@ -39,7 +40,7 @@ export type InferShape<TShape extends Shape> = Simplify<
 export interface ObjectOptions extends MessageOptions {
   /**
    * What to do with input properties the shape does not list. `"strip"` drops them from the output,
-   * `"strict"` rejects each with an `unrecognized_key` issue, and `"passthrough"` copies them to the
+   * `"strict"` rejects each with an `unrecognized_key` issue, up to the 1,000 issues a collection reports, and `"passthrough"` copies them to the
    * output unchecked.
    *
    * @defaultValue "strip"
@@ -92,8 +93,9 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
   // The shape is read once, so changing it after the validator is made changes nothing.
   const keys = Object.keys(shape);
   const validators = keys.map((key) => {
-    assertFunction(`shape.${key}`, shape[key]);
-    return shape[key] as AnyValidator;
+    const validator: unknown = shape[key];
+    assertFunction(`shape.${key}`, validator);
+    return validator as AnyValidator;
   });
   const known = new Set(keys);
   const [options, reject, accept] = tail<ObjectOptions, Record<string, unknown>>(rest, "unknownKeys");
@@ -109,10 +111,13 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
 
     const issues: ValidationIssue[] = [];
     if (unknownKeys === "strict") {
-      const unrecognized = Object.keys(input)
-        .filter((key) => !known.has(key))
-        .map((key) => issue("unrecognized_key", { key }, [key]));
-      append(issues, report(unrecognized, place, options.message));
+      const unrecognized = Object.keys(input).filter((key) => !known.has(key));
+      // The sender adds as many keys as it likes, so they are listed up to the limit of a collection.
+      const listed = unrecognized.slice(0, MAX_ISSUES).map((key) => issue("unrecognized_key", { key }, [key]));
+      append(
+        issues,
+        cap(report(listed, place, options.message), place, options.message, unrecognized.length > MAX_ISSUES),
+      );
     }
 
     // Everything the output takes from the input is read before any child runs, so neither a child that
