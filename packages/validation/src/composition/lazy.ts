@@ -75,30 +75,51 @@ let building: object | undefined;
  */
 let started = 0;
 
-/** A result a `lazy` kept, and the place it was found at. */
-interface Kept {
-  readonly place: Place;
-  readonly result: Maybe<ValidationResult<unknown>>;
+/**
+ * A path met in one validation: the paths one segment below it, and what a `lazy` kept for each object
+ * it found there. Every place at one path leads to the same one, so what was kept for an object at a
+ * path is found by the object alone. Kept by the last segment of the place instead, and compared with
+ * each place the object was already found at, 80,000 rows that shared ten objects took 7.8 seconds.
+ */
+interface Spot {
+  below?: Map<ValidationPathSegment, Spot>;
+  results?: Map<object, Maybe<ValidationResult<unknown>>>;
 }
 
-/** Results kept for each object, by the last segment of the place it was found at, the root's undefined. */
-type Results = Map<object, Map<ValidationPathSegment | undefined, Kept[]>>;
+/** The paths a `lazy` has met in one validation: the root's, and the one each place it has seen leads to. */
+interface Paths {
+  readonly root: Spot;
+  readonly spots: Map<object, Spot>;
+}
 
-/** Tests whether two places are at the same path, comparing segments from the deepest up. */
-function isSamePath(left: Place, right: Place): boolean {
-  let one = left;
-  let other = right;
-  while (one !== undefined && other !== undefined) {
-    if (one === other) {
-      return true;
+const newPaths = (): Paths => ({ root: {}, spots: new Map() });
+
+/**
+ * The path a place is at. It walks up to the nearest place already seen, the parent's in a recursion, and
+ * remembers each place it passed, so every place is walked once and a deep one costs no more than a shallow.
+ */
+function spotOf(place: Place, { root, spots }: Paths): Spot {
+  const unseen: NonNullable<Place>[] = [];
+  let spot: Spot | undefined;
+  for (let node = place; node !== undefined && spot === undefined; node = node.parent) {
+    spot = spots.get(node);
+    if (spot === undefined) {
+      unseen.push(node);
     }
-    if (one.segment !== other.segment) {
-      return false;
-    }
-    one = one.parent;
-    other = other.parent;
   }
-  return one === other;
+  spot ??= root;
+  for (let index = unseen.length - 1; index >= 0; index -= 1) {
+    const each = unseen[index] as NonNullable<Place>;
+    spot.below ??= new Map();
+    let next = spot.below.get(each.segment);
+    if (next === undefined) {
+      next = {};
+      spot.below.set(each.segment, next);
+    }
+    spots.set(each, next);
+    spot = next;
+  }
+  return spot;
 }
 
 /**
@@ -240,21 +261,19 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
   // children, is validated once. The path is part of the key, since the issues are written at it. A
   // primitive is not kept: it has no children, so validating it again cannot multiply the work.
   return composed((input, place) => {
-    const results = resultsOf(self) as Results | undefined;
+    const paths = resultsOf(self, newPaths);
     const isPrimitive = (typeof input !== "object" && typeof input !== "function") || input === null;
-    if (isPrimitive || results === undefined) {
+    if (isPrimitive || paths === undefined) {
       return validate(input, place, isPrimitive);
     }
-    const bySegment = results.get(input) ?? new Map<ValidationPathSegment | undefined, Kept[]>();
-    results.set(input, bySegment);
-    const kept = bySegment.get(place?.segment) ?? [];
-    bySegment.set(place?.segment, kept);
-    const found = kept.find((each) => isSamePath(each.place, place));
+    const spot = spotOf(place, paths);
+    const kept = (spot.results ??= new Map());
+    const found = kept.get(input as object);
     if (found !== undefined) {
-      return found.result;
+      return found;
     }
     const result = validate(input, place, false);
-    kept.push({ place, result });
+    kept.set(input as object, result);
     return result;
   });
 }

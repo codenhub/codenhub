@@ -112,3 +112,34 @@ describe("every format reads long adversarial text in linear time", () => {
     });
   }
 });
+
+/*
+ * A label written in punycode is decoded by the runtime's URL parser, and the time that takes grows with
+ * the square of the label's length: in Node.js 24.19, `a@xn--` and 400,000 letters took five seconds. A
+ * host is refused by its written length before the parser reads it, so such text is answered at once,
+ * however it spells `xn--`.
+ */
+describe("every format that reads a host refuses a long punycode label without decoding it", () => {
+  const label = "b".repeat(400_000);
+  const hostless = url({ protocols: ["mailto"] });
+  const cases: Record<string, [validate: AnyValidator, text: string]> = {
+    email: [email(), `a@xn--${label}.com`],
+    domain: [domain(), `xn--${label}.com`],
+    url: [url(), `https://xn--${label}.com/`],
+    "url, in capitals": [url(), `https://XN--${label}.com/`],
+    "url, in fullwidth letters": [url(), `https://ｘｎ－－${label}.com/`],
+    "url, with an escape": [url(), `https://%78n--${label}.com/`],
+    "url, after credentials and in an inner label": [url(), `https://user@a.xn--${label}.com:8080/`],
+    "a mailto recipient": [hostless, `mailto:a@xn--${label}.com`],
+  };
+
+  for (const [name, [validate, text]] of Object.entries(cases)) {
+    it(`${name} rejects it in under ${BOUND_MS}ms`, () => {
+      const started = performance.now();
+      const result = validate(text) as { ok: boolean };
+      const elapsed = performance.now() - started;
+      expect(result.ok).toBe(false);
+      expect(elapsed).toBeLessThan(BOUND_MS);
+    });
+  }
+});

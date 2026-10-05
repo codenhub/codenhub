@@ -47,7 +47,8 @@ type EmailParts<TOptions> = Extract<TOptions[keyof TOptions & ("domain" | "local
  * `Ada@München.DE` is `Ada@xn--mnchen-3ya.de`, and every spelling that names one domain, such as
  * fullwidth letters or an invisible variation selector, gives one address. The local part must be
  * ASCII: addresses with letters beyond it (RFC 6531) are rejected. Surrounding whitespace is not
- * trimmed; trim first with `pipe` when the input may need it. The `domain` and `local` options check
+ * trimmed; trim first with `pipe` when the input may need it. A domain written with more than 759
+ * characters, three for each one a domain can have, is rejected before the parser reads it. The `domain` and `local` options check
  * those parts with validators of your own, which make the validator asynchronous when one is. A part
  * that fails is one `invalid_format` issue at the address's own place, `{ format: "email", part, issues }`,
  * so a form shows it beside the field, and the `message` option words it.

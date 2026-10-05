@@ -338,6 +338,35 @@ describe("lazy", () => {
       ]);
     });
 
+    it("should find what it kept for an object without going through every place the object was reached at", () => {
+      // Ten objects shared by 80,000 rows, as rows that point at their category do. Kept by the last
+      // segment of the place alone, every row went through the places of the rows before it: 7.8 s.
+      const tag = object({ name: string() });
+      const rows = array(object({ id: number(), tag: lazy(() => tag, { maxCalls: 100_000 }) }));
+      const tags = Array.from({ length: 10 }, (_, index) => ({ name: `tag ${index}` }));
+      const input = Array.from({ length: 80_000 }, (_, id) => ({ id, tag: tags[id % tags.length] }));
+      const started = performance.now();
+      const result = rows(input);
+      const elapsed = performance.now() - started;
+      expect(result.ok).toBe(true);
+      expect(elapsed).toBeLessThan(2_000);
+    });
+
+    it("should tell a place from another with the same keys in another order, and an index from a key", () => {
+      const point = lazy(() => object({ x: number() }));
+      const shared = { x: "1" };
+      const pair = object({ a: object({ b: point }), b: object({ a: point }) });
+      expect(issuesOf(pair({ a: { b: shared }, b: { a: shared } })).map(({ path }) => path)).toEqual([
+        ["a", "b", "x"],
+        ["b", "a", "x"],
+      ]);
+      const indexed = object({ list: array(point), keyed: object({ 0: point }) });
+      expect(issuesOf(indexed({ list: [shared], keyed: { 0: shared } })).map(({ path }) => path)).toEqual([
+        ["list", 0, "x"],
+        ["keyed", "0", "x"],
+      ]);
+    });
+
     // Up to 10,000 calls for each of the two lazy validators, which a loaded machine may take a while over.
     it(
       "should stop a recursive union whose work doubles with each level and cannot be shared, long before it would finish",

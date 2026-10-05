@@ -6,8 +6,9 @@ const ENGINES = [
   { device: "Desktop Safari", name: "webkit" },
 ] as const;
 
-// A worker for each core launched ten browsers at once, which ran a 16 GB machine out of memory.
-const DEFAULT_WORKERS = 3;
+// A worker for each core launched ten browsers at once, which ran a 16 GB machine out of memory. With
+// three, WebKit lost its page or the server in ten of eleven runs on Windows 11, and with two in none of six.
+const DEFAULT_WORKERS = 2;
 
 /**
  * Reads the worker count from `PLAYWRIGHT_WORKERS`. Playwright takes a count only as a number, and
