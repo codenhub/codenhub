@@ -52,7 +52,7 @@
   },
   "devDependencies": {
     "@codenhub/error": "workspace:*",
-    "@codenhub/validation": "workspace:*",
+    "@codenhub/validation": "catalog:",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
