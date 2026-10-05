@@ -66,6 +66,21 @@ describe("assert", () => {
     expect(() => assert(string(), 1, { messages: [] as never })).toThrow(/messages must be a message map/);
   });
 
+  it("should reject an option it does not read, and options that are not a plain object", () => {
+    expect(() => assert(string(), "a", { message: {} } as never)).toThrow(new TypeError("Unknown option message"));
+    expect(() => assert(string(), "a", [] as never)).toThrow(
+      new TypeError("options must be a plain object, received array"),
+    );
+    expect(() => assert(string(), "a", "[I18n]" as never)).toThrow(
+      new TypeError("options must be a plain object, received string"),
+    );
+  });
+
+  it("should read null as no options, as a validator does", () => {
+    expect(assert(string(), "a", null as never)).toBe("a");
+    expect(assert(string(), "a", undefined)).toBe("a");
+  });
+
   it("should reject messages that are not a map for an input that is valid too", () => {
     expect(() => assert(string(), "a", { messages: [] as never })).toThrow(/messages must be a message map/);
     expect(() => assert(string(), "a", { messages: null as never })).toThrow(/messages must be a message map/);

@@ -1,6 +1,7 @@
 import { assertMessages, formatIssue, formatPath, type Messages } from "../messages/format-issue";
 import { isThenable } from "./async";
-import { assertOption, ROOT_PATH } from "./result";
+import { isPlainObject } from "./objects";
+import { assertOption, describeType, ROOT_PATH } from "./result";
 import type { ValidationResult, Validator } from "./types";
 
 /** Options for {@link assert}. */
@@ -47,11 +48,21 @@ export interface AssertOptions {
  * or transforms.
  * @throws {TypeError} When the validator rejects the input, with the subject, the path of the first
  * issue and its wording as the message, and the failure as the `cause`. Also when the validator turns
- * out to be asynchronous, and, whatever the input, when `subject` is not text or `messages` is not a
- * message map.
+ * out to be asynchronous, and, whatever the input, when `options` is not a plain object or holds a name
+ * other than `subject` and `messages`, `subject` is not text, or `messages` is not a message map.
  */
-export function assert<T>(validator: Validator<T>, input: unknown, options: AssertOptions = {}): T {
-  const { subject, messages = {} } = options;
+export function assert<T>(validator: Validator<T>, input: unknown, options?: AssertOptions): T {
+  // Checked as a validator checks its own: `null` is no options, and a name that is not read is a mistake,
+  // such as `message`, which every validator takes, written for `messages`.
+  const given: unknown = options ?? {};
+  if (!isPlainObject(given)) {
+    throw new TypeError(`options must be a plain object, received ${describeType(given)}`);
+  }
+  const unknown = Object.keys(given).find((name) => name !== "subject" && name !== "messages");
+  if (unknown !== undefined) {
+    throw new TypeError(`Unknown option ${unknown}`);
+  }
+  const { subject, messages = {} } = given as AssertOptions;
   assertOption("subject", subject, "string");
   // Checked before the input is, so a wrong map is found by the first call and not by the first invalid input.
   assertMessages(messages);

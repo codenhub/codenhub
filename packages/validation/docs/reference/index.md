@@ -69,7 +69,7 @@ The error names the first issue only. Every issue is on the failure the error ca
 
 **Returns** — The value the validator produced, which is not the input when the validator trims, coerces or transforms.
 
-**Throws** — When the validator rejects the input, with the subject, the path of the first issue and its wording as the message, and the failure as the `cause`. Also when the validator turns out to be asynchronous, and, whatever the input, when `subject` is not text or `messages` is not a message map.
+**Throws** — When the validator rejects the input, with the subject, the path of the first issue and its wording as the message, and the failure as the `cause`. Also when the validator turns out to be asynchronous, and, whatever the input, when `options` is not a plain object or holds a name other than `subject` and `messages`, `subject` is not text, or `messages` is not a message map.
 
 **Example**
 
