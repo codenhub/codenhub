@@ -45,6 +45,6 @@ An exception to a rule that `hub check` enforces MUST also declare a `Checks byp
 ## `@codenhub/error`: built-in opt-in registry presets
 
 - **Rules bypassed:** `docs/specs/errors.md` (general library packages must not instantiate or export preset registries when publishing error definitions).
-- **Where it applies:** `packages/error/src/registries/` and the public registry preset exports from `@codenhub/error/registries` and its browser and Supabase subpaths.
+- **Where it applies:** `packages/error/src/registries/` and the public registry preset exports from `@codenhub/error/registries` and its browser, Node.js, and Supabase subpaths.
 - **Why acceptable:** `@codenhub/error` owns the shared registry implementation and built-in integrations. Its presets are frozen, opt-in snapshots; importing them does not mutate the global registry, establish external connections, or add runtime dependencies. Raw mapping exports remain available for consumers that need definitions without preset registries.
 - **Temporary or permanent:** Permanent while `@codenhub/error` remains the designated owner of built-in error integrations.

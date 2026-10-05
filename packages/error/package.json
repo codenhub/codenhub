@@ -36,6 +36,11 @@
       "import": "./dist/registries/browser.js",
       "default": "./dist/registries/browser.js"
     },
+    "./registries/node": {
+      "types": "./dist/registries/node.d.ts",
+      "import": "./dist/registries/node.js",
+      "default": "./dist/registries/node.js"
+    },
     "./registries/supabase": {
       "types": "./dist/registries/supabase.d.ts",
       "import": "./dist/registries/supabase.js",
@@ -46,7 +51,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/registries/index.ts src/registries/browser.ts src/registries/supabase.ts --format esm --target es2022 --dts --clean --no-fixed-extension --unbundle",
+    "build": "tsdown src/index.ts src/registries/index.ts src/registries/browser.ts src/registries/node.ts src/registries/supabase.ts --format esm --target es2022 --dts --clean --no-fixed-extension --unbundle",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/error version dist-tags time --json && npm dist-tag ls @codenhub/error && npm access get status @codenhub/error",
     "status:pack": "npm pack --dry-run --ignore-scripts",
