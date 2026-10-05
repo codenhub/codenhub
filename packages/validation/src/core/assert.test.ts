@@ -66,6 +66,13 @@ describe("assert", () => {
     expect(() => assert(string(), 1, { messages: [] as never })).toThrow(/messages must be a message map/);
   });
 
+  it("should name the fault of a validator written by hand that returns no result, or a failure with no issue", () => {
+    const fault = new TypeError("assert() needs a validator that returns a result, and a failure that holds an issue");
+    expect(() => assert((() => undefined) as never, 1)).toThrow(fault);
+    expect(() => assert((() => ({ ok: false, error: { issues: [] } })) as never, 1)).toThrow(fault);
+    expect(() => assert((() => ({ ok: false })) as never, 1)).toThrow(fault);
+  });
+
   it("should reject an option it does not read, and options that are not a plain object", () => {
     expect(() => assert(string(), "a", { message: {} } as never)).toThrow(new TypeError("Unknown option message"));
     expect(() => assert(string(), "a", [] as never)).toThrow(

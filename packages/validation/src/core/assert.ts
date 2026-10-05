@@ -2,7 +2,7 @@ import { assertMessages, formatIssue, formatPath, type Messages } from "../messa
 import { isThenable } from "./async";
 import { isPlainObject } from "./objects";
 import { assertOption, describeType, ROOT_PATH } from "./result";
-import type { ValidationResult, Validator } from "./types";
+import type { ValidationErr, ValidationResult, Validator } from "./types";
 
 /** Options for {@link assert}. */
 export interface AssertOptions {
@@ -48,7 +48,7 @@ export interface AssertOptions {
  * or transforms.
  * @throws {TypeError} When the validator rejects the input, with the subject, the path of the first
  * issue and its wording as the message, and the failure as the `cause`. Also when the validator turns
- * out to be asynchronous, and, whatever the input, when `options` is not a plain object or holds a name
+ * out to be asynchronous, or returns no result or a failure without an issue, and, whatever the input, when `options` is not a plain object or holds a name
  * other than `subject` and `messages`, `subject` is not text, or `messages` is not a message map.
  */
 export function assert<T>(validator: Validator<T>, input: unknown, options?: AssertOptions): T {
@@ -73,13 +73,19 @@ export function assert<T>(validator: Validator<T>, input: unknown, options?: Ass
     result.then(undefined, () => undefined);
     throw new TypeError("assert() needs a synchronous validator. Call the validator and await its result instead.");
   }
-  const outcome = result as ValidationResult<T>;
-  if (outcome.ok) {
+  const outcome = result as ValidationResult<T> | null | undefined;
+  if (outcome?.ok === true) {
     return outcome.value;
   }
-  const [first] = outcome.error.issues;
+  const first = (outcome as Partial<ValidationErr> | null | undefined)?.error?.issues?.[0];
+  if (first === undefined) {
+    // A validator written by hand, since the types and `fail()` forbid both.
+    throw new TypeError("assert() needs a validator that returns a result, and a failure that holds an issue");
+  }
   // A path a validator written by hand left out is the value's own, as everywhere else.
   const where = formatPath(first.path ?? ROOT_PATH);
   const problem = `${where === "" ? "" : `${where}: `}${formatIssue(first, messages)}`;
-  throw new TypeError(subject === undefined ? problem : `${subject} ${problem}`, { cause: outcome.error });
+  throw new TypeError(subject === undefined ? problem : `${subject} ${problem}`, {
+    cause: (outcome as ValidationErr).error,
+  });
 }
