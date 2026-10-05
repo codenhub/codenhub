@@ -805,11 +805,14 @@ test.describe("feedback", () => {
     const x = bubbleBox.x + bubbleBox.width / 2;
 
     /* Into the gap, a pause longer than the fade alone would allow, then onto
-       the bubble: only the linger keeps it there to land on. */
+       the bubble: only the linger keeps it there to land on. It lands by the
+       bubble's near edge, the transform origin it shrinks toward while it
+       fades: its middle leaves the bubble halfway through the fade, which left
+       a slow runner too little margin past the pause. */
     await page.mouse.move(x, triggerBox.y + 1);
     await page.mouse.move(x, (triggerBox.y + bubbleBox.y + bubbleBox.height) / 2);
     await page.waitForTimeout(250);
-    await page.mouse.move(x, bubbleBox.y + bubbleBox.height / 2);
+    await page.mouse.move(x, bubbleBox.y + bubbleBox.height - 2);
     await page.waitForTimeout(800);
 
     await expect(bubble).toHaveCSS("opacity", "1");

@@ -313,8 +313,13 @@ export const invalidKeyMessage: QuotingWording = (issue, messages) => {
  */
 export const unrecognizedKeyMessage: Wording = (issue) => `Unrecognized key ${formatValue(issue.params?.key)}`;
 
-/** The English wording of an `invalid_intersection` issue. */
-export const invalidIntersectionMessage = "Conflicting values";
+/**
+ * Words an `invalid_intersection` issue in English. It reads nothing from the issue, and is a function
+ * as the wording of every other code is, so a program can call any of them the same way.
+ *
+ * @returns The wording, without the issue's path.
+ */
+export const invalidIntersectionMessage: Wording = () => "Conflicting values";
 
 /**
  * Words an `invalid_union` issue in English: with what the one option the input was meant for found,
