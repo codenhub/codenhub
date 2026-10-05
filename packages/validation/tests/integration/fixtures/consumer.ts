@@ -26,6 +26,7 @@ import {
   guard,
   hostname,
   intersection,
+  invalidIntersectionMessage,
   invalidKeyMessage,
   invalidTypeMessage,
   is,
@@ -455,6 +456,7 @@ export const asserted: string = assert(string(), raw, { subject: "name:", messag
 declare const reported: ValidationIssue;
 export const worded: string = invalidTypeMessage(reported);
 export const wordedLimit: string = tooSmallMessage(reported);
+export const wordedConflict: string = invalidIntersectionMessage(reported);
 export const wordedKey: string = invalidKeyMessage(reported, wordings);
 // @ts-expect-error the issue behind a key is worded with a map
 export const wordedKeyAlone: string = invalidKeyMessage(reported);

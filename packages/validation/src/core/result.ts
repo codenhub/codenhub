@@ -188,8 +188,8 @@ export const repeatedKey = (segment: ValidationPathSegment): ValidationIssue =>
 
 /**
  * Names the kind of a value for messages without echoing the value: its `typeof`, or `null`, `array`,
- * `date`, `invalid date`, `nan` or `infinity`. It never names a class, which would take reading the
- * prototype, and it reads nothing a getter or a proxy trap runs for, so naming a value never throws.
+ * `date`, `invalid date`, `nan` or `infinity`. It never names a class, and it reads no property of the
+ * value, so no getter runs; a proxy trap that throws is caught, so naming a value never throws.
  */
 export function describeType(value: unknown): string {
   if (typeof value === "number" && !Number.isFinite(value)) {
@@ -202,9 +202,18 @@ export function describeType(value: unknown): string {
     return "null";
   }
   try {
+    // `isArray` throws only for a revoked proxy.
+    if (Array.isArray(value)) {
+      return "array";
+    }
+    // An object as `{}` and `JSON.parse` make it is not asked whether it is a Date: asking throws for one
+    // that is not, and 100 kB of valid `{}` under a union of four options took 0.9 seconds over it.
+    if (Object.getPrototypeOf(value) === Object.prototype) {
+      return "object";
+    }
     // `getTime` reads the value's own slot, so a Date from another realm or without its prototype is
-    // named too; it throws for anything else. `isArray` throws only for a revoked proxy.
-    return Array.isArray(value) ? "array" : Number.isNaN(Date.prototype.getTime.call(value)) ? "invalid date" : "date";
+    // named too; it throws for anything else.
+    return Number.isNaN(Date.prototype.getTime.call(value)) ? "invalid date" : "date";
   } catch {
     return "object";
   }

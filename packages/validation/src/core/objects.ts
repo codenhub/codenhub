@@ -56,13 +56,22 @@ const brand = <T>(read: () => T): T | undefined => {
 };
 
 /**
+ * Runs a built-in method that reads the slot of a Date, a Map or a Set, as {@link brand} does, unless the
+ * value cannot have one: anything that is not an object, and an array. The method throws for those, and
+ * a throw costs far more than the validation around it: 100,000 dates read from text by `coerceDate`
+ * took 1.3 seconds, found by the audit of 0.3.0. `isArray` throws for a revoked proxy, so it is asked inside.
+ */
+const slot = <T>(value: unknown, read: () => T): T | undefined =>
+  typeof value === "object" && value !== null ? brand(() => (Array.isArray(value) ? undefined : read())) : undefined;
+
+/**
  * Reads `size` with the getter of a Map or Set prototype. It is looked up when called and not once at
  * load, because a call made while the module loads is never dropped from a bundle, and every consumer
  * would carry it.
  */
 const sizeOf = (prototype: object, value: unknown): number | undefined => {
   const getter = Object.getOwnPropertyDescriptor(prototype, "size")?.get as (() => number) | undefined;
-  return brand(() => getter?.call(value));
+  return slot(value, () => getter?.call(value));
 };
 
 /**
@@ -76,7 +85,7 @@ export const isInstance = (value: unknown, target: abstract new (...args: never[
 export const isArray = (value: unknown): value is unknown[] => brand(() => Array.isArray(value)) === true;
 
 /** The moment a `Date` holds, `NaN` for an invalid one, or undefined when the value is not a `Date`, in any realm. */
-export const timeOf = (value: unknown): number | undefined => brand(() => Date.prototype.getTime.call(value));
+export const timeOf = (value: unknown): number | undefined => slot(value, () => Date.prototype.getTime.call(value));
 
 /**
  * The source of a regular expression, or undefined when the value is not one, in any realm. The getter
