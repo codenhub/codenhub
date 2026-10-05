@@ -4,7 +4,7 @@
 
 Checks that a value is what you need it to be, and gives you either the typed value or every reason it is not. Each validator is a small function you import on its own, so a package or app ships only the checks it uses. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies.
 
-> **Experimental:** pre-1.0. The API of 0.2.0 is meant to hold for every 0.2.x release; a change that breaks callers, if one proves necessary, ships as 0.3.0 and is listed in the [changelog](docs/changelog/index.md).
+> **Experimental:** pre-1.0. The API of 0.3.0 is meant to hold for every 0.3.x release; a change that breaks callers, if one proves necessary, ships as the next minor and is listed in the [changelog](docs/changelog/index.md).
 >
 > **Migrating from 0.1.0:** the [0.2.0 changelog](docs/changelog/0.2.0.md) maps each changed call to its replacement. From 0.0.1, start with the [0.1.0 changelog](docs/changelog/0.1.0.md).
 
@@ -65,6 +65,8 @@ const account = object(
 
 Write a rule of your own with `check`, including one that needs to `await` something, a format with `format`, and a validator for any type with `guard`; what they make behaves exactly as the built-in ones do.
 
+When invalid input is a caller's mistake, such as an options object passed to your function, `assert(validator, input, { subject, messages })` returns the value or throws a `TypeError` naming the first problem and where it is. `objectLike` validates class instances and other objects that are not plain, which `object` rejects.
+
 ## Documentation
 
 - [Documentation overview](docs/index.md)
@@ -91,7 +93,7 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 - Rules never rewrite the value unless you ask: `trim`, `case` and `clamp` are the options that do. Formats with several spellings are the exception, and produce one: `email()` and `url()` produce what the URL parser reads, such as `https://example.com/admin` for `https://Example.com/public/../admin`, so a check made later on the value sees what a request or a mail server will, `domain()` produces lowercase ASCII with internationalized labels in punycode, and `ip()`, `cidr()`, `hostname()`, `uuid()`, `ulid()`, `phone()`, `mac()` and `creditCard()` produce a canonical spelling.
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
 - `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal`, `printer.local` and `nas.home`. Whether the top-level domain exists is not checked. A validator for the host replaces that rule: `url({ host: hostname() })` accepts any hostname and `url({ host: union([domain(), ip()]) })` any public domain or IP address, of any range. Neither resolves the name, so a public name can still point at a private address.
-- Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input. So do exceptions from code inside the input itself: a getter or a `Proxy` trap that throws while a validator reads the value. Data parsed from JSON holds neither.
+- Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input. So do exceptions from code inside the input itself: a getter or a `Proxy` trap that throws while a validator reads the value, except under `objectLike`, which reports a property it could not read as an issue. Data parsed from JSON holds neither.
 - A recursive `lazy` validator stops at `maxDepth` levels, 128 by default, and fails with `too_big` instead of exhausting the stack, so deeply nested or cyclic input is reported like any other bad input, as long as the recursion is synchronous. An asynchronous rule inside a recursive schema starts each level it awaits before from a fresh stack, which `maxDepth` does not count, but `maxCalls` does: each level is a `lazy` call, and the count lasts across the awaits of this package, such as an asynchronous `check`'s, so such a schema, given a cyclic object, stops too. An await inside a validator you write yourself is not seen, and what it calls after it is counted afresh, so put asynchronous work in a `check`, or bound such a validator yourself. `lazy` stops after `maxCalls` calls in one validation, 10,000 by default, as a backstop for work that grows faster than the input. A `lazy` gives the result it found for an object at a path again when the same object is reached there again in one validation, so the options of a recursive `union` of objects share the children's result and the work grows with the input; a schema that makes a new object at every level, such as with a `transform` that copies its value, cannot share it, and could otherwise run for hours on a few hundred bytes. At that default a validation it stops holds about 10 MB of issues for each `lazy`. Raise it for trusted recursive data with more nodes, or use `tagged` for objects told apart by a property. Nothing else limits how much input is checked: every issue found is kept, so a large list of wrong items is as many issues, and asynchronous rules of every item start at once. Cap the size of untrusted input, and give `array`, `set`, `map`, `record` and a `tuple` with `rest` a `max`, before validating it. A byte limit is not enough for a value received by structured clone, such as `event.data` from `postMessage`, a worker or Electron IPC: it can hold a sparse array whose length costs nothing to send, or the same array at many places, so a message of a few bytes holds millions of items. Only `max` bounds those.
 
 ## License
@@ -155,7 +157,7 @@ if (result.ok) {
 }
 ```
 
-A validator never throws for invalid input, because invalid input is an expected outcome and not a bug. The one exception is input that runs code of its own while it is read, a getter or a `Proxy` trap that throws: that exception propagates, as one from your own callback does. Data parsed from JSON has no such code. If you would rather stop the program, that is one line: `if (!result.ok) throw new Error(...)`.
+A validator never throws for invalid input, because invalid input is an expected outcome and not a bug. The one exception is input that runs code of its own while it is read, a getter or a `Proxy` trap that throws: that exception propagates, as one from your own callback does, except in `objectLike`, which reports a property it could not read as an issue. Data parsed from JSON has no such code. If you would rather stop the program, that is one line: `if (!result.ok) throw new Error(...)`.
 
 `result.value` is not necessarily the input you passed in. It is the value after the validator has run, with any clean-up you asked for applied (`trim`, `case`, `clamp`) and, for an object, unlisted properties dropped. A format with several spellings produces one: `email` and `url` produce what the URL parser reads, such as a lowercase domain, and `phone` produces `+` and the digits, so a check made later on the value sees what a mail server or a request will, and one value is one string. The input is never modified.
 
@@ -761,7 +763,7 @@ A validator here is a function, and `standard` attaches `~standard` to a functio
 
 # Validator reference
 
-Every validator here is created by calling a function and is then called with the value to check. Every one returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`, and never throws for invalid input, unless the input runs code of its own, such as a getter or a `Proxy` trap that throws while it is read, whose exception propagates. The code and `params` each failure reports are listed with the validator; [Issues and messages](docs/errors.md) explains what they mean and how to turn them into text.
+Every validator here is created by calling a function and is then called with the value to check. Every one returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`, and never throws for invalid input, unless the input runs code of its own, such as a getter or a `Proxy` trap that throws while it is read, whose exception propagates; [`objectLike`](#objectlike) is the one validator that reports it as an issue instead. The code and `params` each failure reports are listed with the validator; [Issues and messages](docs/errors.md) explains what they mean and how to turn them into text.
 
 Every validator takes its arguments in the same order: its own, such as the shape of `object` or the item of `array`, then an options object, then any number of [checks](#checks). The options can be left out when there are checks: `string(startsWith("a"))`. Every validator that reports an issue of its own takes a `message` option, [below](#wording-one-validator).
 

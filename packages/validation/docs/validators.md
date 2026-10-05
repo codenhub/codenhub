@@ -5,7 +5,7 @@ description: Every validator and combinator, with its options, what it produces 
 
 # Validator reference
 
-Every validator here is created by calling a function and is then called with the value to check. Every one returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`, and never throws for invalid input, unless the input runs code of its own, such as a getter or a `Proxy` trap that throws while it is read, whose exception propagates. The code and `params` each failure reports are listed with the validator; [Issues and messages](errors.md) explains what they mean and how to turn them into text.
+Every validator here is created by calling a function and is then called with the value to check. Every one returns `{ ok: true, value }` or `{ ok: false, error: { issues } }`, and never throws for invalid input, unless the input runs code of its own, such as a getter or a `Proxy` trap that throws while it is read, whose exception propagates; [`objectLike`](#objectlike) is the one validator that reports it as an issue instead. The code and `params` each failure reports are listed with the validator; [Issues and messages](errors.md) explains what they mean and how to turn them into text.
 
 Every validator takes its arguments in the same order: its own, such as the shape of `object` or the item of `array`, then an options object, then any number of [checks](#checks). The options can be left out when there are checks: `string(startsWith("a"))`. Every validator that reports an issue of its own takes a `message` option, [below](#wording-one-validator).
 

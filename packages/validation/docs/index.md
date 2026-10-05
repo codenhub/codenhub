@@ -58,7 +58,7 @@ if (result.ok) {
 }
 ```
 
-A validator never throws for invalid input, because invalid input is an expected outcome and not a bug. The one exception is input that runs code of its own while it is read, a getter or a `Proxy` trap that throws: that exception propagates, as one from your own callback does. Data parsed from JSON has no such code. If you would rather stop the program, that is one line: `if (!result.ok) throw new Error(...)`.
+A validator never throws for invalid input, because invalid input is an expected outcome and not a bug. The one exception is input that runs code of its own while it is read, a getter or a `Proxy` trap that throws: that exception propagates, as one from your own callback does, except in `objectLike`, which reports a property it could not read as an issue. Data parsed from JSON has no such code. If you would rather stop the program, that is one line: `if (!result.ok) throw new Error(...)`.
 
 `result.value` is not necessarily the input you passed in. It is the value after the validator has run, with any clean-up you asked for applied (`trim`, `case`, `clamp`) and, for an object, unlisted properties dropped. A format with several spellings produces one: `email` and `url` produce what the URL parser reads, such as a lowercase domain, and `phone` produces `+` and the digits, so a check made later on the value sees what a mail server or a request will, and one value is one string. The input is never modified.
 
