@@ -3084,10 +3084,12 @@ Words an `invalid_format` issue in English, such as "Invalid email address" or "
 ### invalidIntersectionMessage
 
 ```ts
-export declare const invalidIntersectionMessage = "Conflicting values";
+export declare const invalidIntersectionMessage: Wording;
 ```
 
-The English wording of an `invalid_intersection` issue.
+Words an `invalid_intersection` issue in English. It reads nothing from the issue, and is a function as the wording of every other code is, so a program can call any of them the same way.
+
+**Returns** — The wording, without the issue's path.
 
 ### invalidKeyMessage
 
