@@ -2,13 +2,17 @@ import { runInNewContext } from "node:vm";
 
 import { describe, expect, it } from "vitest";
 
+import type { ValidationIssue } from "../core/types";
+import { englishMessages } from "../messages/english-messages";
+import { formatIssue } from "../messages/format-issue";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
-import { accepts, issuesOf } from "../test-utils";
+import { accepts, issuesOf, valueOf } from "../test-utils";
 import { endsWith } from "./ends-with";
 import { includes } from "./includes";
 import { lowercase } from "./lowercase";
 import { multipleOf } from "./multiple-of";
+import { nonBlank } from "./non-blank";
 import { nonZero } from "./non-zero";
 import { pattern } from "./pattern";
 import { startsWith } from "./starts-with";
@@ -69,6 +73,27 @@ describe("lowercase and uppercase", () => {
       { code: "invalid_format", path: [], params: { format: "lowercase" } },
     ]);
     expect(issuesOf(string(uppercase())("a"))[0]?.params).toEqual({ format: "uppercase" });
+  });
+});
+
+describe("nonBlank", () => {
+  it("should require a character that is not white space, and leave the string as it is", () => {
+    expect(accepts(string(nonBlank()), "a", " a ", "", " ", "\t\n", "\u00a0\u2003")).toEqual([
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+    ]);
+    expect(valueOf(string(nonBlank())(" a "))).toBe(" a ");
+  });
+
+  it("should report the format it required, worded by its message or in English", () => {
+    const [found] = issuesOf(string(nonBlank())(" "));
+    expect(found).toEqual({ code: "invalid_format", path: [], params: { format: "nonBlank" } });
+    expect(formatIssue(found as ValidationIssue, englishMessages)).toBe("Must not be blank");
+    expect(issuesOf(string(nonBlank("Say something"))(""))[0]?.message).toBe("Say something");
   });
 });
 

@@ -9,6 +9,7 @@ export { endsWith } from "./checks/ends-with";
 export { includes } from "./checks/includes";
 export { lowercase } from "./checks/lowercase";
 export { multipleOf } from "./checks/multiple-of";
+export { nonBlank } from "./checks/non-blank";
 export { nonZero } from "./checks/non-zero";
 export { pattern } from "./checks/pattern";
 export { startsWith } from "./checks/starts-with";

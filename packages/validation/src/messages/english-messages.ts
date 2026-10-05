@@ -129,6 +129,8 @@ const describeFormat = (issue: ValidationIssue, messages: Messages): string => {
       return "Must be lowercase";
     case "uppercase":
       return "Must be uppercase";
+    case "nonBlank":
+      return "Must not be blank";
     default:
       return `Invalid ${name}`;
   }

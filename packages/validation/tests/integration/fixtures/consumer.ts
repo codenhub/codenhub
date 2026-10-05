@@ -33,6 +33,7 @@ import {
   lazy,
   literal,
   map,
+  nonBlank,
   nullable,
   number,
   object,
@@ -439,6 +440,11 @@ export const query = searchParams(object({ page: coerceNumber({ int: true }), ta
   repeated: true,
 });
 export const queryValue: Infer<typeof query> = { page: 1, tags: ["a"] };
+
+// nonBlank() is a check of strings, as the checks of a case are.
+export const spoken = string(nonBlank("Say something"));
+// @ts-expect-error a number is never blank
+export const spokenNumber = number(nonBlank());
 
 // assert() returns what the validator produces, and takes only synchronous validators. The wording of a
 // code is an entry of a message map.
