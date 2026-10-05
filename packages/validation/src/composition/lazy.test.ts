@@ -14,6 +14,7 @@ import { isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { array } from "./array";
 import { fallback } from "./fallback";
 import { intersection } from "./intersection";
+import { json } from "./json";
 import { lazy } from "./lazy";
 import { object } from "./object";
 import { optional } from "./optional";
@@ -175,6 +176,29 @@ describe("lazy", () => {
   });
 
   describe("calls", () => {
+    it("should not count a primitive that ends the recursion, so a long flat list passes", () => {
+      const value: Validator<unknown> = union([number(), string(), array(lazy(() => value))]);
+      expect(value(Array.from({ length: 10_001 }, () => 1)).ok).toBe(true);
+    });
+
+    it("should count a primitive the recursion goes on through, as text that holds the next level", () => {
+      const text: Validator<unknown> = union([literal("end"), json(lazy(() => text, { maxCalls: 3 }))]);
+      let input = "end";
+      for (let level = 0; level < 6; level += 1) {
+        input = JSON.stringify(input);
+      }
+      const [issue] = issuesOf(json(text)(input));
+      expect(JSON.stringify(issue)).toContain('"type":"calls"');
+    });
+
+    it("should count a primitive whose result is pending", async () => {
+      const slow = string(check(async () => true));
+      const list = array(lazy(() => slow, { maxCalls: 2 }));
+      expect(issuesOf(await list(["a", "b", "c"]))).toEqual([
+        { code: "too_big", path: [2], params: { maximum: 2, type: "calls" } },
+      ]);
+    });
+
     interface Link {
       next?: Link;
     }

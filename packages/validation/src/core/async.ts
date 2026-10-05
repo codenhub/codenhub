@@ -78,6 +78,11 @@ export function spendCall(key: object, maxCalls: number): boolean {
   return spent > maxCalls;
 }
 
+/** Takes back the call {@link spendCall} last counted for the `lazy` named by `key`, in the validation running now. */
+export function refundCall(key: object): void {
+  current?.calls.set(key, (current.calls.get(key) ?? 1) - 1);
+}
+
 /** Tests whether a value is a promise, or anything else with a `then` method. */
 export const isThenable = (value: unknown): value is PromiseLike<unknown> =>
   (typeof value === "object" || typeof value === "function") &&

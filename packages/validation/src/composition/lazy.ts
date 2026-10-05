@@ -1,4 +1,4 @@
-import { chain, detached, resultsOf, spendCall, type Maybe } from "../core/async";
+import { chain, detached, isThenable, refundCall, resultsOf, spendCall, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { call, composed, type Place } from "../core/nesting";
 import { assertFunction, assertOption, issue } from "../core/result";
@@ -27,7 +27,9 @@ export interface LazyOptions extends MessageOptions {
   maxDepth?: number;
   /**
    * The most calls this `lazy` may make in one validation, those made for the options a `union` tries
-   * and fails included; a result this `lazy` already found for an object at a path is not a call. Past
+   * and fails included; a result this `lazy` already found for an object at a path is not a call, and
+   * neither is a primitive, such as a number in a list, that reaches no further `lazy` call and whose
+   * result is not pending. Past
    * it, every further call fails with `too_big`, so a schema whose work grows faster than its input stops
    * instead of running for hours on a few hundred bytes. A validation is a call such as
    * `schema(input)` and everything it reaches before it settles, after any await included, so an `array` of recursive items shares
@@ -65,6 +67,12 @@ let openDepth = 0;
  * a `lazy` with a fresh count at every level, and its work would have no bound.
  */
 let building: object | undefined;
+
+/**
+ * How many `lazy` calls have started, of every `lazy`. A call during which it did not move reached no
+ * other, which is how a primitive that ends the recursion is told from one the recursion goes on through.
+ */
+let started = 0;
 
 /** A result a `lazy` kept, and the place it was found at. */
 interface Kept {
@@ -172,7 +180,7 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
   const self = {};
   // Names this `lazy` to the count of calls: its own, or that of the `lazy` whose getter made it.
   const counted = building ?? self;
-  const validate = (input: unknown, place: Place): Maybe<ValidationResult<unknown>> => {
+  const validate = (input: unknown, place: Place, isPrimitive: boolean): Maybe<ValidationResult<unknown>> => {
     if (spendCall(counted, maxCalls)) {
       return reject([issue("too_big", { maximum: maxCalls, type: "calls" })], place);
     }
@@ -180,6 +188,8 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
       return reject([issue("too_big", { maximum: maxDepth, type: "depth" })], place);
     }
     openDepth += 1;
+    started += 1;
+    const mark = started;
     try {
       if (resolved === undefined) {
         const previous = building;
@@ -195,9 +205,17 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
         }
         resolved = found as AnyValidator;
       }
-      return chain(call(resolved, input, place), (result: ValidationResult<unknown>) =>
+      const outcome = chain(call(resolved, input, place), (result: ValidationResult<unknown>) =>
         result.ok ? accept(result.value, place) : result,
       );
+      // A primitive that reached no further `lazy` call cannot multiply the work, so it is not held against
+      // the limit: a long flat list of numbers under a recursive schema is no more work than its length. One
+      // the recursion goes on through, as text a `json` or a `transform` reads the next level from, stays
+      // counted, and so does one whose result is pending, since calls made meanwhile cannot be told apart.
+      if (isPrimitive && started === mark && !isThenable(outcome)) {
+        refundCall(counted);
+      }
+      return outcome;
     } finally {
       openDepth -= 1;
     }
@@ -207,8 +225,9 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
   // primitive is not kept: it has no children, so validating it again cannot multiply the work.
   return composed((input, place) => {
     const results = resultsOf(self) as Results | undefined;
-    if ((typeof input !== "object" && typeof input !== "function") || input === null || results === undefined) {
-      return validate(input, place);
+    const isPrimitive = (typeof input !== "object" && typeof input !== "function") || input === null;
+    if (isPrimitive || results === undefined) {
+      return validate(input, place, isPrimitive);
     }
     const bySegment = results.get(input) ?? new Map<ValidationPathSegment | undefined, Kept[]>();
     results.set(input, bySegment);
@@ -218,7 +237,7 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
     if (found !== undefined) {
       return found.result;
     }
-    const result = validate(input, place);
+    const result = validate(input, place, false);
     kept.push({ place, result });
     return result;
   });
