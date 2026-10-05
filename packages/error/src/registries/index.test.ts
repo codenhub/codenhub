@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { createAppError, createErrorRegistry } from "../index";
 import {
   browserErrorRegistry,
+  nodeErrorCodes,
+  nodeErrorPatterns,
+  nodeErrorRegistry,
   supabaseErrorRegistry,
   browserErrorNames,
   browserErrorPatterns,
@@ -79,6 +82,34 @@ describe("ready registries", () => {
     },
   );
 
+  it("should classify a stale code-split chunk by the bundler's name and by Chrome's message", () => {
+    const chromeFailure = new TypeError(
+      "Failed to fetch dynamically imported module: https://example.com/missing-chunk.js",
+    );
+
+    expect(createAppError({ name: "ChunkLoadError" }, { registry: browserErrorRegistry })).toMatchObject({
+      type: "known",
+      messageKey: "error.browser.moduleLoadFailed",
+      isRetryable: false,
+    });
+    expect(createAppError(chromeFailure, { registry: browserErrorRegistry })).toMatchObject({
+      type: "unexpected",
+      messageKey: "error.browser.moduleLoadFailed",
+      isRetryable: false,
+    });
+  });
+
+  it.each(["NotReadableError", "EncodingError"])("should classify the %s name", (name) => {
+    expect(createAppError(new DOMException("raw", name), { registry: browserErrorRegistry })).toMatchObject({
+      type: "known",
+      code: name,
+    });
+  });
+
+  it("should not tell a reader who dismissed a prompt to change the site settings", () => {
+    expect(browserErrorNames.NotAllowedError.message).not.toMatch(/settings/i);
+  });
+
   it("should not classify unrelated text that mentions a failed load", () => {
     expect(createAppError(new Error("Config load failed: invalid JSON"), { registry: browserErrorRegistry }).type).toBe(
       "unknown",
@@ -123,12 +154,67 @@ describe("ready registries", () => {
     expect(createAppError({ name: "NetworkError" }, { registry }).isRetryable).toBe(false);
   });
 
-  it("should prefer specific retryable browser patterns over broad network patterns", () => {
-    const registry = createErrorRegistry([browserErrorRegistry]);
+  it("should not mark a timeout that may follow a sent request as retryable", () => {
+    const registry = createErrorRegistry([browserErrorRegistry, nodeErrorRegistry]);
 
-    expect(createAppError(new Error("NetworkError: connection refused"), { registry })).toMatchObject({
-      message: "Could not connect to the server.",
-      isRetryable: true,
-    });
+    expect(createAppError({ name: "TimeoutError" }, { registry }).isRetryable).toBe(false);
+    expect(createAppError({ code: "UND_ERR_HEADERS_TIMEOUT" }, { registry }).isRetryable).toBe(false);
+  });
+
+  it("should not classify relayed server text that mentions a refused connection", () => {
+    const relayed = new Error("psql: could not connect: Connection refused");
+
+    expect(createAppError(relayed, { registry: browserErrorRegistry }).type).toBe("unknown");
+  });
+
+  it("should map only the Auth codes Supabase publishes", () => {
+    expect(supabaseErrorCodes.invalid_grant).toBeUndefined();
+
+    for (const code of ["weak_password", "session_expired", "over_request_rate_limit", "email_exists"]) {
+      expect(createAppError({ code }, { registry: supabaseErrorRegistry })).toMatchObject({
+        type: "known",
+        code,
+        source: "supabase.auth",
+      });
+    }
+  });
+
+  it("should give every developer-facing mapping the same message, naming no internals", () => {
+    const registry = createErrorRegistry([browserErrorRegistry, supabaseErrorRegistry]);
+    const messages = [
+      { code: "42P01" },
+      { code: "42703" },
+      { code: "unexpected_failure" },
+      { name: "InvalidStateError" },
+    ].map((failure) => createAppError(failure, { registry }).message);
+
+    expect(new Set(messages).size).toBe(1);
+    expect(messages[0]).not.toMatch(/table|column|database|state/i);
+  });
+
+  it("should write every preset message as full sentences", () => {
+    const presetFeedback = [
+      ...Object.values(browserErrorNames),
+      ...browserErrorPatterns.map(([, feedback]) => feedback),
+      ...Object.values(nodeErrorCodes),
+      ...nodeErrorPatterns.map(([, feedback]) => feedback),
+      ...Object.values(supabaseErrorCodes),
+      ...Object.values(supabaseErrorNames),
+    ];
+
+    for (const { message } of presetFeedback) {
+      expect(message).toMatch(/^[A-Z].*\.$/);
+    }
+  });
+
+  it("should give each message key exactly one message", () => {
+    const messagesByKey = new Map<string, string>();
+
+    for (const feedback of [...Object.values(supabaseErrorCodes), ...Object.values(supabaseErrorNames)]) {
+      const messageKey = feedback.messageKey ?? "";
+
+      expect(messagesByKey.get(messageKey) ?? feedback.message).toBe(feedback.message);
+      messagesByKey.set(messageKey, feedback.message);
+    }
   });
 });

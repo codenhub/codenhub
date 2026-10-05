@@ -18,46 +18,69 @@ import type { ErrorFeedback } from "../types";
  */
 export const nodeErrorCodes = freezeFeedbackMap({
   ECONNREFUSED: {
-    message: "Could not connect to the server.",
+    message: "We couldn't connect to the server. It may be unavailable for a moment, so try again shortly.",
     messageKey: "error.node.network.connectionRefused",
     source: "node.network",
     isRetryable: true,
   },
   ENOTFOUND: {
-    message: "The server address could not be found.",
+    message: "We couldn't find the server's address. Check your internet connection and try again.",
     messageKey: "error.node.network.addressNotFound",
     source: "node.network",
     isRetryable: true,
   },
   ETIMEDOUT: {
-    message: "The connection timed out.",
+    message: "The server took too long to accept the connection. Check your internet connection and try again.",
     messageKey: "error.node.network.connectionTimeout",
     source: "node.network",
     isRetryable: true,
   },
   UND_ERR_CONNECT_TIMEOUT: {
-    message: "The connection timed out.",
+    message: "The server took too long to accept the connection. Check your internet connection and try again.",
     messageKey: "error.node.network.connectionTimeout",
     source: "node.network",
     isRetryable: true,
   },
+  EAI_AGAIN: {
+    message: "We couldn't look up the server's address just now. Check your internet connection and try again.",
+    messageKey: "error.node.network.addressLookupFailed",
+    source: "node.network",
+    isRetryable: true,
+  },
+  EHOSTUNREACH: {
+    message: "We couldn't reach the server from this network. Check your internet connection and try again.",
+    messageKey: "error.node.network.unreachable",
+    source: "node.network",
+    isRetryable: true,
+  },
+  ENETUNREACH: {
+    message: "We couldn't reach the server from this network. Check your internet connection and try again.",
+    messageKey: "error.node.network.unreachable",
+    source: "node.network",
+    isRetryable: true,
+  },
   ECONNRESET: {
-    message: "The connection was reset.",
+    message: "The connection was interrupted before this finished. Check whether it went through before trying again.",
     messageKey: "error.node.network.connectionReset",
     source: "node.network",
   },
   UND_ERR_SOCKET: {
-    message: "The connection was closed unexpectedly.",
+    message: "The connection closed before this finished. Check whether it went through before trying again.",
+    messageKey: "error.node.network.connectionClosed",
+    source: "node.network",
+  },
+  EPIPE: {
+    message: "The connection closed before this finished. Check whether it went through before trying again.",
     messageKey: "error.node.network.connectionClosed",
     source: "node.network",
   },
   UND_ERR_HEADERS_TIMEOUT: {
-    message: "The server took too long to respond.",
+    message: "The server took too long to respond. Check whether this went through before trying again.",
     messageKey: "error.node.network.responseTimeout",
     source: "node.network",
   },
   UND_ERR_BODY_TIMEOUT: {
-    message: "The server took too long to respond.",
+    message: "The server took too long to respond. Check whether this went through before trying again.",
     messageKey: "error.node.network.responseTimeout",
     source: "node.network",
   },
@@ -69,7 +92,7 @@ const nodeErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback])[]
     // no registered code, so the failure is not known to be transient.
     /^fetch failed$/i,
     {
-      message: "Network request failed.",
+      message: "We couldn't complete the request to the server. Check your internet connection and try again.",
       messageKey: "error.node.network.requestFailed",
       source: "node.network",
     },
