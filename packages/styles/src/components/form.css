@@ -89,7 +89,7 @@
     color: var(--color-text-secondary);
   }
 
-  &:hover:not(:disabled, [aria-disabled="true"], [data-disabled], :focus-visible) {
+  &:hover:not(:disabled, .disabled, [aria-disabled="true"], [data-disabled], :focus-visible) {
     --_line-tone: var(--intent-hover);
   }
 

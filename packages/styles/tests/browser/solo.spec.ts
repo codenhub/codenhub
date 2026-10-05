@@ -358,8 +358,211 @@ test.describe("solo utilities", () => {
 
     const focused = (await read(page, "#pixel", ["box-shadow"]))["box-shadow"]!;
 
-    expect(resting.match(/inset/g), "one ring at rest").toHaveLength(1);
-    expect(focused.match(/inset/g), "ring and focus layer").toHaveLength(2);
+    /* The fill is an inset layer too, under everything else. */
+    expect(resting.match(/inset/g), "the ring and the fill at rest").toHaveLength(2);
+    expect(focused.match(/inset/g), "ring, focus layer, its inner line, and the fill").toHaveLength(4);
     expect(focused, "focus layer is wider than the ring").toMatch(/\b7px\b/);
+    expect(focused, "the inner line is wider again").toMatch(/\b9px\b/);
+  });
+
+  /* The ring is a box shadow, and forced colours remove every one. An outline
+     stands in for it and the clip goes, so the element keeps an edge. */
+  test("keep a pixel element's edge in forced colors", async ({ page }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await load(page, ["aesthetics/pixel.css"], `<div id="pixel" class="pixel-solo">pixel</div>`);
+
+    const styles = await read(page, "#pixel", ["outline-style", "outline-width", "outline-offset", "clip-path"]);
+
+    expect(styles["outline-style"]).toBe("solid");
+    expect(styles["outline-width"]).toBe("4px");
+    expect(styles["outline-offset"], "drawn inward, so nothing moves").toBe("-4px");
+    expect(styles["clip-path"]).toBe("none");
+  });
+
+  /* A solo class composes with what the element is asked to be, the way a
+     component does: presentation from the element or a container, the intent
+     on the element, the element's own elevation. See
+     docs/internal/model.md#solo-classes. */
+  test.describe("composition", () => {
+    const SHEETS = ["index.css", "aesthetics/index.css"] as const;
+    const HOST = ".host { background-color: rgb(1, 2, 3); color: rgb(4, 5, 6); }";
+    /* The colour of each layer of a box shadow, in order. */
+    const shadowColors = (shadow: string) => shadow.match(/[a-z]+\([^)]*\)/g) ?? [];
+    const resolve = (page: Page, color: string) =>
+      page.evaluate((value) => {
+        const probe = document.createElement("span");
+
+        probe.style.color = value;
+        document.body.append(probe);
+
+        const resolved = getComputedStyle(probe).color;
+
+        probe.remove();
+
+        return resolved;
+      }, color);
+
+    test("leaves an unclassed element's own background and text alone", async ({ page }) => {
+      await load(
+        page,
+        SHEETS,
+        ["neobrutalism", "pixel", "chunky-tile", "cyber", "sketch"]
+          .map((name) => `<div id="${name}" class="host ${name}-solo">x</div>`)
+          .join(""),
+        HOST,
+      );
+
+      /* oxlint-disable no-await-in-loop -- five reads of one page. */
+      for (const name of ["neobrutalism", "pixel", "chunky-tile", "cyber", "sketch"]) {
+        const styles = await read(page, `#${name}`, ["background-color", "color", "box-shadow"]);
+
+        expect(styles["background-color"], `${name} background`).toBe("rgb(1, 2, 3)");
+        expect(styles.color, `${name} text`).toBe("rgb(4, 5, 6)");
+        expect(readSrgb(shadowColors(styles["box-shadow"]!).at(-1)!).alpha, `${name} paints no fill`).toBe(0);
+      }
+      /* oxlint-enable no-await-in-loop */
+    });
+
+    test("answers the edge axis on the element", async ({ page }) => {
+      await load(
+        page,
+        SHEETS,
+        `<div id="border" class="neobrutalism-solo edgeless">x</div>
+         <div id="ring" class="pixel-solo edgeless">x</div>
+         <div id="glass" class="glass-solo edgeless">x</div>`,
+      );
+
+      const border = await read(page, "#border", ["border-top-color", "box-shadow"]);
+      const ring = (await read(page, "#ring", ["box-shadow"]))["box-shadow"]!;
+      const glass = (await read(page, "#glass", ["border-top-color"]))["border-top-color"]!;
+
+      expect(readSrgb(border["border-top-color"]!).alpha, "no line").toBe(0);
+      expect(border["box-shadow"], "the slab is depth, and stays").toMatch(/\b4px 4px 0px 0px\b/);
+      expect(readSrgb(shadowColors(ring)[0]!).alpha, "no ring").toBe(0);
+      expect(readSrgb(glass).alpha, "no hairline").toBe(0);
+    });
+
+    test("fills and colours from the element's own fill and intent", async ({ page, browserName }) => {
+      await allowTransparency(page, browserName);
+      await load(
+        page,
+        SHEETS,
+        `<div id="solid" class="host neobrutalism-solo solid success">x</div>
+         <div id="soft" class="host chunky-tile-solo soft success">x</div>
+         <div id="glass" class="glass-solo solid success">x</div>`,
+        HOST,
+      );
+
+      const success = await resolve(page, "var(--color-success)");
+      const contrast = await resolve(page, "var(--color-success-contrast)");
+      const solid = await read(page, "#solid", ["box-shadow", "color", "border-top-color", "background-color"]);
+      const soft = (await read(page, "#soft", ["box-shadow"]))["box-shadow"]!;
+      const glass = await read(page, "#glass", ["background-color", "color"]);
+
+      expectSameColor(shadowColors(solid["box-shadow"]!).at(-1)!, success, "the fill layer");
+      expectSameColor(shadowColors(solid["box-shadow"]!)[0]!, success, "the slab takes the intent");
+      expectSameColor(solid["border-top-color"]!, success, "the line takes the intent");
+      expectSameColor(solid.color!, contrast, "the text is the contrast tone");
+      expect(solid["background-color"], "the element's own background is under the fill").toBe("rgb(1, 2, 3)");
+      expect(readSrgb(shadowColors(soft).at(-1)!).alpha, "a soft fill is a tint").toBeCloseTo(0.12, 2);
+      expectSameColor(glass["background-color"]!, success, "a solid glass pane is opaque");
+      expectSameColor(glass.color!, contrast, "with contrast text");
+    });
+
+    test("follows a container's presentation, and not a container's intent", async ({ page }) => {
+      await load(
+        page,
+        SHEETS,
+        `<div class="soft edgeless"><div id="cascaded" class="sketch-solo info">x</div></div>
+         <div class="success solid"><div id="uncoloured" class="host cyber-solo">x</div></div>
+         <div id="alone" class="cyber-solo solid">x</div>`,
+        HOST,
+      );
+
+      const cascaded = await read(page, "#cascaded", ["box-shadow", "border-top-color"]);
+      const uncoloured = await read(page, "#uncoloured", ["border-top-color", "box-shadow"]);
+      const alone = await read(page, "#alone", ["border-top-color", "box-shadow"]);
+
+      expect(readSrgb(shadowColors(cascaded["box-shadow"]!).at(-1)!).alpha, "the container's soft fill").toBeCloseTo(
+        0.12,
+        2,
+      );
+      expectSameColor(
+        cascaded["border-top-color"]!,
+        shadowColors(cascaded["box-shadow"]!).at(-1)!,
+        "and its edgeless line is the fill's one coat",
+      );
+      /* A `.success` container leaves a component inside it neutral, so it
+         leaves a solo element neutral too: same line and same fill as one that
+         is solid on its own. */
+      expectSameColor(uncoloured["border-top-color"]!, alone["border-top-color"]!, "the container's intent");
+      expectSameColor(
+        shadowColors(uncoloured["box-shadow"]!).at(-1)!,
+        shadowColors(alone["box-shadow"]!).at(-1)!,
+        "the neutral fill",
+      );
+    });
+
+    test("scales its depth by the element's own elevation class", async ({ page }) => {
+      await load(
+        page,
+        SHEETS,
+        `<div id="flat" class="neobrutalism-solo flat">x</div>
+         <div id="floating" class="chunky-tile-solo floating">x</div>
+         <div class="flat"><div id="inside" class="sketch-solo">x</div></div>
+         <div id="glow" class="cyber-solo flat">x</div>`,
+      );
+
+      expect((await read(page, "#flat", ["box-shadow"]))["box-shadow"], "no slab").toMatch(/\b0px 0px 0px 0px\b/);
+      expect((await read(page, "#floating", ["box-shadow"]))["box-shadow"], "twice the bar").toMatch(
+        /\b0px 8px 0px 0px\b/,
+      );
+      expect((await read(page, "#inside", ["box-shadow"]))["box-shadow"], "a container's does not reach it").toMatch(
+        /\b2px 2px 0px 0px\b/,
+      );
+      expect((await read(page, "#glow", ["box-shadow"]))["box-shadow"], "the glow is not depth").toMatch(
+        /\b0px 0px 8px 0px\b/,
+      );
+    });
+
+    /* The classes it composes with are the theme's. With the aesthetic alone
+       on the page they set nothing, so the edge, the fill, and the depth are
+       the shipped look's. The text colour is still written, in the neutral
+       ink, because the class is on the element. */
+    test("paints the shipped look where the theme is not loaded", async ({ page }) => {
+      await load(
+        page,
+        ["aesthetics/neobrutalism.css"],
+        `<div id="plain" class="neobrutalism-solo">x</div><div id="classed" class="neobrutalism-solo solid success edgeless flat">x</div>`,
+      );
+
+      const properties = ["box-shadow", "border-top-color"];
+
+      expect(await read(page, "#classed", properties)).toEqual(await read(page, "#plain", properties));
+    });
+  });
+
+  /* A modifier beside a solo class is a token class too, and a token declared
+     on the element inherits into what it holds. A component inside a solo
+     element is not in that aesthetic's region and keeps the page's own look. */
+  test("keep a modifier's tokens off the components inside a solo element", async ({ page }) => {
+    await load(
+      page,
+      ["index.css", "aesthetics/index.css"],
+      `<button id="plain" class="btn">Plain</button>
+       <div class="sketch-solo sketch-rounded"><button id="sketch-first" class="btn">One</button><button id="sketch-second" class="btn">Two</button></div>
+       <div class="glass-solo glass-liquid"><button id="liquid" class="btn">Liquid</button><div id="card" class="card">Card</div></div>`,
+    );
+
+    const radius = async (selector: string) => (await read(page, selector, ["border-radius"]))["border-radius"];
+    const plain = await radius("#plain");
+
+    expect(await radius("#sketch-first"), "first child of a rounded solo element").toBe(plain);
+    expect(await radius("#sketch-second"), "the rotation does not reach it either").toBe(plain);
+    expect(await radius("#liquid"), "inside a liquid solo element").toBe(plain);
+    expect(
+      await page.locator("#card").evaluate((element) => getComputedStyle(element, "::before").content),
+      "and a card inside takes no layers",
+    ).toBe("none");
   });
 });

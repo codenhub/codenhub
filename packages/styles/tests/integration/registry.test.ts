@@ -813,14 +813,20 @@ test("an aesthetic writing onto components excludes every other aesthetic", asyn
 });
 
 /* A solo class is the aesthetic painted onto one element the package does not
-   style, so it has to work with nothing else in scope. `--ui-*` and
-   `--elevation-color` belong to whichever aesthetic an ancestor carries -- a
-   solo glass pane inside a `.pixel` region would take pixel's zero radius, and
-   inside `.chunky-tile` it would cast a black shadow -- and `--intent-*` exists only where
-   the package's own reset declared it. Reading either would make the look
-   depend on surroundings the class exists to ignore. See
-   docs/internal/model.md#solo-classes. */
-test("every aesthetic ships its solo class, and the solo class reads no shared token", async () => {
+   style, so its material has to work with nothing else in scope. A material
+   `--ui-*` token and `--elevation-color` belong to whichever aesthetic an
+   ancestor carries -- a solo glass pane inside a `.pixel` region would take
+   pixel's zero radius, and inside `.chunky-tile` it would cast a black shadow.
+   Reading one would make the look depend on the aesthetic around it, which is
+   the one cascade the class exists to ignore.
+
+   Presentation, intent, and elevation are not material, and a solo class
+   composes with them the way a component does: `--ui-fill`, `--ui-border`,
+   `--ui-fg-on-fill`, `--ui-elevation`, and the intent slots are the inputs it
+   may read. See docs/internal/model.md#solo-classes. */
+const SOLO_INPUTS = new Set(["--ui-fill", "--ui-border", "--ui-fg-on-fill", "--ui-elevation"]);
+
+test("every aesthetic ships its solo class, and the solo class reads no material token", async () => {
   const problems: string[] = [];
 
   for (const { aesthetic, name, source } of await aestheticSources()) {
@@ -835,9 +841,61 @@ test("every aesthetic ships its solo class, and the solo class reads no shared t
       problems.push(`${name} declares no .${aesthetic.solo} rule`);
     }
     for (const [, selector, body] of rules) {
-      for (const [token] of body!.matchAll(/var\(--(?:(?:ui|intent)-[a-z-]+|elevation-color)/g)) {
-        problems.push(`${selector!.trim()} reads ${token.slice(4)}`);
+      for (const [token] of body!.matchAll(/var\(--(?:ui-[a-z-]+|elevation-color)/g)) {
+        if (!SOLO_INPUTS.has(token.slice(4))) {
+          problems.push(`${selector!.trim()} reads ${token.slice(4)}`);
+        }
       }
+    }
+  }
+
+  expect(problems).toEqual([]);
+});
+
+/* Every solo class composes fill, ink, and edge from the same inputs, and each
+   aesthetic file is a standalone entrypoint, so each carries its own copy of
+   that block -- the cost `.quote` and `.progress` pay for not composing `box`.
+   Copies drift; this holds them to one text. The ink an aesthetic names for its
+   neutral line is the one line that differs, and each must name one. */
+test("every solo class carries the same composition", async () => {
+  const blocks = (await aestheticSources()).map(({ aesthetic, name, source }) => {
+    const rule = withoutComments(source).match(new RegExp(`\\n\\.${aesthetic.solo} \\{([^{}]*)\\}`))?.[1] ?? "";
+    const declarations = [...rule.matchAll(/(--_solo-[a-z-]+):\s*([^;]+);/g)].map(
+      ([, property, value]) => [property!, value!.replaceAll(/\s+/g, " ").replaceAll("( ", "(").trim()] as const,
+    );
+
+    return { name, declarations: new Map(declarations) };
+  });
+  const shared = [
+    "--_solo-intent-color",
+    "--_solo-intent-contrast",
+    "--_solo-intent-strong",
+    "--_solo-intent-border",
+    "--_solo-intent-fill-max",
+    "--_solo-color",
+    "--_solo-contrast",
+    "--_solo-strong",
+    "--_solo-capped",
+    "--_solo-fill",
+    "--_solo-on-fill",
+    "--_solo-fg",
+  ];
+  const [first, ...rest] = blocks;
+  const problems: string[] = [];
+
+  for (const property of shared) {
+    if (!first!.declarations.has(property)) {
+      problems.push(`${first!.name} declares no ${property}`);
+    }
+    for (const block of rest) {
+      if (block.declarations.get(property) !== first!.declarations.get(property)) {
+        problems.push(`${block.name} and ${first!.name} disagree on ${property}`);
+      }
+    }
+  }
+  for (const block of blocks) {
+    if (!block.declarations.get("--_solo-ink")?.startsWith("var(--_solo-intent-border,")) {
+      problems.push(`${block.name} does not read the element's intent ahead of its own ink`);
     }
   }
 

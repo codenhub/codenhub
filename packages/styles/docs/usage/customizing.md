@@ -36,7 +36,7 @@ A computed color therefore reaches the page as a resolved `color-mix` result rat
 
 Material tokens describe what a component is _made of_ rather than which intent it shows or how strongly. They control shape, borders, shadows, translucency, filters, and transforms.
 
-Components read each with a fallback, so leaving them unset produces the default look. Setting them on a container restyles the whole subtree. Only shadow geometry is split into colorless parts that inherit safely; color-capable inputs such as `--ui-ink` and `--ui-surface-shadow` may include their own colors.
+Components read each with a fallback, so leaving them unset produces the default look. Setting them on a container restyles the whole subtree, with one exception: `--ui-elevation` does not inherit, so it reaches only the element it is set on (see [Composing → Elevation](./composing.md#elevation)). Only shadow geometry is split into colorless parts that inherit safely; color-capable inputs such as `--ui-ink` and `--ui-surface-shadow` may include their own colors.
 
 | Token                     | Purpose                                                                                                                                              | Fallback                                  |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
@@ -46,7 +46,7 @@ Components read each with a fallback, so leaving them unset produces the default
 | `--ui-radius`             | A complete control radius, used as written: overrides the corner, the step, and the pattern.                                                         | Computed from the corner                  |
 | `--ui-radius-surface`     | A complete surface radius, used as written.                                                                                                          | Computed from the corner                  |
 | `--ui-scale`              | Overrides the size step the size and padding classes set.                                                                                            | The step                                  |
-| `--ui-corner-shape`       | What every corner draws: `round`, or `bevel` for a straight cut. Chromium only today.                                                                | `round`                                   |
+| `--ui-corner-shape`       | What every corner draws: `round`, `bevel` for a straight cut, or `squircle` for a continuous curve. Chromium only today.                             | `round`                                   |
 | `--ui-radius-pill`        | Corner for what is fully round by default: badges, switches, progress, the tooltip icon; `.btn.pill` and `.radio` read it with no fallback but full. | `--ui-radius`, `--ui-corner`, then full   |
 | `--ui-radius-tight`       | Complete radius for chips -- checkbox, `.kbd`, `.code` -- when set; otherwise a small computed default.                                              | `min(--ui-radius or --ui-corner, small)`  |
 | `--ui-line-style`         | Style of every line a component draws: `solid`, `dashed`, `dotted`, or `double` (3px wide or more).                                                  | `solid`                                   |
@@ -71,7 +71,7 @@ Components read each with a fallback, so leaving them unset produces the default
 | `--ui-halo-blur`          | Blur of a halo around the element; `--ui-halo-spread` beside it. Elevation does not scale it.                                                        | `0px`                                     |
 | `--ui-halo-ink`           | The halo's share of the intent colour, over nothing. Unset, there is no halo.                                                                        | Unset                                     |
 | `--ui-shadow-edge`        | Declared, even empty, when the shadow is the element's edge rather than its depth. Read for presence.                                                | Unset                                     |
-| `--ui-elevation`          | Unitless multiplier over shadow geometry.                                                                                                            | `1`                                       |
+| `--ui-elevation`          | Unitless multiplier over shadow geometry. Does not inherit.                                                                                          | `1`                                       |
 | `--ui-surface-shadow`     | Complete multi-layer shadow accepted by surfaces only.                                                                                               | Unset                                     |
 | `--ui-surface-ground`     | Ground a surface, or a default or `.soft` table, sits on.                                                                                            | `--color-background`                      |
 | `--ui-bg-alpha`           | Multiplier over every fill, `.solid` included. No shipped aesthetic sets it.                                                                         | `1`                                       |
@@ -111,11 +111,11 @@ Which corners take the corner is its own choice. `.cut-diagonal` keeps the top-l
 
 `--ui-label-*` treats the label of a button or a badge: weight, tracking, case, and a text shadow. Write the shadow without a colour -- `0 0 6px` -- so it takes the label's own colour and cannot lower its contrast. Your own `font-*`, `tracking-*`, and case utilities still win.
 
-Under forced colours each of these draws its plain version: a solid line, no halo, no painted layer, and no label shadow.
+Under forced colours each of these draws its plain version: a solid line, no halo, no painted layer, and no label shadow. The silhouette and the ring below go too: forced colours remove every box shadow, so `--ui-clip`, `--ui-clip-tight`, `--ui-border-max`, and `--ui-shadow-edge` are cleared and a component draws its real border at `--ui-border-width`.
 
 ### Shape and ring composition
 
-Clipping removes borders, outlines, and outer shadows. An aesthetic that uses a clip can replace the border with an inset shadow by setting `--ui-shadow-inset` and the four shadow geometry parts. Set `--ui-border-max: 0px` when that ring replaces the component border. Focusable components restore the clipped focus outline through `--ui-focus-inset`.
+Clipping removes borders, outlines, and outer shadows. An aesthetic that uses a clip can replace the border with an inset shadow by setting `--ui-shadow-inset` and the four shadow geometry parts. Set `--ui-border-max: 0px` when that ring replaces the component border. Focusable components restore the clipped focus outline through `--ui-focus-inset`: an inset layer of that width in `--focus-ring`, with a 2px line of `--color-background` inside it so focus still shows on a component filled with the ring's own colour.
 
 A clip is not the only way to cut a corner. `--ui-corner-shape: bevel` draws the corner the radius sets as a straight cut instead of an arc, and the border, outer shadow, focus outline, and backdrop all follow it -- so a bevelled element keeps its glow and its line, where a clipped one loses both. `.cyber` uses it. Engines without `corner-shape` ignore it and draw the radius round, so an aesthetic that bevels should square its radius under `@supports not (corner-shape: bevel)`. A bevel on a full radius cuts to points: a radio, a `.btn.pill`, and anything reading `--ui-radius-pill` become diamonds or pointed hexagons.
 

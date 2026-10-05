@@ -274,9 +274,20 @@
    and nothing an aesthetic layers on top. Unlayered, so it beats every layered
    declaration of these tokens -- an aesthetic's and a consumer's utility alike --
    the way the other `forced-colors` blocks do. See
-   docs/internal/model.md#material-tokens. */
+   docs/internal/model.md#material-tokens.
+
+   The border comes back and the clip goes. Forced colours remove every box
+   shadow, so an aesthetic that draws its edge as an inset ring and takes the
+   border out with `--ui-border-max` (`.pixel`) left buttons, fields, and cards
+   with no boundary at all. With the ceiling lifted the border is drawn at the
+   aesthetic's own width and the system colours it; with no clip the corners
+   it would cut are whole and the focus outline shows. */
 @media (forced-colors: active) {
   * {
+    --ui-border-max: initial;
+    --ui-clip: none;
+    --ui-clip-tight: none;
+    --ui-shadow-edge: initial;
     --ui-line-style: solid;
     --ui-rule-style: solid;
     --ui-halo-ink: initial;
