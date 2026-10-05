@@ -14,6 +14,7 @@ import { unique } from "../checks/unique";
 import { uppercase } from "../checks/uppercase";
 import { array } from "../composition/array";
 import { json } from "../composition/json";
+import { lazy } from "../composition/lazy";
 import { map } from "../composition/map";
 import { object } from "../composition/object";
 import { objectLike } from "../composition/object-like";
@@ -22,7 +23,7 @@ import { set } from "../composition/set";
 import { tuple } from "../composition/tuple";
 import { union } from "../composition/union";
 import { fail } from "../core/result";
-import type { ValidationIssue, ValidationResult } from "../core/types";
+import type { ValidationIssue, ValidationResult, Validator } from "../core/types";
 import { base64 } from "../formats/base64";
 import { cidr } from "../formats/cidr";
 import { creditCard } from "../formats/credit-card";
@@ -593,6 +594,15 @@ describe("englishMessages, for issues no other test words", () => {
 });
 
 describe("English wording of nested and unusual issues", () => {
+  it("should word a union a limit of lazy stopped with the limit, whatever its other options found", () => {
+    const tree: Validator<unknown> = union([
+      object({ kids: array(lazy(() => tree, { maxCalls: 3 })) }),
+      object({ leaf: string() }),
+    ]);
+    const [found] = issuesOf(tree({ kids: [{ leaf: "a" }, { leaf: "b" }, { leaf: "c" }, { leaf: "d" }] }));
+    expect(formatIssue(found as ValidationIssue)).toBe("kids[3]: Too complex to check within 3 recursive steps");
+  });
+
   it("should name where a quoted issue sits inside the value it is shown at", () => {
     const box = object({ box: union([literal("auto"), object({ width: number({ min: 1 }), height: number() })]) });
     const [found] = issuesOf(box({ box: { width: 0, height: 1 } }));

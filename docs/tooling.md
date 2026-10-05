@@ -238,6 +238,8 @@ The hooks live in `.githooks/` and are wired by `core.hooksPath`, which the root
 
 A `pre-push` hook refuses a push whose destination is `refs/heads/main`. What it reads is the destination ref rather than the branch you are standing on, so it holds for a push from `main`, for an explicit refspec that targets it from somewhere else, and for a `--delete`. `CONTRIBUTING.md` states the rule and why `main` is the branch that gets one; this is what makes it more than advice.
 
+The same hook refuses a push to a branch whose name is not `<type>/<slug>`, with the type list `commit-msg` uses. The check sits in a hook rather than in wording alone because the name is often not a choice anyone made: an agent harness creates `claude/...` or `codex/...` before the agent has read a file, and a rule about naming a branch does not read as applying to a branch that already has a name. Deleting a remote branch passes whatever it is called, since removing a misnamed branch is the cleanup, and tags are not checked.
+
 `--no-verify` bypasses these: on `git commit` for the first two, on `git push` for the last. It is for the change that genuinely has to land unfixed, and it is worth saying out loud when it is used, since the whole point of a hook is that skipping one is visible.
 
 ## Hosted previews

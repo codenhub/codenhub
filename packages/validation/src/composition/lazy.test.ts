@@ -14,6 +14,7 @@ import { isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { array } from "./array";
 import { fallback } from "./fallback";
 import { intersection } from "./intersection";
+import { json } from "./json";
 import { lazy } from "./lazy";
 import { object } from "./object";
 import { optional } from "./optional";
@@ -116,6 +117,22 @@ describe("lazy", () => {
       expect(issuesOf(heavy(input)).map((issue) => issue.code)).toEqual(["invalid_union"]);
     });
 
+    it("should stay under the stack with the default limit however many options a union tries first", () => {
+      // Each option that failed once stayed on the stack while the next ran, so twenty before the recursive
+      // one overflowed it inside the default limit, on 3 kB of valid input.
+      const others = Array.from({ length: 200 }, (_, index) => object({ type: literal(`t${index}`) }));
+      const block: Validator<unknown> = union([
+        object({ type: literal("none") }),
+        ...others,
+        object({ type: literal("list"), items: array(lazy(() => block)) }),
+      ]);
+      let input: unknown = { type: "list", items: [] };
+      for (let level = 0; level < 126; level += 1) {
+        input = { type: "list", items: [input] };
+      }
+      expect(block(input).ok).toBe(true);
+    });
+
     it("should count every lazy validator, so two that call each other share one limit", () => {
       const ping: Validator<unknown> = optional(object({ next: lazy(() => pong, { maxDepth: 4 }) }));
       const pong: Validator<unknown> = optional(object({ next: lazy(() => ping, { maxDepth: 4 }) }));
@@ -159,6 +176,54 @@ describe("lazy", () => {
   });
 
   describe("calls", () => {
+    it("should not count a primitive that ends the recursion, so a long flat list passes", () => {
+      const value: Validator<unknown> = union([number(), string(), array(lazy(() => value))]);
+      expect(value(Array.from({ length: 10_001 }, () => 1)).ok).toBe(true);
+    });
+
+    it("should not count a primitive that ends the recursion once the limit is reached either", () => {
+      const value: Validator<unknown> = union([number(), array(lazy(() => value, { maxCalls: 1 }))]);
+      expect(value([[1, 2, 3]]).ok).toBe(true);
+      expect(JSON.stringify(issuesOf(value([[[1]]])))).toContain('"type":"calls"');
+    });
+
+    it("should count a primitive the recursion goes on through, as text that holds the next level", () => {
+      const text: Validator<unknown> = union([literal("end"), json(lazy(() => text, { maxCalls: 3 }))]);
+      let input = "end";
+      for (let level = 0; level < 6; level += 1) {
+        input = JSON.stringify(input);
+      }
+      const [issue] = issuesOf(json(text)(input));
+      expect(JSON.stringify(issue)).toContain('"type":"calls"');
+    });
+
+    it("should stop text that holds the next level at the limit when each level waits", async () => {
+      const text: AsyncValidator<unknown> = union([
+        literal("end"),
+        json(
+          lazy(
+            () => text,
+            { maxCalls: 3 },
+            check(async () => true),
+          ),
+        ),
+      ]);
+      let input = "end";
+      for (let level = 0; level < 8; level += 1) {
+        input = JSON.stringify(input);
+      }
+      const [issue] = issuesOf(await json(text)(input));
+      expect(JSON.stringify(issue)).toContain('"type":"calls"');
+    });
+
+    it("should count a primitive whose result is pending", async () => {
+      const slow = string(check(async () => true));
+      const list = array(lazy(() => slow, { maxCalls: 2 }));
+      expect(issuesOf(await list(["a", "b", "c"]))).toEqual([
+        { code: "too_big", path: [2], params: { maximum: 2, type: "calls" } },
+      ]);
+    });
+
     interface Link {
       next?: Link;
     }
