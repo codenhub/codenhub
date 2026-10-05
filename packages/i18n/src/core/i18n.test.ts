@@ -221,6 +221,6 @@ describe("createI18n", () => {
   });
 
   it("exports the operational error mapping from the core entrypoint", () => {
-    expect(i18nErrors.locale_load_failed.source).toBe("i18n.loader");
+    expect(i18nErrors["i18n.locale_load_failed"].source).toBe("i18n.loader");
   });
 });

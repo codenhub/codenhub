@@ -60,7 +60,7 @@ describe("createLocaleLoader", () => {
 
     await expect(firstLoad).rejects.toMatchObject({
       name: "I18nError",
-      code: "locale_load_failed",
+      code: "i18n.locale_load_failed",
       locale: "pt-BR",
       cause,
     });

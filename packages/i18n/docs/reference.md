@@ -151,7 +151,7 @@ Native errors identify programmer or payload failures:
 A rejected injected loader is wrapped:
 
 ```ts
-type I18nErrorCode = "locale_load_failed";
+type I18nErrorCode = "i18n.locale_load_failed";
 
 interface I18nErrorOptions {
   readonly locale?: string;
@@ -173,7 +173,7 @@ Its name is `"I18nError"`, message is `Failed to load translations for locale "<
 
 ```ts
 {
-  locale_load_failed: {
+  "i18n.locale_load_failed": {
     message: "Translations could not be loaded.",
     messageKey: "error.i18n.loader.localeLoadFailed",
     source: "i18n.loader",
