@@ -75,10 +75,10 @@ The reset's rule is `!important` inside the `base` layer, and a layered `!import
 
 ### Forced colors and direction
 
-| Feature        | Behavior                                                                                                                                                |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Forced colors  | `forced-colors: active` preserves visible borders and checked states using system colors.                                                               |
-| Text direction | Quote bar, alert icon, progress fill, vertical divider, switch knob, table alignment, and a select's chevron mirror under `dir="rtl"`. No class needed. |
+| Feature        | Behavior                                                                                                                                                                                                                |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Forced colors  | `forced-colors: active` preserves visible borders and checked states using system colors, under every aesthetic: one that draws its edge as an inset shadow (`.pixel`) draws a real border instead, and drops its clip. |
+| Text direction | Quote bar, alert icon, progress fill, vertical divider, switch knob, table alignment, and a select's chevron mirror under `dir="rtl"`. No class needed.                                                                 |
 
 In forced colors, class-based form controls including `.text-control` receive a 2px `Highlight` system-color focus outline. The native entrypoint provides the same visible system outline for unclassed text inputs, selects, textareas, checkboxes, and radios.
 

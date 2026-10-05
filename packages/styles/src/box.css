@@ -184,7 +184,15 @@
      on anything that set one. `--ui-surface-shadow` is that escape hatch narrowed
      to the single case that needs it. */
   --_shadow: var(--_shadow-parts) var(--_halo-layer,);
-  --_focus-stack: var(--_shadow), inset 0 0 0 var(--ui-focus-inset) var(--focus-ring);
+  /* The inset focus layer an aesthetic that clips asks for, in two tones. The
+     ring is the primary colour, so on a `.solid.primary` box it was painted
+     over its own colour and a focused button was pixel for pixel a resting
+     one. A line of the page colour sits inside it: one of the two always
+     differs from the fill, whatever the fill is. Shadows paint first-on-top,
+     so the line is listed last and is the two pixels the ring leaves showing. */
+  --_focus-stack:
+    var(--_shadow), inset 0 0 0 var(--ui-focus-inset) var(--focus-ring),
+    inset 0 0 0 calc(var(--ui-focus-inset) + 2px) var(--color-background);
 
   /* Every box sizes itself as `min-height`/`min-width: var(--control-height)`
      plus its own padding and the border shorthand above, so its geometry is

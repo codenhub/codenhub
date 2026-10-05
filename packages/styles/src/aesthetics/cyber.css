@@ -150,16 +150,37 @@
 
 /* Solo: the same look painted onto the one element carrying the class, for an
    element the package does not style. See docs/internal/model.md#solo-classes and
-   the note on `.glass-solo`: own knobs and foundation tokens with literal
-   fallbacks, never a shared `--ui-*`, `--intent-*`, or `--elevation-color`
-   token, unlayered, and not for this package's own components. */
+   the note on `.glass-solo`: it composes with the element's presentation,
+   intent, and elevation, and reads its material from its own knobs and
+   foundation tokens with literal fallbacks, never a shared material `--ui-*`
+   or `--elevation-color` token. Unlayered, and not for this package's own
+   components. */
 .cyber-solo {
-  --_cyber-ink: var(
-    --cyber-ink,
-    light-dark(var(--color-neutral-950, oklch(14.5% 0 0)), var(--color-neutral-50, oklch(98.5% 0 0)))
+  /* The composition, the same in every solo class; `registry.test.ts` holds
+     the copies together. See the note on `.glass-solo`. */
+  --_solo-intent-color: initial;
+  --_solo-intent-contrast: initial;
+  --_solo-intent-strong: initial;
+  --_solo-intent-border: initial;
+  --_solo-intent-fill-max: initial;
+  --_solo-color: var(--_solo-intent-color, var(--color-text, light-dark(oklch(14.5% 0 0), oklch(98.5% 0 0))));
+  --_solo-contrast: var(
+    --_solo-intent-contrast,
+    var(--color-text-contrast, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)))
   );
+  --_solo-strong: var(--_solo-intent-strong, var(--color-text-strong, light-dark(oklch(20.5% 0 0), oklch(97% 0 0))));
+  --_solo-capped: min(var(--ui-fill, 0%), var(--_solo-intent-fill-max, 20%));
+  --_solo-fill: color-mix(in oklab, var(--_solo-color) var(--_solo-capped), transparent);
+  --_solo-on-fill: min(var(--ui-fg-on-fill, 0%), max(0%, calc(var(--_solo-capped) * 2 - 100%)));
+  --_solo-fg: color-mix(in oklab, var(--_solo-contrast) var(--_solo-on-fill), var(--_solo-strong));
+  /* The line with no intent on the element: this aesthetic's own ink. */
+  --_solo-ink: var(
+    --_solo-intent-border,
+    var(--cyber-ink, light-dark(var(--color-neutral-950, oklch(14.5% 0 0)), var(--color-neutral-50, oklch(98.5% 0 0))))
+  );
+  --_solo-edge: color-mix(in oklab, var(--_solo-ink) var(--ui-border, 100%), var(--_solo-fill));
 
-  border: 1px solid var(--_cyber-ink);
+  border: 1px solid var(--_solo-edge);
   /* The surface shape: the element this exists for is usually a pane. An action
      takes the control shape below. */
   border-radius: var(
@@ -167,11 +188,42 @@
     0 min(var(--cyber-cut, 0.625rem), 25%) / 0 min(var(--cyber-cut, 0.625rem), 25%)
   );
   corner-shape: bevel;
-  /* Always lit: the elevation gate the aesthetic class answers to is `box`'s,
-     and a solo element is one the consumer chose to light up. */
-  box-shadow: 0 0 var(--cyber-glow, 8px) 0 color-mix(in oklab, var(--_cyber-ink) 40%, transparent);
+  /* Always lit, in the element's own colour: the glow is a halo and not depth,
+     so `.flat` leaves it on, as under the aesthetic class. */
+  box-shadow:
+    0 0 var(--cyber-glow, 8px) 0 color-mix(in oklab, var(--_solo-ink) 40%, transparent),
+    inset 0 0 0 100vmax var(--_solo-fill);
   font-family: var(--font-cyber, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
   transition: transform var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));
+}
+
+/* An intent class on the element colours it, as on a component. Named rather
+   than read from `--intent-*` alone: those slots inherit, so a `.success`
+   container would colour a solo element where it leaves a component neutral. */
+.cyber-solo:is(.primary, .secondary, .success, .warning, .destructive, .info) {
+  --_solo-intent-color: var(--intent-color);
+  --_solo-intent-contrast: var(--intent-contrast);
+  --_solo-intent-strong: var(--intent-strong);
+  --_solo-intent-border: var(--intent-border);
+  --_solo-intent-fill-max: var(--intent-fill-max);
+}
+
+/* The text colour is written only where a fill or an intent is asked for, on
+   the element or by a container's fill class. Anywhere else the element keeps
+   its own: a dark toast keeps its light text. */
+.cyber-solo:is(
+  .solid,
+  .soft,
+  .ghost,
+  .primary,
+  .secondary,
+  .success,
+  .warning,
+  .destructive,
+  .info,
+  :is(.solid, .soft, .ghost) *
+) {
+  color: var(--_solo-fg);
 }
 
 /* An action takes the control shape, on the opposite diagonal to a pane's. */

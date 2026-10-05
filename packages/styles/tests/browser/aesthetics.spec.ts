@@ -881,6 +881,93 @@ test.describe("aesthetics", () => {
         expect(solidTable.before, "a solid table takes no layer").toBe("none");
       });
 
+      /* A button is a pane only when it says so itself: the modifier on the
+         region leaves controls solid, and the modifier on the button asks for
+         the layers. Its fill stays presentation's, over liquid's ground. */
+      test("layers a button that carries the modifier, and no other", async ({ page, browserName }) => {
+        await allowTransparency(page, browserName);
+        await page.goto(withAesthetic(SURFACES_URL, LIQUID));
+
+        const read = await page.getByTestId("preview-root").evaluate((root) => {
+          const region = document.createElement("div");
+
+          region.innerHTML =
+            '<button class="btn primary" data-probe="region">Region</button>' +
+            '<button class="btn primary glass-liquid" data-probe="solid">Solid</button>' +
+            '<button class="btn ghost glass-liquid" data-probe="ghost">Ghost</button>' +
+            '<div class="card"><button class="btn ghost glass-liquid" data-probe="nested">Nested</button></div>';
+          root.append(region);
+
+          const paint = (probe: string) => {
+            const button = region.querySelector(`[data-probe="${probe}"]`)!;
+            const after = getComputedStyle(button, "::after");
+
+            return {
+              before: getComputedStyle(button, "::before").content,
+              blur: getComputedStyle(button, "::before").backdropFilter,
+              lens: after.backdropFilter,
+              rim: after.boxShadow,
+              isolation: getComputedStyle(button).isolation,
+              ground: getComputedStyle(button).backgroundColor,
+            };
+          };
+          const card = getComputedStyle(region.querySelector(".card")!, "::after").backdropFilter;
+          const result = {
+            region: paint("region"),
+            solid: paint("solid"),
+            ghost: paint("ghost"),
+            nested: paint("nested"),
+            card,
+          };
+
+          region.remove();
+
+          return result;
+        });
+
+        expect(read.region.before, "a button in a liquid region takes no layer").toBe("none");
+        for (const probe of ["solid", "ghost", "nested"] as const) {
+          expect(read[probe].before, `${probe} blur layer`).toBe('""');
+          expect(read[probe].blur, `${probe} blur layer`).toContain("blur(2px)");
+          expect(read[probe].lens, `${probe} lens layer`).toContain("#lens");
+          expect(read[probe].rim, `${probe} rim`).toContain("inset");
+          expect(read[probe].isolation, probe).toBe("isolate");
+        }
+        expect(read.ghost.lens, "a control's lens is not a pane's").not.toBe(read.card);
+        expect(readSrgb(read.solid.ground).alpha, "a solid button stays opaque").toBe(1);
+        expect(readSrgb(read.ghost.ground).alpha, "a ghost button rests on liquid's ground").toBeCloseTo(0.3, 2);
+      });
+
+      /* The layers' list names components, so anything else that frosts under
+         glass -- a bare `<table>` under `/native`, a consumer's own `@apply
+         surface` -- takes none. It keeps a blur of its own instead: with the
+         backdrop cleared on the region it had the clearer ground and nothing
+         blurred behind it. */
+      test("leaves a blur for what frosts and takes no layers", async ({ page, browserName }) => {
+        await allowTransparency(page, browserName);
+        await page.goto(withAesthetic(SURFACES_URL, LIQUID));
+
+        const read = await page.getByTestId("preview-root").evaluate((root) => {
+          const region = document.createElement("div");
+
+          region.innerHTML = '<div data-probe="unlisted">Unlisted</div><div class="card" data-probe="host">Host</div>';
+          root.append(region);
+
+          const token = (probe: string) =>
+            getComputedStyle(region.querySelector(`[data-probe="${probe}"]`)!)
+              .getPropertyValue("--ui-backdrop")
+              .trim();
+          const result = { unlisted: token("unlisted"), host: token("host") };
+
+          region.remove();
+
+          return result;
+        });
+
+        expect(read.unlisted, "the region's backdrop is liquid's blur").toContain("blur(2px)");
+        expect(read.host, "a host clears it for its layers").toBe("none");
+      });
+
       test("reaches one surface inside a glass region, and skips a plain glass region nested inside", async ({
         page,
         browserName,
@@ -1312,7 +1399,8 @@ test.describe("aesthetics", () => {
         return { boxShadow: computed.boxShadow, outlineStyle: computed.outlineStyle };
       });
 
-      expect(styles.boxShadow.match(/inset/g)?.length, styles.boxShadow).toBe(2);
+      /* A third layer, the line of the page colour inside the ring. */
+      expect(styles.boxShadow.match(/inset/g)?.length, styles.boxShadow).toBe(3);
       /* The outline from `reset.css` is declared and drawn, and `clip-path`
          clips an element's whole rendering including its outline -- which is the
          reason the inset layer exists. This used to read `none`, because

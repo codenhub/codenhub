@@ -147,18 +147,46 @@
 
 /* Solo: the same look painted onto the one element carrying the class, for an
    element the package does not style. See docs/internal/model.md#solo-classes and
-   the note on `.glass-solo`: own knobs and foundation tokens with literal
-   fallbacks, never a shared `--ui-*`, `--intent-*`, or `--elevation-color`
-   token, unlayered, and not for this package's own components. */
+   the note on `.glass-solo`: it composes with the element's presentation,
+   intent, and elevation, and reads its material from its own knobs and
+   foundation tokens with literal fallbacks, never a shared material `--ui-*`
+   or `--elevation-color` token. Unlayered, and not for this package's own
+   components. */
 .pixel-solo {
   --_pixel-unit: var(--pixel-unit, 4px);
-  --_pixel-ink: light-dark(var(--color-neutral-950, oklch(14.5% 0 0)), var(--color-neutral-50, oklch(98.5% 0 0)));
+  /* The composition, the same in every solo class; `registry.test.ts` holds
+     the copies together. See the note on `.glass-solo`. */
+  --_solo-intent-color: initial;
+  --_solo-intent-contrast: initial;
+  --_solo-intent-strong: initial;
+  --_solo-intent-border: initial;
+  --_solo-intent-fill-max: initial;
+  --_solo-color: var(--_solo-intent-color, var(--color-text, light-dark(oklch(14.5% 0 0), oklch(98.5% 0 0))));
+  --_solo-contrast: var(
+    --_solo-intent-contrast,
+    var(--color-text-contrast, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)))
+  );
+  --_solo-strong: var(--_solo-intent-strong, var(--color-text-strong, light-dark(oklch(20.5% 0 0), oklch(97% 0 0))));
+  --_solo-capped: min(var(--ui-fill, 0%), var(--_solo-intent-fill-max, 20%));
+  --_solo-fill: color-mix(in oklab, var(--_solo-color) var(--_solo-capped), transparent);
+  --_solo-on-fill: min(var(--ui-fg-on-fill, 0%), max(0%, calc(var(--_solo-capped) * 2 - 100%)));
+  --_solo-fg: color-mix(in oklab, var(--_solo-contrast) var(--_solo-on-fill), var(--_solo-strong));
+  /* The line with no intent on the element: this aesthetic's own ink. */
+  --_solo-ink: var(
+    --_solo-intent-border,
+    light-dark(var(--color-neutral-950, oklch(14.5% 0 0)), var(--color-neutral-50, oklch(98.5% 0 0)))
+  );
+  /* The ring is the edge, and the fill is a layer under it rather than a plate
+     beneath a border, so the line fades to nothing instead of to the fill. */
+  --_solo-edge: color-mix(in oklab, var(--_solo-ink) var(--ui-border, 100%), transparent);
 
   /* The clip removes a border at the straight sides, so the ring draws the
      edge and the element's own border goes. */
   border: 0;
   border-radius: 0;
-  box-shadow: inset 0 0 0 var(--_pixel-unit) var(--_pixel-ink);
+  box-shadow:
+    inset 0 0 0 var(--_pixel-unit) var(--_solo-edge),
+    inset 0 0 0 100vmax var(--_solo-fill);
   clip-path: polygon(
     0 var(--_pixel-unit),
     var(--_pixel-unit) var(--_pixel-unit),
@@ -176,11 +204,68 @@
   font-family: var(--font-pixel, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
 }
 
+/* An intent class on the element colours it, as on a component. Named rather
+   than read from `--intent-*` alone: those slots inherit, so a `.success`
+   container would colour a solo element where it leaves a component neutral. */
+.pixel-solo:is(.primary, .secondary, .success, .warning, .destructive, .info) {
+  --_solo-intent-color: var(--intent-color);
+  --_solo-intent-contrast: var(--intent-contrast);
+  --_solo-intent-strong: var(--intent-strong);
+  --_solo-intent-border: var(--intent-border);
+  --_solo-intent-fill-max: var(--intent-fill-max);
+}
+
+/* The text colour is written only where a fill or an intent is asked for, on
+   the element or by a container's fill class. Anywhere else the element keeps
+   its own: a dark toast keeps its light text. */
+.pixel-solo:is(
+  .solid,
+  .soft,
+  .ghost,
+  .primary,
+  .secondary,
+  .success,
+  .warning,
+  .destructive,
+  .info,
+  :is(.solid, .soft, .ghost) *
+) {
+  color: var(--_solo-fg);
+}
+
 /* The clip takes the focus outline too, so focus is a second inset layer under
-   the ring, wider than it so it shows -- shadows paint first-on-top. */
+   the ring, wider than it so it shows -- shadows paint first-on-top. A line of
+   the page colour sits inside that one, as in `box`: the ring is the ink, and
+   on an element filled with the ink it would not show. */
 .pixel-solo:focus-visible {
   box-shadow:
-    inset 0 0 0 var(--_pixel-unit) var(--_pixel-ink),
+    inset 0 0 0 var(--_pixel-unit) var(--_solo-edge),
     inset 0 0 0 calc(var(--_pixel-unit) + var(--focus-ring-width, 3px))
-      var(--focus-ring, color-mix(in srgb, var(--_pixel-ink) 64%, transparent));
+      var(
+        --focus-ring,
+        color-mix(
+          in srgb,
+          light-dark(var(--color-neutral-950, oklch(14.5% 0 0)), var(--color-neutral-50, oklch(98.5% 0 0))) 64%,
+          transparent
+        )
+      ),
+    inset 0 0 0 calc(var(--_pixel-unit) + var(--focus-ring-width, 3px) + 2px)
+      var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0))),
+    inset 0 0 0 100vmax var(--_solo-fill);
+}
+
+/* Forced colours remove every box shadow, and the ring is one: the element
+   would have no edge at all. An outline stands in for it, drawn inward so
+   nothing moves, and the clip goes so the focus outline can show. This
+   entrypoint may be the only package stylesheet loaded, so it says so itself. */
+@media (forced-colors: active) {
+  .pixel-solo {
+    outline: var(--_pixel-unit) solid CanvasText;
+    outline-offset: calc(-1 * var(--_pixel-unit));
+    clip-path: none;
+  }
+
+  .pixel-solo:focus-visible {
+    outline-color: Highlight;
+  }
 }
