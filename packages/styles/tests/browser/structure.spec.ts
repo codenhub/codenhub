@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { expect, test, type Page } from "./fixtures";
+import { expectSameColor, getColorDistance } from "./test-utils";
 
 /* The promises docs/internal/model.md#material-tokens makes, one test each, on a blank page
    built from the files a consumer links -- the way the layer suite reads them,
@@ -298,7 +299,9 @@ test.describe("inset focus", () => {
       const styles = getComputedStyle(element);
       const probe = document.createElement("span");
 
-      document.body.append(probe);
+      /* Inside the button, so the page colour resolves in the button's own
+         theme scope rather than the document's. */
+      element.append(probe);
 
       /* Each colour resolved by the engine, so a ring and a plate are compared
          as colours rather than as two spellings of one. */
@@ -322,6 +325,10 @@ test.describe("inset focus", () => {
     expect(layers.focusVisible).toBe(true);
     expect(layers.shadow.match(/inset/g), layers.shadow).toHaveLength(3);
     expect(layers.shadow, "the line sits two pixels inside the ring").toMatch(/\b0px 0px 0px 9px\b/);
-    expect(layers.page, "and is not the plate's colour").not.toBe(layers.plate);
+
+    const line = layers.shadow.match(/[a-z]+\([^)]*\)/g)!.at(-1)!;
+
+    expectSameColor(line, layers.page, "the innermost layer is the page colour");
+    expect(getColorDistance(line, layers.plate), "which is not the plate's").toBeGreaterThan(20);
   });
 });
