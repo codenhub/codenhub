@@ -69,6 +69,22 @@ describe("ready registries", () => {
     }
   });
 
+  it.each(["Failed to fetch", "Load failed", "NetworkError when attempting to fetch resource."])(
+    "should classify the failed-fetch message %j",
+    (message) => {
+      expect(createAppError(new TypeError(message), { registry: browserErrorRegistry })).toMatchObject({
+        type: "unexpected",
+        messageKey: "error.browser.requestFailed",
+      });
+    },
+  );
+
+  it("should not classify unrelated text that mentions a failed load", () => {
+    expect(createAppError(new Error("Config load failed: invalid JSON"), { registry: browserErrorRegistry }).type).toBe(
+      "unknown",
+    );
+  });
+
   it("should preserve string-keyed access to raw mappings", () => {
     const browserName: string = "AbortError";
     const supabaseCode: string = "invalid_credentials";
