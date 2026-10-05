@@ -43,7 +43,6 @@ export const browserErrorNames = freezeFeedbackMap({
     message: "The operation timed out.",
     messageKey: "error.browser.timeout",
     source: "browser",
-    isRetryable: true,
   },
   NotSupportedError: {
     message: "The operation is not supported.",
