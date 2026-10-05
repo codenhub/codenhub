@@ -23,19 +23,23 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./registries": {
       "types": "./dist/registries/index.d.ts",
-      "import": "./dist/registries/index.js"
+      "import": "./dist/registries/index.js",
+      "default": "./dist/registries/index.js"
     },
     "./registries/browser": {
       "types": "./dist/registries/browser.d.ts",
-      "import": "./dist/registries/browser.js"
+      "import": "./dist/registries/browser.js",
+      "default": "./dist/registries/browser.js"
     },
     "./registries/supabase": {
       "types": "./dist/registries/supabase.d.ts",
-      "import": "./dist/registries/supabase.js"
+      "import": "./dist/registries/supabase.js",
+      "default": "./dist/registries/supabase.js"
     }
   },
   "publishConfig": {
