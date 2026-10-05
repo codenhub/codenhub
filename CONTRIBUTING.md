@@ -87,7 +87,7 @@ Work happens on a branch. Do not commit to `main`.
 
 The exception is real but narrow: it takes an explicit request from a maintainer, in the moment, for that specific commit. An agent must ask and be told yes. Neither a general instruction to "just fix it" nor a previous approval carries over to the next commit.
 
-Name the branch `<type>/<slug>`, where `<type>` is the commit type of the work and `<slug>` is kebab-case:
+Name the branch `<type>/<slug>`, where `<type>` is the [commit type](#type) of the work and `<slug>` is kebab-case. A version in the slug keeps its dots, as in `fix/validation-0.2-audit`.
 
 ```
 feat/docs-manual-previews
@@ -95,6 +95,8 @@ docs/ci-deployment-watch-paths
 fix/build-dependency-order
 chore/docs-wrangler-config
 ```
+
+Every pushed branch follows the pattern, whoever or whatever created it. A tool that names its own branches, such as `claude/agent-branch-naming-03bee5` or `codex/fix-build-order`, does not make an exception: rename the branch with `git branch -m <type>/<slug>` before its first push. The `pre-push` hook refuses any other name.
 
 ## Commits
 
@@ -214,6 +216,6 @@ Three hooks run locally, all from `.githooks/`:
 | ------------ | ------------------------------------------------------------ |
 | `pre-commit` | Formats and lints the staged files, re-staging what it fixed |
 | `commit-msg` | The subject line shape described above                       |
-| `pre-push`   | Refuses a direct push to `main`                              |
+| `pre-push`   | Refuses a direct push to `main`, and a misnamed branch       |
 
 `--no-verify` bypasses them. It is for the commit that genuinely has to land unfixed, and an agent that reaches for it MUST say so in the same breath rather than quietly routing around a failing check. `docs/tooling.md` describes what each hook does and why it does no more than that.
