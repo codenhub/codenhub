@@ -42,6 +42,38 @@ Includes name mappings for DOMException types (e.g., `AbortError`, `TimeoutError
 
 Importing this registry preset does not access or require browser/DOM globals.
 
+### nodeErrorCodes
+
+```ts
+export declare const nodeErrorCodes: Readonly<Record<string, Readonly<ErrorFeedback>>>;
+```
+
+Raw code mapping definitions for Node.js network failures.
+
+Covers the system codes raised by sockets and DNS lookups and the `UND_ERR_*` codes raised by the built-in `fetch`, which carries them on the `cause` of its `TypeError`. Only failures that happen before the request reaches the server are marked retryable. Filesystem codes are left out: what `ENOENT` should tell a user depends on what the application was doing.
+
+### nodeErrorPatterns
+
+```ts
+export declare const nodeErrorPatterns: readonly (readonly [RegExp, Readonly<ErrorFeedback>])[];
+```
+
+Read-only heuristic pattern mappings for Node.js network failures.
+
+Identifies a failed built-in `fetch` whose cause carries no registered code.
+
+### nodeErrorRegistry
+
+```ts
+export declare const nodeErrorRegistry: ReadonlyErrorRegistry;
+```
+
+An opt-in, read-only error registry pre-populated with mappings for Node.js network failures.
+
+Includes code mappings for socket, DNS, and built-in `fetch` failures (e.g., `ECONNREFUSED`, `ENOTFOUND`, `UND_ERR_CONNECT_TIMEOUT`) and a pattern mapping for a failed `fetch` with no recognized cause.
+
+Importing this preset does not access Node.js globals or built-in modules.
+
 ### supabaseErrorCodes
 
 ```ts

@@ -55,16 +55,18 @@ Maps the success value of a Result asynchronously using the provided mapper func
 ### attempt
 
 ```ts
-export declare const attempt: <T>(operation: () => T, options?: AppErrorOptions) => Result<T>;
+export declare const attempt: <T>(operation: () => T extends PromiseLike<unknown> ? never : T, options?: AppErrorOptions) => Result<T>;
 ```
 
 Runs a callback and captures a thrown value as a normalized `Err` instead of propagating it.
 
 This is the boundary helper for wrapping code that throws: the callback result becomes `Ok`, and anything thrown is normalized through the same pipeline as `createAppError`.
 
+The callback must be synchronous: one that returns a promise is rejected by the type checker, because its rejection would escape inside an `Ok` holding the promise. Use `attemptAsync` there.
+
 **Parameters**
 
-- `operation` — The callback to run.
+- `operation` — The synchronous callback to run.
 - `options` — Configuration options for AppError normalization.
 
 **Type parameters**
@@ -92,9 +94,7 @@ Runs an async callback and captures a thrown or rejected value as a normalized `
 
 - `T` — The type the callback resolves to on success.
 
-**Returns** — A Promise resolving to an Ok result holding the awaited value, or an Err holding the normalized failure. The promise does not reject for failures raised by `operation`.
-
-**Throws** — TypeError - If `options` or any supplied option value is invalid.
+**Returns** — A Promise resolving to an Ok result holding the awaited value, or an Err holding the normalized failure. The promise does not reject for failures raised by `operation`; it rejects with `TypeError`, before running `operation`, if `options` or any supplied option value is invalid.
 
 ### createAppError
 
@@ -118,7 +118,7 @@ A deep known match outranks a shallow unexpected match. Ordinary unknown input n
 - `error` — The raw error value to normalize, such as an `Error`, plain object, or string.
 - `options` — Configuration controlling fallback message, registry source, and wrapper depth.
 
-**Returns** — A frozen AppError. An existing AppError is returned as-is only when no options are supplied.
+**Returns** — A frozen AppError. An existing AppError is returned as-is when no options are supplied, or when the supplied options find no match that outranks the classification it already has.
 
 **Throws** — TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string, `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer from 0 through 3.
 
@@ -361,6 +361,14 @@ A predictable, frozen error shape representing a normalized application error.
 
 Implements the standard JavaScript `Error` interface and adds classification, localization support, and original error wrapping. An explicit `toJSON` keeps JSON serialization limited to the normalized fields, excluding diagnostic `cause` and `originalError` values on every engine.
 
+#### code
+
+```ts
+readonly code: string | null;
+```
+
+The registry identifier that classified this error: the matched code, or the matched error name when no code matched. `null` for message, prefix, and pattern matches and for unknown errors. Use it to branch on a specific failure.
+
 #### isRetryable
 
 ```ts
@@ -404,7 +412,7 @@ The classification of this error, denoting whether it was explicitly mapped as a
 #### toJSON
 
 ```ts
-toJSON(): { name: string; message: string; type: AppErrorType; messageKey: string | null; source: AppErrorSource; isRetryable: boolean; };
+toJSON(): { name: string; message: string; type: AppErrorType; code: string | null; messageKey: string | null; source: AppErrorSource; isRetryable: boolean; };
 ```
 
 Produces the normalized fields used by `JSON.stringify`, excluding the diagnostic `cause` and `originalError` values.
@@ -491,7 +499,7 @@ A safe, user-facing error message description.
 messageKey?: string;
 ```
 
-An optional dot-separated localization key under the `error` namespace. Each segment after `error` uses lower camel case.
+An optional localization key; any non-empty string. Built-in presets use dot-separated lower-camel-case keys under the `error` namespace.
 
 #### source
 
@@ -499,7 +507,7 @@ An optional dot-separated localization key under the `error` namespace. Each seg
 source?: string;
 ```
 
-An optional dot-separated source namespace using lowercase kebab-case segments (e.g. `supabase.auth`).
+An optional source label; any non-empty string. Built-in presets use dot-separated lowercase kebab-case segments (e.g. `supabase.auth`).
 
 ### ErrorPatternDefinition
 

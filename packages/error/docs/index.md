@@ -4,7 +4,7 @@ title: Overview
 
 # Normalize application errors
 
-The `@codenhub/error` package normalizes unknown failures into a typed `AppError`, provides result-style control flow, and supplies opt-in browser and Supabase mappings. It is useful at application boundaries where thrown or rejected values need a consistent shape before they reach logging, UI, or recovery logic.
+The `@codenhub/error` package normalizes unknown failures into a typed `AppError`, provides result-style control flow, and supplies opt-in browser, Node.js, and Supabase mappings. It is useful at application boundaries where thrown or rejected values need a consistent shape before they reach logging, UI, or recovery logic.
 
 ## Setup
 
@@ -29,7 +29,7 @@ getErrorRegistry().codes.add("invalid_credentials", {
 const error = createAppError({ code: "invalid_credentials" });
 ```
 
-Applications decide which errors are known by registering mappings or merging presets. Browser and Supabase presets are opt-in, and importing one does not mutate the global registry.
+Applications decide which errors are known by registering mappings or merging presets. Browser, Node.js, and Supabase presets are opt-in, and importing one does not mutate the global registry.
 
 ### Configuration
 
@@ -39,10 +39,10 @@ Configure the mutable global registry during application initialization, or crea
 
 - Node.js 24 or newer, or an ES2022-compatible browser, worker, or edge runtime, is required.
 - Native `Error` cause support is required.
-- ESM-aware package resolution is required.
+- The package is ESM. CommonJS can load it through `require()` on runtimes that support requiring ES modules.
 - The package has no runtime dependencies.
 
-Runtime code does not access browser or Node.js globals. Browser preset imports do not access DOM globals. Supabase preset imports do not contact services or require Supabase packages.
+Runtime code does not access browser or Node.js globals. Browser preset imports do not access DOM globals. Node.js preset imports do not access Node.js globals or built-in modules. Supabase preset imports do not contact services or require Supabase packages.
 
 ## Next steps
 

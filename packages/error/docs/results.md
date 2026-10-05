@@ -9,12 +9,12 @@ title: Results
 ```ts
 import { err, ok, type Result } from "@codenhub/error";
 
-const loadName = (value: string | null): Result<string> => (value === null ? err("missing_name", { fallbackMessage: "Name is missing." }) : ok(value));
+const loadName = (value: string | null): Result<string> => (value === null ? err({ code: "my-app.missing_name" }, { fallbackMessage: "Name is missing." }) : ok(value));
 ```
 
 `ok(value)` wraps a success value, and `ok()` creates `Ok<void>`. `err(error, options?)` normalizes failures through the same pipeline as `createAppError`. Both return frozen result objects.
 
-String values are matched against the registry like any other value, at every wrapper depth. An unmatched string never becomes the message, so raw diagnostic text is not surfaced to users; supply `fallbackMessage` when user-facing text is needed.
+A string is treated as message text: it is matched against the `messages`, `prefixes`, and `patterns` buckets, at every wrapper depth, and never against `codes`. Pass `{ code: "..." }` to raise a failure by its registered code. An unmatched string never becomes the message, so raw diagnostic text is not surfaced to users; supply `fallbackMessage` when user-facing text is needed.
 
 Use `attempt` and `attemptAsync` at boundaries where existing code throws:
 
@@ -25,7 +25,7 @@ const parsed = attempt(() => JSON.parse(payload) as Config);
 const loaded = await attemptAsync(() => fetch(url).then((response) => response.json()));
 ```
 
-Both run the supplied callback and convert anything it throws or rejects with into a normalized `Err`, so the returned promise from `attemptAsync` does not reject for callback failures. Invalid options throw `TypeError` before the callback runs.
+Both run the supplied callback and convert anything it throws or rejects with into a normalized `Err`, so the returned promise from `attemptAsync` does not reject for callback failures. Invalid options are reported before the callback runs: `attempt` throws `TypeError`, and `attemptAsync` returns a promise rejected with it. `attempt` takes a synchronous callback; one that returns a promise is a type error, because its rejection would escape inside an `Ok`.
 
 The remaining helpers operate only on the success branch unless stated:
 
