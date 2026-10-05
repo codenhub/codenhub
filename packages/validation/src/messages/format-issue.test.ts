@@ -114,6 +114,13 @@ describe("the wording of one code", () => {
     expect(formatIssue(issuesOf(string({ max: 1 })("ab"))[0] as ValidationIssue, messages)).toBe("Invalid value");
   });
 
+  it("should word the limit its name says, whatever code the issue has", () => {
+    const short: ValidationIssue = { code: "short", path: [], params: { minimum: 3, type: "string" } };
+    const long: ValidationIssue = { code: "long", path: [], params: { maximum: 3, type: "string" } };
+    expect(formatIssue(short, { short: tooSmallMessage })).toBe("Must be at least 3 characters");
+    expect(formatIssue(long, { long: tooBigMessage })).toBe("Must be at most 3 characters");
+  });
+
   it("should word an issue quoted inside another with the map in use", () => {
     const [found] = issuesOf(record(string({ min: 2 }), string())({ a: "x" }));
     expect(formatIssue(found as ValidationIssue, { invalid_key: invalidKeyMessage })).toBe(

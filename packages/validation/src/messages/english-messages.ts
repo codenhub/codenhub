@@ -72,8 +72,7 @@ const param = (issue: ValidationIssue, name: string): string => String(issue.par
 const formatValue = (value: unknown): string =>
   typeof value === "string" ? JSON.stringify(value) : typeof value === "bigint" ? `${value}n` : String(value);
 
-const describeLimit = ({ code, params }: ValidationIssue): string => {
-  const isMin = code === "too_small";
+const describeLimit = ({ params }: ValidationIssue, isMin: boolean): string => {
   const limit = params?.[isMin ? "minimum" : "maximum"];
   const bound = String(limit);
   const type = String(params?.type);
@@ -236,7 +235,7 @@ export const invalidTypeMessage: Wording = (issue) => {
  * @param issue - The issue to word.
  * @returns The wording, without the issue's path.
  */
-export const tooSmallMessage: Wording = describeLimit;
+export const tooSmallMessage: Wording = (issue) => describeLimit(issue, true);
 
 /**
  * Words a `too_big` issue in English, such as "Must contain at most 10 items".
@@ -244,7 +243,7 @@ export const tooSmallMessage: Wording = describeLimit;
  * @param issue - The issue to word.
  * @returns The wording, without the issue's path.
  */
-export const tooBigMessage: Wording = describeLimit;
+export const tooBigMessage: Wording = (issue) => describeLimit(issue, false);
 
 /**
  * Words an `invalid_format` issue in English, such as "Invalid email address" or "Must match /^a/".
