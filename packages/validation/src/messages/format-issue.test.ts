@@ -115,6 +115,12 @@ describe("the wording of one code", () => {
     expect(formatIssue(issuesOf(string({ max: 1 })("ab"))[0] as ValidationIssue, messages)).toBe("Invalid value");
   });
 
+  it("should be a function of the issue for every code, so a program can call any of them", () => {
+    const conflict: ValidationIssue = { code: "invalid_intersection", path: [] };
+    expect(invalidIntersectionMessage(conflict)).toBe("Conflicting values");
+    expect(Object.values(englishMessages).map((wording) => typeof wording)).toEqual(Array(9).fill("function"));
+  });
+
   it("should word the limit its name says, whatever code the issue has", () => {
     const short: ValidationIssue = { code: "short", path: [], params: { minimum: 3, type: "string" } };
     const long: ValidationIssue = { code: "long", path: [], params: { maximum: 3, type: "string" } };
