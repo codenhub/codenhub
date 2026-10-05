@@ -313,7 +313,7 @@ export const invalidUnionMessage: Wording = describeUnion;
  * The built-in English wording for every issue the validators can report, as a message map.
  *
  * @remarks
- * Pass it to `formatIssue`, `flatten` or `standard` to get text such as "Must be at least
+ * Pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Must be at least
  * 18". It is a separate value, not something `formatIssue` carries, so a program that words its own
  * issues, or that never shows one, does not bundle it, and one that can report only a few codes takes
  * the wording of each on its own, such as {@link invalidTypeMessage}. To change some of the wording,

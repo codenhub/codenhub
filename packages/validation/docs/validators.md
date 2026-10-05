@@ -566,6 +566,10 @@ An issue that carries a message is worded by it first, before any message map, s
 
 `formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then a message map you pass, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](errors.md) explains all of them.
 
+### `assert`
+
+`assert(validator, input, { subject?, messages? })` returns the value the validator produced, or throws a `TypeError` naming the first issue, for input whose being invalid is a mistake of the caller, such as configuration. It accepts synchronous validators only. See [Throwing for invalid configuration](errors.md#throwing-for-invalid-configuration).
+
 ### `Infer`
 
 `Infer<typeof validator>` is the type a validator produces. It reads the output of either a synchronous or an asynchronous validator.

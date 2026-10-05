@@ -40,6 +40,7 @@ export { tagged, type InferTagged, type Variants } from "./composition/tagged";
 export { transform } from "./composition/transform";
 export { tuple, type InferTuple, type TupleOptions } from "./composition/tuple";
 export { union } from "./composition/union";
+export { assert, type AssertOptions } from "./core/assert";
 export { is } from "./core/is";
 export { fail, pass, type IssueInput } from "./core/result";
 export type {

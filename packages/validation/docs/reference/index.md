@@ -45,6 +45,42 @@ tags(["a", "b"]); // { ok: true, value: ["a", "b"] }
 tags(["a", "a"]); // { ok: false, ... }, code "invalid_value" at path [1]
 ```
 
+### assert
+
+```ts
+export declare function assert<T>(validator: Validator<T>, input: unknown, options?: AssertOptions): T;
+```
+
+Returns the value a validator produces for an input, or throws when the input is invalid.
+
+It is for input whose being invalid is a mistake of the caller, such as a configuration object: the mistake is thrown where it was made, as any other bad argument is. Input a program is expected to receive invalid, such as a form or a request, is read from the result of calling the validator, which lists every issue and throws nothing.
+
+The error names the first issue only. Every issue is on the failure the error carries as its `cause`.
+
+**Parameters**
+
+- `validator` — A synchronous validator.
+- `input` — The value to validate.
+- `options` — The subject of the message and the wording of its issues.
+
+**Type parameters**
+
+- `T` — The type the validator produces.
+
+**Returns** — The value the validator produced, which is not the input when the validator trims, coerces or transforms.
+
+**Throws** — When the validator rejects the input, with the subject, the path of the first issue and its wording as the message, and the failure as the `cause`. Also when the validator turns out to be asynchronous, `subject` is not text, or `messages` is not a message map.
+
+**Example**
+
+```ts
+const config = object({ locales: array(string({ min: 1 })) });
+const messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+assert(config, { locales: ["en"] }, { subject: "[I18n]", messages }); // { locales: ["en"] }
+assert(config, { locales: ["en", 1] }, { subject: "[I18n]", messages });
+// TypeError: [I18n] locales[1]: Expected string, received number
+```
+
 ### check
 
 ```ts
@@ -1340,6 +1376,30 @@ Inherited from [MessageOptions](#messageoptions).
 #### min
 
 Inherited from [SizeOptions](#sizeoptions).
+
+### AssertOptions
+
+```ts
+export interface AssertOptions
+```
+
+Options for [assert](#assert).
+
+#### messages
+
+```ts
+messages?: Messages;
+```
+
+Wording for issues that carry no message of their own, keyed by issue code, such as `englishMessages` or a map of the wordings the validator can report.
+
+#### subject
+
+```ts
+subject?: string;
+```
+
+What was being validated, written before the problem as it is, such as `"[I18n]"` or `"Router options:"`. Without it the message starts at the path.
 
 ### Base64Options
 
@@ -2915,7 +2975,7 @@ export declare const englishMessages: Messages;
 
 The built-in English wording for every issue the validators can report, as a message map.
 
-Pass it to `formatIssue`, `flatten` or `standard` to get text such as "Must be at least 18". It is a separate value, not something `formatIssue` carries, so a program that words its own issues, or that never shows one, does not bundle it, and one that can report only a few codes takes the wording of each on its own, such as [invalidTypeMessage](#invalidtypemessage). To change some of the wording, spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is frozen, so no code can reword the messages of every other user of it in the process. A custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
+Pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Must be at least 18". It is a separate value, not something `formatIssue` carries, so a program that words its own issues, or that never shows one, does not bundle it, and one that can report only a few codes takes the wording of each on its own, such as [invalidTypeMessage](#invalidtypemessage). To change some of the wording, spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is frozen, so no code can reword the messages of every other user of it in the process. A custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
 
 **Example**
 

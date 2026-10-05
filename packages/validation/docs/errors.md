@@ -149,6 +149,31 @@ if (!result.ok) {
 
 `englishMessages` is the map of all nine. A wording that quotes the issue behind another, as `invalidKeyMessage`, `invalidUnionMessage` and `invalidFormatMessage` do, words it with the map it was called with, so include the codes the quoted issue can have.
 
+## Throwing for invalid configuration
+
+Some input is not expected to be invalid: an options object another developer passes to your function is wrong only by mistake, and a mistake is thrown where it was made. `assert(validator, input, options?)` returns the value the validator produced, or throws a `TypeError`:
+
+```ts
+import { array, assert, invalidTypeMessage, object, string, tooSmallMessage } from "@codenhub/validation";
+
+const config = object({ locales: array(string({ trim: true, min: 1 }), { min: 1 }) });
+const messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+
+export function createI18n(input: unknown) {
+  const { locales } = assert(config, input, { subject: "[I18n]", messages });
+  return locales;
+}
+
+createI18n({ locales: ["en", 1] }); // TypeError: [I18n] locales[1]: Expected string, received number
+```
+
+- The message is the `subject`, written as you gave it, then the path of the first issue and its wording. Without a `subject` it starts at the path, and an issue at the value itself has no path.
+- The wording is the issue's own `message`, then the `messages` map, then "Invalid value". The map is optional here, since the path still says which option is wrong.
+- The error's `cause` is the failure, so `error.cause.issues` lists every issue, not only the first.
+- It accepts synchronous validators only, and throws a `TypeError` if the validator returns a promise.
+
+Use it for configuration and other arguments. For a form, a request or anything else a program expects to receive invalid, call the validator and read its result, which lists every issue and throws nothing.
+
 ## Errors for a form
 
 `flatten` groups the messages of a failed result for display: issues at the root go to `formErrors`, and the rest are keyed by their formatted path in `fieldErrors`.

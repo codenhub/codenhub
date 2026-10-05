@@ -211,6 +211,22 @@ const isPort = (input: unknown): input is number => is(number({ int: true, min: 
 
 `is` returns a `boolean` and does not narrow the input, since a validator that trims, coerces or transforms produces another value than it was given. Where the validator keeps the value as it is, write the guard yourself, as above; otherwise read `result.value` from calling the validator. `is` accepts synchronous validators only.
 
+## Throwing for invalid configuration
+
+A validator returns its result and never throws for its input. When invalid input is a mistake of the caller, such as an options object passed to your function, `assert` returns the value or throws a `TypeError` that names the problem and where it is:
+
+```ts
+import { assert, englishMessages, number, object } from "@codenhub/validation";
+
+const options = object({ port: number({ int: true, min: 1, max: 65535 }) });
+
+assert(options, { port: 8080 }, { subject: "createServer:", messages: englishMessages }); // { port: 8080 }
+assert(options, { port: 0 }, { subject: "createServer:", messages: englishMessages });
+// TypeError: createServer: port: Must be at least 1
+```
+
+[Issues and messages](docs/errors.md#throwing-for-invalid-configuration) covers the message, and how to bundle only the wording you need.
+
 ## Next steps
 
 - [Validator reference](docs/validators.md): every validator and combinator, with its options and the issue it reports.
@@ -643,6 +659,31 @@ if (!result.ok) {
 ```
 
 `englishMessages` is the map of all nine. A wording that quotes the issue behind another, as `invalidKeyMessage`, `invalidUnionMessage` and `invalidFormatMessage` do, words it with the map it was called with, so include the codes the quoted issue can have.
+
+## Throwing for invalid configuration
+
+Some input is not expected to be invalid: an options object another developer passes to your function is wrong only by mistake, and a mistake is thrown where it was made. `assert(validator, input, options?)` returns the value the validator produced, or throws a `TypeError`:
+
+```ts
+import { array, assert, invalidTypeMessage, object, string, tooSmallMessage } from "@codenhub/validation";
+
+const config = object({ locales: array(string({ trim: true, min: 1 }), { min: 1 }) });
+const messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+
+export function createI18n(input: unknown) {
+  const { locales } = assert(config, input, { subject: "[I18n]", messages });
+  return locales;
+}
+
+createI18n({ locales: ["en", 1] }); // TypeError: [I18n] locales[1]: Expected string, received number
+```
+
+- The message is the `subject`, written as you gave it, then the path of the first issue and its wording. Without a `subject` it starts at the path, and an issue at the value itself has no path.
+- The wording is the issue's own `message`, then the `messages` map, then "Invalid value". The map is optional here, since the path still says which option is wrong.
+- The error's `cause` is the failure, so `error.cause.issues` lists every issue, not only the first.
+- It accepts synchronous validators only, and throws a `TypeError` if the validator returns a promise.
+
+Use it for configuration and other arguments. For a form, a request or anything else a program expects to receive invalid, call the validator and read its result, which lists every issue and throws nothing.
 
 ## Errors for a form
 
@@ -1278,6 +1319,10 @@ An issue that carries a message is worded by it first, before any message map, s
 ### `formatIssue`, `flatten`, `formatPath` and `englishMessages`
 
 `formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then a message map you pass, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](docs/errors.md) explains all of them.
+
+### `assert`
+
+`assert(validator, input, { subject?, messages? })` returns the value the validator produced, or throws a `TypeError` naming the first issue, for input whose being invalid is a mistake of the caller, such as configuration. It accepts synchronous validators only. See [Throwing for invalid configuration](docs/errors.md#throwing-for-invalid-configuration).
 
 ### `Infer`
 

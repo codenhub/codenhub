@@ -4,6 +4,7 @@
  */
 import {
   array,
+  assert,
   bigint,
   boolean,
   check,
@@ -25,6 +26,7 @@ import {
   guard,
   hostname,
   intersection,
+  invalidTypeMessage,
   is,
   json,
   lazy,
@@ -38,6 +40,7 @@ import {
   tagged,
   oneOf,
   optional,
+  tooSmallMessage,
   partial,
   pass,
   pipe,
@@ -57,6 +60,7 @@ import {
   type AsyncValidator,
   type Check,
   type Infer,
+  type Messages,
   type StandardSchemaV1,
   type Validator,
 } from "../../../dist/index";
@@ -432,3 +436,13 @@ export const query = searchParams(object({ page: coerceNumber({ int: true }), ta
   repeated: true,
 });
 export const queryValue: Infer<typeof query> = { page: 1, tags: ["a"] };
+
+// assert() returns what the validator produces, and takes only synchronous validators. The wording of a
+// code is an entry of a message map.
+export const wordings: Messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+export const asserted: string = assert(string(), raw, { subject: "name:", messages: wordings });
+export const assertedBare: number = assert(number(), raw);
+// @ts-expect-error a validator that may finish later cannot be asserted
+export const badAssert = assert(username, raw);
+// @ts-expect-error the subject is text
+export const badSubject = assert(string(), raw, { subject: 1 });

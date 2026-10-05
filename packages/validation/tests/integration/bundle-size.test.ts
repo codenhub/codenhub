@@ -147,6 +147,11 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
     budget: 2300,
   },
   {
+    name: "assert with the wording of two codes",
+    source: `import { assert, invalidTypeMessage, string, tooSmallMessage } from "DIST"; const messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage }; export const read = (input: unknown) => assert(string({ min: 1 }), input, { messages });`,
+    budget: 2900,
+  },
+  {
     name: "everything",
     source: `export * from "DIST";`,
     budget: 18690,

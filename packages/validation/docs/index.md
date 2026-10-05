@@ -114,6 +114,22 @@ const isPort = (input: unknown): input is number => is(number({ int: true, min: 
 
 `is` returns a `boolean` and does not narrow the input, since a validator that trims, coerces or transforms produces another value than it was given. Where the validator keeps the value as it is, write the guard yourself, as above; otherwise read `result.value` from calling the validator. `is` accepts synchronous validators only.
 
+## Throwing for invalid configuration
+
+A validator returns its result and never throws for its input. When invalid input is a mistake of the caller, such as an options object passed to your function, `assert` returns the value or throws a `TypeError` that names the problem and where it is:
+
+```ts
+import { assert, englishMessages, number, object } from "@codenhub/validation";
+
+const options = object({ port: number({ int: true, min: 1, max: 65535 }) });
+
+assert(options, { port: 8080 }, { subject: "createServer:", messages: englishMessages }); // { port: 8080 }
+assert(options, { port: 0 }, { subject: "createServer:", messages: englishMessages });
+// TypeError: createServer: port: Must be at least 1
+```
+
+[Issues and messages](errors.md#throwing-for-invalid-configuration) covers the message, and how to bundle only the wording you need.
+
 ## Next steps
 
 - [Validator reference](validators.md): every validator and combinator, with its options and the issue it reports.
