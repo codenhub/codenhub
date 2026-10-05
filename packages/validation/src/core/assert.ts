@@ -1,4 +1,4 @@
-import { formatIssue, formatPath, type Messages } from "../messages/format-issue";
+import { assertMessages, formatIssue, formatPath, type Messages } from "../messages/format-issue";
 import { isThenable } from "./async";
 import { assertOption, ROOT_PATH } from "./result";
 import type { ValidationResult, Validator } from "./types";
@@ -26,7 +26,7 @@ export interface AssertOptions {
  * It is for input whose being invalid is a mistake of the caller, such as a configuration object: the
  * mistake is thrown where it was made, as any other bad argument is. Input a program is expected to
  * receive invalid, such as a form or a request, is read from the result of calling the validator, which
- * lists every issue and throws nothing.
+ * lists every issue instead of throwing for the first.
  *
  * The error names the first issue only. Every issue is on the failure the error carries as its `cause`.
  *
@@ -47,11 +47,14 @@ export interface AssertOptions {
  * or transforms.
  * @throws {TypeError} When the validator rejects the input, with the subject, the path of the first
  * issue and its wording as the message, and the failure as the `cause`. Also when the validator turns
- * out to be asynchronous, `subject` is not text, or `messages` is not a message map.
+ * out to be asynchronous, and, whatever the input, when `subject` is not text or `messages` is not a
+ * message map.
  */
 export function assert<T>(validator: Validator<T>, input: unknown, options: AssertOptions = {}): T {
   const { subject, messages = {} } = options;
   assertOption("subject", subject, "string");
+  // Checked before the input is, so a wrong map is found by the first call and not by the first invalid input.
+  assertMessages(messages);
   const result: unknown = validator(input);
   if (isThenable(result)) {
     // The promise is abandoned, so a later rejection is not reported as unhandled.

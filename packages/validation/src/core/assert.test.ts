@@ -65,4 +65,9 @@ describe("assert", () => {
     );
     expect(() => assert(string(), 1, { messages: [] as never })).toThrow(/messages must be a message map/);
   });
+
+  it("should reject messages that are not a map for an input that is valid too", () => {
+    expect(() => assert(string(), "a", { messages: [] as never })).toThrow(/messages must be a message map/);
+    expect(() => assert(string(), "a", { messages: null as never })).toThrow(/messages must be a message map/);
+  });
 });

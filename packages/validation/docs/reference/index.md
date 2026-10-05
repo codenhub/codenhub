@@ -53,7 +53,7 @@ export declare function assert<T>(validator: Validator<T>, input: unknown, optio
 
 Returns the value a validator produces for an input, or throws when the input is invalid.
 
-It is for input whose being invalid is a mistake of the caller, such as a configuration object: the mistake is thrown where it was made, as any other bad argument is. Input a program is expected to receive invalid, such as a form or a request, is read from the result of calling the validator, which lists every issue and throws nothing.
+It is for input whose being invalid is a mistake of the caller, such as a configuration object: the mistake is thrown where it was made, as any other bad argument is. Input a program is expected to receive invalid, such as a form or a request, is read from the result of calling the validator, which lists every issue instead of throwing for the first.
 
 The error names the first issue only. Every issue is on the failure the error carries as its `cause`.
 
@@ -69,7 +69,7 @@ The error names the first issue only. Every issue is on the failure the error ca
 
 **Returns** — The value the validator produced, which is not the input when the validator trims, coerces or transforms.
 
-**Throws** — When the validator rejects the input, with the subject, the path of the first issue and its wording as the message, and the failure as the `cause`. Also when the validator turns out to be asynchronous, `subject` is not text, or `messages` is not a message map.
+**Throws** — When the validator rejects the input, with the subject, the path of the first issue and its wording as the message, and the failure as the `cause`. Also when the validator turns out to be asynchronous, and, whatever the input, when `subject` is not text or `messages` is not a message map.
 
 **Example**
 
