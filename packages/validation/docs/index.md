@@ -116,7 +116,7 @@ const isPort = (input: unknown): input is number => is(number({ int: true, min: 
 
 ## Throwing for invalid configuration
 
-A validator returns its result and never throws for its input. When invalid input is a mistake of the caller, such as an options object passed to your function, `assert` returns the value or throws a `TypeError` that names the problem and where it is:
+A validator reports invalid input in its result instead of throwing, and only code the input carries, a getter or a `Proxy` trap that throws while it is read, propagates an exception. When invalid input is a mistake of the caller, such as an options object passed to your function, `assert` returns the value or throws a `TypeError` that names the problem and where it is:
 
 ```ts
 import { assert, englishMessages, number, object } from "@codenhub/validation";

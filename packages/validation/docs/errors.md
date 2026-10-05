@@ -172,7 +172,7 @@ createI18n({ locales: ["en", 1] }); // TypeError: [I18n] locales[1]: Expected st
 - The error's `cause` is the failure, so `error.cause.issues` lists every issue, not only the first.
 - It accepts synchronous validators only, and throws a `TypeError` if the validator returns a promise.
 
-Use it for configuration and other arguments. For a form, a request or anything else a program expects to receive invalid, call the validator and read its result, which lists every issue and throws nothing.
+Use it for configuration and other arguments. For a form, a request or anything else a program expects to receive invalid, call the validator and read its result, which lists every issue instead of throwing for the first.
 
 ## Errors for a form
 
