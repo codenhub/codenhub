@@ -1420,6 +1420,7 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 ## Fixed
 
 - `email`, `url` and `domain` no longer take time that grows with the square of a host's length. The runtime's URL parser decodes a punycode label that way, so `email()` took 0.3 s to reject `a@xn--` and 100,000 letters and 5 s for 400,000, in Node.js 24.19, however `url` was given the `xn--`: in capitals, in fullwidth letters or as an escape. A host written with more than 759 characters, three for each one a host can have, is now rejected before the parser reads it. A host that long was valid only when padded with characters the parser drops.
+- `lazy` no longer slows with the square of the places one object is reached at. With `maxCalls` raised, 80,000 rows that shared ten objects took 7.8 s to validate, and take 0.2 s.
 - A recursive `union` with many options no longer overflows the stack inside `lazy`'s default `maxDepth`. With twenty options before the recursive one, 3 kB of valid input nested 120 levels threw `RangeError: Maximum call stack size exceeded` in a fresh Node.js process and in Chromium, since every option that failed stayed on the stack while the next ran.
 - `object` reads each validator of its shape once, when it is created. It read the property to check it and again to keep it, so a shape whose property is a getter could be checked as one value and run as another.
 
