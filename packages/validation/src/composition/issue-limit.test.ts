@@ -5,6 +5,7 @@ import { fail } from "../core/result";
 import type { AsyncValidator, Validator } from "../core/types";
 import { englishMessages } from "../messages/english-messages";
 import { formatIssue } from "../messages/format-issue";
+import { boolean } from "../primitives/boolean";
 import { literal } from "../primitives/literal";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
@@ -64,12 +65,13 @@ describe("the most issues a collection reports", () => {
     expect(either(numbers()).ok).toBe(true);
   });
 
-  it("should stop an array of unions after as many items as the limit", () => {
+  it("should count the issues that the issue of a union holds", () => {
     const shape = (type: string): Validator<object> => object({ type: literal(type), id: string() });
     const events = array(union([shape("a"), shape("b"), shape("c")]));
     const issues = issuesOf(events(Array.from({ length: COUNT }, () => ({}))));
-    expect(issues).toHaveLength(LIMIT + 1);
-    expect(issues[LIMIT]).toEqual(stopped());
+    // Each item is one issue that holds two for each of the three options, so seven of the limit.
+    expect(issues).toHaveLength(Math.ceil(LIMIT / 7) + 1);
+    expect(issues.at(-1)).toEqual(stopped());
   });
 
   it("should stop the collection around one whose items reached the limit", () => {
@@ -77,6 +79,24 @@ describe("the most issues a collection reports", () => {
     expect(issues).toHaveLength(LIMIT + 1);
     expect(issues[0]?.path).toEqual([0, 0]);
     expect(issues[LIMIT]).toEqual(stopped());
+  });
+
+  it("should stop at the first item whose union holds as many issues as the limit", () => {
+    const lists = array(union([array(string()), array(boolean())]));
+    const issues = issuesOf(lists(Array.from({ length: 50 }, () => numbers())));
+    expect(issues).toHaveLength(2);
+    expect(issues[0]?.code).toBe("invalid_union");
+    expect(issues[1]).toEqual(stopped());
+  });
+
+  it("should cut by what the issues hold when the items waited", async () => {
+    const held = Array.from({ length: 600 }, () => ({ code: "inner", path: [] }));
+    const heavy: AsyncValidator<string> = async () => {
+      await Promise.resolve();
+      return fail({ code: "outer", params: { issues: held } });
+    };
+    const issues = issuesOf(await array(heavy)([1, 2, 3, 4, 5]));
+    expect(issues.map((issue) => issue.code)).toEqual(["outer", "outer", "too_big"]);
   });
 
   it("should stop a tuple, a set, a map and a record the same way", () => {

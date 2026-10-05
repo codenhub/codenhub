@@ -14,8 +14,24 @@ import type { Message, ValidationIssue, ValidationResult } from "./types";
 /** How many issues the items of one collection report before it stops. */
 export const MAX_ISSUES = 1000;
 
+/**
+ * How many issues a list holds, counting the ones an issue holds behind it in `params.issues`, as the
+ * issue of a `union` holds every option's: counted as one, a thousand items that each failed a union of
+ * lists held two million. Issues nest at most three deep, so this does too.
+ */
+const weigh = (found: unknown): number => {
+  if (Array.isArray(found)) {
+    let weight = 0;
+    for (const each of found) {
+      weight += weigh(each);
+    }
+    return weight;
+  }
+  return 1 + weigh((found as ValidationIssue | null)?.params?.["issues"] ?? []);
+};
+
 /** How many issues a result holds, none when it passed. */
-export const countIssues = (result: ValidationResult<unknown>): number => (result.ok ? 0 : result.error.issues.length);
+export const countIssues = (result: ValidationResult<unknown>): number => (result.ok ? 0 : weigh(result.error.issues));
 
 /**
  * Runs `work` for each index below `length`, as `runEach` does, until the results that are not pending
@@ -47,7 +63,7 @@ export function runItems<R>(
 }
 
 /**
- * Cuts the issues of a collection at `MAX_ISSUES` when there are more, or when `isCut` says its items were
+ * Cuts the issues of a collection at `MAX_ISSUES`, counted as `countIssues` counts them, when there are more, or when `isCut` says its items were
  * not all run, and adds the issue that says so: `too_big` with `type: "issues"`, at the collection's
  * `place`, worded by its `message`. The list is changed in place and returned.
  */
@@ -57,8 +73,13 @@ export function cap(
   message: Message | undefined,
   isCut = false,
 ): ValidationIssue[] {
-  if (isCut || issues.length > MAX_ISSUES) {
-    issues.length = Math.min(issues.length, MAX_ISSUES);
+  // Cut after the issue that reaches the limit, counting what each holds.
+  let kept = 0;
+  for (let weight = 0; kept < issues.length && weight < MAX_ISSUES; kept += 1) {
+    weight += weigh(issues[kept]);
+  }
+  if (isCut || kept < issues.length) {
+    issues.length = kept;
     append(issues, report([issue("too_big", { maximum: MAX_ISSUES, type: "issues" })], place, message));
   }
   return issues;
