@@ -2,7 +2,7 @@ import { assertMessages, formatIssue, formatPath, type Messages } from "../messa
 import { isThenable } from "./async";
 import { isPlainObject } from "./objects";
 import { assertOption, describeType, ROOT_PATH } from "./result";
-import type { ValidationErr, ValidationResult, Validator } from "./types";
+import type { ValidationErr, ValidationIssue, ValidationResult, Validator } from "./types";
 
 /** Options for {@link assert}. */
 export interface AssertOptions {
@@ -77,8 +77,9 @@ export function assert<T>(validator: Validator<T>, input: unknown, options?: Ass
   if (outcome?.ok === true) {
     return outcome.value;
   }
-  const first = (outcome as Partial<ValidationErr> | null | undefined)?.error?.issues?.[0];
-  if (first === undefined) {
+  const first: ValidationIssue | null | undefined = (outcome as Partial<ValidationErr> | null | undefined)?.error
+    ?.issues?.[0];
+  if (first === undefined || first === null) {
     // A validator written by hand, since the types and `fail()` forbid both.
     throw new TypeError("assert() needs a validator that returns a result, and a failure that holds an issue");
   }

@@ -72,6 +72,7 @@ describe("assert", () => {
     expect(() => assert((() => undefined) as never, 1)).toThrow(fault);
     expect(() => assert((() => ({ ok: false, error: { issues: [] } })) as never, 1)).toThrow(fault);
     expect(() => assert((() => ({ ok: false })) as never, 1)).toThrow(fault);
+    expect(() => assert((() => ({ ok: false, error: { issues: [null] } })) as never, 1)).toThrow(fault);
   });
 
   it("should reject an option it does not read, and options that are not a plain object", () => {
