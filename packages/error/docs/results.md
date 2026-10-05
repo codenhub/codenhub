@@ -25,7 +25,7 @@ const parsed = attempt(() => JSON.parse(payload) as Config);
 const loaded = await attemptAsync(() => fetch(url).then((response) => response.json()));
 ```
 
-Both run the supplied callback and convert anything it throws or rejects with into a normalized `Err`, so the returned promise from `attemptAsync` does not reject for callback failures. Invalid options are reported before the callback runs: `attempt` throws `TypeError`, and `attemptAsync` returns a promise rejected with it. `attempt` takes a synchronous callback; one that returns a promise is a type error, because its rejection would escape inside an `Ok`.
+Both run the supplied callback and convert anything it throws or rejects with into a normalized `Err`, so the returned promise from `attemptAsync` does not reject for callback failures. Invalid options are reported before the callback runs: `attempt` throws `TypeError`, and `attemptAsync` returns a promise rejected with it. `attempt` takes a synchronous callback; one that returns a promise is a type error, because its rejection would escape inside an `Ok`. Where the type checker cannot see the promise, such as a callback typed `any`, `attempt` throws `TypeError` instead of returning it. Both helpers throw `TypeError` for a callback that is not a function.
 
 The remaining helpers operate only on the success branch unless stated:
 

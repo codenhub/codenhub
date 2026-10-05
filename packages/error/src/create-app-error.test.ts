@@ -475,14 +475,55 @@ describe("createAppError — re-normalization with options", () => {
     expect(appError2.originalError).toBe(appError1);
   });
 
-  it("should use the new fallback message if re-normalization fails to match", () => {
+  it("should keep an unknown AppError when the options match nothing", () => {
     const registry = createErrorRegistry();
-    const appError1 = createAppError({ code: "unregistered" });
-    expect(appError1.message).toBe("An unexpected error occurred.");
+    const appError1 = createAppError({ code: "unregistered" }, { fallbackMessage: "Could not load the user." });
 
-    const appError2 = createAppError(appError1, { fallbackMessage: "New custom fallback", registry });
-    expect(appError2.message).toBe("New custom fallback");
-    expect(appError2.originalError).toBe(appError1);
+    expect(createAppError(appError1, { fallbackMessage: "New custom fallback", registry })).toBe(appError1);
+  });
+
+  it("should keep the first fallback message through every later layer", () => {
+    let appError = createAppError(new Error("boom"), { fallbackMessage: "one" });
+
+    for (const fallbackMessage of ["two", "three", "four"]) {
+      appError = createAppError(appError, { fallbackMessage });
+      expect(appError.message).toBe("one");
+    }
+  });
+
+  it("should return the same AppError when the same registry classifies it again", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("code1", { message: "Match" });
+    registry.patterns.add(/rate limit/i, { message: "Slow down." });
+    const known = createAppError({ code: "code1" }, { registry });
+    const unexpected = createAppError(new Error("Rate limit hit"), { registry });
+
+    expect(createAppError(known, { registry })).toBe(known);
+    expect(createAppError(unexpected, { registry })).toBe(unexpected);
+  });
+
+  it("should keep an unexpected AppError over a pattern match from the new registry", () => {
+    const patternRegistry = createErrorRegistry();
+    patternRegistry.patterns.add(/rate limit/i, { message: "Slow down." });
+    const unexpected = createAppError(new Error("Rate limit hit"), { registry: patternRegistry });
+    const registry = createErrorRegistry();
+    registry.patterns.add(/./, { message: "Heuristic." });
+
+    expect(createAppError(unexpected, { registry })).toBe(unexpected);
+  });
+
+  it("should classify the raw value, not an earlier classification, on every pass", () => {
+    const registries = ["First", "Second", "Third"].map((label) => {
+      const registry = createErrorRegistry();
+      registry.codes.add("code1", { message: `${label} Registry Match` });
+      return registry;
+    });
+
+    let appError = createAppError({ code: "code1" }, { registry: registries[0] });
+    appError = createAppError(appError, { registry: registries[1] });
+    appError = createAppError(appError, { registry: registries[2] });
+
+    expect(appError.message).toBe("Third Registry Match");
   });
 
   it("should handle primitive non-record and non-string errors", () => {
@@ -594,7 +635,7 @@ describe("createAppError — identifiers that are not codes", () => {
     registry.codes.add("20", { message: "Custom API error 20." });
 
     expect(createAppError(new DOMException("Aborted", "AbortError"), { registry })).toMatchObject({
-      message: "Request cancelled.",
+      messageKey: "error.browser.abort",
       code: "AbortError",
     });
     expect(createAppError({ code: 20 }, { registry }).message).toBe("Custom API error 20.");

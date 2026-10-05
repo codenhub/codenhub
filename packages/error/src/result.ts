@@ -61,33 +61,70 @@ export const err = (error: unknown, options: AppErrorOptions = {}): Err =>
     error: createAppError(error, options),
   });
 
+const assertCallback = (operation: unknown): void => {
+  if (typeof operation !== "function") {
+    throw new TypeError("Result callback must be a function.");
+  }
+};
+
+const isThenable = (value: unknown): boolean => {
+  if (value === null || (typeof value !== "object" && typeof value !== "function")) {
+    return false;
+  }
+
+  try {
+    return typeof (value as { then?: unknown }).then === "function";
+  } catch {
+    return false;
+  }
+};
+
 /**
  * Runs a callback and captures a thrown value as a normalized `Err` instead of propagating it.
  *
  * This is the boundary helper for wrapping code that throws: the callback result becomes `Ok`,
  * and anything thrown is normalized through the same pipeline as `createAppError`.
  *
- * The callback must be synchronous: one that returns a promise is rejected by the type checker,
- * because its rejection would escape inside an `Ok` holding the promise. Use `attemptAsync` there.
+ * The callback must be synchronous: one that returns a promise is rejected by the type checker
+ * and, where the type checker cannot see it, at runtime, because its rejection would escape inside
+ * an `Ok` holding the promise. Use `attemptAsync` there.
  *
  * @typeParam T - The type returned by the callback on success.
  * @param operation - The synchronous callback to run.
  * @param options - Configuration options for AppError normalization.
  * @returns An Ok result holding the callback value, or an Err holding the normalized failure.
- * @throws TypeError - If `options` or any supplied option value is invalid.
+ * @throws TypeError - If `operation` is not a function or returns a promise or other thenable, or
+ * if `options` or any supplied option value is invalid.
  */
 export const attempt = <T>(
   operation: () => T extends PromiseLike<unknown> ? never : T,
   options: AppErrorOptions = {},
 ): Result<T> => {
+  assertCallback(operation);
   // Validated up front so invalid options surface immediately instead of only on the failure path.
   resolveAppErrorOptions(options);
 
+  let value: T;
+
   try {
-    return ok(operation() as T);
+    value = operation() as T;
   } catch (caughtError) {
     return err(caughtError, options);
   }
+
+  // The callback type rejects promises, but a callback typed `any` or written in JavaScript gets
+  // past it, and an Ok holding the promise would let its rejection escape.
+  if (isThenable(value)) {
+    // Only a native promise is already running; calling `then` on a lazy thenable would start it.
+    if (value instanceof Promise) {
+      // oxlint-disable-next-line promise/prefer-await-to-then
+      value.catch(() => {});
+    }
+
+    throw new TypeError("attempt callback must not return a promise. Use attemptAsync instead.");
+  }
+
+  return ok(value);
 };
 
 /**
@@ -98,12 +135,14 @@ export const attempt = <T>(
  * @param options - Configuration options for AppError normalization.
  * @returns A Promise resolving to an Ok result holding the awaited value, or an Err holding the
  * normalized failure. The promise does not reject for failures raised by `operation`; it rejects
- * with `TypeError`, before running `operation`, if `options` or any supplied option value is invalid.
+ * with `TypeError`, before running `operation`, if `operation` is not a function or if `options` or
+ * any supplied option value is invalid.
  */
 export const attemptAsync = async <T>(
   operation: () => Promise<T> | T,
   options: AppErrorOptions = {},
 ): Promise<Result<T>> => {
+  assertCallback(operation);
   // Validated up front so invalid options surface immediately instead of only on the failure path.
   resolveAppErrorOptions(options);
 

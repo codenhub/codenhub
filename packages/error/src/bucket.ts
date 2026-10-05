@@ -8,9 +8,16 @@ import type {
 } from "./types";
 
 const ERROR_IDENTIFIER_TRAILING_PUNCTUATION = ".!?";
+const WHITESPACE = /\s/;
+
+const isTrailingNoise = (character: string): boolean =>
+  ERROR_IDENTIFIER_TRAILING_PUNCTUATION.includes(character) || WHITESPACE.test(character);
 
 /**
  * Normalizes an error identifier by trimming whitespace and stripping trailing punctuation (like `.`, `!`, `?`).
+ *
+ * The result is a fixed point: normalizing it again changes nothing, so a stored key survives the
+ * second pass it gets on lookup and on merge.
  *
  * @internal
  * @param identifier - The raw error identifier string.
@@ -19,14 +26,14 @@ const ERROR_IDENTIFIER_TRAILING_PUNCTUATION = ".!?";
 export const normalizeErrorMessage = (identifier: string): string => {
   const trimmedIdentifier = identifier.trim();
 
-  // Scanned from the end by hand: a `/[.!?]+$/` replace retries every punctuation run in the
-  // text, which is quadratic on a long message an attacker can shape.
+  // Scanned from the end by hand: a `/[.!?\s]+$/` replace retries every run in the text, which
+  // is quadratic on a long message an attacker can shape.
   let end = trimmedIdentifier.length;
-  while (end > 0 && ERROR_IDENTIFIER_TRAILING_PUNCTUATION.includes(trimmedIdentifier[end - 1])) {
+  while (end > 0 && isTrailingNoise(trimmedIdentifier[end - 1])) {
     end -= 1;
   }
 
-  return trimmedIdentifier.slice(0, end).trimEnd();
+  return trimmedIdentifier.slice(0, end);
 };
 
 /** @internal */

@@ -129,6 +129,14 @@ const resolveFromAppError = (appError: AppError, originalError: unknown): AppErr
   isRetryable: appError.isRetryable,
 });
 
+const isSameClassification = (resolution: AppErrorResolution, appError: AppError): boolean =>
+  resolution.type === appError.type &&
+  resolution.code === appError.code &&
+  resolution.message === appError.message &&
+  resolution.messageKey === appError.messageKey &&
+  resolution.source === appError.source &&
+  resolution.isRetryable === appError.isRetryable;
+
 /** @internal */
 const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError => {
   const { fallbackMessage, registry, maxDepth, hasCustomOptions } = resolveAppErrorOptions(options);
@@ -137,14 +145,15 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
     return error;
   }
 
-  // An AppError given options is classified again from its original value, so a new registry can
-  // reclassify it. Its own classification still stands when nothing outranks it: options that
-  // match nothing new, such as a lone fallbackMessage, must not downgrade it to unknown.
+  // An AppError given options is classified again from the raw value it started from, so a new
+  // registry can reclassify it. Unwinding earlier AppErrors first keeps an older classification
+  // from coming back as a candidate on a later pass.
   const existingAppError = isAppError(error) ? error : null;
-  const errorCandidates = getErrorCandidates(
-    existingAppError === null ? error : existingAppError.originalError,
-    maxDepth,
-  );
+  let rawError = error;
+  while (isAppError(rawError)) {
+    rawError = rawError.originalError;
+  }
+  const errorCandidates = getErrorCandidates(rawError, maxDepth);
 
   // Single pass over candidates resolving by priority tier:
   // known > unexpected > appError fallback (any type).
@@ -182,11 +191,16 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
     }
   }
 
-  if (
-    knownResult === null &&
-    (existingAppError?.type === "known" || (existingAppError?.type === "unexpected" && unexpectedResult === null))
-  ) {
-    return existingAppError;
+  // Re-normalization only ever upgrades: an unexpected match replaces an unknown error, a known
+  // match replaces anything it differs from, and nothing else changes what the error already says.
+  if (existingAppError !== null) {
+    const replacement = knownResult ?? (existingAppError.type === "unknown" ? unexpectedResult : null);
+
+    if (replacement === null || isSameClassification(replacement, existingAppError)) {
+      return existingAppError;
+    }
+
+    return new AppErrorImpl(replacement);
   }
 
   return new AppErrorImpl(
@@ -224,7 +238,9 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
  * @param error - The raw error value to normalize, such as an `Error`, plain object, or string.
  * @param options - Configuration controlling fallback message, registry source, and wrapper depth.
  * @returns A frozen AppError. An existing AppError is returned as-is when no options are supplied,
- * or when the supplied options find no match that outranks the classification it already has.
+ * or when the supplied options find nothing that improves on it: only an unexpected match replaces
+ * an unknown error, and only a known match that differs replaces a classified one. A
+ * `fallbackMessage` never replaces the message an AppError already has.
  * @throws TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string,
  * `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer
  * from 0 through 3.

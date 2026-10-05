@@ -2,7 +2,7 @@ import { runInNewContext } from "node:vm";
 
 import { describe, expect, it } from "vitest";
 
-import { createErrorRegistry, type ErrorFeedback } from "./index";
+import { createAppError, createErrorRegistry, type ErrorFeedback } from "./index";
 
 describe("feedback map bucket (codes / names / messages)", () => {
   it("should store and retrieve an entry by identifier", () => {
@@ -239,6 +239,15 @@ describe("feedback map bucket (codes / names / messages)", () => {
 
     expect(registry.messages.get("Upload failed")).toEqual({ message: "Msg" });
     expect(() => registry.messages.add(" ...!? ", { message: "Msg" })).toThrow(TypeError);
+  });
+
+  it("should match a message whose trailing punctuation is broken up by whitespace", () => {
+    const registry = createErrorRegistry();
+    registry.messages.add("Done . .", { message: "Msg" });
+
+    expect([...registry.messages.values()]).toEqual([["Done", { message: "Msg" }]]);
+    expect(createAppError(new Error("Done . ."), { registry }).type).toBe("known");
+    expect([...createErrorRegistry([registry]).messages.values()]).toEqual([["Done", { message: "Msg" }]]);
   });
 
   it("should reject an empty or whitespace-only identifier on delete", () => {

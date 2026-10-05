@@ -40,7 +40,9 @@ export interface AppError extends Error {
   readonly originalError: unknown;
 
   /**
-   * Indicates whether retrying the operation that failed with this error is likely to succeed.
+   * Whether the failed operation can be repeated as it is, without user intervention and without
+   * the risk that it runs twice. True only for failures that happen before the operation takes
+   * effect, such as a refused connection or a rate limit.
    */
   readonly isRetryable: boolean;
 
@@ -122,7 +124,8 @@ export interface ErrorFeedback {
   source?: string;
 
   /**
-   * Indicates if the operation can be safely retried.
+   * Whether the failed operation can be repeated as it is, without user intervention and without
+   * the risk that it runs twice. Defaults to `false`.
    */
   isRetryable?: boolean;
 }

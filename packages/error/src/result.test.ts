@@ -168,11 +168,35 @@ describe("attempt — option validation and callback shape", () => {
 
   it("should reject a callback that returns a promise at the type level", () => {
     // @ts-expect-error - an async callback belongs to attemptAsync; its rejection would escape.
-    const result = attempt(async () => 42);
+    expect(() => attempt(async () => 42)).toThrow(TypeError);
     const syncResult: Result<number> = attempt(() => 42);
 
-    expect(result.ok).toBe(true);
     expect(syncResult).toEqual({ ok: true, value: 42 });
+  });
+
+  it("should throw when a callback the type checker cannot see through returns a promise", () => {
+    // Stands in for an untyped SDK call: the type checker sees no promise.
+    const save = (): unknown => Promise.reject(new Error("late"));
+
+    expect(() => attempt(() => save())).toThrow(TypeError);
+  });
+
+  it("should throw for a lazy thenable without starting it", () => {
+    let hasStarted = false;
+    const query: unknown = {
+      // oxlint-disable-next-line unicorn/no-thenable
+      then() {
+        hasStarted = true;
+      },
+    };
+
+    expect(() => attempt(() => query)).toThrow(TypeError);
+    expect(hasStarted).toBe(false);
+  });
+
+  it("should throw when the callback is not a function", async () => {
+    expect(() => attempt(undefined as never)).toThrow(TypeError);
+    await expect(attemptAsync(undefined as never)).rejects.toThrow(TypeError);
   });
 });
 

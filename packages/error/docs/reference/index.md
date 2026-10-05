@@ -62,7 +62,7 @@ Runs a callback and captures a thrown value as a normalized `Err` instead of pro
 
 This is the boundary helper for wrapping code that throws: the callback result becomes `Ok`, and anything thrown is normalized through the same pipeline as `createAppError`.
 
-The callback must be synchronous: one that returns a promise is rejected by the type checker, because its rejection would escape inside an `Ok` holding the promise. Use `attemptAsync` there.
+The callback must be synchronous: one that returns a promise is rejected by the type checker and, where the type checker cannot see it, at runtime, because its rejection would escape inside an `Ok` holding the promise. Use `attemptAsync` there.
 
 **Parameters**
 
@@ -75,7 +75,7 @@ The callback must be synchronous: one that returns a promise is rejected by the 
 
 **Returns** — An Ok result holding the callback value, or an Err holding the normalized failure.
 
-**Throws** — TypeError - If `options` or any supplied option value is invalid.
+**Throws** — TypeError - If `operation` is not a function or returns a promise or other thenable, or if `options` or any supplied option value is invalid.
 
 ### attemptAsync
 
@@ -94,7 +94,7 @@ Runs an async callback and captures a thrown or rejected value as a normalized `
 
 - `T` — The type the callback resolves to on success.
 
-**Returns** — A Promise resolving to an Ok result holding the awaited value, or an Err holding the normalized failure. The promise does not reject for failures raised by `operation`; it rejects with `TypeError`, before running `operation`, if `options` or any supplied option value is invalid.
+**Returns** — A Promise resolving to an Ok result holding the awaited value, or an Err holding the normalized failure. The promise does not reject for failures raised by `operation`; it rejects with `TypeError`, before running `operation`, if `operation` is not a function or if `options` or any supplied option value is invalid.
 
 ### createAppError
 
@@ -118,7 +118,7 @@ A deep known match outranks a shallow unexpected match. Ordinary unknown input n
 - `error` — The raw error value to normalize, such as an `Error`, plain object, or string.
 - `options` — Configuration controlling fallback message, registry source, and wrapper depth.
 
-**Returns** — A frozen AppError. An existing AppError is returned as-is when no options are supplied, or when the supplied options find no match that outranks the classification it already has.
+**Returns** — A frozen AppError. An existing AppError is returned as-is when no options are supplied, or when the supplied options find nothing that improves on it: only an unexpected match replaces an unknown error, and only a known match that differs replaces a classified one. A `fallbackMessage` never replaces the message an AppError already has.
 
 **Throws** — TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string, `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer from 0 through 3.
 
@@ -375,7 +375,7 @@ The registry identifier that classified this error: the matched code, or the mat
 readonly isRetryable: boolean;
 ```
 
-Indicates whether retrying the operation that failed with this error is likely to succeed.
+Whether the failed operation can be repeated as it is, without user intervention and without the risk that it runs twice. True only for failures that happen before the operation takes effect, such as a refused connection or a rate limit.
 
 #### messageKey
 
@@ -483,7 +483,7 @@ The structured feedback returned when a registry matches an error. Defines the s
 isRetryable?: boolean;
 ```
 
-Indicates if the operation can be safely retried.
+Whether the failed operation can be repeated as it is, without user intervention and without the risk that it runs twice. Defaults to `false`.
 
 #### message
 

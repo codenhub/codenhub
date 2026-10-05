@@ -32,7 +32,7 @@ describe("node registry preset", () => {
     expect(createAppError(failure, { registry: nodeErrorRegistry })).toMatchObject({
       type: "known",
       code: "ECONNREFUSED",
-      message: "Could not connect to the server.",
+      messageKey: "error.node.network.connectionRefused",
       source: "node.network",
       isRetryable: true,
     });
@@ -49,6 +49,10 @@ describe("node registry preset", () => {
     ["ENOTFOUND", true],
     ["ETIMEDOUT", true],
     ["UND_ERR_CONNECT_TIMEOUT", true],
+    ["EAI_AGAIN", true],
+    ["EHOSTUNREACH", true],
+    ["ENETUNREACH", true],
+    ["EPIPE", false],
     ["ECONNRESET", false],
     ["UND_ERR_SOCKET", false],
     ["UND_ERR_HEADERS_TIMEOUT", false],
