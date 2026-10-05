@@ -116,6 +116,22 @@ describe("lazy", () => {
       expect(issuesOf(heavy(input)).map((issue) => issue.code)).toEqual(["invalid_union"]);
     });
 
+    it("should stay under the stack with the default limit however many options a union tries first", () => {
+      // Each option that failed once stayed on the stack while the next ran, so twenty before the recursive
+      // one overflowed it inside the default limit, on 3 kB of valid input.
+      const others = Array.from({ length: 200 }, (_, index) => object({ type: literal(`t${index}`) }));
+      const block: Validator<unknown> = union([
+        object({ type: literal("none") }),
+        ...others,
+        object({ type: literal("list"), items: array(lazy(() => block)) }),
+      ]);
+      let input: unknown = { type: "list", items: [] };
+      for (let level = 0; level < 126; level += 1) {
+        input = { type: "list", items: [input] };
+      }
+      expect(block(input).ok).toBe(true);
+    });
+
     it("should count every lazy validator, so two that call each other share one limit", () => {
       const ping: Validator<unknown> = optional(object({ next: lazy(() => pong, { maxDepth: 4 }) }));
       const pong: Validator<unknown> = optional(object({ next: lazy(() => ping, { maxDepth: 4 }) }));
