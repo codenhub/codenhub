@@ -125,7 +125,7 @@ What that means in practice:
 - **Your utility or unlayered CSS beats an intent, presentation, elevation, or aesthetic class** on the same element for normal declarations. `[--ui-fill:50%]` on a `.solid` button, `font-serif` on a `.pixel` region, or `.my-card { --ui-radius: 0 }` in your own stylesheet all apply.
 - **A component and your utility share the `utilities` layer.** Which wins is decided by specificity and then source order, as between any two utilities. Your unlayered normal CSS always beats a component.
 - **State beats your intent.** An `aria-invalid` field stays destructive even with an intent utility on it.
-- **The `-solo` classes are unlayered on purpose**, so they beat a foreign component's own styles; tune them through their knobs rather than with utilities.
+- **The `-solo` classes are unlayered on purpose**, so they beat a foreign component's own styles; tune their material through their knobs rather than with utilities. The presentation, intent, and elevation classes still reach them.
 
 ## Requirements
 

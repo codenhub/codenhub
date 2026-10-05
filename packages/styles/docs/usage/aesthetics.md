@@ -99,13 +99,33 @@ The lens is drawn by an SVG filter in `backdrop-filter`, which Chromium renders 
 
 **Exceptions:**
 
-- It reaches `.card`, `.panel`, `.alert`, the tooltip bubble, and a default or `.soft` `.data-table`. Controls stay solid, as they do under glass.
+- It reaches `.card`, `.panel`, `.alert`, the tooltip bubble, and a default or `.soft` `.data-table`. Controls stay solid, as they do under glass, except a button that asks: see [Liquid buttons](#liquid-buttons).
 - It draws its blur and lens on each surface's `::before` and `::after`, so a surface inside a liquid region cannot carry a `::before` or `::after` of your own, and each surface becomes a positioned stacking context -- a surface you position yourself keeps your placement.
-- The lens is 8px of erosion blurred over 10px at every size, and its strength is fixed. A filter cannot read a custom property, so neither is a knob. The corners are, through `--glass-radius` and `--glass-radius-surface`, with larger defaults: a continuous corner reads smaller than a round one of the same radius.
+- Anything else that frosts under glass keeps liquid's light blur and its clearer ground, without the lens or the rim: a bare `<table>` under `/native`, or a component of your own built with `@apply surface`.
+- The lens is 8px of erosion blurred over 10px on every surface, and 3px blurred over 3.5px on a button; its strength is fixed. A filter cannot read a custom property, so neither is a knob. The corners are, through `--glass-radius` and `--glass-radius-surface`, with larger defaults: a continuous corner reads smaller than a round one of the same radius.
 - A region of another aesthetic nested inside a liquid region, or of plain `.glass`, keeps its own material and takes no layers.
 - Without `.glass` in scope it changes the corners and nothing else.
 - Under `prefers-reduced-transparency: reduce` the blur and the lens go and the surface is opaque, as under glass; in forced colours the layers draw nothing.
 - Text sits over a clearer pane than under glass. Over busy content, check that your text still reads -- the ground is 30% of the page colour, where glass's is 45%.
+
+#### Liquid buttons
+
+A button is a liquid pane when it carries `.glass-liquid` itself, inside a glass region. The modifier on the region alone leaves every button solid: a blur and a lens under each control of a dense toolbar cost two composited layers apiece and read as noise, so the one button that is meant to be glass says so.
+
+```html
+<section class="glass glass-liquid">
+  <button class="btn primary">Solid, like every control</button>
+  <button class="btn ghost glass-liquid">A clear pane</button>
+  <button class="btn soft success glass-liquid">A tinted pane</button>
+</section>
+```
+
+- The fill is still [presentation's](./composing.md#presentation). `.ghost` is the clear pane and `.soft` the tinted one; a `.solid` button keeps its opaque plate and takes the rim and sheen over it. Intent, size, `.pill`, `.icon`, hover, and press all work as on any button.
+- It works in a plain `.glass` region too, and on a button inside a liquid card.
+- It spends the button's `::before` and `::after`, so a liquid button cannot carry one of your own.
+- A disabled liquid button keeps the ground and the rim and loses the blur and the lens: it is dimmed with `opacity`, which cuts its layers off from the page behind it.
+- The label sits over whatever is behind the button. Over busy content, check that it still reads, or use `.solid`.
+- It reaches `.btn`, and a bare `<button>` only through its `.btn` class: the layers are a list of classes, which `/native`'s element mapping does not join.
 
 ## Pixel
 
@@ -121,6 +141,8 @@ The lens is drawn by an SVG filter in `backdrop-filter`, which Chromium renders 
 
 - Corners are one unit or nothing. Chips square instead of stepping — badges, key caps, code, checkboxes, and switches all read `--ui-clip-tight`, which this aesthetic sets to none, because one unit off each corner of a 24px badge is a bite rather than a corner. Tables, progress bars, and skeletons square too, each for its own reason: a table takes no clip, because in Chromium and WebKit its box includes its caption and the clip would cut the caption rather than the rows, and progress and skeleton never read a clip at all — a squaring aesthetic reaches them through `border-radius` alone. `.pre` is the one exception that steps: it carries no clip override, so it inherits the same polygon a button or a card gets, and with no border by default the cut shows with no ring around it.
 - The outline is an inset ring, because a clip removes a real border — and the focus ring, for the same reason, is a second inset layer rather than an outline. Both are the element's own edge rather than a shadow, so the border answers `.edged` and `.edgeless` the way a border does: a `.edgeless` badge and a `.solid` button draw none, a `.edged` card draws one, and a field keeps one whatever a container asks for.
+- The inset focus ring carries a 2px line of the page colour inside it. The ring is the primary colour, so on a `.solid.primary` button it would be drawn over its own colour; the line is what shows there.
+- In forced colours the ring and the cut both go, because the system removes every box shadow: components draw a real 2px border and square corners, and `.pixel-solo` an inward outline.
 - The tooltip trigger and `.radio` are hardcoded past the clip rather than reached by it. `.tooltip-icon` and `.radio` force `clip-path: none`: the circle is the only thing telling a radio from a checkbox at a glance, and a stepped polygon would bite a 20px trigger rather than shape it. The tooltip trigger still takes pixel's zero corner and draws square; the radio keeps its circle.
 - `--font-pixel` is yours to supply. The package ships no font binary, so the aesthetic has no network side effect and falls back to the monospace stack.
 - Numeral legibility depends on the face you pick. At UI sizes -- pagination, counters, small badges -- some pixel/bitmap faces render lookalike digits such as `2`/`8` or `3`/`9` closely enough to misread at a glance; this is a property of the font, not something the aesthetic's CSS can correct. Prefer a face with clearly distinct digit shapes wherever small numeric text matters.
@@ -255,11 +277,37 @@ An aesthetic class sets material tokens and nothing paints until a component rea
 
 A solo class ships in the same entrypoint as its aesthetic, and needs nothing else loaded:
 
-- **It paints material, not colour.** Edge, corner, depth, silhouette, backdrop, font, and press. No intent, no fill amount, no hover tint -- the element has no presentation to compose. Glass's translucent ground is the one fill, because it is glass's material.
+- **It composes with presentation, intent, and elevation, the way a component does.** A solo element reads the same classes a `.card` would:
+
+  ```html
+  <div class="toast pixel-solo edgeless">No ring</div>
+  <div class="toast glass-solo solid success">An opaque green pane</div>
+  <div class="toast neobrutalism-solo flat">No slab</div>
+
+  <section class="soft edged">
+    <div class="toast chunky-tile-solo info">Soft and edged from the container, info from itself</div>
+  </section>
+  ```
+
+  | What                                  | Read from                                                                                              |
+  | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+  | Fill and edge (`.solid`, `.edged`, …) | The element, or any container: presentation cascades, as it does to components.                        |
+  | Intent (`.success`, …)                | The element only. A `.success` container leaves a component inside it neutral, and a solo element too. |
+  | Elevation (`.flat`, `.raised`, …)     | The element only, as on components. It scales the slab, the bar, and sketch's offset.                  |
+  | The aesthetic around it (`.pixel`, …) | Never. See below.                                                                                      |
+
+  With none of those classes it paints material alone -- edge, corner, depth, silhouette, backdrop, font, and press -- and leaves the element's own background and text colour untouched.
+
+- **The fill is a layer over the element's own background.** Five of the six paint it as an inset shadow and write no `background`, so a `.soft` solo toast is a tint over whatever the toast already was, and a `.solid` one with a coloured intent is opaque. Glass owns its background, because the translucent ground is its material, and mixes the fill over that ground. A neutral `.solid` is a 20% tint, not the opaque plate a component draws.
+- **The text colour assumes the theme.** It is written only where a fill or an intent is asked for, and it is the tone the theme prints on the page or on the fill. On an element whose own background does not follow the theme -- a white toast on a dark page -- a `.soft` or `.ghost` intent can print light text on a light ground; use `.solid`, or leave the intent off.
+- **There is no hover tint.** A solo element is not known to be pressable, so the derived hover a `.btn` gets is not drawn.
 - **It reads its aesthetic's knobs and the theme's tokens, with the shipped values as fallbacks.** `--glass-radius-surface`, `--neo-offset`, `--pixel-unit`, `--tile-lift`, `--tile-radius`, `--cyber-cut`, `--cyber-shape`, `--cyber-shape-surface`, `--cyber-glow`, `--cyber-ink`, `--sketch-radius`, `--sketch-radius-surface`, `--sketch-radius-rounded`, `--sketch-radius-surface-rounded`, and the font knobs (including `--font-sketch`) all work, set on the element or any ancestor. With the theme loaded it follows it; without it, it renders the shipped look.
-- **It ignores the aesthetic around it.** It reads no `--ui-*` or `--elevation-color`, so a `.glass-solo` inside a `.pixel` region keeps its corners. The elevation modifiers do not reach it either.
+- **It ignores the aesthetic around it.** It reads no material token and no `--elevation-color`, so a `.glass-solo` inside a `.pixel` region keeps its corners, and `--ui-radius` or `--ui-border-width` set on it or above it do nothing: tune the material through the knobs.
+- **It is not a region.** A component inside a solo element keeps the look of the page around it, with `.glass-liquid` or `.sketch-rounded` beside the solo class too. Only an inherited property the solo class sets, its font, reaches what it holds.
 - **It beats a foreign component's own styles.** The rules are unlayered and one class deep, so they win over a component's zero-specificity or layered rules wherever the two load. The flip side is that a Tailwind utility on the same element (`rounded-none`) loses to it: tune a solo class through its knobs.
 - **It presses only an action.** Neobrutalism, chunky tile, and cyber press a `button`, `a[href]`, `[role="button"]`, `summary`, or button-type `input` that is not disabled; a container stays put, so a toast does not sink when clicked. Reduced motion drops the movement. Chunky tile's heavier label follows the same rule.
 - **Dark values need a colour scheme.** Light and dark pairs are `light-dark()`, which follows the element's `color-scheme`. The package theme sets it; a page without it gets the light values.
+- **The classes it composes with are the theme's.** `.solid`, `.edgeless`, `.success`, `.flat`, and the rest ship in the base stylesheet or `@codenhub/styles/theme`. With an aesthetic entrypoint alone on the page they set nothing, and the solo class paints its unclassed look.
+- **Glass's shadow is whole.** `.flat` does not take it off `.glass-solo`, as it does not under `.glass`.
 
-Do not put a solo class on this package's own components. On a `.card` it would replace the composed fill, edge, and intent with material alone; use the aesthetic class there.
+Do not put a solo class on this package's own components. A `.card` already composes its fill, edge, and intent, and a solo class would paint a second edge and fill over them; use the aesthetic class there, which also works on one element: `<button class="btn pixel">`.
