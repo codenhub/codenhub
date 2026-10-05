@@ -174,7 +174,35 @@ createI18n({ locales: ["en", 1] }); // TypeError: [I18n] locales[1]: Expected st
 - The error's `cause` is the failure, so `error.cause.issues` lists every issue, not only the first.
 - It accepts synchronous validators only, and throws a `TypeError` if the validator returns a promise.
 
-Use it for configuration and other arguments. For a form, a request or anything else a program expects to receive invalid, call the validator and read its result, which lists every issue instead of throwing for the first.
+### Keeping your own wording
+
+A package that already throws for its options has wording its users know. Give each validator its `message`, and `assert` needs no map, so no wording of this package is bundled:
+
+```ts
+import { assert, boolean, nonBlank, objectLike, optional, string } from "@codenhub/validation";
+
+const feedback = objectLike(
+  {
+    message: string({ message: "must be a non-empty string." }, nonBlank()),
+    isRetryable: optional(boolean({ message: "must be a boolean when provided." })),
+  },
+  { message: "must be an object whose fields can be read." },
+);
+
+export function register(input: unknown) {
+  return assert(feedback, input, { subject: "Registry feedback" });
+}
+
+register({ message: " " }); // TypeError: Registry feedback message: must be a non-empty string.
+register({ message: "Try again", isRetryable: "yes" }); // TypeError: Registry feedback isRetryable: must be a boolean when provided.
+register(null); // TypeError: Registry feedback must be an object whose fields can be read.
+```
+
+- A validator's `message` words every issue it reports itself and every issue of its checks that has no message, so one sentence covers a wrong type, a bound and `nonBlank()`. Give a check its own message where the sentences differ.
+- `assert` writes the path before the message, so the message does not name its field: it reads after `message:` or `locales[1]:`.
+- `objectLike` accepts what a class instance or an `Error` is, and reports a getter that throws with the message of the object, where `object` would accept plain objects only and let the exception through.
+
+Use `assert` for configuration and other arguments. For a form, a request or anything else a program expects to receive invalid, call the validator and read its result, which lists every issue instead of throwing for the first.
 
 ## Errors for a form
 
