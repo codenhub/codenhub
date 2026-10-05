@@ -254,4 +254,74 @@ test.describe("forced colours", () => {
     expect(await read(page, "card", "--ui-surface-image")).toBe("none");
     expect(await read(page, "button", "--ui-label-shadow")).toBe("none");
   });
+
+  /* An edge drawn as an inset ring is a box shadow, and forced colours remove
+     every one. With the border ceiling at zero beside it, every box of the
+     aesthetic lost its boundary. */
+  test("draws a real border where an aesthetic's edge is a shadow", async ({ page }) => {
+    await page.emulateMedia({ forcedColors: "active" });
+    await load(
+      page,
+      `<div class="pixel">
+         <button data-testid="button" class="btn">b</button>
+         <input data-testid="field" class="ipt" />
+         <div data-testid="card" class="card">c</div>
+         <input data-testid="switch" type="checkbox" class="switch" />
+       </div>`,
+    );
+
+    for (const testId of ["button", "field", "card"]) {
+      // oxlint-disable-next-line no-await-in-loop -- three reads of one page.
+      expect(await read(page, testId, "border-top-width"), `${testId} border`).toBe("2px");
+      // oxlint-disable-next-line no-await-in-loop -- three reads of one page.
+      expect(await read(page, testId, "clip-path"), `${testId} clip`).toBe("none");
+    }
+    expect(await read(page, "switch", "--ui-shadow-edge"), "the knob sizes from the border again").toBe("");
+  });
+});
+
+/* An aesthetic that clips draws focus as an inset layer, in the primary
+   colour. On a box filled with that colour the layer was invisible, so a line
+   of the page colour sits inside it. */
+test.describe("inset focus", () => {
+  test("shows on a box filled with the ring's own colour", async ({ page }) => {
+    await load(page, `<div class="pixel light"><button data-testid="button" class="btn primary">b</button></div>`);
+
+    await page.keyboard.press("Tab");
+    await expect(page.getByTestId("button")).toBeFocused();
+    /* The layers are transitioned in, so this waits for the settled value. */
+    await expect
+      .poll(() => page.getByTestId("button").evaluate((element) => getComputedStyle(element).boxShadow))
+      .toMatch(/\b0px 0px 0px 9px\b/);
+
+    const layers = await page.getByTestId("button").evaluate((element) => {
+      const styles = getComputedStyle(element);
+      const probe = document.createElement("span");
+
+      document.body.append(probe);
+
+      /* Each colour resolved by the engine, so a ring and a plate are compared
+         as colours rather than as two spellings of one. */
+      const resolve = (color: string) => {
+        probe.style.color = color;
+
+        return getComputedStyle(probe).color;
+      };
+      const result = {
+        focusVisible: element.matches(":focus-visible"),
+        shadow: styles.boxShadow,
+        plate: resolve(styles.backgroundColor),
+        page: resolve("var(--color-background)"),
+      };
+
+      probe.remove();
+
+      return result;
+    });
+
+    expect(layers.focusVisible).toBe(true);
+    expect(layers.shadow.match(/inset/g), layers.shadow).toHaveLength(3);
+    expect(layers.shadow, "the line sits two pixels inside the ring").toMatch(/\b0px 0px 0px 9px\b/);
+    expect(layers.page, "and is not the plate's colour").not.toBe(layers.plate);
+  });
 });

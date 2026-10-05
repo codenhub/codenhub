@@ -1312,7 +1312,8 @@ test.describe("aesthetics", () => {
         return { boxShadow: computed.boxShadow, outlineStyle: computed.outlineStyle };
       });
 
-      expect(styles.boxShadow.match(/inset/g)?.length, styles.boxShadow).toBe(2);
+      /* A third layer, the line of the page colour inside the ring. */
+      expect(styles.boxShadow.match(/inset/g)?.length, styles.boxShadow).toBe(3);
       /* The outline from `reset.css` is declared and drawn, and `clip-path`
          clips an element's whole rendering including its outline -- which is the
          reason the inset layer exists. This used to read `none`, because
