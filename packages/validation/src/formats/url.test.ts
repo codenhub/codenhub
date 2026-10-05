@@ -71,6 +71,24 @@ describe("url", () => {
     expect(url({ host: unknown() })(`https://${labels(20)}/`).ok).toBe(false);
   });
 
+  it("should reject a host written with more than 759 characters, three for each a host can have", () => {
+    const labels = (count: number): string => Array.from({ length: count }, () => "a".repeat(61)).join(".");
+    // The longest host with every character as an escape is the longest a host is written.
+    const escaped = [...`${labels(4)}.abcde`].map((letter) => `%${letter.charCodeAt(0).toString(16)}`).join("");
+    expect(escaped).toHaveLength(759);
+    expect(url()(`https://${escaped}/`).ok).toBe(true);
+    // A variation selector, which the parser drops from a host, so the host read is `example.com`.
+    const padded = (marks: number): string => `e${"️".repeat(marks)}xample.com`;
+    expect(padded(748)).toHaveLength(759);
+    expect(valueOf(url()(`https://${padded(748)}/`))).toBe("https://example.com/");
+    expect(url()(`https://${padded(749)}/`).ok).toBe(false);
+    expect(url({ host: unknown() })(`https://${padded(749)}/`).ok).toBe(false);
+    // Only the host is measured: not the credentials and the port around it, nor the path after it.
+    const around = url({ credentials: unknown(), port: unknown() });
+    expect(around(`https://${"u".repeat(800)}:p@${padded(748)}:8080/`).ok).toBe(true);
+    expect(url()(`https://example.com/${"a".repeat(2000)}?${"b".repeat(2000)}#${"c".repeat(2000)}`).ok).toBe(true);
+  });
+
   it("should reject an absolute host ending in a dot, whatever the host validator or scheme", () => {
     expect(accepts(url(), "https://Example.com./a", "https://localhost./", "https://example.com../")).toEqual([
       false,

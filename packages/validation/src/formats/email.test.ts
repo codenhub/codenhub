@@ -58,6 +58,23 @@ describe("email", () => {
     expect(email()(`a@${host}`).ok).toBe(true);
   });
 
+  it("should reject a domain written with more than 759 characters, and read a shorter one the parser shortens", () => {
+    // A variation selector, which the parser drops from a host, so the domain read is `example.com`.
+    const padded = (marks: number): string => `e${"️".repeat(marks)}xample.com`;
+    expect(padded(748)).toHaveLength(759);
+    expect(valueOf(email()(`a@${padded(748)}`))).toBe("a@example.com");
+    expect(email()(`a@${padded(749)}`).ok).toBe(false);
+    expect(email({ domain: hostname() })(`a@${padded(749)}`).ok).toBe(false);
+    expect(accepts(url({ protocols: ["mailto"] }), `mailto:a@${padded(748)}`, `mailto:a@${padded(749)}`)).toEqual([
+      true,
+      false,
+    ]);
+    // Letters written with their accents apart are longer than the 253 characters of the host they spell.
+    const decomposed = `${Array.from({ length: 5 }, () => "é".repeat(30)).join(".")}.com`;
+    expect(decomposed.length).toBeGreaterThan(253);
+    expect(email()(`a@${decomposed}`).ok).toBe(true);
+  });
+
   it("should reject a non-ASCII local part", () => {
     expect(accepts(email(), "ü@example.com", "用户@example.com")).toEqual([false, false]);
   });

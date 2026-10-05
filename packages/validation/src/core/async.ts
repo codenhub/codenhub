@@ -17,7 +17,7 @@ export type Maybe<T> = T | PromiseLike<T>;
 /** One validation: how many calls each `lazy` it reached has made, and the results each kept, keyed by that `lazy`. */
 interface Validation {
   readonly calls: Map<object, number>;
-  readonly results: Map<object, Map<unknown, unknown>>;
+  readonly results: Map<object, unknown>;
 }
 
 /** The validation running now, or undefined between validations and in a consumer's callback. */
@@ -52,15 +52,18 @@ export const detached = <A, R>(callback: (argument: A) => R, argument: A): R => 
 
 /**
  * The results the `lazy` named by `key` has kept in the validation running now, which it alone reads
- * and writes, or undefined outside a validation.
+ * and writes, made by `make` the first time, or undefined outside a validation.
  */
-export function resultsOf(key: object): Map<unknown, unknown> | undefined {
+export function resultsOf<T>(key: object, make: () => T): T | undefined {
   if (current === undefined) {
     return undefined;
   }
   const { results } = current;
-  const kept = results.get(key) ?? new Map<unknown, unknown>();
-  results.set(key, kept);
+  let kept = results.get(key) as T | undefined;
+  if (kept === undefined) {
+    kept = make();
+    results.set(key, kept);
+  }
   return kept;
 }
 
