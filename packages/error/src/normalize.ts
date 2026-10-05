@@ -95,6 +95,16 @@ const getWrappedErrorCandidates = (error: unknown): unknown[] => {
 };
 
 /**
+ * @internal
+ * @throws TypeError - If `maxDepth` is not an integer from 0 through the supported maximum.
+ */
+export const assertValidMaxDepth = (maxDepth: number): void => {
+  if (!Number.isInteger(maxDepth) || maxDepth < 0 || maxDepth > ERROR_UNWRAP_MAX_DEPTH) {
+    throw new TypeError(`AppError maxDepth must be an integer from 0 through ${ERROR_UNWRAP_MAX_DEPTH}.`);
+  }
+};
+
+/**
  * Collects the error value and every nested wrapper candidate found within `maxDepth`,
  * skipping objects already visited so cyclic wrappers terminate.
  *
@@ -102,9 +112,7 @@ const getWrappedErrorCandidates = (error: unknown): unknown[] => {
  * @throws TypeError - If `maxDepth` is not an integer from 0 through the supported maximum.
  */
 export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_DEPTH): unknown[] => {
-  if (!Number.isInteger(maxDepth) || maxDepth < 0 || maxDepth > ERROR_UNWRAP_MAX_DEPTH) {
-    throw new TypeError(`AppError maxDepth must be an integer from 0 through ${ERROR_UNWRAP_MAX_DEPTH}.`);
-  }
+  assertValidMaxDepth(maxDepth);
 
   const visitedObjects = new Set<object>();
 

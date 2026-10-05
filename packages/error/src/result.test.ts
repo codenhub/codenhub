@@ -151,7 +151,37 @@ describe("attempt", () => {
   });
 });
 
+describe("attempt — option validation and callback shape", () => {
+  it("should reject an invalid maxDepth before running the callback", () => {
+    let hasRun = false;
+
+    expect(() =>
+      attempt(
+        () => {
+          hasRun = true;
+        },
+        { maxDepth: 5 },
+      ),
+    ).toThrow(TypeError);
+    expect(hasRun).toBe(false);
+  });
+});
+
 describe("attemptAsync", () => {
+  it("should reject an invalid maxDepth before running the callback", async () => {
+    let hasRun = false;
+
+    await expect(
+      attemptAsync(
+        () => {
+          hasRun = true;
+        },
+        { maxDepth: 5 },
+      ),
+    ).rejects.toThrow(TypeError);
+    expect(hasRun).toBe(false);
+  });
+
   it("should return an Ok result holding the resolved value", async () => {
     await expect(attemptAsync(async () => "done")).resolves.toEqual({ ok: true, value: "done" });
   });

@@ -1,4 +1,4 @@
-import { classifyErrorCandidate, getErrorCandidates } from "./normalize";
+import { assertValidMaxDepth, classifyErrorCandidate, getErrorCandidates } from "./normalize";
 import { getErrorRegistry, isReadableErrorRegistry } from "./registry";
 import type {
   AppError,
@@ -105,6 +105,10 @@ export const resolveAppErrorOptions = (options: AppErrorOptions): ResolvedAppErr
 
   if (registry !== undefined && !isReadableErrorRegistry(registry)) {
     throw new TypeError("AppError options.registry must implement the readable registry interface.");
+  }
+
+  if (maxDepth !== undefined) {
+    assertValidMaxDepth(maxDepth);
   }
 
   return {

@@ -91,8 +91,8 @@ export const attempt = <T>(operation: () => T, options: AppErrorOptions = {}): R
  * @param operation - The asynchronous callback to run.
  * @param options - Configuration options for AppError normalization.
  * @returns A Promise resolving to an Ok result holding the awaited value, or an Err holding the
- * normalized failure. The promise does not reject for failures raised by `operation`.
- * @throws TypeError - If `options` or any supplied option value is invalid.
+ * normalized failure. The promise does not reject for failures raised by `operation`; it rejects
+ * with `TypeError`, before running `operation`, if `options` or any supplied option value is invalid.
  */
 export const attemptAsync = async <T>(
   operation: () => Promise<T> | T,
