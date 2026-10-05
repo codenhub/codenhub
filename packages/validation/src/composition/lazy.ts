@@ -181,8 +181,16 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
   // Names this `lazy` to the count of calls: its own, or that of the `lazy` whose getter made it.
   const counted = building ?? self;
   const validate = (input: unknown, place: Place, isPrimitive: boolean): Maybe<ValidationResult<unknown>> => {
-    if (spendCall(counted, maxCalls)) {
-      return reject([issue("too_big", { maximum: maxCalls, type: "calls" })], place);
+    const tooMany = (): ValidationResult<unknown> =>
+      reject([issue("too_big", { maximum: maxCalls, type: "calls" })], place);
+    // One primitive past the limit is let through to see whether it ends the recursion, in which case it
+    // was never a call to count: refused here, the last value of a tree with exactly `maxCalls` objects
+    // failed it. Its call is given back only if it does end it, so a second one finds the count two past
+    // the limit and is refused, after an await too, and nothing runs on past the limit.
+    const spent = spendCall(counted);
+    const isOver = spent > maxCalls;
+    if (spent > maxCalls + (isPrimitive ? 1 : 0)) {
+      return tooMany();
     }
     if (openDepth >= maxDepth) {
       return reject([issue("too_big", { maximum: maxDepth, type: "depth" })], place);
@@ -214,6 +222,13 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
       // counted, and so does one whose result is pending, since calls made meanwhile cannot be told apart.
       if (isPrimitive && started === mark && !isThenable(outcome)) {
         refundCall(counted);
+        return outcome;
+      }
+      if (isOver) {
+        // Nothing waits for a result that is pending now, so a rejection of it is handled here.
+        // oxlint-disable-next-line promise/prefer-await-to-then, promise/catch-or-return
+        Promise.resolve(outcome).catch(() => undefined);
+        return tooMany();
       }
       return outcome;
     } finally {

@@ -181,6 +181,12 @@ describe("lazy", () => {
       expect(value(Array.from({ length: 10_001 }, () => 1)).ok).toBe(true);
     });
 
+    it("should not count a primitive that ends the recursion once the limit is reached either", () => {
+      const value: Validator<unknown> = union([number(), array(lazy(() => value, { maxCalls: 1 }))]);
+      expect(value([[1, 2, 3]]).ok).toBe(true);
+      expect(JSON.stringify(issuesOf(value([[[1]]])))).toContain('"type":"calls"');
+    });
+
     it("should count a primitive the recursion goes on through, as text that holds the next level", () => {
       const text: Validator<unknown> = union([literal("end"), json(lazy(() => text, { maxCalls: 3 }))]);
       let input = "end";
@@ -188,6 +194,25 @@ describe("lazy", () => {
         input = JSON.stringify(input);
       }
       const [issue] = issuesOf(json(text)(input));
+      expect(JSON.stringify(issue)).toContain('"type":"calls"');
+    });
+
+    it("should stop text that holds the next level at the limit when each level waits", async () => {
+      const text: AsyncValidator<unknown> = union([
+        literal("end"),
+        json(
+          lazy(
+            () => text,
+            { maxCalls: 3 },
+            check(async () => true),
+          ),
+        ),
+      ]);
+      let input = "end";
+      for (let level = 0; level < 8; level += 1) {
+        input = JSON.stringify(input);
+      }
+      const [issue] = issuesOf(await json(text)(input));
       expect(JSON.stringify(issue)).toContain('"type":"calls"');
     });
 

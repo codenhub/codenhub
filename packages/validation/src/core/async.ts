@@ -65,17 +65,17 @@ export function resultsOf(key: object): Map<unknown, unknown> | undefined {
 }
 
 /**
- * Counts a call of the `lazy` named by `key` in the validation running now, and tests whether that
- * `lazy` has now made more calls than `maxCalls`, its own limit.
+ * Counts a call of the `lazy` named by `key` in the validation running now, and gives how many that
+ * `lazy` has now made in it, for the `lazy` to hold against its own limit.
  */
-export function spendCall(key: object, maxCalls: number): boolean {
+export function spendCall(key: object): number {
   if (current === undefined) {
     // Every composer runs within a validation, so this only guards a call made outside one.
-    return false;
+    return 0;
   }
   const spent = (current.calls.get(key) ?? 0) + 1;
   current.calls.set(key, spent);
-  return spent > maxCalls;
+  return spent;
 }
 
 /** Takes back the call {@link spendCall} last counted for the `lazy` named by `key`, in the validation running now. */
