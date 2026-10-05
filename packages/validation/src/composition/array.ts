@@ -1,4 +1,4 @@
-import { runEach, type Maybe } from "../core/async";
+import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { below, call, composed } from "../core/nesting";
 import { isArray } from "../core/objects";
@@ -28,6 +28,8 @@ export interface ArrayOptions extends SizeOptions, MessageOptions {}
  * leads through the item's index. Checks, such as `unique()`, run on the validated items once every
  * item has passed. The output is a new array; the input is never modified. It is synchronous when
  * `item` is, and asynchronous otherwise.
+ * An array stops once its items have reported 1,000 issues: the rest are not validated, and one more
+ * issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
  *
  * @example
  * ```ts
@@ -66,9 +68,12 @@ export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
       return reject(oversize, place);
     }
     return settle(
+      length,
       // Read by index up to the length that was checked, never through the array's own iterator, which
       // the input can replace to yield other items or never stop.
-      runEach(length, (index) => call(item, input[index], below(place, index))),
+      (index) => call(item, input[index], below(place, index)),
+      place,
+      options.message,
       (values) => accept(values, place),
     );
   });

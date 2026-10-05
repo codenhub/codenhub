@@ -1,5 +1,6 @@
-import { chain, collect, runEach, type Maybe } from "../core/async";
+import { chain, collect, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
+import { cap, countIssues, runItems } from "../core/limit";
 import { append, below, call, composed } from "../core/nesting";
 import { isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, describeType, failWith, issue, nested, repeatedKey } from "../core/result";
@@ -46,6 +47,8 @@ export type InferRecord<TKey extends string, TValue> = string extends TKey
  * silently replacing the first. A wrong number of keys is reported at once, as `too_small` or
  * `too_big` with `type: "record"`, without validating any entry. It is synchronous when both validators
  * are, and asynchronous otherwise.
+ * A record stops once its entries have reported 1,000 issues: the rest are not validated, and one more
+ * issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
  *
  * @example
  * ```ts
@@ -91,12 +94,16 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
     // Every value is read before any validator runs, as in `object`, so neither a key validator that
     // changes the input nor a change made while one waits can reach the output.
     const values = names.map((name) => input[name]);
-    const entries = runEach(names.length, (index) => {
-      const name = names[index] as string;
-      return chain(key(name), (keyResult) =>
-        chain(call(value, values[index], below(place, name)), (valueResult) => ({ keyResult, valueResult })),
-      );
-    });
+    const entries = runItems(
+      names.length,
+      (index) => {
+        const name = names[index] as string;
+        return chain(key(name), (keyResult) =>
+          chain(call(value, values[index], below(place, name)), (valueResult) => ({ keyResult, valueResult })),
+        );
+      },
+      ({ keyResult, valueResult }) => countIssues(keyResult) + countIssues(valueResult),
+    );
     return chain(collect(entries), (settled) => {
       const issues: ValidationIssue[] = [];
       const output: Record<string, unknown> = {};
@@ -127,7 +134,9 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
           }
         }
       });
-      return issues.length > 0 ? failWith(issues) : accept(output, place);
+      return issues.length > 0
+        ? failWith(cap(issues, place, options.message, settled.length < names.length))
+        : accept(output, place);
     });
   });
 }

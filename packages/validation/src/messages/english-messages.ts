@@ -90,6 +90,9 @@ const describeLimit = ({ params }: ValidationIssue, isMin: boolean): string => {
   if (type === "calls") {
     return `Too complex to check within ${bound} recursive steps`;
   }
+  if (type === "issues") {
+    return `Stopped after ${bound} problems, so there may be more`;
+  }
   const counts = entryOf(COLLECTIONS, type);
   if (counts !== undefined) {
     const wording = params?.exact === true ? "exactly" : isMin ? "at least" : "at most";

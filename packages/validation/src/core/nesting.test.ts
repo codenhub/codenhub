@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { array } from "../composition/array";
 import { lazy } from "../composition/lazy";
 import { object } from "../composition/object";
 import { optional } from "../composition/optional";
@@ -81,9 +80,14 @@ describe("deep input with many issues", () => {
     next?: Level;
     items?: unknown[];
   }
+  // Written by hand, since a collection of this package stops at its limit of issues.
+  const many: Validator<unknown[]> = (input) => ({
+    ok: false,
+    error: { issues: (input as unknown[]).map((_, index) => ({ code: "invalid_type", path: [index] })) as never },
+  });
   const level: Validator<Level> = object({
     next: optional(lazy(() => level)),
-    items: optional(array(number())),
+    items: optional(many),
   });
 
   const nested = (depth: number): Level => {

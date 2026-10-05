@@ -1,5 +1,6 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { cap } from "../core/limit";
 import { call, composed } from "../core/nesting";
 import { entriesOf, isArray, isPlainObject, setOwn, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "../core/objects";
 import { assertFunction, failWith, issue } from "../core/result";
@@ -235,7 +236,7 @@ export function intersection(left: AnyValidator, right: AnyValidator, ...rest: u
         if (first?.ok && second?.ok) {
           const conflicts: ValidationIssue[] = [];
           const merged = merge(first.value, second.value, conflicts);
-          return conflicts.length > 0 ? reject(conflicts, place) : accept(merged, place);
+          return conflicts.length > 0 ? reject(cap(conflicts, undefined, undefined), place) : accept(merged, place);
         }
         return failWith([first, second].flatMap((result) => (result?.ok === false ? result.error.issues : [])));
       }),

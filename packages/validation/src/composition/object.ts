@@ -1,5 +1,6 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
+import { cap, MAX_ISSUES } from "../core/limit";
 import { append, below, call, composed } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, failWith, issue } from "../core/result";
@@ -110,10 +111,13 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
 
     const issues: ValidationIssue[] = [];
     if (unknownKeys === "strict") {
-      const unrecognized = Object.keys(input)
-        .filter((key) => !known.has(key))
-        .map((key) => issue("unrecognized_key", { key }, [key]));
-      append(issues, report(unrecognized, place, options.message));
+      const unrecognized = Object.keys(input).filter((key) => !known.has(key));
+      // The sender adds as many keys as it likes, so they are listed up to the limit of a collection.
+      const listed = unrecognized.slice(0, MAX_ISSUES).map((key) => issue("unrecognized_key", { key }, [key]));
+      append(
+        issues,
+        cap(report(listed, place, options.message), place, options.message, unrecognized.length > MAX_ISSUES),
+      );
     }
 
     // Everything the output takes from the input is read before any child runs, so neither a child that

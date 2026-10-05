@@ -19,7 +19,7 @@ export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: 
 
 Creates a validator for arrays whose every item passes `item`.
 
-A wrong size is reported at once, without validating the items, so a huge array is never worked through only to be rejected. Otherwise every item is validated, and each issue's path leads through the item's index. Checks, such as `unique()`, run on the validated items once every item has passed. The output is a new array; the input is never modified. It is synchronous when `item` is, and asynchronous otherwise.
+A wrong size is reported at once, without validating the items, so a huge array is never worked through only to be rejected. Otherwise every item is validated, and each issue's path leads through the item's index. Checks, such as `unique()`, run on the validated items once every item has passed. The output is a new array; the input is never modified. It is synchronous when `item` is, and asynchronous otherwise. An array stops once its items have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
 
 **Parameters**
 
@@ -620,7 +620,7 @@ export declare function map<TKey extends AnyValidator, TValue extends AnyValidat
 
 Creates a validator for `Map`s whose every key passes `key` and every value passes `value`.
 
-A wrong size is reported at once, without validating the entries. An issue's path ends at the entry's key when it is a string, and at its position in iteration order, a number, for any other key, so no two entries share a path, as a number key and the position of an object key could. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found. A key that the key validator changes must stay distinct: an entry that arrives at a key already taken is reported as `invalid_key`, so no value is silently replaced. The output is a new `Map`. It is synchronous when both validators are, and asynchronous otherwise.
+A wrong size is reported at once, without validating the entries. An issue's path ends at the entry's key when it is a string, and at its position in iteration order, a number, for any other key, so no two entries share a path, as a number key and the position of an object key could. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found. A key that the key validator changes must stay distinct: an entry that arrives at a key already taken is reported as `invalid_key`, so no value is silently replaced. The output is a new `Map`. It is synchronous when both validators are, and asynchronous otherwise. A map stops once its entries have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
 
 **Parameters**
 
@@ -1011,7 +1011,7 @@ export declare function record<TKey extends AnyValidator<string>, TValue extends
 
 Creates a validator for plain objects used as a dictionary: any number of keys, all following the same rules.
 
-Each key passes `key` and each value passes `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it cannot be mistaken for a problem with the value; the value is still checked. Only own enumerable properties are read, and a getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does. Every value is read when the validator is called, before any key or value validator runs, so a change to the input made by a callback or while an asynchronous key waits never reaches the output. The output is a new object and the input is never modified. A key such as `__proto__` from parsed JSON is kept as data and never writes to a prototype. A key that the `key` validator changes, such as by lowercasing, must stay distinct: a second entry that arrives at a key already taken is reported as `invalid_key` with `{ issues: [{ code: "invalid_value", params: { unique: true } }] }` instead of silently replacing the first. A wrong number of keys is reported at once, as `too_small` or `too_big` with `type: "record"`, without validating any entry. It is synchronous when both validators are, and asynchronous otherwise.
+Each key passes `key` and each value passes `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it cannot be mistaken for a problem with the value; the value is still checked. Only own enumerable properties are read, and a getter or `Proxy` trap in the input that throws while it is read propagates, as a callback's exception does. Every value is read when the validator is called, before any key or value validator runs, so a change to the input made by a callback or while an asynchronous key waits never reaches the output. The output is a new object and the input is never modified. A key such as `__proto__` from parsed JSON is kept as data and never writes to a prototype. A key that the `key` validator changes, such as by lowercasing, must stay distinct: a second entry that arrives at a key already taken is reported as `invalid_key` with `{ issues: [{ code: "invalid_value", params: { unique: true } }] }` instead of silently replacing the first. A wrong number of keys is reported at once, as `too_small` or `too_big` with `type: "record"`, without validating any entry. It is synchronous when both validators are, and asynchronous otherwise. A record stops once its entries have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
 
 **Parameters**
 
@@ -1081,7 +1081,7 @@ export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: As
 
 Creates a validator for `Set`s whose every value passes `item`.
 
-A wrong size is reported at once, without validating the values. Otherwise every value is validated, and each issue's path leads through the value's position in iteration order. The output is a new `Set` of the validated values. When `item` changes values so that one becomes equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its position, rather than dropped, so the output never holds fewer values than the size options allow. It is synchronous when `item` is, and asynchronous otherwise.
+A wrong size is reported at once, without validating the values. Otherwise every value is validated, and each issue's path leads through the value's position in iteration order. The output is a new `Set` of the validated values. When `item` changes values so that one becomes equal to an earlier one, the later is reported as `invalid_value` with `{ unique: true }` at its position, rather than dropped, so the output never holds fewer values than the size options allow. It is synchronous when `item` is, and asynchronous otherwise. A set stops once its items have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
 
 **Parameters**
 
@@ -1244,7 +1244,7 @@ export declare function tuple<const TItems extends readonly [AnyValidator, ...An
 
 Creates a validator for arrays of fixed length whose items each have their own validator.
 
-A wrong length is reported at once, without validating the items. With `rest`, the array may be longer, and every extra item must pass it; `max` caps how long, the fixed items included, and a longer array fails with `too_big` and `{ maximum, type: "array" }`. Each issue's path leads through the item's index.
+A wrong length is reported at once, without validating the items. With `rest`, the array may be longer, and every extra item must pass it; `max` caps how long, the fixed items included, and a longer array fails with `too_big` and `{ maximum, type: "array" }`. Each issue's path leads through the item's index. A tuple stops once its items have reported 1,000 issues: the rest are not validated, and one more issue, `too_big` with `{ maximum: 1000, type: "issues" }`, says that it stopped.
 
 **Parameters**
 
