@@ -1,6 +1,6 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
-import { cap } from "../core/limit";
+import { cap, MAX_ISSUES } from "../core/limit";
 import { call, composed } from "../core/nesting";
 import { entriesOf, isArray, isPlainObject, setOwn, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "../core/objects";
 import { assertFunction, failWith, issue } from "../core/result";
@@ -42,6 +42,16 @@ function pathOf(pending: Pending): ValidationPathSegment[] {
 }
 
 /**
+ * Reports the place two outputs conflict, up to one past the limit of a collection, which is how the list
+ * is known to be cut: every item of two long lists may conflict, and only the first thousand are reported.
+ */
+function conflict(conflicts: ValidationIssue[], pending: Pending): void {
+  if (conflicts.length <= MAX_ISSUES) {
+    conflicts.push(issue("invalid_intersection", undefined, pathOf(pending)));
+  }
+}
+
+/**
  * Merges one pair, queueing the pairs inside it in `inner`. The same value on both sides is kept,
  * which is what a key both sides passed through unchecked holds, and so are two dates holding the same
  * moment. A pair of objects met before, as a cycle or a shared reference in the outputs meets it, gives
@@ -63,7 +73,7 @@ function mergeOne(pending: Pending, inner: Step[], conflicts: ValidationIssue[],
   }
   // Two values that differ and are not both objects can be nothing but a conflict.
   if (typeof left !== "object" || left === null || typeof right !== "object" || right === null) {
-    conflicts.push(issue("invalid_intersection", undefined, pathOf(pending)));
+    conflict(conflicts, pending);
     return right;
   }
   if (merged.get(left)?.has(right) === true) {
@@ -148,7 +158,7 @@ function mergeOne(pending: Pending, inner: Step[], conflicts: ValidationIssue[],
     inner.push(() => values.forEach((value) => output.add(value)));
     return output;
   }
-  conflicts.push(issue("invalid_intersection", undefined, pathOf(pending)));
+  conflict(conflicts, pending);
   return right;
 }
 
