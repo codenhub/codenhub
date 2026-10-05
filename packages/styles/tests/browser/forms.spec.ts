@@ -897,6 +897,25 @@ test.describe("forms", () => {
     await expectUnmoved("switch-default-none-disabled");
   });
 
+  /* `box` dims a `.disabled` control like the other three spellings, so its
+     line has to hold still under the pointer like theirs. */
+  test("stops a field disabled by class reacting to hover", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const field = page.getByTestId("ipt-default-none");
+
+    await field.evaluate((node) => {
+      node.classList.add("disabled");
+      node.style.transition = "none";
+    });
+
+    const before = await field.evaluate((node) => getComputedStyle(node).borderColor);
+
+    await field.hover();
+
+    expect(await field.evaluate((node) => getComputedStyle(node).borderColor)).toBe(before);
+  });
+
   /* No icons ship. `.input-group` is the wrapper that owns the field box so a
      control can carry an icon element beside it -- any element, from
      `@codenhub/icons` or an inline `<svg>`. These build the markup and read what
