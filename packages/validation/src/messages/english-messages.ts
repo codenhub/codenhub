@@ -188,11 +188,14 @@ const describeValue = (issue: ValidationIssue): string => {
   }
 };
 
+/** The English wording of one issue code, as a function of the issue alone. */
+type Wording = (issue: ValidationIssue) => string;
+
 /**
- * The English wording of one issue code: text, or a function that words an issue, given the map in use
- * so an issue quoted inside it is worded by the same map.
+ * The English wording of a code whose issue holds the issues behind it: it is also given the map in use,
+ * which words the issue it quotes.
  */
-type Wording = (issue: ValidationIssue, messages: Messages) => string;
+type QuotingWording = (issue: ValidationIssue, messages: Messages) => string;
 
 /**
  * Words an `invalid_type` issue in English, such as "Expected string, received number".
@@ -250,7 +253,7 @@ export const tooBigMessage: Wording = describeLimit;
  * @param messages - The map in use, which words the issue a failed part of a URL or an address holds.
  * @returns The wording, without the issue's path.
  */
-export const invalidFormatMessage: Wording = describeFormat;
+export const invalidFormatMessage: QuotingWording = describeFormat;
 
 /**
  * Words an `invalid_value` issue in English, such as "Expected one of "a", "b"" or "Must be unique".
@@ -281,7 +284,7 @@ export const invalidValueMessage: Wording = (issue) =>
  * overrides some of the wording reaches that issue too.
  * @returns The wording, without the issue's path.
  */
-export const invalidKeyMessage: Wording = (issue, messages) => {
+export const invalidKeyMessage: QuotingWording = (issue, messages) => {
   const [found] = (issue.params?.issues ?? []) as readonly ValidationIssue[];
   if (found?.code === "invalid_value" && found.params?.unique === true) {
     return "Must be given only once";
@@ -309,7 +312,7 @@ export const invalidIntersectionMessage = "Conflicting values";
  * @param messages - The map in use, which words the issue an option reported.
  * @returns The wording, without the issue's path.
  */
-export const invalidUnionMessage: Wording = describeUnion;
+export const invalidUnionMessage: QuotingWording = describeUnion;
 
 /**
  * The built-in English wording for every issue the validators can report, as a message map.

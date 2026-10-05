@@ -26,6 +26,7 @@ import {
   guard,
   hostname,
   intersection,
+  invalidKeyMessage,
   invalidTypeMessage,
   is,
   json,
@@ -63,6 +64,7 @@ import {
   type Infer,
   type Messages,
   type StandardSchemaV1,
+  type ValidationIssue,
   type Validator,
 } from "../../../dist/index";
 
@@ -442,6 +444,14 @@ export const queryValue: Infer<typeof query> = { page: 1, tags: ["a"] };
 // code is an entry of a message map.
 export const wordings: Messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
 export const asserted: string = assert(string(), raw, { subject: "name:", messages: wordings });
+// A wording that reads only the issue is called with it alone, and one that quotes the issue behind another
+// needs the map that words it.
+declare const reported: ValidationIssue;
+export const worded: string = invalidTypeMessage(reported);
+export const wordedLimit: string = tooSmallMessage(reported);
+export const wordedKey: string = invalidKeyMessage(reported, wordings);
+// @ts-expect-error the issue behind a key is worded with a map
+export const wordedKeyAlone: string = invalidKeyMessage(reported);
 export const assertedBare: number = assert(number(), raw);
 // @ts-expect-error a validator that may finish later cannot be asserted
 export const badAssert = assert(username, raw);

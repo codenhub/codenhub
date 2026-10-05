@@ -3054,7 +3054,7 @@ hostname()("-bad.com"); // { ok: false, ... }, code "invalid_format"
 ### invalidFormatMessage
 
 ```ts
-export declare const invalidFormatMessage: Wording;
+export declare const invalidFormatMessage: QuotingWording;
 ```
 
 Words an `invalid_format` issue in English, such as "Invalid email address" or "Must match /^a/".
@@ -3072,7 +3072,7 @@ The English wording of an `invalid_intersection` issue.
 ### invalidKeyMessage
 
 ```ts
-export declare const invalidKeyMessage: Wording;
+export declare const invalidKeyMessage: QuotingWording;
 ```
 
 Words an `invalid_key` issue in English, with what the key's validator found first.
@@ -3106,7 +3106,7 @@ if (!result.ok) {
 ### invalidUnionMessage
 
 ```ts
-export declare const invalidUnionMessage: Wording;
+export declare const invalidUnionMessage: QuotingWording;
 ```
 
 Words an `invalid_union` issue in English: with what the one option the input was meant for found, and generically when no option is that one.
@@ -3518,6 +3518,16 @@ The type produced by the last validator of a list.
 
 Not exported; declared in `src/composition/pipe.ts`.
 
+### QuotingWording
+
+```ts
+type QuotingWording = (issue: ValidationIssue, messages: Messages) => string;
+```
+
+The English wording of a code whose issue holds the issues behind it: it is also given the map in use, which words the issue it quotes.
+
+Not exported; declared in `src/messages/english-messages.ts`.
+
 ### Replacement
 
 ```ts
@@ -3561,9 +3571,9 @@ Not exported; declared in `src/primitives/one-of.ts`.
 ### Wording
 
 ```ts
-type Wording = (issue: ValidationIssue, messages: Messages) => string;
+type Wording = (issue: ValidationIssue) => string;
 ```
 
-The English wording of one issue code: text, or a function that words an issue, given the map in use so an issue quoted inside it is worded by the same map.
+The English wording of one issue code, as a function of the issue alone.
 
 Not exported; declared in `src/messages/english-messages.ts`.
