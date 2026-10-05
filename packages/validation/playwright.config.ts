@@ -6,12 +6,30 @@ const ENGINES = [
   { device: "Desktop Safari", name: "webkit" },
 ] as const;
 
+// A worker for each core launched ten browsers at once, which ran a 16 GB machine out of memory.
+const DEFAULT_WORKERS = 3;
+
+/**
+ * Reads the worker count from `PLAYWRIGHT_WORKERS`. Playwright takes a count only as a number, and
+ * `Number` of text that is no number is NaN, which it takes and then runs no worker for, so anything
+ * but a positive integer is refused here.
+ */
+function readWorkers(): number {
+  const given = process.env.PLAYWRIGHT_WORKERS;
+  if (given === undefined || given === "") {
+    return DEFAULT_WORKERS;
+  }
+  const count = Number(given);
+  if (!Number.isInteger(count) || count < 1) {
+    throw new TypeError(`PLAYWRIGHT_WORKERS must be a positive integer, received "${given}"`);
+  }
+  return count;
+}
+
 export default defineConfig({
   testDir: "./tests/browser",
   fullyParallel: true,
-  // A worker for each core launched ten browsers at once, which ran a 16 GB machine out of memory.
-  // Given as text, which Playwright refuses unless it is a count; `Number` of other text is NaN, which it takes.
-  workers: process.env.PLAYWRIGHT_WORKERS ?? 3,
+  workers: readWorkers(),
   reporter: "list",
   webServer: {
     command: "vite --host 127.0.0.1 --port 5193 --strictPort",
