@@ -154,12 +154,20 @@
 
      The corner knobs are glass's own, with larger defaults: a continuous corner
      reads smaller than a round one of the same radius. Where `corner-shape` is
-     not drawn the corners stay round. */
-  .glass-liquid {
+     not drawn the corners stay round.
+
+     Not on a solo element: `.glass-solo.glass-liquid` paints its own corner
+     below, and a token declared on it would inherit into whatever it holds --
+     a `.btn` inside a solo toast took liquid's corners on a page with no glass
+     in scope. Every scope below skips a solo element for the same reason. */
+  .glass-liquid:not(.glass-solo) {
     --ui-corner: var(--glass-radius, 1rem);
     --ui-corner-surface: var(--glass-radius-surface, 1.5rem);
     --ui-corner-shape: squircle;
+  }
 
+  /* The layers' values, on a solo element too: it draws the same two. */
+  .glass-liquid {
     --_glass-liquid-blur: blur(2px) saturate(1.8);
 
     /* The lens is its own layer rather than a second function in the blur's
@@ -177,6 +185,12 @@
        property, so the band and the strength are fixed, not knobs. */
     --_glass-liquid-lens: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='lens' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feFlood flood-color='white'/><feMorphology operator='erode' radius='8'/><feGaussianBlur stdDeviation='10' result='ramp'/><feOffset in='ramp' dx='-3' result='l'/><feOffset in='ramp' dx='3' result='r'/><feComposite in='l' in2='r' operator='arithmetic' k2='2' k3='-2' k4='0.5' result='dx'/><feOffset in='ramp' dy='-3' result='u'/><feOffset in='ramp' dy='3' result='d'/><feComposite in='u' in2='d' operator='arithmetic' k2='2' k3='-2' k4='0.5' result='dy'/><feColorMatrix in='dx' values='0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1' result='x'/><feColorMatrix in='dy' values='0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1'/><feComposite in='x' operator='arithmetic' k2='1' k3='1'/><feDisplacementMap in='SourceGraphic' scale='110' xChannelSelector='R' yChannelSelector='G'/></filter></svg>#lens");
 
+    /* The same lens at a control's size. The pane's band is 8px of erosion
+       under a 10px blur, which is most of a 40px button's height: the two
+       sides' ramps meet in the middle and the label sits in a loop. A third of
+       each length keeps a clear centre for the label. */
+    --_glass-liquid-lens-control: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='lens' x='0' y='0' width='100%' height='100%' color-interpolation-filters='sRGB'><feFlood flood-color='white'/><feMorphology operator='erode' radius='3'/><feGaussianBlur stdDeviation='3.5' result='ramp'/><feOffset in='ramp' dx='-1' result='l'/><feOffset in='ramp' dx='1' result='r'/><feComposite in='l' in2='r' operator='arithmetic' k2='2' k3='-2' k4='0.5' result='dx'/><feOffset in='ramp' dy='-1' result='u'/><feOffset in='ramp' dy='1' result='d'/><feComposite in='u' in2='d' operator='arithmetic' k2='2' k3='-2' k4='0.5' result='dy'/><feColorMatrix in='dx' values='0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1' result='x'/><feColorMatrix in='dy' values='0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1'/><feComposite in='x' operator='arithmetic' k2='1' k3='1'/><feDisplacementMap in='SourceGraphic' scale='40' xChannelSelector='R' yChannelSelector='G'/></filter></svg>#lens");
+
     /* The rim: light caught on the top-left edge and, fainter, the bottom-right,
        over a soft inner glow. Drawn on the lens layer, the topmost, because a
        rim drawn on the surface itself would sit under the layers and blur. */
@@ -192,45 +206,62 @@
   }
 
   /* The glass material the modifier changes, where glass is in scope: on the
-     same element, or on a surface inside a glass region. The blur moves off the
-     surface onto a layer behind its content (below): a surface with a backdrop
-     filter of its own is a backdrop root, and a layer inside one sees only the
-     surface, never the page behind it. */
-  .glass.glass-liquid,
-  .glass .glass-liquid {
+     same element, or on a surface inside a glass region.
+
+     The backdrop is liquid's lighter blur, for whatever frosts under glass and
+     takes no layers below: a bare `<table>` under `/native`, a consumer's own
+     `@apply surface`. The layers' selector list cannot name those, and with
+     the backdrop cleared here they kept the clearer ground with nothing
+     blurred behind it. A surface that does take the layers clears its own. */
+  .glass.glass-liquid:not(.glass-solo),
+  .glass .glass-liquid:not(.glass-solo) {
     --ui-ink: light-dark(rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.16));
     --ui-surface-ground: color-mix(in srgb, var(--color-background) 30%, transparent);
     --ui-surface-image: initial;
-    --ui-backdrop: none;
+    --ui-backdrop: var(--_glass-liquid-blur);
   }
 
   @media (prefers-reduced-transparency: reduce) {
-    .glass.glass-liquid,
-    .glass .glass-liquid {
+    .glass.glass-liquid:not(.glass-solo),
+    .glass .glass-liquid:not(.glass-solo) {
       --ui-surface-ground: var(--color-background);
     }
 
     .glass-liquid {
       --_glass-liquid-blur: none;
       --_glass-liquid-lens: none;
+      --_glass-liquid-lens-control: none;
     }
   }
 
   /* The layers: a treatment no token reaches, so a selector list glass owns and
-     the registry records. Two pseudo-elements behind a surface's content, the
-     blur beneath and the lens with the rim and sheen above it. `isolation`
-     keeps them above the surface's own plate, which they then blur with the
-     page; `position` anchors them, and a component that positions itself --
-     the tooltip bubble -- keeps its own. A default or `.soft` table frosts
-     under glass, so it takes the layers too. Both slots are spent, so a surface
-     inside a liquid region carries no `::before` or `::after` of the
-     consumer's; the fields cannot host one, and controls stay solid as they do
-     under glass.
+     the registry records. Two pseudo-elements behind the content, the blur
+     beneath and the lens with the rim and sheen above it. `isolation` keeps
+     them above the element's own plate, which they then blur with the page;
+     `position` anchors them, and a component that positions itself -- the
+     tooltip bubble -- keeps its own. A default or `.soft` table frosts under
+     glass, so it takes the layers too. Both slots are spent, so a host carries
+     no `::before` or `::after` of the consumer's; the fields cannot host one.
 
-     A region of another aesthetic nested inside, or of plain glass, keeps its
-     own material and takes no layers. This list names the other aesthetics, and
-     `registry.test.ts` fails when one is missing. */
-  :is(.glass-liquid, .glass-liquid *):is(.glass, .glass *):is(
+     The blur is on the layer and not on the host: an element with a backdrop
+     filter of its own is a backdrop root, and a layer inside one sees only that
+     element, never the page behind it. So a host clears the region's backdrop.
+
+     Surfaces take the layers from a liquid scope. A region of another
+     aesthetic nested inside, or of plain glass, keeps its own material and
+     takes none; this list names the other aesthetics, and `registry.test.ts`
+     fails when one is missing.
+
+     A button takes them only when it carries `.glass-liquid` itself, in a
+     glass scope. Controls stay solid under a liquid region, for the reason
+     glass gives -- two composited layers and a filter under every control of a
+     dense cluster -- and a class on the one button that is meant to be a pane
+     is a request rather than a cascade, the idiom `text-control` uses for
+     `.edgeless`. Its fill is still presentation's: `.solid` stays an opaque
+     plate under the rim, and `.soft` and `.ghost` are the clear panes. A
+     disabled one is dimmed by `opacity`, which makes it a backdrop root, so it
+     keeps the ground and the rim and bends nothing. */
+  :is(.glass-liquid:not(.glass-solo), .glass-liquid:not(.glass-solo) *):is(.glass, .glass *):is(
     .card,
     .panel,
     .alert,
@@ -242,7 +273,10 @@
     .glass-liquid :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *,
     .glass-liquid .glass:not(.glass-liquid),
     .glass-liquid .glass:not(.glass-liquid) *
-  ) {
+  ),
+  .btn.glass-liquid:is(.glass, .glass *) {
+    --ui-backdrop: none;
+
     position: relative;
     isolation: isolate;
 
@@ -269,6 +303,28 @@
       box-shadow: var(--_glass-liquid-rim);
     }
   }
+
+  /* A button's lens is the control one. Swapped as the value the layer reads
+     rather than on the layer: the list above outranks any selector that names
+     the button's `::after` alone. */
+  .btn.glass-liquid:is(.glass, .glass *) {
+    --_glass-liquid-lens: var(--_glass-liquid-lens-control);
+  }
+}
+
+/* A liquid button rests on liquid's ground rather than on nothing, so a
+   `.ghost` or `.soft` one is a pane and not a hole in the page. It reads the
+   surface ground the modifier set on it, so reduced transparency and a
+   consumer's own `--ui-surface-ground` reach it as they reach a card.
+
+   In `utilities`, not with the layers: it has to beat `box`'s own
+   `--_d-ground: transparent`, which it does there on specificity, and it
+   writes only a private nothing a consumer sets. See
+   docs/internal/model.md#cascade-layers. */
+@layer utilities {
+  .btn.glass-liquid:is(.glass, .glass *) {
+    --_d-ground: var(--ui-surface-ground, transparent);
+  }
 }
 
 /* Forced colours paint the plain surface: no layer blurs, bends, or lights it. */
@@ -276,6 +332,7 @@
   .glass-liquid {
     --_glass-liquid-blur: none;
     --_glass-liquid-lens: none;
+    --_glass-liquid-lens-control: none;
     --_glass-liquid-rim: none;
     --_glass-liquid-sheen: none;
   }
