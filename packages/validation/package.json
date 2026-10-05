@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/validation",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": false,
   "description": "Zero-dependency schema validation for TypeScript: typed, composable, and extensible with custom checks, async rules and localizable messages.",
   "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/validation",
