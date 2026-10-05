@@ -47,7 +47,7 @@ Until 0.3.0 the issues of a failing input were the caller's to bound, with the s
 | Input  | Before                                  | With the limit |
 | ------ | --------------------------------------- | -------------- |
 | 100 kB | 575 ms, 152 MB                          | 39 ms, 13 MB   |
-| 1 MB   | 5.9 s, 1.07 GB; a 512 MB process aborts | 96 ms, 32 MB   |
+| 1 MB   | 5.9 s, 1.07 GB; a 512 MB process aborts | 71 ms, 25 MB   |
 
 A plain `array(string())` given 1 MB of `0`s took 189 MB, and takes 6 MB. So the 100 kB cap the documentation suggested still cost half a second of a blocked event loop for each request, and the default body limit of several frameworks ended a small container. It also left every adopter to remember `max` on every collection, which is the kind of care the package exists to take once.
 
