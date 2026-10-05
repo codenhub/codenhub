@@ -92,8 +92,9 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
   // The shape is read once, so changing it after the validator is made changes nothing.
   const keys = Object.keys(shape);
   const validators = keys.map((key) => {
-    assertFunction(`shape.${key}`, shape[key]);
-    return shape[key] as AnyValidator;
+    const validator: unknown = shape[key];
+    assertFunction(`shape.${key}`, validator);
+    return validator as AnyValidator;
   });
   const known = new Set(keys);
   const [options, reject, accept] = tail<ObjectOptions, Record<string, unknown>>(rest, "unknownKeys");
