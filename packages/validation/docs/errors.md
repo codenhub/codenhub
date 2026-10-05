@@ -22,7 +22,7 @@ const result = {
 };
 ```
 
-`error.issues` lists every problem the validator found, in a fixed order, and is never empty. Its type says so too, so `result.error.issues[0]` is an issue and not `undefined`, even under `noUncheckedIndexedAccess`. A strict `object` reports its unrecognized keys first, then the issues of its properties in the order the shape lists them, whichever finished first.
+`error.issues` lists every problem the validator found, up to the [1,000 issues a collection reports](validators.md#collections), in a fixed order, and is never empty. Its type says so too, so `result.error.issues[0]` is an issue and not `undefined`, even under `noUncheckedIndexedAccess`. A strict `object` reports its unrecognized keys first, then the issues of its properties in the order the shape lists them, whichever finished first.
 
 ## The issue
 
@@ -171,7 +171,7 @@ createI18n({ locales: ["en", 1] }); // TypeError: [I18n] locales[1]: Expected st
 
 - The message is the `subject`, written as you gave it, then the path of the first issue and its wording. Without a `subject` it starts at the path, and an issue at the value itself has no path.
 - The wording is the issue's own `message`, then the `messages` map, then "Invalid value". The map is optional here, since the path still says which option is wrong.
-- The error's `cause` is the failure, so `error.cause.issues` lists every issue, not only the first.
+- The error's `cause` is the failure, so `error.cause.issues` lists the issues the validator reported, not only the first.
 - It accepts synchronous validators only, and throws a `TypeError` if the validator returns a promise.
 
 ### Keeping your own wording
@@ -202,7 +202,7 @@ register(null); // TypeError: Registry feedback must be an object whose fields c
 - `assert` writes the path before the message, so the message does not name its field: it reads after `message:` or `locales[1]:`.
 - `objectLike` accepts what a class instance or an `Error` is, and reports a getter that throws with the message of the object, where `object` would accept plain objects only and let the exception through.
 
-Use `assert` for configuration and other arguments. For a form, a request or anything else a program expects to receive invalid, call the validator and read its result, which lists every issue instead of throwing for the first.
+Use `assert` for configuration and other arguments. For a form, a request or anything else a program expects to receive invalid, call the validator and read its result, which lists the issues instead of throwing for the first.
 
 ## Errors for a form
 

@@ -27,9 +27,9 @@ export interface AssertOptions {
  * It is for input whose being invalid is a mistake of the caller, such as a configuration object: the
  * mistake is thrown where it was made, as any other bad argument is. Input a program is expected to
  * receive invalid, such as a form or a request, is read from the result of calling the validator, which
- * lists every issue instead of throwing for the first.
+ * lists the issues instead of throwing for the first.
  *
- * The error names the first issue only. Every issue is on the failure the error carries as its `cause`.
+ * The error names the first issue only. The others are on the failure the error carries as its `cause`.
  *
  * @example
  * ```ts

@@ -44,7 +44,7 @@ type Signup = Infer<typeof signup>; // { name: string; email: string; age?: numb
 const result = signup(requestBody);
 ```
 
-Invalid input never throws, with one exception noted below. Every problem is in `result.error.issues`, each with a `code`, a `path` to the offending value and `params` describing the failure. Turn an issue into text with `formatIssue`, or group them by field for a form with `flatten`, passing `englishMessages` or a map of your own.
+Invalid input never throws, with one exception noted below. Every problem a validator reports is in `result.error.issues`, each with a `code`, a `path` to the offending value and `params` describing the failure. Turn an issue into text with `formatIssue`, or group them by field for a form with `flatten`, passing `englishMessages` or a map of your own.
 
 Every validator takes options, then checks, which are rules for the rarer cases, and a `message` option for a sentence of its own:
 
