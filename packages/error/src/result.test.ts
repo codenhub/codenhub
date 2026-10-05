@@ -165,6 +165,15 @@ describe("attempt — option validation and callback shape", () => {
     ).toThrow(TypeError);
     expect(hasRun).toBe(false);
   });
+
+  it("should reject a callback that returns a promise at the type level", () => {
+    // @ts-expect-error - an async callback belongs to attemptAsync; its rejection would escape.
+    const result = attempt(async () => 42);
+    const syncResult: Result<number> = attempt(() => 42);
+
+    expect(result.ok).toBe(true);
+    expect(syncResult).toEqual({ ok: true, value: 42 });
+  });
 });
 
 describe("attemptAsync", () => {
