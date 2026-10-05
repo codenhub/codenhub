@@ -2915,7 +2915,7 @@ export declare const englishMessages: Messages;
 
 The built-in English wording for every issue the validators can report, as a message map.
 
-Pass it to `formatIssue`, `flatten` or `standard` to get text such as "Must be at least 18". It is a separate value, not something `formatIssue` carries, so a program that words its own issues, or that never shows one, does not bundle it. To change some of the wording, spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is frozen, so no code can reword the messages of every other user of it in the process. A custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
+Pass it to `formatIssue`, `flatten` or `standard` to get text such as "Must be at least 18". It is a separate value, not something `formatIssue` carries, so a program that words its own issues, or that never shows one, does not bundle it, and one that can report only a few codes takes the wording of each on its own, such as [invalidTypeMessage](#invalidtypemessage). To change some of the wording, spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is frozen, so no code can reword the messages of every other user of it in the process. A custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
 
 **Example**
 
@@ -2956,6 +2956,78 @@ hostname()("localhost"); // { ok: true, value: "localhost" }
 hostname()("Intranet.Example"); // { ok: true, value: "intranet.example" }
 hostname()("-bad.com"); // { ok: false, ... }, code "invalid_format"
 ```
+
+### invalidFormatMessage
+
+```ts
+export declare const invalidFormatMessage: Wording;
+```
+
+Words an `invalid_format` issue in English, such as "Invalid email address" or "Must match /^a/".
+
+**Returns** — The wording, without the issue's path.
+
+### invalidIntersectionMessage
+
+```ts
+export declare const invalidIntersectionMessage = "Conflicting values";
+```
+
+The English wording of an `invalid_intersection` issue.
+
+### invalidKeyMessage
+
+```ts
+export declare const invalidKeyMessage: Wording;
+```
+
+Words an `invalid_key` issue in English, with what the key's validator found first.
+
+A key given twice, in a query or by two keys a key validator made the same, is worded "Must be given only once", since "must be unique" names no rule a person broke.
+
+**Returns** — The wording, without the issue's path.
+
+### invalidTypeMessage
+
+```ts
+export declare const invalidTypeMessage: Wording;
+```
+
+Words an `invalid_type` issue in English, such as "Expected string, received number".
+
+Each code's wording is a value of its own, so a program that can report only a few codes builds a map of those and bundles no other wording: `{ invalid_type: invalidTypeMessage }`. Pass the map wherever [englishMessages](#englishmessages) goes. A code the map lacks is worded "Invalid value".
+
+**Returns** — The wording, without the issue's path.
+
+**Example**
+
+```ts
+const messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+const result = string({ min: 2 })(1);
+if (!result.ok) {
+  formatIssue(result.error.issues[0], messages); // "Expected string, received number"
+}
+```
+
+### invalidUnionMessage
+
+```ts
+export declare const invalidUnionMessage: Wording;
+```
+
+Words an `invalid_union` issue in English: with what the one option the input was meant for found, and generically when no option is that one.
+
+**Returns** — The wording, without the issue's path.
+
+### invalidValueMessage
+
+```ts
+export declare const invalidValueMessage: Wording;
+```
+
+Words an `invalid_value` issue in English, such as "Expected one of "a", "b"" or "Must be unique".
+
+**Returns** — The wording, without the issue's path.
 
 ### ip
 
@@ -3200,6 +3272,26 @@ time()("24:00"); // { ok: false, ... }, code "invalid_format"
 time({ precision: 0 })("09:15"); // { ok: false, ... }: the seconds are required
 ```
 
+### tooBigMessage
+
+```ts
+export declare const tooBigMessage: Wording;
+```
+
+Words a `too_big` issue in English, such as "Must contain at most 10 items".
+
+**Returns** — The wording, without the issue's path.
+
+### tooSmallMessage
+
+```ts
+export declare const tooSmallMessage: Wording;
+```
+
+Words a `too_small` issue in English, such as "Must be at least 2 characters".
+
+**Returns** — The wording, without the issue's path.
+
 ### ulid
 
 ```ts
@@ -3230,6 +3322,16 @@ Creates a validator that accepts every value, unchanged. Checks given to it run 
 const metadata = object({ id: string(), extra: unknown() });
 const serializable = unknown(check((value) => JSON.stringify(value) !== undefined, "Must be serializable"));
 ```
+
+### unrecognizedKeyMessage
+
+```ts
+export declare const unrecognizedKeyMessage: Wording;
+```
+
+Words an `unrecognized_key` issue in English, with the key quoted as a literal, since it is text the sender chose and may hold quotes or line breaks.
+
+**Returns** — The wording, without the issue's path.
 
 ### uuid
 
@@ -3361,3 +3463,13 @@ type ValuesOf<T> = T extends readonly unknown[] ? T[number] : T[keyof T];
 The values a list or an enum holds.
 
 Not exported; declared in `src/primitives/one-of.ts`.
+
+### Wording
+
+```ts
+type Wording = (issue: ValidationIssue, messages: Messages) => string;
+```
+
+The English wording of one issue code: text, or a function that words an issue, given the map in use so an issue quoted inside it is worded by the same map.
+
+Not exported; declared in `src/messages/english-messages.ts`.

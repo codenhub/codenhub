@@ -47,7 +47,18 @@ import { oneOf } from "../primitives/one-of";
 import { string } from "../primitives/string";
 import { unknown } from "../primitives/unknown";
 import { issuesOf } from "../test-utils";
-import { englishMessages } from "./english-messages";
+import {
+  englishMessages,
+  invalidFormatMessage,
+  invalidIntersectionMessage,
+  invalidKeyMessage,
+  invalidTypeMessage,
+  invalidUnionMessage,
+  invalidValueMessage,
+  tooBigMessage,
+  tooSmallMessage,
+  unrecognizedKeyMessage,
+} from "./english-messages";
 import { flatten, formatIssue as formatWith, formatPath, type Messages } from "./format-issue";
 
 const formatIssue = (issue: ValidationIssue, messages: Messages = englishMessages): string =>
@@ -73,6 +84,43 @@ describe("without the English wording", () => {
     expect(() => formatWith(found as ValidationIssue, undefined as never)).toThrow(error);
     expect(() => flatten({ issues: [found as ValidationIssue] }, undefined as never)).toThrow(error);
     expect(() => formatWith(found as ValidationIssue, [] as never)).toThrow(TypeError);
+  });
+});
+
+describe("the wording of one code", () => {
+  it("should be the wording englishMessages has for that code", () => {
+    expect(englishMessages).toEqual({
+      invalid_type: invalidTypeMessage,
+      too_small: tooSmallMessage,
+      too_big: tooBigMessage,
+      invalid_format: invalidFormatMessage,
+      invalid_value: invalidValueMessage,
+      invalid_key: invalidKeyMessage,
+      unrecognized_key: unrecognizedKeyMessage,
+      invalid_intersection: invalidIntersectionMessage,
+      invalid_union: invalidUnionMessage,
+    });
+  });
+
+  it("should word its code in a map of a few, and leave a code the map lacks to the fallback", () => {
+    const messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+    expect(formatIssue(issuesOf(string({ min: 2 })(1))[0] as ValidationIssue, messages)).toBe(
+      "Expected string, received number",
+    );
+    expect(formatIssue(issuesOf(string({ min: 2 })("a"))[0] as ValidationIssue, messages)).toBe(
+      "Must be at least 2 characters",
+    );
+    expect(formatIssue(issuesOf(string({ max: 1 })("ab"))[0] as ValidationIssue, messages)).toBe("Invalid value");
+  });
+
+  it("should word an issue quoted inside another with the map in use", () => {
+    const [found] = issuesOf(record(string({ min: 2 }), string())({ a: "x" }));
+    expect(formatIssue(found as ValidationIssue, { invalid_key: invalidKeyMessage })).toBe(
+      "Invalid key: Invalid value",
+    );
+    expect(formatIssue(found as ValidationIssue, { invalid_key: invalidKeyMessage, too_small: tooSmallMessage })).toBe(
+      "Invalid key: Must be at least 2 characters",
+    );
   });
 });
 

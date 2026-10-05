@@ -89,7 +89,18 @@ export { url, type UrlOptions } from "./formats/url";
 export { uuid, type UuidOptions } from "./formats/uuid";
 export { standard } from "./interop/standard";
 export { type StandardSchemaV1 } from "./interop/standard-schema";
-export { englishMessages } from "./messages/english-messages";
+export {
+  englishMessages,
+  invalidFormatMessage,
+  invalidIntersectionMessage,
+  invalidKeyMessage,
+  invalidTypeMessage,
+  invalidUnionMessage,
+  invalidValueMessage,
+  tooBigMessage,
+  tooSmallMessage,
+  unrecognizedKeyMessage,
+} from "./messages/english-messages";
 export { flatten, formatIssue, formatPath, type FlattenedErrors, type Messages } from "./messages/format-issue";
 export { bigint, type BigintOptions } from "./primitives/bigint";
 export { boolean } from "./primitives/boolean";

@@ -120,6 +120,35 @@ formatIssue(issue, pt);
 
 A custom validator's own codes belong in the map too, or can carry a `message` on the issue.
 
+### The wording of one code
+
+Each code's English wording is also an export of its own, so a program that can report only a few codes builds a map of those and bundles no other wording:
+
+| Code                   | Export                       |
+| ---------------------- | ---------------------------- |
+| `invalid_type`         | `invalidTypeMessage`         |
+| `invalid_format`       | `invalidFormatMessage`       |
+| `invalid_value`        | `invalidValueMessage`        |
+| `too_small`            | `tooSmallMessage`            |
+| `too_big`              | `tooBigMessage`              |
+| `unrecognized_key`     | `unrecognizedKeyMessage`     |
+| `invalid_key`          | `invalidKeyMessage`          |
+| `invalid_intersection` | `invalidIntersectionMessage` |
+| `invalid_union`        | `invalidUnionMessage`        |
+
+```ts
+import { formatIssue, invalidTypeMessage, string, tooSmallMessage, type Messages } from "@codenhub/validation";
+
+const messages: Messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+
+const result = string({ min: 2 })("a");
+if (!result.ok) {
+  formatIssue(result.error.issues[0], messages); // "Must be at least 2 characters"
+}
+```
+
+`englishMessages` is the map of all nine. A wording that quotes the issue behind another, as `invalidKeyMessage`, `invalidUnionMessage` and `invalidFormatMessage` do, words it with the map it was called with, so include the codes the quoted issue can have.
+
 ## Errors for a form
 
 `flatten` groups the messages of a failed result for display: issues at the root go to `formErrors`, and the rest are keyed by their formatted path in `fieldErrors`.

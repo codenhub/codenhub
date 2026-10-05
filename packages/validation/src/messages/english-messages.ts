@@ -189,15 +189,137 @@ const describeValue = (issue: ValidationIssue): string => {
 };
 
 /**
+ * The English wording of one issue code: text, or a function that words an issue, given the map in use
+ * so an issue quoted inside it is worded by the same map.
+ */
+type Wording = (issue: ValidationIssue, messages: Messages) => string;
+
+/**
+ * Words an `invalid_type` issue in English, such as "Expected string, received number".
+ *
+ * @remarks
+ * Each code's wording is a value of its own, so a program that can report only a few codes builds a
+ * map of those and bundles no other wording: `{ invalid_type: invalidTypeMessage }`. Pass the map
+ * wherever {@link englishMessages} goes. A code the map lacks is worded "Invalid value".
+ *
+ * @example
+ * ```ts
+ * const messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+ * const result = string({ min: 2 })(1);
+ * if (!result.ok) {
+ *   formatIssue(result.error.issues[0], messages); // "Expected string, received number"
+ * }
+ * ```
+ *
+ * @param issue - The issue to word.
+ * @returns The wording, without the issue's path.
+ */
+export const invalidTypeMessage: Wording = (issue) => {
+  if (issue.params?.coerced === true) {
+    return `Cannot convert ${param(issue, "received")} to a ${param(issue, "expected")}`;
+  }
+  if (issue.params?.received === "non-plain object") {
+    // Such as `process.env` or a class instance, which a copy into a plain object passes.
+    return "Expected a plain object; copy it first, as in { ...value }";
+  }
+  return issue.params?.expected === "never"
+    ? "Not allowed"
+    : `Expected ${param(issue, "expected")}, received ${param(issue, "received")}`;
+};
+
+/**
+ * Words a `too_small` issue in English, such as "Must be at least 2 characters".
+ *
+ * @param issue - The issue to word.
+ * @returns The wording, without the issue's path.
+ */
+export const tooSmallMessage: Wording = describeLimit;
+
+/**
+ * Words a `too_big` issue in English, such as "Must contain at most 10 items".
+ *
+ * @param issue - The issue to word.
+ * @returns The wording, without the issue's path.
+ */
+export const tooBigMessage: Wording = describeLimit;
+
+/**
+ * Words an `invalid_format` issue in English, such as "Invalid email address" or "Must match /^a/".
+ *
+ * @param issue - The issue to word.
+ * @param messages - The map in use, which words the issue a failed part of a URL or an address holds.
+ * @returns The wording, without the issue's path.
+ */
+export const invalidFormatMessage: Wording = describeFormat;
+
+/**
+ * Words an `invalid_value` issue in English, such as "Expected one of "a", "b"" or "Must be unique".
+ *
+ * @param issue - The issue to word.
+ * @returns The wording, without the issue's path.
+ */
+export const invalidValueMessage: Wording = (issue) =>
+  issue.params?.unique === true
+    ? "Must be unique"
+    : issue.params?.encodedSeparator === true
+      ? "Must not hold an encoded / or \\"
+      : issue.params?.dotSegment === true
+        ? "Must not hold . or .. followed by ;"
+        : describeValue(issue);
+
+/**
+ * Words an `invalid_key` issue in English, with what the key's validator found first.
+ *
+ * @remarks
+ * A key given twice, in a query or by two keys a key validator made the same, is worded "Must be given
+ * only once", since "must be unique" names no rule a person broke.
+ *
+ * @param issue - The issue to word.
+ * @param messages - The map in use, which words the issue the key's validator reported, so a map that
+ * overrides some of the wording reaches that issue too.
+ * @returns The wording, without the issue's path.
+ */
+export const invalidKeyMessage: Wording = (issue, messages) => {
+  const [found] = (issue.params?.issues ?? []) as readonly ValidationIssue[];
+  if (found?.code === "invalid_value" && found.params?.unique === true) {
+    return "Must be given only once";
+  }
+  return found === undefined ? "Invalid key" : `Invalid key: ${quote(found, messages)}`;
+};
+
+/**
+ * Words an `unrecognized_key` issue in English, with the key quoted as a literal, since it is text the
+ * sender chose and may hold quotes or line breaks.
+ *
+ * @param issue - The issue to word.
+ * @returns The wording, without the issue's path.
+ */
+export const unrecognizedKeyMessage: Wording = (issue) => `Unrecognized key ${formatValue(issue.params?.key)}`;
+
+/** The English wording of an `invalid_intersection` issue. */
+export const invalidIntersectionMessage = "Conflicting values";
+
+/**
+ * Words an `invalid_union` issue in English: with what the one option the input was meant for found,
+ * and generically when no option is that one.
+ *
+ * @param issue - The issue to word.
+ * @param messages - The map in use, which words the issue an option reported.
+ * @returns The wording, without the issue's path.
+ */
+export const invalidUnionMessage: Wording = describeUnion;
+
+/**
  * The built-in English wording for every issue the validators can report, as a message map.
  *
  * @remarks
- * Pass it to `formatIssue`, `flatten` or `standard` to get text such as "Must be at least 18". It is
- * a separate value, not something `formatIssue` carries, so a program that words its own issues, or
- * that never shows one, does not bundle it. To change some of the wording, spread it and override
- * the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is frozen, so no code
- * can reword the messages of every other user of it in the process. A custom validator's own codes
- * are not in it; give them a `message` on the issue or an entry of your own.
+ * Pass it to `formatIssue`, `flatten` or `standard` to get text such as "Must be at least
+ * 18". It is a separate value, not something `formatIssue` carries, so a program that words its own
+ * issues, or that never shows one, does not bundle it, and one that can report only a few codes takes
+ * the wording of each on its own, such as {@link invalidTypeMessage}. To change some of the wording,
+ * spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is
+ * frozen, so no code can reword the messages of every other user of it in the process. A custom
+ * validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
  *
  * @example
  * ```ts
@@ -208,42 +330,13 @@ const describeValue = (issue: ValidationIssue): string => {
  * ```
  */
 export const englishMessages: Messages = /* @__PURE__ */ Object.freeze({
-  invalid_type: (issue) => {
-    if (issue.params?.coerced === true) {
-      return `Cannot convert ${param(issue, "received")} to a ${param(issue, "expected")}`;
-    }
-    if (issue.params?.received === "non-plain object") {
-      // Such as `process.env` or a class instance, which a copy into a plain object passes.
-      return "Expected a plain object; copy it first, as in { ...value }";
-    }
-    return issue.params?.expected === "never"
-      ? "Not allowed"
-      : `Expected ${param(issue, "expected")}, received ${param(issue, "received")}`;
-  },
-  too_small: describeLimit,
-  too_big: describeLimit,
-  invalid_format: describeFormat,
-  invalid_value: (issue) =>
-    issue.params?.unique === true
-      ? "Must be unique"
-      : issue.params?.encodedSeparator === true
-        ? "Must not hold an encoded / or \\"
-        : issue.params?.dotSegment === true
-          ? "Must not hold . or .. followed by ;"
-          : describeValue(issue),
-  // Worded with what the key validator found first, so a form says why the key is wrong, not only that it
-  // is, and with the map in use, so a map that overrides some of this wording reaches that issue too.
-  // A key given twice, in a query or by two keys a key validator made the same, is said as such, since
-  // "must be unique" names no rule a person broke.
-  invalid_key: (issue, messages) => {
-    const [found] = (issue.params?.issues ?? []) as readonly ValidationIssue[];
-    if (found?.code === "invalid_value" && found.params?.unique === true) {
-      return "Must be given only once";
-    }
-    return found === undefined ? "Invalid key" : `Invalid key: ${quote(found, messages)}`;
-  },
-  // Quoted as a literal, since the key is text the sender chose and may hold quotes or line breaks.
-  unrecognized_key: (issue) => `Unrecognized key ${formatValue(issue.params?.key)}`,
-  invalid_intersection: "Conflicting values",
-  invalid_union: describeUnion,
+  invalid_type: invalidTypeMessage,
+  too_small: tooSmallMessage,
+  too_big: tooBigMessage,
+  invalid_format: invalidFormatMessage,
+  invalid_value: invalidValueMessage,
+  invalid_key: invalidKeyMessage,
+  unrecognized_key: unrecognizedKeyMessage,
+  invalid_intersection: invalidIntersectionMessage,
+  invalid_union: invalidUnionMessage,
 });

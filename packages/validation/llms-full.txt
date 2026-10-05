@@ -615,6 +615,35 @@ formatIssue(issue, pt);
 
 A custom validator's own codes belong in the map too, or can carry a `message` on the issue.
 
+### The wording of one code
+
+Each code's English wording is also an export of its own, so a program that can report only a few codes builds a map of those and bundles no other wording:
+
+| Code                   | Export                       |
+| ---------------------- | ---------------------------- |
+| `invalid_type`         | `invalidTypeMessage`         |
+| `invalid_format`       | `invalidFormatMessage`       |
+| `invalid_value`        | `invalidValueMessage`        |
+| `too_small`            | `tooSmallMessage`            |
+| `too_big`              | `tooBigMessage`              |
+| `unrecognized_key`     | `unrecognizedKeyMessage`     |
+| `invalid_key`          | `invalidKeyMessage`          |
+| `invalid_intersection` | `invalidIntersectionMessage` |
+| `invalid_union`        | `invalidUnionMessage`        |
+
+```ts
+import { formatIssue, invalidTypeMessage, string, tooSmallMessage, type Messages } from "@codenhub/validation";
+
+const messages: Messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage };
+
+const result = string({ min: 2 })("a");
+if (!result.ok) {
+  formatIssue(result.error.issues[0], messages); // "Must be at least 2 characters"
+}
+```
+
+`englishMessages` is the map of all nine. A wording that quotes the issue behind another, as `invalidKeyMessage`, `invalidUnionMessage` and `invalidFormatMessage` do, words it with the map it was called with, so include the codes the quoted issue can have.
+
 ## Errors for a form
 
 `flatten` groups the messages of a failed result for display: issues at the root go to `formErrors`, and the rest are keyed by their formatted path in `fieldErrors`.
@@ -1248,7 +1277,7 @@ An issue that carries a message is worded by it first, before any message map, s
 
 ### `formatIssue`, `flatten`, `formatPath` and `englishMessages`
 
-`formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then a message map you pass, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. [Issues and messages](docs/errors.md) explains all four.
+`formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then a message map you pass, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](docs/errors.md) explains all of them.
 
 ### `Infer`
 
