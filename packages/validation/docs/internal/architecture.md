@@ -318,6 +318,16 @@ What 0.3.0 does instead is make the cost a shared one and remove what adopters w
 
 Hand-written checks stay cheaper in bytes for a handful of options. What an adopter buys is that the edge cases are handled in one place, and what it pays is shared with every other adopter in the same application.
 
+### Who gains from adopting
+
+Recorded on 2026-10-05, after 0.3.0 was built, from reading how the workspace packages check their input. It is a finding about fit, and it names no package, as the roadmap does not.
+
+- **A package that checks a developer's options gains little.** Its input is wrong only by mistake, so the realms, prototypes and hostile text this package handles hardly reach it, and its checks are a few `typeof` tests whose review is short. The first adopter's eleven exports are 3.9 kB gzipped against 0.66 kB written by hand. A second package was read for the same move, four fields of an object that may be an instance and about ten one-line argument checks: `objectLike` and `assert` would shorten it, and would give a package with no dependencies its first one, for an estimated 3.5 to 4 kB gzipped. That estimate was not measured.
+- **Data from outside the program is where it pays.** Stored state read back with `JSON.parse` and returned as its declared type, and the parameters of a URL, are both in the workspace and both unchecked. Neither package should depend on this one: each should accept a validator from its caller, since the caller knows the shape and only a caller that validates then pays.
+- **A structure that is validated and converted in one walk does not fit.** A nested dictionary that is flattened as it is checked, with its own counts and its own refusal of accessors and symbol keys, is a different algorithm and not a composition of validators.
+
+What this changed: `nonBlank()` was added, since requiring text that is not blank without trimming it is what such option checks do and `trim` with `min: 1` changes the value; the errors page shows `assert` keeping an adopter's own wording, with no message map; and the roadmap's direction says who the package is for. What it did not change: the dependency model, and the adopter the package already has.
+
 ## Coercion
 
 A coercing validator is a strict validator behind a converter: `coerceNumber(options)` builds `number(options)` once, converts the input, and hands the converted value to it. So the strict validator owns every constraint and every option check, and the coercing one adds only the conversion. Each is its own module and its own export, so a consumer that never coerces does not bundle the conversion code, which is why coercion is not an option on the strict validators.

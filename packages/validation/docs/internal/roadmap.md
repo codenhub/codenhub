@@ -13,6 +13,8 @@ This is the definition of done for the 0.3.0 release. The design it builds towar
 ## Direction
 
 - **One place for validation.** Checking a value has more edge cases than it looks: other realms, prototypes, getters, hostile input, what an error may reveal. A package that checks its own input by hand takes all of them on, and its reviews with them. This package handles them once, so a fix here reaches every package that validates with it, and each of those is reviewed for what it is for.
+- **For data nobody controls.** The edge cases this package handles are those of input from outside the program: a form, a request, a query string, stored data, a file. That is where one place for validation pays for itself. A package that only checks the handful of options a developer passes it is checking a mistake, not hostile input, and hand-written checks stay cheaper for it in bytes: measured, about a sixth of the cost for five options (see [Who gains from adopting](architecture.md#who-gains-from-adopting)). Such a package may adopt this one, and none is expected to.
+- **Taken as an argument before it is taken as a dependency.** A package that hands data from outside to its caller, such as stored state or the parameters of a URL, serves its users best by accepting a validator from them: `Validator<T>` is a type, which costs nothing to import, and a Standard Schema is accepted by any library that follows the specification. Then only the applications that validate pay for it.
 - **A good validation library.** The package exists to answer "is this value what I need it to be?" well, for anyone. The workspace packages that validate their configuration are consumers of it, not the reason for it.
 - **Short, predictable and complete.** A single value is validated with one call. The common constraints are options, the rare ones are checks, every validator takes the same arguments in the same order, and a custom validator is built with the same helpers as a built-in one and behaves exactly as one.
 - **Small by construction.** A consumer's bundle contains only the validators and checks it imports, and budgets in the test suite hold that line.
@@ -28,6 +30,8 @@ This is the definition of done for the 0.3.0 release. The design it builds towar
 - **`assert(validator, input, { subject, messages })`.** Returns the value or throws a `TypeError` naming the first issue, with the failure as its `cause`, for input whose being invalid is a programmer error.
 - **The wording of each code as an export of its own**, `invalidTypeMessage` and the rest, with `englishMessages` the map of them.
 - **`objectLike(shape, options?, ...checks)`.** Any object that is not an array, its listed properties read as `input[key]`, and a property that throws while it is read reported as an issue.
+- **`nonBlank()`**, a check of strings that requires a character that is not white space and, unlike `trim` with `min: 1`, leaves the string as it is.
+- **A limit of 1,000 issues for each collection.** See [The limit of issues](architecture.md#the-limit-of-issues).
 - **No 0.1.0 migration errors.** An option 0.1.0 had is an unknown option, as any other name the factory does not read.
 - **Unchanged.** Everything else, the signature `validator(options?, ...checks)` included.
 
@@ -63,6 +67,8 @@ The adopter can move only once 0.3.0 is on npm, since public packages install ea
 ## Later / Possible
 
 Each is additive, so it fits a 0.3.x release.
+
+- **A page on accepting a validator.** What a package that takes one from its caller declares, `Validator<T>` or a Standard Schema, how it reports a failure, and what it costs when the caller passes none.
 
 - **National phone numbers.** `phone({ country })` accepting national formats, still returning E.164, with the per-country rules in a module of their own so `phone()` alone never bundles them.
 - **File paths.** A `filepath({ platform })` that checks syntax only. Left out because what a valid path is depends on the operating system and the file system, and checking the text says nothing about whether it is safe to open.
