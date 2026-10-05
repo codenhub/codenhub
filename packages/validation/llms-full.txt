@@ -631,6 +631,8 @@ formatIssue(issue, pt);
 
 A custom validator's own codes belong in the map too, or can carry a `message` on the issue.
 
+An entry must be text or a function that returns text. Anything else, such as a translation lookup that returned `undefined` or an entry that is a group of translations, throws a `TypeError` when an issue of that code is worded, in `formatIssue`, `flatten`, `assert` and `standard` alike, rather than showing `undefined` in a form.
+
 ### The wording of one code
 
 Each code's English wording is also an export of its own, so a program that can report only a few codes builds a map of those and bundles no other wording:

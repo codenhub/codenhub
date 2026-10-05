@@ -1,3 +1,4 @@
+import { assertText } from "../core/result";
 import type { ValidationFailure, ValidationIssue, ValidationPathSegment } from "../core/types";
 
 /**
@@ -103,7 +104,8 @@ const FALLBACK_MESSAGE = "Invalid value";
  * @param issue - The issue to describe.
  * @param messages - Text for the codes it names, such as `englishMessages`, or `{}` for none.
  * @returns The message.
- * @throws {TypeError} When `messages` is not a message map, such as when it was left out.
+ * @throws {TypeError} When `messages` is not a message map, such as when it was left out, or the entry
+ * that words an issue is neither text nor a function that returns text.
  */
 export function formatIssue(issue: ValidationIssue, messages: Messages): string {
   assertMessages(messages);
@@ -114,7 +116,11 @@ export function formatIssue(issue: ValidationIssue, messages: Messages): string 
   if (custom === undefined) {
     return FALLBACK_MESSAGE;
   }
-  return typeof custom === "function" ? custom(issue, messages) : custom;
+  const worded: unknown = typeof custom === "function" ? custom(issue, messages) : custom;
+  // A function that returns anything but text, such as a translation lookup that missed, or an entry that
+  // is a group of translations, would reach a form or an error as `undefined` or `[object Object]`.
+  assertText("message", worded);
+  return worded as string;
 }
 
 /** Issue messages grouped for display next to form fields. */
@@ -134,7 +140,8 @@ export interface FlattenedErrors {
  * @param failure - The `error` of a failed result.
  * @param messages - Text for the codes it names, as for {@link formatIssue}.
  * @returns The grouped messages.
- * @throws {TypeError} When `messages` is not a message map, such as when it was left out.
+ * @throws {TypeError} When `messages` is not a message map, such as when it was left out, or the entry
+ * that words an issue is neither text nor a function that returns text.
  */
 export function flatten(failure: ValidationFailure, messages: Messages): FlattenedErrors {
   assertMessages(messages);

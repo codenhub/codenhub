@@ -227,7 +227,7 @@ Groups the messages of a failure for display: issues at the root go to `formErro
 
 **Returns** — The grouped messages.
 
-**Throws** — When `messages` is not a message map, such as when it was left out.
+**Throws** — When `messages` is not a message map, such as when it was left out, or the entry that words an issue is neither text nor a function that returns text.
 
 ### format
 
@@ -273,7 +273,7 @@ The text comes from the first of these that exists: the issue's own `message`, a
 
 **Returns** — The message.
 
-**Throws** — When `messages` is not a message map, such as when it was left out.
+**Throws** — When `messages` is not a message map, such as when it was left out, or the entry that words an issue is neither text nor a function that returns text.
 
 **Example**
 
@@ -1128,7 +1128,7 @@ The result is a validator that behaves exactly as the one you gave, plus the `~s
 
 **Returns** — A validator that is also a Standard Schema.
 
-**Throws** — When `validator` is not a function, or `messages` is not a message map.
+**Throws** — When `validator` is not a function, or `messages` is not a message map. Validating throws one too when the entry of `messages` that words an issue is neither text nor a function that returns text.
 
 **Example**
 

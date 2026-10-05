@@ -132,6 +132,26 @@ describe("the wording of one code", () => {
   });
 });
 
+describe("a message map that holds something other than text", () => {
+  const issue: ValidationIssue = { code: "invalid_type", path: ["name"] };
+  const error = new TypeError("message must be text, received undefined");
+
+  it("should throw for a function that returns no text, such as a translation lookup that missed", () => {
+    expect(() => formatWith(issue, { invalid_type: () => undefined as never })).toThrow(error);
+    expect(() => flatten({ issues: [issue] }, { invalid_type: () => undefined as never })).toThrow(error);
+  });
+
+  it("should throw for an entry that is neither text nor a function", () => {
+    expect(() => formatWith(issue, { invalid_type: { one: "a" } as never })).toThrow(
+      new TypeError("message must be text, received object"),
+    );
+  });
+
+  it("should still word a code the map lacks with the fallback", () => {
+    expect(formatWith(issue, { invalid_type: undefined })).toBe("Invalid value");
+  });
+});
+
 describe("englishMessages", () => {
   it("should say that a property could not be read", () => {
     const input = {
