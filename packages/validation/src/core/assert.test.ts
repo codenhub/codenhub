@@ -35,6 +35,7 @@ describe("assert", () => {
   it("should leave out the path of an issue at the value itself, and the subject when there is none", () => {
     expect(caught(() => assert(string(), 1, { subject: "name:" })).message).toBe("name: Invalid value");
     expect(caught(() => assert(string(), 1)).message).toBe("Invalid value");
+    expect(caught(() => assert(string(), 1, { subject: "" })).message).toBe("Invalid value");
     expect(caught(() => assert(config, { locales: [], port: "80" })).message).toBe("port: Invalid value");
   });
 

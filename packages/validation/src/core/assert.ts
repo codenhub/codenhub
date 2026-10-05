@@ -85,7 +85,7 @@ export function assert<T>(validator: Validator<T>, input: unknown, options?: Ass
   // A path a validator written by hand left out is the value's own, as everywhere else.
   const where = formatPath(first.path ?? ROOT_PATH);
   const problem = `${where === "" ? "" : `${where}: `}${formatIssue(first, messages)}`;
-  throw new TypeError(subject === undefined ? problem : `${subject} ${problem}`, {
+  throw new TypeError(subject === undefined || subject === "" ? problem : `${subject} ${problem}`, {
     cause: (outcome as ValidationErr).error,
   });
 }
