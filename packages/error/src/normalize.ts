@@ -24,6 +24,8 @@ interface ClassifyErrorCandidateOptions {
 
 const ERROR_UNWRAP_MAX_DEPTH = 3;
 const ERROR_WRAPPER_FIELD_NAMES = ["cause", "originalError", "error", "err", "inner", "innerError"] as const;
+const ERROR_LIST_FIELD_NAME = "errors";
+const ERROR_LIST_MAX_LENGTH = 10;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return (typeof value === "object" || typeof value === "function") && value !== null;
@@ -99,9 +101,21 @@ const getWrappedErrorCandidates = (error: unknown): unknown[] => {
     return [];
   }
 
-  return ERROR_WRAPPER_FIELD_NAMES.map((fieldName) => getRecordField(error, fieldName)).filter(
-    (value) => value !== undefined && value !== null,
-  );
+  const wrappedErrors = ERROR_WRAPPER_FIELD_NAMES.map((fieldName) => getRecordField(error, fieldName));
+
+  // `AggregateError.errors`, and the same list shape on API responses. Capped so one long list
+  // cannot multiply the candidates at every depth.
+  try {
+    const errorList = getRecordField(error, ERROR_LIST_FIELD_NAME);
+
+    if (Array.isArray(errorList)) {
+      wrappedErrors.push(...(errorList.slice(0, ERROR_LIST_MAX_LENGTH) as unknown[]));
+    }
+  } catch {
+    // An unreadable list contributes no candidates.
+  }
+
+  return wrappedErrors.filter((value) => value !== undefined && value !== null);
 };
 
 /**

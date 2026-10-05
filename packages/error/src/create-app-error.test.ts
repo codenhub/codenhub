@@ -555,6 +555,49 @@ describe("createAppError — identifiers that are not codes", () => {
   });
 });
 
+describe("createAppError — error lists", () => {
+  it("should classify the errors held by an AggregateError", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("ECONNREFUSED", { message: "Refused." });
+    const refused = Object.assign(new Error("connect"), { code: "ECONNREFUSED" });
+
+    expect(createAppError(new AggregateError([new Error("other"), refused], "All failed"), { registry }).type).toBe(
+      "known",
+    );
+  });
+
+  it("should respect maxDepth for list entries", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("E1", { message: "Msg" });
+
+    expect(createAppError({ errors: [{ code: "E1" }] }, { registry, maxDepth: 0 }).type).toBe("unknown");
+  });
+
+  it("should inspect only the first ten entries of a list", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("E1", { message: "Msg" });
+    const filler = Array.from({ length: 10 }, () => ({}));
+
+    expect(createAppError({ errors: [...filler.slice(1), { code: "E1" }] }, { registry }).type).toBe("known");
+    expect(createAppError({ errors: [...filler, { code: "E1" }] }, { registry }).type).toBe("unknown");
+  });
+
+  it("should not throw for an unreadable or non-list errors field", () => {
+    const { proxy, revoke } = Proxy.revocable([], {});
+    revoke();
+
+    expect(createAppError({ errors: proxy }).type).toBe("unknown");
+    expect(createAppError({ errors: "E1" }).type).toBe("unknown");
+    expect(
+      createAppError({
+        get errors(): never {
+          throw new Error("unreadable");
+        },
+      }).type,
+    ).toBe("unknown");
+  });
+});
+
 describe("createAppError — appErrorFallback nested unknown AppError resolution", () => {
   it("should resolve using nested unknown AppError properties if no other match exists", () => {
     const registry = createErrorRegistry();
