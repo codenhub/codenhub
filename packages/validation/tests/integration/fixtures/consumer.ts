@@ -35,6 +35,7 @@ import {
   nullable,
   number,
   object,
+  objectLike,
   startsWith,
   symbol,
   tagged,
@@ -446,3 +447,14 @@ export const assertedBare: number = assert(number(), raw);
 export const badAssert = assert(username, raw);
 // @ts-expect-error the subject is text
 export const badSubject = assert(string(), raw, { subject: 1 });
+
+// objectLike() produces the same type object() does for a shape, and is asynchronous when a property is.
+export const feedback = objectLike({ message: string(), isRetryable: optional(boolean()) });
+export const feedbackValue: Infer<typeof feedback> = { message: "Try again" };
+export const feedbackSync: Validator<{ message: string; isRetryable?: boolean | undefined }> = feedback;
+// @ts-expect-error message is required
+export const badFeedback: Infer<typeof feedback> = { isRetryable: true };
+// @ts-expect-error an asynchronous property makes an asynchronous validator
+export const feedbackAsync: Validator<{ name: string }> = objectLike({ name: username });
+// @ts-expect-error objectLike has no unknownKeys
+export const strictFeedback = objectLike({ message: string() }, { unknownKeys: "strict" });

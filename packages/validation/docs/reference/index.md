@@ -789,6 +789,40 @@ const signup = object(
 );
 ```
 
+### objectLike
+
+```ts
+export declare function objectLike<TShape extends Shape>(shape: TShape, ...rest: Rest<InferShape<TShape>, MessageOptions>): Composed<TShape[keyof TShape], InferShape<TShape>>;
+export declare function objectLike<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferShape<TShape>, MessageOptions>): AsyncValidator<InferShape<TShape>>;
+```
+
+Creates a validator for any object that has the given properties, such as a class instance.
+
+Where [object](#object) accepts plain objects and reads their own properties, this accepts every object that is not an array and reads each listed property as `input[key]`, so one that is inherited, not enumerable or computed by a getter counts. Use it for a value another program hands over as an instance, such as an `Error` or an object with methods, and `object` for data.
+
+Every property is validated even when an earlier one failed. A property that throws while it is read, as a getter or a `Proxy` trap may, is reported as an `invalid_value` issue with `params.unreadable`, and never throws. The output is a new plain object holding the listed properties only, without the ones whose value is `undefined`; the input is never modified. It is synchronous when every property validator is, and asynchronous otherwise.
+
+**Parameters**
+
+- `shape` — Validator of each property.
+- `rest` — Options, then checks, which run once every property has passed and see the output.
+
+**Type parameters**
+
+- `TShape` — Property validators.
+
+**Returns** — A validator that produces a plain object.
+
+**Throws** — When `shape` is not a plain object or a property validator is not a function.
+
+**Example**
+
+```ts
+const feedback = objectLike({ message: string({ min: 1 }), isRetryable: optional(boolean()) });
+feedback(new Error("Try again")); // { ok: true, value: { message: "Try again" } }
+feedback({ message: "" }); // { ok: false, error: { issues: [{ code: "too_small", path: ["message"], ... }] } }
+```
+
 ### oneOf
 
 ```ts

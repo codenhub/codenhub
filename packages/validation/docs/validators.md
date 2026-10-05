@@ -316,6 +316,25 @@ const signup = object(
 
 See [Reusing shapes](#reusing-shapes) for extending, omitting and making properties optional.
 
+### `objectLike`
+
+`objectLike(shape, options?, ...checks)` validates any object that has the listed properties, where `object` accepts plain objects only. Use it for a value handed over as an instance, such as an `Error` or an object with methods, and `object` for data.
+
+```ts
+import { boolean, objectLike, optional, string } from "@codenhub/validation";
+
+const feedback = objectLike({ message: string({ min: 1 }), isRetryable: optional(boolean()) });
+
+feedback(new Error("Try again")); // { ok: true, value: { message: "Try again" } }
+feedback({ message: "" }); // one issue: too_small at ["message"]
+```
+
+- Every object that is not an array is accepted: a plain object, a class instance, a `Map`, a `Date`. Anything else, a function included, fails with `invalid_type` and `{ expected: "object", received }`.
+- Each listed property is read as `input[key]`, so one that is inherited, not enumerable or computed by a getter counts.
+- A property that throws while it is read, as a getter or a `Proxy` trap may, is reported as `invalid_value` with `params: { unreadable: true }` at the property's path, and the other properties are still validated. `object` lets such an exception propagate.
+- The output is a new plain object holding the listed properties only, without the ones whose value is `undefined`. There is no `unknownKeys` option.
+- Checks run once every property has passed, and see the output.
+
 ## Collections
 
 Every collection validator takes the validator for its items, then options and checks, checks every item, and reports each issue with a path that leads through the item's position. A wrong size is reported at once, without validating the items, so a huge input is never worked through only to be rejected.

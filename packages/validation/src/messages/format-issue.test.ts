@@ -16,6 +16,7 @@ import { array } from "../composition/array";
 import { json } from "../composition/json";
 import { map } from "../composition/map";
 import { object } from "../composition/object";
+import { objectLike } from "../composition/object-like";
 import { record } from "../composition/record";
 import { set } from "../composition/set";
 import { tuple } from "../composition/tuple";
@@ -125,6 +126,17 @@ describe("the wording of one code", () => {
 });
 
 describe("englishMessages", () => {
+  it("should say that a property could not be read", () => {
+    const input = {
+      get name(): string {
+        throw new Error("boom");
+      },
+    };
+    expect(formatIssue(issuesOf(objectLike({ name: string() })(input))[0] as ValidationIssue)).toBe(
+      "Could not be read",
+    );
+  });
+
   it("should be frozen, so no code can reword the messages of everyone else who uses it", () => {
     expect(Object.isFrozen(englishMessages)).toBe(true);
     expect(() => {

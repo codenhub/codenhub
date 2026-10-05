@@ -152,6 +152,11 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
     budget: 2900,
   },
   {
+    name: "objectLike",
+    source: `import { boolean, objectLike, string } from "DIST"; export const check = objectLike({ a: string(), b: boolean() });`,
+    budget: 2570,
+  },
+  {
     name: "everything",
     source: `export * from "DIST";`,
     budget: 18690,

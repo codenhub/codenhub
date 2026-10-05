@@ -30,6 +30,7 @@ export { map } from "./composition/map";
 export { nullable } from "./composition/nullable";
 export { nullish } from "./composition/nullish";
 export { object, type InferShape, type ObjectOptions, type Shape } from "./composition/object";
+export { objectLike } from "./composition/object-like";
 export { optional } from "./composition/optional";
 export { partial, type PartialShape } from "./composition/partial";
 export { pipe } from "./composition/pipe";

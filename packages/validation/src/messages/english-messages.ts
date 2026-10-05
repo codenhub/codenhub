@@ -261,11 +261,13 @@ export const invalidFormatMessage: Wording = describeFormat;
 export const invalidValueMessage: Wording = (issue) =>
   issue.params?.unique === true
     ? "Must be unique"
-    : issue.params?.encodedSeparator === true
-      ? "Must not hold an encoded / or \\"
-      : issue.params?.dotSegment === true
-        ? "Must not hold . or .. followed by ;"
-        : describeValue(issue);
+    : issue.params?.unreadable === true
+      ? "Could not be read"
+      : issue.params?.encodedSeparator === true
+        ? "Must not hold an encoded / or \\"
+        : issue.params?.dotSegment === true
+          ? "Must not hold . or .. followed by ;"
+          : describeValue(issue);
 
 /**
  * Words an `invalid_key` issue in English, with what the key's validator found first.
