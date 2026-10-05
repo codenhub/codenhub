@@ -343,24 +343,63 @@
    `<div>` on a page that never loaded the base stylesheet. See
    docs/internal/model.md#solo-classes.
 
-   It reads the aesthetic's own knobs and the theme's foundation tokens, each
-   with its shipped literal as the fallback, and never a `--ui-*`, `--intent-*`,
-   or `--elevation-color` token: those belong to whichever aesthetic an ancestor
-   carries, and a solo element has to look the same inside any of them.
+   It composes with what the element is asked to be, the way a component does:
+   the fill and edge a presentation class asks for, on the element or cascaded
+   from a container; the intent class on the element; the element's own
+   elevation class. Each is read with the unclassed look as its fallback, so
+   with none of them, or with no theme loaded, it paints what it always did.
+
+   Material is the exception. It reads the aesthetic's own knobs and the
+   theme's foundation tokens, each with its shipped literal as the fallback,
+   and never a material `--ui-*` or `--elevation-color` token: those belong to
+   whichever aesthetic an ancestor carries, and a solo element has to be this
+   aesthetic inside any of them.
+
    Unlayered and one class deep, so it beats a foreign component's
    zero-specificity rules wherever they load. Not for this package's own
-   components, which take the aesthetic class instead. */
+   components, which take the aesthetic class instead.
+
+   The other five paint the fill as an inset layer over whatever the element
+   already is, and write no background, so an unclassed solo element keeps its
+   own. Glass's translucent ground is its material, so it owns the background
+   and mixes the fill over that ground. */
 .glass-solo {
-  background-color: color-mix(
+  /* The composition, the same in every solo class; `registry.test.ts` holds
+     the copies together. See the note on `.glass-solo`. */
+  --_solo-intent-color: initial;
+  --_solo-intent-contrast: initial;
+  --_solo-intent-strong: initial;
+  --_solo-intent-border: initial;
+  --_solo-intent-fill-max: initial;
+  --_solo-color: var(--_solo-intent-color, var(--color-text, light-dark(oklch(14.5% 0 0), oklch(98.5% 0 0))));
+  --_solo-contrast: var(
+    --_solo-intent-contrast,
+    var(--color-text-contrast, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)))
+  );
+  --_solo-strong: var(--_solo-intent-strong, var(--color-text-strong, light-dark(oklch(20.5% 0 0), oklch(97% 0 0))));
+  --_solo-capped: min(var(--ui-fill, 0%), var(--_solo-intent-fill-max, 20%));
+  --_solo-fill: color-mix(in oklab, var(--_solo-color) var(--_solo-capped), transparent);
+  --_solo-on-fill: min(var(--ui-fg-on-fill, 0%), max(0%, calc(var(--_solo-capped) * 2 - 100%)));
+  --_solo-fg: color-mix(in oklab, var(--_solo-contrast) var(--_solo-on-fill), var(--_solo-strong));
+  /* The line with no intent on the element: this aesthetic's own ink. */
+  --_solo-ink: var(--_solo-intent-border, light-dark(rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.22)));
+  --_solo-ground: color-mix(
     in srgb,
     var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0))) 45%,
     transparent
   );
-  border: 1px solid light-dark(rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.22));
+  /* The plate runs under the border, so the line fades to nothing, as `box`'s
+     does, rather than to the fill. */
+  --_solo-edge: color-mix(in oklab, var(--_solo-ink) var(--ui-border, 100%), transparent);
+
+  background-color: color-mix(in oklab, var(--_solo-color) var(--_solo-capped), var(--_solo-ground));
+  border: 1px solid var(--_solo-edge);
   /* The surface corner: the element this exists for is a pane. */
   border-radius: var(--glass-radius-surface, 1rem);
   /* The theme's depth colour as a literal, for the reason above: inside a
-     `.chunky-tile` region the token is black. */
+     `.chunky-tile` region the token is black. A complete shadow, so the
+     elevation classes do not reach it, as they do not under the aesthetic
+     class. */
   box-shadow:
     0 1px 2px -1px light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55)),
     0 18px 40px -16px light-dark(rgb(15 23 42 / 0.08), rgb(0 0 0 / 0.55));
@@ -370,9 +409,39 @@
   backdrop-filter: blur(14px) saturate(1.6);
 }
 
+/* An intent class on the element colours it, as on a component. Named rather
+   than read from `--intent-*` alone: those slots inherit, so a `.success`
+   container would colour a solo element where it leaves a component neutral. */
+.glass-solo:is(.primary, .secondary, .success, .warning, .destructive, .info) {
+  --_solo-intent-color: var(--intent-color);
+  --_solo-intent-contrast: var(--intent-contrast);
+  --_solo-intent-strong: var(--intent-strong);
+  --_solo-intent-border: var(--intent-border);
+  --_solo-intent-fill-max: var(--intent-fill-max);
+}
+
+/* The text colour is written only where a fill or an intent is asked for, on
+   the element or by a container's fill class. Anywhere else the element keeps
+   its own: a dark toast keeps its light text. */
+.glass-solo:is(
+  .solid,
+  .soft,
+  .ghost,
+  .primary,
+  .secondary,
+  .success,
+  .warning,
+  .destructive,
+  .info,
+  :is(.solid, .soft, .ghost) *
+) {
+  color: var(--_solo-fg);
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .glass-solo {
-    background-color: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
+    --_solo-ground: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
+
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
@@ -393,13 +462,14 @@
 }
 
 .glass-solo.glass-liquid {
-  isolation: isolate;
-  background-color: color-mix(
+  --_solo-ground: color-mix(
     in srgb,
     var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0))) 30%,
     transparent
   );
-  border-color: light-dark(rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.16));
+  --_solo-ink: var(--_solo-intent-border, light-dark(rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.16)));
+
+  isolation: isolate;
   border-radius: var(--glass-radius-surface, 1.5rem);
   corner-shape: squircle;
   -webkit-backdrop-filter: none;
@@ -430,6 +500,6 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .glass-solo.glass-liquid {
-    background-color: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
+    --_solo-ground: var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0)));
   }
 }
