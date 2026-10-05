@@ -63,16 +63,25 @@ export const isPublicHost = (host: string): boolean =>
 const DOMAIN_TEXT_PATTERN = /^[\p{L}\p{M}\p{N}.。．｡-]+$/u;
 /** The longest a domain name can be, in its ASCII form. */
 export const HOST_MAX_LENGTH = 253;
+/**
+ * The longest a host is written before the parser reads it: three characters for each one a host can
+ * have, which is every one of them as an escape, `%61` for `a`. Text can spell a host with more
+ * characters than the host has, letters with their accents apart or marks the parser drops, so the
+ * limit of the host itself would refuse valid ones. Past this the text is refused unread, since the
+ * parser decodes a punycode label in time that grows with the square of its length: `xn--` and 400,000
+ * letters took five seconds in Node.js 24.19.
+ */
+export const HOST_TEXT_MAX_LENGTH = 759;
 
 /**
  * A host as the URL parser reads it: lowercase ASCII, with an internationalized label in punycode, so
  * `München.de` is `xn--mnchen-3ya.de`, or undefined when the text is not a host at all. The parser's
  * reading is returned rather than the text, so every spelling it maps to one host, such as fullwidth
  * letters or an invisible variation selector, becomes that host, and no later check on the value can
- * see a different one.
+ * see a different one. Text longer than a host is ever written is no host, and is not given to the parser.
  */
 export function toAsciiHost(host: string): string | undefined {
-  if (!DOMAIN_TEXT_PATTERN.test(host) || !URL.canParse(`http://${host}`)) {
+  if (host.length > HOST_TEXT_MAX_LENGTH || !DOMAIN_TEXT_PATTERN.test(host) || !URL.canParse(`http://${host}`)) {
     return undefined;
   }
   const { hostname } = new URL(`http://${host}`);

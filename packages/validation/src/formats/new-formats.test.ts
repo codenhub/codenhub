@@ -298,6 +298,14 @@ describe("domain", () => {
     expect(valueOf(domain()("münchen.de"))).toBe("xn--mnchen-3ya.de");
   });
 
+  it("should reject a name written with more than 759 characters, before the parser reads it", () => {
+    // A variation selector, which the parser drops from a host, so the name read is `example.com`.
+    const padded = (marks: number): string => `e${"️".repeat(marks)}xample.com`;
+    expect(padded(748)).toHaveLength(759);
+    expect(valueOf(domain()(padded(748)))).toBe("example.com");
+    expect(domain()(padded(749)).ok).toBe(false);
+  });
+
   it("should reject hosts that are not public domain names", () => {
     expect(
       accepts(

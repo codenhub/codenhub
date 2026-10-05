@@ -12,7 +12,7 @@ import type {
 import { HOSTLESS_SCHEMES, toHostlessUrl } from "./hostless-url";
 import { toCanonicalIpv6 } from "./ip";
 import { assertParts, notFormat, partIssue, partsFormat, readQuery, type Part, type Reading } from "./parts";
-import { HOST_MAX_LENGTH, isIdnHost, isPublicHost } from "./patterns";
+import { HOST_MAX_LENGTH, HOST_TEXT_MAX_LENGTH, isIdnHost, isPublicHost } from "./patterns";
 
 /**
  * No whitespace and no control characters: a written URL holds neither (RFC 3986), and the parser would
@@ -75,6 +75,16 @@ function isPlainHost(text: string, hostname: string): boolean {
   }
   return PLAIN_HOST_PATTERN.test(hostname) && !(DOTTED_IPV4_PATTERN.test(hostname) && BARE_HEX_PATTERN.test(written));
 }
+
+/**
+ * Tests whether a URL of a scheme the parser has rules for writes a host longer than a host is ever
+ * written. The parser reads the host of such a scheme as a domain name, and decodes a punycode label in
+ * time that grows with the square of its length, so the text is measured before the parser is given it.
+ * A host of any other scheme is kept as written, which takes no such time.
+ */
+const hasOverlongHost = (text: string): boolean =>
+  SPECIAL_SCHEMES.includes(text.slice(0, text.indexOf(":")).toLowerCase()) &&
+  (WRITTEN_HOST_PATTERN.exec(text)?.[1] ?? "").length > HOST_TEXT_MAX_LENGTH;
 
 /** A percent-encoded path separator, `%2F` for `/` or `%5C` for `\`, in either letter case. */
 const ENCODED_SEPARATOR_PATTERN = /%(?:2f|5c)/i;
@@ -175,6 +185,9 @@ type UrlParts<TOptions> = Extract<
  * host is in punycode, an IPv4 host is four decimal parts, the host of a scheme the parser has no rules
  * for, such as `ssh`, is in lowercase, and characters such as `"` and `<` are percent-encoded. A `mailto` URL gives each recipient as `email` does. Text holding whitespace or control characters is rejected rather than cleaned, and
  * no scheme is guessed for text that lacks one. A host longer than 253 characters is rejected, and so is
+ * the host of a scheme the parser has rules for that is written with more than 759, three for each, which
+ * is refused before the parser reads it, since the parser takes time that grows with the square of the
+ * length of a punycode label, and so is
  * an absolute host such as `example.com.`, whatever the host validator: it names the same host as
  * `example.com`, and a second spelling of one host would let it past a check that compares the value as a
  * string, such as a list of blocked hosts.
@@ -235,7 +248,7 @@ export function url(...rest: unknown[]): AnyValidator {
   });
 
   const read = (text: string): Reading => {
-    if (!WRITTEN_URL_PATTERN.test(text) || !URL.canParse(text)) {
+    if (!WRITTEN_URL_PATTERN.test(text) || hasOverlongHost(text) || !URL.canParse(text)) {
       return notFormat("url");
     }
     const parsed = new URL(text);

@@ -9,7 +9,8 @@ import { formatFactory } from "./text-format";
  * such as `.テスト`. Whether the top-level domain exists is not checked, so a name under any other label
  * passes, private ones in common use such as `nas.lan`, `a.private` or `a.intranet` included: block those
  * with a check of your own when they matter, and remember that a public name can still resolve to a
- * private address. An absolute name, `example.com.`, is rejected: it names the same host as `example.com`, and a second
+ * private address. A name written with more than 759 characters, three for each one a name can have, is
+ * rejected before the parser reads it. An absolute name, `example.com.`, is rejected: it names the same host as `example.com`, and a second
  * spelling of one host would let it past a check that compares the value as a string, such as a list of
  * blocked hosts. This is the rule `email` and `url` apply to their host by default. The value is the domain as the URL parser reads it, lowercase
  * ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
