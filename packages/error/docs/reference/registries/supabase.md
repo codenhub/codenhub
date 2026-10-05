@@ -18,7 +18,7 @@ export declare const supabaseErrorCodes: Readonly<Record<string, Readonly<ErrorF
 
 Raw code mapping definitions for common Supabase service errors.
 
-Includes Postgres database codes and Supabase Auth specific error codes.
+Includes the Supabase Auth codes a person using the application can run into and act on, and selected Postgres database codes. Auth codes that only a developer can resolve, such as `bad_jwt` or the `hook_*` and `saml_*` families, are left out. The Auth codes follow the list Supabase publishes at https://supabase.com/docs/guides/auth/debugging/error-codes.
 
 ### supabaseErrorNames
 

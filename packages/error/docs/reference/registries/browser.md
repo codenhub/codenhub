@@ -28,7 +28,7 @@ export declare const browserErrorPatterns: readonly (readonly [RegExp, Readonly<
 
 Read-only heuristic pattern mappings for common browser and Web API errors.
 
-Identifies fetch failures, DNS issues, and network connection refusal.
+Identifies a failed fetch by the whole message each browser engine produces for one, and a failed dynamic import by the message Chrome produces.
 
 ### browserErrorRegistry
 
@@ -38,6 +38,6 @@ export declare const browserErrorRegistry: ReadonlyErrorRegistry;
 
 An opt-in, read-only error registry pre-populated with mappings for common browser and Web API errors.
 
-Includes name mappings for DOMException types (e.g., `AbortError`, `TimeoutError`, `QuotaExceededError`) and pattern mappings for network fetch failures (e.g., DNS errors, connection refusal).
+Includes name mappings for DOMException types (e.g., `AbortError`, `TimeoutError`, `QuotaExceededError`) and pattern mappings for a failed fetch and a failed dynamic import.
 
 Importing this registry preset does not access or require browser/DOM globals.
