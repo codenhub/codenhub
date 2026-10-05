@@ -542,6 +542,19 @@ describe("createAppError — code", () => {
   });
 });
 
+describe("createAppError — identifiers that are not codes", () => {
+  it("should classify a DOMException by name, ignoring its legacy numeric code", () => {
+    const registry = createErrorRegistry([browserErrorRegistry]);
+    registry.codes.add("20", { message: "Custom API error 20." });
+
+    expect(createAppError(new DOMException("Aborted", "AbortError"), { registry })).toMatchObject({
+      message: "Request cancelled.",
+      code: "AbortError",
+    });
+    expect(createAppError({ code: 20 }, { registry }).message).toBe("Custom API error 20.");
+  });
+});
+
 describe("createAppError — appErrorFallback nested unknown AppError resolution", () => {
   it("should resolve using nested unknown AppError properties if no other match exists", () => {
     const registry = createErrorRegistry();

@@ -65,6 +65,16 @@ const toClassification = (
   };
 };
 
+// DOMException carries a legacy numeric `code` (20 for AbortError) that does not identify the
+// failure; its `name` does. Read through the tag so no global is touched and realms do not matter.
+const isDomException = (error: Record<string, unknown>): boolean => {
+  try {
+    return Object.prototype.toString.call(error) === "[object DOMException]";
+  } catch {
+    return false;
+  }
+};
+
 const normalizeError = (error: unknown): NormalizedError => {
   if (typeof error === "string") {
     return { code: null, message: error, name: null };
@@ -74,7 +84,7 @@ const normalizeError = (error: unknown): NormalizedError => {
     return { code: null, message: null, name: null };
   }
 
-  const rawCode = getRecordField(error, "code");
+  const rawCode = isDomException(error) ? undefined : getRecordField(error, "code");
   const code = typeof rawCode === "string" ? rawCode : typeof rawCode === "number" ? String(rawCode) : null;
 
   return {
