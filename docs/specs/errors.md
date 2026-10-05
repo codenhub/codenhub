@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-30
+last_updated: 2026-10-05
 scope: Workspace packages that expose errors to consumers.
 ---
 
@@ -18,7 +18,7 @@ Packages that do not expose errors do not need to follow this spec.
 
 `@codenhub/error` provides a normalized `AppError` shape, a registry system for classifying errors, and a `Result<T>` pattern for fallible operations. When packages expose errors using these conventions, consumers benefit from:
 
-- Consistent error shape across the codebase (`AppError.type`, `AppError.source`, `AppError.messageKey`)
+- Consistent error shape across the codebase (`AppError.type`, `AppError.code`, `AppError.source`, `AppError.messageKey`)
 - Opt-in classifications — consumers pick what they classify; nothing is hidden in a global
 - i18n-ready error messages via `messageKey`
 - Retry signaling via `isRetryable`
@@ -29,15 +29,23 @@ Packages that do not expose errors do not need to follow this spec.
 
 ## `@codenhub/error` runtime contract
 
-`createAppError()` MUST return a frozen `AppError`. Its own properties MUST NOT be writable, configurable, added, or removed after construction. The referenced `originalError` value is diagnostic input and is not recursively frozen. Default JSON serialization MUST include `name`, `message`, `type`, `messageKey`, `source`, and `isRetryable`, and MUST omit diagnostic `cause` and `originalError` values.
+`createAppError()` MUST return a frozen `AppError`. Its own properties MUST NOT be writable, configurable, added, or removed after construction. The referenced `originalError` value is diagnostic input and is not recursively frozen. Default JSON serialization MUST include `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable`, and MUST omit diagnostic `cause` and `originalError` values.
 
-Wrapper traversal defaults to a maximum depth of `3`. A supplied `maxDepth` MUST be an integer from `0` through `3`; all other values are programmer errors and MUST throw `TypeError` before traversal begins.
+`AppError.code` MUST be the registry identifier that classified the error: the matched code, or the matched name when no code matched. It MUST be `null` for message, prefix, and pattern matches and for unknown errors. It exists so consumers can branch on a specific failure without comparing message text or a translation key.
+
+Wrapper traversal defaults to a maximum depth of `3`. A supplied `maxDepth` MUST be an integer from `0` through `3`; all other values are programmer errors and MUST throw `TypeError` before traversal begins, and before `attempt()` or `attemptAsync()` run their callback.
+
+Normalizing error text MUST take time linear in its length. Error messages routinely embed input an attacker controls, so no step that runs on every message may backtrack.
+
+Passing options to `createAppError()` with an existing `AppError` classifies its original value again. The existing classification MUST be kept unless that finds a match of a higher tier: a known result replaces anything, an unexpected result replaces only an unknown one. Options that match nothing new, such as a lone `fallbackMessage`, MUST NOT downgrade a classified error.
 
 Raw strings passed to `err()` MUST be treated as untrusted error values. They MUST NOT become user-facing messages unless the caller explicitly supplies a safe `fallbackMessage`.
 
 `freezeRegistry()` MUST return an immutable snapshot rather than a live view. The returned registry and buckets MUST expose only their documented read methods at runtime. Reflection MUST NOT reveal mutation methods from the source or snapshot registry.
 
 Registry feedback MUST be copied into plain data before storage. Each feedback field MUST be read at most once, and inaccessible or invalid fields MUST produce a `TypeError` rather than allowing invalid data into a bucket.
+
+The registry MUST accept any non-empty string as a `messageKey` or `source`. The naming conventions below bind packages in this repository, not applications: an application registers the translation keys its catalog already has. Tests hold the built-in presets to the conventions.
 
 ## Providing error mappings (not registries)
 
@@ -51,14 +59,24 @@ When avoiding a runtime dependency, the package SHOULD export a plain JavaScript
 import type { ErrorFeedback } from "@codenhub/error"; // Erased at runtime
 
 export const myPackageErrors: Record<string, ErrorFeedback> = {
-  invalid_credentials: {
+  "my-package.invalid_credentials": {
     message: "Invalid email or password.",
     source: "my-package",
   },
 };
 ```
 
-**Naming convention:** `<camelCasePackageName>Errors` (e.g., `supabaseErrors`, `routerErrors`).
+**Naming convention:** `<camelCasePackageName>Errors` for a dictionary keyed by error code (e.g., `i18nErrors`, `routerErrors`). A dictionary keyed by another identifier names its bucket: `<camelCasePackageName>ErrorNames`, `<camelCasePackageName>ErrorMessages`.
+
+Every error the package throws or returns MUST carry the identifier its dictionary is keyed by: a `code` property equal to the key for a code dictionary, a `name` equal to the key for a name dictionary. A mapping whose key no error carries can never match.
+
+### Code namespacing
+
+A registry's `codes` bucket is one flat namespace shared by every source merged into it, and a later registration silently replaces an earlier one. Two packages that both export `not_found` cannot be registered together.
+
+A package in this repository MUST prefix each code it defines with its unscoped package name and a dot: `i18n.locale_load_failed`, `router.not_found`.
+
+Codes that belong to a third party keep the spelling that party emits, because they have to match the raw error: `23505`, `invalid_credentials`, `ENOENT`. Presets of such codes cannot be namespaced, so a code two services share resolves to whichever was registered last. Consumers that merge presets for overlapping services SHOULD classify each service's errors against its own registry through the `registry` option.
 
 ### Dependency Rules
 
@@ -177,11 +195,11 @@ Do NOT mix throwing and returning results for the same failure category within t
 ```ts
 // Wrong — mutates the global registry on import
 import { getErrorRegistry } from "@codenhub/error";
-getErrorRegistry().codes.add("my_error", { message: "Error." });
+getErrorRegistry().codes.add("my-package.my_error", { message: "Error." });
 
 // Correct — export raw mappings; let the consumer merge them
 export const myPackageErrors = {
-  my_error: { message: "Error.", source: "my-package" },
+  "my-package.my_error": { message: "Error.", source: "my-package" },
 };
 ```
 

@@ -9,6 +9,7 @@ interface NormalizedError {
 
 interface ErrorClassification {
   type: Exclude<AppErrorType, "unknown">;
+  code: string | null;
   message: string;
   messageKey: string | null;
   source: string | null;
@@ -23,6 +24,8 @@ interface ClassifyErrorCandidateOptions {
 
 const ERROR_UNWRAP_MAX_DEPTH = 3;
 const ERROR_WRAPPER_FIELD_NAMES = ["cause", "originalError", "error", "err", "inner", "innerError"] as const;
+const ERROR_LIST_FIELD_NAME = "errors";
+const ERROR_LIST_MAX_LENGTH = 10;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return (typeof value === "object" || typeof value === "function") && value !== null;
@@ -41,13 +44,38 @@ const getStringField = (source: Record<string, unknown>, key: string): string | 
   return typeof value === "string" ? value : null;
 };
 
-const toClassification = (type: ErrorClassification["type"], feedback: ErrorFeedback): ErrorClassification => ({
-  type,
-  message: feedback.message,
-  messageKey: feedback.messageKey ?? null,
-  source: feedback.source ?? null,
-  isRetryable: feedback.isRetryable ?? false,
-});
+// Built-in buckets validate feedback on registration, but a hand-written registry can return
+// anything, so the fields are checked again before they reach an AppError.
+const toClassification = (
+  type: ErrorClassification["type"],
+  feedback: ErrorFeedback,
+  code: string | null = null,
+): ErrorClassification => {
+  const { message, messageKey, source, isRetryable } = feedback;
+
+  if (typeof message !== "string" || message.trim().length === 0) {
+    throw new TypeError("Error registry returned feedback without a non-empty message.");
+  }
+
+  return {
+    type,
+    code,
+    message,
+    messageKey: typeof messageKey === "string" ? messageKey : null,
+    source: typeof source === "string" ? source : null,
+    isRetryable: isRetryable === true,
+  };
+};
+
+// DOMException carries a legacy numeric `code` (20 for AbortError) that does not identify the
+// failure; its `name` does. Read through the tag so no global is touched and realms do not matter.
+const isDomException = (error: Record<string, unknown>): boolean => {
+  try {
+    return Object.prototype.toString.call(error) === "[object DOMException]";
+  } catch {
+    return false;
+  }
+};
 
 const normalizeError = (error: unknown): NormalizedError => {
   if (typeof error === "string") {
@@ -58,7 +86,7 @@ const normalizeError = (error: unknown): NormalizedError => {
     return { code: null, message: null, name: null };
   }
 
-  const rawCode = getRecordField(error, "code");
+  const rawCode = isDomException(error) ? undefined : getRecordField(error, "code");
   const code = typeof rawCode === "string" ? rawCode : typeof rawCode === "number" ? String(rawCode) : null;
 
   return {
@@ -73,9 +101,31 @@ const getWrappedErrorCandidates = (error: unknown): unknown[] => {
     return [];
   }
 
-  return ERROR_WRAPPER_FIELD_NAMES.map((fieldName) => getRecordField(error, fieldName)).filter(
-    (value) => value !== undefined && value !== null,
-  );
+  const wrappedErrors = ERROR_WRAPPER_FIELD_NAMES.map((fieldName) => getRecordField(error, fieldName));
+
+  // `AggregateError.errors`, and the same list shape on API responses. Capped so one long list
+  // cannot multiply the candidates at every depth.
+  try {
+    const errorList = getRecordField(error, ERROR_LIST_FIELD_NAME);
+
+    if (Array.isArray(errorList)) {
+      wrappedErrors.push(...(errorList.slice(0, ERROR_LIST_MAX_LENGTH) as unknown[]));
+    }
+  } catch {
+    // An unreadable list contributes no candidates.
+  }
+
+  return wrappedErrors.filter((value) => value !== undefined && value !== null);
+};
+
+/**
+ * @internal
+ * @throws TypeError - If `maxDepth` is not an integer from 0 through the supported maximum.
+ */
+export const assertValidMaxDepth = (maxDepth: number): void => {
+  if (!Number.isInteger(maxDepth) || maxDepth < 0 || maxDepth > ERROR_UNWRAP_MAX_DEPTH) {
+    throw new TypeError(`AppError maxDepth must be an integer from 0 through ${ERROR_UNWRAP_MAX_DEPTH}.`);
+  }
 };
 
 /**
@@ -86,9 +136,7 @@ const getWrappedErrorCandidates = (error: unknown): unknown[] => {
  * @throws TypeError - If `maxDepth` is not an integer from 0 through the supported maximum.
  */
 export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_DEPTH): unknown[] => {
-  if (!Number.isInteger(maxDepth) || maxDepth < 0 || maxDepth > ERROR_UNWRAP_MAX_DEPTH) {
-    throw new TypeError(`AppError maxDepth must be an integer from 0 through ${ERROR_UNWRAP_MAX_DEPTH}.`);
-  }
+  assertValidMaxDepth(maxDepth);
 
   const visitedObjects = new Set<object>();
 
@@ -159,7 +207,7 @@ const resolveDeterministicKnownError = (
     const feedback = registry.codes.get(code);
 
     if (feedback !== undefined) {
-      return toClassification("known", feedback);
+      return toClassification("known", feedback, code.trim());
     }
   }
 
@@ -167,7 +215,7 @@ const resolveDeterministicKnownError = (
     const feedback = registry.names.get(name);
 
     if (feedback !== undefined) {
-      return toClassification("known", feedback);
+      return toClassification("known", feedback, name.trim());
     }
   }
 

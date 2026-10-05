@@ -73,7 +73,9 @@ const browserErrorPatternDefinitions: readonly (readonly [RegExp, ErrorFeedback]
     },
   ] as const,
   [
-    /failed to fetch|networkerror|load failed/i,
+    // Anchored to the whole message each engine produces for a failed fetch, so unrelated text
+    // such as "Config load failed" is not classified as a network failure.
+    /^(?:failed to fetch|load failed|networkerror when attempting to fetch resource)\.?$/i,
     {
       // Distinct from error.browser.network so one translation key never has to cover both the
       // DOMException name match and this heuristic message match.

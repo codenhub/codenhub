@@ -1,6 +1,7 @@
 import * as errorPackage from "@codenhub/error";
 import * as registries from "@codenhub/error/registries";
 import * as browserRegistries from "@codenhub/error/registries/browser";
+import * as nodeRegistries from "@codenhub/error/registries/node";
 import * as supabaseRegistries from "@codenhub/error/registries/supabase";
 import { describe, expect, it } from "vitest";
 
@@ -9,6 +10,7 @@ describe("published package exports", () => {
     expect(errorPackage.createAppError).toBeTypeOf("function");
     expect(registries.browserErrorRegistry).toBeDefined();
     expect(browserRegistries.browserErrorNames).toBeDefined();
+    expect(nodeRegistries.nodeErrorCodes).toBeDefined();
     expect(supabaseRegistries.supabaseErrorCodes).toBeDefined();
   });
 
@@ -40,6 +42,9 @@ describe("published package exports", () => {
         "browserErrorNames",
         "browserErrorPatterns",
         "browserErrorRegistry",
+        "nodeErrorCodes",
+        "nodeErrorPatterns",
+        "nodeErrorRegistry",
         "supabaseErrorCodes",
         "supabaseErrorNames",
         "supabaseErrorRegistry",
@@ -47,6 +52,9 @@ describe("published package exports", () => {
     );
     expect(Object.keys(browserRegistries).sort()).toEqual(
       ["browserErrorNames", "browserErrorPatterns", "browserErrorRegistry"].sort(),
+    );
+    expect(Object.keys(nodeRegistries).sort()).toEqual(
+      ["nodeErrorCodes", "nodeErrorPatterns", "nodeErrorRegistry"].sort(),
     );
     expect(Object.keys(supabaseRegistries).sort()).toEqual(
       ["supabaseErrorCodes", "supabaseErrorNames", "supabaseErrorRegistry"].sort(),

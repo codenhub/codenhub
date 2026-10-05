@@ -11,14 +11,14 @@ describe("I18nError", () => {
     expect(error).toBeInstanceOf(Error);
     expect(error.name).toBe("I18nError");
     expect(error.message).toBe('Failed to load translations for locale "pt-BR".');
-    expect(error.code).toBe("locale_load_failed");
+    expect(error.code).toBe("i18n.locale_load_failed");
     expect(error.locale).toBe("pt-BR");
     expect(error.cause).toBe(cause);
   });
 
   it("exports deterministic safe feedback for loader failures", () => {
     expect(i18nErrors).toEqual({
-      locale_load_failed: {
+      "i18n.locale_load_failed": {
         message: "Translations could not be loaded.",
         messageKey: "error.i18n.loader.localeLoadFailed",
         source: "i18n.loader",

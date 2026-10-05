@@ -58,6 +58,7 @@ describe("createAppError — basic normalization", () => {
       name: "AppError",
       message: DEFAULT_APP_ERROR_MESSAGE,
       type: "unknown",
+      code: null,
       messageKey: null,
       source: null,
       isRetryable: false,
@@ -71,6 +72,7 @@ describe("createAppError — basic normalization", () => {
       name: "AppError",
       message: DEFAULT_APP_ERROR_MESSAGE,
       type: "unknown",
+      code: null,
       messageKey: null,
       source: null,
       isRetryable: false,
@@ -492,6 +494,156 @@ describe("createAppError — re-normalization with options", () => {
   });
 });
 
+describe("createAppError — re-normalization keeps an existing classification", () => {
+  const createKnownAppError = () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("invalid_credentials", { message: "Invalid email or password.", source: "my-app.auth" });
+    return createAppError({ code: "invalid_credentials" }, { registry });
+  };
+
+  it("should keep a known AppError when only a fallbackMessage is supplied", () => {
+    const known = createKnownAppError();
+
+    expect(createAppError(known, { fallbackMessage: "Login failed." })).toBe(known);
+  });
+
+  it("should keep a known AppError when the documented default maxDepth is supplied", () => {
+    const known = createKnownAppError();
+
+    expect(createAppError(known, { maxDepth: 3 })).toBe(known);
+  });
+
+  it("should keep a known AppError over a pattern match from the new registry", () => {
+    const known = createKnownAppError();
+    const registry = createErrorRegistry();
+    registry.patterns.add(/./, { message: "Heuristic." });
+
+    expect(createAppError(known, { registry })).toBe(known);
+  });
+
+  it("should keep an unexpected AppError when the new registry matches nothing", () => {
+    const patternRegistry = createErrorRegistry();
+    patternRegistry.patterns.add(/rate limit/i, { message: "Slow down." });
+    const unexpected = createAppError(new Error("Rate limit hit"), { registry: patternRegistry });
+
+    expect(createAppError(unexpected, { registry: createErrorRegistry() })).toBe(unexpected);
+  });
+
+  it("should upgrade an unexpected AppError when the new registry knows it", () => {
+    const patternRegistry = createErrorRegistry();
+    patternRegistry.patterns.add(/rate limit/i, { message: "Slow down." });
+    const unexpected = createAppError(new Error("Rate limit hit"), { registry: patternRegistry });
+
+    const registry = createErrorRegistry();
+    registry.messages.add("Rate limit hit", { message: "Too many requests." });
+
+    expect(createAppError(unexpected, { registry })).toMatchObject({ type: "known", message: "Too many requests." });
+  });
+});
+
+describe("createAppError — code", () => {
+  it("should expose the matched code", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("23505", { message: "Already exists." });
+
+    const appError = createAppError({ code: " 23505 " }, { registry });
+
+    expect(appError.code).toBe("23505");
+    expect(appError.toJSON().code).toBe("23505");
+  });
+
+  it("should expose the matched name when no code matched", () => {
+    const registry = createErrorRegistry();
+    registry.names.add("AbortError", { message: "Cancelled." });
+
+    expect(createAppError({ code: "other", name: "AbortError" }, { registry }).code).toBe("AbortError");
+  });
+
+  it("should leave code null for message, prefix, pattern, and unknown results", () => {
+    const registry = createErrorRegistry();
+    registry.messages.add("Exact", { message: "Msg" });
+    registry.prefixes.add("Upload failed:", { message: "Msg" });
+    registry.patterns.add(/timeout/, { message: "Msg" });
+
+    expect(createAppError(new Error("Exact"), { registry }).code).toBeNull();
+    expect(createAppError(new Error("Upload failed: too big"), { registry }).code).toBeNull();
+    expect(createAppError(new Error("a timeout"), { registry }).code).toBeNull();
+    expect(createAppError({ code: "unregistered" }, { registry }).code).toBeNull();
+  });
+
+  it("should carry the code of a nested AppError", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("E1", { message: "Msg" });
+    const nested = createAppError({ code: "E1" }, { registry });
+
+    expect(createAppError(new Error("wrapper", { cause: nested })).code).toBe("E1");
+  });
+
+  it("should classify a serialized AppError again by its code", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("E1", { message: "Msg", isRetryable: true });
+    const serialized: unknown = JSON.parse(JSON.stringify(createAppError({ code: "E1" }, { registry })));
+
+    expect(createAppError(serialized, { registry })).toMatchObject({ type: "known", code: "E1", isRetryable: true });
+  });
+});
+
+describe("createAppError — identifiers that are not codes", () => {
+  it("should classify a DOMException by name, ignoring its legacy numeric code", () => {
+    const registry = createErrorRegistry([browserErrorRegistry]);
+    registry.codes.add("20", { message: "Custom API error 20." });
+
+    expect(createAppError(new DOMException("Aborted", "AbortError"), { registry })).toMatchObject({
+      message: "Request cancelled.",
+      code: "AbortError",
+    });
+    expect(createAppError({ code: 20 }, { registry }).message).toBe("Custom API error 20.");
+  });
+});
+
+describe("createAppError — error lists", () => {
+  it("should classify the errors held by an AggregateError", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("ECONNREFUSED", { message: "Refused." });
+    const refused = Object.assign(new Error("connect"), { code: "ECONNREFUSED" });
+
+    expect(createAppError(new AggregateError([new Error("other"), refused], "All failed"), { registry }).type).toBe(
+      "known",
+    );
+  });
+
+  it("should respect maxDepth for list entries", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("E1", { message: "Msg" });
+
+    expect(createAppError({ errors: [{ code: "E1" }] }, { registry, maxDepth: 0 }).type).toBe("unknown");
+  });
+
+  it("should inspect only the first ten entries of a list", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("E1", { message: "Msg" });
+    const filler = Array.from({ length: 10 }, () => ({}));
+
+    expect(createAppError({ errors: [...filler.slice(1), { code: "E1" }] }, { registry }).type).toBe("known");
+    expect(createAppError({ errors: [...filler, { code: "E1" }] }, { registry }).type).toBe("unknown");
+  });
+
+  it("should not throw for an unreadable or non-list errors field", () => {
+    const { proxy, revoke } = Proxy.revocable([], {});
+    revoke();
+
+    expect(createAppError({ errors: proxy }).type).toBe("unknown");
+    expect(createAppError({ errors: "E1" }).type).toBe("unknown");
+    expect(
+      createAppError({
+        get errors(): never {
+          throw new Error("unreadable");
+        },
+      }).type,
+    ).toBe("unknown");
+  });
+});
+
 describe("createAppError — appErrorFallback nested unknown AppError resolution", () => {
   it("should resolve using nested unknown AppError properties if no other match exists", () => {
     const registry = createErrorRegistry();
@@ -556,6 +708,19 @@ describe("createAppError — option validation", () => {
 
   it("should reject an invalid registry even when the error carries no identifiers", () => {
     expect(() => createAppError({}, { registry: {} } as never)).toThrow(TypeError);
+  });
+
+  it("should reject feedback without a message returned by a hand-written registry", () => {
+    const emptyBucket = { get: () => undefined, values: () => [][Symbol.iterator]() };
+    const registry = {
+      codes: { ...emptyBucket, get: () => ({ message: undefined }) },
+      names: emptyBucket,
+      messages: emptyBucket,
+      prefixes: { values: () => [] },
+      patterns: { values: () => [] },
+    };
+
+    expect(() => createAppError({ code: "any" }, { registry } as never)).toThrow(TypeError);
   });
 
   it("should accept a frozen read-only registry as a classification source", () => {

@@ -151,7 +151,46 @@ describe("attempt", () => {
   });
 });
 
+describe("attempt — option validation and callback shape", () => {
+  it("should reject an invalid maxDepth before running the callback", () => {
+    let hasRun = false;
+
+    expect(() =>
+      attempt(
+        () => {
+          hasRun = true;
+        },
+        { maxDepth: 5 },
+      ),
+    ).toThrow(TypeError);
+    expect(hasRun).toBe(false);
+  });
+
+  it("should reject a callback that returns a promise at the type level", () => {
+    // @ts-expect-error - an async callback belongs to attemptAsync; its rejection would escape.
+    const result = attempt(async () => 42);
+    const syncResult: Result<number> = attempt(() => 42);
+
+    expect(result.ok).toBe(true);
+    expect(syncResult).toEqual({ ok: true, value: 42 });
+  });
+});
+
 describe("attemptAsync", () => {
+  it("should reject an invalid maxDepth before running the callback", async () => {
+    let hasRun = false;
+
+    await expect(
+      attemptAsync(
+        () => {
+          hasRun = true;
+        },
+        { maxDepth: 5 },
+      ),
+    ).rejects.toThrow(TypeError);
+    expect(hasRun).toBe(false);
+  });
+
   it("should return an Ok result holding the resolved value", async () => {
     await expect(attemptAsync(async () => "done")).resolves.toEqual({ ok: true, value: "done" });
   });

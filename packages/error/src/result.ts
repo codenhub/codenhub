@@ -67,18 +67,24 @@ export const err = (error: unknown, options: AppErrorOptions = {}): Err =>
  * This is the boundary helper for wrapping code that throws: the callback result becomes `Ok`,
  * and anything thrown is normalized through the same pipeline as `createAppError`.
  *
+ * The callback must be synchronous: one that returns a promise is rejected by the type checker,
+ * because its rejection would escape inside an `Ok` holding the promise. Use `attemptAsync` there.
+ *
  * @typeParam T - The type returned by the callback on success.
- * @param operation - The callback to run.
+ * @param operation - The synchronous callback to run.
  * @param options - Configuration options for AppError normalization.
  * @returns An Ok result holding the callback value, or an Err holding the normalized failure.
  * @throws TypeError - If `options` or any supplied option value is invalid.
  */
-export const attempt = <T>(operation: () => T, options: AppErrorOptions = {}): Result<T> => {
+export const attempt = <T>(
+  operation: () => T extends PromiseLike<unknown> ? never : T,
+  options: AppErrorOptions = {},
+): Result<T> => {
   // Validated up front so invalid options surface immediately instead of only on the failure path.
   resolveAppErrorOptions(options);
 
   try {
-    return ok(operation());
+    return ok(operation() as T);
   } catch (caughtError) {
     return err(caughtError, options);
   }
@@ -91,8 +97,8 @@ export const attempt = <T>(operation: () => T, options: AppErrorOptions = {}): R
  * @param operation - The asynchronous callback to run.
  * @param options - Configuration options for AppError normalization.
  * @returns A Promise resolving to an Ok result holding the awaited value, or an Err holding the
- * normalized failure. The promise does not reject for failures raised by `operation`.
- * @throws TypeError - If `options` or any supplied option value is invalid.
+ * normalized failure. The promise does not reject for failures raised by `operation`; it rejects
+ * with `TypeError`, before running `operation`, if `options` or any supplied option value is invalid.
  */
 export const attemptAsync = async <T>(
   operation: () => Promise<T> | T,

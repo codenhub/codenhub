@@ -7,9 +7,7 @@ import type {
   ErrorRegistryBucket,
 } from "./types";
 
-const ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN = /[.!?]+$/;
-const ERROR_MESSAGE_KEY_PATTERN = /^error(?:\.[a-z][A-Za-z0-9]*)+$/;
-const ERROR_SOURCE_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)*$/;
+const ERROR_IDENTIFIER_TRAILING_PUNCTUATION = ".!?";
 
 /**
  * Normalizes an error identifier by trimming whitespace and stripping trailing punctuation (like `.`, `!`, `?`).
@@ -19,7 +17,16 @@ const ERROR_SOURCE_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(
  * @returns The normalized error identifier string.
  */
 export const normalizeErrorMessage = (identifier: string): string => {
-  return identifier.trim().replace(ERROR_IDENTIFIER_TRAILING_PUNCTUATION_PATTERN, "").trim();
+  const trimmedIdentifier = identifier.trim();
+
+  // Scanned from the end by hand: a `/[.!?]+$/` replace retries every punctuation run in the
+  // text, which is quadratic on a long message an attacker can shape.
+  let end = trimmedIdentifier.length;
+  while (end > 0 && ERROR_IDENTIFIER_TRAILING_PUNCTUATION.includes(trimmedIdentifier[end - 1])) {
+    end -= 1;
+  }
+
+  return trimmedIdentifier.slice(0, end).trimEnd();
 };
 
 /** @internal */
@@ -59,16 +66,12 @@ export const freezeFeedback = (feedback: ErrorFeedback): Readonly<ErrorFeedback>
     throw new TypeError("Error registry feedback.message must be a non-empty string.");
   }
 
-  if (messageKey !== undefined && (typeof messageKey !== "string" || !ERROR_MESSAGE_KEY_PATTERN.test(messageKey))) {
-    throw new TypeError(
-      "Error registry feedback.messageKey must be a dot-separated key under the error namespace when provided.",
-    );
+  if (messageKey !== undefined && (typeof messageKey !== "string" || messageKey.trim().length === 0)) {
+    throw new TypeError("Error registry feedback.messageKey must be a non-empty string when provided.");
   }
 
-  if (source !== undefined && (typeof source !== "string" || !ERROR_SOURCE_PATTERN.test(source))) {
-    throw new TypeError(
-      "Error registry feedback.source must use lowercase kebab-case namespace segments when provided.",
-    );
+  if (source !== undefined && (typeof source !== "string" || source.trim().length === 0)) {
+    throw new TypeError("Error registry feedback.source must be a non-empty string when provided.");
   }
 
   if (isRetryable !== undefined && typeof isRetryable !== "boolean") {

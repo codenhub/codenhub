@@ -197,31 +197,48 @@ describe("feedback map bucket (codes / names / messages)", () => {
     expect(() => registry.codes.add("code1", { message: "Msg", isRetryable: "yes" } as never)).toThrow(TypeError);
   });
 
-  it.each(["", "validation.required", "error.Validation.required", "error.validation.required-value"])(
-    "should reject invalid messageKey %j",
-    (messageKey) => {
-      const registry = createErrorRegistry();
-      expect(() => registry.codes.add("code1", { message: "Msg", messageKey })).toThrow(TypeError);
-    },
-  );
+  it.each(["", "   "])("should reject empty messageKey %j", (messageKey) => {
+    const registry = createErrorRegistry();
+    expect(() => registry.codes.add("code1", { message: "Msg", messageKey })).toThrow(TypeError);
+  });
 
-  it.each(["", "Supabase.auth", "supabase.Auth", "supabase_auth", "supabase..auth"])(
-    "should reject invalid source %j",
-    (source) => {
-      const registry = createErrorRegistry();
-      expect(() => registry.codes.add("code1", { message: "Msg", source })).toThrow(TypeError);
-    },
-  );
+  it.each(["", "   "])("should reject empty source %j", (source) => {
+    const registry = createErrorRegistry();
+    expect(() => registry.codes.add("code1", { message: "Msg", source })).toThrow(TypeError);
+  });
 
   it.each([
     ["error.myApp.api.rateLimit", "my-app.api"],
     ["error.supabase.auth.invalidCredentials", "supabase.auth"],
-    ["error.browser", "browser"],
-  ])("should accept documented messageKey %j with source %j", (messageKey, source) => {
+    ["errors.auth.invalid_credentials", "@acme/api"],
+    ["auth:invalidCredentials", "Billing"],
+  ])("should accept an application's own messageKey %j with source %j", (messageKey, source) => {
     const registry = createErrorRegistry();
     registry.codes.add("code1", { message: "Msg", messageKey, source });
 
     expect(registry.codes.get("code1")).toEqual({ message: "Msg", messageKey, source });
+  });
+
+  it("should normalize a long message with an inner punctuation run in linear time", () => {
+    const registry = createErrorRegistry();
+    const message = `Unknown command: ${"!".repeat(200_000)}x`;
+    registry.messages.add(`${message}...`, { message: "Msg" });
+
+    const startedAt = performance.now();
+    const feedback = registry.messages.get(message);
+    const elapsed = performance.now() - startedAt;
+
+    expect(feedback).toEqual({ message: "Msg" });
+    // The quadratic regex this replaced needed tens of seconds for this input.
+    expect(elapsed).toBeLessThan(1000);
+  });
+
+  it("should strip trailing punctuation and the whitespace before it", () => {
+    const registry = createErrorRegistry();
+    registry.messages.add("  Upload failed ?!. ", { message: "Msg" });
+
+    expect(registry.messages.get("Upload failed")).toEqual({ message: "Msg" });
+    expect(() => registry.messages.add(" ...!? ", { message: "Msg" })).toThrow(TypeError);
   });
 
   it("should reject an empty or whitespace-only identifier on delete", () => {

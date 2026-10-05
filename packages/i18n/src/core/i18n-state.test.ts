@@ -59,7 +59,7 @@ describe("I18n state", () => {
     const { onReady, onLocaleChange } = listenForLifecycleEvents(i18n);
     const initialization = i18n.init();
 
-    await expect(initialization).rejects.toMatchObject({ code: "locale_load_failed", locale: "en", cause });
+    await expect(initialization).rejects.toMatchObject({ code: "i18n.locale_load_failed", locale: "en", cause });
     await expect(initialization).rejects.toBeInstanceOf(I18nError);
     expect(i18n.isReady).toBe(false);
     expect(() => i18n.translate("common.greeting")).toThrow(Error);
@@ -148,7 +148,7 @@ describe("I18n state", () => {
     await i18n.init();
     const { onReady, onLocaleChange } = listenForLifecycleEvents(i18n);
 
-    await expect(i18n.setLocale("pt")).rejects.toMatchObject({ code: "locale_load_failed", cause });
+    await expect(i18n.setLocale("pt")).rejects.toMatchObject({ code: "i18n.locale_load_failed", cause });
     expect(i18n.locale).toBe("en");
     expect(i18n.direction).toBe("ltr");
     expect(i18n.isReady).toBe(true);

@@ -53,6 +53,38 @@ describe("ready registries", () => {
     expect(presetFeedback.every((feedback) => typeof feedback.messageKey === "string")).toBe(true);
   });
 
+  it("should follow the repository's messageKey and source conventions", () => {
+    // The registry accepts any non-empty string, so the conventions of docs/specs/errors.md
+    // are held here for the built-in presets instead.
+    const presetFeedback = [
+      ...Object.values(browserErrorNames),
+      ...browserErrorPatterns.map(([, feedback]) => feedback),
+      ...Object.values(supabaseErrorCodes),
+      ...Object.values(supabaseErrorNames),
+    ];
+
+    for (const feedback of presetFeedback) {
+      expect(feedback.messageKey).toMatch(/^error(?:\.[a-z][A-Za-z0-9]*)+$/);
+      expect(feedback.source).toMatch(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\.[a-z][a-z0-9]*(?:-[a-z0-9]+)*)*$/);
+    }
+  });
+
+  it.each(["Failed to fetch", "Load failed", "NetworkError when attempting to fetch resource."])(
+    "should classify the failed-fetch message %j",
+    (message) => {
+      expect(createAppError(new TypeError(message), { registry: browserErrorRegistry })).toMatchObject({
+        type: "unexpected",
+        messageKey: "error.browser.requestFailed",
+      });
+    },
+  );
+
+  it("should not classify unrelated text that mentions a failed load", () => {
+    expect(createAppError(new Error("Config load failed: invalid JSON"), { registry: browserErrorRegistry }).type).toBe(
+      "unknown",
+    );
+  });
+
   it("should preserve string-keyed access to raw mappings", () => {
     const browserName: string = "AbortError";
     const supabaseCode: string = "invalid_credentials";
