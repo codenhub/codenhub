@@ -10,7 +10,7 @@ catalog:
   "@codenhub/store": ^0.0.2
   "@codenhub/styles": ^0.6.0
   "@codenhub/theme": ^0.1.2
-  "@codenhub/validation": ^0.2.0
+  "@codenhub/validation": ^0.3.0
   "@tauri-apps/api": ^2.0.0
   "@tailwindcss/cli": ^4.3.2
   "@tailwindcss/vite": ^4.3.2
@@ -45,4 +45,4 @@ allowBuilds:
 linkWorkspacePackages: false
 
 minimumReleaseAgeExclude:
-  - "@codenhub/validation@0.2.0"
+  - "@codenhub/validation@0.3.0"
