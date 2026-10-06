@@ -7,11 +7,11 @@ export const SIZE_OPTIONS = "min max length";
 /** Size constraints shared by arrays, sets, maps and records, where the size of a record is its number of keys. Every option is optional. */
 export interface SizeOptions {
   /** Requires at least this many items. A non-negative integer. */
-  min?: number;
+  min?: number | undefined;
   /** Allows at most this many items. A non-negative integer. */
-  max?: number;
+  max?: number | undefined;
   /** Requires exactly this many items. A non-negative integer. */
-  length?: number;
+  length?: number | undefined;
 }
 
 /**

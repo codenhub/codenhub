@@ -45,7 +45,7 @@ export interface ObjectOptions extends MessageOptions {
    *
    * @defaultValue "strip"
    */
-  unknownKeys?: "strip" | "strict" | "passthrough";
+  unknownKeys?: "strip" | "strict" | "passthrough" | undefined;
 }
 
 /**

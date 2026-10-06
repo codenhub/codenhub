@@ -35,13 +35,13 @@ export const browserErrorNames = freezeFeedbackMap({
   },
   NotAllowedError: {
     message:
-      "This was blocked because it wasn't allowed, either by you or by your browser. Try again and allow it when asked.",
+      "This was blocked because it wasn't allowed, either by you or by your browser. Try again, and allow it if your browser asks.",
     messageKey: "error.browser.permissionDenied",
     source: "browser.permissions",
   },
   NotFoundError: {
     message:
-      "We couldn't find something this needs, such as a file or a device. Check that it's still available and try again.",
+      "We couldn't find something this needs. Check that any file or device you chose is still available, then try again.",
     messageKey: "error.browser.notFound",
     source: "browser",
   },

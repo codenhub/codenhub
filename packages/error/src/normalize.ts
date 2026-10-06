@@ -23,6 +23,9 @@ interface ClassifyErrorCandidateOptions {
 }
 
 const ERROR_UNWRAP_MAX_DEPTH = 3;
+// A cause chain is linear, so following it further costs one candidate per level, where every
+// other wrapper field multiplies the candidates at each depth.
+const ERROR_CAUSE_MAX_DEPTH = 8;
 const ERROR_WRAPPER_FIELD_NAMES = ["cause", "originalError", "error", "err", "inner", "innerError"] as const;
 const ERROR_LIST_FIELD_NAME = "errors";
 const ERROR_LIST_MAX_LENGTH = 10;
@@ -118,6 +121,12 @@ const getWrappedErrorCandidates = (error: unknown): unknown[] => {
   return wrappedErrors.filter((value) => value !== undefined && value !== null);
 };
 
+const getCauseCandidate = (error: unknown): unknown[] => {
+  const cause = isRecord(error) ? getRecordField(error, "cause") : undefined;
+
+  return cause === undefined || cause === null ? [] : [cause];
+};
+
 /**
  * @internal
  * @throws TypeError - If `maxDepth` is not an integer from 0 through the supported maximum.
@@ -130,7 +139,8 @@ export const assertValidMaxDepth = (maxDepth: number): void => {
 
 /**
  * Collects the error value and every nested wrapper candidate found within `maxDepth`,
- * skipping objects already visited so cyclic wrappers terminate.
+ * skipping objects already visited so cyclic wrappers terminate. At the maximum depth, a
+ * `cause` chain alone is followed further.
  *
  * @internal
  * @throws TypeError - If `maxDepth` is not an integer from 0 through the supported maximum.
@@ -152,11 +162,17 @@ export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_D
 
     candidates.push(candidate.value);
 
-    if (candidate.depth >= maxDepth) {
+    let wrappedErrorCandidates: unknown[];
+
+    if (candidate.depth < maxDepth) {
+      wrappedErrorCandidates = getWrappedErrorCandidates(candidate.value);
+    } else if (maxDepth === ERROR_UNWRAP_MAX_DEPTH && candidate.depth < ERROR_CAUSE_MAX_DEPTH) {
+      wrappedErrorCandidates = getCauseCandidate(candidate.value);
+    } else {
       continue;
     }
 
-    for (const wrappedErrorCandidate of getWrappedErrorCandidates(candidate.value)) {
+    for (const wrappedErrorCandidate of wrappedErrorCandidates) {
       if (isRecord(wrappedErrorCandidate)) {
         if (visitedObjects.has(wrappedErrorCandidate)) {
           continue;

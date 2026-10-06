@@ -16,7 +16,8 @@ export interface AppError extends Error {
   /**
    * The registry identifier that classified this error: the matched code, or the matched error
    * name when no code matched. `null` for message, prefix, and pattern matches and for unknown
-   * errors. Use it to branch on a specific failure.
+   * errors. Use it to branch on a specific failure; branch on `messageKey` for a built-in preset
+   * mapping matched by message, prefix, or pattern, which has no code.
    */
   readonly code: string | null;
 
@@ -81,7 +82,8 @@ export interface AppErrorOptions {
 
   /**
    * The maximum depth to unwrap nested error wrappers (e.g. cause, originalError).
-   * Must be an integer from 0 through 3. Defaults to 3.
+   * Must be an integer from 0 through 3. Defaults to 3. At 3, a `cause` chain alone is followed
+   * further, to a depth of 8; a lower value stops every field at that depth.
    */
   maxDepth?: number;
 }

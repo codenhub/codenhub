@@ -280,11 +280,48 @@ describe("createAppError — nested wrapper traversal", () => {
     const registry = createErrorRegistry();
     registry.codes.add("KNOWN_DEEP", { message: "Deep failure." });
 
-    const tooDeep = { cause: { cause: { cause: { cause: { code: "KNOWN_DEEP" } } } } };
+    const tooDeep = { error: { error: { error: { error: { code: "KNOWN_DEEP" } } } } };
     expect(createAppError(tooDeep, { registry }).type).toBe("unknown");
 
-    const withinLimit = { cause: { cause: { cause: { code: "KNOWN_DEEP" } } } };
+    const withinLimit = { error: { error: { error: { code: "KNOWN_DEEP" } } } };
     expect(createAppError(withinLimit, { registry }).type).toBe("known");
+  });
+
+  it("should follow a cause chain past the default depth, up to eight levels", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("KNOWN_DEEP", { message: "Deep failure." });
+
+    const chain = (length: number): unknown => {
+      let error: unknown = { code: "KNOWN_DEEP" };
+      for (let level = 0; level < length; level += 1) {
+        error = new Error("wrapper", { cause: error });
+      }
+      return error;
+    };
+
+    expect(createAppError(chain(4), { registry }).type).toBe("known");
+    expect(createAppError(chain(8), { registry }).type).toBe("known");
+    expect(createAppError(chain(9), { registry }).type).toBe("unknown");
+    expect(createAppError(chain(4), { registry, maxDepth: 3 }).type).toBe("known");
+  });
+
+  it("should follow only cause past the default depth", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("KNOWN_DEEP", { message: "Deep failure." });
+
+    const viaCause = { error: { error: { error: { cause: { code: "KNOWN_DEEP" } } } } };
+    expect(createAppError(viaCause, { registry }).type).toBe("known");
+
+    const viaList = { cause: { cause: { cause: { errors: [{ code: "KNOWN_DEEP" }] } } } };
+    expect(createAppError(viaList, { registry }).type).toBe("unknown");
+  });
+
+  it("should not follow a cause chain past a maxDepth below the default", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("KNOWN_DEEP", { message: "Deep failure." });
+
+    const chain = { cause: { cause: { cause: { code: "KNOWN_DEEP" } } } };
+    expect(createAppError(chain, { registry, maxDepth: 2 }).type).toBe("unknown");
   });
 
   it("should allow configuring a custom maxDepth", () => {
@@ -433,6 +470,21 @@ describe("createAppError — custom registry implementations", () => {
 });
 
 describe("isAppError", () => {
+  it("should not expose a constructor that builds an AppError around the registry", () => {
+    const appError = createAppError("Something failed");
+
+    expect(appError.constructor).toBe(Error);
+    expect(isAppError(new (appError.constructor as ErrorConstructor)("forged"))).toBe(false);
+  });
+
+  it("should not let the shared prototype be changed", () => {
+    const prototype = Object.getPrototypeOf(createAppError("Something failed")) as object;
+
+    expect(Object.isFrozen(prototype)).toBe(true);
+    expect(Reflect.set(prototype, "toJSON", () => ({ forged: true }))).toBe(false);
+    expect(JSON.parse(JSON.stringify(createAppError("Something failed")))).toHaveProperty("type", "unknown");
+  });
+
   it("should return true for errors created by createAppError", () => {
     expect(isAppError(createAppError("Something failed"))).toBe(true);
   });

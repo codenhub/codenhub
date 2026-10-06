@@ -177,5 +177,5 @@ export interface MessageOptions {
    * Wording for every issue this validator reports itself, and every issue one of its checks reports
    * without a message of its own. Issues a child validator reports keep their own wording.
    */
-  message?: Message;
+  message?: Message | undefined;
 }
