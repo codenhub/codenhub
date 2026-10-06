@@ -50,7 +50,7 @@ Runtime code does not access browser or Node.js globals, making it suitable for 
 - Batch registration and registry merging are atomic: invalid input leaves the target unchanged.
 - `AppError` instances, result objects, read-only registry snapshots, and every value returned by a bucket are frozen.
 - An unmatched string never becomes the error message; supply `fallbackMessage` when user-facing text is needed.
-- JSON serialization is defined by `AppError.toJSON()` and includes `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable`, omitting diagnostic `cause` and `originalError` values. Send `error.toJSON()` across a worker, IPC, or IndexedDB boundary; a structured clone of the error itself carries the raw `cause`.
+- JSON serialization is defined by `AppError.toJSON()` and includes `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable`, omitting diagnostic `cause` and `originalError` values. Send `error.toJSON()` across a worker, IPC, or IndexedDB boundary; a structured clone of the error itself can carry the raw `cause`.
 - `AppError.code` holds the registered code or name that matched, for branching on a specific failure. A message, prefix, or pattern match has no code; branch on its `messageKey`.
 - `isAppError` recognizes errors created by the current package runtime, not structurally similar values.
 - Built-in preset `messageKey` values are stable integration keys for consumer-owned translations; the package does not yet ship a translation map.
