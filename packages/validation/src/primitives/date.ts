@@ -6,9 +6,9 @@ import type { Factory, MessageOptions } from "../core/types";
 /** Bounds for {@link date}. Every option is optional. */
 export interface DateOptions extends MessageOptions {
   /** Requires this moment or a later one. Must be a valid `Date`. */
-  min?: Date;
+  min?: Date | undefined;
   /** Requires this moment or an earlier one. Must be a valid `Date`. */
-  max?: Date;
+  max?: Date | undefined;
 }
 
 /** A `Date` from any realm that holds a moment. */

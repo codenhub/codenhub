@@ -207,12 +207,14 @@ export function describeType(value: unknown): string {
       return "array";
     }
     // An object as `{}` and `JSON.parse` make it is not asked whether it is a Date: asking throws for one
-    // that is not, and 100 kB of valid `{}` under a union of four options took 0.9 seconds over it.
-    if (Object.getPrototypeOf(value) === Object.prototype) {
+    // that is not, and 100 kB of valid `{}` under a union of four options took 0.9 seconds over it. Nor is
+    // one with no prototype, as `querystring.parse` and `Object.groupBy` make it.
+    const prototype: unknown = Object.getPrototypeOf(value);
+    if (prototype === Object.prototype || prototype === null) {
       return "object";
     }
-    // `getTime` reads the value's own slot, so a Date from another realm or without its prototype is
-    // named too; it throws for anything else.
+    // `getTime` reads the value's own slot, so a Date from another realm or given another prototype
+    // is named too; it throws for anything else.
     return Number.isNaN(Date.prototype.getTime.call(value)) ? "invalid date" : "date";
   } catch {
     return "object";

@@ -19,7 +19,7 @@ export interface EmailOptions extends MessageOptions {
    *
    * @defaultValue true
    */
-  allowPlus?: boolean;
+  allowPlus?: boolean | undefined;
   /**
    * Validates the domain instead of the default rule, that it is a public domain name. It receives the
    * domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode, and
@@ -27,12 +27,12 @@ export interface EmailOptions extends MessageOptions {
    * `email({ domain: oneOf(["example.com"]) })` accepts that domain alone. Its failure is reported as
    * the address's, with `params.part` `"domain"`.
    */
-  domain?: AnyValidator;
+  domain?: AnyValidator | undefined;
   /**
    * Validates the local part, the text before the `@`, as written. Its failure is reported as the
    * address's, with `params.part` `"local"`.
    */
-  local?: AnyValidator;
+  local?: AnyValidator | undefined;
 }
 
 /** The part validators an options object names. */

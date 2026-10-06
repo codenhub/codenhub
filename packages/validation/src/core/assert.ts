@@ -10,14 +10,14 @@ export interface AssertOptions {
    * What was being validated, written before the problem as it is, such as `"[I18n]"` or
    * `"Router options:"`. Without it the message starts at the path.
    */
-  subject?: string;
+  subject?: string | undefined;
   /**
    * Wording for issues that carry no message of their own, keyed by issue code, such as
    * `englishMessages` or a map of the wordings the validator can report.
    *
    * @defaultValue An empty map, which words such an issue as "Invalid value".
    */
-  messages?: Messages;
+  messages?: Messages | undefined;
 }
 
 /**

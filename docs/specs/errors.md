@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-05
+last_updated: 2026-10-06
 scope: Workspace packages that expose errors to consumers.
 ---
 
@@ -30,11 +30,11 @@ Packages that do not expose errors do not need to follow this spec.
 
 ## `@codenhub/error` runtime contract
 
-`createAppError()` MUST return a frozen `AppError`. Its own properties MUST NOT be writable, configurable, added, or removed after construction. The referenced `originalError` value is diagnostic input and is not recursively frozen. Default JSON serialization MUST include `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable`, and MUST omit diagnostic `cause` and `originalError` values.
+`createAppError()` MUST be the only way to build an `AppError`: an instance MUST NOT expose the class that constructs it, and the prototype instances share MUST be frozen, so no code can build an `AppError` that no registry classified or replace its serialization. `createAppError()` MUST return a frozen `AppError`. Its own properties MUST NOT be writable, configurable, added, or removed after construction. The referenced `originalError` value is diagnostic input and is not recursively frozen. Default JSON serialization MUST include `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable`, and MUST omit diagnostic `cause` and `originalError` values. The package does not read that shape back, and a receiver reads the parsed fields directly. A helper that rebuilds an `AppError` from them was weighed and left out: it would let whoever controls the serialized text choose the message, and nothing needs the rebuilt instance yet.
 
-`AppError.code` MUST be the registry identifier that classified the error: the matched code, or the matched name when no code matched. It MUST be `null` for message, prefix, and pattern matches and for unknown errors. It exists so consumers can branch on a specific failure without comparing message text or a translation key.
+`AppError.code` MUST be the registry identifier that classified the error: the matched code, or the matched name when no code matched. It MUST be `null` for message, prefix, and pattern matches and for unknown errors. It exists so consumers can branch on a specific failure without comparing message text. A mapping matched by message, prefix, or pattern has no identifier to expose, so one failure can carry a code from one source and `null` from another; consumers branch on `messageKey` there, which is why a preset's keys are public API (see "`messageKey` conventions"). Letting feedback carry its own identifier was weighed and deferred: it adds surface that no application has asked for yet.
 
-Wrapper traversal defaults to a maximum depth of `3`. A supplied `maxDepth` MUST be an integer from `0` through `3`; all other values are programmer errors and MUST throw `TypeError` before traversal begins, and before `attempt()` or `attemptAsync()` run their callback.
+Wrapper traversal defaults to a maximum depth of `3`. At that depth a `cause` chain alone MUST be followed further, to a depth of `8`: the cap exists because every other wrapper field multiplies the candidates at each level, and a `cause` chain adds one, while an error wrapped once per layer of an application routinely sits deeper than `3`. A `maxDepth` below `3` stops every field, `cause` included, at that depth. A supplied `maxDepth` MUST be an integer from `0` through `3`; all other values are programmer errors and MUST throw `TypeError` before traversal begins, and before `attempt()` or `attemptAsync()` run their callback.
 
 `attempt()` MUST throw `TypeError` when its callback returns a promise or other thenable, and MUST NOT call `then` on a thenable that is not a native promise, since that would start it. `attempt()` and `attemptAsync()` MUST throw `TypeError` for a callback that is not a function.
 
@@ -76,6 +76,8 @@ Every error the package throws or returns MUST carry the identifier its dictiona
 ### Code namespacing
 
 A registry's `codes` bucket is one flat namespace shared by every source merged into it, and a later registration silently replaces an earlier one. Two packages that both export `not_found` cannot be registered together.
+
+The `names` bucket is flat in the same way, and a name matches any value that carries it, whatever threw it. `NotFoundError`, `TimeoutError`, and `NetworkError` are `DOMException` names and also common class names in libraries, so a registry holding the browser preset classifies a library's `NotFoundError` as the browser's. A name mapping's message MUST hold for every error that plausibly carries the name, and the same per-service `registry` advice below applies.
 
 A package in this repository MUST prefix each code it defines with its unscoped package name and a dot: `i18n.locale_load_failed`, `router.not_found`.
 
@@ -151,7 +153,7 @@ Write one string of full sentences, in this order:
 Rules:
 
 - Say only what the identifier proves. `invalid_credentials` proves a sign-in failed, so the message can name it. `23505` proves a duplicate value and nothing about which record, and `ECONNREFUSED` proves nothing about what the person was doing.
-- Advise only actions that always exist. A mapping cannot know that the application has a password reset, a support chat, or a retry button, so "check them and try again" is safe and "reset your password" is not. An application that has the feature registers its own message for the code.
+- Advise only actions that always exist. A mapping cannot know that the application has a password reset, a support chat, or a retry button, so "check them and try again" is safe and "reset your password" is not. An application that has the feature registers its own message for the code. "Contact support", with no channel named, is the one exception, and only where the reader can do nothing else: it points at whoever runs the application and claims no feature.
 - Speak as the application, in the first person plural: "We couldn't…". Do not blame the reader, and do not use jargon, identifiers, or the raw error text.
 - "Try again" in a message is advice to a person and does not make the mapping `isRetryable`. When the operation may already have taken effect, say so: "Check whether it went through before trying again."
 - A failure with nothing to act on, such as a cancelled request, MAY be a single sentence.
@@ -171,7 +173,7 @@ Rules:
 - Developer-facing mappings in one package SHOULD share one message, so the reader is told the same thing whichever defect produced it. `@codenhub/error` uses a single sentence for all of its own.
 - Register a developer-facing identifier only when it is common enough that telling the reader "this is not your doing" is worth more than the generic fallback. Identifiers that only surface during development, such as a malformed token or a misconfigured hook, are left unmapped and resolve to an unknown error.
 - When the same identifier can be either, write for the person using the app. `23502`, a missing required value, is usually a form the application failed to validate, but the reader can still fill the field in.
-- The audience is a rule for writing mappings, not a field on `AppError`. Code that needs to tell the two apart branches on `AppError.code`.
+- The audience is a rule for writing mappings, not a field on `AppError`. Code that needs to tell the two apart branches on `AppError.code`. Known gap: `type` is `"known"` for both audiences, and a preset does not export which of its identifiers are developer-facing, so an application that reports defects to an error tracker has to list them itself. A field can be added without a breaking change once an application needs it.
 
 ## `messageKey` conventions
 
@@ -212,7 +214,7 @@ Set `isRetryable: true` only when the same operation can be repeated **without u
 
 When in doubt, omit `isRetryable` (defaults to `false`). Do not mark an error as retryable speculatively. A failure that is likely to pass on a second try but may follow a request the server already received is not retryable.
 
-Generic browser fetch messages such as `Failed to fetch` or `Load failed` SHOULD remain non-retryable because they can represent permanent failures such as CORS, invalid URLs, or TLS errors. A `TimeoutError` from `AbortSignal.timeout()` SHOULD remain non-retryable because it can fire after the request was sent. More specific signals that the request never arrived, such as connection refusal or DNS failure, MAY be marked retryable.
+Generic browser fetch messages such as `Failed to fetch` or `Load failed` SHOULD remain non-retryable because they can represent permanent failures such as CORS, invalid URLs, or TLS errors. A `TimeoutError` from `AbortSignal.timeout()` SHOULD remain non-retryable because it can fire after the request was sent. So SHOULD `ETIMEDOUT`: Node.js raises it for a connection attempt and for an established socket alike, and the code does not say which. More specific signals that the request never arrived, such as connection refusal or DNS failure, MAY be marked retryable.
 
 ## Error-propagation pattern (throwing vs. returning Results)
 

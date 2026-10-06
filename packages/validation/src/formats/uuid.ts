@@ -9,7 +9,7 @@ const SPECIAL_UUID_PATTERN = /^(?:0{8}-0{4}-0{4}-0{4}-0{12}|f{8}-f{4}-f{4}-f{4}-
 /** Options for {@link uuid}. */
 export interface UuidOptions extends MessageOptions {
   /** Requires this version, from 1 to 8. The nil and max UUIDs have no version and are then rejected. Any version when omitted. */
-  version?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+  version?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | undefined;
 }
 
 /**

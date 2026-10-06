@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-03
+last_updated: 2026-10-06
 scope: repo-wide direction for the workspace's packages and deploy surfaces
 ---
 
@@ -46,6 +46,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
 
 - **Delivery split.** All three deploy surfaces run from Cloudflare dashboard state — the `codenhub`, `codenhub-docs`, and `codenhub-demo` Workers Builds projects. The repository carries build configuration (`apps/*/wrangler.jsonc`) and, for `codenhub-docs` alone, one deploy-hook secret that lets a publish trigger a rebuild directly instead of waiting on a merge (`docs/ci.md`, "Publish-scoped content" and "Credentials"). `docs/ci.md` records each project's build watch-path excludes and the reasoning.
 - **Release model.** A maintainer authorizes a release by pushing a `<package name>@<version>` tag; `.github/workflows/publish.yml` publishes through trusted publishing (OIDC, provenance), refusing a tag whose version disagrees with the manifest. The first release of a name is manual, because npm cannot configure a trusted publisher for a name that does not exist yet. `docs/specs/packages-lifecycle.md` and `docs/ci.md` own the rules.
+- **`ui-kit` is on hold.** `@codenhub/ui-kit` is old and is not being worked on. It will be either deprecated or rewritten from scratch. Until then it is left out of audits, reviews, and cross-package compliance work: a finding against it is not acted on, and it is not a reason to change another package or a spec.
 - **Unlisted packages.** `router`, `store`, `theme`, the plugins, and `ui-kit` are internal, WIP, deprecated, or evaluated separately, and are absent from the per-package list above by intent.
 
 ## References
