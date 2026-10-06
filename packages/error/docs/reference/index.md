@@ -118,7 +118,7 @@ A deep known match outranks a shallow unexpected match. Ordinary unknown input n
 - `error` — The raw error value to normalize, such as an `Error`, plain object, or string.
 - `options` — Configuration controlling fallback message, registry source, and wrapper depth.
 
-**Returns** — A frozen AppError. An existing AppError is returned as-is when no options are supplied, or when the supplied options find nothing that improves on it: only an unexpected match replaces an unknown error, and only a known match that differs replaces a classified one. A `fallbackMessage` never replaces the message an AppError already has.
+**Returns** — A frozen AppError. An existing AppError is returned as-is unless a `registry` is supplied and finds something that improves on it: only an unexpected match replaces an unknown error, and only a known match that differs replaces a classified one. A `fallbackMessage` or `maxDepth` alone never changes an AppError.
 
 **Throws** — TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string, `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer from 0 through 3.
 
@@ -375,7 +375,7 @@ The registry identifier that classified this error: the matched code, or the mat
 readonly isRetryable: boolean;
 ```
 
-Whether the failed operation can be repeated as it is, without user intervention and without the risk that it runs twice. True only for failures that happen before the operation takes effect, such as a refused connection or a rate limit.
+Whether the failed operation can be repeated as it is, without user intervention and without the risk that it runs twice. True only for failures that happen before the operation takes effect, such as a refused connection. It holds for an error the local runtime raised; a code copied into a response body says nothing about the request that carried it.
 
 #### messageKey
 
@@ -935,6 +935,8 @@ The classification level of a normalized application error.
 - `"known"`: Matched explicitly in the registry (by code, name, exact message, or prefix).
 - `"unexpected"`: Matched heuristically via regex patterns in the registry.
 - `"unknown"`: Could not be resolved/classified by the active registry.
+
+The type says how the error was matched, not how serious it is: a defect such as a missing table is `"known"` when its code is registered, and an offline user is `"unexpected"` when a pattern matched. Branch on `code` or `messageKey` to decide what to report.
 
 ### Result
 

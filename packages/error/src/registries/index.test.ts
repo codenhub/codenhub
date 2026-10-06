@@ -113,7 +113,7 @@ describe("ready registries", () => {
   it("should say only what the NotFoundError and NotAllowedError names prove", () => {
     // NotFoundError is also what a failed removeChild throws, and NotAllowedError what blocked
     // autoplay throws, where no file or device is missing and no prompt will be shown.
-    expect(browserErrorNames.NotFoundError.message).not.toMatch(/such as a file or a device/i);
+    expect(browserErrorNames.NotFoundError.message).not.toMatch(/file|device/i);
     expect(browserErrorNames.NotAllowedError.message).not.toMatch(/when asked/i);
   });
 
@@ -148,9 +148,21 @@ describe("ready registries", () => {
 
     expect(createAppError({ name: "FunctionsHttpError" }, { registry }).isRetryable).toBe(false);
     expect(createAppError({ code: "57014" }, { registry }).isRetryable).toBe(false);
-    expect(createAppError({ code: "over_sms_send_rate_limit" }, { registry }).isRetryable).toBe(true);
-    expect(createAppError({ code: "over_email_send_rate_limit" }, { registry }).isRetryable).toBe(true);
     expect(createAppError({ name: "FunctionsFetchError" }, { registry }).isRetryable).toBe(false);
+  });
+
+  it("should not mark a rate limit as retryable", () => {
+    // The flag carries no delay, so a loop that reads it would retry at once and count against
+    // the limit again. The message tells the reader how long to wait.
+    for (const code of ["over_sms_send_rate_limit", "over_email_send_rate_limit", "over_request_rate_limit"]) {
+      expect(createAppError({ code }, { registry: supabaseErrorRegistry }).isRetryable).toBe(false);
+    }
+  });
+
+  it("should not advise reloading a page in a preset that also runs outside a browser", () => {
+    for (const { message } of Object.values(supabaseErrorCodes)) {
+      expect(message).not.toMatch(/\bpage\b/i);
+    }
   });
 
   it("should not mark ambiguous browser fetch failures as retryable", () => {

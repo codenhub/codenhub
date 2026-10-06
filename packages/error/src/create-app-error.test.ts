@@ -78,6 +78,8 @@ describe("createAppError — basic normalization", () => {
       isRetryable: false,
     });
     expect(Object.keys(appError.toJSON())).not.toContain("stack");
+    // The same projection is what crosses a worker, IPC, or IndexedDB boundary.
+    expect(structuredClone(appError.toJSON())).toEqual(appError.toJSON());
   });
 
   it("should freeze the complete AppError instance", () => {
@@ -604,6 +606,20 @@ describe("createAppError — re-normalization keeps an existing classification",
     const known = createKnownAppError();
 
     expect(createAppError(known, { maxDepth: 3 })).toBe(known);
+  });
+
+  it("should keep a classification from another registry when no registry is supplied", () => {
+    // The global registry knows the same code under another meaning. Only an explicit registry
+    // asks for the error to be classified again.
+    getErrorRegistry().codes.add("invalid_credentials", { message: "Global match." });
+    getErrorRegistry().patterns.add(/boom/, { message: "Global heuristic." });
+    const known = createKnownAppError();
+    const unknown = createAppError(new Error("boom"), { registry: createErrorRegistry() });
+
+    expect(createAppError(known, { fallbackMessage: "Login failed." })).toBe(known);
+    expect(createAppError(known, { maxDepth: 2 })).toBe(known);
+    expect(createAppError(unknown, { fallbackMessage: "Login failed." })).toBe(unknown);
+    expect(createAppError(known, { registry: getErrorRegistry() }).message).toBe("Global match.");
   });
 
   it("should keep a known AppError over a pattern match from the new registry", () => {

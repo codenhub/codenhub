@@ -34,7 +34,7 @@ interface ResolvedAppErrorOptions {
   fallbackMessage: string;
   registry: ErrorRegistry | ReadonlyErrorRegistry;
   maxDepth: number | undefined;
-  hasCustomOptions: boolean;
+  hasCustomRegistry: boolean;
 }
 
 /** Default message used when no registry entry or fallback message can describe an error. */
@@ -121,7 +121,7 @@ export const resolveAppErrorOptions = (options: AppErrorOptions): ResolvedAppErr
     fallbackMessage: fallbackMessage ?? DEFAULT_APP_ERROR_MESSAGE,
     registry: registry ?? getErrorRegistry(),
     maxDepth,
-    hasCustomOptions: fallbackMessage !== undefined || registry !== undefined || maxDepth !== undefined,
+    hasCustomRegistry: registry !== undefined,
   };
 };
 
@@ -145,15 +145,18 @@ const isSameClassification = (resolution: AppErrorResolution, appError: AppError
 
 /** @internal */
 const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError => {
-  const { fallbackMessage, registry, maxDepth, hasCustomOptions } = resolveAppErrorOptions(options);
+  const { fallbackMessage, registry, maxDepth, hasCustomRegistry } = resolveAppErrorOptions(options);
 
-  if (isAppError(error) && !hasCustomOptions) {
+  // Only a supplied registry asks for an AppError to be classified again. The registry that
+  // classified it may not be the global one, so a layer that passes a fallbackMessage alone
+  // must not have the global registry replace what the error already says.
+  if (isAppError(error) && !hasCustomRegistry) {
     return error;
   }
 
-  // An AppError given options is classified again from the raw value it started from, so a new
-  // registry can reclassify it. Unwinding earlier AppErrors first keeps an older classification
-  // from coming back as a candidate on a later pass.
+  // An AppError given a registry is classified again from the raw value it started from.
+  // Unwinding earlier AppErrors first keeps an older classification from coming back as a
+  // candidate on a later pass.
   const existingAppError = isAppError(error) ? error : null;
   let rawError = error;
   while (isAppError(rawError)) {
@@ -243,10 +246,10 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
  *
  * @param error - The raw error value to normalize, such as an `Error`, plain object, or string.
  * @param options - Configuration controlling fallback message, registry source, and wrapper depth.
- * @returns A frozen AppError. An existing AppError is returned as-is when no options are supplied,
- * or when the supplied options find nothing that improves on it: only an unexpected match replaces
- * an unknown error, and only a known match that differs replaces a classified one. A
- * `fallbackMessage` never replaces the message an AppError already has.
+ * @returns A frozen AppError. An existing AppError is returned as-is unless a `registry` is
+ * supplied and finds something that improves on it: only an unexpected match replaces an unknown
+ * error, and only a known match that differs replaces a classified one. A `fallbackMessage` or
+ * `maxDepth` alone never changes an AppError.
  * @throws TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string,
  * `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer
  * from 0 through 3.

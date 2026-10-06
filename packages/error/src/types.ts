@@ -43,7 +43,8 @@ export interface AppError extends Error {
   /**
    * Whether the failed operation can be repeated as it is, without user intervention and without
    * the risk that it runs twice. True only for failures that happen before the operation takes
-   * effect, such as a refused connection or a rate limit.
+   * effect, such as a refused connection. It holds for an error the local runtime raised; a
+   * code copied into a response body says nothing about the request that carried it.
    */
   readonly isRetryable: boolean;
 
@@ -94,6 +95,10 @@ export interface AppErrorOptions {
  * - `"known"`: Matched explicitly in the registry (by code, name, exact message, or prefix).
  * - `"unexpected"`: Matched heuristically via regex patterns in the registry.
  * - `"unknown"`: Could not be resolved/classified by the active registry.
+ *
+ * The type says how the error was matched, not how serious it is: a defect such as a missing
+ * table is `"known"` when its code is registered, and an offline user is `"unexpected"` when a
+ * pattern matched. Branch on `code` or `messageKey` to decide what to report.
  */
 export type AppErrorType = "known" | "unexpected" | "unknown";
 

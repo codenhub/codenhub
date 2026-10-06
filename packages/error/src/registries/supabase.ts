@@ -172,19 +172,16 @@ export const supabaseErrorCodes = freezeFeedbackMap({
     message: "We've sent too many text messages to this number. Wait a few minutes before requesting another.",
     messageKey: "error.supabase.auth.overSmsSendRateLimit",
     source: "supabase.auth",
-    isRetryable: true,
   },
   over_email_send_rate_limit: {
     message: "We've sent too many emails to this address. Wait a few minutes before requesting another.",
     messageKey: "error.supabase.auth.overEmailSendRateLimit",
     source: "supabase.auth",
-    isRetryable: true,
   },
   over_request_rate_limit: {
     message: "Too many attempts were made in a short time. Wait a few minutes, then try again.",
     messageKey: "error.supabase.auth.overRequestRateLimit",
     source: "supabase.auth",
-    isRetryable: true,
   },
   request_timeout: {
     message: "This took too long to complete. Check whether it went through before trying again.",
@@ -203,7 +200,7 @@ export const supabaseErrorCodes = freezeFeedbackMap({
   },
   "23503": {
     message:
-      "This couldn't be completed because it's linked to other data that is missing or still in use. Refresh the page and try again.",
+      "This couldn't be completed because it's linked to other data that is missing or still in use. Check the items it refers to, then try again.",
     messageKey: "error.supabase.database.foreignKeyViolation",
     source: "supabase.database",
   },
