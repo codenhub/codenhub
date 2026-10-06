@@ -1,12 +1,21 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { parseMarkdown } from "../documentation/document-policy.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
 const CHANGELOG_DIR = "docs/changelog";
 const INDEX = `${CHANGELOG_DIR}/index.md`;
 const LINK_PATTERN = /\]\(\s*(?<target>[^)\s]+)/gu;
+// `hub release --cut` scaffolds the description as a TODO, which tells a reader
+// as little as no description at all.
+const PLACEHOLDER = /^TODO\b/iu;
+const REQUIRED_FIELDS = ["date", "description"] as const;
+const REQUIRED_FIELD_HINTS: Record<(typeof REQUIRED_FIELDS)[number], string> = {
+  date: "Set it to the release date in ISO YYYY-MM-DD form.",
+  description: "Summarize the release in a sentence.",
+};
 
 /**
  * Whether a package keeps a changelog.
@@ -36,6 +45,30 @@ async function readLinkedPages(packageRoot: string): Promise<string[] | undefine
     .map((match) => match.groups?.target ?? "")
     .map((target) => target.split("/").at(-1) ?? "")
     .filter((name) => name.endsWith(".md"));
+}
+
+/**
+ * Reports the frontmatter a version page must carry and does not.
+ *
+ * Only presence is checked. The `documentation` rule already rejects a `date`
+ * that is not ISO and a `description` that is empty.
+ * @param packageRoot Absolute package directory.
+ * @param page Version page file name, such as `1.2.0.md`.
+ * @returns One finding per missing field.
+ */
+async function checkPageFrontmatter(packageRoot: string, page: string): Promise<Finding[]> {
+  const location = `${CHANGELOG_DIR}/${page}`;
+  const contents = await readFile(join(packageRoot, location), "utf8").catch(() => "");
+  const { frontmatter } = parseMarkdown(contents);
+  return REQUIRED_FIELDS.filter((field) => {
+    const value = frontmatter[field];
+    return typeof value !== "string" || value.trim() === "" || PLACEHOLDER.test(value);
+  }).map((field) => ({
+    code: `changelog/missing-${field}`,
+    location,
+    message: `Version page ${page} has no ${field} in its frontmatter. ${REQUIRED_FIELD_HINTS[field]} See docs/specs/packages-changelog.md.`,
+    severity: "error",
+  }));
 }
 
 async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
@@ -80,6 +113,9 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
       severity: "error",
     });
   }
+  if (pages.includes(page)) {
+    findings.push(...(await checkPageFrontmatter(workspacePackage.directory, page)));
+  }
   return findings;
 }
 
@@ -99,7 +135,7 @@ export function createChangelogRules(): CheckRule[] {
       appliesTo: ({ isPrivate }) => !isPrivate,
       name: "changelog",
       run: ({ package: workspacePackage }) => run(workspacePackage),
-      summary: "An opted-in changelog documents and links the version the manifest declares.",
+      summary: "An opted-in changelog documents, dates, describes, and links the version the manifest declares.",
     },
   ];
 }

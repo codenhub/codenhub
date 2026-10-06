@@ -9,9 +9,11 @@ import { createChangelogRules } from "./changelog-rules.ts";
 
 const [rule] = createChangelogRules();
 
+const COMPLETE_FRONTMATTER = "date: 2026-09-05\ndescription: What the release changes.\n";
+
 async function createPackageOnDisk(
   version: string,
-  changelog?: { index?: string; pages?: readonly string[] },
+  changelog?: { index?: string; pages?: readonly string[]; frontmatter?: string },
 ): Promise<WorkspacePackage> {
   const directory = await mkdtemp(join(tmpdir(), "codenhub-changelog-"));
   if (changelog !== undefined) {
@@ -20,7 +22,14 @@ async function createPackageOnDisk(
       await writeFile(join(directory, "docs/changelog/index.md"), changelog.index);
     }
     await Promise.all(
-      (changelog.pages ?? []).map(async (page) => writeFile(join(directory, "docs/changelog", page), `# ${page}\n`)),
+      (changelog.pages ?? []).map(async (page) => {
+        const title = page.replace(/\.md$/u, "");
+        const frontmatter = changelog.frontmatter ?? COMPLETE_FRONTMATTER;
+        return writeFile(
+          join(directory, "docs/changelog", page),
+          `---\ntitle: ${title}\n${frontmatter}---\n\n# ${title}\n`,
+        );
+      }),
     );
   }
   return {
@@ -92,6 +101,43 @@ describe("changelog rule run", () => {
       index: "# Changelog\n\n- [1.2.0](1.2.0.md)\n",
       pages: ["1.2.0.md", "0.1.0.md"],
     });
+
+    expect(await run(workspacePackage)).toEqual([]);
+  });
+
+  it("reports a current version page with no date or description", async () => {
+    const workspacePackage = await createPackageOnDisk("1.2.0", {
+      frontmatter: "",
+      index: "# Changelog\n\n- [1.2.0](1.2.0.md)\n",
+      pages: ["1.2.0.md"],
+    });
+
+    expect(await run(workspacePackage)).toMatchObject([
+      { code: "changelog/missing-date" },
+      { code: "changelog/missing-description" },
+    ]);
+  });
+
+  it("reports a description the cut scaffold left as a TODO", async () => {
+    const workspacePackage = await createPackageOnDisk("1.2.0", {
+      frontmatter: "date: 2026-09-05\ndescription: TODO: one sentence.\n",
+      index: "# Changelog\n\n- [1.2.0](1.2.0.md)\n",
+      pages: ["1.2.0.md"],
+    });
+
+    expect(await run(workspacePackage)).toMatchObject([{ code: "changelog/missing-description" }]);
+  });
+
+  it("leaves an older version page without them alone", async () => {
+    const workspacePackage = await createPackageOnDisk("1.2.0", {
+      frontmatter: "",
+      index: "# Changelog\n\n- [1.2.0](1.2.0.md)\n- [1.1.0](1.1.0.md)\n",
+      pages: ["1.1.0.md"],
+    });
+    await writeFile(
+      join(workspacePackage.directory, "docs/changelog/1.2.0.md"),
+      `---\ntitle: 1.2.0\n${COMPLETE_FRONTMATTER}---\n\n# 1.2.0\n`,
+    );
 
     expect(await run(workspacePackage)).toEqual([]);
   });
