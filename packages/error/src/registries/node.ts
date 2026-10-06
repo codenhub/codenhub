@@ -13,7 +13,8 @@ import type { ErrorFeedback } from "../types";
  *
  * Covers the system codes raised by sockets and DNS lookups and the `UND_ERR_*` codes raised by
  * the built-in `fetch`, which carries them on the `cause` of its `TypeError`. Only failures that
- * happen before the request reaches the server are marked retryable. Filesystem codes are left
+ * happen before the request reaches the server are marked retryable; `ETIMEDOUT` is not, because
+ * it is also raised on a socket that already carried the request. Filesystem codes are left
  * out: what `ENOENT` should tell a user depends on what the application was doing.
  */
 export const nodeErrorCodes = freezeFeedbackMap({
@@ -26,12 +27,6 @@ export const nodeErrorCodes = freezeFeedbackMap({
   ENOTFOUND: {
     message: "We couldn't find the server's address. Check your internet connection and try again.",
     messageKey: "error.node.network.addressNotFound",
-    source: "node.network",
-    isRetryable: true,
-  },
-  ETIMEDOUT: {
-    message: "The server took too long to accept the connection. Check your internet connection and try again.",
-    messageKey: "error.node.network.connectionTimeout",
     source: "node.network",
     isRetryable: true,
   },
@@ -72,6 +67,13 @@ export const nodeErrorCodes = freezeFeedbackMap({
   EPIPE: {
     message: "The connection closed before this finished. Check whether it went through before trying again.",
     messageKey: "error.node.network.connectionClosed",
+    source: "node.network",
+  },
+  // Not retryable: raised when a connection attempt times out and also on an established socket,
+  // after the request was sent. The code alone does not say which.
+  ETIMEDOUT: {
+    message: "The server took too long to respond. Check whether this went through before trying again.",
+    messageKey: "error.node.network.responseTimeout",
     source: "node.network",
   },
   UND_ERR_HEADERS_TIMEOUT: {

@@ -86,6 +86,12 @@ class AppErrorImpl extends Error implements AppError {
   }
 }
 
+// The class is reachable through an instance's `constructor`, and building one directly would
+// produce an AppError no registry classified. Pointing it at Error and freezing the prototype
+// leaves the factory as the only way in and `toJSON` as the only serialization.
+Object.defineProperty(AppErrorImpl.prototype, "constructor", { value: Error });
+Object.freeze(AppErrorImpl.prototype);
+
 /**
  * Reads each supplied option once and validates it before any traversal begins.
  *
@@ -222,7 +228,7 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
  * Normalizes an unknown error value into a predictable, frozen `AppError`.
  *
  * Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`, `innerError`)
- * up to the configured depth, then resolves a classification in priority order across every
+ * up to the configured depth, and a `cause` chain alone past the default depth, then resolves a classification in priority order across every
  * candidate found:
  *
  * 1. Known `AppError` or deterministic registry match (code, name, exact message, prefix).
