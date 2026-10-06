@@ -260,8 +260,15 @@ export function assertBounds<T extends number | bigint>({
   assertOrder("gt", gt, "lt", lt, true);
 }
 
-/** Whether a validator returned a result, and not a function, a primitive or nothing. */
-export const isResult = (result: unknown): boolean => typeof result === "object" && result !== null;
+/**
+ * Whether a validator returned a result: an object that passed, or one that holds a list of issues. A
+ * function, a primitive, nothing, a value given back as it is and a failure without its issues are none.
+ * `ok` is read as true or false, not compared, so a result written by hand with `ok: 1` passes as before.
+ */
+export const isResult = (result: unknown): boolean =>
+  typeof result === "object" &&
+  result !== null &&
+  (Boolean((result as ValidationOk<unknown>).ok) || Array.isArray((result as Partial<ValidationErr>).error?.issues));
 
 /**
  * The error for a validator that returned no result. A factory given where its validator belongs,

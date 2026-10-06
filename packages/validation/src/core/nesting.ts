@@ -91,7 +91,8 @@ export function call(validator: AnyValidator, input: unknown, place: Place): May
   }
   return chain(validator(input), (result: ValidationResult<unknown>) => {
     if (!isResult(result)) {
-      throw notResult(`The validator at ${pathAt(place).join(".") || "the root"}`);
+      // Written as a list, so a key that is empty or holds a dot is not read as the root or as two keys.
+      throw notResult(`The validator at ${place === undefined ? "the root" : JSON.stringify(pathAt(place))}`);
     }
     return result.ok || place === undefined ? result : failWith(placeAll(result.error.issues, place));
   });
