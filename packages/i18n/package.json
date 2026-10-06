@@ -51,7 +51,7 @@
     "typecheck": "tsc -b"
   },
   "devDependencies": {
-    "@codenhub/error": "workspace:*",
+    "@codenhub/error": "catalog:",
     "@codenhub/validation": "catalog:",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
