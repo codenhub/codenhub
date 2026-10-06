@@ -32,7 +32,7 @@ export interface DatetimeOptions extends MessageOptions {
    *
    * @defaultValue false
    */
-  offset?: boolean;
+  offset?: boolean | undefined;
   /**
    * Also accepts a date-time without a zone, which names a time on a local clock rather than a moment,
    * such as `2026-09-28T14:30` from an HTML `datetime-local` input. Without `precision`, such a time may
@@ -40,9 +40,9 @@ export interface DatetimeOptions extends MessageOptions {
    *
    * @defaultValue false
    */
-  local?: boolean;
+  local?: boolean | undefined;
   /** Exact number of fractional-second digits, an integer from 0 to 9. `0` forbids them; they are optional and unbounded when omitted. */
-  precision?: number;
+  precision?: number | undefined;
 }
 
 /**

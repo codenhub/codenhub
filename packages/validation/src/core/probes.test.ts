@@ -37,6 +37,15 @@ describe("a value that cannot be a date, a map or a set", () => {
     expect(thrown(time)).toBe(0);
   });
 
+  it("should be named without a probe that throws when it is an object with no prototype", () => {
+    const { time } = spies();
+    // As `querystring.parse` and `Object.groupBy` make their results.
+    const row = Object.assign(Object.create(null) as object, { id: 1 });
+    expect(describeType(row)).toBe("object");
+    expect(union([string(), number(), object({ id: number() })])(row).ok).toBe(true);
+    expect(thrown(time)).toBe(0);
+  });
+
   it("should fail the options of a union before the one it matches without a probe that throws", () => {
     const probes = spies();
     expect(union([string(), number(), object({ id: number() })])({ id: 1 }).ok).toBe(true);

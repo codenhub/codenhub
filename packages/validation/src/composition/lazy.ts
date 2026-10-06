@@ -25,7 +25,7 @@ export interface LazyOptions extends MessageOptions {
    *
    * @defaultValue 128
    */
-  maxDepth?: number;
+  maxDepth?: number | undefined;
   /**
    * The most calls this `lazy` may make in one validation, those made for the options a `union` tries
    * and fails included; a result this `lazy` already found for an object at a path is not a call, and
@@ -41,7 +41,7 @@ export interface LazyOptions extends MessageOptions {
    *
    * @defaultValue 10000
    */
-  maxCalls?: number;
+  maxCalls?: number | undefined;
 }
 
 const DEFAULT_MAX_DEPTH = 128;

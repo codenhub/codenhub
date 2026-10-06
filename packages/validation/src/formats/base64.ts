@@ -20,7 +20,7 @@ export interface Base64Options extends MessageOptions {
    *
    * @defaultValue false
    */
-  url?: boolean;
+  url?: boolean | undefined;
 }
 
 /**

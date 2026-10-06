@@ -9,7 +9,7 @@ export interface TimeOptions extends MessageOptions {
    * Exact number of fractional-second digits, an integer from 0 to 9, which also makes the seconds
    * required. Without it, the seconds and their fraction are optional and the fraction unbounded.
    */
-  precision?: number;
+  precision?: number | undefined;
 }
 
 /**

@@ -8,27 +8,27 @@ import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
  */
 export interface NumberOptions extends MessageOptions {
   /** Requires a value of at least this. */
-  min?: number;
+  min?: number | undefined;
   /** Requires a value of at most this. */
-  max?: number;
+  max?: number | undefined;
   /** Requires a value strictly greater than this. */
-  gt?: number;
+  gt?: number | undefined;
   /** Requires a value strictly less than this. */
-  lt?: number;
+  lt?: number | undefined;
   /**
    * Requires a whole number.
    *
    * @defaultValue false
    */
-  int?: boolean;
+  int?: boolean | undefined;
   /**
    * Requires a whole number that a double represents exactly, that is within `Number.MAX_SAFE_INTEGER`.
    *
    * @defaultValue false
    */
-  safeInt?: boolean;
+  safeInt?: boolean | undefined;
   /** Moves the value into this range instead of rejecting it, before the constraints run and in the output. */
-  clamp?: { min: number; max: number };
+  clamp?: { min: number; max: number } | undefined;
 }
 
 const outOfRange = (side: "min" | "max", bound: number, isInclusive: boolean): ValidationIssue =>
