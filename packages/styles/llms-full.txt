@@ -2146,16 +2146,19 @@ A liquid-glass modifier, glass that keeps every presentation's fill whole, hover
 
 # 0.5.0
 
-A foundation update with an opt-in sketch aesthetic and rounded sketch variant.
+A foundation update with an opt-in sketch aesthetic and rounded sketch variant. Everything under [Changed](#changed) and [Removed](#removed) breaks against `0.4.0`.
 
-## Breaking
+## Changed
 
 - **The package sits in named cascade layers.** Every entrypoint declares Tailwind's layer order first and places everything in it: foundation tokens and the palette in `theme`, resets in `base`, the intent, presentation, elevation, and aesthetic classes in `components`, and every component in `utilities` -- including on `/components` and `/native`, which emitted them unlayered. Your own utility or unlayered CSS now beats all four class families on the same element, and an aesthetic on `<html>` keeps its tokens over the theme's in any load order. CSS that relied on a package class beating it now loses to it, and a rule of yours in `@layer components` contests the class families by specificity instead of losing outright. See [Setup](docs/setup.md).
 - **Aesthetics set `--ui-corner`, not `--ui-radius`.** The corner is now a length at the default size that scales with the element (below); `--ui-radius` and `--ui-radius-surface` take a complete radius used as written, and every shipped aesthetic sets `--ui-corner` and `--ui-corner-surface` instead. If you set `--ui-radius` yourself, nothing changes for you. An aesthetic of your own moves to `--ui-corner` to get the scale and the corner pattern. `--ui-radius-pill` and `--ui-radius-tight` fall back through `--ui-radius`, then `--ui-corner`.
 - **`--ui-button-weight` and `--ui-button-tracking` are `--ui-label-weight` and `--ui-label-tracking`**, read by `.badge` as well as `.btn`. The old names are removed without an alias. Under `.chunky-tile`, badges now take the heavier label too.
 - **Explicit chip radii are no longer capped.** Checkbox, `.kbd`, and `.code` keep a small default radius when `--ui-radius-tight` is unset, but a supplied value now applies as a complete `border-radius`, including elliptical shapes. A consumer setting a large value now gets the large corner it asked for instead of the previous `--radius-small` ceiling.
-- **Alias classes removed**, each a second name for a class that already had one: `.dense`, `.compact`, and `.spacious` (use `.p-xs`, `.p-sm`, and `.p-lg`); `.danger` and `.error` (use `.destructive`, and `.hint.destructive` for `.hint.error`); and `.elevation-none`, `.elevation-sm`, and `.elevation-md` (use `.flat`, `.raised`, and `.floating`). `.theme-light` and `.theme-dark` stay.
 - **`.cyber` glows everything, flat or not.** Its glow moved from depth onto the new halo, so fields, chips, badges, and alerts glow too, `.flat` no longer puts the glow out, and `.raised` and `.floating` add no shadow under it.
+
+## Removed
+
+- **Alias classes removed**, each a second name for a class that already had one: `.dense`, `.compact`, and `.spacious` (use `.p-xs`, `.p-sm`, and `.p-lg`); `.danger` and `.error` (use `.destructive`, and `.hint.destructive` for `.hint.error`); and `.elevation-none`, `.elevation-sm`, and `.elevation-md` (use `.flat`, `.raised`, and `.floating`). `.theme-light` and `.theme-dark` stay.
 
 ## Added
 
