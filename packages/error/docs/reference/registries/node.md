@@ -18,7 +18,7 @@ export declare const nodeErrorCodes: Readonly<Record<string, Readonly<ErrorFeedb
 
 Raw code mapping definitions for Node.js network failures.
 
-Covers the system codes raised by sockets and DNS lookups and the `UND_ERR_*` codes raised by the built-in `fetch`, which carries them on the `cause` of its `TypeError`. Only failures that happen before the request reaches the server are marked retryable. Filesystem codes are left out: what `ENOENT` should tell a user depends on what the application was doing.
+Covers the system codes raised by sockets and DNS lookups and the `UND_ERR_*` codes raised by the built-in `fetch`, which carries them on the `cause` of its `TypeError`. Only failures that happen before the request reaches the server are marked retryable; `ETIMEDOUT` is not, because it is also raised on a socket that already carried the request. Filesystem codes are left out: what `ENOENT` should tell a user depends on what the application was doing.
 
 ### nodeErrorPatterns
 

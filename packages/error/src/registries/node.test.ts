@@ -47,7 +47,7 @@ describe("node registry preset", () => {
 
   it.each([
     ["ENOTFOUND", true],
-    ["ETIMEDOUT", true],
+    ["ETIMEDOUT", false],
     ["UND_ERR_CONNECT_TIMEOUT", true],
     ["EAI_AGAIN", true],
     ["EHOSTUNREACH", true],
@@ -64,6 +64,16 @@ describe("node registry preset", () => {
       type: "known",
       code,
       isRetryable,
+    });
+  });
+
+  it("should not mark a timeout on an established socket as retryable", () => {
+    const failure = Object.assign(new Error("read ETIMEDOUT"), { code: "ETIMEDOUT", syscall: "read" });
+
+    expect(createAppError(failure, { registry: nodeErrorRegistry })).toMatchObject({
+      code: "ETIMEDOUT",
+      messageKey: "error.node.network.responseTimeout",
+      isRetryable: false,
     });
   });
 

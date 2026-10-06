@@ -104,7 +104,7 @@ export declare function createAppError(error: unknown, options?: AppErrorOptions
 
 Normalizes an unknown error value into a predictable, frozen `AppError`.
 
-Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`, `innerError`) up to the configured depth, then resolves a classification in priority order across every candidate found:
+Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`, `innerError`) up to the configured depth, and a `cause` chain alone past the default depth, then resolves a classification in priority order across every candidate found:
 
 1. Known `AppError` or deterministic registry match (code, name, exact message, prefix).
 2. Unexpected `AppError` or heuristic registry pattern match.
@@ -367,7 +367,7 @@ Implements the standard JavaScript `Error` interface and adds classification, lo
 readonly code: string | null;
 ```
 
-The registry identifier that classified this error: the matched code, or the matched error name when no code matched. `null` for message, prefix, and pattern matches and for unknown errors. Use it to branch on a specific failure.
+The registry identifier that classified this error: the matched code, or the matched error name when no code matched. `null` for message, prefix, and pattern matches and for unknown errors. Use it to branch on a specific failure; branch on `messageKey` for a built-in preset mapping matched by message, prefix, or pattern, which has no code.
 
 #### isRetryable
 
@@ -439,7 +439,7 @@ The fallback error message to use when the error cannot be matched in the regist
 maxDepth?: number;
 ```
 
-The maximum depth to unwrap nested error wrappers (e.g. cause, originalError). Must be an integer from 0 through 3. Defaults to 3.
+The maximum depth to unwrap nested error wrappers (e.g. cause, originalError). Must be an integer from 0 through 3. Defaults to 3. At 3, a `cause` chain alone is followed further, to a depth of 8; a lower value stops every field at that depth.
 
 #### registry
 

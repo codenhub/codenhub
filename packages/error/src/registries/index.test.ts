@@ -110,6 +110,13 @@ describe("ready registries", () => {
     expect(browserErrorNames.NotAllowedError.message).not.toMatch(/settings/i);
   });
 
+  it("should say only what the NotFoundError and NotAllowedError names prove", () => {
+    // NotFoundError is also what a failed removeChild throws, and NotAllowedError what blocked
+    // autoplay throws, where no file or device is missing and no prompt will be shown.
+    expect(browserErrorNames.NotFoundError.message).not.toMatch(/such as a file or a device/i);
+    expect(browserErrorNames.NotAllowedError.message).not.toMatch(/when asked/i);
+  });
+
   it("should not classify unrelated text that mentions a failed load", () => {
     expect(createAppError(new Error("Config load failed: invalid JSON"), { registry: browserErrorRegistry }).type).toBe(
       "unknown",
