@@ -84,9 +84,10 @@ export function replaceManifestVersion(contents: string, version: string): strin
 /**
  * Builds a changelog page for a version, with the headings and nothing else.
  *
- * The bullets are deliberately absent. What changed for a consumer is the one
- * part of a release no tool can derive, so the page is scaffolded to be
- * finished rather than generated to look complete.
+ * The description and the bullets are deliberately absent. What changed for a
+ * consumer is the one part of a release no tool can derive, so the page is
+ * scaffolded to be finished rather than generated to look complete. `hub check`
+ * reports the description until it is written.
  * @param version Version the page documents.
  * @param date Release date in ISO `YYYY-MM-DD` form.
  * @returns The page contents.
@@ -95,6 +96,7 @@ export function buildChangelogPage(version: string, date: string): string {
   return `---
 title: ${version}
 date: ${date}
+description: TODO: one sentence on what this release changes for a consumer.
 ---
 
 # ${version}

@@ -88,6 +88,7 @@ describe("buildChangelogPage", () => {
 
     expect(page).toContain("title: 1.2.0");
     expect(page).toContain("date: 2026-09-07");
+    expect(page).toContain("description: TODO");
     expect(page).toContain("## Added");
     expect(page).toContain("TODO");
   });

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-03
+last_updated: 2026-10-06
 scope: Recommended changelog documentation for workspace packages.
 ---
 
@@ -14,7 +14,7 @@ Keeping a changelog costs little once a package has any consumer, and it's usual
 
 A package opts in by adding a `docs/changelog/` directory as described below. There is no metadata flag to set on the package itself and no version at which a package is expected to start.
 
-Once a package has opted in, keeping the changelog current stops being optional. `hub check`'s `changelog` rule reports `changelog/missing-entry` when the version in the manifest has no page and `changelog/unlinked-entry` when it has one `index.md` does not link. `hub release --cut` writes both, so the ordinary way to release also produces the entry; `docs/tooling.md` documents each.
+Once a package has opted in, keeping the changelog current stops being optional. `hub check`'s `changelog` rule reports `changelog/missing-entry` when the version in the manifest has no page, `changelog/unlinked-entry` when it has one `index.md` does not link, and `changelog/missing-date` or `changelog/missing-description` when that page lacks the frontmatter required below. `hub release --cut` writes the page and the link, so the ordinary way to release also produces the entry; `docs/tooling.md` documents each.
 
 ## Structure
 
@@ -56,7 +56,11 @@ Keep every released version linked. The list is meant to grow — a link is one 
 
 Each released version gets its own file, named after the exact released version string: `1.2.0.md`, `2.0.0-beta.1.md`. This is a deliberate exception to the general kebab-case filename rule in `docs/specs/packages-documentation.md` — a version number isn't word-based, so kebab-casing it would only obscure the version it names. The exception is defined here, as a rule of this document, not as a package-specific bypass, so it does not need an entry in `docs/specs/packages-exceptions.md`.
 
-A version page's frontmatter needs only `title`, the same as any ordinary public document. It SHOULD also set `date` to the release date in ISO `YYYY-MM-DD` form, and MAY set `description`. It does not need `order`, and does not need to know whether it is currently linked from `index.md` or not: publication is entirely `index.md`'s concern, not the page's.
+A version page's frontmatter MUST set `title`, `date`, and `description`: `date` is the release date in ISO `YYYY-MM-DD` form, and `description` is a one-sentence summary of what the release changes for a consumer, which is what a search result or a link preview shows before the page is opened.
+
+Both were optional at first, `date` recommended and `description` permitted. That left pages in the same changelog carrying different metadata: across the workspace, one version page had no date and nine had no description, each for no reason but that nothing asked. `hub check` enforces the two fields on the page for the manifest's current version only, so a page written before this rule is brought in line when someone touches it, not by a failing check. `hub release --cut` scaffolds the description as a `TODO`, which the check reports until it is written.
+
+A version page does not need `order`, and does not need to know whether it is currently linked from `index.md` or not: publication is entirely `index.md`'s concern, not the page's.
 
 A version page exists only for a version that is being released. Do not keep a running "Unreleased" page: the page is written as part of cutting the release, in the same change that raises the manifest version, and the tag that publishes it follows. `docs/specs/packages-lifecycle.md` owns that sequence and `hub release --cut` performs it.
 
@@ -81,6 +85,7 @@ Putting the frontmatter and headings together, a complete `docs/changelog/1.2.0.
 ---
 title: 1.2.0
 date: 2026-09-05
+description: A strict mode for parseConfig, and resolvePath accepting a trailing separator.
 ---
 
 # 1.2.0
