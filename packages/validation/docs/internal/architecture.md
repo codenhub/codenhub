@@ -320,6 +320,8 @@ What 0.3.0 does instead is make the cost a shared one and remove what adopters w
 
 Hand-written checks stay cheaper in bytes for a handful of options. What an adopter buys is that the edge cases are handled in one place, and what it pays is shared with every other adopter in the same application.
 
+So the cost is accepted, and issue 209 is closed without a lower floor. A package that needs every byte keeps its checks written by hand, and does not adopt this one.
+
 ### Who gains from adopting
 
 Recorded on 2026-10-05, after 0.3.0 was built, from reading how the workspace packages check their input. It is a finding about fit, and it names no package, as the roadmap does not.
