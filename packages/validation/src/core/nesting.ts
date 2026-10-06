@@ -7,7 +7,7 @@
  * are moved under the place once.
  */
 import { chain, within, type Maybe } from "./async";
-import { failWith, ROOT_PATH } from "./result";
+import { failWith, isResult, notResult, ROOT_PATH } from "./result";
 import type { AnyValidator, ValidationIssue, ValidationPathSegment, ValidationResult } from "./types";
 
 /**
@@ -81,14 +81,19 @@ export function composed(run: Run): (input: unknown) => Maybe<ValidationResult<u
  * Validates a value found at `place` with any validator, and returns its result with every issue at
  * its full path: a composer of this package writes them so itself, and any other validator's issues are
  * moved there once. An issue written by hand without a path is given the place as its path; at the root
- * it is returned as the validator wrote it.
+ * it is returned as the validator wrote it. A validator that returns no result is a mistake in the
+ * schema, named by its place.
  */
 export function call(validator: AnyValidator, input: unknown, place: Place): Maybe<ValidationResult<unknown>> {
   const run = runs.get(validator);
   if (run !== undefined) {
     return run(input, place);
   }
-  return chain(validator(input), (result: ValidationResult<unknown>) =>
-    result.ok || place === undefined ? result : failWith(placeAll(result.error.issues, place)),
-  );
+  return chain(validator(input), (result: ValidationResult<unknown>) => {
+    if (!isResult(result)) {
+      // Written as a list, so a key that is empty or holds a dot is not read as the root or as two keys.
+      throw notResult(`The validator at ${place === undefined ? "the root" : JSON.stringify(pathAt(place))}`);
+    }
+    return result.ok || place === undefined ? result : failWith(placeAll(result.error.issues, place));
+  });
 }

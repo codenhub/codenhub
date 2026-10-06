@@ -1,7 +1,7 @@
 import { chain, isThenable, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { composed } from "../core/nesting";
-import { assertFunction, assertList, issue, nested } from "../core/result";
+import { assertFunction, assertList, isResult, issue, nested, notResult } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -69,12 +69,19 @@ export function union(options: readonly AnyValidator[], ...rest: unknown[]): Any
         const result = (tried[index] as AnyValidator)(input);
         if (isThenable(result)) {
           return chain(result, (settled) => {
+            if (!isResult(settled)) {
+              throw notResult(`options[${index}]`);
+            }
             if (settled.ok) {
               return accept(settled.value, place);
             }
             found.push(settled.error.issues.map(nested));
             return attempt(index + 1);
           });
+        }
+        // A mistake in the schema, such as `string` for `string()`, named by its option.
+        if (!isResult(result)) {
+          throw notResult(`options[${index}]`);
         }
         if (result.ok) {
           return accept(result.value, place);

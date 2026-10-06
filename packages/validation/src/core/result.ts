@@ -261,6 +261,25 @@ export function assertBounds<T extends number | bigint>({
 }
 
 /**
+ * Whether a validator returned a result: an object that passed, or one that holds a list of issues. A
+ * function, a primitive, nothing, a value given back as it is and a failure without its issues are none.
+ * `ok` is read as true or false, not compared, so a result written by hand with `ok: 1` passes as before.
+ */
+export const isResult = (result: unknown): boolean =>
+  typeof result === "object" &&
+  result !== null &&
+  (Boolean((result as ValidationOk<unknown>).ok) || Array.isArray((result as Partial<ValidationErr>).error?.issues));
+
+/**
+ * The error for a validator that returned no result. A factory given where its validator belongs,
+ * `string` for `string()`, is a function too, so nothing rejects it when the schema is made: called with
+ * the input as its options, it returns a validator, which read as a result failed on a property of
+ * `undefined` and named neither the child nor the mistake.
+ */
+export const notResult = (where: string): TypeError =>
+  new TypeError(`${where} returned no result. A factory is called first, as in string()`);
+
+/**
  * Rejects a child validator or callback that is not a function, such as an import that resolved to
  * nothing, since it is a mistake in the schema and would otherwise throw on the first input instead.
  */
