@@ -8,22 +8,22 @@ import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
  */
 export interface StringOptions extends MessageOptions {
   /** Requires at least this many characters (UTF-16 code units, as `String.length` counts them). A non-negative integer. */
-  min?: number;
+  min?: number | undefined;
   /** Allows at most this many characters. A non-negative integer. */
-  max?: number;
+  max?: number | undefined;
   /** Requires exactly this many characters. A non-negative integer. */
-  length?: number;
+  length?: number | undefined;
   /**
    * Removes leading and trailing whitespace before the constraints run, and from the output.
    *
    * @defaultValue false
    */
-  trim?: boolean;
+  trim?: boolean | undefined;
   /**
    * Converts the string to lowercase or uppercase before the constraints run, and in the output. To
    * require a case without changing the string, use the `lowercase()` or `uppercase()` check.
    */
-  case?: "lower" | "upper";
+  case?: "lower" | "upper" | undefined;
 }
 
 const isString = (input: unknown): boolean => typeof input === "string";

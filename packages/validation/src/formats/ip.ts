@@ -58,7 +58,7 @@ function isIpv6(text: string): boolean {
 /** Options for {@link ip}. */
 export interface IpOptions extends MessageOptions {
   /** Restricts the address family. Both are accepted when omitted. */
-  version?: "v4" | "v6";
+  version?: "v4" | "v6" | undefined;
 }
 
 /**

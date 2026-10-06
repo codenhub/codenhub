@@ -106,7 +106,7 @@ export interface UrlOptions extends MessageOptions {
    *
    * @defaultValue ["http", "https"]
    */
-  protocols?: readonly string[];
+  protocols?: readonly string[] | undefined;
   /**
    * Validates the host instead of the default rule, that it is a public domain name. It receives the
    * host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in
@@ -120,7 +120,7 @@ export interface UrlOptions extends MessageOptions {
    * accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part`
    * `"host"`.
    */
-  host?: AnyValidator;
+  host?: AnyValidator | undefined;
   /**
    * Validates the credentials, a user and a password written before the host, as in
    * `postgres://app:secret@db.example.com`, which are rejected without it. It receives
@@ -130,13 +130,13 @@ export interface UrlOptions extends MessageOptions {
    * keeps them. A URL without a host, `mailto`, `tel` or `urn`, never takes credentials. Its failure is
    * reported as the URL's, with `params.part` `"credentials"`.
    */
-  credentials?: AnyValidator;
+  credentials?: AnyValidator | undefined;
   /**
    * Validates the port, a number, or `undefined` when the URL names none or names its scheme's default,
    * which the parser drops. So `port: optional(port())` accepts either, and `port: literal(8080)` requires
    * it. Without it, port 0, which nothing can connect to, is rejected; with it, the validator decides. Its failure is reported as the URL's, with `params.part` `"port"`.
    */
-  port?: AnyValidator;
+  port?: AnyValidator | undefined;
   /**
    * Validates the path as the parser writes it: dot segments resolved and characters such as spaces
    * percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such
@@ -149,7 +149,7 @@ export interface UrlOptions extends MessageOptions {
    * parameters from a segment, which a denylist such as "not under `/admin`" does not foresee. Its failure
    * is reported as the URL's, with `params.part` `"path"`.
    */
-  path?: AnyValidator;
+  path?: AnyValidator | undefined;
   /**
    * Validates the query, as an object of its decoded parameters: each key's value as a string, or with
    * `repeated` every value of every key as an array. A key given twice fails at `[key]` inside the
@@ -157,13 +157,13 @@ export interface UrlOptions extends MessageOptions {
    * and paths relative to the query in `params.issues`. To reject parameters it does not list,
    * give it `object(shape, { unknownKeys: "strict" })`.
    */
-  query?: AnyValidator;
+  query?: AnyValidator | undefined;
   /**
    * Gives `query` every value of every key as an array, and accepts a key given more than once.
    *
    * @defaultValue false
    */
-  repeated?: boolean;
+  repeated?: boolean | undefined;
 }
 
 /** The part validators an options object names. */

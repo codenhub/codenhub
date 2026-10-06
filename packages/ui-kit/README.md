@@ -2,7 +2,7 @@
 
 Browser UI utilities for feedback, internationalization, light and dark themes, toasts, and a compiled global stylesheet.
 
-> [!WARNING] This package is experimental. Its API, browser support, generated markup, styling output, and integration boundaries may change before a stable release.
+> [!WARNING] This package is experimental and on hold. It is old, it is not being worked on, and it will be either retired or rewritten from scratch; do not build on it. Its API, browser support, generated markup, styling output, and integration boundaries may change before a stable release.
 
 ## Installation
 

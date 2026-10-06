@@ -87,8 +87,15 @@ describe("describeType", () => {
     expect(describeType(value)).toBe(expected);
   });
 
-  it("should name a date that lost its prototype, by what it holds", () => {
-    expect(describeType(Object.setPrototypeOf(new Date(0), null))).toBe("date");
+  it("should name a date given another prototype by what it holds", () => {
+    expect(describeType(Object.setPrototypeOf(new Date(0), class Widget {}.prototype))).toBe("date");
+  });
+
+  it("should name a date stripped of its prototype an object, as it names one given Object.prototype", () => {
+    expect([
+      describeType(Object.setPrototypeOf(new Date(0), null)),
+      describeType(Object.setPrototypeOf(new Date(0), Object.prototype)),
+    ]).toEqual(["object", "object"]);
   });
 
   it("should say object for an input that throws when inspected, instead of throwing", () => {

@@ -22,7 +22,7 @@ export interface SearchParamsOptions extends MessageOptions {
    *
    * @defaultValue false
    */
-  repeated?: boolean;
+  repeated?: boolean | undefined;
 }
 
 /**
