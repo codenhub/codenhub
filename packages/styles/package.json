@@ -198,7 +198,7 @@
     "build:styles": "node scripts/build-styles.mjs --styles",
     "build:aesthetics": "node scripts/build-styles.mjs --aesthetics",
     "build:tw": "node scripts/build-tw.mjs",
-    "prepublishOnly": "pnpm build && pnpm typecheck && pnpm test",
+    "prepublishOnly": "pnpm --filter=@codenhub/icons build && pnpm build && pnpm typecheck && pnpm test",
     "status:npm": "npm view @codenhub/styles version dist-tags time --json && npm dist-tag ls @codenhub/styles && npm access get status @codenhub/styles",
     "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
