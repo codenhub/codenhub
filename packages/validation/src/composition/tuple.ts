@@ -31,12 +31,12 @@ export type InferTuple<
 /** Options for {@link tuple}. */
 export interface TupleOptions<TRest extends AnyValidator | undefined = undefined> extends MessageOptions {
   /** Validator for every position after the fixed ones. Without it the array must be exactly as long as the tuple. */
-  rest?: TRest;
+  rest?: TRest | undefined;
   /**
    * The most items the array may hold, the fixed ones included, a non-negative integer no smaller than
    * their number. Only with `rest`, since without it the length is fixed.
    */
-  max?: TRest extends AnyValidator ? number : never;
+  max?: (TRest extends AnyValidator ? number : never) | undefined;
 }
 
 /**

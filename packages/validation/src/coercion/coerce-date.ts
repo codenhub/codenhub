@@ -19,7 +19,7 @@ export interface CoerceDateOptions extends DateOptions {
    * `"utc"` reads it as UTC, for text you know is written in UTC. A date alone, `2026-09-28`, is always
    * midnight UTC, as JavaScript reads it.
    */
-  zoneless?: "utc";
+  zoneless?: "utc" | undefined;
 }
 
 /**

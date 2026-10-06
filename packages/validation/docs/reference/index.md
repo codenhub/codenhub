@@ -1442,7 +1442,7 @@ Options for [assert](#assert).
 #### messages
 
 ```ts
-messages?: Messages;
+messages?: Messages | undefined;
 ```
 
 Wording for issues that carry no message of their own, keyed by issue code, such as `englishMessages` or a map of the wordings the validator can report.
@@ -1450,7 +1450,7 @@ Wording for issues that carry no message of their own, keyed by issue code, such
 #### subject
 
 ```ts
-subject?: string;
+subject?: string | undefined;
 ```
 
 What was being validated, written before the problem as it is, such as `"[I18n]"` or `"Router options:"`. Without it the message starts at the path.
@@ -1470,7 +1470,7 @@ Inherited from [MessageOptions](#messageoptions).
 #### url
 
 ```ts
-url?: boolean;
+url?: boolean | undefined;
 ```
 
 Requires the URL-safe alphabet of RFC 4648, with `-` and `_` for `+` and `/` and the padding optional, and reports the format as `base64url`.
@@ -1486,7 +1486,7 @@ Constraints for [bigint](#bigint). Every option is optional.
 #### gt
 
 ```ts
-gt?: bigint;
+gt?: bigint | undefined;
 ```
 
 Requires a value strictly greater than this.
@@ -1494,7 +1494,7 @@ Requires a value strictly greater than this.
 #### lt
 
 ```ts
-lt?: bigint;
+lt?: bigint | undefined;
 ```
 
 Requires a value strictly less than this.
@@ -1502,7 +1502,7 @@ Requires a value strictly less than this.
 #### max
 
 ```ts
-max?: bigint;
+max?: bigint | undefined;
 ```
 
 Requires a value of at most this.
@@ -1514,7 +1514,7 @@ Inherited from [MessageOptions](#messageoptions).
 #### min
 
 ```ts
-min?: bigint;
+min?: bigint | undefined;
 ```
 
 Requires a value of at least this.
@@ -1542,7 +1542,7 @@ Inherited from [DateOptions](#dateoptions).
 #### zoneless
 
 ```ts
-zoneless?: "utc";
+zoneless?: "utc" | undefined;
 ```
 
 How to read a date-time written without a zone, such as `2026-09-28T14:30` from an HTML `datetime-local` input. Such text names a time on some clock, not a moment, so without this option it fails: reading it in any one zone would move the moment, without a word, for everyone in another. `"utc"` reads it as UTC, for text you know is written in UTC. A date alone, `2026-09-28`, is always midnight UTC, as JavaScript reads it.
@@ -1558,7 +1558,7 @@ Bounds for [date](#date). Every option is optional.
 #### max
 
 ```ts
-max?: Date;
+max?: Date | undefined;
 ```
 
 Requires this moment or an earlier one. Must be a valid `Date`.
@@ -1570,7 +1570,7 @@ Inherited from [MessageOptions](#messageoptions).
 #### min
 
 ```ts
-min?: Date;
+min?: Date | undefined;
 ```
 
 Requires this moment or a later one. Must be a valid `Date`.
@@ -1586,7 +1586,7 @@ Options for [datetime](#datetime).
 #### local
 
 ```ts
-local?: boolean;
+local?: boolean | undefined;
 ```
 
 Also accepts a date-time without a zone, which names a time on a local clock rather than a moment, such as `2026-09-28T14:30` from an HTML `datetime-local` input. Without `precision`, such a time may leave out its seconds, as that input does when they are zero; a time with a zone still needs them.
@@ -1598,7 +1598,7 @@ Inherited from [MessageOptions](#messageoptions).
 #### offset
 
 ```ts
-offset?: boolean;
+offset?: boolean | undefined;
 ```
 
 Accepts a UTC offset such as `+02:00` instead of only `Z`.
@@ -1606,7 +1606,7 @@ Accepts a UTC offset such as `+02:00` instead of only `Z`.
 #### precision
 
 ```ts
-precision?: number;
+precision?: number | undefined;
 ```
 
 Exact number of fractional-second digits, an integer from 0 to 9. `0` forbids them; they are optional and unbounded when omitted.
@@ -1622,7 +1622,7 @@ Options for [email](#email).
 #### allowPlus
 
 ```ts
-allowPlus?: boolean;
+allowPlus?: boolean | undefined;
 ```
 
 Accepts `+` in the local part, as in `me+tag@example.com`.
@@ -1630,7 +1630,7 @@ Accepts `+` in the local part, as in `me+tag@example.com`.
 #### domain
 
 ```ts
-domain?: AnyValidator;
+domain?: AnyValidator | undefined;
 ```
 
 Validates the domain instead of the default rule, that it is a public domain name. It receives the domain as the URL parser reads it, lowercase ASCII with internationalized labels in punycode, and the domain must still be a hostname: `email({ domain: hostname() })` accepts `ada@localhost`, and `email({ domain: oneOf(["example.com"]) })` accepts that domain alone. Its failure is reported as the address's, with `params.part` `"domain"`.
@@ -1638,7 +1638,7 @@ Validates the domain instead of the default rule, that it is a public domain nam
 #### local
 
 ```ts
-local?: AnyValidator;
+local?: AnyValidator | undefined;
 ```
 
 Validates the local part, the text before the `@`, as written. Its failure is reported as the address's, with `params.part` `"local"`.
@@ -1694,7 +1694,7 @@ Inherited from [MessageOptions](#messageoptions).
 #### version
 
 ```ts
-version?: "v4" | "v6";
+version?: "v4" | "v6" | undefined;
 ```
 
 Restricts the address family. Both are accepted when omitted.
@@ -1750,7 +1750,7 @@ Options for [lazy](#lazy).
 #### maxCalls
 
 ```ts
-maxCalls?: number;
+maxCalls?: number | undefined;
 ```
 
 The most calls this `lazy` may make in one validation, those made for the options a `union` tries and fails included; a result this `lazy` already found for an object at a path is not a call, and neither is a primitive, such as a number in a list, that reaches no further `lazy` call and whose result is not pending. Past it, every further call fails with `too_big`, so a schema whose work grows faster than its input stops instead of running for hours on a few hundred bytes. A validation is a call such as `schema(input)` and everything it reaches before it settles, after any await included, so an `array` of recursive items shares this `lazy`'s count, and validations made one after another, or from a callback such as a check's test, or after an await inside a validator you write yourself, have counts of their own. Each `lazy` counts its own calls against its own limit, so no other `lazy` overrides it. Recursive data with more nodes than this in one validation needs it raised.
@@ -1758,7 +1758,7 @@ The most calls this `lazy` may make in one validation, those made for the option
 #### maxDepth
 
 ```ts
-maxDepth?: number;
+maxDepth?: number | undefined;
 ```
 
 The most levels of `lazy` that may be open at once, counting every `lazy` validator, not only this one. Input nested deeper fails with `too_big` instead of exhausting the stack. Since the levels of every `lazy` count, a `maxDepth` of 1 inside another `lazy` fails at once: set it for the whole nesting. A worker has about half the stack of a page in Chromium and Firefox, so a schema with many validators at each level that runs in one needs it lowered.
@@ -1778,7 +1778,7 @@ The options every validator takes.
 #### message
 
 ```ts
-message?: Message;
+message?: Message | undefined;
 ```
 
 Wording for every issue this validator reports itself, and every issue one of its checks reports without a message of its own. Issues a child validator reports keep their own wording.
@@ -1794,7 +1794,7 @@ Constraints and clean-up for [number](#number). Every option is optional. Rarer 
 #### clamp
 
 ```ts
-clamp?: { min: number; max: number; };
+clamp?: { min: number; max: number; } | undefined;
 ```
 
 Moves the value into this range instead of rejecting it, before the constraints run and in the output.
@@ -1802,7 +1802,7 @@ Moves the value into this range instead of rejecting it, before the constraints 
 #### gt
 
 ```ts
-gt?: number;
+gt?: number | undefined;
 ```
 
 Requires a value strictly greater than this.
@@ -1810,7 +1810,7 @@ Requires a value strictly greater than this.
 #### int
 
 ```ts
-int?: boolean;
+int?: boolean | undefined;
 ```
 
 Requires a whole number.
@@ -1818,7 +1818,7 @@ Requires a whole number.
 #### lt
 
 ```ts
-lt?: number;
+lt?: number | undefined;
 ```
 
 Requires a value strictly less than this.
@@ -1826,7 +1826,7 @@ Requires a value strictly less than this.
 #### max
 
 ```ts
-max?: number;
+max?: number | undefined;
 ```
 
 Requires a value of at most this.
@@ -1838,7 +1838,7 @@ Inherited from [MessageOptions](#messageoptions).
 #### min
 
 ```ts
-min?: number;
+min?: number | undefined;
 ```
 
 Requires a value of at least this.
@@ -1846,7 +1846,7 @@ Requires a value of at least this.
 #### safeInt
 
 ```ts
-safeInt?: boolean;
+safeInt?: boolean | undefined;
 ```
 
 Requires a whole number that a double represents exactly, that is within `Number.MAX_SAFE_INTEGER`.
@@ -1866,7 +1866,7 @@ Inherited from [MessageOptions](#messageoptions).
 #### unknownKeys
 
 ```ts
-unknownKeys?: "strip" | "strict" | "passthrough";
+unknownKeys?: "strip" | "strict" | "passthrough" | undefined;
 ```
 
 What to do with input properties the shape does not list. `"strip"` drops them from the output, `"strict"` rejects each with an `unrecognized_key` issue, up to the 1,000 issues a collection reports, and `"passthrough"` copies them to the output unchecked.
@@ -1886,7 +1886,7 @@ Inherited from [MessageOptions](#messageoptions).
 #### repeated
 
 ```ts
-repeated?: boolean;
+repeated?: boolean | undefined;
 ```
 
 Gives the validator every value of every key as an array, and accepts a key given more than once.
@@ -1902,7 +1902,7 @@ Size constraints shared by arrays, sets, maps and records, where the size of a r
 #### length
 
 ```ts
-length?: number;
+length?: number | undefined;
 ```
 
 Requires exactly this many items. A non-negative integer.
@@ -1910,7 +1910,7 @@ Requires exactly this many items. A non-negative integer.
 #### max
 
 ```ts
-max?: number;
+max?: number | undefined;
 ```
 
 Allows at most this many items. A non-negative integer.
@@ -1918,7 +1918,7 @@ Allows at most this many items. A non-negative integer.
 #### min
 
 ```ts
-min?: number;
+min?: number | undefined;
 ```
 
 Requires at least this many items. A non-negative integer.
@@ -2160,7 +2160,7 @@ Constraints and clean-up for [string](#string). Every option is optional. Rarer 
 #### case
 
 ```ts
-case?: "lower" | "upper";
+case?: "lower" | "upper" | undefined;
 ```
 
 Converts the string to lowercase or uppercase before the constraints run, and in the output. To require a case without changing the string, use the `lowercase()` or `uppercase()` check.
@@ -2168,7 +2168,7 @@ Converts the string to lowercase or uppercase before the constraints run, and in
 #### length
 
 ```ts
-length?: number;
+length?: number | undefined;
 ```
 
 Requires exactly this many characters. A non-negative integer.
@@ -2176,7 +2176,7 @@ Requires exactly this many characters. A non-negative integer.
 #### max
 
 ```ts
-max?: number;
+max?: number | undefined;
 ```
 
 Allows at most this many characters. A non-negative integer.
@@ -2188,7 +2188,7 @@ Inherited from [MessageOptions](#messageoptions).
 #### min
 
 ```ts
-min?: number;
+min?: number | undefined;
 ```
 
 Requires at least this many characters (UTF-16 code units, as `String.length` counts them). A non-negative integer.
@@ -2196,7 +2196,7 @@ Requires at least this many characters (UTF-16 code units, as `String.length` co
 #### trim
 
 ```ts
-trim?: boolean;
+trim?: boolean | undefined;
 ```
 
 Removes leading and trailing whitespace before the constraints run, and from the output.
@@ -2216,7 +2216,7 @@ Inherited from [MessageOptions](#messageoptions).
 #### precision
 
 ```ts
-precision?: number;
+precision?: number | undefined;
 ```
 
 Exact number of fractional-second digits, an integer from 0 to 9, which also makes the seconds required. Without it, the seconds and their fraction are optional and the fraction unbounded.
@@ -2232,7 +2232,7 @@ Options for [tuple](#tuple).
 #### max
 
 ```ts
-max?: TRest extends AnyValidator ? number : never;
+max?: (TRest extends AnyValidator ? number : never) | undefined;
 ```
 
 The most items the array may hold, the fixed ones included, a non-negative integer no smaller than their number. Only with `rest`, since without it the length is fixed.
@@ -2244,7 +2244,7 @@ Inherited from [MessageOptions](#messageoptions).
 #### rest
 
 ```ts
-rest?: TRest;
+rest?: TRest | undefined;
 ```
 
 Validator for every position after the fixed ones. Without it the array must be exactly as long as the tuple.
@@ -2260,7 +2260,7 @@ Options for [url](#url).
 #### credentials
 
 ```ts
-credentials?: AnyValidator;
+credentials?: AnyValidator | undefined;
 ```
 
 Validates the credentials, a user and a password written before the host, as in `postgres://app:secret@db.example.com`, which are rejected without it. It receives `{ username, password }` as the parser writes them, percent-encoded, with `password` empty when only a user is written, or `undefined` when the URL names neither, so `credentials: optional(object({ username: string(), password: string() }))` accepts a URL with or without them. The URL produced keeps them. A URL without a host, `mailto`, `tel` or `urn`, never takes credentials. Its failure is reported as the URL's, with `params.part` `"credentials"`.
@@ -2268,7 +2268,7 @@ Validates the credentials, a user and a password written before the host, as in 
 #### host
 
 ```ts
-host?: AnyValidator;
+host?: AnyValidator | undefined;
 ```
 
 Validates the host instead of the default rule, that it is a public domain name. It receives the host as the URL parser reads it: a domain in lowercase ASCII with internationalized labels in punycode, an IPv4 address as four decimal parts, or an IPv6 address without its brackets, spelled as `ip()` spells it, while the URL produced keeps the parser's spelling. For a scheme the parser has no rules for, such as `ssh`, it reads a name as written, and the host is that name with its letters in lowercase and its escapes in uppercase, as RFC 3986 normalizes them, and not read as an address, so `redis://2130706433/` gives `"2130706433"`, which a client may read as `127.0.0.1`: check it with `hostname()`, `domain()` or `ip()`, never a list of strings. So `host: hostname()` accepts any hostname, `localhost` included, and `host: union([domain(), ip()])` accepts IP addresses but not `localhost`. Its failure is reported as the URL's, with `params.part` `"host"`.
@@ -2280,7 +2280,7 @@ Inherited from [MessageOptions](#messageoptions).
 #### path
 
 ```ts
-path?: AnyValidator;
+path?: AnyValidator | undefined;
 ```
 
 Validates the path as the parser writes it: dot segments resolved and characters such as spaces percent-encoded, starting with `/`, or empty for a URL of a scheme the parser has no rules for, such as `ssh://example.com`, that names no path. A path holding an encoded `/` or `\`, `%2F` or `%5C`, fails before it runs, with `{ encodedSeparator: true }`, since a server that decodes it before routing would read another path than the validator saw, and so does one holding a segment `.` or `..` followed by `;` or `%3B`, such as `/api/..;/admin`, with `{ dotSegment: true }`, since a server that drops the parameters before resolving dot segments would read `..`. Write it as an allowlist, such as `string(startsWith("/api/"))`: a server may also decode an escape, merge `//` or drop `;` and its parameters from a segment, which a denylist such as "not under `/admin`" does not foresee. Its failure is reported as the URL's, with `params.part` `"path"`.
@@ -2288,7 +2288,7 @@ Validates the path as the parser writes it: dot segments resolved and characters
 #### port
 
 ```ts
-port?: AnyValidator;
+port?: AnyValidator | undefined;
 ```
 
 Validates the port, a number, or `undefined` when the URL names none or names its scheme's default, which the parser drops. So `port: optional(port())` accepts either, and `port: literal(8080)` requires it. Without it, port 0, which nothing can connect to, is rejected; with it, the validator decides. Its failure is reported as the URL's, with `params.part` `"port"`.
@@ -2296,7 +2296,7 @@ Validates the port, a number, or `undefined` when the URL names none or names it
 #### protocols
 
 ```ts
-protocols?: readonly string[];
+protocols?: readonly string[] | undefined;
 ```
 
 Accepted protocols, without the colon, in any letter case. Of the schemes without a host, `mailto`, `tel` and `urn` are accepted, each checked by its own rules even when written with a host; any other is always rejected. `javascript`, `vbscript` and `data` cannot be listed, since their URLs run script.
@@ -2304,7 +2304,7 @@ Accepted protocols, without the colon, in any letter case. Of the schemes withou
 #### query
 
 ```ts
-query?: AnyValidator;
+query?: AnyValidator | undefined;
 ```
 
 Validates the query, as an object of its decoded parameters: each key's value as a string, or with `repeated` every value of every key as an array. A key given twice fails at `[key]` inside the query unless `repeated` is set. Its failure is reported as the URL's, with `params.part` `"query"` and paths relative to the query in `params.issues`. To reject parameters it does not list, give it `object(shape, { unknownKeys: "strict" })`.
@@ -2312,7 +2312,7 @@ Validates the query, as an object of its decoded parameters: each key's value as
 #### repeated
 
 ```ts
-repeated?: boolean;
+repeated?: boolean | undefined;
 ```
 
 Gives `query` every value of every key as an array, and accepts a key given more than once.
@@ -2332,7 +2332,7 @@ Inherited from [MessageOptions](#messageoptions).
 #### version
 
 ```ts
-version?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+version?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | undefined;
 ```
 
 Requires this version, from 1 to 8. The nil and max UUIDs have no version and are then rejected. Any version when omitted.

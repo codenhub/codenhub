@@ -5,6 +5,7 @@
 import {
   array,
   assert,
+  base64,
   bigint,
   boolean,
   check,
@@ -25,6 +26,7 @@ import {
   formatIssue,
   guard,
   hostname,
+  ip,
   intersection,
   invalidIntersectionMessage,
   invalidKeyMessage,
@@ -42,6 +44,7 @@ import {
   startsWith,
   symbol,
   tagged,
+  time,
   oneOf,
   optional,
   tooSmallMessage,
@@ -60,6 +63,7 @@ import {
   unique,
   unknown,
   url,
+  uuid,
   type AsyncCheck,
   type AsyncValidator,
   type Check,
@@ -476,3 +480,56 @@ export const badFeedback: Infer<typeof feedback> = { isRetryable: true };
 export const feedbackAsync: Validator<{ name: string }> = objectLike({ name: username });
 // @ts-expect-error objectLike has no unknownKeys
 export const strictFeedback = objectLike({ message: string() }, { unknownKeys: "strict" });
+
+// An option read from a value that may be undefined is passed as it is, and is no option, under
+// `exactOptionalPropertyTypes` too.
+declare const maybeLimit: number | undefined;
+declare const maybeBound: bigint | undefined;
+declare const maybeMoment: Date | undefined;
+declare const maybeFlag: boolean | undefined;
+declare const maybeWording: string | undefined;
+declare const maybePart: Validator<string> | undefined;
+export const maybeOptions = [
+  string({
+    min: maybeLimit,
+    max: maybeLimit,
+    length: maybeLimit,
+    trim: maybeFlag,
+    case: maybeFlag ? "lower" : undefined,
+    message: maybeWording,
+  }),
+  number({
+    min: maybeLimit,
+    max: maybeLimit,
+    gt: maybeLimit,
+    lt: maybeLimit,
+    int: maybeFlag,
+    safeInt: maybeFlag,
+    clamp: undefined,
+  }),
+  bigint({ min: maybeBound, max: maybeBound, gt: maybeBound, lt: maybeBound }),
+  date({ min: maybeMoment, max: maybeMoment }),
+  coerceDate({ zoneless: maybeFlag ? "utc" : undefined, min: maybeMoment }),
+  array(string(), { min: maybeLimit, max: maybeLimit, length: maybeLimit }),
+  tuple([string()], { rest: undefined, max: undefined }),
+  tuple([string()], { rest: string(), max: maybeLimit }),
+  object({}, { unknownKeys: maybeFlag ? "strict" : undefined }),
+  lazy(() => string(), { maxDepth: maybeLimit, maxCalls: maybeLimit }),
+  url({
+    protocols: undefined,
+    host: maybePart,
+    credentials: undefined,
+    port: undefined,
+    path: maybePart,
+    query: undefined,
+    repeated: maybeFlag,
+  }),
+  email({ allowPlus: maybeFlag, domain: maybePart, local: maybePart }),
+  datetime({ offset: maybeFlag, local: maybeFlag, precision: maybeLimit }),
+  time({ precision: maybeLimit }),
+  ip({ version: maybeFlag ? "v4" : undefined }),
+  uuid({ version: maybeFlag ? 4 : undefined }),
+  base64({ url: maybeFlag }),
+  searchParams(unknown(), { repeated: maybeFlag }),
+];
+export const maybeAsserted: string = assert(string(), "a", { subject: maybeWording, messages: undefined });
