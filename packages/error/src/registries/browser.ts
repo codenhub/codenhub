@@ -40,8 +40,7 @@ export const browserErrorNames = freezeFeedbackMap({
     source: "browser.permissions",
   },
   NotFoundError: {
-    message:
-      "We couldn't find something this needs. Check that any file or device you chose is still available, then try again.",
+    message: "We couldn't find something this needs. Try again, and reload the page if it keeps happening.",
     messageKey: "error.browser.notFound",
     source: "browser",
   },

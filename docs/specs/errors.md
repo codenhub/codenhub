@@ -40,7 +40,7 @@ Wrapper traversal defaults to a maximum depth of `3`. At that depth a `cause` ch
 
 Normalizing error text MUST take time linear in its length. Error messages routinely embed input an attacker controls, so no step that runs on every message may backtrack.
 
-Passing options to `createAppError()` with an existing `AppError` classifies the raw value it started from again, unwinding any earlier `AppError` first. Re-normalization MUST only upgrade: an unexpected result replaces only an unknown error, and a known result replaces anything it differs from. In every other case the same `AppError` MUST be returned. A `fallbackMessage` MUST NOT replace the message an `AppError` already has, so an error passed through several layers keeps the wording of the first one that named it.
+Passing a `registry` to `createAppError()` with an existing `AppError` classifies the raw value it started from again, unwinding any earlier `AppError` first. Re-normalization MUST only upgrade: an unexpected result replaces only an unknown error, and a known result replaces anything it differs from. In every other case the same `AppError` MUST be returned. Without a `registry` option the same `AppError` MUST be returned whatever else is passed: a `fallbackMessage` or `maxDepth` MUST NOT change an `AppError`, so an error passed through several layers keeps the wording of the first one that named it. Classifying again against the global registry whenever any option was passed was tried and reversed: the error may have been classified by a per-service registry, as "Code namespacing" advises, and a later layer that only supplied a `fallbackMessage` had the global registry's mapping for the same code replace it. Never replacing a known `AppError` was weighed and rejected, because an application that passes its own registry is asking for its wording.
 
 Raw strings passed to `err()` MUST be treated as untrusted error values. They MUST NOT become user-facing messages unless the caller explicitly supplies a safe `fallbackMessage`.
 
@@ -55,6 +55,8 @@ The registry MUST accept any non-empty string as a `messageKey` or `source`. The
 Packages MUST NOT introduce a runtime dependency on `@codenhub/error` solely for the purpose of exposing their error definitions. Consequently, if a package only wants to publish error definitions, it MUST NOT create or export `ErrorRegistry` or `ReadonlyErrorRegistry` instances directly.
 
 However, if a package requires `@codenhub/error` for its own internal runtime logic or features (such as UI/feedback components), it is allowed to carry it as a runtime dependency and use it directly.
+
+A package that classifies at runtime, by calling `createAppError()`, `err()`, `attempt()`, or `attemptAsync()`, or that returns `Result<T>` or `AppError` values to its consumer, MUST list `@codenhub/error` in `peerDependencies`, not `dependencies`. The global registry and the `isAppError()` identity both belong to one copy of the package. A second copy, which a `dependencies` range installs whenever it disagrees with the application's version, has its own empty global registry and does not recognize the application's `AppError` values, so everything the package classifies resolves to an unknown error. A package that reads only constants or types from `@codenhub/error` is not affected.
 
 When avoiding a runtime dependency, the package SHOULD export a plain JavaScript object (dictionary) containing its error feedback definitions, importing type definitions via `import type`.
 
@@ -85,7 +87,7 @@ Codes that belong to a third party keep the spelling that party emits, because t
 
 ### Dependency Rules
 
-- **Runtime Dependencies**: `@codenhub/error` MUST NOT be listed in the `dependencies` or `peerDependencies` of the package if it is only needed to expose error definitions. It is allowed if needed for internal runtime logic.
+- **Runtime Dependencies**: `@codenhub/error` MUST NOT be listed in the `dependencies` or `peerDependencies` of the package if it is only needed to expose error definitions. It is allowed if needed for internal runtime logic, in `peerDependencies` when the package classifies errors or returns `Result<T>` or `AppError` values.
 - **Development Dependencies**: If the package does not use it at runtime, `@codenhub/error` MUST be listed in `devDependencies` to allow compiling the `import type` statement.
 
 ### Integrating with Registries
@@ -173,7 +175,7 @@ Rules:
 - Developer-facing mappings in one package SHOULD share one message, so the reader is told the same thing whichever defect produced it. `@codenhub/error` uses a single sentence for all of its own.
 - Register a developer-facing identifier only when it is common enough that telling the reader "this is not your doing" is worth more than the generic fallback. Identifiers that only surface during development, such as a malformed token or a misconfigured hook, are left unmapped and resolve to an unknown error.
 - When the same identifier can be either, write for the person using the app. `23502`, a missing required value, is usually a form the application failed to validate, but the reader can still fill the field in.
-- The audience is a rule for writing mappings, not a field on `AppError`. Code that needs to tell the two apart branches on `AppError.code`. Known gap: `type` is `"known"` for both audiences, and a preset does not export which of its identifiers are developer-facing, so an application that reports defects to an error tracker has to list them itself. A field can be added without a breaking change once an application needs it.
+- The audience is a rule for writing mappings, not a field on `AppError`. Code that needs to tell the two apart branches on `AppError.code`. Known gap: `type` is `"known"` for both audiences, and a preset does not export which of its identifiers are developer-facing, so an application that reports defects to an error tracker has to list them itself. A field can be added without a breaking change once an application needs it. `type` says how the error was matched, not how serious it is: a missing table is `"known"` and an offline user matched by pattern is `"unexpected"`, so `type !== "known"` is not a test for a defect. The name `"unexpected"` suggests otherwise and is to be reconsidered before `1.0`.
 
 ## `messageKey` conventions
 
@@ -209,10 +211,15 @@ Set `isRetryable: true` only when the same operation can be repeated **without u
 | ----------------------------------------- | --------------------------------------------------- |
 | Connection refused, connection timeout    | Response timeout, connection reset, aborted request |
 | DNS failures                              | Auth failures, permission denied                    |
-| Rate limit (with backoff)                 | Validation errors, unique constraint violations     |
-| Service errors that reject before running | Service errors that may have run the request (5xx)  |
+| Service errors that reject before running | Validation errors, unique constraint violations     |
+|                                           | Service errors that may have run the request (5xx)  |
+|                                           | Rate limits                                         |
 
 When in doubt, omit `isRetryable` (defaults to `false`). Do not mark an error as retryable speculatively. A failure that is likely to pass on a second try but may follow a request the server already received is not retryable.
+
+A rate limit is not retryable, though repeating the operation is safe: the flag carries no delay, so code that retries on it does so at once and counts against the limit again. The message tells the reader how long to wait. Letting feedback carry a delay was weighed and left out as surface no application has asked for.
+
+The flag holds only for an error the local runtime raised. Matching does not know where a value came from: a server that forwards its own upstream failure as `{ "code": "ECONNREFUSED" }` in a response body produces a value that matches the Node.js mapping, although the request reached the server and may have run. Applications SHOULD classify response bodies against a registry that holds the service's own codes and no transport preset, through the `registry` option. Restricting a mapping to `Error` instances was weighed and left out: it adds a matching rule to every bucket for a case the `registry` option already covers.
 
 Generic browser fetch messages such as `Failed to fetch` or `Load failed` SHOULD remain non-retryable because they can represent permanent failures such as CORS, invalid URLs, or TLS errors. A `TimeoutError` from `AbortSignal.timeout()` SHOULD remain non-retryable because it can fire after the request was sent. So SHOULD `ETIMEDOUT`: Node.js raises it for a connection attempt and for an established socket alike, and the code does not say which. More specific signals that the request never arrived, such as connection refusal or DNS failure, MAY be marked retryable.
 

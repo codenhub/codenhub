@@ -25,17 +25,17 @@ const error = createAppError(new Error("Request failed"), {
 | `registry`        | `getErrorRegistry()`        | Classification source; must expose the read-facing registry surface.                                                  |
 | `maxDepth`        | `3`                         | Maximum wrapper depth; must be an integer from `0` through `3`. A value below `3` also stops the `cause` chain there. |
 
-`DEFAULT_APP_ERROR_MESSAGE` is `"An unexpected error occurred."`. `isAppError(value)` identifies errors created by the current package runtime. Structurally similar or serialized values are not accepted. Passing an `AppError` to `createAppError` returns the same object when no custom options are supplied. Custom options classify the raw value it started from again, and re-normalization only ever upgrades: a pattern match replaces only an unknown error, and a known match replaces anything it differs from. Everything else returns the same object, so a `fallbackMessage` never replaces the message an `AppError` already has and the first layer to name a failure keeps its wording through every later one.
+`DEFAULT_APP_ERROR_MESSAGE` is `"An unexpected error occurred."`. `isAppError(value)` identifies errors created by the current package runtime. Structurally similar or serialized values are not accepted. Passing an `AppError` to `createAppError` returns the same object unless a `registry` is supplied. A supplied registry classifies the raw value it started from again, and re-normalization only ever upgrades: a pattern match replaces only an unknown error, and a known match replaces anything it differs from. Everything else returns the same object. A `fallbackMessage` or `maxDepth` alone never changes an `AppError`, so the first layer to name a failure keeps its wording through every later one, including when that layer used its own registry.
 
 An `AppError` is frozen, implements `Error`, and exposes:
 
-- `type: AppErrorType`, where deterministic matches are `"known"`, pattern matches are `"unexpected"`, and unmatched values are `"unknown"`.
+- `type: AppErrorType`, where deterministic matches are `"known"`, pattern matches are `"unexpected"`, and unmatched values are `"unknown"`. It says how the error was matched, not how serious it is: a missing table is `"known"` when its code is registered, and an offline user is `"unexpected"` when a pattern matched. Branch on `code` or `messageKey` to decide what to report to an error tracker.
 - `code`, the registered code that matched, or the registered name when no code matched. It is `null` for message, prefix, and pattern matches and for unknown errors. Branch on it rather than on `message`. A mapping matched by message, prefix, or pattern has no code, so branch on its `messageKey` there: the built-in preset keys are stable, and one failure can arrive either way, as a stale code-split chunk does with `code: "ChunkLoadError"` from webpack and `code: null` from Chrome, both under `error.browser.moduleLoadFailed`.
 - `message`, plus nullable `messageKey` and `source: AppErrorSource` metadata.
 - `originalError`, preserving the original top-level input as a non-enumerable diagnostic value.
-- `isRetryable`, which defaults to `false` unless matched feedback sets it. It means the operation can be repeated as it is, without user intervention and without the risk that it runs twice. A failure that may follow a request the server already received is not retryable, however likely a second try is to succeed.
+- `isRetryable`, which defaults to `false` unless matched feedback sets it. It means the operation can be repeated as it is, without user intervention and without the risk that it runs twice. A failure that may follow a request the server already received is not retryable, however likely a second try is to succeed. The flag holds for an error the local runtime raised. A code copied into a response body matches the same mapping, as `{ "code": "ECONNREFUSED" }` from a server forwarding its own upstream failure does, although that request reached the server. Classify response bodies against a registry that holds the service's codes and no transport preset.
 
-Normalization does not throw for ordinary unknown input, including objects or proxies whose inspected properties throw. An explicit `toJSON()` defines serialization, so `JSON.stringify` yields exactly `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable` on every engine. It excludes the raw `cause` and `originalError` diagnostic values, preventing sensitive fields and cyclic wrapper objects from being serialized through the normalized error. Nothing reads that shape back: `isAppError` is false for the parsed object, and passing it to `createAppError` classifies it as raw input, which loses a message, prefix, or pattern match. On the receiving side, read the parsed object's fields directly. Registry configuration errors throw `TypeError` at their configuration boundary. Invalid options are programmer errors and throw `TypeError` before traversal begins: a non-object `options` value, an empty or non-string `fallbackMessage`, a `registry` that does not expose the read-facing registry surface, and a `maxDepth` outside the integer range from `0` through `3`.
+Normalization does not throw for ordinary unknown input, including objects or proxies whose inspected properties throw. An explicit `toJSON()` defines serialization, so `JSON.stringify` yields exactly `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable` on every engine. It excludes the raw `cause` and `originalError` diagnostic values, preventing sensitive fields and cyclic wrapper objects from being serialized through the normalized error. Nothing reads that shape back: `isAppError` is false for the parsed object, and passing it to `createAppError` classifies it as raw input, which loses a message, prefix, or pattern match. On the receiving side, read the parsed object's fields directly. Only this JSON shape is safe to send: a structured clone, as made by `postMessage`, `structuredClone`, or IndexedDB, copies the error as a plain `Error` without the normalized fields. Where the engine clones `cause`, as V8 does, the raw value travels with it, and the clone throws `DataCloneError` when that value holds a function. Send `error.toJSON()` across those boundaries. Registry configuration errors throw `TypeError` at their configuration boundary. Invalid options are programmer errors and throw `TypeError` before traversal begins: a non-object `options` value, an empty or non-string `fallbackMessage`, a `registry` that does not expose the read-facing registry surface, and a `maxDepth` outside the integer range from `0` through `3`.
 
 ## Configure A Registry
 
@@ -46,10 +46,9 @@ import { createAppError, createErrorRegistry } from "@codenhub/error";
 
 const registry = createErrorRegistry();
 registry.codes.add("E_RATE_LIMIT", {
-  message: "Try again later.",
+  message: "We've received too many requests. Wait a few minutes, then try again.",
   messageKey: "error.myApp.api.rateLimit",
   source: "my-app.api",
-  isRetryable: true,
 });
 
 const error = createAppError({ code: "E_RATE_LIMIT" }, { registry });
@@ -104,7 +103,8 @@ Registered patterns run against arbitrary error text, so a pattern that backtrac
 
 - `AppError` has a `code` field and `toJSON()` includes it. Code that compares the serialized shape exactly needs the new field.
 - A `messageKey` or `source` in any format is accepted; only an empty one throws `TypeError`.
-- Passing options with an existing `AppError` returns the same object unless the options find a better classification. A `fallbackMessage` no longer replaces the message of an unknown `AppError`; set it where the failure is first normalized.
+- Passing an existing `AppError` returns the same object unless a `registry` is supplied and finds a better classification. A `fallbackMessage` no longer replaces the message of an unknown `AppError`; set it where the failure is first normalized.
+- The Supabase rate-limit mappings (`over_request_rate_limit`, `over_email_send_rate_limit`, `over_sms_send_rate_limit`) are no longer retryable.
 - `attempt` rejects a callback that returns a promise at the type level, and throws `TypeError` when one returns a promise or other thenable at runtime; use `attemptAsync`. `attempt` and `attemptAsync` throw `TypeError` for a callback that is not a function.
 - The browser `TimeoutError` mapping is no longer retryable.
 - Every preset message is rewritten; the `messageKey` values are unchanged. Code or tests that compare a preset's message text need the new wording, and translations written against the old meaning should be reviewed.
