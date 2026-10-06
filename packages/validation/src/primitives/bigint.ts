@@ -5,13 +5,13 @@ import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
 /** Constraints for {@link bigint}. Every option is optional. */
 export interface BigintOptions extends MessageOptions {
   /** Requires a value of at least this. */
-  min?: bigint;
+  min?: bigint | undefined;
   /** Requires a value of at most this. */
-  max?: bigint;
+  max?: bigint | undefined;
   /** Requires a value strictly greater than this. */
-  gt?: bigint;
+  gt?: bigint | undefined;
   /** Requires a value strictly less than this. */
-  lt?: bigint;
+  lt?: bigint | undefined;
 }
 
 // The bound is written as its decimal digits, since `JSON.stringify` throws on a bigint, and an issue is
