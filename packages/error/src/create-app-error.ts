@@ -192,12 +192,21 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
   // All tiers are collected before returning so that a "known" match deep in the
   // chain wins over an "unexpected" match at the surface.
   let knownResult: AppErrorResolution | null = null;
+  let nestedKnownResult: AppErrorResolution | null = null;
   let unexpectedResult: AppErrorResolution | null = null;
   let appErrorFallback: AppErrorResolution | null = null;
 
   for (const candidate of errorCandidates) {
     if (isAppError(candidate)) {
       if (candidate.type === "known") {
+        // A supplied registry is asked for its wording, so a nested known AppError must not end
+        // the search before the raw value inside it has been classified. It stands when the
+        // registry has no known match of its own.
+        if (hasCustomRegistry) {
+          nestedKnownResult ??= resolveFromAppError(candidate, error);
+          continue;
+        }
+
         knownResult = resolveFromAppError(candidate, error);
         break;
       } else if (candidate.type === "unexpected" && unexpectedResult === null) {
@@ -226,7 +235,8 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
   // Re-normalization only ever upgrades: an unexpected match replaces an unknown error, a known
   // match replaces anything it differs from, and nothing else changes what the error already says.
   if (existingAppError !== null) {
-    const replacement = knownResult ?? (existingAppError.type === "unknown" ? unexpectedResult : null);
+    const replacement =
+      knownResult ?? nestedKnownResult ?? (existingAppError.type === "unknown" ? unexpectedResult : null);
 
     if (replacement === null || isSameClassification(replacement, existingAppError)) {
       return existingAppError;
@@ -237,6 +247,7 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
 
   return new AppErrorImpl(
     knownResult ??
+      nestedKnownResult ??
       unexpectedResult ??
       appErrorFallback ?? {
         type: "unknown",
@@ -263,7 +274,8 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
  * 4. An unknown error carrying the fallback message.
  *
  * A deep known match outranks a shallow unexpected match. A nested `AppError` is a candidate as it
- * stands: the raw value inside it is classified again only when a `registry` is supplied.
+ * stands: the raw value inside it is classified again only when a `registry` is supplied, and
+ * then a known match from that registry outranks the nested classification.
  *
  * Ordinary unknown input never throws, including objects and proxies whose inspected properties
  * throw. A raw string is matched against the registry like any other candidate; when nothing

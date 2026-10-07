@@ -41,12 +41,13 @@ export interface AppError extends Error {
   readonly originalError: unknown;
 
   /**
-   * Whether the failed operation can be repeated as it is, without user intervention and without
-   * the risk that it runs twice. True only for failures that happen before the operation takes
-   * effect, such as a refused connection. It describes the call that raised the matched failure,
-   * which can sit several wrappers down, so retry on it only where the code made that call itself.
-   * It holds for an error the local runtime raised; a code copied into a response body says
-   * nothing about the request that carried it.
+   * Whether the call that raised the matched failure can be repeated as it is, without user
+   * intervention and without the risk that it runs twice. True only for failures that happen
+   * before that call takes effect, such as a refused connection. The call can sit several wrappers
+   * down, and the flag says nothing about the operation around it: a `publish()` that uploads a
+   * file and then fails to save a record is retryable for the save, not for `publish()`. Retry on
+   * it only where the code made the failing call itself. It holds for an error the local runtime
+   * raised; a code copied into a response body says nothing about the request that carried it.
    */
   readonly isRetryable: boolean;
 
@@ -133,8 +134,8 @@ export interface ErrorFeedback {
   source?: string;
 
   /**
-   * Whether the failed operation can be repeated as it is, without user intervention and without
-   * the risk that it runs twice. Defaults to `false`.
+   * Whether the call that raises this failure can be repeated as it is, without user intervention
+   * and without the risk that it runs twice. Defaults to `false`.
    */
   isRetryable?: boolean;
 }

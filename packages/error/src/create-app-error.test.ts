@@ -1016,3 +1016,66 @@ describe("appErrorFromJSON", () => {
     expect(appErrorFromJSON(hostile).type).toBe("unknown");
   });
 });
+
+describe("createAppError — a supplied registry and a nested AppError", () => {
+  const nestedFrom = (feedbackMessage: string | null, raw: unknown): AppError => {
+    const registry = createErrorRegistry();
+    if (feedbackMessage !== null) {
+      registry.codes.add("shared_code", { message: feedbackMessage });
+    }
+    return createAppError(raw, { registry, fallbackMessage: "First wording." });
+  };
+
+  it("should let the supplied registry reword a nested known AppError, as it does a direct one", () => {
+    const supplied = createErrorRegistry();
+    supplied.codes.add("shared_code", { message: "Supplied wording." });
+    const nested = nestedFrom("Service wording.", { code: "shared_code" });
+
+    expect(createAppError(nested, { registry: supplied }).message).toBe("Supplied wording.");
+    expect(createAppError(new Error("layer", { cause: nested }), { registry: supplied }).message).toBe(
+      "Supplied wording.",
+    );
+  });
+
+  it("should keep a nested known AppError when the supplied registry has no known match", () => {
+    const supplied = createErrorRegistry();
+    supplied.patterns.add(/duplicate/i, { message: "Supplied pattern wording." });
+    const nested = nestedFrom("Service wording.", { code: "shared_code", message: "duplicate key" });
+
+    const result = createAppError(new Error("layer", { cause: nested }), { registry: supplied });
+
+    expect(result.type).toBe("known");
+    expect(result.message).toBe("Service wording.");
+  });
+
+  it("should keep a nested unexpected AppError over a supplied pattern match", () => {
+    const service = createErrorRegistry();
+    service.patterns.add(/duplicate/i, { message: "Service pattern wording." });
+    const nested = createAppError(new Error("duplicate key"), { registry: service });
+    const supplied = createErrorRegistry();
+    supplied.patterns.add(/key/i, { message: "Supplied pattern wording." });
+
+    const result = createAppError(new Error("layer", { cause: nested }), { registry: supplied });
+
+    expect(result.message).toBe("Service pattern wording.");
+  });
+
+  it("should let a supplied pattern match replace a nested unknown AppError", () => {
+    const supplied = createErrorRegistry();
+    supplied.patterns.add(/duplicate/i, { message: "Supplied pattern wording." });
+    const nested = nestedFrom(null, new Error("duplicate key"));
+
+    const result = createAppError(new Error("layer", { cause: nested }), { registry: supplied });
+
+    expect(result.type).toBe("unexpected");
+    expect(result.message).toBe("Supplied pattern wording.");
+  });
+
+  it("should keep a nested unknown AppError when the supplied registry matches nothing", () => {
+    const nested = nestedFrom(null, { code: "unmapped" });
+
+    const result = createAppError(new Error("layer", { cause: nested }), { registry: createErrorRegistry() });
+
+    expect(result.message).toBe("First wording.");
+  });
+});

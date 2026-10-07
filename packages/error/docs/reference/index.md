@@ -127,7 +127,7 @@ Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`
 3. Any remaining `AppError` candidate.
 4. An unknown error carrying the fallback message.
 
-A deep known match outranks a shallow unexpected match. A nested `AppError` is a candidate as it stands: the raw value inside it is classified again only when a `registry` is supplied.
+A deep known match outranks a shallow unexpected match. A nested `AppError` is a candidate as it stands: the raw value inside it is classified again only when a `registry` is supplied, and then a known match from that registry outranks the nested classification.
 
 Ordinary unknown input never throws, including objects and proxies whose inspected properties throw. A raw string is matched against the registry like any other candidate; when nothing matches, the resolved message is the fallback rather than the string itself, so raw text is never surfaced to consumers.
 
@@ -393,7 +393,7 @@ The registry identifier that classified this error: the matched code, or the mat
 readonly isRetryable: boolean;
 ```
 
-Whether the failed operation can be repeated as it is, without user intervention and without the risk that it runs twice. True only for failures that happen before the operation takes effect, such as a refused connection. It describes the call that raised the matched failure, which can sit several wrappers down, so retry on it only where the code made that call itself. It holds for an error the local runtime raised; a code copied into a response body says nothing about the request that carried it.
+Whether the call that raised the matched failure can be repeated as it is, without user intervention and without the risk that it runs twice. True only for failures that happen before that call takes effect, such as a refused connection. The call can sit several wrappers down, and the flag says nothing about the operation around it: a `publish()` that uploads a file and then fails to save a record is retryable for the save, not for `publish()`. Retry on it only where the code made the failing call itself. It holds for an error the local runtime raised; a code copied into a response body says nothing about the request that carried it.
 
 #### messageKey
 
@@ -501,7 +501,7 @@ The structured feedback returned when a registry matches an error. Defines the s
 isRetryable?: boolean;
 ```
 
-Whether the failed operation can be repeated as it is, without user intervention and without the risk that it runs twice. Defaults to `false`.
+Whether the call that raises this failure can be repeated as it is, without user intervention and without the risk that it runs twice. Defaults to `false`.
 
 #### message
 
