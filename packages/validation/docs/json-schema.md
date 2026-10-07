@@ -154,6 +154,10 @@ toJsonSchema(forecast);
 
 The keys are written on whatever schema the part is written as, beside a `$ref` for a `lazy` and beside an `anyOf` for a `nullable`, and the same on the input and the output side. Examples are written as given, and are not checked against the validator.
 
+## Drafts
+
+The schema is written in draft 2020-12 unless `target: "draft-07"` asks for the older draft, which some readers, such as the tools of a language model in the AI SDK, still take. In draft-07 the items of a `tuple` are listed under `items` and its `rest` under `additionalItems`, definitions are under `definitions`, and what `json` parses is not written, since that draft has no `contentSchema`. Any other target is a `TypeError`. [`standardJsonSchema`](standard-schema.md#with-its-json-schema) writes the draft a library asks for, through the same function.
+
 ## What cannot be written
 
 JSON Schema has no words for some of what a validator can check, and JSON has no value for some of what it can produce:

@@ -706,7 +706,7 @@ So a value the validator could not have produced fails with the issues it has, a
 
 ## Exposing a validator to other libraries
 
-`standard(validator, messages?)` returns the validator with the `~standard` property that [Standard Schema](standard-schema.md) asks for, so libraries that accept one can take it directly. Its `messages` map supplies the text that specification requires on every issue, the built-in English when left out.
+`standard(validator, messages?)` returns the validator with the `~standard` property that [Standard Schema](standard-schema.md) asks for, so libraries that accept one can take it directly. Its `messages` map supplies the text that specification requires on every issue, the built-in English when left out. `standardJsonSchema(validator, messages?)` also carries the validator's JSON Schema, for a library that writes the schema down, such as the AI SDK for the tools of a language model: [With its JSON Schema](standard-schema.md#with-its-json-schema).
 
 ## Wording one validator
 

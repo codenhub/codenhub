@@ -145,6 +145,7 @@ const others = new Set([
   "required",
   "pass",
   "standard",
+  "standardJsonSchema",
   "toJsonSchema",
   "tooBigMessage",
   "tooSmallMessage",

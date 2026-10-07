@@ -140,6 +140,7 @@ assert(options, { port: 0 }, { subject: "createServer:", messages: englishMessag
 - [Coercion](coercion.md): validate text input such as environment variables, query strings and form fields by converting it.
 - [Standard Schema](standard-schema.md): use a validator wherever a library accepts a Standard Schema.
 - [JSON Schema](json-schema.md): write a validator as a JSON Schema, for an HTTP API, the tools of a language model or a form generator.
+- [Integrations](integrations.md): use a validator with react-hook-form, TanStack Form, tRPC, Hono, the AI SDK, the Model Context Protocol and OpenAPI.
 - [Issues and messages](errors.md): the shape of an issue, the built-in codes, message text, localization and form errors.
 - [Compared with valibot, zod and yup](comparison.md): where the package differs, what was measured, and when to choose one of them.
 - [API reference](reference/index.md): every export with its signature and documentation, generated from the source.

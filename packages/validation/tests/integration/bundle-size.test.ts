@@ -207,6 +207,11 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
     budget: 9690,
   },
   {
+    name: "standardJsonSchema with an object",
+    source: `import { object, standardJsonSchema, string } from "DIST"; export const check = standardJsonSchema(object({ name: string() }));`,
+    budget: 8720,
+  },
+  {
     name: "everything",
     source: `export * from "DIST";`,
     budget: 28020,

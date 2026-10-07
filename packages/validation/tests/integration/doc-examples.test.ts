@@ -55,14 +55,26 @@ interface Example {
 }
 
 /**
- * Every TypeScript block of the public pages, each a module of its own. A block that imports nothing,
- * such as a list of calls written under the import of the block before it, is given an import of every
- * export.
+ * A block of the integrations page that imports a library other than this package. The suite does not
+ * install those libraries, so such a block is checked against the version the page names, outside the
+ * suite, and not here. A block of another page that imports one, such as `vitest`, which the suite runs
+ * on, is checked as any other.
+ */
+const OTHER_LIBRARY = /^import\b[^;]*?\bfrom "(?!@codenhub\/validation")[^"]+";/m;
+const INTEGRATIONS = "docs/integrations.md";
+
+/**
+ * Every TypeScript block of the public pages, each a module of its own. The one exception is a block of
+ * the integrations page that imports another library, which is left out. A block that imports nothing, such as a list of calls written under the import of the block
+ * before it, is given an import of every export.
  */
 function examples(exportNames: readonly string[]): Example[] {
   return pages.flatMap((page) => {
     const text = readFileSync(`${packageRoot}${page}`, "utf8");
-    return [...text.matchAll(/```ts\n([\s\S]*?)```/g)].map((match) => {
+    const blocks = [...text.matchAll(/```ts\n([\s\S]*?)```/g)].filter(
+      (match) => page !== INTEGRATIONS || !OTHER_LIBRARY.test(match[1] as string),
+    );
+    return blocks.map((match) => {
       const firstLine = text.slice(0, match.index).split("\n").length + 1;
       const body = match[1] as string;
       const header = /^import /m.test(body)
