@@ -71,6 +71,6 @@ export function json(...args: unknown[]): AnyValidator {
         result.ok ? accept(result.value, place) : result,
       );
     }),
-    { kind: "json", options, checks, inner: validator },
+    { kind: "json", options, checks, inner: isOptions ? undefined : validator },
   );
 }

@@ -867,6 +867,40 @@ feedback(new Error("Try again")); // { ok: true, value: { message: "Try again" }
 feedback({ message: "" }); // { ok: false, error: { issues: [{ code: "too_small", path: ["message"], ... }] } }
 ```
 
+### omit
+
+```ts
+export declare function omit<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Omitted<Infer<TValidator>, TKey>, ObjectOptions>): Reshaped<TValidator, Omitted<Infer<TValidator>, TKey>>;
+export declare function omit<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Omitted<Infer<TValidator>, TKey>, ObjectOptions>): AsyncValidator<Omitted<Infer<TValidator>, TKey>>;
+```
+
+Creates an object validator without the named properties of another.
+
+The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, unless options are given here. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
+
+**Parameters**
+
+- `validator` — A validator made by `object`, without checks.
+- `keys` — The properties to leave out, each of which the object has.
+- `rest` — Options, replacing those of the object, then checks on the new object.
+
+**Type parameters**
+
+- `TValidator` — The object validator to omit from.
+- `TKey` — The properties left out.
+
+**Returns** — A validator made by `object`, of the other properties.
+
+**Throws** — When the validator was not made by `object`, has checks, or lacks one of the keys.
+
+**Example**
+
+```ts
+const user = object({ id: uuid(), name: string(), password: string({ min: 12 }) });
+const profile = omit(user, ["password"]);
+type Profile = Infer<typeof profile>; // { id: string; name: string }
+```
+
 ### oneOf
 
 ```ts
@@ -943,21 +977,25 @@ const tags = optional(array(string()), () => []);
 
 ```ts
 export declare function partial<TShape extends Shape>(shape: TShape): PartialShape<TShape>;
+export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: Rest<AllOptional<Infer<TValidator>>, ObjectOptions>): Reshaped<TValidator, AllOptional<Infer<TValidator>>>;
+export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllOptional<Infer<TValidator>>, ObjectOptions>): AsyncValidator<AllOptional<Infer<TValidator>>>;
 ```
 
-Makes every property of a shape optional, for a form or an update where any field may be left out. A shape is a plain object, so this returns a new one to pass to `object`; the original is unchanged.
+Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator, with the same options unless options are given here.
+
+An object validator with checks is refused, since a check may read a property that is now absent: give the checks the new object needs here instead. What was given is unchanged either way.
 
 **Parameters**
 
-- `shape` — Property validators.
+- `shape` — Property validators, or a validator made by `object`, without checks.
 
 **Type parameters**
 
 - `TShape` — The shape.
 
-**Returns** — A shape whose every validator also accepts `undefined`.
+**Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
 
-**Throws** — When `shape` is not a plain object, or a property validator is not a function.
+**Throws** — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
 
 **Example**
 
@@ -965,6 +1003,7 @@ Makes every property of a shape optional, for a form or an update where any fiel
 const user = { name: string({ min: 2 }), email: email() };
 const create = object(user);
 const update = object(partial(user)); // { name?: string; email?: string }
+const patch = partial(create); // the same, from the validator
 ```
 
 ### pass
@@ -1015,6 +1054,40 @@ The `g` and `y` flags are dropped, so the check gives the same answer on every c
 
 ```ts
 string(pattern(/^[a-z]+$/, "Lowercase letters only"));
+```
+
+### pick
+
+```ts
+export declare function pick<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Picked<Infer<TValidator>, TKey>, ObjectOptions>): Reshaped<TValidator, Picked<Infer<TValidator>, TKey>>;
+export declare function pick<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Picked<Infer<TValidator>, TKey>, ObjectOptions>): AsyncValidator<Picked<Infer<TValidator>, TKey>>;
+```
+
+Creates an object validator with only the named properties of another.
+
+The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, unless options are given here. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
+
+**Parameters**
+
+- `validator` — A validator made by `object`, without checks.
+- `keys` — The properties to keep, each of which the object has.
+- `rest` — Options, replacing those of the object, then checks on the new object.
+
+**Type parameters**
+
+- `TValidator` — The object validator to pick from.
+- `TKey` — The properties kept.
+
+**Returns** — A validator made by `object`, of the named properties.
+
+**Throws** — When the validator was not made by `object`, has checks, or lacks one of the keys.
+
+**Example**
+
+```ts
+const user = object({ id: uuid(), name: string(), email: email() });
+const contact = pick(user, ["name", "email"]);
+contact({ name: "Ada", email: "ada@example.com" }); // { ok: true, value: { name: "Ada", email: "ada@example.com" } }
 ```
 
 ### pipe
@@ -1081,6 +1154,40 @@ Each key passes `key` and each value passes `value`. An issue's path ends at the
 const scores = record(string({ min: 1 }), number({ int: true }));
 scores({ ada: 3, alan: 5 }); // { ok: true, value: { ada: 3, alan: 5 } }
 scores({ ada: "3" }); // { ok: false, ... }, code "invalid_type" at path ["ada"]
+```
+
+### required
+
+```ts
+export declare function required<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: Rest<AllRequired<Infer<TValidator>>, ObjectOptions>): Reshaped<TValidator, AllRequired<Infer<TValidator>>>;
+export declare function required<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllRequired<Infer<TValidator>>, ObjectOptions>): AsyncValidator<AllRequired<Infer<TValidator>>>;
+```
+
+Creates an object validator whose properties are all required, from one where some are optional.
+
+A property made with `optional` becomes the validator it wrapped, so its default is gone with it, and one made with `nullish` becomes `nullable`, which still accepts `null`. Any other property is kept as it is: one that accepts `undefined` some other way, such as `unknown()` or a `union` with `literal(undefined)`, still does, though the type says otherwise.
+
+The validator must be one `object` made, and the new object keeps its options unless options are given here. One with checks is refused, since a check may rely on a property being absent: give the checks the new object needs here instead.
+
+**Parameters**
+
+- `validator` — A validator made by `object`, without checks.
+- `rest` — Options, replacing those of the object, then checks on the new object.
+
+**Type parameters**
+
+- `TValidator` — The object validator to make required.
+
+**Returns** — A validator made by `object`, with every property required.
+
+**Throws** — When the validator was not made by `object` or has checks.
+
+**Example**
+
+```ts
+const draft = object({ title: optional(string()), body: optional(string()) });
+const published = required(draft);
+published({ title: "Hello" }); // fails: body is missing
 ```
 
 ### searchParams
@@ -1242,6 +1349,46 @@ const event = tagged("type", {
 event({ type: "key", key: "a" }); // { ok: true, value: { type: "key", key: "a" } }
 event({ type: "scroll" }); // { ok: false, ... }, code "invalid_union" at path ["type"]
 event({ type: "click", x: 1 }); // { ok: false, ... }, code "invalid_type" at path ["y"]
+```
+
+### toJsonSchema
+
+```ts
+export declare function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOptions): JsonSchema;
+```
+
+Writes a validator as a JSON Schema, draft 2020-12, for whatever takes one: the body of an HTTP API, the arguments of a tool a language model calls, a form generator.
+
+The schema is read from what [describe](#describe) gives, so only validators made by this package's factories can be written. It never refuses a value the validator accepts on purpose, and it accepts some the validator refuses, since a validator checks more than a schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as the nearest JSON Schema `format`.
+
+Clean-up is not written. `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming; text with spaces around five letters passes the validator and not the schema. `clamp` and `case` are the same. Lengths differ for a character outside the Basic Multilingual Plane, such as an emoji, which a string's `length` counts as two and JSON Schema as one.
+
+A recursive schema is written with `$defs` and `$ref`, one definition for each `lazy`.
+
+**Parameters**
+
+- `validator` — A validator made by a factory of this package.
+- `options` — Which side to write, and what to do with a part that cannot be written.
+
+**Returns** — The schema, as a new plain object.
+
+**Throws** — When a part cannot be written and `unrepresentable` is `"throw"`, naming the part and its place, or when an option is not one of its values.
+
+**Example**
+
+```ts
+const user = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
+toJsonSchema(user);
+// {
+//   $schema: "https://json-schema.org/draft/2020-12/schema",
+//   type: "object",
+//   properties: {
+//     name: { type: "string", minLength: 2 },
+//     email: { type: "string", format: "email" },
+//     age: { type: "integer" },
+//   },
+//   required: ["name", "email"],
+// }
 ```
 
 ### transform
@@ -1796,6 +1943,70 @@ path?: readonly ValidationPathSegment[];
 ```
 
 Location of the failure relative to the value being validated. Defaults to that value itself.
+
+### JsonSchema
+
+```ts
+export interface JsonSchema
+```
+
+A JSON Schema, draft 2020-12, as plain data ready for `JSON.stringify`.
+
+#### $defs
+
+```ts
+$defs?: Record<string, JsonSchema>;
+```
+
+The definitions a recursive schema refers to, one for each `lazy`.
+
+#### $schema
+
+```ts
+$schema?: string;
+```
+
+The draft the schema is written in, on the schema `toJsonSchema` returns.
+
+#### properties
+
+```ts
+properties?: Record<string, JsonSchema>;
+```
+
+The properties of an object.
+
+#### required
+
+```ts
+required?: string[];
+```
+
+The properties an object must have.
+
+### JsonSchemaOptions
+
+```ts
+export interface JsonSchemaOptions
+```
+
+Options for [toJsonSchema](#tojsonschema).
+
+#### io
+
+```ts
+io?: "input" | "output" | undefined;
+```
+
+Which side of the validator to write. `"input"` is what a value must look like to pass, which is what the body of a request or the arguments of a tool must satisfy. `"output"` is what the validator produces. They differ where a validator changes its value: a default, a coercion, `json`, `fallback`.
+
+#### unrepresentable
+
+```ts
+unrepresentable?: "throw" | "any" | undefined;
+```
+
+What to do with a part JSON Schema has no words for, such as a `date`, a `bigint`, the result of a `transform` or a check written by hand. `"throw"` names the part and where it is. `"any"` writes a schema that accepts anything there, and leaves a check out.
 
 ### LazyOptions
 
@@ -2497,6 +2708,26 @@ The validated value, after any transforms and defaults.
 
 ## Type aliases
 
+### AllOptional
+
+```ts
+export type AllOptional<T> = {
+    [K in keyof T]?: T[K] | undefined;
+} & {};
+```
+
+The object type with every property optional.
+
+### AllRequired
+
+```ts
+export type AllRequired<T> = Simplify<{
+    [K in keyof T]-?: Exclude<T[K], undefined>;
+}>;
+```
+
+The object type with every property present and none of them `undefined`.
+
 ### AnyFunction
 
 ```ts
@@ -2698,6 +2929,14 @@ Message text keyed by issue code, such as `englishMessages` or a translation.
 
 A string is used as it is. A function receives the issue, so it can word the message from `params`, and the map it was found in, so it can word an issue nested in `params`, such as the one behind an `invalid_key`, with the same map. This is how messages are worded and localized.
 
+### Omitted
+
+```ts
+export type Omitted<T, K extends keyof T> = Simplify<Omit<T, K>>;
+```
+
+The object type without the properties named.
+
 ### PartialShape
 
 ```ts
@@ -2707,6 +2946,22 @@ export type PartialShape<TShape extends Shape> = {
 ```
 
 A shape with every property wrapped in `optional`.
+
+### Picked
+
+```ts
+export type Picked<T, K extends keyof T> = Simplify<Pick<T, K>>;
+```
+
+The object type with only the properties named.
+
+### Reshaped
+
+```ts
+export type Reshaped<TValidator extends AnyValidator, T> = TValidator extends Validator<unknown> ? Validator<T> : AsyncValidator<T>;
+```
+
+A validator of `T` that is synchronous when the validator it was made from is.
 
 ### Rest
 
@@ -3626,7 +3881,7 @@ type Simplify<T> = {
 } & {};
 ```
 
-Not exported; declared in `src/composition/object.ts`, `src/composition/tagged.ts`.
+Not exported; declared in `src/composition/object.ts`, `src/composition/reshape.ts`, `src/composition/tagged.ts`.
 
 ### Transformed
 

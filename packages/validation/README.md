@@ -74,6 +74,7 @@ When invalid input is a caller's mistake, such as an options object passed to yo
 - [Issues and messages](docs/errors.md)
 - [Coercion](docs/coercion.md)
 - [Standard Schema](docs/standard-schema.md)
+- [JSON Schema](docs/json-schema.md)
 - [Changelog](docs/changelog/index.md)
 
 ## Requirements

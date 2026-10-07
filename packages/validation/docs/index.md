@@ -136,6 +136,7 @@ assert(options, { port: 0 }, { subject: "createServer:", messages: englishMessag
 - [Custom validators](custom-validators.md): add rules with `check`, build validators with `format` and `guard`, and validate asynchronously.
 - [Coercion](coercion.md): validate text input such as environment variables, query strings and form fields by converting it.
 - [Standard Schema](standard-schema.md): use a validator wherever a library accepts a Standard Schema.
+- [JSON Schema](json-schema.md): write a validator as a JSON Schema, for an HTTP API, the tools of a language model or a form generator.
 - [Issues and messages](errors.md): the shape of an issue, the built-in codes, message text, localization and form errors.
 - [API reference](reference/index.md): every export with its signature and documentation, generated from the source.
 - [Changelog](changelog/index.md): release notes, and the migrations from 0.1.0 and from 0.0.1.

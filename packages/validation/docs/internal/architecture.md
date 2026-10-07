@@ -6,7 +6,7 @@ scope: How the validation package is built and why, for whoever changes it next.
 
 # Validation architecture
 
-This records the invariants of `@codenhub/validation` and the reasoning behind decisions that are not obvious from the code. Public behavior lives in the package docs; this is for changing the package without breaking what it relies on. The release conditions of the next release live in [roadmap.md](roadmap.md), and [0.4.0.md](0.4.0.md) is the approved design of what follows 0.3.0: where it reverses a section here, this document describes the code until the change that implements it. [A validator can be described](#a-validator-can-be-described) is the first of those changes; `pick`, `omit`, `required` and JSON Schema, which are built on it, and the input type of [Types](#types), are not built yet.
+This records the invariants of `@codenhub/validation` and the reasoning behind decisions that are not obvious from the code. Public behavior lives in the package docs; this is for changing the package without breaking what it relies on. The release conditions of the next release live in [roadmap.md](roadmap.md), and [0.4.0.md](0.4.0.md) is the approved design of what follows 0.3.0: where it reverses a section here, this document describes the code until the change that implements it. [A validator can be described](#a-validator-can-be-described) is the first of those changes, with `pick`, `omit`, `required` and JSON Schema built on it; the input type of [Types](#types) is not built yet.
 
 ## What the package is for
 
@@ -266,6 +266,31 @@ Measured with rolldown, minified and gzipped: a lone `boolean()` went from 1199 
 `src/core/describe.test.ts` holds a case for every export of the package and fails when an export has none, so a factory added later cannot go undescribed.
 
 Rejected: a registry, above; describing children when the parent is made, which builds a tree nobody may read and cannot end for a recursive schema; and a method on the validator, which is the class the package does not have.
+
+### Objects made from an object
+
+`pick`, `omit`, `required` and `partial` given a validator read the `shape` and `options` an `object` describes itself with, change the shape, and call `object` again (`composition/reshape.ts`). What they return is therefore an `object` like any other, described and derived from again, and none of them is a second implementation of one.
+
+- **Only a validator `object` made.** `objectLike`, a wrapper around an object and a validator written by hand are a `TypeError`. Reading through a wrapper would have to decide what a `transform` around an object means once a property is gone.
+- **An object with checks is refused.** A check reads the whole object, so it may read a property the new shape lacks or holds otherwise. Kept, it fails every value or throws; dropped, the new object accepts what the first was written to refuse, and nothing says so. So each takes what follows a shape in `object`, options and then checks, and the caller gives the new object the checks it needs. Without options of its own it keeps those of the object it came from, `unknownKeys` above all: a strict object picked from stays strict.
+- **A key the object does not have is a `TypeError`**, as an option a factory does not read is: it is a misspelling, and would otherwise pick nothing.
+- **`required` undoes `optional` and `nullish`, and nothing else.** `optional` becomes what it wrapped, default gone, and `nullish` becomes `nullable`. A property that accepts `undefined` another way, `unknown()` or a `union` with `literal(undefined)`, is kept, and for the second the type `AllRequired` says more than is true. Wrapping every such property in a rule against `undefined` was weighed and left out: it would add a validator around properties that need none, for a shape nobody has asked about.
+- **The types work on the output**, `Pick`, `Omit` and the two mapped types of `Infer<typeof validator>`, since the shape's type is gone from a validator's. `Reshaped` keeps a synchronous validator synchronous; one that was asynchronous stays typed so even when the property that waited is left out.
+
+### JSON Schema
+
+`toJsonSchema` (`interop/json-schema.ts`) walks a schema with `describe` and writes draft 2020-12. It is one module and one export, so only a consumer that asks for a schema bundles it: 5060 bytes gzipped with an `object` of one string, about 2.2 kB above that object alone.
+
+- **One promise: a value the validator accepts passes the schema.** A schema says less than a validator checks, so it may accept what the validator refuses, never the reverse. The exceptions are stated in the public page and are all clean-up: `trim`, `case` and `clamp` are written as the value is after cleaning, and a length counts UTF-16 units where JSON Schema counts characters. Writing clean-up options loosely, without `maxLength` under `trim`, was rejected: a form or a tool would lose the limit for the sake of text padded with spaces.
+- **The input side by default.** What a request body or a tool call must satisfy is what the validator accepts. `io: "output"` writes what it produces. They differ at `optional` with a default, the `coerce` validators, `transform`, `pipe`, `json`, `searchParams` and `fallback`.
+- **What cannot be written throws**, naming the part and its place, and `unrepresentable: "any"` writes `{}` there and leaves a check out. Writing it loosely by default was rejected: a schema would be weaker than its author believed with nothing to say so.
+- **A format is written under JSON Schema's name where it has one, and under its own otherwise.** `format` is an open vocabulary and a reader ignores a name it does not know, so `"format": "phone"` is honest and harmless, and a format is never a reason to throw.
+- **A definition for each `lazy`, keyed by its getter.** Keyed by the `lazy` or by what the getter returns, a schema built anew at each level, `lazy(build)` inside `build`, never met the same key twice. A getter written where the schema is built, `lazy(() => build())`, is new each time too, so more than 64 definitions open one inside another is taken for that and throws, where it would run out of stack.
+- **`literal(undefined)` in a `union`, and `undefined` in `oneOf`, are left out**, since they say a value may be absent, which an object says by not requiring the property.
+
+Checked once against Ajv 8 in draft 2020-12 mode, outside the suite since it is a dependency the package does not have: 17 schemas and 68 values, objects, bounds, checks, tuples, records, unions, a tagged union with a strict variant, a recursive tree and formats, and the schema and the validator gave the same answer for every one.
+
+Adding the two grew the bundle of every export past its budget, 19810 to 21191 bytes, so every scenario was measured again and every budget reset by the rule of [Tree-shaking is a contract](#tree-shaking-is-a-contract), with a scenario for `toJsonSchema` and one for `pick`.
 
 ## Tree-shaking is a contract
 

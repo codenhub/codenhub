@@ -558,6 +558,31 @@ const update = object(partial(user)); // every property optional
 const withAge = object({ ...user, age: number() });
 ```
 
+### `pick`, `omit`, `required` and `partial` on a validator
+
+When what you have is the validator and not its shape, such as one another module exports, the same four are functions of the validator. Each takes a validator `object` made and returns a new one, and leaves the one it was given as it is:
+
+```ts
+import { email, number, object, omit, optional, partial, pick, required, string } from "@codenhub/validation";
+
+const user = object({ id: number(), name: string({ min: 2 }), email: email(), bio: optional(string()) });
+
+const contact = pick(user, ["name", "email"]); // { name: string; email: string }
+const draft = omit(user, ["id"]); // everything but the id
+const patch = partial(user); // every property optional
+const complete = required(user); // bio is required too
+```
+
+- `pick(validator, keys)` keeps the named properties and `omit(validator, keys)` leaves them out. A key the object does not have is a `TypeError` when the validator is created, since it is a misspelling.
+- `partial(validator)` wraps every property in `optional`, as `partial(shape)` does.
+- `required(validator)` makes every property required: one made with `optional` becomes the validator it wrapped, so a default goes with it, and one made with `nullish` becomes `nullable`, which still accepts `null`. A property that accepts `undefined` some other way, such as `unknown()`, is kept as it is.
+
+The new object keeps the options of the one it came from, `unknownKeys` and `message`, and takes options and checks of its own after its arguments, as `object` does: `pick(user, ["name"], { unknownKeys: "strict" }, check(...))`.
+
+An object with checks is refused with a `TypeError`. A check reads the whole object, so it may read a property the new object lacks: kept, it could fail every value, and dropped without a word, the new object would accept what the first was written to refuse. Make the object without its checks, derive from that, and give each result the checks it needs.
+
+They need a validator `object` made, which is how they know its shape: `objectLike`, a `pipe` or `transform` around an object, and a validator written by hand are a `TypeError`. [Reading a schema](#reading-a-schema) is how they read it, and how you would write one of your own.
+
 ## Coercing text input
 
 The coercing validators accept text that holds a value, convert it, and then apply the constraints of their strict counterpart: `coerceString` and `string`, `coerceNumber` and `number`, `coerceBoolean` and `boolean`, `coerceBigint` and `bigint`, `coerceDate` and `date`. They take the same options, `coerceDate` also `zoneless`, which says how to read a date-time without a zone, and fail with `invalid_type` and `coerced: true` in `params` when the value cannot be converted. [Coercion](coercion.md) lists exactly what each accepts and refuses, and how to read a whole environment or form with them.
@@ -629,6 +654,8 @@ A validator inside another is given as the validator itself, to be described in 
 A check is described the same way, so the list in `checks` can be read too: `describe(pattern(/^a/))` gives `{ kind: "check", code: "invalid_format", params: { format: "regex", pattern: "/^a/" } }`. What nobody can read gives `undefined`: a validator or a check you wrote by hand, and a check made by `check`, whose test is a function. A reader of a schema decides what such a rule means to it, and code that turns a schema into another notation usually refuses it. The function a `transform` converts with, a `guard`'s test and a `lazy`'s getter are in the description as functions, for the same reason.
 
 What `standard` returns is described as the validator it wraps. The parts are typed as `unknown`, since what a part is depends on the kind: read `kind` first, then the parts of that kind from the table.
+
+To write a whole schema as JSON Schema, for an HTTP API or the tools of a language model, see [JSON Schema](json-schema.md).
 
 ## Working with results
 

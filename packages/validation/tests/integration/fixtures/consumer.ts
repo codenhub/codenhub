@@ -48,7 +48,10 @@ import {
   oneOf,
   optional,
   tooSmallMessage,
+  omit,
   partial,
+  pick,
+  required,
   pass,
   pipe,
   port as portNumber,
@@ -56,6 +59,7 @@ import {
   searchParams,
   set,
   standard,
+  toJsonSchema,
   string,
   transform,
   tuple,
@@ -532,4 +536,23 @@ export const maybeOptions = [
   base64({ url: maybeFlag }),
   searchParams(unknown(), { repeated: maybeFlag }),
 ];
+// A validator made from another keeps what the types can know of it: the properties, and whether it waits.
+const account = object({ id: number(), name: string(), bio: optional(string()) });
+const contact = pick(account, ["name"]);
+export const pickedName: Infer<typeof contact> = { name: "Ada" };
+export const pickedAtOnce: boolean = contact({}).ok;
+// @ts-expect-error a picked object no longer has the properties left out
+export const pickedId: Infer<typeof contact> = { name: "Ada", id: 1 };
+// @ts-expect-error only a property of the object can be picked
+pick(account, ["nmae"]);
+const withoutId = omit(account, ["id"]);
+export const omitted: Infer<typeof withoutId> = { name: "Ada" };
+const patch = partial(account);
+export const patched: Infer<typeof patch> = {};
+const whole = required(account);
+export const complete: Infer<typeof whole> = { id: 1, name: "Ada", bio: "Mathematician" };
+// @ts-expect-error bio is required once the object is
+export const incomplete: Infer<typeof whole> = { id: 1, name: "Ada" };
+export const accountSchema: string[] | undefined = toJsonSchema(account, { io: "output" }).required;
+
 export const maybeAsserted: string = assert(string(), "a", { subject: maybeWording, messages: undefined });
