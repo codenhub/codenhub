@@ -305,7 +305,7 @@ describe("toJsonSchema", () => {
           object({ id: number() }),
           unique((item: { id: number }) => item.id),
         ),
-        "at the root",
+        "a check that cannot be read at the root",
       ],
       ["a literal JSON lacks", literal(1n), "a literal JSON has no value for at the root"],
       [
@@ -331,6 +331,66 @@ describe("toJsonSchema", () => {
       });
       expect(schemaOf(object({ own: byHand }), any)).toEqual({ type: "object", properties: { own: {} } });
     });
+  });
+
+  describe("checks beside what is already written", () => {
+    it("should add a second pattern to the members of an intersection, and not replace them", () => {
+      const both = intersection(string({ min: 2 }), string({ max: 9 }), pattern(/a/), pattern(/b/));
+      expect(schemaOf(both)).toEqual({
+        allOf: [{ type: "string", minLength: 2 }, { type: "string", maxLength: 9 }, { pattern: "b" }],
+        pattern: "a",
+      });
+    });
+
+    it("should write the checks of a lazy where it is used, so two of one getter keep their own", () => {
+      const text = (): Validator<string> => string(pattern(/x/));
+      const schema = toJsonSchema(object({ a: lazy(text, startsWith("a")), b: lazy(text, startsWith("b")) }));
+      expect(schema.$defs).toEqual({ schema1: { type: "string", pattern: "x" } });
+      expect(schema.properties).toEqual({
+        a: { allOf: [{ $ref: "#/$defs/schema1" }, { pattern: "^a" }] },
+        b: { allOf: [{ $ref: "#/$defs/schema1" }, { pattern: "^b" }] },
+      });
+    });
+
+    it("should write the checks of json and searchParams on what they parse to, and refuse one it cannot read", () => {
+      const tags = json(array(string()), unique());
+      const items = { type: "array", items: { type: "string" } };
+      expect(schemaOf(tags)).toEqual({
+        type: "string",
+        contentMediaType: "application/json",
+        contentSchema: { allOf: [items, { uniqueItems: true }] },
+      });
+      expect(schemaOf(tags, { io: "output" })).toEqual({ allOf: [items, { uniqueItems: true }] });
+      const byHand = check(() => true);
+      expect(() => toJsonSchema(json(array(string()), byHand))).toThrow("a check that cannot be read at the root");
+      expect(() => toJsonSchema(json(byHand as never))).toThrow(TypeError);
+      const query = searchParams(object({ page: string() }), byHand);
+      expect(() => toJsonSchema(query, { io: "output" })).toThrow("a check that cannot be read at the root");
+      // The input side of a query is text, which says nothing of what it parses to.
+      expect(schemaOf(query)).toEqual({ type: "string" });
+    });
+
+    it("should write a pattern whose only flags are the ones the check drops", () => {
+      expect(schemaOf(string(pattern(/^a/g)))).toEqual({ type: "string", pattern: "^a" });
+      expect(schemaOf(string(pattern(/^a/uy)))).toEqual({ type: "string", pattern: "^a" });
+      expect(() => toJsonSchema(string(pattern(/^a/gi)))).toThrow("a pattern with flags");
+    });
+  });
+
+  it("should write a choice JSON has no value for as a schema nothing passes", () => {
+    expect(schemaOf(oneOf([undefined]))).toEqual({ not: {} });
+    expect(schemaOf(union([literal(undefined)]))).toEqual({ not: {} });
+    expect(schemaOf(object({ a: oneOf([undefined]) }))).toEqual({ type: "object", properties: { a: { not: {} } } });
+  });
+
+  it("should require a property of an intersection unless every member may be absent", () => {
+    const schema = schemaOf(
+      object({
+        both: intersection(optional(string()), optional(string())),
+        one: intersection(optional(string()), string()),
+      }),
+    );
+    expect(schema["required"]).toEqual(["one"]);
   });
 
   it("should reject options it does not understand", () => {

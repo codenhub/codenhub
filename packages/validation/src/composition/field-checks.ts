@@ -50,6 +50,9 @@ export function failWithFields(
   message: Message | undefined,
   place: Place,
 ): Maybe<ValidationErr> {
+  if (fieldChecks.length === 0) {
+    return failWith(issues);
+  }
   const ready = fieldChecks.filter(([, indexes]) => indexes.every((index) => settled[index]?.ok)).map(([each]) => each);
   if (ready.length === 0) {
     return failWith(issues);

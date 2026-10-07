@@ -39,6 +39,7 @@ const scenarios = [
     record(string(), number()),
     Object.fromEntries(strings.slice(0, 10).map((key, index) => [key, index])),
   ],
+  ["email", email(), "ada@example.com"],
   ["union, second option", union([number(), string()]), "hello"],
   ["tagged", event, { type: "key", code: "Enter" }],
   ["signup, valid", signup, { name: "Ada Lovelace", email: "ada@example.com", age: 36 }],

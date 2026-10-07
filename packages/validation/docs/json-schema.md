@@ -37,7 +37,7 @@ A schema says less than a validator checks. `email()` refuses an address at `loc
 
 Three places bend that promise, each because the validator cleans a value before it checks it, which a schema cannot say:
 
-- **Clean-up options.** `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming. Text with spaces around five letters passes the validator and not the schema. `case` and `clamp` are the same: the schema describes the value as it is after cleaning.
+- **Clean-up options.** `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming. Text with spaces around five letters passes the validator and not the schema. `case` is the same, and so is `clamp` beside a limit, as in `number({ max: 10, clamp: { min: 0, max: 10 } })`: the schema describes the value as it is after cleaning. The range of a `clamp` is itself not written.
 - **Length of text.** A string's `length` counts an emoji, and any other character outside the Basic Multilingual Plane, as two, and JSON Schema counts it as one, so a `min` or `max` can differ by the number of such characters.
 - **Formats that accept several spellings.** `phone()` accepts `+55 (11) 98765-4321` and produces `+5511987654321`. A format JSON Schema has no name for is written under its own, such as `"format": "phone"`, which a reader that does not know it ignores.
 
@@ -62,15 +62,16 @@ toJsonSchema(query, { io: "output" }).properties;
 // and both are required
 ```
 
-| Validator                    | Input                                                                                     | Output                               |
-| ---------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------ |
-| `optional(validator, value)` | The validator's schema, not required, with `default` when the default is a JSON primitive | The validator's schema, required     |
-| The `coerce` validators      | The types they convert from                                                               | The type they produce                |
-| `transform`                  | The schema of the validator it converts from                                              | Cannot be written                    |
-| `pipe`                       | Its first validator                                                                       | Its last                             |
-| `json(validator)`            | A string, with `contentSchema` for what it parses to                                      | The validator's schema               |
-| `searchParams(validator)`    | A string                                                                                  | The validator's schema               |
-| `fallback`                   | Anything, since it never fails                                                            | The schema of the validator it wraps |
+| Validator                                    | Input                                                                                                                                           | Output                                                 |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `optional(validator, value)`                 | The validator's schema, not required, with `default` when the default is a JSON primitive                                                       | The validator's schema, required                       |
+| `lazy`, `json` or `searchParams` with checks | For `lazy` and `json`, the checks in an `allOf` beside what it refers to or parses to. For `searchParams`, a string, which says nothing of them | The checks in an `allOf` beside the validator's schema |
+| The `coerce` validators                      | The types they convert from                                                                                                                     | The type they produce                                  |
+| `transform`                                  | The schema of the validator it converts from                                                                                                    | Cannot be written                                      |
+| `pipe`                                       | Its first validator                                                                                                                             | Its last                                               |
+| `json(validator)`                            | A string, with `contentSchema` for what it parses to                                                                                            | The validator's schema                                 |
+| `searchParams(validator)`                    | A string                                                                                                                                        | The validator's schema                                 |
+| `fallback`                                   | Anything, since it never fails                                                                                                                  | The schema of the validator it wraps                   |
 
 ## How each validator is written
 
@@ -94,7 +95,7 @@ toJsonSchema(query, { io: "output" }).properties;
 | `pattern`, `startsWith`, `endsWith`, `includes`, `nonBlank` | `pattern`                                                                                                                                                                                                                                       |
 | `multipleOf`, `nonZero`, `unique()`                         | `multipleOf`, `not: { const: 0 }` and `uniqueItems`                                                                                                                                                                                             |
 
-A property is left out of `required` when its validator accepts `undefined`: `optional`, `nullish`, `unknown`, `fallback`, a `union` with one of those, or a `lazy`, `nullable`, `readonly`, `transform` or `pipe` around one. JSON has no `undefined`, so `literal(undefined)` in a `union` is left out of its `anyOf`.
+A property is left out of `required` when its validator accepts `undefined`: `optional`, `nullish`, `unknown`, `fallback`, a `union` with one of those, or a `lazy`, `nullable`, `readonly`, `transform` or `pipe` around one. An `intersection` is left out when every validator in it accepts `undefined`. JSON has no `undefined`, so `literal(undefined)` in a `union` is left out of its `anyOf`, and a `union` or a `oneOf` of nothing else is written as `{ not: {} }`, which no value passes.
 
 A recursive schema is written once, as a definition the schema refers to:
 
@@ -124,9 +125,9 @@ Build a recursive schema once and refer to it, as the [validator reference](vali
 
 JSON Schema has no words for some of what a validator can check, and JSON has no value for some of what it can produce:
 
-- `date`, `bigint`, `symbol`, `func`, `instanceOf`, `set`, `map` and a validator made by `guard`, none of which is a JSON value.
+- `date`, `bigint`, `symbol`, `func`, `instanceOf`, `set` and `map`, none of which is a JSON value, and a validator made by `guard`, whose test is a function nobody can read.
 - A validator you wrote by hand, and a check made by `check`, whose rule is a function nobody can read.
-- `lowercase`, `uppercase`, `unique` with a key function, and a `pattern` with a flag such as `i`, which JSON Schema patterns do not have.
+- `lowercase`, `uppercase`, `unique` with a key function, and a `pattern` with a flag such as `i`, which JSON Schema patterns do not have. The flags `g` and `y`, which `pattern` drops, are left out.
 - What a `transform` returns, on the output side.
 - A check on an `object`, and a variant of `tagged` that is not an `object`.
 

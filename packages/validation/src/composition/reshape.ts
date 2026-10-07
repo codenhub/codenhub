@@ -56,15 +56,19 @@ const rebuild = (shape: Shape, options: ObjectOptions, rest: readonly unknown[])
   );
 };
 
-/** The entries of a shape whose key is, or is not, one of `keys`, each of which the shape must have. */
+/**
+ * The entries of a shape whose key is, or is not, one of `keys`, each of which the shape must have. A
+ * number names the property written with it, as in `{ 0: string() }`, whose key the types give as `0`.
+ */
 function select(name: string, shape: Shape, keys: readonly unknown[], isKept: boolean): Shape {
   assertList("keys", keys, "property names");
-  for (const key of keys) {
+  const names = keys.map((key) => (typeof key === "number" ? String(key) : key));
+  for (const key of names) {
     if (typeof key !== "string" || !Object.hasOwn(shape, key)) {
       throw new TypeError(`${name}() was given a key the object does not have: ${String(key)}`);
     }
   }
-  return Object.fromEntries(Object.entries(shape).filter(([key]) => keys.includes(key) === isKept));
+  return Object.fromEntries(Object.entries(shape).filter(([key]) => names.includes(key) === isKept));
 }
 
 /** Makes an object validator of the named properties of another. See `pick` in `pick.ts`. */

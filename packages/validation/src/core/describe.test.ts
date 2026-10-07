@@ -111,7 +111,10 @@ const checks: Record<string, [check: unknown, params: Record<string, unknown>]> 
   uppercase: [api.uppercase(), { format: "uppercase" }],
 };
 
-/** The exports that make neither a validator nor a check that can be read. */
+/**
+ * The exports the tables above do not list: the ones that make no validator, `check`, whose check cannot
+ * be read, and the ones that give a validator made of another, which have tests of their own.
+ */
 const others = new Set([
   "assert",
   "brand",

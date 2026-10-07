@@ -114,6 +114,13 @@ describe("omit", () => {
     expect(() => omit(strict, "b" as never)).toThrow("keys must be a list of property names, received string");
   });
 
+  it("should take a property written with a number by that number, as its type names it", () => {
+    const row = object({ 0: string(), 1: string(), label: string() });
+    expect(valueOf(pick(row, [0])({ 0: "a" }))).toEqual({ 0: "a" });
+    expect(valueOf(omit(row, [0, "label"])({ 1: "b" }))).toEqual({ 1: "b" });
+    expect(() => pick(row, [2 as never])).toThrow("pick() was given a key the object does not have: 2");
+  });
+
   it("should refuse a key the object does not have", () => {
     expect(() => omit(user, ["emial" as never])).toThrow("omit() was given a key the object does not have: emial");
   });

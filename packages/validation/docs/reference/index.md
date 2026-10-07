@@ -1079,10 +1079,12 @@ An object validator with checks is refused, since a check may read a property th
 **Parameters**
 
 - `shape` — Property validators, or a validator made by `object`, without checks.
+- `rest` — For a validator only: options, replacing those of the object, then checks on the new object.
 
 **Type parameters**
 
 - `TShape` — The shape.
+- `TValidator` — The object validator, when one is given in place of a shape.
 
 **Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
 
@@ -1221,7 +1223,7 @@ Wraps a validator so the value it produces cannot be changed: its type is read-o
 It freezes the value itself and not what is inside it, as `Object.freeze` does and as the type says: wrap an inner validator too where its value must not change. Three things are left as they are:
 
 - **The input.** A validator that produces the very value it was given, such as `instanceOf`, `guard` or `unknown`, has its type made read-only and nothing frozen, since freezing would change an object the caller owns. `object`, `objectLike`, `array`, `tuple` and `record` produce a new value, which is frozen.
-- **A `Map` and a `Set`.** Freezing one does not stop `set` or `add`, so only the type keeps them from being changed.
+- **What a `Map` and a `Set` hold.** A new one is frozen as any other value is, which does not stop `set` or `add`, so only the type keeps them from being changed.
 - **A typed array**, which cannot be frozen.
 
 `pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after.
@@ -1490,9 +1492,9 @@ export declare function toJsonSchema(validator: AnyValidator, options?: JsonSche
 
 Writes a validator as a JSON Schema, draft 2020-12, for whatever takes one: the body of an HTTP API, the arguments of a tool a language model calls, a form generator.
 
-The schema is read from what [describe](#describe) gives, so only validators made by this package's factories can be written. It never refuses a value the validator accepts on purpose, and it accepts some the validator refuses, since a validator checks more than a schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as the nearest JSON Schema `format`.
+The schema is read from what [describe](#describe) gives, so only validators made by this package's factories can be written. It is written so that a value the validator accepts passes it, with the exceptions below, and it accepts some the validator refuses, since a validator checks more than a schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as the nearest JSON Schema `format`.
 
-Clean-up is not written. `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming; text with spaces around five letters passes the validator and not the schema. `clamp` and `case` are the same. Lengths differ for a character outside the Basic Multilingual Plane, such as an emoji, which a string's `length` counts as two and JSON Schema as one.
+The exceptions are where a validator cleans a value before it checks it, which is not written. `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming; text with spaces around five letters passes the validator and not the schema. A `case`, and a `clamp` beside a limit, are the same. Lengths differ for a character outside the Basic Multilingual Plane, such as an emoji, which a string's `length` counts as two and JSON Schema as one.
 
 A recursive schema is written with `$defs` and `$ref`, one definition for each `lazy`.
 

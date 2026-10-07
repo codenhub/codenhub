@@ -70,14 +70,16 @@ const isJsonPrimitive = (value: unknown): boolean =>
  *
  * @remarks
  * The schema is read from what {@link describe} gives, so only validators made by this package's
- * factories can be written. It never refuses a value the validator accepts on purpose, and it accepts
- * some the validator refuses, since a validator checks more than a schema can say: a format's exact
- * rules, such as which hosts of an `email` are public, are written as the nearest JSON Schema `format`.
+ * factories can be written. It is written so that a value the validator accepts passes it, with the
+ * exceptions below, and it accepts some the validator refuses, since a validator checks more than a
+ * schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as
+ * the nearest JSON Schema `format`.
  *
- * Clean-up is not written. `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which
- * describes text that needs no trimming; text with spaces around five letters passes the validator and
- * not the schema. `clamp` and `case` are the same. Lengths differ for a character outside the Basic
- * Multilingual Plane, such as an emoji, which a string's `length` counts as two and JSON Schema as one.
+ * The exceptions are where a validator cleans a value before it checks it, which is not written.
+ * `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no
+ * trimming; text with spaces around five letters passes the validator and not the schema. A `case`, and
+ * a `clamp` beside a limit, are the same. Lengths differ for a character outside the Basic Multilingual
+ * Plane, such as an emoji, which a string's `length` counts as two and JSON Schema as one.
  *
  * A recursive schema is written with `$defs` and `$ref`, one definition for each `lazy`.
  *
@@ -157,6 +159,8 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
         return mayBeAbsent((record["steps"] as unknown[]).at(isInput ? 0 : -1), seen);
       case "union":
         return (record["members"] as unknown[]).some((member) => mayBeAbsent(member, seen));
+      case "intersection":
+        return (record["members"] as unknown[]).every((member) => mayBeAbsent(member, seen));
       case "literal":
         return record["value"] === undefined;
       case "oneOf":
@@ -179,7 +183,8 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
         const written = String(params["pattern"]);
         const end = written.lastIndexOf("/");
         // A flag such as `i` or `m` changes what the pattern accepts, and JSON Schema has no flags.
-        if (/^[uv]?$/.test(written.slice(end + 1))) {
+        // `g` and `y` change nothing: the check drops them.
+        if (/^g?[uv]?y?$/.test(written.slice(end + 1))) {
           patterns.push(written.slice(1, end));
         } else {
           refuse("a pattern with flags", path);
@@ -207,7 +212,11 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
       schema["pattern"] = first;
     }
     if (others.length > 0) {
-      schema["allOf"] = others.map((pattern) => ({ pattern }));
+      // Added to the `allOf` an intersection has of its members, which is what its checks are written on.
+      schema["allOf"] = [
+        ...((schema["allOf"] as JsonSchema[] | undefined) ?? []),
+        ...others.map((pattern) => ({ pattern })),
+      ];
     }
     return schema;
   };
@@ -234,6 +243,17 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
       (record[name] as unknown[]).map((each, index) => convert(each, at(index)));
     const checked = (schema: JsonSchema): JsonSchema => applyChecks(schema, record, path);
     const anything = (what: string): JsonSchema => refuse(what, path) ?? {};
+    /**
+     * The schema of a validator that wraps another and takes checks of its own. They are written beside
+     * the inner schema and not into it, where a keyword of one, such as `pattern`, would replace the other's.
+     */
+    const over = (inner: JsonSchema): JsonSchema => {
+      const own = checked({});
+      return Object.keys(own).length === 0 ? inner : { allOf: [inner, own] };
+    };
+    /** A schema no value passes when `schemas` is empty, which `anyOf` and `enum` may not be. */
+    const none = (schemas: readonly unknown[], schema: JsonSchema): JsonSchema =>
+      checked(schemas.length === 0 ? { not: {} } : schema);
 
     switch (record.kind) {
       case "string":
@@ -265,7 +285,9 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
       case "oneOf": {
         const values = record["values"] as unknown[];
         const present = values.filter((value) => value !== undefined);
-        return present.every(isJsonPrimitive) ? checked({ enum: present }) : anything("a value JSON has none for");
+        return present.every(isJsonPrimitive)
+          ? none(present, { enum: present })
+          : anything("a value JSON has none for");
       }
       case "format": {
         const name = String(record["format"]);
@@ -336,7 +358,7 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
         const members = (record["members"] as unknown[]).filter(
           (member) => !isUndefinedLiteral(describe(member as AnyValidator)),
         );
-        return checked({ anyOf: members.map((member) => convert(member, path)) });
+        return none(members, { anyOf: members.map((member) => convert(member, path)) });
       }
       case "intersection":
         return checked({ allOf: list("members") });
@@ -387,19 +409,20 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
           names.set(getter, name);
           open += 1;
           try {
-            definitions[name] = checked(convert(getter(), path));
+            definitions[name] = convert(getter(), path);
           } finally {
             open -= 1;
           }
         }
-        return { $ref: `#/$defs/${name}` };
+        // The checks are of this `lazy` and not of its getter, which another `lazy` may share.
+        return over({ $ref: `#/$defs/${name}` });
       }
       case "json": {
-        const parsed = record["inner"] === undefined ? {} : child("inner");
+        const parsed = record["inner"] === undefined ? checked({}) : over(child("inner"));
         return isInput ? { type: "string", contentMediaType: "application/json", contentSchema: parsed } : parsed;
       }
       case "searchParams":
-        return isInput ? { type: "string" } : child("inner");
+        return isInput ? { type: "string" } : over(child("inner"));
       default:
         return anything(
           record.kind === "guard"

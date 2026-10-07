@@ -30,8 +30,8 @@ export type ReadonlyOutput<T> = unknown extends T
  *   `guard` or `unknown`, has its type made read-only and nothing frozen, since freezing would change
  *   an object the caller owns. `object`, `objectLike`, `array`, `tuple` and `record` produce a new value, which is
  *   frozen.
- * - **A `Map` and a `Set`.** Freezing one does not stop `set` or `add`, so only the type keeps them from
- *   being changed.
+ * - **What a `Map` and a `Set` hold.** A new one is frozen as any other value is, which does not stop
+ *   `set` or `add`, so only the type keeps them from being changed.
  * - **A typed array**, which cannot be frozen.
  *
  * `pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after.

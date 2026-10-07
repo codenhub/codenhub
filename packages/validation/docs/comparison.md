@@ -20,7 +20,7 @@ It is built for data nobody you trust controls: a request body, a query string, 
 | `Ada@EXAMPLE.com`                     | `Ada@example.com`           | unchanged         |
 | `https://Example.com/public/../admin` | `https://example.com/admin` | unchanged         |
 
-They also accept less by default. A URL is `http` or `https` to a public host name unless you say otherwise with `url({ host: hostname() })` or the `protocols` option:
+They also accept less by default. A URL is `http` or `https` to a public host name. The `protocols` option changes the schemes accepted and nothing else, and `url({ host: hostname() })` is what accepts a host that is not public:
 
 | `url()` given                   | This package | valibot  | zod      | yup      |
 | ------------------------------- | ------------ | -------- | -------- | -------- |
@@ -43,7 +43,7 @@ yup throws the same `RangeError` on the nested input. A thrown `RangeError` is n
 
 ### An issue never holds the input
 
-An issue the package reports has a `code`, a `path` and `params`, and none of them is the value that failed, so logging a failed validation cannot log a password or a token. A check or a validator you write decides what its own issue holds, so keep the value out of its `params` and `message`. Serialized, an issue of valibot and an error of yup contain the value; zod's does not.
+An issue the package reports has a `code`, a `path` and `params`, and none of them is the value that failed, so logging a failed validation cannot log a password or a token. It does name the input's properties, in `path` and for a key a strict object refuses, so keep a secret out of the keys of a `record`. A check or a validator you write decides what its own issue holds, so keep the value out of its `params` and `message`. Serialized, an issue of valibot and an error of yup contain the value; zod's does not.
 
 ### Mistakes in a schema are found early
 

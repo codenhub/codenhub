@@ -6,7 +6,7 @@ Validation for data you do not control: a request body, a query string, a form, 
 
 - **Formats return what a parser read.** `email()` and `url()` produce the address the platform's URL parser sees, so what you store and check is what a request or a mail server will use.
 - **What a failing input costs is bounded.** A long list of bad items stops at 1,000 issues, and input nested too deep is one issue and never a stack overflow. Input that passes is checked in full, so give collections a `max`.
-- **The issues the package reports never hold the input**, so logging a failed validation cannot log a password. A check you write decides what its own issue holds.
+- **The issues the package reports never hold the input**, so logging a failed validation cannot log a password. They do name the input's properties, in `path`, and a check you write decides what its own issue holds.
 
 Each validator is a function you import on its own, so a program ships only the checks it uses: a lone `boolean()` is 1.2 kB gzipped and an object with a string, an email and a number 5.8 kB. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies. [Compared with valibot, zod and yup](docs/comparison.md) has the measurements, and says when one of them is the better choice.
 
@@ -122,7 +122,7 @@ Licensed under Apache-2.0.
 
 This matters wherever data crosses a boundary you do not control: a request, a form, a query string, an environment variable, a file, a message from another service. TypeScript cannot check those at runtime, so the type you wrote for them is a promise nothing enforces until a validator does.
 
-The package is built for that boundary, where the input may be hostile. `email()` and `url()` return what the platform's URL parser read, so the value you store is the one a request or a mail server will use. What a failing input costs is bounded: a long list of bad items stops at 1,000 issues, and input nested too deep is one issue and never a stack overflow, while input that passes is checked in full, so give collections a `max`. An issue the package reports never holds the value that failed, so a log of failures holds no passwords; a check you write decides what its own issue holds. [Compared with valibot, zod and yup](docs/comparison.md) shows each of these beside the other libraries, with what it costs in size and speed.
+The package is built for that boundary, where the input may be hostile. `email()` and `url()` return what the platform's URL parser read, so the value you store is the one a request or a mail server will use. What a failing input costs is bounded: a long list of bad items stops at 1,000 issues, and input nested too deep is one issue and never a stack overflow, while input that passes is checked in full, so give collections a `max`. An issue the package reports never holds the value that failed, so a log of failures holds no passwords; it does name the input's properties, in `path`, and a check you write decides what its own issue holds. [Compared with valibot, zod and yup](docs/comparison.md) shows each of these beside the other libraries, with what it costs in size and speed.
 
 ## Installation
 
@@ -345,7 +345,7 @@ It is built for data nobody you trust controls: a request body, a query string, 
 | `Ada@EXAMPLE.com`                     | `Ada@example.com`           | unchanged         |
 | `https://Example.com/public/../admin` | `https://example.com/admin` | unchanged         |
 
-They also accept less by default. A URL is `http` or `https` to a public host name unless you say otherwise with `url({ host: hostname() })` or the `protocols` option:
+They also accept less by default. A URL is `http` or `https` to a public host name. The `protocols` option changes the schemes accepted and nothing else, and `url({ host: hostname() })` is what accepts a host that is not public:
 
 | `url()` given                   | This package | valibot  | zod      | yup      |
 | ------------------------------- | ------------ | -------- | -------- | -------- |
@@ -368,7 +368,7 @@ yup throws the same `RangeError` on the nested input. A thrown `RangeError` is n
 
 ### An issue never holds the input
 
-An issue the package reports has a `code`, a `path` and `params`, and none of them is the value that failed, so logging a failed validation cannot log a password or a token. A check or a validator you write decides what its own issue holds, so keep the value out of its `params` and `message`. Serialized, an issue of valibot and an error of yup contain the value; zod's does not.
+An issue the package reports has a `code`, a `path` and `params`, and none of them is the value that failed, so logging a failed validation cannot log a password or a token. It does name the input's properties, in `path` and for a key a strict object refuses, so keep a secret out of the keys of a `record`. A check or a validator you write decides what its own issue holds, so keep the value out of its `params` and `message`. Serialized, an issue of valibot and an error of yup contain the value; zod's does not.
 
 ### Mistakes in a schema are found early
 
@@ -936,7 +936,7 @@ A schema says less than a validator checks. `email()` refuses an address at `loc
 
 Three places bend that promise, each because the validator cleans a value before it checks it, which a schema cannot say:
 
-- **Clean-up options.** `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming. Text with spaces around five letters passes the validator and not the schema. `case` and `clamp` are the same: the schema describes the value as it is after cleaning.
+- **Clean-up options.** `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming. Text with spaces around five letters passes the validator and not the schema. `case` is the same, and so is `clamp` beside a limit, as in `number({ max: 10, clamp: { min: 0, max: 10 } })`: the schema describes the value as it is after cleaning. The range of a `clamp` is itself not written.
 - **Length of text.** A string's `length` counts an emoji, and any other character outside the Basic Multilingual Plane, as two, and JSON Schema counts it as one, so a `min` or `max` can differ by the number of such characters.
 - **Formats that accept several spellings.** `phone()` accepts `+55 (11) 98765-4321` and produces `+5511987654321`. A format JSON Schema has no name for is written under its own, such as `"format": "phone"`, which a reader that does not know it ignores.
 
@@ -961,15 +961,16 @@ toJsonSchema(query, { io: "output" }).properties;
 // and both are required
 ```
 
-| Validator                    | Input                                                                                     | Output                               |
-| ---------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------ |
-| `optional(validator, value)` | The validator's schema, not required, with `default` when the default is a JSON primitive | The validator's schema, required     |
-| The `coerce` validators      | The types they convert from                                                               | The type they produce                |
-| `transform`                  | The schema of the validator it converts from                                              | Cannot be written                    |
-| `pipe`                       | Its first validator                                                                       | Its last                             |
-| `json(validator)`            | A string, with `contentSchema` for what it parses to                                      | The validator's schema               |
-| `searchParams(validator)`    | A string                                                                                  | The validator's schema               |
-| `fallback`                   | Anything, since it never fails                                                            | The schema of the validator it wraps |
+| Validator                                    | Input                                                                                                                                           | Output                                                 |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `optional(validator, value)`                 | The validator's schema, not required, with `default` when the default is a JSON primitive                                                       | The validator's schema, required                       |
+| `lazy`, `json` or `searchParams` with checks | For `lazy` and `json`, the checks in an `allOf` beside what it refers to or parses to. For `searchParams`, a string, which says nothing of them | The checks in an `allOf` beside the validator's schema |
+| The `coerce` validators                      | The types they convert from                                                                                                                     | The type they produce                                  |
+| `transform`                                  | The schema of the validator it converts from                                                                                                    | Cannot be written                                      |
+| `pipe`                                       | Its first validator                                                                                                                             | Its last                                               |
+| `json(validator)`                            | A string, with `contentSchema` for what it parses to                                                                                            | The validator's schema                                 |
+| `searchParams(validator)`                    | A string                                                                                                                                        | The validator's schema                                 |
+| `fallback`                                   | Anything, since it never fails                                                                                                                  | The schema of the validator it wraps                   |
 
 ## How each validator is written
 
@@ -993,7 +994,7 @@ toJsonSchema(query, { io: "output" }).properties;
 | `pattern`, `startsWith`, `endsWith`, `includes`, `nonBlank` | `pattern`                                                                                                                                                                                                                                       |
 | `multipleOf`, `nonZero`, `unique()`                         | `multipleOf`, `not: { const: 0 }` and `uniqueItems`                                                                                                                                                                                             |
 
-A property is left out of `required` when its validator accepts `undefined`: `optional`, `nullish`, `unknown`, `fallback`, a `union` with one of those, or a `lazy`, `nullable`, `readonly`, `transform` or `pipe` around one. JSON has no `undefined`, so `literal(undefined)` in a `union` is left out of its `anyOf`.
+A property is left out of `required` when its validator accepts `undefined`: `optional`, `nullish`, `unknown`, `fallback`, a `union` with one of those, or a `lazy`, `nullable`, `readonly`, `transform` or `pipe` around one. An `intersection` is left out when every validator in it accepts `undefined`. JSON has no `undefined`, so `literal(undefined)` in a `union` is left out of its `anyOf`, and a `union` or a `oneOf` of nothing else is written as `{ not: {} }`, which no value passes.
 
 A recursive schema is written once, as a definition the schema refers to:
 
@@ -1023,9 +1024,9 @@ Build a recursive schema once and refer to it, as the [validator reference](docs
 
 JSON Schema has no words for some of what a validator can check, and JSON has no value for some of what it can produce:
 
-- `date`, `bigint`, `symbol`, `func`, `instanceOf`, `set`, `map` and a validator made by `guard`, none of which is a JSON value.
+- `date`, `bigint`, `symbol`, `func`, `instanceOf`, `set` and `map`, none of which is a JSON value, and a validator made by `guard`, whose test is a function nobody can read.
 - A validator you wrote by hand, and a check made by `check`, whose rule is a function nobody can read.
-- `lowercase`, `uppercase`, `unique` with a key function, and a `pattern` with a flag such as `i`, which JSON Schema patterns do not have.
+- `lowercase`, `uppercase`, `unique` with a key function, and a `pattern` with a flag such as `i`, which JSON Schema patterns do not have. The flags `g` and `y`, which `pattern` drops, are left out.
 - What a `transform` returns, on the output side.
 - A check on an `object`, and a variant of `tagged` that is not an `object`.
 
@@ -1404,7 +1405,7 @@ const signup = object(
 );
 ```
 
-That check says nothing while any property fails, since there is no whole object to give it. `checkFields(keys, test, issue?)` is a check that names the properties it needs and runs as soon as those have passed, so a form shows "Passwords must match" beside the other fields' problems: `checkFields(["password", "confirm"], (data) => data.password === data.confirm, { path: ["confirm"] })`. [Custom validators](docs/custom-validators.md#a-rule-across-fields-that-does-not-wait-for-the-others) covers it.
+That check says nothing while any property fails, since there is no whole object to give it. `checkFields(keys, test, issue?)` is a check that names the properties it needs and runs as soon as those have passed, so a form shows "Passwords must match" beside the other fields' problems: `checkFields(["password", "confirm"], (data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" })`. [Custom validators](docs/custom-validators.md#a-rule-across-fields-that-does-not-wait-for-the-others) covers it.
 
 See [Reusing shapes](#reusing-shapes) for extending, omitting and making properties optional.
 
@@ -1781,7 +1782,7 @@ A validator inside another is given as the validator itself, to be described in 
 | `"json"`, `"searchParams"`                                                                    | `json`, `searchParams`                            | `inner`                                                                                                                         |
 | `"check"`                                                                                     | Every built-in check                              | `code` and `params` of the issue it reports                                                                                     |
 
-A check is described the same way, so the list in `checks` can be read too: `describe(pattern(/^a/))` gives `{ kind: "check", code: "invalid_format", params: { format: "regex", pattern: "/^a/" } }`. A check made by `checkFields` gives `{ kind: "check", fields }`, the properties it waits for, and no `params`, since its test is a function. What nobody can read gives `undefined`: a validator or a check you wrote by hand, and a check made by `check`, whose test is a function. A reader of a schema decides what such a rule means to it, and code that turns a schema into another notation usually refuses it. The function a `transform` converts with, a `guard`'s test and a `lazy`'s getter are in the description as functions, for the same reason.
+A check is described the same way, so the list in `checks` can be read too: `describe(pattern(/^a/))` gives `{ kind: "check", code: "invalid_format", params: { format: "regex", pattern: "/^a/" } }`. A check made by `checkFields` gives `{ kind: "check", fields }`, the properties it waits for, and no `params`, since its test is a function. What nobody can read gives `undefined`: a validator or a check you wrote by hand, and a check made by `check`, whose test is a function. A reader of a schema decides what such a rule means to it, and code that turns a schema into another notation usually refuses it. The function a `transform` converts with and a `lazy`'s getter are in the description as functions, for the same reason. The test of a `guard` and what a format reads with are not in it: a `guard` gives the `expected` it names and a format its name.
 
 What `standard` returns is described as the validator it wraps. The parts are typed as `unknown`, since what a part is depends on the kind: read `kind` first, then the parts of that kind from the table.
 
@@ -1855,13 +1856,13 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 - **Breaking.** `is(validator, input)` is a type guard: it narrows `input` to the type the validator accepts, `InferInput`, where 0.3.0 returned `boolean` and narrowed nothing. Inside `if (is(string(), value))`, `value` is a `string`. Code that compiled may stop compiling where the `else` branch is now narrowed too: with `value` typed `string | number`, the branch after a failed `is(string(), value)` sees a `number`, so code there that used it as text is a compile error. A validator written by hand that does not declare its input narrows nothing, as before.
 - **Breaking.** `standard(validator, messages)` reports the validator's input type to the library that takes it, where 0.3.0 reported `unknown`. A form library that types a field from a Standard Schema now types one for `coerceNumber()` as `string | number` and one for `optional(string(), "")` as `string | undefined`, so code that relied on the field being `unknown` may need the narrower type.
 - `Validator` and `AsyncValidator` are interfaces with a call signature, where they were function types, so that they can carry the input type. A function of the right shape is still a validator, and nothing a caller writes changes.
-- Every validator and check the package makes has a property named `~description`, which `describe` reads. The record it holds is frozen, and holds no input.
+- Every validator a factory of the package makes, and every built-in check, has a property named `~description`, which `describe` reads; a check made by `check` has none, since its rule is a function. The record it holds is frozen, and holds no input.
 - A message map with an entry named `default` words every code it has no entry for with it, as above. A map that used `default` as the code of one of its own issues now words other unknown codes with that text too.
 - The package description, the README and the documentation overview lead with what the package is for, validating input nobody you trust controls, and state its size as a measurement.
 
 ## Performance
 
-Measured on Node.js 24.19 on one machine, valid input, in millions of validations a second, the published 0.3.0 against this release with every result kept. `pnpm bench` in the package runs them.
+Measured on Node.js 24.19 on one machine, valid input, in millions of validations a second, the published 0.3.0 against this release with every result kept. `pnpm bench` in the package measures this release; the 0.3.0 column is the same script given the published build, which is not in the repository.
 
 | Validator                         | 0.3.0 | 0.4.0 |
 | --------------------------------- | ----- | ----- |

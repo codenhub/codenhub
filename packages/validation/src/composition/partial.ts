@@ -30,7 +30,9 @@ export type AllOptional<T> = { [K in keyof T]?: T[K] | undefined } & {};
  * ```
  *
  * @typeParam TShape - The shape.
+ * @typeParam TValidator - The object validator, when one is given in place of a shape.
  * @param shape - Property validators, or a validator made by `object`, without checks.
+ * @param rest - For a validator only: options, replacing those of the object, then checks on the new object.
  * @returns A shape whose every validator also accepts `undefined`, or an object validator of one.
  * @throws {TypeError} When `shape` is not a plain object or a property validator is not a function, or,
  * for a validator, when it was not made by `object` or has checks.

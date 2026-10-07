@@ -290,8 +290,9 @@ export function assertFunction(name: string, value: unknown): void {
 }
 
 /**
- * Rejects a list of validators that is not a list, such as a single validator passed without its
- * brackets, since it is a mistake in the schema and not in the input.
+ * Rejects what should be a list and is not, such as a single validator passed without its brackets,
+ * since it is a mistake in the schema and not in the input. `of` says what the list holds, for the
+ * message, and is validators unless given.
  */
 export function assertList(name: string, value: unknown, of = "validators"): void {
   if (!Array.isArray(value)) {
