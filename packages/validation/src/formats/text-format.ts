@@ -1,6 +1,7 @@
 import type { Maybe } from "../core/async";
 import { finish, split, word } from "../core/checks";
 import { described } from "../core/describe";
+import { MISS, withFast } from "../core/nesting";
 import { failWith, issue, typeIssue } from "../core/result";
 import type { AsyncCheck, Factory, Message, MessageOptions, ValidationResult } from "../core/types";
 
@@ -10,26 +11,31 @@ const isString = (input: unknown): boolean => typeof input === "string";
  * Builds the validator of a format: an input that is not `expected` fails with `invalid_type`, and
  * `read` returns the value for an input of the format, its canonical spelling or the input itself, and
  * undefined for any other, which fails with `invalid_format` naming the format. The checks run only on a
- * value of the format, so a check can rely on it being one, as it can for `url` and `email`.
+ * value of the format, so a check can rely on it being one, as it can for `url` and `email`. A format whose
+ * `read` runs code the consumer wrote, as one made with `format` does, passes `isQuick` false and has no
+ * fast test, since an invalid value would run that code twice, once in the test and once in the full work.
  */
-export const formatLeaf =
-  <T>(
-    expected: string,
-    accepts: (input: unknown) => boolean,
-    format: string,
-    read: (input: T) => T | undefined,
-    message: Message | undefined,
-    checks: readonly AsyncCheck<T>[],
-  ): ((input: unknown) => Maybe<ValidationResult<T>>) =>
-  (input) => {
-    if (!accepts(input)) {
-      return failWith(word([typeIssue(expected, input)], message));
-    }
-    const value = read(input as T);
-    return value === undefined
-      ? failWith(word([issue("invalid_format", { format })], message))
-      : finish(value, [], message, checks);
-  };
+export const formatLeaf = <T>(
+  expected: string,
+  accepts: (input: unknown) => boolean,
+  format: string,
+  read: (input: T) => T | undefined,
+  message: Message | undefined,
+  checks: readonly AsyncCheck<T>[],
+  isQuick = true,
+): ((input: unknown) => Maybe<ValidationResult<T>>) =>
+  withFast(
+    (input: unknown): Maybe<ValidationResult<T>> => {
+      if (!accepts(input)) {
+        return failWith(word([typeIssue(expected, input)], message));
+      }
+      const value = read(input as T);
+      return value === undefined
+        ? failWith(word([issue("invalid_format", { format })], message))
+        : finish(value, [], message, checks);
+    },
+    !isQuick || checks.length > 0 ? undefined : (input) => (accepts(input) ? (read(input as T) ?? MISS) : MISS),
+  );
 
 /** Builds the validator for a string format, as {@link formatLeaf} does for a string. */
 export const stringFormat = (
@@ -37,8 +43,9 @@ export const stringFormat = (
   read: (text: string) => string | undefined,
   message: Message | undefined,
   checks: readonly AsyncCheck<string>[],
+  isQuick = true,
 ): ((input: unknown) => Maybe<ValidationResult<string>>) =>
-  formatLeaf<string>("string", isString, format, read, message, checks);
+  formatLeaf<string>("string", isString, format, read, message, checks, isQuick);
 
 /**
  * Makes the factory of a format whose only option is `message`. A module may export what it returns as
@@ -47,8 +54,14 @@ export const stringFormat = (
 export const formatFactory = (
   format: string,
   read: (text: string) => string | undefined,
+  isQuick = true,
 ): Factory<string, MessageOptions> =>
   ((...args: unknown[]) => {
     const [options, checks] = split<MessageOptions, string>(args);
-    return described(stringFormat(format, read, options.message, checks), { kind: "format", format, options, checks });
+    return described(stringFormat(format, read, options.message, checks, isQuick), {
+      kind: "format",
+      format,
+      options,
+      checks,
+    });
   }) as Factory<string, MessageOptions>;

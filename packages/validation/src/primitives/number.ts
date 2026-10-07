@@ -116,28 +116,39 @@ export const number = ((...args: unknown[]) => {
     assertOrder("clamp.min", clamp.min, "lt", lt, true);
   }
 
-  const validator = leaf<number>("number", isNumber, message, checks, (input, issues) => {
-    const value = clamp === undefined ? input : Math.min(Math.max(input, clamp.min), clamp.max);
-    if (min !== undefined && value < min) {
-      issues.push(outOfRange("min", min, true));
-    }
-    if (gt !== undefined && value <= gt) {
-      issues.push(outOfRange("min", gt, false));
-    }
-    if (max !== undefined && value > max) {
-      issues.push(outOfRange("max", max, true));
-    }
-    if (lt !== undefined && value >= lt) {
-      issues.push(outOfRange("max", lt, false));
-    }
-    if (int === true && !Number.isInteger(value)) {
-      issues.push(invalidValue("int"));
-    } else if (safeInt === true && !Number.isSafeInteger(value)) {
-      // A fraction that int already reported is not reported again as an unsafe integer.
-      issues.push(invalidValue("safeInt"));
-    }
-    return value;
-  });
+  // `int: false` and `safeInt: false` ask for nothing, as leaving them out does.
+  const isPlain = [clamp, min, max, gt, lt].every((option) => option === undefined) && int !== true && safeInt !== true;
+  // A number no option reads is the value as it is, and is passed without a list for issues it cannot have.
+  const validator = leaf<number>(
+    "number",
+    isNumber,
+    message,
+    checks,
+    isPlain
+      ? undefined
+      : (input, issues) => {
+          const value = clamp === undefined ? input : Math.min(Math.max(input, clamp.min), clamp.max);
+          if (min !== undefined && value < min) {
+            issues.push(outOfRange("min", min, true));
+          }
+          if (gt !== undefined && value <= gt) {
+            issues.push(outOfRange("min", gt, false));
+          }
+          if (max !== undefined && value > max) {
+            issues.push(outOfRange("max", max, true));
+          }
+          if (lt !== undefined && value >= lt) {
+            issues.push(outOfRange("max", lt, false));
+          }
+          if (int === true && !Number.isInteger(value)) {
+            issues.push(invalidValue("int"));
+          } else if (safeInt === true && !Number.isSafeInteger(value)) {
+            // A fraction that int already reported is not reported again as an unsafe integer.
+            issues.push(invalidValue("safeInt"));
+          }
+          return value;
+        },
+  );
   // The range the validator clamps to, and not the caller's object, which may change after.
   const read = clamp === undefined ? options : Object.freeze({ ...options, clamp: Object.freeze(clamp) });
   return described(validator, { kind: "number", options: read, checks });

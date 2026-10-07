@@ -3,12 +3,14 @@ import { isPlainObject } from "../core/objects";
 import { assertFunction } from "../core/result";
 import type { AnyValidator } from "../core/types";
 
-/** A JSON Schema, draft 2020-12, as plain data ready for `JSON.stringify`. */
+/** A JSON Schema, draft 2020-12 or draft-07, as plain data ready for `JSON.stringify`. */
 export interface JsonSchema {
   /** The draft the schema is written in, on the schema `toJsonSchema` returns. */
   $schema?: string;
   /** The definitions a recursive schema refers to, one for each `lazy`. */
   $defs?: Record<string, JsonSchema>;
+  /** The same definitions, under the name draft-07 gives them. */
+  definitions?: Record<string, JsonSchema>;
   /** The properties of an object. */
   properties?: Record<string, JsonSchema>;
   /** The properties an object must have. */
@@ -35,6 +37,14 @@ export interface JsonSchemaOptions {
    * @defaultValue "throw"
    */
   unrepresentable?: "throw" | "any" | undefined;
+  /**
+   * The draft of JSON Schema to write. `"draft-07"` is for a reader that does not know 2020-12, such as
+   * some tools of language models: it writes a tuple with `items` and `additionalItems`, definitions under
+   * `definitions`, and leaves out the `contentSchema` of `json`, which that draft has no word for.
+   *
+   * @defaultValue "draft-2020-12"
+   */
+  target?: "draft-2020-12" | "draft-07" | undefined;
 }
 
 /** The formats JSON Schema names otherwise than this package does. Any other is written under its own name. */
@@ -66,8 +76,8 @@ const isJsonPrimitive = (value: unknown): boolean =>
   value === null || typeof value === "string" || typeof value === "boolean" || Number.isFinite(value);
 
 /**
- * Writes a validator as a JSON Schema, draft 2020-12, for whatever takes one: the body of an HTTP API,
- * the arguments of a tool a language model calls, a form generator.
+ * Writes a validator as a JSON Schema, draft 2020-12 unless `target` asks for draft-07, for whatever takes
+ * one: the body of an HTTP API, the arguments of a tool a language model calls, a form generator.
  *
  * @remarks
  * The schema is read from what {@link describe} gives, so only validators made by this package's
@@ -82,7 +92,8 @@ const isJsonPrimitive = (value: unknown): boolean =>
  * a `clamp` beside a limit, are the same. Lengths differ for a character outside the Basic Multilingual
  * Plane, such as an emoji, which a string's `length` counts as two and JSON Schema as one.
  *
- * A recursive schema is written with `$defs` and `$ref`, one definition for each `lazy`.
+ * A recursive schema is written with `$ref` and one definition for each `lazy`, under `$defs` in draft
+ * 2020-12 and under `definitions` in draft-07.
  *
  * @example
  * ```ts
@@ -111,14 +122,19 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
   if (!isPlainObject(options)) {
     throw new TypeError("options must be an object");
   }
-  const { io = "input", unrepresentable = "throw" } = options;
+  const { io = "input", unrepresentable = "throw", target = "draft-2020-12" } = options;
   if (io !== "input" && io !== "output") {
     throw new TypeError(`io must be "input" or "output", received "${String(io)}"`);
   }
   if (unrepresentable !== "throw" && unrepresentable !== "any") {
     throw new TypeError(`unrepresentable must be "throw" or "any", received "${String(unrepresentable)}"`);
   }
+  if (target !== "draft-2020-12" && target !== "draft-07") {
+    throw new TypeError(`target must be "draft-2020-12" or "draft-07", received "${String(target)}"`);
+  }
   const isInput = io === "input";
+  const isDraft07 = target === "draft-07";
+  const definitionsKey = isDraft07 ? "definitions" : "$defs";
   const definitions: Record<string, JsonSchema> = {};
   // Keyed by the getter of a `lazy`, which is the same function wherever a schema built anew at each level
   // names it, where the `lazy` and what the getter returns are new each time.
@@ -153,11 +169,14 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
       case "nullable":
       case "readonly":
       case "transform":
+      case "meta":
         return inner();
       case "lazy":
         return mayBeAbsent((record["getter"] as () => unknown)(), seen);
       case "pipe":
         return mayBeAbsent((record["steps"] as unknown[]).at(isInput ? 0 : -1), seen);
+      case "codec":
+        return mayBeAbsent(record[isInput ? "input" : "output"], seen);
       case "union":
         return (record["members"] as unknown[]).some((member) => mayBeAbsent(member, seen));
       case "intersection":
@@ -233,7 +252,14 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
     return schema;
   };
 
+  /** The schema of a part, with what `meta` says of it. */
   const convert = (target: unknown, path: string): JsonSchema => {
+    const schema = write(target, path);
+    const said = describe(target as AnyValidator)?.["meta"];
+    return said === undefined ? schema : { ...schema, ...(said as object) };
+  };
+
+  const write = (target: unknown, path: string): JsonSchema => {
     const record = describe(target as AnyValidator);
     if (record === undefined) {
       return refuse("a validator written by hand", path) ?? {};
@@ -335,8 +361,11 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
         return checked(sizes({ type: "array", items: child("item", `${path}[]`) }, given, "minItems", "maxItems"));
       case "tuple": {
         const prefixItems = list("items", (index) => `${path}[${index}]`);
-        const schema: JsonSchema = { type: "array", prefixItems, minItems: prefixItems.length };
-        schema["items"] = record["rest"] === undefined ? false : child("rest", `${path}[]`);
+        const rest = record["rest"] === undefined ? false : child("rest", `${path}[]`);
+        // Draft-07 lists the items of a tuple under `items`, and the rest under `additionalItems`.
+        const schema: JsonSchema = isDraft07
+          ? { type: "array", items: prefixItems, minItems: prefixItems.length, additionalItems: rest }
+          : { type: "array", prefixItems, minItems: prefixItems.length, items: rest };
         if (given["max"] !== undefined) {
           schema["maxItems"] = given["max"];
         }
@@ -389,6 +418,7 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
       case "nullish":
         return { anyOf: [child("inner"), { type: "null" }] };
       case "readonly":
+      case "meta":
         return child("inner");
       case "fallback":
         return isInput ? {} : child("inner");
@@ -396,6 +426,8 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
         return isInput ? child("inner") : anything("what a transform returns");
       case "pipe":
         return convert((record["steps"] as unknown[]).at(isInput ? 0 : -1), path);
+      case "codec":
+        return child(isInput ? "input" : "output");
       case "lazy": {
         const getter = record["getter"] as () => unknown;
         let name = names.get(getter);
@@ -417,11 +449,18 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
           }
         }
         // The checks are of this `lazy` and not of its getter, which another `lazy` may share.
-        return over({ $ref: `#/$defs/${name}` });
+        return over({ $ref: `#/${definitionsKey}/${name}` });
       }
       case "json": {
-        const parsed = record["inner"] === undefined ? checked({}) : over(child("inner"));
-        return isInput ? { type: "string", contentMediaType: "application/json", contentSchema: parsed } : parsed;
+        const parsed = (): JsonSchema => (record["inner"] === undefined ? checked({}) : over(child("inner")));
+        if (!isInput) {
+          return parsed();
+        }
+        // Draft-07 has no `contentSchema`, and leaving it out only accepts more, as the schema may, so what
+        // is parsed is not read and cannot make the schema throw.
+        return isDraft07
+          ? { type: "string", contentMediaType: "application/json" }
+          : { type: "string", contentMediaType: "application/json", contentSchema: parsed() };
       }
       case "searchParams":
         return isInput ? { type: "string" } : over(child("inner"));
@@ -436,8 +475,8 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
 
   const schema = convert(validator, "");
   return {
-    $schema: "https://json-schema.org/draft/2020-12/schema",
+    $schema: isDraft07 ? "http://json-schema.org/draft-07/schema#" : "https://json-schema.org/draft/2020-12/schema",
     ...schema,
-    ...(names.size > 0 && { $defs: definitions }),
+    ...(names.size > 0 && { [definitionsKey]: definitions }),
   };
 }

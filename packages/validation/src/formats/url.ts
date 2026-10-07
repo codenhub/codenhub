@@ -330,5 +330,10 @@ export function url(...rest: unknown[]): AnyValidator {
     }
     return { value: parsed.href, parts };
   };
-  return described(partsFormat("url", read, message, checks), { kind: "format", format: "url", options, checks });
+  return described(partsFormat("url", read, message, checks, [credentials, host, port, path, query]), {
+    kind: "format",
+    format: "url",
+    options,
+    checks,
+  });
 }

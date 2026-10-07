@@ -46,6 +46,28 @@ const age = standard(number({ min: 18 }), {
 
 Each issue's `path` is the issue's own path, as an array of strings and numbers.
 
+## With its JSON Schema
+
+Some libraries need to write the schema down too, such as the AI SDK, which sends the arguments of a tool to a language model as a JSON Schema. They read it from `~standard.jsonSchema`, which [Standard JSON Schema](https://standardschema.dev/json-schema) adds to the specification. `standardJsonSchema(validator, messages?)` returns what `standard` does with it added:
+
+```ts
+import { meta, number, object, optional, standardJsonSchema, string } from "@codenhub/validation";
+
+const forecast = standardJsonSchema(
+  object({
+    city: meta(string({ min: 1, max: 100 }), { description: "The city to get the weather for" }),
+    days: optional(number({ int: true, min: 1, max: 7 })),
+  }),
+);
+
+forecast["~standard"].jsonSchema.input({ target: "draft-07" });
+// { $schema: "http://json-schema.org/draft-07/schema#", type: "object", properties: { city: { ..., description: "The city to get the weather for" }, ... }, required: ["city"] }
+```
+
+`input` and `output` write the validator with [`toJsonSchema`](json-schema.md), the side and the draft as asked. `"draft-2020-12"` and `"draft-07"` are written, and any other target throws a `TypeError`. When a part of the validator cannot be written as JSON Schema, such as a custom check, `toJsonSchema` throws for it, and so do `input` and `output`, unless the library passes `libraryOptions: { unrepresentable: "any" }`. Give [`meta`](validators.md#meta) to the validator before passing it here, since the schema is written from the validator `standardJsonSchema` is given.
+
+It is a separate export so that `standard`, which a form in the browser uses, does not bundle the code that writes a schema: use `standard` where only validation is asked for, and `standardJsonSchema` where the schema is read too.
+
 ## A note on functions
 
 A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator)["~standard"] }`.
