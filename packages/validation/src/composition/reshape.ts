@@ -1,9 +1,10 @@
 /*
- * Validators made from the parts of an `object` validator: `pick`, `omit`, `required`, and `partial` given
+ * Validators made from the parts of an `object` validator: `pick`, `omit`, `required`, `extend`, and `partial` given
  * a validator. Each reads the shape and options the object describes itself with, changes the shape, and
  * makes a new `object` of it, so what it returns is an `object` like any other.
  */
 import { describe } from "../core/describe";
+import { assertShape } from "../core/objects";
 import { assertList } from "../core/result";
 import type { AnyValidator, AsyncValidator, Validator } from "../core/types";
 import { nullable } from "./nullable";
@@ -46,10 +47,10 @@ function partsOf(name: string, validator: unknown): [shape: Shape, options: Obje
 /**
  * Makes the new object. What follows the function's own arguments is what follows a shape in `object`,
  * options and then checks; without options of its own the new object keeps those of the one it came from.
- * Options given as `undefined` are no options, as for every factory, so they keep them too.
+ * Options given as `undefined` or `null` are no options, as for every factory, so they keep them too.
  */
 const rebuild = (shape: Shape, options: ObjectOptions, rest: readonly unknown[]): AnyValidator => {
-  const given = rest.length > 0 && rest[0] === undefined ? rest.slice(1) : rest;
+  const given = rest.length > 0 && (rest[0] === undefined || rest[0] === null) ? rest.slice(1) : rest;
   return (object as (shape: Shape, ...rest: unknown[]) => AnyValidator)(
     shape,
     ...(given.length === 0 || typeof given[0] === "function" ? [options, ...given] : given),
@@ -81,6 +82,14 @@ export const picking = (
 ): AnyValidator => {
   const [shape, options] = partsOf(name, validator);
   return rebuild(select(name, shape, keys, isKept), options, rest);
+};
+
+/** Makes an object validator of the properties of another with those of `added` added or replaced. See `extend` in `extend.ts`. */
+export const extending = (validator: unknown, added: unknown, rest: readonly unknown[]): AnyValidator => {
+  const [shape, options] = partsOf("extend", validator);
+  assertShape(added);
+  // A key the object has keeps its place and takes the new validator, as spreading the shape does.
+  return rebuild({ ...shape, ...(added as Shape) }, options, rest);
 };
 
 /** Makes an object validator whose every property is changed by `change`. */
