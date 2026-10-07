@@ -22,7 +22,7 @@ This records the definition of done of the 0.3.0 release, which is out, and poin
 
 ## Current Focus
 
-[0.4.0.md](0.4.0.md) is the spec of the work after 0.3.0, in the order it is built: composers as fast as their leaves allow, validators that can be described, an input type, a rule across fields that does not wait for the others, what the package says it is for, and `brand`, `readonly` and message maps in other languages. It came from measuring the package against valibot, zod and yup on 2026-10-07, and it reverses three entries this roadmap had under Not Planned, naming for each what the entry did not weigh. The first step is a 0.3.x release, and the first that changes a signature is 0.4.0. Steps 1 to 6 are built and not released; the [0.4.0 changelog](../changelog/0.4.0.md) is written.
+[0.4.0.md](0.4.0.md) is the spec of the work after 0.3.0, in the order it is built: composers as fast as their leaves allow, validators that can be described, an input type, a rule across fields that does not wait for the others, what the package says it is for, and `brand`, `readonly` and message maps in other languages. It came from measuring the package against valibot, zod and yup on 2026-10-07, and it reverses three entries this roadmap had under Not Planned, naming for each what the entry did not weigh. The first step is a 0.3.x release, and the first that changes a signature is 0.4.0. Steps 1 to 6 are built, the [0.4.0 changelog](../changelog/0.4.0.md) is written and the package's version is 0.4.0. It is not published: the workspace catalog and the packages that depend on this one stay on 0.3.0 until it is.
 
 ## Released: 0.3.0
 
@@ -59,18 +59,18 @@ The adopter can move only once 0.3.0 is on npm, since public packages install ea
 
 ## Versioning until 1.0
 
-0.3.0 is the API, and everything after it is a 0.3.x release: fixes, new validators, new checks, new options, better messages. A change that would break a caller means the design missed something, as 0.3.0 itself was for 0.2.0, and it is the next minor and a signal to revisit [architecture.md](architecture.md), not a routine event. What counts as breaking for a format is set by [Compatibility of a format](architecture.md#compatibility-of-a-format).
+0.4.0 is the API, and everything after it is a 0.4.x release: fixes, new validators, new checks, new options, better messages. A change that would break a caller means the design missed something, as 0.4.0 was for 0.3.0, which had no type for what a validator accepts, and it is the next minor and a signal to revisit [architecture.md](architecture.md), not a routine event. What counts as breaking for a format is set by [Compatibility of a format](architecture.md#compatibility-of-a-format).
 
 1.0 is not a date and not a promise made on release day. It is declared when the API has been used for real, by more than one consumer, through enough releases to have shown where it was wrong:
 
-- Every release since 0.3.0 has been additive or a fix, with no change to an existing signature, issue code or `params` shape.
+- Every release since 0.4.0 has been additive or a fix, with no change to an existing signature, issue code or `params` shape.
 - Validators in this package have been used by more than one package and by at least one app or site validating forms or an integration, and what they found is fixed.
 - The public docs have not needed a correction to what an existing validator does.
 - No document under `docs/internal/` is still a `DRAFT`.
 
 ## Later / Possible
 
-Each is additive, so it fits a 0.3.x release.
+Each is additive, so it fits a 0.4.x release.
 
 - **A page on accepting a validator.** What a package that takes one from its caller declares, `Validator<T>` or a Standard Schema, how it reports a failure, and what it costs when the caller passes none.
 

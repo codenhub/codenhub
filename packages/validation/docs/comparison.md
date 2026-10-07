@@ -5,7 +5,7 @@ description: How the package differs from valibot, zod and yup, with what was me
 
 # Compared with valibot, zod and yup
 
-All four check a value against a schema and give you a typed result. This page says where this package differs, what that costs, and when one of the others is the better choice. Everything in the tables was run on 2026-10-07 against valibot 1.5.0, zod 4.6.5 and yup 1.7.1, on Node.js 24.19 on one machine; anything said from a library's documentation alone is marked so.
+All four check a value against a schema and give you a typed result. This page says where this package, at 0.4.0, differs, what that costs, and when one of the others is the better choice. Everything in the tables was run on 2026-10-07 against valibot 1.5.0, zod 4.6.5 and yup 1.7.1, on Node.js 24.19 on one machine; anything said from a library's documentation alone is marked so.
 
 ## What this package is for
 
@@ -36,7 +36,7 @@ A failing input costs a bounded amount, whatever its size.
 
 | Case                                                | This package                   | valibot               | zod                   |
 | --------------------------------------------------- | ------------------------------ | --------------------- | --------------------- |
-| An array of 200,000 items, each invalid             | 1,001 issues, 2 ms             | 200,000 issues, 73 ms | 200,000 issues, 83 ms |
+| An array of 200,000 items, each invalid             | 1,001 issues, 2 ms             | 200,000 issues, 78 ms | 200,000 issues, 84 ms |
 | A recursive schema, given input nested 100,000 deep | fails with one `too_big` issue | throws a `RangeError` | throws a `RangeError` |
 
 yup throws the same `RangeError` on the nested input. A thrown `RangeError` is not a validation result: code that expects `safeParse` never to throw does not catch it, and on a server it is an unhandled exception a few kilobytes of JSON can cause. An array stops after 1,000 issues and says so, and `lazy` stops at 128 levels by default; [`lazy`](validators.md#lazy) says what is and is not limited.
@@ -56,10 +56,10 @@ The same schema in each library, `{ name: string of at least 2, email, age: opti
 
 | Library        | That object, gzipped | A lone `boolean`, gzipped | Valid input, M ops/s | Invalid input, M ops/s |
 | -------------- | -------------------- | ------------------------- | -------------------- | ---------------------- |
-| this package   | 5.79 kB              | 1.24 kB                   | 0.9                  | 2.0                    |
-| valibot 1.5.0  | 1.58 kB              | 0.76 kB                   | 5.4 to 6.2           | 3.1                    |
-| zod/mini 4.6.5 | 5.76 kB              | 3.04 kB                   | 4.2                  | 0.6                    |
-| zod 4.6.5      | 23.8 kB              | 14.7 kB                   | 6.9 to 8.3           | 0.9                    |
+| this package   | 5.79 kB              | 1.24 kB                   | 1.0                  | 2.0                    |
+| valibot 1.5.0  | 1.58 kB              | 0.76 kB                   | 6.2                  | 3.3                    |
+| zod/mini 4.6.5 | 5.76 kB              | 3.04 kB                   | 4.3                  | 0.6                    |
+| zod 4.6.5      | 23.8 kB              | 14.7 kB                   | 8.6 to 9.1           | 0.9                    |
 | yup 1.7.1      | 12.8 kB              | 12.7 kB                   | 0.3                  | 0.01                   |
 
 Read the ratios and not the figures: this is one schema on one machine.

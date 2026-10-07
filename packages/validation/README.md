@@ -8,7 +8,9 @@ Validation for data you do not control: a request body, a query string, a form, 
 
 Each validator is a function you import on its own, so a program ships only the checks it uses: a lone `boolean()` is 1.2 kB gzipped and an object with a string, an email and a number 5.8 kB. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies. [Compared with valibot, zod and yup](docs/comparison.md) has the measurements, and says when one of them is the better choice.
 
-> **Experimental:** pre-1.0. The API of 0.3.0 is meant to hold for every 0.3.x release; a change that breaks callers, if one proves necessary, ships as the next minor and is listed in the [changelog](docs/changelog/index.md).
+> **Experimental:** pre-1.0. The API of 0.4.0 is meant to hold for every 0.4.x release; a change that breaks callers, if one proves necessary, ships as the next minor and is listed in the [changelog](docs/changelog/index.md).
+>
+> **Migrating from 0.3.0:** the [0.4.0 changelog](docs/changelog/0.4.0.md#migrating-from-030) lists the two changes to the types.
 >
 > **Migrating from 0.1.0:** the [0.2.0 changelog](docs/changelog/0.2.0.md) maps each changed call to its replacement. From 0.0.1, start with the [0.1.0 changelog](docs/changelog/0.1.0.md).
 
