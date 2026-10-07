@@ -123,6 +123,8 @@ describe("ready registries", () => {
     );
   });
 
+  // Keying the maps by their identifiers was weighed and left out: it catches a misspelled
+  // identifier, but a lookup by `error.code` or `error.name`, which are strings, stops compiling.
   it("should preserve string-keyed access to raw mappings", () => {
     const browserName: string = "AbortError";
     const supabaseCode: string = "invalid_credentials";

@@ -20,6 +20,7 @@ describe("published package exports", () => {
         "DEFAULT_APP_ERROR_MESSAGE",
         "andThen",
         "andThenAsync",
+        "appErrorFromJSON",
         "attempt",
         "attemptAsync",
         "createAppError",

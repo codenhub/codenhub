@@ -107,7 +107,8 @@ class AppErrorImpl extends Error implements AppError {
 
 // The class is reachable through an instance's `constructor`, and building one directly would
 // produce an AppError no registry classified. Pointing it at Error and freezing the prototype
-// leaves the factory as the only way in and `toJSON` as the only serialization.
+// leaves `createAppError` and `appErrorFromJSON` as the only ways in and `toJSON` as the only
+// serialization.
 Object.defineProperty(AppErrorImpl.prototype, "constructor", { value: Error });
 Object.freeze(AppErrorImpl.prototype);
 
@@ -181,19 +182,31 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
   while (isAppError(rawError)) {
     rawError = rawError.originalError;
   }
-  const errorCandidates = getErrorCandidates(rawError, maxDepth);
+  // A nested AppError already says what a registry made of its raw value. Only a supplied
+  // registry asks for that value to be classified again; without one, looking inside would let
+  // the global registry replace a classification a per-service registry made, one wrapper up.
+  const errorCandidates = getErrorCandidates(rawError, maxDepth, hasCustomRegistry ? undefined : isAppError);
 
   // Single pass over candidates resolving by priority tier:
   // known > unexpected > appError fallback (any type).
   // All tiers are collected before returning so that a "known" match deep in the
   // chain wins over an "unexpected" match at the surface.
   let knownResult: AppErrorResolution | null = null;
+  let nestedKnownResult: AppErrorResolution | null = null;
   let unexpectedResult: AppErrorResolution | null = null;
   let appErrorFallback: AppErrorResolution | null = null;
 
   for (const candidate of errorCandidates) {
     if (isAppError(candidate)) {
       if (candidate.type === "known") {
+        // A supplied registry is asked for its wording, so a nested known AppError must not end
+        // the search before the raw value inside it has been classified. It stands when the
+        // registry has no known match of its own.
+        if (hasCustomRegistry) {
+          nestedKnownResult ??= resolveFromAppError(candidate, error);
+          continue;
+        }
+
         knownResult = resolveFromAppError(candidate, error);
         break;
       } else if (candidate.type === "unexpected" && unexpectedResult === null) {
@@ -222,7 +235,8 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
   // Re-normalization only ever upgrades: an unexpected match replaces an unknown error, a known
   // match replaces anything it differs from, and nothing else changes what the error already says.
   if (existingAppError !== null) {
-    const replacement = knownResult ?? (existingAppError.type === "unknown" ? unexpectedResult : null);
+    const replacement =
+      knownResult ?? nestedKnownResult ?? (existingAppError.type === "unknown" ? unexpectedResult : null);
 
     if (replacement === null || isSameClassification(replacement, existingAppError)) {
       return existingAppError;
@@ -233,6 +247,7 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
 
   return new AppErrorImpl(
     knownResult ??
+      nestedKnownResult ??
       unexpectedResult ??
       appErrorFallback ?? {
         type: "unknown",
@@ -258,10 +273,14 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
  * 3. Any remaining `AppError` candidate.
  * 4. An unknown error carrying the fallback message.
  *
- * A deep known match outranks a shallow unexpected match. Ordinary unknown input never throws,
- * including objects and proxies whose inspected properties throw. A raw string is matched against
- * the registry like any other candidate; when nothing matches, the resolved message is the
- * fallback rather than the string itself, so raw text is never surfaced to consumers.
+ * A deep known match outranks a shallow unexpected match. A nested `AppError` is a candidate as it
+ * stands: the raw value inside it is classified again only when a `registry` is supplied, and
+ * then a known match from that registry outranks the nested classification.
+ *
+ * Ordinary unknown input never throws, including objects and proxies whose inspected properties
+ * throw. A raw string is matched against the registry like any other candidate; when nothing
+ * matches, the resolved message is the fallback rather than the string itself, so raw text is
+ * never surfaced to consumers.
  *
  * @param error - The raw error value to normalize, such as an `Error`, plain object, or string.
  * @param options - Configuration controlling fallback message, registry source, and wrapper depth.
@@ -275,6 +294,66 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
  */
 export function createAppError(error: unknown, options: AppErrorOptions = {}): AppError {
   return normalizeAppError(error, options);
+}
+
+const APP_ERROR_TYPES: readonly unknown[] = ["known", "unexpected", "unknown"] satisfies readonly AppErrorType[];
+
+const isStringOrNull = (value: unknown): value is string | null => value === null || typeof value === "string";
+
+// Reads each field once, so a value cannot answer the check one way and the build another.
+const readSerializedAppError = (value: unknown): AppErrorResolution | null => {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  let fields: Record<keyof SerializedAppError, unknown>;
+
+  try {
+    const { name, message, type, code, messageKey, source, isRetryable } = value as Record<string, unknown>;
+    fields = { name, message, type, code, messageKey, source, isRetryable };
+  } catch {
+    return null;
+  }
+
+  const { name, message, type, code, messageKey, source, isRetryable } = fields;
+
+  if (
+    name !== "AppError" ||
+    typeof message !== "string" ||
+    message.trim().length === 0 ||
+    !APP_ERROR_TYPES.includes(type) ||
+    !isStringOrNull(code) ||
+    !isStringOrNull(messageKey) ||
+    !isStringOrNull(source) ||
+    typeof isRetryable !== "boolean"
+  ) {
+    return null;
+  }
+
+  return { type: type as AppErrorType, code, message, messageKey, source, originalError: value, isRetryable };
+};
+
+/**
+ * Rebuilds an `AppError` from the shape `AppError.toJSON()` produces, for the receiving side of a
+ * boundary an error was sent across as JSON, such as a server response read by a client.
+ *
+ * No registry is consulted: the rebuilt error carries the fields it was sent with, and the parsed
+ * value becomes its `originalError`. Whoever produced the value therefore chooses the message, so
+ * use this only on data from a source the application trusts to word its errors, such as its own
+ * server. Pass anything else to `createAppError`.
+ *
+ * @param value - The parsed JSON value, typically `JSON.parse` output or a response body field.
+ * @returns The rebuilt AppError. An existing AppError is returned as it is. A value that does not
+ * have exactly the serialized field types is normalized as raw input, as by `createAppError(value)`.
+ */
+export function appErrorFromJSON(value: unknown): AppError {
+  if (isAppError(value)) {
+    return value;
+  }
+
+  const resolution = readSerializedAppError(value);
+
+  return resolution === null ? createAppError(value) : new AppErrorImpl(resolution);
 }
 
 /**

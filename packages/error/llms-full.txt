@@ -52,9 +52,10 @@ Runtime code does not access browser or Node.js globals, making it suitable for 
 - Batch registration and registry merging are atomic: invalid input leaves the target unchanged.
 - Result objects, read-only registry snapshots, and every value returned by a bucket are frozen. An `AppError`'s own properties cannot be changed or removed, but it accepts new ones, so a framework can annotate an error it catches.
 - An unmatched string never becomes the error message; supply `fallbackMessage` when user-facing text is needed.
-- JSON serialization is defined by `AppError.toJSON()` and includes `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable`, omitting diagnostic `cause` and `originalError` values. Send `error.toJSON()` across a worker, IPC, or IndexedDB boundary; a structured clone of the error itself can carry the raw `cause`.
+- JSON serialization is defined by `AppError.toJSON()` and includes `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable`, omitting diagnostic `cause` and `originalError` values. `appErrorFromJSON()` rebuilds an `AppError` from that shape on the receiving side; use it only on data from a source you trust to word its errors. Send `error.toJSON()` across a worker, IPC, or IndexedDB boundary; a structured clone of the error itself can carry the raw `cause`.
 - `AppError.code` holds the registered code or name that matched, for branching on a specific failure. A message, prefix, or pattern match has no code; branch on its `messageKey`.
 - `isAppError` recognizes errors created by the current package runtime, not structurally similar values.
+- `isRetryable` describes the call that raised the matched failure, which can sit several wrappers down. Retry on it only where the code made that call itself.
 - Built-in preset `messageKey` values are stable integration keys for consumer-owned translations; the package does not yet ship a translation map.
 - Invalid registry entries and invalid `createAppError` options are programmer errors and throw `TypeError`.
 - Custom registry patterns run against arbitrary error text; keep them linear to avoid catastrophic backtracking.
@@ -85,7 +86,7 @@ The global registry starts empty. Configure it during application initialization
 import { createAppError, getErrorRegistry } from "@codenhub/error";
 
 getErrorRegistry().codes.add("invalid_credentials", {
-  message: "Invalid email or password.",
+  message: "We couldn't sign you in. The email or password is incorrect. Check them and try again.",
   source: "my-app.auth",
 });
 
@@ -138,7 +139,7 @@ const error = createAppError(new Error("Request failed"), {
 | `registry`        | `getErrorRegistry()`        | Classification source; must expose the read-facing registry surface.                                                  |
 | `maxDepth`        | `3`                         | Maximum wrapper depth; must be an integer from `0` through `3`. A value below `3` also stops the `cause` chain there. |
 
-`DEFAULT_APP_ERROR_MESSAGE` is `"An unexpected error occurred."`. `isAppError(value)` identifies errors created by the current package runtime. Structurally similar or serialized values are not accepted. Passing an `AppError` to `createAppError` returns the same object unless a `registry` is supplied. A supplied registry classifies the raw value it started from again, and re-normalization only ever upgrades: a pattern match replaces only an unknown error, and a known match replaces anything it differs from. Everything else returns the same object. A `fallbackMessage` or `maxDepth` alone never changes an `AppError`, so the first layer to name a failure keeps its wording through every later one, including when that layer used its own registry.
+`DEFAULT_APP_ERROR_MESSAGE` is `"An unexpected error occurred."`. `isAppError(value)` identifies errors created by the current package runtime. Structurally similar or serialized values are not accepted. Passing an `AppError` to `createAppError` returns the same object unless a `registry` is supplied. A supplied registry classifies the raw value it started from again, and re-normalization only ever upgrades: a pattern match replaces only an unknown error, and a known match replaces anything it differs from. Everything else returns the same object. A `fallbackMessage` or `maxDepth` alone never changes an `AppError`, so the first layer to name a failure keeps its wording through every later one, including when that layer used its own registry. An `AppError` nested in another value, as in `new Error("checkout failed", { cause: appError })`, is treated the same way: its classification is a candidate, and the raw value inside it is classified again only when a `registry` is supplied. A known match from that registry then replaces the nested classification, as it does for an `AppError` passed directly.
 
 An `AppError` implements `Error`, and none of its own properties can be changed or removed. It stays extensible, because frameworks add properties to the errors they catch: Koa assigns `status` and hapi's `Boom.boomify` assigns `isBoom`, and both would throw on a frozen error. It exposes:
 
@@ -146,9 +147,9 @@ An `AppError` implements `Error`, and none of its own properties can be changed 
 - `code`, the registered code that matched, or the registered name when no code matched. It is `null` for message, prefix, and pattern matches and for unknown errors. Branch on it rather than on `message`. A mapping matched by message, prefix, or pattern has no code, so branch on its `messageKey` there: the built-in preset keys are stable, and one failure can arrive either way, as a stale code-split chunk does with `code: "ChunkLoadError"` from webpack and `code: null` from Chrome, both under `error.browser.moduleLoadFailed`.
 - `message`, plus nullable `messageKey` and `source: AppErrorSource` metadata.
 - `originalError`, preserving the original top-level input as a non-enumerable diagnostic value.
-- `isRetryable`, which defaults to `false` unless matched feedback sets it. It means the operation can be repeated as it is, without user intervention and without the risk that it runs twice. A failure that may follow a request the server already received is not retryable, however likely a second try is to succeed. The flag holds for an error the local runtime raised. A code copied into a response body matches the same mapping, as `{ "code": "ECONNREFUSED" }` from a server forwarding its own upstream failure does, although that request reached the server. Classify response bodies against a registry that holds the service's codes and no transport preset.
+- `isRetryable`, which defaults to `false` unless matched feedback sets it. It means the call that raised the matched failure can be repeated as it is, without user intervention and without the risk that it runs twice. A failure that may follow a request the server already received is not retryable, however likely a second try is to succeed. That call can sit several wrappers down, and the flag says nothing about the operation around it: a `publish()` that uploads a file and then fails to save a record with `ECONNREFUSED` resolves to a retryable error, which is true of the save and not of `publish()`, since repeating `publish()` uploads the file again. Retry on the flag only where the code made the failing call itself, or knows everything around it is safe to repeat. The flag also holds only for an error the local runtime raised. A code copied into a response body matches the same mapping, as `{ "code": "ECONNREFUSED" }` from a server forwarding its own upstream failure does, although that request reached the server. Classify response bodies against a registry that holds the service's codes and no transport preset.
 
-Normalization does not throw for ordinary unknown input, including objects or proxies whose inspected properties throw. An explicit `toJSON()` defines serialization, so `JSON.stringify` yields exactly `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable` on every engine. It excludes the raw `cause` and `originalError` diagnostic values, preventing sensitive fields and cyclic wrapper objects from being serialized through the normalized error. Nothing reads that shape back: `isAppError` is false for the parsed object, and passing it to `createAppError` classifies it as raw input, which loses a message, prefix, or pattern match. On the receiving side, read the parsed object's fields directly. Only this JSON shape is safe to send: a structured clone, as made by `postMessage`, `structuredClone`, or IndexedDB, copies the error as a plain `Error` without the normalized fields. Where the engine clones `cause`, as V8 does, the raw value travels with it, and the clone throws `DataCloneError` when that value holds a function. Send `error.toJSON()` across those boundaries. Registry configuration errors throw `TypeError` at their configuration boundary. Invalid options are programmer errors and throw `TypeError` before traversal begins: a non-object `options` value, an empty or non-string `fallbackMessage`, a `registry` that does not expose the read-facing registry surface, and a `maxDepth` outside the integer range from `0` through `3`.
+Normalization does not throw for ordinary unknown input, including objects or proxies whose inspected properties throw. An explicit `toJSON()` defines serialization, so `JSON.stringify` yields exactly `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable` on every engine. It excludes the raw `cause` and `originalError` diagnostic values, preventing sensitive fields and cyclic wrapper objects from being serialized through the normalized error. `appErrorFromJSON(value)` reads that shape back on the receiving side, such as a client reading its own server's response: it rebuilds an `AppError` carrying the fields it was sent with, consults no registry, and keeps the parsed value as `originalError`. The sender chooses the message, so use it only on data from a source the application trusts to word its errors. A value that does not have exactly the serialized field types is normalized as raw input. `isAppError` is false for the parsed object itself, and passing it to `createAppError` classifies it as raw input, which loses a name, message, prefix, or pattern match. Only this JSON shape is safe to send: a structured clone, as made by `postMessage`, `structuredClone`, or IndexedDB, copies the error as a plain `Error` without the normalized fields. Where the engine clones `cause`, as V8 does, the raw value travels with it, and the clone throws `DataCloneError` when that value holds a function. Send `error.toJSON()` across those boundaries. Registry configuration errors throw `TypeError` at their configuration boundary. Invalid options are programmer errors and throw `TypeError` before traversal begins: a non-object `options` value, an empty or non-string `fallbackMessage`, a `registry` that does not expose the read-facing registry surface, and a `maxDepth` outside the integer range from `0` through `3`.
 
 ## Configure A Registry
 
@@ -215,6 +216,8 @@ Registered patterns run against arbitrary error text, so a pattern that backtrac
 ### To 0.3
 
 - `AppError` has a `code` field and `toJSON()` includes it. Code that compares the serialized shape exactly needs the new field.
+- `appErrorFromJSON(value)` rebuilds an `AppError` from the `toJSON()` shape. Code that read the parsed fields by hand can keep doing so.
+- An `AppError` nested in another value keeps its classification unless a `registry` is supplied. A wrapper such as `new Error("x", { cause: appError })` used to have the raw value inside the `AppError` classified against the global registry.
 - A `messageKey` or `source` in any format is accepted; only an empty one throws `TypeError`.
 - Passing an existing `AppError` returns the same object unless a `registry` is supplied and finds a better classification. A `fallbackMessage` no longer replaces the message of an unknown `AppError`; set it where the failure is first normalized.
 - The Supabase rate-limit mappings (`over_request_rate_limit`, `over_email_send_rate_limit`, `over_sms_send_rate_limit`) are no longer retryable.
@@ -247,14 +250,19 @@ Version 0.2 intentionally resets unstable 0.1 behavior. `AppError` values are fr
 `Result<T>` is the union `Ok<T> | Err`. `Ok<T>` contains `{ ok: true, value }`; `Err` contains `{ ok: false, error: AppError }`.
 
 ```ts
-import { err, ok, type Result } from "@codenhub/error";
+import { err, getErrorRegistry, ok, type Result } from "@codenhub/error";
 
-const loadName = (value: string | null): Result<string> => (value === null ? err({ code: "my-app.missing_name" }, { fallbackMessage: "Name is missing." }) : ok(value));
+getErrorRegistry().codes.add("my-app.missing_name", {
+  message: "We couldn't save this because the name is empty. Enter a name and try again.",
+  source: "my-app",
+});
+
+const loadName = (value: string | null): Result<string> => (value === null ? err({ code: "my-app.missing_name" }) : ok(value));
 ```
 
 `ok(value)` wraps a success value, and `ok()` creates `Ok<void>`. `err(error, options?)` normalizes failures through the same pipeline as `createAppError`. Both return frozen result objects.
 
-A string is treated as message text: it is matched against the `messages`, `prefixes`, and `patterns` buckets, at every wrapper depth, and never against `codes`. Pass `{ code: "..." }` to raise a failure by its registered code. An unmatched string never becomes the message, so raw diagnostic text is not surfaced to users; supply `fallbackMessage` when user-facing text is needed.
+A string is treated as message text: it is matched against the `messages`, `prefixes`, and `patterns` buckets, at every wrapper depth, and never against `codes`. Pass `{ code: "..." }` to raise a failure by its registered code. The code has to be registered first: an unregistered one resolves to an unknown error whose `code` is `null`, whatever `fallbackMessage` says. An unmatched string never becomes the message, so raw diagnostic text is not surfaced to users; supply `fallbackMessage` when user-facing text is needed.
 
 Use `attempt` and `attemptAsync` at boundaries where existing code throws:
 
@@ -307,6 +315,7 @@ const output = match(doubled, {
 - The browser preset classifies a code-split chunk that fails to load, by webpack's `ChunkLoadError` name and by the message Chrome produces for a failed `import()`, and tells the reader to reload the page. It also maps the `NotReadableError` and `EncodingError` names.
 - The Node.js preset maps `EAI_AGAIN`, `EHOSTUNREACH`, `ENETUNREACH`, and `EPIPE`.
 - The Supabase preset classifies two errors the Supabase Auth client raises itself: `AuthSessionMissingError`, which carries no code and is what most calls return without a session, as an ended session, and `pkce_code_verifier_not_found`, from a sign-in link opened in another browser, as an interrupted sign-in. Both resolved to an unknown error.
+- `appErrorFromJSON` rebuilds an `AppError` from the shape `toJSON()` produces, so a failure a server sent as JSON can be held in a `Result` on the client. Passing the parsed object to `createAppError` lost every name, message, prefix, and pattern match. The sender chooses the message, so it is for sources the application trusts.
 - A `default` export condition, so CommonJS can `require()` the package on runtimes that support requiring ES modules.
 
 ## Changed
@@ -323,6 +332,7 @@ const output = match(doubled, {
 - **Breaking.** An existing `AppError` is classified again only when a `registry` is supplied, and then only ever upgraded: a pattern match replaces an unknown error, a known match replaces anything it differs from, and everything else returns the same object. A lone `fallbackMessage`, or the default `maxDepth` written out, used to turn a known error into an unknown one, and a `fallbackMessage` replaced the message of an unknown error, so the message alternated as an error passed through layers that each supplied one. Either option also classified the error against the global registry, replacing a classification made by a per-service registry.
 - **Breaking.** The Supabase `FunctionsRelayError` mapping is not retryable, and its message tells the reader to check whether the call went through. The relay reports the error on a response, after the function may have run.
 - **Breaking.** An `AppError` is no longer frozen. Its own properties still cannot be changed or removed, but new ones can be added: Koa's error handler assigns `status` and hapi's `Boom.boomify` assigns `isBoom` to every error they catch, and on a frozen `AppError` that assignment threw. In Koa the rejection went unhandled, which ends a Node.js process. `Object.isFrozen(error)` is now `false`.
+- **Breaking.** An `AppError` nested in another value keeps its classification unless a `registry` is supplied. Wrapping one, as in `new Error("checkout failed", { cause: appError })`, used to have the raw value inside it classified against the global registry, which replaced an unknown or unexpected classification made by a per-service registry and could mark the result retryable. A supplied `registry` now also rewords a nested known `AppError`, as it already did one passed directly; the nested one used to end the search.
 - `mapAsync` and `andThenAsync` accept a mapper that returns a plain value or `Result` as well as a promise, so a mapper that is asynchronous only on some paths type-checks.
 - **Breaking.** The Supabase rate-limit mappings are not retryable. `isRetryable` carries no delay, so code that retried on it did so at once and counted against the limit again; the message tells the reader how long to wait.
 - **Breaking.** Every preset message is rewritten to say what happened and what to do next, where it used to restate the code: `invalid_credentials` reads "We couldn't sign you in. The email or password is incorrect. Check them and try again." Failures only a developer can fix, such as a missing table or column, share one message that tells the reader the problem is not their doing and names no internals. The `messageKey` values are unchanged.
@@ -334,7 +344,7 @@ const output = match(doubled, {
 - A `DOMException` is classified by its name; its legacy numeric `code` could match an unrelated registered code.
 - A message or prefix mapping whose trailing punctuation is broken up by whitespace, such as `Done . .`, matches. Its key was normalized once when stored and again on lookup, to a different result, so it never matched until the registry was merged or frozen.
 - `attempt` and `attemptAsync` throw `TypeError` for a callback that is not a function instead of returning an `Err`.
-- An `AppError` no longer exposes the class that builds it: `constructor` is `Error` and the shared prototype is frozen, so an `AppError` no registry classified cannot be built, and `toJSON` cannot be replaced for every instance.
+- An `AppError` no longer exposes the class that builds it: `constructor` is `Error` and the shared prototype is frozen, so an `AppError` cannot be built around `createAppError` and `appErrorFromJSON`, and `toJSON` cannot be replaced for every instance.
 - Feedback without a message returned by a hand-written registry throws `TypeError` instead of producing an `AppError` with no message.
 
 ## Removed
