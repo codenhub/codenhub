@@ -1,4 +1,5 @@
 import { leaf, split } from "../core/checks";
+import { described } from "../core/describe";
 import { isInstance } from "../core/objects";
 import { assertFunction } from "../core/result";
 import type { AnyValidator, AsyncRest, AsyncValidator, MessageOptions, Rest, Validator } from "../core/types";
@@ -25,8 +26,8 @@ export type Constructor<T = unknown> = abstract new (...args: never[]) => T;
  * @throws {TypeError} When `target` is not a function `instanceof` can test against, such as an arrow function,
  * or its `Symbol.hasInstance` is neither a function nor absent, which would make `instanceof` throw for every value.
  */
-export function instanceOf<T>(target: Constructor<T>, ...rest: Rest<T, MessageOptions>): Validator<T>;
-export function instanceOf<T>(target: Constructor<T>, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
+export function instanceOf<T>(target: Constructor<T>, ...rest: Rest<T, MessageOptions>): Validator<T, T>;
+export function instanceOf<T>(target: Constructor<T>, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T, T>;
 export function instanceOf(target: Constructor, ...rest: unknown[]): AnyValidator {
   assertFunction("target", target);
   // `instanceof` treats a `Symbol.hasInstance` of null or undefined as absent and tests the prototype, and
@@ -47,6 +48,10 @@ export function instanceOf(target: Constructor, ...rest: unknown[]): AnyValidato
   } catch {
     throw new TypeError("target must be a class or a function with a prototype");
   }
-  const [{ message }, checks] = split<MessageOptions, unknown>(rest);
-  return leaf(`instance of ${target.name || "anonymous class"}`, (input) => isInstance(input, target), message, checks);
+  const [options, checks] = split<MessageOptions, unknown>(rest);
+  const { message } = options;
+  return described(
+    leaf(`instance of ${target.name || "anonymous class"}`, (input) => isInstance(input, target), message, checks),
+    { kind: "instance", options, checks, target },
+  );
 }

@@ -5,6 +5,7 @@
  */
 
 export { check } from "./builders/check";
+export { checkFields } from "./builders/check-fields";
 export { endsWith } from "./checks/ends-with";
 export { includes } from "./checks/includes";
 export { lowercase } from "./checks/lowercase";
@@ -23,6 +24,7 @@ export { coerceDate, type CoerceDateOptions } from "./coercion/coerce-date";
 export { coerceNumber } from "./coercion/coerce-number";
 export { coerceString } from "./coercion/coerce-string";
 export { array, type ArrayOptions } from "./composition/array";
+export { brand, type Branded } from "./composition/brand";
 export { fallback } from "./composition/fallback";
 export { intersection } from "./composition/intersection";
 export { json } from "./composition/json";
@@ -30,20 +32,26 @@ export { lazy, type LazyOptions } from "./composition/lazy";
 export { map } from "./composition/map";
 export { nullable } from "./composition/nullable";
 export { nullish } from "./composition/nullish";
-export { object, type InferShape, type ObjectOptions, type Shape } from "./composition/object";
+export { object, type InferShape, type InferShapeInput, type ObjectOptions, type Shape } from "./composition/object";
 export { objectLike } from "./composition/object-like";
 export { optional } from "./composition/optional";
-export { partial, type PartialShape } from "./composition/partial";
+export { omit } from "./composition/omit";
+export { partial, type AllOptional, type PartialShape } from "./composition/partial";
+export { pick } from "./composition/pick";
 export { pipe } from "./composition/pipe";
-export { record, type InferRecord } from "./composition/record";
+export { record, type InferRecord, type InferRecordInput } from "./composition/record";
+export { required } from "./composition/required";
+export type { AllRequired, Omitted, Picked, Reshaped } from "./composition/reshape";
 export { set } from "./composition/set";
 export { type SizeOptions } from "./composition/size";
-export { tagged, type InferTagged, type Variants } from "./composition/tagged";
+export { tagged, type InferTagged, type InferTaggedInput, type Variants } from "./composition/tagged";
+export { readonly, type ReadonlyOutput } from "./composition/readonly";
 export { transform } from "./composition/transform";
-export { tuple, type InferTuple, type TupleOptions } from "./composition/tuple";
+export { tuple, type InferTuple, type InferTupleInput, type TupleOptions } from "./composition/tuple";
 export { union } from "./composition/union";
 export { assert, type AssertOptions } from "./core/assert";
 export { is } from "./core/is";
+export { describe, type Description } from "./core/describe";
 export { fail, pass, type IssueInput } from "./core/result";
 export type {
   AnyValidator,
@@ -54,6 +62,7 @@ export type {
   Composed,
   Factory,
   Infer,
+  InferInput,
   Message,
   MessageOptions,
   Rest,
@@ -90,6 +99,7 @@ export { time, type TimeOptions } from "./formats/time";
 export { ulid } from "./formats/ulid";
 export { url, type UrlOptions } from "./formats/url";
 export { uuid, type UuidOptions } from "./formats/uuid";
+export { toJsonSchema, type JsonSchema, type JsonSchemaOptions } from "./interop/json-schema";
 export { standard } from "./interop/standard";
 export { type StandardSchemaV1 } from "./interop/standard-schema";
 export {
@@ -104,6 +114,7 @@ export {
   tooSmallMessage,
   unrecognizedKeyMessage,
 } from "./messages/english-messages";
+export { portugueseMessages } from "./messages/portuguese-messages";
 export { flatten, formatIssue, formatPath, type FlattenedErrors, type Messages } from "./messages/format-issue";
 export { bigint, type BigintOptions } from "./primitives/bigint";
 export { boolean } from "./primitives/boolean";

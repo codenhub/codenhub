@@ -1,6 +1,7 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
-import { below, call, composed } from "../core/nesting";
+import { described } from "../core/describe";
+import { childOf, composed, type Child } from "../core/nesting";
 import { isArray } from "../core/objects";
 import { assertFunction, assertList, assertOrder, assertSize, issue, typeIssue } from "../core/result";
 import type {
@@ -9,6 +10,7 @@ import type {
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationResult,
@@ -27,6 +29,21 @@ export type InferTuple<
   TItems extends readonly AnyValidator[],
   TRest extends AnyValidator | undefined = undefined,
 > = TRest extends AnyValidator ? [...InferItems<TItems>, ...Infer<TRest>[]] : InferItems<TItems>;
+
+type InferItemInputs<TItems extends readonly AnyValidator[]> = {
+  -readonly [K in keyof TItems]: InferInput<TItems[K]>;
+};
+
+/**
+ * The array type that can pass a tuple: what each fixed item accepts, then any number of what `rest` accepts.
+ *
+ * @typeParam TItems - The validators of the fixed positions.
+ * @typeParam TRest - The validator of the remaining positions, or `undefined` for none.
+ */
+export type InferTupleInput<
+  TItems extends readonly AnyValidator[],
+  TRest extends AnyValidator | undefined = undefined,
+> = TRest extends AnyValidator ? [...InferItemInputs<TItems>, ...InferInput<TRest>[]] : InferItemInputs<TItems>;
 
 /** Options for {@link tuple}. */
 export interface TupleOptions<TRest extends AnyValidator | undefined = undefined> extends MessageOptions {
@@ -75,16 +92,16 @@ export function tuple<
 >(
   items: TItems,
   ...rest: Rest<InferTuple<TItems, TRest>, TupleOptions<TRest>>
-): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>>;
+): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>, InferTupleInput<TItems, TRest>>;
 export function tuple<
   const TItems extends readonly [AnyValidator, ...AnyValidator[]],
   TRest extends AnyValidator | undefined = undefined,
 >(
   items: TItems,
   ...rest: AsyncRest<InferTuple<TItems, TRest>, TupleOptions<TRest>>
-): AsyncValidator<InferTuple<TItems, TRest>>;
+): AsyncValidator<InferTuple<TItems, TRest>, InferTupleInput<TItems, TRest>>;
 export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyValidator {
-  const [options, reject, accept] = tail<TupleOptions<AnyValidator | undefined>, unknown[]>(args, "rest max");
+  const [options, reject, accept, checks] = tail<TupleOptions<AnyValidator | undefined>, unknown[]>(args, "rest max");
   const { rest, max } = options;
   assertList("items", items);
   // Copied, so changing the list after the validator is made changes nothing.
@@ -106,34 +123,40 @@ export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyVa
     assertOrder("the fixed items", length, "max", max);
   }
 
-  return composed((input, place): Maybe<ValidationResult<unknown>> => {
-    if (!isArray(input)) {
-      return reject([typeIssue("array", input)], place);
-    }
-    const size = input.length;
-    if (max !== undefined && size > max) {
-      return reject([issue("too_big", { maximum: max, type: "array" })], place);
-    }
-    if (size < length || (rest === undefined && size > length)) {
-      const isShort = size < length;
-      return reject(
-        [
-          issue(isShort ? "too_small" : "too_big", {
-            [isShort ? "minimum" : "maximum"]: length,
-            type: "array",
-            ...(rest === undefined && { exact: true }),
-          }),
-        ],
+  const children = fixed.map(childOf);
+  const restChild = rest === undefined ? undefined : childOf(rest);
+
+  return described(
+    composed((input, place): Maybe<ValidationResult<unknown>> => {
+      if (!isArray(input)) {
+        return reject([typeIssue("array", input)], place);
+      }
+      const size = input.length;
+      if (max !== undefined && size > max) {
+        return reject([issue("too_big", { maximum: max, type: "array" })], place);
+      }
+      if (size < length || (rest === undefined && size > length)) {
+        const isShort = size < length;
+        return reject(
+          [
+            issue(isShort ? "too_small" : "too_big", {
+              [isShort ? "minimum" : "maximum"]: length,
+              type: "array",
+              ...(rest === undefined && { exact: true }),
+            }),
+          ],
+          place,
+        );
+      }
+      return settle(
+        size,
+        // By index up to the length that was checked, never through the array's own iterator, as in `array`.
+        (index) => ((index < length ? children[index] : restChild) as Child)(input[index], place, index),
         place,
+        options.message,
+        (values) => accept(values, place),
       );
-    }
-    return settle(
-      size,
-      // By index up to the length that was checked, never through the array's own iterator, as in `array`.
-      (index) => call((index < length ? fixed[index] : rest) as AnyValidator, input[index], below(place, index)),
-      place,
-      options.message,
-      (values) => accept(values, place),
-    );
-  });
+    }),
+    { kind: "tuple", options, checks, items: Object.freeze(fixed), rest },
+  );
 }

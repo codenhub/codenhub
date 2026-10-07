@@ -86,7 +86,7 @@ export const coerceDate = ((...args: unknown[]) => {
   }
   const isUtc = zoneless === "utc";
   const strict = isPlainObject(first) ? date(options, ...(checks as [])) : date(...(args as []));
-  return coercing("valid date", strict, args, (input) => {
+  const convert = (input: unknown): [unknown] | undefined => {
     if (timeOf(input) !== undefined) {
       return [input];
     }
@@ -97,5 +97,6 @@ export const coerceDate = ((...args: unknown[]) => {
     }
     const parsed = typeof input === "string" ? readIso(input.trim(), isUtc) : undefined;
     return parsed === undefined ? undefined : [parsed];
-  });
-}) as Factory<Date, CoerceDateOptions>;
+  };
+  return coercing("valid date", strict, args, convert, isUtc ? { zoneless } : undefined);
+}) as Factory<Date, CoerceDateOptions, Date | number | string>;

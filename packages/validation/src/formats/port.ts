@@ -1,4 +1,5 @@
 import { split } from "../core/checks";
+import { described } from "../core/describe";
 import type { Factory, MessageOptions } from "../core/types";
 import { formatLeaf } from "./text-format";
 
@@ -21,13 +22,17 @@ const MAX_PORT = 65_535;
  * ```
  */
 export const port = ((...args: unknown[]) => {
-  const [{ message }, checks] = split<MessageOptions, number>(args);
-  return formatLeaf<number>(
-    "number",
-    isNumber,
-    "port",
-    (value) => (Number.isInteger(value) && value >= 1 && value <= MAX_PORT ? value : undefined),
-    message,
-    checks,
+  const [options, checks] = split<MessageOptions, number>(args);
+  const { message } = options;
+  return described(
+    formatLeaf<number>(
+      "number",
+      isNumber,
+      "port",
+      (value) => (Number.isInteger(value) && value >= 1 && value <= MAX_PORT ? value : undefined),
+      message,
+      checks,
+    ),
+    { kind: "format", format: "port", options, checks },
   );
 }) as Factory<number, MessageOptions>;

@@ -1,4 +1,5 @@
 import { chain, collect, detached, runEach, type Maybe } from "./async";
+import { described, type Description } from "./describe";
 import { placeAll, type Place } from "./nesting";
 import { isPlainObject } from "./objects";
 import { assertText, failWith, isPath, issue, pass, typeIssue } from "./result";
@@ -46,7 +47,7 @@ export function split<TOptions extends MessageOptions, T>(
   }
   // Copied, so changing the object after the validator is made changes nothing, whether the validator reads
   // an option once or, as a composer reads its message and sizes, on every call.
-  return [{ ...(options as object) } as TOptions, checks as AsyncCheck<T>[]];
+  return [Object.freeze({ ...(options as object) }) as TOptions, checks as AsyncCheck<T>[]];
 }
 
 /** What a check written by hand that returns something it may not is told. */
@@ -112,6 +113,10 @@ export function finish<T>(
   if (issues.length > 0) {
     return failWith(word(issues, message));
   }
+  if (checks.length === 0) {
+    // The usual case, and every leaf and composer ends here, so nothing is made for checks there are none of.
+    return pass(value);
+  }
   return chain(collect(runEach(checks.length, (index) => detached(checks[index] as AsyncCheck<T>, value))), (found) => {
     for (const list of found) {
       if (list !== undefined && !Array.isArray(list)) {
@@ -169,7 +174,11 @@ export function rule<T>(
   message: Message | undefined,
 ): Check<T> {
   assertMessage(message);
-  return (value) => (test(value) ? undefined : word([issue(code, { ...params })], message));
+  return described<Check<T>>((value) => (test(value) ? undefined : word([issue(code, { ...params })], message)), {
+    kind: "check",
+    code,
+    params: Object.freeze(params),
+  });
 }
 
 /**
@@ -183,14 +192,19 @@ export function member<T>(
   find: (input: unknown) => readonly [value: T] | undefined,
   params: () => Readonly<Record<string, unknown>>,
   args: readonly unknown[],
+  description: Omit<Description, "options">,
 ): (input: unknown) => Maybe<ValidationResult<T>> {
-  const [{ message }, checks] = split<MessageOptions, T>(args);
-  return (input) => {
-    const found = find(input);
-    return found === undefined
-      ? failWith(word([issue("invalid_value", params())], message))
-      : finish(found[0], [], message, checks);
-  };
+  const [options, checks] = split<MessageOptions, T>(args);
+  const { message } = options;
+  return described(
+    (input: unknown) => {
+      const found = find(input);
+      return found === undefined
+        ? failWith(word([issue("invalid_value", params())], message))
+        : finish(found[0], [], message, checks);
+    },
+    { ...description, options, checks },
+  );
 }
 
 /**
@@ -207,15 +221,19 @@ export function tail<TOptions extends MessageOptions, T>(
   options: TOptions,
   reject: (issues: readonly ValidationIssue[], place: Place) => ValidationErr,
   accept: (value: T, place: Place) => Maybe<ValidationResult<T>>,
+  checks: readonly AsyncCheck<T>[],
 ] {
   const [options, checks] = split<TOptions, T>(args, known);
   return [
     options,
     (issues, place) => failWith(report(issues, place, options.message)),
     // A check reports relative to the value, as for a leaf, and its issues are moved to the place after.
-    (value, place) =>
-      chain(finish(value, [], options.message, checks), (result) =>
-        result.ok || place === undefined ? result : failWith(placeAll(result.error.issues, place)),
-      ),
+    checks.length === 0
+      ? pass
+      : (value, place) =>
+          chain(finish(value, [], options.message, checks), (result) =>
+            result.ok || place === undefined ? result : failWith(placeAll(result.error.issues, place)),
+          ),
+    checks,
   ];
 }

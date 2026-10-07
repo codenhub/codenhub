@@ -13,8 +13,8 @@ group: Reference
 ### array
 
 ```ts
-export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: Rest<Infer<TItem>[], ArrayOptions>): Composed<TItem, Infer<TItem>[]>;
-export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Infer<TItem>[], ArrayOptions>): AsyncValidator<Infer<TItem>[]>;
+export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: Rest<Infer<TItem>[], ArrayOptions>): Composed<TItem, Infer<TItem>[], InferInput<TItem>[]>;
+export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Infer<TItem>[], ArrayOptions>): AsyncValidator<Infer<TItem>[], InferInput<TItem>[]>;
 ```
 
 Creates a validator for arrays whose every item passes `item`.
@@ -81,6 +81,47 @@ assert(config, { locales: ["en", 1] }, { subject: "[I18n]", messages });
 // TypeError: [I18n] locales[1]: Expected string, received number
 ```
 
+### brand
+
+```ts
+export declare function brand<TValidator extends AnyValidator, const TName extends string>(validator: TValidator, name: TName): Composed<TValidator, Branded<Infer<TValidator>, TName>, InferInput<TValidator>>;
+```
+
+Marks what a validator produces with a name, in the types alone, so only a value that went through the validator is accepted where the marked type is asked for.
+
+TypeScript treats two types of the same shape as one, so a function that takes a `string` it calls a user id also takes an email, or text nobody validated. A brand makes the validated type its own: `Infer` of the result is the type with the mark, and the only way to a value of it is the validator.
+
+Nothing changes at run time. The validator is returned as it is, so it validates, is described and is written as a JSON Schema exactly as before, and `name` is read by the types only. The input type is not marked, since what is given to a validator has not passed it yet. Brands add up: `brand(brand(string(), "A"), "B")` produces a type with both.
+
+**Parameters**
+
+- `validator` — The validator to mark the output of.
+- `name` — The name of the mark, such as `"UserId"`.
+
+**Type parameters**
+
+- `TValidator` — The validator whose output is marked.
+- `TName` — The name of the mark.
+
+**Returns** — The same validator, typed as producing the marked type.
+
+**Throws** — When `validator` is not a function or `name` is not text.
+
+**Example**
+
+```ts
+const userId = brand(uuid(), "UserId");
+type UserId = Infer<typeof userId>;
+
+declare function loadUser(id: UserId): Promise<User>;
+
+const result = userId(input);
+if (result.ok) {
+  await loadUser(result.value);
+}
+await loadUser("not validated"); // a compile error
+```
+
 ### check
 
 ```ts
@@ -117,13 +158,81 @@ const signup = object(
 );
 ```
 
+### checkFields
+
+```ts
+export declare function checkFields<T extends object, const TKey extends keyof T & string>(keys: readonly TKey[], test: (value: Pick<T, TKey>) => boolean, issue?: IssueInput | Message): Check<T>;
+export declare function checkFields<T extends object, const TKey extends keyof T & string>(keys: readonly TKey[], test: (value: Pick<T, TKey>) => boolean | PromiseLike<boolean>, issue?: IssueInput | Message): AsyncCheck<T>;
+```
+
+Makes a check of an object that needs only some of its properties, and so does not wait for the others: given to `object` or `objectLike`, it runs as soon as every property it names has passed, whatever the rest did.
+
+A check made by `check` is given the whole object, so it runs once every property has passed, and a form shows "Passwords must match" only after every other field is valid. This one is given an object of the named properties alone, typed so, and reports with the issues of the properties that failed.
+
+It takes the issue to report as `check` does: a message, a function that words the issue, or an issue with its own `code`, `path`, `params` and `message`. A property named here that the object does not have is a `TypeError` when the object is created. Given to any other validator it is a check like any other, run once the value has passed.
+
+**Parameters**
+
+- `keys` — The properties the test needs, each of which the object has.
+- `test` — Returns whether an object of those properties is acceptable.
+- `issue` — The message, or the issue to report. Defaults to the code `custom` at the object itself.
+
+**Type parameters**
+
+- `T` — The type of the object.
+- `TKey` — The properties the test reads.
+
+**Returns** — A check for an object with those properties.
+
+**Throws** — When `keys` is not a list of property names or is empty, `test` is not a function, or `issue` is not a message or an issue object.
+
+**Example**
+
+```ts
+const signup = object(
+  { name: string({ min: 2 }), password: string({ min: 12 }), confirm: string() },
+  checkFields(["password", "confirm"], (data) => data.password === data.confirm, {
+    path: ["confirm"],
+    message: "Passwords must match",
+  }),
+);
+signup({ name: "", password: "correct horse battery", confirm: "nope" });
+// fails with the issue of `name` and "Passwords must match" at `confirm`
+```
+
+### describe
+
+```ts
+export declare function describe(target: AnyValidator | AsyncCheck<never>): Description | undefined;
+```
+
+Reads what a validator or a check is made of, so a program can walk a schema: to write it in another notation, build a form from it, or derive another validator.
+
+Only what a factory of this package made is described. A validator or check written by hand, and a check made by `check`, is a function like any other and gives `undefined`, as does anything that is not a function: to a reader of the schema it is a rule that cannot be read.
+
+**Parameters**
+
+- `target` — A validator or a check.
+
+**Returns** — Its description, or `undefined` when it carries none.
+
+**Example**
+
+```ts
+const user = object({ name: string({ min: 2 }) });
+const record = describe(user);
+record?.kind; // "object"
+const shape = record?.["shape"] as { name: AnyValidator }; // { name: [validator] }
+describe(shape.name)?.options; // { min: 2 }
+```
+
 ### email
 
 ```ts
-export declare function email(...checks: Check<string>[]): Validator<string>;
-export declare function email<const TOptions extends EmailOptions>(options: TOptions, ...checks: Check<string>[]): Composed<EmailParts<TOptions>, string>;
-export declare function email(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
-export declare function email(options: EmailOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
+export declare function email(...checks: Check<string>[]): Validator<string, string>;
+export declare function email<const TOptions extends EmailOptions>(options: TOptions, ...checks: Check<string>[]): Composed<EmailParts<TOptions>, string, string>;
+export declare function email(...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
+export declare function email(options: EmailOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
 ```
 
 Creates a validator for email addresses with a public domain name, which may be internationalized.
@@ -264,7 +373,7 @@ export declare function formatIssue(issue: ValidationIssue, messages: Messages):
 
 Turns an issue into text a person can read.
 
-The text comes from the first of these that exists: the issue's own `message`, an entry for its `code` in `messages`, then the generic "Invalid value". The built-in English wording is not carried here, so a program that words its own issues does not bundle it: pass `englishMessages` for it, or a map of your own, or both spread together. The map is required, so leaving it out is a compile error and not a form that says "Invalid value" for everything; a program whose issues all carry their own `message` passes `{}`.
+The text comes from the first of these that exists: the issue's own `message`, an entry for its `code` in `messages`, the entry `default` of `messages`, then the generic "Invalid value". The built-in English wording is not carried here, so a program that words its own issues does not bundle it: pass `englishMessages` for it, or a map of your own, or both spread together. The map is required, so leaving it out is a compile error and not a form that says "Invalid value" for everything; a program whose issues all carry their own `message` passes `{}`.
 
 **Parameters**
 
@@ -311,8 +420,8 @@ formatPath(["a.b"]); // '["a.b"]'
 ### func
 
 ```ts
-export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(...rest: Rest<T, MessageOptions>): Validator<T>;
-export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
+export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(...rest: Rest<T, MessageOptions>): Validator<T, T>;
+export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T, T>;
 ```
 
 Creates a validator for functions, such as a callback in a configuration object. Classes, arrow, async and generator functions are all functions, and a function from another realm is one too.
@@ -393,8 +502,8 @@ string(includes("@"));
 ### instanceOf
 
 ```ts
-export declare function instanceOf<T>(target: Constructor<T>, ...rest: Rest<T, MessageOptions>): Validator<T>;
-export declare function instanceOf<T>(target: Constructor<T>, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
+export declare function instanceOf<T>(target: Constructor<T>, ...rest: Rest<T, MessageOptions>): Validator<T, T>;
+export declare function instanceOf<T>(target: Constructor<T>, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T, T>;
 ```
 
 Creates a validator that accepts instances of a class, checked with `instanceof`. An instance from another realm, such as an iframe, is not recognized, and neither is a value `instanceof` throws for, such as a revoked proxy.
@@ -423,8 +532,8 @@ upload("a.txt"); // { ok: false, ... }, params { expected: "instance of File", r
 ### intersection
 
 ```ts
-export declare function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(left: TLeft, right: TRight, ...rest: Rest<Infer<TLeft> & Infer<TRight>, MessageOptions>): Composed<TLeft | TRight, Infer<TLeft> & Infer<TRight>>;
-export declare function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(left: TLeft, right: TRight, ...rest: AsyncRest<Infer<TLeft> & Infer<TRight>, MessageOptions>): AsyncValidator<Infer<TLeft> & Infer<TRight>>;
+export declare function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(left: TLeft, right: TRight, ...rest: Rest<Infer<TLeft> & Infer<TRight>, MessageOptions>): Composed<TLeft | TRight, Infer<TLeft> & Infer<TRight>, InferInput<TLeft> & InferInput<TRight>>;
+export declare function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(left: TLeft, right: TRight, ...rest: AsyncRest<Infer<TLeft> & Infer<TRight>, MessageOptions>): AsyncValidator<Infer<TLeft> & Infer<TRight>, InferInput<TLeft> & InferInput<TRight>>;
 ```
 
 Creates a validator that accepts a value only when it passes both validators, and produces the two results merged.
@@ -461,7 +570,7 @@ export declare function is(validator: Validator<unknown>, input: unknown): boole
 
 Tests whether an input passes a validator.
 
-It does not narrow the type of the input. A validator that trims, coerces or transforms produces another value than it was given, such as a number from the text `"5"`, so the input is not of the type the validator produces; read `result.value` from calling the validator for that. Where a validator keeps the value as it is, write the guard yourself, as below.
+It returns a `boolean` and narrows nothing. A type guard says two things, that a value that passes is of the type and that one that fails is not, and the second is false of a validator: `string({ min: 3 })` refuses `"ab"`, which is a string. Where the type is wanted, read `result.value` from calling the validator, or write the guard for the one type you mean, as below.
 
 **Parameters**
 
@@ -476,15 +585,19 @@ It does not narrow the type of the input. A validator that trims, coerces or tra
 
 ```ts
 const isPort = (input: unknown): input is number => is(number({ int: true, min: 1, max: 65535 }), input);
+
+if (is(email(), value)) {
+  // value passes, and is still typed as it was
+}
 ```
 
 ### json
 
 ```ts
-export declare function json(): Validator<unknown>;
-export declare function json(options: MessageOptions): Validator<unknown>;
-export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, MessageOptions>): Composed<TValidator, Infer<TValidator>>;
-export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, MessageOptions>): AsyncValidator<Infer<TValidator>>;
+export declare function json(): Validator<unknown, string>;
+export declare function json(options: MessageOptions): Validator<unknown, string>;
+export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, MessageOptions>): Composed<TValidator, Infer<TValidator>, string>;
+export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, MessageOptions>): AsyncValidator<Infer<TValidator>, string>;
 ```
 
 Creates a validator for text that holds JSON: it parses the text, then optionally validates what was parsed.
@@ -514,8 +627,8 @@ settings("{oops"); // { ok: false, ... }, code "invalid_format"
 ### lazy
 
 ```ts
-export declare function lazy<TValidator extends AnyValidator>(getter: () => TValidator, ...rest: Rest<Infer<TValidator>, LazyOptions>): Composed<TValidator, Infer<TValidator>>;
-export declare function lazy<TValidator extends AnyValidator>(getter: () => TValidator, ...rest: AsyncRest<Infer<TValidator>, LazyOptions>): AsyncValidator<Infer<TValidator>>;
+export declare function lazy<TValidator extends AnyValidator>(getter: () => TValidator, ...rest: Rest<Infer<TValidator>, LazyOptions>): Composed<TValidator, Infer<TValidator>, InferInput<TValidator>>;
+export declare function lazy<TValidator extends AnyValidator>(getter: () => TValidator, ...rest: AsyncRest<Infer<TValidator>, LazyOptions>): AsyncValidator<Infer<TValidator>, InferInput<TValidator>>;
 ```
 
 Creates a validator that looks up another validator the first time it runs, so a validator can refer to itself for recursive data such as a tree or a comment thread.
@@ -559,8 +672,8 @@ const category: Validator<Category> = object({
 ### literal
 
 ```ts
-export declare function literal<const T extends LiteralValue>(value: T, ...rest: Rest<T, MessageOptions>): Validator<T>;
-export declare function literal<const T extends LiteralValue>(value: T, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T>;
+export declare function literal<const T extends LiteralValue>(value: T, ...rest: Rest<T, MessageOptions>): Validator<T, T>;
+export declare function literal<const T extends LiteralValue>(value: T, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T, T>;
 ```
 
 Creates a validator that accepts exactly one value, compared with `===`. The type is the value itself, so `literal("admin")` produces `"admin"` and not `string`, and the value produced is the one declared, so `literal(0)` produces `0` for `-0`, which `===` matches. It is also how `null` and `undefined` are validated: `literal(null)`.
@@ -614,8 +727,8 @@ string(lowercase("Must be lowercase"));
 ### map
 
 ```ts
-export declare function map<TKey extends AnyValidator, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: Rest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>>;
-export declare function map<TKey extends AnyValidator, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncValidator<Map<Infer<TKey>, Infer<TValue>>>;
+export declare function map<TKey extends AnyValidator, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: Rest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>, Map<InferInput<TKey>, InferInput<TValue>>>;
+export declare function map<TKey extends AnyValidator, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncValidator<Map<Infer<TKey>, Infer<TValue>>, Map<InferInput<TKey>, InferInput<TValue>>>;
 ```
 
 Creates a validator for `Map`s whose every key passes `key` and every value passes `value`.
@@ -718,7 +831,7 @@ number(nonZero("Cannot be zero"));
 ### nullable
 
 ```ts
-export declare function nullable<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, Infer<TValidator> | null>;
+export declare function nullable<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, Infer<TValidator> | null, InferInput<TValidator> | null>;
 ```
 
 Wraps a validator so `null` is accepted and passed through, and every other value goes to the wrapped validator. `undefined` is not accepted; use `nullish` for both.
@@ -747,7 +860,7 @@ middleName(undefined); // { ok: false, ... }
 ### nullish
 
 ```ts
-export declare function nullish<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, Infer<TValidator> | null | undefined>;
+export declare function nullish<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, Infer<TValidator> | null | undefined, InferInput<TValidator> | null | undefined>;
 ```
 
 Wraps a validator so `null` and `undefined` are accepted and passed through, and every other value goes to the wrapped validator. Inside `object`, the property becomes optional in the inferred type.
@@ -775,8 +888,8 @@ nickname(undefined); // { ok: true, value: undefined }
 ### object
 
 ```ts
-export declare function object<TShape extends Shape>(shape: TShape, ...rest: Rest<InferShape<TShape>, ObjectOptions>): Composed<TShape[keyof TShape], InferShape<TShape>>;
-export declare function object<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferShape<TShape>, ObjectOptions>): AsyncValidator<InferShape<TShape>>;
+export declare function object<TShape extends Shape>(shape: TShape, ...rest: Rest<InferShape<TShape>, ObjectOptions>): Composed<TShape[keyof TShape], InferShape<TShape>, InferShapeInput<TShape>>;
+export declare function object<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferShape<TShape>, ObjectOptions>): AsyncValidator<InferShape<TShape>, InferShapeInput<TShape>>;
 ```
 
 Creates a validator for plain objects with the given properties.
@@ -812,8 +925,8 @@ const signup = object(
 ### objectLike
 
 ```ts
-export declare function objectLike<TShape extends Shape>(shape: TShape, ...rest: Rest<InferShape<TShape>, MessageOptions>): Composed<TShape[keyof TShape], InferShape<TShape>>;
-export declare function objectLike<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferShape<TShape>, MessageOptions>): AsyncValidator<InferShape<TShape>>;
+export declare function objectLike<TShape extends Shape>(shape: TShape, ...rest: Rest<InferShape<TShape>, MessageOptions>): Composed<TShape[keyof TShape], InferShape<TShape>, InferShapeInput<TShape>>;
+export declare function objectLike<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferShape<TShape>, MessageOptions>): AsyncValidator<InferShape<TShape>, InferShapeInput<TShape>>;
 ```
 
 Creates a validator for any object that has the given properties, such as a class instance.
@@ -843,11 +956,45 @@ feedback(new Error("Try again")); // { ok: true, value: { message: "Try again" }
 feedback({ message: "" }); // { ok: false, error: { issues: [{ code: "too_small", path: ["message"], ... }] } }
 ```
 
+### omit
+
+```ts
+export declare function omit<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Omitted<Infer<TValidator>, TKey>, ObjectOptions>): Reshaped<TValidator, Omitted<Infer<TValidator>, TKey>, Omit<InferInput<TValidator>, TKey>>;
+export declare function omit<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Omitted<Infer<TValidator>, TKey>, ObjectOptions>): AsyncValidator<Omitted<Infer<TValidator>, TKey>, Omit<InferInput<TValidator>, TKey>>;
+```
+
+Creates an object validator without the named properties of another.
+
+The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, unless options are given here. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
+
+**Parameters**
+
+- `validator` — A validator made by `object`, without checks.
+- `keys` — The properties to leave out, each of which the object has.
+- `rest` — Options, replacing those of the object, then checks on the new object.
+
+**Type parameters**
+
+- `TValidator` — The object validator to omit from.
+- `TKey` — The properties left out.
+
+**Returns** — A validator made by `object`, of the other properties.
+
+**Throws** — When the validator was not made by `object`, has checks, or lacks one of the keys.
+
+**Example**
+
+```ts
+const user = object({ id: uuid(), name: string(), password: string({ min: 12 }) });
+const profile = omit(user, ["password"]);
+type Profile = Infer<typeof profile>; // { id: string; name: string }
+```
+
 ### oneOf
 
 ```ts
-export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike>(values: T, ...rest: Rest<ValuesOf<T>, MessageOptions>): Validator<ValuesOf<T>>;
-export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike>(values: T, ...rest: AsyncRest<ValuesOf<T>, MessageOptions>): AsyncValidator<ValuesOf<T>>;
+export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike>(values: T, ...rest: Rest<ValuesOf<T>, MessageOptions>): Validator<ValuesOf<T>, ValuesOf<T>>;
+export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike>(values: T, ...rest: AsyncRest<ValuesOf<T>, MessageOptions>): AsyncValidator<ValuesOf<T>, ValuesOf<T>>;
 ```
 
 Creates a validator that accepts any one value of a list or of a TypeScript `enum`, compared with `===`. The type is the union of the values, so `oneOf(["admin", "user"])` produces `"admin" | "user"`, and the value produced is the one listed, so `oneOf([0])` produces `0` for `-0`, which `===` matches. The entries TypeScript adds to a numeric enum to map values back to names are not values and are ignored, in an object written like an enum too, so `{ a: 1, "1": "a" }` holds `1` alone.
@@ -882,8 +1029,8 @@ oneOf(Status)("active"); // { ok: true, value: Status.Active }
 ### optional
 
 ```ts
-export declare function optional<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, Infer<TValidator> | undefined>;
-export declare function optional<TValidator extends AnyValidator>(validator: TValidator, value: Fallback<Exclude<Infer<TValidator>, undefined>>): Composed<TValidator, Exclude<Infer<TValidator>, undefined>>;
+export declare function optional<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, Infer<TValidator> | undefined, InferInput<TValidator> | undefined>;
+export declare function optional<TValidator extends AnyValidator>(validator: TValidator, value: Fallback<Exclude<Infer<TValidator>, undefined>>): Composed<TValidator, Exclude<Infer<TValidator>, undefined>, InferInput<TValidator> | undefined>;
 ```
 
 Wraps a validator so `undefined` is accepted, and every other value goes to the wrapped validator. Inside `object`, the property then becomes optional in the inferred type.
@@ -919,21 +1066,27 @@ const tags = optional(array(string()), () => []);
 
 ```ts
 export declare function partial<TShape extends Shape>(shape: TShape): PartialShape<TShape>;
+export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: Rest<AllOptional<Infer<TValidator>>, ObjectOptions>): Reshaped<TValidator, AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
+export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllOptional<Infer<TValidator>>, ObjectOptions>): AsyncValidator<AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
 ```
 
-Makes every property of a shape optional, for a form or an update where any field may be left out. A shape is a plain object, so this returns a new one to pass to `object`; the original is unchanged.
+Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator, with the same options unless options are given here.
+
+An object validator with checks is refused, since a check may read a property that is now absent: give the checks the new object needs here instead. What was given is unchanged either way.
 
 **Parameters**
 
-- `shape` — Property validators.
+- `shape` — Property validators, or a validator made by `object`, without checks.
+- `rest` — For a validator only: options, replacing those of the object, then checks on the new object.
 
 **Type parameters**
 
 - `TShape` — The shape.
+- `TValidator` — The object validator, when one is given in place of a shape.
 
-**Returns** — A shape whose every validator also accepts `undefined`.
+**Returns** — A shape whose every validator also accepts `undefined`, or an object validator of one.
 
-**Throws** — When `shape` is not a plain object, or a property validator is not a function.
+**Throws** — When `shape` is not a plain object or a property validator is not a function, or, for a validator, when it was not made by `object` or has checks.
 
 **Example**
 
@@ -941,6 +1094,7 @@ Makes every property of a shape optional, for a form or an update where any fiel
 const user = { name: string({ min: 2 }), email: email() };
 const create = object(user);
 const update = object(partial(user)); // { name?: string; email?: string }
+const patch = partial(create); // the same, from the validator
 ```
 
 ### pass
@@ -993,10 +1147,44 @@ The `g` and `y` flags are dropped, so the check gives the same answer on every c
 string(pattern(/^[a-z]+$/, "Lowercase letters only"));
 ```
 
+### pick
+
+```ts
+export declare function pick<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Picked<Infer<TValidator>, TKey>, ObjectOptions>): Reshaped<TValidator, Picked<Infer<TValidator>, TKey>, Pick<InferInput<TValidator>, TKey & keyof InferInput<TValidator>>>;
+export declare function pick<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Picked<Infer<TValidator>, TKey>, ObjectOptions>): AsyncValidator<Picked<Infer<TValidator>, TKey>, Pick<InferInput<TValidator>, TKey & keyof InferInput<TValidator>>>;
+```
+
+Creates an object validator with only the named properties of another.
+
+The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, unless options are given here. One with checks is refused: a check reads the whole object and may read a property that is left out, so give the checks the smaller object needs here instead.
+
+**Parameters**
+
+- `validator` — A validator made by `object`, without checks.
+- `keys` — The properties to keep, each of which the object has.
+- `rest` — Options, replacing those of the object, then checks on the new object.
+
+**Type parameters**
+
+- `TValidator` — The object validator to pick from.
+- `TKey` — The properties kept.
+
+**Returns** — A validator made by `object`, of the named properties.
+
+**Throws** — When the validator was not made by `object`, has checks, or lacks one of the keys.
+
+**Example**
+
+```ts
+const user = object({ id: uuid(), name: string(), email: email() });
+const contact = pick(user, ["name", "email"]);
+contact({ name: "Ada", email: "ada@example.com" }); // { ok: true, value: { name: "Ada", email: "ada@example.com" } }
+```
+
 ### pipe
 
 ```ts
-export declare function pipe<const TValidators extends readonly [AnyValidator, ...AnyValidator[]]>(...validators: TValidators): Composed<TValidators[number], Output<TValidators>>;
+export declare function pipe<const TValidators extends readonly [AnyValidator, ...AnyValidator[]]>(...validators: TValidators): Composed<TValidators[number], Output<TValidators>, InferInput<TValidators[0]>>;
 ```
 
 Runs validators one after another, feeding each the value the previous one produced.
@@ -1022,11 +1210,53 @@ const address = pipe(string({ trim: true, case: "lower" }), email());
 address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
 ```
 
+### readonly
+
+```ts
+export declare function readonly<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, ReadonlyOutput<Infer<TValidator>>, InferInput<TValidator>>;
+```
+
+Wraps a validator so the value it produces cannot be changed: its type is read-only, and the object or array is frozen.
+
+It freezes the value itself and not what is inside it, as `Object.freeze` does and as the type says: wrap an inner validator too where its value must not change. Three things are left as they are:
+
+- **The input.** A validator that produces the very value it was given, such as `instanceOf`, `guard` or `unknown`, has its type made read-only and nothing frozen, since freezing would change an object the caller owns. `object`, `objectLike`, `array`, `tuple` and `record` produce a new value, which is frozen.
+- **What a `Map` and a `Set` hold.** A new one is frozen as any other value is, which does not stop `set` or `add`, so only the type keeps them from being changed.
+- **A typed array or a `DataView`.** A typed array cannot be frozen, and freezing a `DataView` would not stop it writing to its buffer.
+
+A value is taken to be the caller's when it is the input itself. When a `transform` or a validator written by hand returns a value from inside the input, such as `(value) => value.tags`, that value is not the input and is frozen: copy it there, `[...value.tags]`, when the caller must keep it changeable.
+
+`pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after.
+
+**Parameters**
+
+- `validator` — The validator whose value is made read-only.
+
+**Type parameters**
+
+- `TValidator` — The wrapped validator.
+
+**Returns** — A validator that produces the same value, frozen, typed read-only.
+
+**Throws** — When `validator` is not a function.
+
+**Example**
+
+```ts
+const settings = readonly(object({ theme: string(), tags: readonly(array(string())) }));
+type Settings = Infer<typeof settings>; // { readonly theme: string; readonly tags: readonly string[] }
+
+const result = settings(input);
+if (result.ok) {
+  result.value.theme = "dark"; // a compile error, and a TypeError in strict mode
+}
+```
+
 ### record
 
 ```ts
-export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: Rest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>>;
-export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncValidator<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>>;
+export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: Rest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, InferRecordInput<TKey, TValue>>;
+export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncValidator<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, InferRecordInput<TKey, TValue>>;
 ```
 
 Creates a validator for plain objects used as a dictionary: any number of keys, all following the same rules.
@@ -1059,11 +1289,45 @@ scores({ ada: 3, alan: 5 }); // { ok: true, value: { ada: 3, alan: 5 } }
 scores({ ada: "3" }); // { ok: false, ... }, code "invalid_type" at path ["ada"]
 ```
 
+### required
+
+```ts
+export declare function required<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: Rest<AllRequired<Infer<TValidator>>, ObjectOptions>): Reshaped<TValidator, AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
+export declare function required<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllRequired<Infer<TValidator>>, ObjectOptions>): AsyncValidator<AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
+```
+
+Creates an object validator whose properties are all required, from one where some are optional.
+
+A property made with `optional` becomes the validator it wrapped, so its default is gone with it, and one made with `nullish` becomes `nullable`, which still accepts `null`. Any other property is kept as it is: one that accepts `undefined` some other way, such as `unknown()` or a `union` with `literal(undefined)`, still does, though the type says otherwise.
+
+The validator must be one `object` made, and the new object keeps its options unless options are given here. One with checks is refused, since a check may rely on a property being absent: give the checks the new object needs here instead.
+
+**Parameters**
+
+- `validator` — A validator made by `object`, without checks.
+- `rest` — Options, replacing those of the object, then checks on the new object.
+
+**Type parameters**
+
+- `TValidator` — The object validator to make required.
+
+**Returns** — A validator made by `object`, with every property required.
+
+**Throws** — When the validator was not made by `object` or has checks.
+
+**Example**
+
+```ts
+const draft = object({ title: optional(string()), body: optional(string()) });
+const published = required(draft);
+published({ title: "Hello" }); // fails: body is missing
+```
+
 ### searchParams
 
 ```ts
-export declare function searchParams<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, SearchParamsOptions>): Composed<TValidator, Infer<TValidator>>;
-export declare function searchParams<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, SearchParamsOptions>): AsyncValidator<Infer<TValidator>>;
+export declare function searchParams<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, SearchParamsOptions>): Composed<TValidator, Infer<TValidator>, string | Iterable<[string, string]>>;
+export declare function searchParams<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, SearchParamsOptions>): AsyncValidator<Infer<TValidator>, string | Iterable<[string, string]>>;
 ```
 
 Creates a validator that reads a query string, or a `URLSearchParams`, into an object of its decoded parameters, and validates that object: each key's value as a string, or with `repeated` every value of every key as an array. The value is what the validator produces, so values can be converted as they are read.
@@ -1095,8 +1359,8 @@ searchParams(object({ tag: array(string()) }), { repeated: true })("tag=a&tag=b"
 ### set
 
 ```ts
-export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: Rest<Set<Infer<TItem>>, SizeOptions & MessageOptions>): Composed<TItem, Set<Infer<TItem>>>;
-export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Set<Infer<TItem>>, SizeOptions & MessageOptions>): AsyncValidator<Set<Infer<TItem>>>;
+export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: Rest<Set<Infer<TItem>>, SizeOptions & MessageOptions>): Composed<TItem, Set<Infer<TItem>>, Set<InferInput<TItem>>>;
+export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Set<Infer<TItem>>, SizeOptions & MessageOptions>): AsyncValidator<Set<Infer<TItem>>, Set<InferInput<TItem>>>;
 ```
 
 Creates a validator for `Set`s whose every value passes `item`.
@@ -1130,12 +1394,12 @@ ids(new Set()); // { ok: false, ... }, code "too_small"
 ### standard
 
 ```ts
-export declare function standard<TValidator extends AnyValidator>(validator: TValidator, messages: Messages): TValidator & StandardSchemaV1<unknown, Infer<TValidator>>;
+export declare function standard<TValidator extends AnyValidator>(validator: TValidator, messages: Messages): TValidator & StandardSchemaV1<InferInput<TValidator>, Infer<TValidator>>;
 ```
 
 Makes a validator usable wherever a [Standard Schema](https://standardschema.dev/) is accepted, such as form libraries, API frameworks and routers, without an adapter on their side.
 
-The result is a validator that behaves exactly as the one you gave, plus the `~standard` property the specification asks for. The one you gave is not modified. The specification requires a message on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass: `englishMessages` for the built-in English, or a map of your own. `~standard.validate` returns its result directly for a synchronous validator and a `Promise` for an asynchronous one, even one that returns another kind of thenable, since callers tell the two apart with `instanceof Promise`, as the specification shows, and would otherwise read a pending result as one without issues. Input and output types are `unknown` and what the validator produces.
+The result is a validator that behaves exactly as the one you gave, plus the `~standard` property the specification asks for. The one you gave is not modified. The specification requires a message on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass: `englishMessages` for the built-in English, or a map of your own. `~standard.validate` returns its result directly for a synchronous validator and a `Promise` for an asynchronous one, even one that returns another kind of thenable, since callers tell the two apart with `instanceof Promise`, as the specification shows, and would otherwise read a pending result as one without issues. Input and output types are what the validator accepts, `InferInput`, and what it produces.
 
 **Parameters**
 
@@ -1185,8 +1449,8 @@ string(startsWith("https://"));
 ### tagged
 
 ```ts
-export declare function tagged<const TKey extends string, const TVariants extends Variants>(key: TKey, variants: TVariants & CheckedVariants<TKey, TVariants>, ...rest: Rest<InferTagged<TKey, TVariants>, MessageOptions>): Composed<TVariants[keyof TVariants], InferTagged<TKey, TVariants>>;
-export declare function tagged<const TKey extends string, const TVariants extends Variants>(key: TKey, variants: TVariants & CheckedVariants<TKey, TVariants>, ...rest: AsyncRest<InferTagged<TKey, TVariants>, MessageOptions>): AsyncValidator<InferTagged<TKey, TVariants>>;
+export declare function tagged<const TKey extends string, const TVariants extends Variants>(key: TKey, variants: TVariants & CheckedVariants<TKey, TVariants>, ...rest: Rest<InferTagged<TKey, TVariants>, MessageOptions>): Composed<TVariants[keyof TVariants], InferTagged<TKey, TVariants>, InferTaggedInput<TKey, TVariants>>;
+export declare function tagged<const TKey extends string, const TVariants extends Variants>(key: TKey, variants: TVariants & CheckedVariants<TKey, TVariants>, ...rest: AsyncRest<InferTagged<TKey, TVariants>, MessageOptions>): AsyncValidator<InferTagged<TKey, TVariants>, InferTaggedInput<TKey, TVariants>>;
 ```
 
 Creates a validator for objects that share a tag property and differ in the rest, such as events with a `type`. The tag chooses the variant, so a failure reports that variant's own issues instead of a list of everything that did not match.
@@ -1220,12 +1484,52 @@ event({ type: "scroll" }); // { ok: false, ... }, code "invalid_union" at path [
 event({ type: "click", x: 1 }); // { ok: false, ... }, code "invalid_type" at path ["y"]
 ```
 
+### toJsonSchema
+
+```ts
+export declare function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOptions): JsonSchema;
+```
+
+Writes a validator as a JSON Schema, draft 2020-12, for whatever takes one: the body of an HTTP API, the arguments of a tool a language model calls, a form generator.
+
+The schema is read from what [describe](#describe) gives, so only validators made by this package's factories can be written. It is written so that a value the validator accepts passes it, with the exceptions below, and it accepts some the validator refuses, since a validator checks more than a schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as the nearest JSON Schema `format`.
+
+The exceptions are where a validator cleans a value before it checks it, which is not written. `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming; text with spaces around five letters passes the validator and not the schema. A `case`, and a `clamp` beside a limit, are the same. Lengths differ for a character outside the Basic Multilingual Plane, such as an emoji, which a string's `length` counts as two and JSON Schema as one.
+
+A recursive schema is written with `$defs` and `$ref`, one definition for each `lazy`.
+
+**Parameters**
+
+- `validator` — A validator made by a factory of this package.
+- `options` — Which side to write, and what to do with a part that cannot be written.
+
+**Returns** — The schema, as a new plain object.
+
+**Throws** — When a part cannot be written and `unrepresentable` is `"throw"`, naming the part and its place, or when an option is not one of its values.
+
+**Example**
+
+```ts
+const user = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
+toJsonSchema(user);
+// {
+//   $schema: "https://json-schema.org/draft/2020-12/schema",
+//   type: "object",
+//   properties: {
+//     name: { type: "string", minLength: 2 },
+//     email: { type: "string", format: "email" },
+//     age: { type: "integer" },
+//   },
+//   required: ["name", "email"],
+// }
+```
+
 ### transform
 
 ```ts
-export declare function transform<T, R>(validator: AnyValidator<T>, convert: (value: T) => PromiseLike<R>): AsyncValidator<R>;
-export declare function transform<T, R>(validator: Validator<T>, convert: (value: T) => R): Transformed<R>;
-export declare function transform<T, R>(validator: AnyValidator<T>, convert: (value: T) => R): AsyncValidator<Awaited<R>>;
+export declare function transform<T, R, TInput = unknown>(validator: AnyValidator<T, TInput>, convert: (value: T) => PromiseLike<R>): AsyncValidator<R, TInput>;
+export declare function transform<T, R, TInput = unknown>(validator: Validator<T, TInput>, convert: (value: T) => R): Transformed<R, TInput>;
+export declare function transform<T, R, TInput = unknown>(validator: AnyValidator<T, TInput>, convert: (value: T) => R): AsyncValidator<Awaited<R>, TInput>;
 ```
 
 Changes the value a validator produced into another value, such as text into a `Date`.
@@ -1258,8 +1562,8 @@ const user = transform(string(), async (id) => await loadUser(id));
 ### tuple
 
 ```ts
-export declare function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]], TRest extends AnyValidator | undefined = undefined>(items: TItems, ...rest: Rest<InferTuple<TItems, TRest>, TupleOptions<TRest>>): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>>;
-export declare function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]], TRest extends AnyValidator | undefined = undefined>(items: TItems, ...rest: AsyncRest<InferTuple<TItems, TRest>, TupleOptions<TRest>>): AsyncValidator<InferTuple<TItems, TRest>>;
+export declare function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]], TRest extends AnyValidator | undefined = undefined>(items: TItems, ...rest: Rest<InferTuple<TItems, TRest>, TupleOptions<TRest>>): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>, InferTupleInput<TItems, TRest>>;
+export declare function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]], TRest extends AnyValidator | undefined = undefined>(items: TItems, ...rest: AsyncRest<InferTuple<TItems, TRest>, TupleOptions<TRest>>): AsyncValidator<InferTuple<TItems, TRest>, InferTupleInput<TItems, TRest>>;
 ```
 
 Creates a validator for arrays of fixed length whose items each have their own validator.
@@ -1297,8 +1601,8 @@ args(["sum", 1, 2, 3]); // { ok: true, ... }
 ### union
 
 ```ts
-export declare function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(options: TOptions, ...rest: Rest<Infer<TOptions[number]>, MessageOptions>): Composed<TOptions[number], Infer<TOptions[number]>>;
-export declare function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(options: TOptions, ...rest: AsyncRest<Infer<TOptions[number]>, MessageOptions>): AsyncValidator<Infer<TOptions[number]>>;
+export declare function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(options: TOptions, ...rest: Rest<Infer<TOptions[number]>, MessageOptions>): Composed<TOptions[number], Infer<TOptions[number]>, InferInput<TOptions[number]>>;
+export declare function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(options: TOptions, ...rest: AsyncRest<Infer<TOptions[number]>, MessageOptions>): AsyncValidator<Infer<TOptions[number]>, InferInput<TOptions[number]>>;
 ```
 
 Creates a validator that accepts a value passing any one of several validators.
@@ -1380,10 +1684,10 @@ string(uppercase("Must be uppercase"));
 ### url
 
 ```ts
-export declare function url(...checks: Check<string>[]): Validator<string>;
-export declare function url<const TOptions extends UrlOptions>(options: TOptions, ...checks: Check<string>[]): Composed<UrlParts<TOptions>, string>;
-export declare function url(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
-export declare function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
+export declare function url(...checks: Check<string>[]): Validator<string, string>;
+export declare function url<const TOptions extends UrlOptions>(options: TOptions, ...checks: Check<string>[]): Composed<UrlParts<TOptions>, string, string>;
+export declare function url(...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
+export declare function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
 ```
 
 Creates a validator for absolute URLs with an allowed protocol and a public domain name, and without embedded credentials unless a `credentials` validator accepts them. The value is the URL as the URL parser writes it, which is what a request made with it will use.
@@ -1454,6 +1758,24 @@ subject?: string | undefined;
 ```
 
 What was being validated, written before the problem as it is, such as `"[I18n]"` or `"Router options:"`. Without it the message starts at the path.
+
+### AsyncValidator
+
+```ts
+export interface AsyncValidator<T, TInput = unknown>
+```
+
+A validator that may finish later, for rules that need I/O such as checking a name is not taken.
+
+Always `await` its result. It is a promise only when the validator actually had to wait: a composer holding an asynchronous rule still answers at once for input it can reject without running it, such as `undefined` for an optional value. `await` handles both.
+
+#### ~types
+
+```ts
+readonly "~types"?: { readonly input: TInput; };
+```
+
+Never set: it only carries `TInput`, as on [Validator](#validator).
 
 ### Base64Options
 
@@ -1611,6 +1933,40 @@ precision?: number | undefined;
 
 Exact number of fractional-second digits, an integer from 0 to 9. `0` forbids them; they are optional and unbounded when omitted.
 
+### Description
+
+```ts
+export interface Description
+```
+
+What a factory of this package made, as plain data: a validator's kind, the options it read, its checks, and whatever a validator of that kind is made of, such as the `shape` of an `object` or the `item` of an `array`. A built-in check has one too, of kind `"check"`, with the `code` and `params` of the issue it reports.
+
+The record and its options are frozen. A child is given as the validator itself, to be described in turn, so a recursive schema is described one level at a time.
+
+#### checks
+
+```ts
+readonly checks?: readonly AsyncCheck<never>[];
+```
+
+The checks given to the validator, each described in turn, for a validator that takes checks.
+
+#### kind
+
+```ts
+readonly kind: string;
+```
+
+What was made, such as `"string"`, `"object"`, `"format"` or `"check"`.
+
+#### options
+
+```ts
+readonly options?: Readonly<Record<string, unknown>>;
+```
+
+The options the factory read, `message` included, for a validator that takes options.
+
 ### EmailOptions
 
 ```ts
@@ -1650,7 +2006,7 @@ Inherited from [MessageOptions](#messageoptions).
 ### Factory
 
 ```ts
-export interface Factory<T, TOptions>
+export interface Factory<T, TOptions, TInput = T>
 ```
 
 The factory of a validator of `T` with options `TOptions`: options first and optional, then any checks. It makes a [Validator](#validator) while every check is a [Check](#check), and an [AsyncValidator](#asyncvalidator) as soon as one is an [AsyncCheck](#asynccheck).
@@ -1738,6 +2094,70 @@ path?: readonly ValidationPathSegment[];
 ```
 
 Location of the failure relative to the value being validated. Defaults to that value itself.
+
+### JsonSchema
+
+```ts
+export interface JsonSchema
+```
+
+A JSON Schema, draft 2020-12, as plain data ready for `JSON.stringify`.
+
+#### $defs
+
+```ts
+$defs?: Record<string, JsonSchema>;
+```
+
+The definitions a recursive schema refers to, one for each `lazy`.
+
+#### $schema
+
+```ts
+$schema?: string;
+```
+
+The draft the schema is written in, on the schema `toJsonSchema` returns.
+
+#### properties
+
+```ts
+properties?: Record<string, JsonSchema>;
+```
+
+The properties of an object.
+
+#### required
+
+```ts
+required?: string[];
+```
+
+The properties an object must have.
+
+### JsonSchemaOptions
+
+```ts
+export interface JsonSchemaOptions
+```
+
+Options for [toJsonSchema](#tojsonschema).
+
+#### io
+
+```ts
+io?: "input" | "output" | undefined;
+```
+
+Which side of the validator to write. `"input"` is what a value must look like to pass, which is what the body of a request or the arguments of a tool must satisfy. `"output"` is what the validator produces. They differ where a validator changes its value: a default, a coercion, `json`, `fallback`.
+
+#### unrepresentable
+
+```ts
+unrepresentable?: "throw" | "any" | undefined;
+```
+
+What to do with a part JSON Schema has no words for, such as a `date`, a `bigint`, the result of a `transform` or a check written by hand. `"throw"` names the part and where it is. `"any"` writes a schema that accepts anything there, and leaves a check out.
 
 ### LazyOptions
 
@@ -2437,7 +2857,47 @@ readonly value: T;
 
 The validated value, after any transforms and defaults.
 
+### Validator
+
+```ts
+export interface Validator<T, TInput = unknown>
+```
+
+A synchronous validator: a function that takes any input and returns a [ValidationResult](#validationresult).
+
+Every validator in this package has this shape, and so does anything you write yourself.
+
+It is called with any input, whatever `TInput` is: `TInput` is the type of input that can pass, which a form or a caller's types are written from, and never a limit on what may be given.
+
+#### ~types
+
+```ts
+readonly "~types"?: { readonly input: TInput; };
+```
+
+Never set: it only carries `TInput`, the type of input that can pass, for [InferInput](#inferinput). Being optional, it lets any function of the right shape be a validator. The type is held in an object, since read straight from an optional property, an input type that includes `undefined` would lose it.
+
 ## Type aliases
+
+### AllOptional
+
+```ts
+export type AllOptional<T> = {
+    [K in keyof T]?: T[K] | undefined;
+} & {};
+```
+
+The object type with every property optional.
+
+### AllRequired
+
+```ts
+export type AllRequired<T> = Simplify<{
+    [K in keyof T]-?: Exclude<T[K], undefined>;
+}>;
+```
+
+The object type with every property present and none of them `undefined`.
 
 ### AnyFunction
 
@@ -2450,7 +2910,7 @@ Any function, whatever it takes and returns.
 ### AnyValidator
 
 ```ts
-export type AnyValidator<T = unknown> = Validator<T> | AsyncValidator<T>;
+export type AnyValidator<T = unknown, TInput = unknown> = Validator<T, TInput> | AsyncValidator<T, TInput>;
 ```
 
 Any validator, synchronous or asynchronous.
@@ -2458,6 +2918,7 @@ Any validator, synchronous or asynchronous.
 **Type parameters**
 
 - `T` — The type of the value on success.
+- `TInput` — The type of input that can pass.
 
 ### AsyncCheck
 
@@ -2479,19 +2940,22 @@ export type AsyncRest<T, TOptions> = [options?: TOptions, ...checks: AsyncCheck<
 
 [Rest](#rest) where a check may be an [AsyncCheck](#asynccheck).
 
-### AsyncValidator
+### Branded
 
 ```ts
-export type AsyncValidator<T> = (input: unknown) => ValidationResult<T> | PromiseLike<ValidationResult<T>>;
+export type Branded<T, TName extends string> = T extends null | undefined ? T : T & {
+    readonly "~brand": {
+        readonly [K in TName]: true;
+    };
+};
 ```
 
-A validator that may finish later, for rules that need I/O such as checking a name is not taken.
-
-Always `await` its result. It is a promise only when the validator actually had to wait: a composer holding an asynchronous rule still answers at once for input it can reject without running it, such as `undefined` for an optional value. `await` handles both.
+A type marked with a name, so a value of the plain type is not accepted where the marked one is asked for. The mark exists in the types alone: no value has the property. `null` and `undefined` are left unmarked, so what an `optional` or a `nullable` validator produces keeps them.
 
 **Type parameters**
 
-- `T` — The type of the value on success.
+- `T` — The type that is marked.
+- `TName` — The name of the mark.
 
 ### Check
 
@@ -2510,7 +2974,9 @@ Make one with `check`, or write the function yourself.
 ### Composed
 
 ```ts
-export type Composed<TChildren extends AnyValidator, TOutput> = [TChildren] extends [Validator<unknown>] ? Validator<TOutput> : AsyncValidator<TOutput>;
+export type Composed<TChildren extends AnyValidator, TOutput, TInput = unknown> = [TChildren] extends [
+    Validator<unknown>
+] ? Validator<TOutput, TInput> : AsyncValidator<TOutput, TInput>;
 ```
 
 The validator type a composer returns: synchronous when every child validator is, asynchronous as soon as one child is.
@@ -2519,6 +2985,7 @@ The validator type a composer returns: synchronous when every child validator is
 
 - `TChildren` — The validators the composer runs.
 - `TOutput` — The type the composed validator produces on success.
+- `TInput` — The type of input that can pass the composed validator.
 
 ### Constructor
 
@@ -2555,6 +3022,32 @@ const age = number({ int: true });
 type Age = Infer<typeof age>; // number
 ```
 
+### InferInput
+
+```ts
+export type InferInput<TValidator extends AnyValidator> = TValidator extends {
+    readonly "~types"?: {
+        readonly input: infer TInput;
+    };
+} ? TInput : unknown;
+```
+
+The type of input that can pass a validator, which differs from what it produces wherever it changes the value: a default, a coercion, a `transform`. It is what a form holds before validation.
+
+A validator is called with any input; this is the type of the input it accepts, not a limit on its argument. A validator written by hand, typed `Validator<T>`, gives `unknown` unless it says otherwise, as `Validator<number, string>` does. Clean-up is not part of it: `string({ trim: true })` takes and produces `string`.
+
+**Type parameters**
+
+- `TValidator` — The validator to read the type from.
+
+**Example**
+
+```ts
+const settings = object({ page: coerceNumber(), theme: optional(oneOf(["light", "dark"]), "light") });
+type Settings = Infer<typeof settings>; // { page: number; theme: "light" | "dark" }
+type SettingsInput = InferInput<typeof settings>; // { page: string | number; theme?: "light" | "dark" | undefined }
+```
+
 ### InferRecord
 
 ```ts
@@ -2568,6 +3061,21 @@ The object type a record produces. A record with open string keys always has eve
 - `TKey` — The type of the keys.
 - `TValue` — The type of the values.
 
+### InferRecordInput
+
+```ts
+export type InferRecordInput<TKey extends AnyValidator, TValue extends AnyValidator> = InferRecord<[
+    InferInput<TKey>
+] extends [string] ? InferInput<TKey> : string, InferInput<TValue>>;
+```
+
+The type of input that can pass a record: the keys its key validator accepts, when it names them, and any key otherwise.
+
+**Type parameters**
+
+- `TKey` — The validator for keys.
+- `TValue` — The validator for values.
+
 ### InferShape
 
 ```ts
@@ -2579,6 +3087,22 @@ export type InferShape<TShape extends Shape> = Simplify<{
 ```
 
 The object type a shape produces. A property whose validator accepts `undefined` becomes optional.
+
+**Type parameters**
+
+- `TShape` — Property validators.
+
+### InferShapeInput
+
+```ts
+export type InferShapeInput<TShape extends Shape> = Simplify<{
+    [K in Exclude<keyof TShape, OptionalInputKeys<TShape>>]: InferInput<TShape[K]>;
+} & {
+    [K in OptionalInputKeys<TShape>]?: InferInput<TShape[K]>;
+}>;
+```
+
+The object type that can pass a shape. A property whose validator accepts `undefined` is optional, so one with a default is optional here and present in what the shape produces.
 
 **Type parameters**
 
@@ -2601,6 +3125,23 @@ The type a tagged union produces: one object type per variant, each with its tag
 - `TKey` — The name of the tag property.
 - `TVariants` — The variants, keyed by tag.
 
+### InferTaggedInput
+
+```ts
+export type InferTaggedInput<TKey extends string, TVariants extends Variants> = {
+    [TTag in keyof TVariants & string]: Simplify<InferInput<TVariants[TTag]> & {
+        [K in TKey]: TTag;
+    }>;
+}[keyof TVariants & string];
+```
+
+The union that can pass a set of variants: for each tag, what its variant accepts with the tag added.
+
+**Type parameters**
+
+- `TKey` — The property that holds the tag.
+- `TVariants` — Variant validators, keyed by tag.
+
 ### InferTuple
 
 ```ts
@@ -2608,6 +3149,19 @@ export type InferTuple<TItems extends readonly AnyValidator[], TRest extends Any
 ```
 
 The array type a tuple produces: the fixed items in order, then any number of `rest` values.
+
+**Type parameters**
+
+- `TItems` — The validators of the fixed positions.
+- `TRest` — The validator of the remaining positions, or `undefined` for none.
+
+### InferTupleInput
+
+```ts
+export type InferTupleInput<TItems extends readonly AnyValidator[], TRest extends AnyValidator | undefined = undefined> = TRest extends AnyValidator ? [...InferItemInputs<TItems>, ...InferInput<TRest>[]] : InferItemInputs<TItems>;
+```
+
+The array type that can pass a tuple: what each fixed item accepts, then any number of what `rest` accepts.
 
 **Type parameters**
 
@@ -2640,15 +3194,53 @@ Message text keyed by issue code, such as `englishMessages` or a translation.
 
 A string is used as it is. A function receives the issue, so it can word the message from `params`, and the map it was found in, so it can word an issue nested in `params`, such as the one behind an `invalid_key`, with the same map. This is how messages are worded and localized.
 
+The entry `default` words an issue whose code has no entry of its own, such as the code of a custom check, in place of the English "Invalid value".
+
+### Omitted
+
+```ts
+export type Omitted<T, K extends keyof T> = Simplify<Omit<T, K>>;
+```
+
+The object type without the properties named.
+
 ### PartialShape
 
 ```ts
 export type PartialShape<TShape extends Shape> = {
-    [K in keyof TShape]: Composed<TShape[K], Infer<TShape[K]> | undefined>;
+    [K in keyof TShape]: Composed<TShape[K], Infer<TShape[K]> | undefined, InferInput<TShape[K]> | undefined>;
 };
 ```
 
 A shape with every property wrapped in `optional`.
+
+### Picked
+
+```ts
+export type Picked<T, K extends keyof T> = Simplify<Pick<T, K>>;
+```
+
+The object type with only the properties named.
+
+### ReadonlyOutput
+
+```ts
+export type ReadonlyOutput<T> = unknown extends T ? T : T extends ReadonlyMap<infer TKey, infer TValue> ? ReadonlyMap<TKey, TValue> & BrandOf<T> : T extends ReadonlySet<infer TItem> ? ReadonlySet<TItem> & BrandOf<T> : Readonly<T>;
+```
+
+What `readonly` makes of the type a validator produces: its properties or items read-only, and a `Map` or a `Set` the read-only kind, with the mark of a `brand` kept. `unknown` stays as it is. `Readonly` covers properties and not methods, so a `Date` or a typed array keeps the ones that change it.
+
+**Type parameters**
+
+- `T` — The type the wrapped validator produces.
+
+### Reshaped
+
+```ts
+export type Reshaped<TValidator extends AnyValidator, T, TInput = unknown> = TValidator extends Validator<unknown> ? Validator<T, TInput> : AsyncValidator<T, TInput>;
+```
+
+A validator of `T` that is synchronous when the validator it was made from is.
 
 ### Rest
 
@@ -2691,20 +3283,6 @@ export type ValidationResult<T> = ValidationOk<T> | ValidationErr;
 ```
 
 What a validator returns instead of throwing on invalid input.
-
-### Validator
-
-```ts
-export type Validator<T> = (input: unknown) => ValidationResult<T>;
-```
-
-A synchronous validator: a function that takes any input and returns a [ValidationResult](#validationresult).
-
-Every validator in this package has this shape, and so does anything you write yourself.
-
-**Type parameters**
-
-- `T` — The type of the value on success.
 
 ### Variants
 
@@ -2794,7 +3372,7 @@ cidr({ version: "v4" })("10.0.0.0/33"); // { ok: false, ... }, params { format: 
 ### coerceBigint
 
 ```ts
-export declare const coerceBigint: Factory<bigint, BigintOptions>;
+export declare const coerceBigint: Factory<bigint, BigintOptions, bigint | number | string>;
 ```
 
 Creates a validator for bigints that also accepts safe integers and text holding a decimal integer, converting them, then applies the same constraints as [bigint](#bigint).
@@ -2818,7 +3396,7 @@ coerceBigint()(1.5); // { ok: false, ... }, code "invalid_type"
 ### coerceBoolean
 
 ```ts
-export declare const coerceBoolean: Factory<boolean, MessageOptions>;
+export declare const coerceBoolean: Factory<boolean, MessageOptions, boolean | number | string>;
 ```
 
 Creates a validator for booleans that also accepts the words `true`/`false`, `yes`/`no`, `on`/`off` and `1`/`0`, in any letter case and ignoring surrounding whitespace, and the numbers `1` and `0`.
@@ -2838,7 +3416,7 @@ coerceBoolean()("maybe"); // { ok: false, ... }, code "invalid_type"
 ### coerceDate
 
 ```ts
-export declare const coerceDate: Factory<Date, CoerceDateOptions>;
+export declare const coerceDate: Factory<Date, CoerceDateOptions, Date | number | string>;
 ```
 
 Creates a validator for dates that also accepts whole timestamps in milliseconds and ISO 8601 strings such as `2026-09-28` or `2026-09-28T14:30:00Z`, converting them to a `Date`, then applies the same bounds as [date](#date).
@@ -2865,7 +3443,7 @@ coerceDate({ zoneless: "utc" })("2026-09-28T14:30"); // { ok: true, value: Date 
 ### coerceNumber
 
 ```ts
-export declare const coerceNumber: Factory<number, NumberOptions>;
+export declare const coerceNumber: Factory<number, NumberOptions, number | string>;
 ```
 
 Creates a validator for numbers that also accepts text holding a decimal number, converting it, then applies the same constraints as [number](#number).
@@ -2891,7 +3469,7 @@ port("abc"); // { ok: false, ... }, code "invalid_type"
 ### coerceString
 
 ```ts
-export declare const coerceString: Factory<string, StringOptions>;
+export declare const coerceString: Factory<string, StringOptions, string | number | bigint | boolean>;
 ```
 
 Creates a validator for text that also accepts finite numbers, bigints and booleans, converting them to their string form, then applies the same constraints as [string](#string).
@@ -2915,7 +3493,7 @@ coerceString()(null); // { ok: false, ... }, code "invalid_type"
 ### creditCard
 
 ```ts
-export declare const creditCard: Factory<string, MessageOptions>;
+export declare const creditCard: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for payment card numbers: 12 to 19 digits whose Luhn checksum holds, optionally grouped by spaces or hyphens as people type them. The value is the digits alone, so one card is one value however it was grouped.
@@ -2932,7 +3510,7 @@ creditCard()("4242 4242 4242 4241"); // { ok: false, ... }: the checksum fails
 ### cuid2
 
 ```ts
-export declare const cuid2: Factory<string, MessageOptions>;
+export declare const cuid2: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for CUID2 identifiers. The value is not modified.
@@ -2992,7 +3570,7 @@ datetime({ local: true })("2026-09-28T14:30"); // { ok: true, ... }, a datetime-
 ### domain
 
 ```ts
-export declare const domain: Factory<string, MessageOptions>;
+export declare const domain: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for public domain names, such as `example.com` or `münchen.de`: at least two labels, a last label of 2 to 63 letters or a punycode label, and none of the special-use names that never name a public host, such as `localhost`, `.local`, `.internal`, `.test`, `.arpa`, `.home`, `.corp`, `.mail`, `.localdomain`, Kubernetes' `.svc` and `.cluster`, or an IDN test top-level domain such as `.テスト`. Whether the top-level domain exists is not checked, so a name under any other label passes, private ones in common use such as `nas.lan`, `a.private` or `a.intranet` included: block those with a check of your own when they matter, and remember that a public name can still resolve to a private address. A name written with more than 759 characters, three for each one a name can have, is rejected before the parser reads it. An absolute name, `example.com.`, is rejected: it names the same host as `example.com`, and a second spelling of one host would let it past a check that compares the value as a string, such as a list of blocked hosts. This is the rule `email` and `url` apply to their host by default. The value is the domain as the URL parser reads it, lowercase ASCII with an internationalized label in punycode, so `München.DE` is `xn--mnchen-3ya.de`.
@@ -3009,7 +3587,7 @@ domain()("localhost"); // { ok: false, ... }, code "invalid_format"
 ### duration
 
 ```ts
-export declare const duration: Factory<string, MessageOptions>;
+export declare const duration: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for ISO 8601 durations such as `P1Y2M`, `PT30M` or `P1DT12H`. The value is not modified. Only the seconds may have a fraction, written with a dot, which is stricter than ISO 8601 and than `Temporal.Duration`, both of which accept `PT1.5H` and `PT1,5S`, weeks may be combined with other units, as in `P1W2D`, and a negative duration, `-P1D`, is rejected.
@@ -3043,7 +3621,7 @@ if (!result.ok) {
 ### hex
 
 ```ts
-export declare const hex: Factory<string, MessageOptions>;
+export declare const hex: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for one or more hexadecimal digits of any letter case. The value is not modified.
@@ -3058,7 +3636,7 @@ hex()("xyz"); // { ok: false, ... }, code "invalid_format"
 ### hostname
 
 ```ts
-export declare const hostname: Factory<string, MessageOptions>;
+export declare const hostname: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for hostnames: dot-separated labels of letters, digits and hyphens, at most 253 characters, whose last label is not a number, all digits or `0x` and hex digits, since the URL parser reads a name that ends that way as an IPv4 address (`0x7f000001` is `127.0.0.1`), and whose punycode labels, such as `xn--mnchen-3ya`, decode. An absolute name ending in a dot, such as `example.com.`, is rejected, since it names the same host as `example.com` and a second spelling would let one host past a check that compares the value as a string. Unlike `url`, single-label hosts such as `localhost` are accepted. The value is the hostname in lowercase, since letter case does not change the host it names, so one host is one value however it was written.
@@ -3168,7 +3746,7 @@ ip({ version: "v6" })("192.168.0.1"); // { ok: false, ... }, params { format: "i
 ### isoDate
 
 ```ts
-export declare const isoDate: Factory<string, MessageOptions>;
+export declare const isoDate: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for ISO 8601 calendar dates such as `2026-09-28`, on a day that exists. The value is a string and is not modified; to get a `Date`, use `coerceDate`. Text that is not one fails with `invalid_format` and `{ format: "isoDate" }`.
@@ -3183,7 +3761,7 @@ isoDate()("2026-02-29"); // { ok: false, ... }: 2026 is not a leap year
 ### jwt
 
 ```ts
-export declare const jwt: Factory<string, MessageOptions>;
+export declare const jwt: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for JSON Web Tokens in compact form: three base64url segments separated by dots, whose header and payload decode to JSON objects with no key twice in any object, and whose header names an algorithm in `alg`, as text that is not empty. The value is not modified.
@@ -3200,7 +3778,7 @@ jwt()("not.a.token"); // { ok: false, ... }, code "invalid_format"
 ### mac
 
 ```ts
-export declare const mac: Factory<string, MessageOptions>;
+export declare const mac: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for MAC addresses (EUI-48) written as six pairs of hex digits separated by colons or by hyphens, such as `00:1A:2b:3c:4d:5e` or `00-1a-2b-3c-4d-5e`. The value is the canonical spelling, lowercase with colons, so one address is one value however it was written.
@@ -3215,7 +3793,7 @@ mac()("00:1a-2b:3c:4d:5e"); // { ok: false, ... }: mixed separators
 ### nanoid
 
 ```ts
-export declare const nanoid: Factory<string, MessageOptions>;
+export declare const nanoid: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for Nano IDs in their default form: 21 characters of `A-Za-z0-9_-`. The value is not modified.
@@ -3268,7 +3846,7 @@ number({ min: 0 }, multipleOf(0.01)); // money
 ### phone
 
 ```ts
-export declare const phone: Factory<string, MessageOptions>;
+export declare const phone: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for international phone numbers in E.164 form: a `+`, the country code and the number, 7 to 15 digits in all, optionally with spaces, hyphens or dots between digits and one group of them in parentheses. The value is the canonical E.164 spelling, `+` and the digits alone, so one number is one value however it was written.
@@ -3298,10 +3876,29 @@ port()(70_000); // { ok: false, ... }, code "invalid_format"
 url({ port: optional(port()) }); // a URL's port is a number, or absent
 ```
 
+### portugueseMessages
+
+```ts
+export declare const portugueseMessages: Messages;
+```
+
+The built-in Portuguese wording for every issue the validators can report, as a message map.
+
+It is what [englishMessages](#englishmessages) is, in Portuguese as written in Brazil: pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Deve ser no mínimo 18". It is a separate value, so a program bundles the wording of the languages it imports and no other. To change some of the wording, spread it and override the codes you want: `{ ...portugueseMessages, too_small: "Muito curto" }`. It is frozen. The names of types, such as `string` in "Esperado string, recebido number", are the ones the issue holds and are not translated, and a custom validator's own codes are not in it: one without a `message` on the issue or an entry of your own is worded "Valor inválido", by the entry `default`.
+
+**Example**
+
+```ts
+const result = number({ min: 18 })(15);
+if (!result.ok) {
+  formatIssue(result.error.issues[0], portugueseMessages); // "Deve ser no mínimo 18"
+}
+```
+
 ### semver
 
 ```ts
-export declare const semver: Factory<string, MessageOptions>;
+export declare const semver: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for Semantic Versioning 2.0.0 versions, such as `1.2.3`, `1.0.0-rc.1` or `1.0.0+build.5`. A leading `v` is not part of a version and is rejected. The value is not modified.
@@ -3316,7 +3913,7 @@ semver()("v1.4.0"); // { ok: false, ... }, code "invalid_format"
 ### slug
 
 ```ts
-export declare const slug: Factory<string, MessageOptions>;
+export declare const slug: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for URL slugs: lowercase ASCII letters and digits in words joined by single hyphens, such as `hello-world-2`. The value is not modified.
@@ -3411,7 +4008,7 @@ Words a `too_small` issue in English, such as "Must be at least 2 characters".
 ### ulid
 
 ```ts
-export declare const ulid: Factory<string, MessageOptions>;
+export declare const ulid: Factory<string, MessageOptions, string>;
 ```
 
 Creates a validator for ULIDs in any letter case. The value is the ULID in uppercase, the form its specification writes, so one ULID is one value however it was written.
@@ -3473,15 +4070,29 @@ uuid({ version: 7 })("123e4567-e89b-12d3-a456-426614174000"); // { ok: false, ..
 
 ## Internal types
 
+### BrandOf
+
+```ts
+type BrandOf<T> = T extends {
+    readonly "~brand": infer TBrand;
+} ? {
+    readonly "~brand": TBrand;
+} : unknown;
+```
+
+The mark `brand` put on a type, which naming the read-only kind of a `Map` or a `Set` would drop.
+
+Not exported; declared in `src/composition/readonly.ts`.
+
 ### CheckedVariants
 
 ```ts
 type CheckedVariants<TKey extends string, TVariants extends Variants> = {
-    [TTag in keyof TVariants]: Infer<TVariants[TTag]> extends readonly unknown[] | ((...args: never[]) => unknown) ? never : TKey extends DeclaredKeys<Infer<TVariants[TTag]>> ? never : TVariants[TTag];
+    [TTag in keyof TVariants]: Infer<TVariants[TTag]> extends readonly unknown[] | ((...args: never[]) => unknown) ? never : TKey extends DeclaredKeys<Infer<TVariants[TTag]>> | DeclaredKeys<InferInput<TVariants[TTag]>> ? never : TVariants[TTag];
 };
 ```
 
-The variants as `tagged` accepts them. A variant whose output type is an array or a function, which cannot carry the tag, or declares the tag property, even as optional or beside an index signature, which the variant is never given, is typed `never`, so passing it is a compile error at that variant. An index signature alone, as a `record` has, declares no property, so it is accepted.
+The variants as `tagged` accepts them. A variant whose output type is an array or a function, which cannot carry the tag, or declares the tag property, even as optional or beside an index signature, which the variant is never given, is typed `never`, so passing it is a compile error at that variant. So is one that accepts the tag property and produces none, such as a `transform` that drops it, since it would wait for a property it is never given. An index signature alone, as a `record` has, declares no property, so it is accepted.
 
 Not exported; declared in `src/composition/tagged.ts`.
 
@@ -3507,6 +4118,16 @@ A primitive value, or a function called for every use to produce the value. An o
 
 Not exported; declared in `src/composition/optional.ts`.
 
+### InferItemInputs
+
+```ts
+type InferItemInputs<TItems extends readonly AnyValidator[]> = {
+    -readonly [K in keyof TItems]: InferInput<TItems[K]>;
+};
+```
+
+Not exported; declared in `src/composition/tuple.ts`.
+
 ### InferItems
 
 ```ts
@@ -3516,6 +4137,16 @@ type InferItems<TItems extends readonly AnyValidator[]> = {
 ```
 
 Not exported; declared in `src/composition/tuple.ts`.
+
+### OptionalInputKeys
+
+```ts
+type OptionalInputKeys<TShape extends Shape> = {
+    [K in keyof TShape]: undefined extends InferInput<TShape[K]> ? K : never;
+}[keyof TShape];
+```
+
+Not exported; declared in `src/composition/object.ts`.
 
 ### OptionalKeys
 
@@ -3568,12 +4199,12 @@ type Simplify<T> = {
 } & {};
 ```
 
-Not exported; declared in `src/composition/object.ts`, `src/composition/tagged.ts`.
+Not exported; declared in `src/composition/object.ts`, `src/composition/reshape.ts`, `src/composition/tagged.ts`.
 
 ### Transformed
 
 ```ts
-type Transformed<R> = 0 extends 1 & R ? Validator<R> : [unknown] extends [R] ? AsyncValidator<Awaited<R>> : [Extract<R, PromiseLike<unknown>>] extends [never] ? Validator<R> : AsyncValidator<Awaited<R>>;
+type Transformed<R, TInput> = 0 extends 1 & R ? Validator<R, TInput> : [unknown] extends [R] ? AsyncValidator<Awaited<R>, TInput> : [Extract<R, PromiseLike<unknown>>] extends [never] ? Validator<R, TInput> : AsyncValidator<Awaited<R>, TInput>;
 ```
 
 What a synchronous validator becomes once `convert` runs on its value: still synchronous when `convert` never returns a promise, and asynchronous, producing what the promise settles to, when it may return one, such as a function typed `number | Promise<number>`. A function typed as returning `unknown` may return one too, so it makes the validator asynchronous. One typed as returning `any`, such as `JSON.parse`, has opted out of type checking, and is taken at its word as synchronous: typing it asynchronous would make the most common conversion need an `await` it never needs.

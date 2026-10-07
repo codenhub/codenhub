@@ -1,8 +1,16 @@
 # @codenhub/validation
 
-Checks that a value is what you need it to be, and gives you either the typed value or every reason it is not. Each validator is a small function you import on its own, so a package or app ships only the checks it uses. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies.
+Validation for data you do not control: a request body, a query string, a form, a message from another origin. A validator gives you either the typed value or every reason it is not one, and is built for input that may be hostile:
 
-> **Experimental:** pre-1.0. The API of 0.3.0 is meant to hold for every 0.3.x release; a change that breaks callers, if one proves necessary, ships as the next minor and is listed in the [changelog](docs/changelog/index.md).
+- **Formats return what a parser read.** `email()` and `url()` produce the address the platform's URL parser sees, so what you store and check is what a request or a mail server will use.
+- **What a failing input costs is bounded.** A long list of bad items stops at 1,000 issues, and input nested too deep is one issue and never a stack overflow. Input that passes is checked in full, so give collections a `max`.
+- **The issues the package reports never hold a value of the input**, so logging a failed validation cannot log a password. They do name the input's properties, in `path`, and a check you write decides what its own issue holds.
+
+Each validator is a function you import on its own, so a program ships only the checks it uses: a lone `boolean()` is 1.2 kB gzipped and an object with a string, an email and a number 5.8 kB. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies. [Compared with valibot, zod and yup](docs/comparison.md) has the measurements, and says when one of them is the better choice.
+
+> **Experimental:** pre-1.0. The API of 0.4.0 is meant to hold for every 0.4.x release; a change that breaks callers, if one proves necessary, ships as the next minor and is listed in the [changelog](docs/changelog/index.md).
+>
+> **Migrating from 0.3.0:** the [0.4.0 changelog](docs/changelog/0.4.0.md#migrating-from-030) lists the two changes to the types.
 >
 > **Migrating from 0.1.0:** the [0.2.0 changelog](docs/changelog/0.2.0.md) maps each changed call to its replacement. From 0.0.1, start with the [0.1.0 changelog](docs/changelog/0.1.0.md).
 
@@ -49,7 +57,7 @@ Invalid input never throws, with one exception noted below. Every problem a vali
 Every validator takes options, then checks, which are rules for the rarer cases, and a `message` option for a sentence of its own:
 
 ```ts
-import { check, object, pattern, string } from "@codenhub/validation";
+import { checkFields, object, pattern, string } from "@codenhub/validation";
 
 const account = object(
   {
@@ -57,11 +65,14 @@ const account = object(
     password: string({ min: 12 }),
     confirm: string(),
   },
-  check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
+  checkFields(["password", "confirm"], (data) => data.password === data.confirm, {
+    path: ["confirm"],
+    message: "Passwords must match",
+  }),
 );
 ```
 
-Write a rule of your own with `check`, including one that needs to `await` something, a format with `format`, and a validator for any type with `guard`; what they make behaves exactly as the built-in ones do.
+`checkFields` is a rule across properties that runs as soon as the ones it names have passed, so a form shows it beside the other fields' problems and not after them. Write a rule of your own with `check`, including one that needs to `await` something, a format with `format`, and a validator for any type with `guard`; what they make behaves exactly as the built-in ones do.
 
 When invalid input is a caller's mistake, such as an options object passed to your function, `assert(validator, input, { subject, messages })` returns the value or throws a `TypeError` naming the first problem and where it is. `objectLike` validates class instances and other objects that are not plain, which `object` rejects.
 
@@ -74,6 +85,8 @@ When invalid input is a caller's mistake, such as an options object passed to yo
 - [Issues and messages](docs/errors.md)
 - [Coercion](docs/coercion.md)
 - [Standard Schema](docs/standard-schema.md)
+- [JSON Schema](docs/json-schema.md)
+- [Compared with valibot, zod and yup](docs/comparison.md)
 - [Changelog](docs/changelog/index.md)
 
 ## Requirements
@@ -87,7 +100,7 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 ## Notes
 
 - A validator returns `{ ok: true, value }` or `{ ok: false, error }`. Bad input is never thrown, except by code the input carries, below; a bad option, such as `string({ min: -1 })`, throws when the validator is created.
-- Issues never contain an input value, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English, which is a separate import so a program that words its own issues does not bundle it, or your own to reword or localize. Keys are another matter: a path leads through the input's own keys, and a strict `object` names each key it does not recognize.
+- Issues never contain an input value, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English or `portugueseMessages` for Portuguese, each a separate import so a program bundles only the wording it uses, or your own to reword or localize. Keys are another matter: a path leads through the input's own keys, and a strict `object` names each key it does not recognize.
 - Rules never rewrite the value unless you ask: `trim`, `case` and `clamp` are the options that do. Formats with several spellings are the exception, and produce one: `email()` and `url()` produce what the URL parser reads, such as `https://example.com/admin` for `https://Example.com/public/../admin`, so a check made later on the value sees what a request or a mail server will, `domain()` produces lowercase ASCII with internationalized labels in punycode, and `ip()`, `cidr()`, `hostname()`, `uuid()`, `ulid()`, `phone()`, `mac()` and `creditCard()` produce a canonical spelling.
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
 - `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal`, `printer.local` and `nas.home`. Whether the top-level domain exists is not checked. A validator for the host replaces that rule: `url({ host: hostname() })` accepts any hostname and `url({ host: union([domain(), ip()]) })` any public domain or IP address, of any range. Neither resolves the name, so a public name can still point at a private address.

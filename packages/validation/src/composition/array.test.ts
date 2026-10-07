@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { unique } from "../checks/unique";
-import type { Check } from "../core/types";
+import { fail, pass } from "../core/result";
+import type { AsyncValidator, Check } from "../core/types";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { unknown } from "../primitives/unknown";
@@ -157,6 +158,44 @@ describe("array", () => {
       const result = names(["ok", "taken", "fine", "taken"]);
       expect(isPending(result)).toBe(true);
       expect(issuesOf(await result).map((issue) => issue.path)).toEqual([[1], [3]]);
+    });
+
+    // Waits for text and answers at once for anything else, so one list holds items of both kinds.
+    const calls: unknown[] = [];
+    const mixed: AsyncValidator<unknown> = (input) => {
+      calls.push(input);
+      if (input === "throw") {
+        throw new Error("a bug in the item");
+      }
+      const result = typeof input === "number" && input < 0 ? fail({ code: "negative" }) : pass(input);
+      return typeof input === "string"
+        ? input === "reject"
+          ? Promise.reject(new Error("late"))
+          : Promise.resolve(result)
+        : result;
+    };
+
+    it("should keep values and issues in index order when only a later item waits", async () => {
+      const result = array(mixed)([1, -2, "a", -4, 5]);
+      expect(isPending(result)).toBe(true);
+      expect(issuesOf(await result).map((issue) => issue.path)).toEqual([[1], [3]]);
+      expect(valueOf(await array(mixed)([1, 2, "a", 4]))).toEqual([1, 2, "a", 4]);
+    });
+
+    it("should count the issues found before and after the first item that waits toward the limit", async () => {
+      calls.length = 0;
+      const bad = Array.from({ length: 1005 }, () => -1);
+      const issues = issuesOf(await array(mixed)([-1, -1, "a", ...bad]));
+      // Two before the one that waits, it, and the 998 after it that reach the limit.
+      expect(calls).toHaveLength(1001);
+      expect(issues).toHaveLength(1001);
+      expect(issues.at(-1)).toMatchObject({ code: "too_big", path: [], params: { type: "issues" } });
+    });
+
+    it("should handle the rejection of an item that waits when a later one throws", async () => {
+      expect(() => array(mixed)([1, "reject", "throw"])).toThrow("a bug in the item");
+      // An unhandled rejection would fail the run here.
+      await new Promise((resolve) => setTimeout(resolve, 5));
     });
 
     it("should answer at once for input that is not an array", () => {

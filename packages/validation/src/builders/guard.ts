@@ -1,5 +1,6 @@
 import { decided } from "../core/async";
 import { leaf, split } from "../core/checks";
+import { described } from "../core/describe";
 import { assertFunction, assertText } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
 
@@ -27,7 +28,8 @@ export function guard<T>(expected: string, accepts: (input: unknown) => input is
   assertText("guard(expected)", expected);
   assertFunction("accepts", accepts);
   return ((...args: unknown[]) => {
-    const [{ message }, checks] = split<MessageOptions, T>(args);
-    return leaf(expected, (input) => decided("guard", accepts, input), message, checks);
+    const [options, checks] = split<MessageOptions, T>(args);
+    const validator = leaf(expected, (input) => decided("guard", accepts, input), options.message, checks);
+    return described(validator, { kind: "guard", expected, options, checks });
   }) as Factory<T, MessageOptions>;
 }

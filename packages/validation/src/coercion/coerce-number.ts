@@ -58,4 +58,4 @@ export const coerceNumber = ((...args: unknown[]) =>
     return Number.isFinite(converted) && (!Number.isInteger(converted) || Number.isSafeInteger(converted))
       ? [converted]
       : undefined;
-  })) as Factory<number, NumberOptions>;
+  })) as Factory<number, NumberOptions, number | string>;

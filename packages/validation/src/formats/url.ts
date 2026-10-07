@@ -1,4 +1,5 @@
 import { split } from "../core/checks";
+import { described } from "../core/describe";
 import { assertOption, issue } from "../core/result";
 import type {
   AnyValidator,
@@ -12,7 +13,7 @@ import type {
 import { HOSTLESS_SCHEMES, toHostlessUrl } from "./hostless-url";
 import { toCanonicalIpv6 } from "./ip";
 import { assertParts, notFormat, partIssue, partsFormat, readQuery, type Part, type Reading } from "./parts";
-import { HOST_MAX_LENGTH, HOST_TEXT_MAX_LENGTH, isIdnHost, isPublicHost } from "./patterns";
+import { HOST_MAX_LENGTH, HOST_TEXT_MAX_LENGTH, isIdnHost, isPublicHost, readUrl } from "./patterns";
 
 /**
  * No whitespace and no control characters: a written URL holds neither (RFC 3986), and the parser would
@@ -211,13 +212,13 @@ type UrlParts<TOptions> = Extract<
  * instance `"https:"` with its colon, or is `javascript`, `vbscript` or `data`, whose URLs run script, a
  * part validator is not a function, or `repeated` is not a boolean.
  */
-export function url(...checks: Check<string>[]): Validator<string>;
+export function url(...checks: Check<string>[]): Validator<string, string>;
 export function url<const TOptions extends UrlOptions>(
   options: TOptions,
   ...checks: Check<string>[]
-): Composed<UrlParts<TOptions>, string>;
-export function url(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
-export function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
+): Composed<UrlParts<TOptions>, string, string>;
+export function url(...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
+export function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
 export function url(...rest: unknown[]): AnyValidator {
   const [options, checks] = split<UrlOptions, string>(rest, "protocols credentials host port path query repeated");
   const {
@@ -248,10 +249,10 @@ export function url(...rest: unknown[]): AnyValidator {
   });
 
   const read = (text: string): Reading => {
-    if (!WRITTEN_URL_PATTERN.test(text) || hasOverlongHost(text) || !URL.canParse(text)) {
+    const parsed = WRITTEN_URL_PATTERN.test(text) && !hasOverlongHost(text) ? readUrl(text) : undefined;
+    if (parsed === undefined) {
       return notFormat("url");
     }
-    const parsed = new URL(text);
     const scheme = parsed.protocol.slice(0, -1);
     const isHostless = parsed.host === "" || HOSTLESS_SCHEMES.includes(scheme);
     const hasCredentials = parsed.username !== "" || parsed.password !== "";
@@ -329,5 +330,5 @@ export function url(...rest: unknown[]): AnyValidator {
     }
     return { value: parsed.href, parts };
   };
-  return partsFormat("url", read, message, checks);
+  return described(partsFormat("url", read, message, checks), { kind: "format", format: "url", options, checks });
 }

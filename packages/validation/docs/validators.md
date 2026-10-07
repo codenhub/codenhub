@@ -314,6 +314,8 @@ const signup = object(
 );
 ```
 
+That check says nothing while any property fails, since there is no whole object to give it. `checkFields(keys, test, issue?)` is a check that names the properties it needs and runs as soon as those have passed, so a form shows "Passwords must match" beside the other fields' problems: `checkFields(["password", "confirm"], (data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" })`. [Custom validators](custom-validators.md#a-rule-across-fields-that-does-not-wait-for-the-others) covers it.
+
 See [Reusing shapes](#reusing-shapes) for extending, omitting and making properties optional.
 
 ### `objectLike`
@@ -398,6 +400,44 @@ const role = optional(oneOf(["admin", "user"]), "user");
 const tags = optional(array(string()), () => []);
 ```
 
+### `brand`
+
+`brand(validator, name)` marks what a validator produces with a name, in the types alone. TypeScript treats two types of the same shape as one, so a function that takes a `string` it calls a user id also takes an email, or text nobody validated. With a brand, the only way to a value of the type is through the validator:
+
+```ts
+import { brand, uuid, type Infer } from "@codenhub/validation";
+
+const userId = brand(uuid(), "UserId");
+type UserId = Infer<typeof userId>;
+
+declare function loadUser(id: UserId): Promise<unknown>;
+
+const result = userId(input);
+if (result.ok) {
+  await loadUser(result.value);
+}
+// loadUser("not validated") is a compile error
+```
+
+Nothing changes at run time: `brand` returns the validator it was given, so it validates, is described and is written as a JSON Schema as before, and `pick` and the others still read a branded `object`. The input type is not marked, since what is given to a validator has not passed it yet. `null` and `undefined` are left unmarked, so `brand(optional(string()), "Id")` produces a marked string or `undefined`. Brands add up, so `brand(brand(string(), "A"), "B")` produces a type with both. `Branded<T, "Name">` is the marked type, for when you need to write it.
+
+### `readonly`
+
+`readonly(validator)` makes what a validator produces read-only: in its type, and by freezing the object or array.
+
+```ts
+import { array, object, readonly, string, type Infer } from "@codenhub/validation";
+
+const settings = readonly(object({ theme: string(), tags: readonly(array(string())) }));
+type Settings = Infer<typeof settings>; // { readonly theme: string; readonly tags: readonly string[] }
+```
+
+- It freezes the value itself and not what is inside it, as `Object.freeze` does and as the type says. Wrap an inner validator too where its value must not change, as `tags` above.
+- A value that is the input itself is never frozen, since the caller owns it: `instanceOf`, `guard` and `unknown` produce what they were given, so `readonly` changes their type alone. `object`, `objectLike`, `array`, `tuple`, `record`, `set` and `map` produce a new value, which is frozen.
+- A `Map` or a `Set` is typed `ReadonlyMap` or `ReadonlySet`, and only the type protects it: freezing one does not stop `set` or `add`. A typed array cannot be frozen and is left as it is, and so is a `DataView`. The type covers properties and not methods, so a `Date` keeps its setters.
+- A value is taken to be yours when it is the input itself. When a `transform` returns a value from inside the input, such as `(value) => value.tags`, that value is frozen: copy it there when the caller must keep it changeable.
+- `pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after: `readonly(pick(user, ["name"]))`.
+
 ### `fallback`
 
 `fallback(validator, value)` replaces a value that fails `validator` with a fallback, so the result never fails. The fallback is trusted and is not validated, and a function receives the issues that were found, which is the place to log them. A primitive is used as it is. An array or object must come from a function, such as `fallback(array(string()), () => [])`, since one value would be shared by every result and a change to one would show up in the next: the types reject it, and `fallback` throws a `TypeError` when created from JavaScript. A function is called with the issues, so a fallback that is itself a function has to be returned from one: `fallback(validator, () => callback)`, and the types reject the callback itself whenever the wrapped validator can produce a function. For the same reason a function that reads an argument, such as `Array` or `String`, would be given the issues: write `() => []`, not `Array`. A value whose validation `lazy` stopped at one of its limits, such as cyclic input or input nested past `maxDepth`, fails too, so it is replaced like any other failure; when those limits must surface, keep `fallback` off a recursive schema. This turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
@@ -444,7 +484,7 @@ The built-in checks, each its own import, take their message last:
 
 A `pattern` that is not a regular expression, and a `multipleOf` step that is not a positive finite number, throw when the check is made. `multipleOf` is exact for every number as it is written, the shortest text that reads back as it, which is what JSON carries. Past `Number.MAX_SAFE_INTEGER` that text is not always the number the double holds: `2 ** 60` is written `1152921504606847000`, so it is not a multiple of `1024`, though `1e23` is one of `10`. A number computed in floating point is not always the decimal it looks like: `0.1 + 0.2` is `0.30000000000000004`, which is not a multiple of `0.1`.
 
-`check(test, issue?)` makes a check of your own; [Custom validators](custom-validators.md) covers it and the other builders. A check that returns a promise makes its validator asynchronous.
+`check(test, issue?)` makes a check of your own, and `checkFields(keys, test, issue?)` one for an object that waits only for the properties it names; [Custom validators](custom-validators.md) covers both and the other builders. A check that returns a promise makes its validator asynchronous.
 
 ## Choosing between validators
 
@@ -558,6 +598,31 @@ const update = object(partial(user)); // every property optional
 const withAge = object({ ...user, age: number() });
 ```
 
+### `pick`, `omit`, `required` and `partial` on a validator
+
+When what you have is the validator and not its shape, such as one another module exports, the same four are functions of the validator. Each takes a validator `object` made and returns a new one, and leaves the one it was given as it is:
+
+```ts
+import { email, number, object, omit, optional, partial, pick, required, string } from "@codenhub/validation";
+
+const user = object({ id: number(), name: string({ min: 2 }), email: email(), bio: optional(string()) });
+
+const contact = pick(user, ["name", "email"]); // { name: string; email: string }
+const draft = omit(user, ["id"]); // everything but the id
+const patch = partial(user); // every property optional
+const complete = required(user); // bio is required too
+```
+
+- `pick(validator, keys)` keeps the named properties and `omit(validator, keys)` leaves them out. A key the object does not have is a `TypeError` when the validator is created, since it is a misspelling.
+- `partial(validator)` wraps every property in `optional`, as `partial(shape)` does.
+- `required(validator)` makes every property required: one made with `optional` becomes the validator it wrapped, so its default is removed too and a missing property fails, and one made with `nullish` becomes `nullable`, which still accepts `null`. A property that accepts `undefined` some other way, such as `unknown()`, is kept as it is.
+
+The new object keeps the options of the one it came from, `unknownKeys` and `message`, and takes options and checks of its own after its arguments, as `object` does: `pick(user, ["name"], { unknownKeys: "strict" }, check(...))`.
+
+An object with checks is refused with a `TypeError`. A check reads the whole object, so it may read a property the new object lacks: kept, it could fail every value, and dropped without a word, the new object would accept what the first was written to refuse. Make the object without its checks, derive from that, and give each result the checks it needs.
+
+They need a validator `object` made, which is how they know its shape: `objectLike`, a `pipe` or `transform` around an object, and a validator written by hand are a `TypeError`. [Reading a schema](#reading-a-schema) is how they read it, and how you would write one of your own.
+
 ## Coercing text input
 
 The coercing validators accept text that holds a value, convert it, and then apply the constraints of their strict counterpart: `coerceString` and `string`, `coerceNumber` and `number`, `coerceBoolean` and `boolean`, `coerceBigint` and `bigint`, `coerceDate` and `date`. They take the same options, `coerceDate` also `zoneless`, which says how to read a date-time without a zone, and fail with `invalid_type` and `coerced: true` in `params` when the value cannot be converted. [Coercion](coercion.md) lists exactly what each accepts and refuses, and how to read a whole environment or form with them.
@@ -582,11 +647,62 @@ const form = object({
 
 An issue that carries a message is worded by it first, before any message map, so this is how one field gets its own sentence while a map words the rest. [Issues and messages](errors.md) has the order.
 
+## Reading a schema
+
+`describe(validator)` returns what a validator is made of, as plain data: its `kind`, the `options` it was given, its `checks`, and the validators inside it. A program walks a schema with it, to write the schema in another notation, to build a form from it, or to make another validator from its parts.
+
+```ts
+import { describe, email, object, optional, string, type AnyValidator } from "@codenhub/validation";
+
+const signup = object({ name: string({ min: 2 }), email: email(), nickname: optional(string()) });
+
+const top = describe(signup);
+top?.kind; // "object"
+const shape = top?.["shape"] as Record<string, AnyValidator>;
+describe(shape["name"] as AnyValidator)?.options; // { min: 2 }
+describe(shape["email"] as AnyValidator)?.["format"]; // "email"
+describe(shape["nickname"] as AnyValidator)?.kind; // "optional"
+```
+
+A validator inside another is given as the validator itself, to be described in turn, so a recursive schema is read one level at a time and never without end. The description and its options are frozen, and are a copy of what the factory was given, so changing an options object afterwards changes neither the validator nor what it says of itself.
+
+| `kind`                                                                                        | Made by                                           | Beside `options` and `checks`                                                                                                   |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `"string"`, `"number"`, `"bigint"`, `"boolean"`, `"date"`, `"symbol"`, `"unknown"`, `"never"` | The validator of that name                        |                                                                                                                                 |
+| `"function"`                                                                                  | `func`                                            |                                                                                                                                 |
+| `"literal"`                                                                                   | `literal`                                         | `value`                                                                                                                         |
+| `"oneOf"`                                                                                     | `oneOf`                                           | `values`, a list, for an enum too                                                                                               |
+| `"instance"`                                                                                  | `instanceOf`                                      | `target`, the class                                                                                                             |
+| `"guard"`                                                                                     | A factory `guard` made                            | `expected`                                                                                                                      |
+| `"format"`                                                                                    | Every format, `port`, and a factory `format` made | `format`, its name, as in the issue it reports                                                                                  |
+| `"coerce"`                                                                                    | The `coerce` validators                           | `inner`, the strict validator, which has the options; `options` for an option of the coercion's own, `zoneless` of `coerceDate` |
+| `"object"`, `"objectLike"`                                                                    | `object`, `objectLike`                            | `shape`                                                                                                                         |
+| `"array"`, `"set"`                                                                            | `array`, `set`                                    | `item`                                                                                                                          |
+| `"tuple"`                                                                                     | `tuple`                                           | `items`, and `rest` when it has one                                                                                             |
+| `"record"`, `"map"`                                                                           | `record`, `map`                                   | `key`, `value`                                                                                                                  |
+| `"union"`, `"intersection"`                                                                   | `union`, `intersection`                           | `members`                                                                                                                       |
+| `"tagged"`                                                                                    | `tagged`                                          | `key`, `variants`                                                                                                               |
+| `"optional"`                                                                                  | `optional`                                        | `inner`, `default`; no `options` or `checks`                                                                                    |
+| `"nullable"`, `"nullish"`                                                                     | `nullable`, `nullish`                             | `inner`; no `options` or `checks`                                                                                               |
+| `"readonly"`                                                                                  | `readonly`                                        | `inner`; no `options` or `checks`                                                                                               |
+| `"fallback"`                                                                                  | `fallback`                                        | `inner`, `value`; no `options` or `checks`                                                                                      |
+| `"transform"`                                                                                 | `transform`                                       | `inner`, `convert`; no `options` or `checks`                                                                                    |
+| `"pipe"`                                                                                      | `pipe`                                            | `steps`; no `options` or `checks`                                                                                               |
+| `"lazy"`                                                                                      | `lazy`                                            | `getter`, which returns the validator                                                                                           |
+| `"json"`, `"searchParams"`                                                                    | `json`, `searchParams`                            | `inner`                                                                                                                         |
+| `"check"`                                                                                     | Every built-in check                              | `code` and `params` of the issue it reports                                                                                     |
+
+A check is described the same way, so the list in `checks` can be read too: `describe(pattern(/^a/))` gives `{ kind: "check", code: "invalid_format", params: { format: "regex", pattern: "/^a/" } }`. A check made by `checkFields` gives `{ kind: "check", fields }`, the properties it waits for, and no `params`, since its test is a function. What nobody can read gives `undefined`: a validator or a check you wrote by hand, and a check made by `check`, whose test is a function. A reader of a schema decides what such a rule means to it, and code that turns a schema into another notation usually refuses it. The function a `transform` converts with and a `lazy`'s getter are in the description as functions, for the same reason. The test of a `guard` and what a format reads with are not in it: a `guard` gives the `expected` it names and a format its name.
+
+What `standard` returns is described as the validator it wraps. The parts are typed as `unknown`, since what a part is depends on the kind: read `kind` first, then the parts of that kind from the table.
+
+To write a whole schema as JSON Schema, for an HTTP API or the tools of a language model, see [JSON Schema](json-schema.md).
+
 ## Working with results
 
-### `formatIssue`, `flatten`, `formatPath` and `englishMessages`
+### `formatIssue`, `flatten`, `formatPath` and the message maps
 
-`formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then a message map you pass, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](errors.md) explains all of them.
+`formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then the entry for its code in a message map you pass, then the map's `default` entry, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](errors.md) explains all of them. `portugueseMessages` is the same map in Portuguese, as written in Brazil; [Issues and messages](errors.md#built-in-languages) covers both.
 
 ### `assert`
 
@@ -596,9 +712,26 @@ An issue that carries a message is worded by it first, before any message map, s
 
 `Infer<typeof validator>` is the type a validator produces. It reads the output of either a synchronous or an asynchronous validator.
 
+### `InferInput`
+
+`InferInput<typeof validator>` is the type of input that can pass, which is the type a form holds before it is validated. The two differ wherever a validator changes its value:
+
+```ts
+import { coerceNumber, object, oneOf, optional, type Infer, type InferInput } from "@codenhub/validation";
+
+const settings = object({ page: coerceNumber(), theme: optional(oneOf(["light", "dark"]), "light") });
+
+type Settings = Infer<typeof settings>; // { page: number; theme: "light" | "dark" }
+type SettingsInput = InferInput<typeof settings>; // { page: string | number; theme?: "light" | "dark" | undefined }
+```
+
+It differs from `Infer` for `optional` with a default, the `coerce` validators, `transform`, `pipe`, which accepts what its first validator does, `json`, which accepts text, `searchParams`, which accepts text or a `URLSearchParams`, typed as `string | Iterable<[string, string]>` so that the type names no global of a runtime, and `fallback`, which accepts anything. Clean-up is not a difference: `string({ trim: true })` accepts and produces a `string`.
+
+A validator is still called with any value at all. The input type says what can pass, for the types of a form or of a caller, and is never a limit on the argument. A validator you write by hand has `unknown` unless its type says otherwise, as `Validator<number, string>` does for one that reads a number from text. `standard` gives the input type to the library that takes the schema, so a form library types its fields from it.
+
 ### `is`
 
-`is(validator, input)` returns whether `input` passes, as a `boolean`. It does not narrow the type of `input`: a validator that trims, coerces or transforms produces another value than it was given, such as a number from the text `"5"`, so the input is not of the type the validator produces. Read `result.value` from calling the validator for that, or, where the validator keeps the value as it is, write the guard yourself: `(input: unknown): input is number => is(number(), input)`. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise.
+`is(validator, input)` returns whether `input` passes, as a `boolean`. It does not narrow `input`: a type guard also says that a value that fails is not of the type, and `string({ min: 3 })` refuses `"ab"`, which is a string. Read `result.value` from calling the validator for the typed value, or wrap `is` in a guard of your own for the one type you mean, `(input: unknown): input is number => is(number(), input)`. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise.
 
 ### `pass` and `fail`
 
@@ -606,4 +739,4 @@ An issue that carries a message is worded by it first, before any message map, s
 
 ### Types
 
-The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, `Check<T>` and `AsyncCheck<T>`, `Infer`, `ValidationResult<T>`, `ValidationIssue`, `Message`, `Messages` and the options interface of each validator, such as `StringOptions` or `UrlOptions`. The others exported, such as `Composed`, `Factory`, `Rest`, `InferShape` and `InferTagged`, are the machinery of the signatures: they are exported so that a validator you export from a library of your own can be named in its declarations. Each is documented in the source and listed in the [API reference](reference/index.md).
+The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, `Check<T>` and `AsyncCheck<T>`, `Infer`, `InferInput`, `ValidationResult<T>`, `ValidationIssue`, `Message`, `Messages` and the options interface of each validator, such as `StringOptions` or `UrlOptions`. The others exported, such as `Composed`, `Factory`, `Rest`, `InferShape` and `InferTagged`, are the machinery of the signatures: they are exported so that a validator you export from a library of your own can be named in its declarations. Each is documented in the source and listed in the [API reference](reference/index.md).

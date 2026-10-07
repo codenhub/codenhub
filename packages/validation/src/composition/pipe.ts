@@ -1,7 +1,8 @@
 import { chain, type Maybe } from "../core/async";
+import { described } from "../core/describe";
 import { call, composed } from "../core/nesting";
 import { assertFunction, pass } from "../core/result";
-import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
+import type { AnyValidator, Composed, Infer, ValidationResult, InferInput } from "../core/types";
 
 /** The type produced by the last validator of a list. */
 type Output<TValidators extends readonly AnyValidator[]> = TValidators extends readonly [
@@ -31,7 +32,7 @@ type Output<TValidators extends readonly AnyValidator[]> = TValidators extends r
  */
 export function pipe<const TValidators extends readonly [AnyValidator, ...AnyValidator[]]>(
   ...validators: TValidators
-): Composed<TValidators[number], Output<TValidators>> {
+): Composed<TValidators[number], Output<TValidators>, InferInput<TValidators[0]>> {
   if (validators.length === 0) {
     // The types forbid it, but a pipe of nothing would accept every value unchecked.
     throw new TypeError("pipe() needs at least one validator");
@@ -44,5 +45,9 @@ export function pipe<const TValidators extends readonly [AnyValidator, ...AnyVal
         pass(input),
       ),
   );
-  return validate as unknown as Composed<TValidators[number], Output<TValidators>>;
+  return described(validate, { kind: "pipe", steps: Object.freeze([...validators]) }) as unknown as Composed<
+    TValidators[number],
+    Output<TValidators>,
+    InferInput<TValidators[0]>
+  >;
 }

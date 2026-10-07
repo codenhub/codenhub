@@ -1,5 +1,6 @@
 import { chain, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { described } from "../core/describe";
 import { call, composed } from "../core/nesting";
 import { queryOf } from "../core/objects";
 import { assertFunction, assertOption, typeIssue } from "../core/result";
@@ -54,27 +55,31 @@ export interface SearchParamsOptions extends MessageOptions {
 export function searchParams<TValidator extends AnyValidator>(
   validator: TValidator,
   ...rest: Rest<Infer<TValidator>, SearchParamsOptions>
-): Composed<TValidator, Infer<TValidator>>;
+): Composed<TValidator, Infer<TValidator>, string | Iterable<[string, string]>>;
 export function searchParams<TValidator extends AnyValidator>(
   validator: TValidator,
   ...rest: AsyncRest<Infer<TValidator>, SearchParamsOptions>
-): AsyncValidator<Infer<TValidator>>;
+): AsyncValidator<Infer<TValidator>, string | Iterable<[string, string]>>;
 export function searchParams(validator: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("validator", validator);
-  const [{ repeated = false }, reject, accept] = tail<SearchParamsOptions, unknown>(rest, "repeated");
+  const [options, reject, accept, checks] = tail<SearchParamsOptions, unknown>(rest, "repeated");
+  const { repeated = false } = options;
   assertOption("repeated", repeated, "boolean");
-  return composed((input, place): Maybe<ValidationResult<unknown>> => {
-    // A `URLSearchParams` is read as its text, so one from another realm is read as one from this.
-    const query = typeof input === "string" ? input : queryOf(input);
-    if (query === undefined) {
-      return reject([typeIssue("query string", input)], place);
-    }
-    const { value, issues } = readQuery(new URLSearchParams(query), repeated);
-    if (issues.length > 0) {
-      return reject(issues, place);
-    }
-    return chain(call(validator, value, place), (result: ValidationResult<unknown>) =>
-      result.ok ? accept(result.value, place) : result,
-    );
-  });
+  return described(
+    composed((input, place): Maybe<ValidationResult<unknown>> => {
+      // A `URLSearchParams` is read as its text, so one from another realm is read as one from this.
+      const query = typeof input === "string" ? input : queryOf(input);
+      if (query === undefined) {
+        return reject([typeIssue("query string", input)], place);
+      }
+      const { value, issues } = readQuery(new URLSearchParams(query), repeated);
+      if (issues.length > 0) {
+        return reject(issues, place);
+      }
+      return chain(call(validator, value, place), (result: ValidationResult<unknown>) =>
+        result.ok ? accept(result.value, place) : result,
+      );
+    }),
+    { kind: "searchParams", options, checks, inner: validator },
+  );
 }

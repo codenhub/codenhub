@@ -8,7 +8,9 @@ import {
   base64,
   bigint,
   boolean,
+  brand,
   check,
+  checkFields,
   coerceBigint,
   coerceBoolean,
   coerceDate,
@@ -48,7 +50,12 @@ import {
   oneOf,
   optional,
   tooSmallMessage,
+  omit,
   partial,
+  pick,
+  portugueseMessages,
+  readonly,
+  required,
   pass,
   pipe,
   port as portNumber,
@@ -56,6 +63,7 @@ import {
   searchParams,
   set,
   standard,
+  toJsonSchema,
   string,
   transform,
   tuple,
@@ -68,6 +76,7 @@ import {
   type AsyncValidator,
   type Check,
   type Infer,
+  type InferInput,
   type Messages,
   type StandardSchemaV1,
   type ValidationIssue,
@@ -132,12 +141,15 @@ export const checkedLater: AsyncValidator<string[]> = array(
   check(async (list) => list.length > 0),
 );
 
-// is() accepts only synchronous validators, and answers whether the input passes without narrowing it,
-// since a validator may produce another value than it was given.
+// is() accepts only synchronous validators, and narrows nothing: a guard would also say that what
+// fails is not of the type, and a string too short for string({ min: 3 }) is a string.
 export const raw: unknown = "text";
 export const passes: boolean = is(string(), raw);
-// @ts-expect-error is() does not narrow its input
+// @ts-expect-error a value that passes is still typed as it was
 export const narrowed: string = is(string(), raw) ? raw : "";
+export const text = "ab" as string | number;
+// @ts-expect-error a value that fails may still be text, so the other branch is not a number
+export const notNarrowed: number = is(string({ min: 3 }), text) ? 0 : text;
 // @ts-expect-error a validator that may finish later cannot be used as a synchronous guard
 export const badGuard = is(username, raw);
 
@@ -532,4 +544,130 @@ export const maybeOptions = [
   base64({ url: maybeFlag }),
   searchParams(unknown(), { repeated: maybeFlag }),
 ];
+// A rule across properties is typed by the object it is given to, and its test by the properties it names.
+export const registration = object(
+  { name: string(), password: string(), confirm: string(), age: number() },
+  checkFields(["password", "confirm"], (data) => data.password === data.confirm, { path: ["confirm"] }),
+  // @ts-expect-error the test is given the named properties alone
+  checkFields(["password"], (data) => data.confirm === ""),
+  // @ts-expect-error only a property of the object can be named
+  checkFields(["pasword"], () => true),
+);
+export const registrationAtOnce: boolean = registration({}).ok;
+const registrationThatWaits = object(
+  { name: string() },
+  checkFields(["name"], async (data) => data.name !== ""),
+);
+// @ts-expect-error a test that waits makes the object asynchronous
+export const registrationRead: boolean = registrationThatWaits({}).ok;
+
+// The input type is what can pass, which differs from what is produced where a validator changes its value.
+const preferences = object({
+  page: coerceNumber({ int: true }),
+  theme: optional(oneOf(["light", "dark"]), "light"),
+  tags: array(transform(string(), (text) => text.length)),
+  note: nullable(string()),
+});
+export const preferencesInput: InferInput<typeof preferences> = { page: "2", tags: ["a"], note: null };
+export const preferencesOutput: Infer<typeof preferences> = { page: 2, theme: "light", tags: [1], note: null };
+// @ts-expect-error a default makes the property present in what is produced
+export const withoutTheme: Infer<typeof preferences> = { page: 2, tags: [1], note: null };
+// @ts-expect-error what a transform produces is not what it accepts
+export const lengthsAsInput: InferInput<typeof preferences> = { page: 1, tags: [1], note: null };
+// A validator written by hand accepts whatever it does not say, and may say.
+export const handInput: InferInput<typeof even> = Symbol("anything");
+const fromText: Validator<number, string> = (input) => ({ ok: true, value: Number(input) });
+export const textInput: InferInput<typeof fromText> = "5";
+// @ts-expect-error it declared text as its input
+export const numberInput: InferInput<typeof fromText> = 5;
+// A validator is still called with anything, whatever input type it declares.
+export const calledWithAnything: boolean = string()(Symbol("not a string")).ok;
+// A Standard Schema carries the input type to the library that takes it.
+const standardPreferences = standard(preferences, englishMessages);
+export const standardInput: StandardSchemaV1.InferInput<typeof standardPreferences> = {
+  page: "2",
+  tags: [],
+  note: null,
+};
+
+// A validator made from another keeps what the types can know of it: the properties, and whether it waits.
+const account = object({ id: number(), name: string(), bio: optional(string()) });
+const contact = pick(account, ["name"]);
+export const pickedName: Infer<typeof contact> = { name: "Ada" };
+export const pickedAtOnce: boolean = contact({}).ok;
+// @ts-expect-error a picked object no longer has the properties left out
+export const pickedId: Infer<typeof contact> = { name: "Ada", id: 1 };
+// @ts-expect-error only a property of the object can be picked
+pick(account, ["nmae"]);
+const withoutId = omit(account, ["id"]);
+export const omitted: Infer<typeof withoutId> = { name: "Ada" };
+const patch = partial(account);
+export const patched: Infer<typeof patch> = {};
+const whole = required(account);
+export const complete: Infer<typeof whole> = { id: 1, name: "Ada", bio: "Mathematician" };
+// @ts-expect-error bio is required once the object is
+export const incomplete: Infer<typeof whole> = { id: 1, name: "Ada" };
+export const accountSchema: string[] | undefined = toJsonSchema(account, { io: "output" }).required;
+
 export const maybeAsserted: string = assert(string(), "a", { subject: maybeWording, messages: undefined });
+
+// A brand marks what a validator produces, in the types alone, and leaves what it accepts unmarked.
+const userId = brand(string(), "UserId");
+type UserId = Infer<typeof userId>;
+declare function loadUser(id: UserId): void;
+const idResult = userId("u1");
+if (idResult.ok) {
+  loadUser(idResult.value);
+  takeText(idResult.value);
+}
+// @ts-expect-error text that did not go through the validator is not a user id
+loadUser("u1");
+export const brandInput: InferInput<typeof userId> = "u1";
+const orderId = brand(string(), "OrderId");
+declare const anOrder: Infer<typeof orderId>;
+// @ts-expect-error two brands of the same type do not stand for each other
+loadUser(anOrder);
+declare function takeText(text: string): void;
+const takenId = brand(string(check(async () => true)), "Free");
+// @ts-expect-error a brand keeps an asynchronous validator asynchronous
+export const takenAtOnce: boolean = takenId("a").ok;
+
+// readonly makes what a validator produces read-only, a Map and a Set the read-only kind.
+const frozen = readonly(object({ name: string(), tags: readonly(array(string())), seen: readonly(set(number())) }));
+declare const frozenValue: Infer<typeof frozen>;
+export const frozenTags: readonly string[] = frozenValue.tags;
+export const frozenSeen: ReadonlySet<number> = frozenValue.seen;
+// @ts-expect-error a property of what readonly produced cannot be assigned
+frozenValue.name = "Ada";
+// @ts-expect-error nor an item added
+frozenValue.tags.push("a");
+// @ts-expect-error nor a set added to
+frozenValue.seen.add(1);
+export const frozenInput: InferInput<typeof frozen> = { name: "Ada", tags: ["a"], seen: new Set([1]) };
+export const frozenUnknown: Infer<ReturnType<typeof readonly<Validator<unknown>>>> = Symbol("anything");
+export const inPortuguese: string = formatIssue({ code: "too_small", path: [] }, portugueseMessages);
+
+// readonly keeps the mark of a brand on a Map, whose type it replaces with the read-only kind.
+const markedStock = readonly(brand(map(string(), number()), "Stock"));
+export const sizeOfStock = (value: Infer<typeof markedStock>): number => value.size;
+// @ts-expect-error a map that did not go through the validator has no mark
+sizeOfStock(new Map<string, number>());
+
+// A brand marks what is there: a missing value an optional validator produced stays undefined.
+const maybeUserId = brand(optional(string()), "UserId");
+export const noUserId: Infer<typeof maybeUserId> = undefined;
+// @ts-expect-error text that is there must still have gone through the validator
+export const plainUserId: Infer<typeof maybeUserId> = "u1";
+
+// A record whose keys are named accepts those keys.
+const hours = record(oneOf(["mon", "tue"]), number());
+export const someHours: InferInput<typeof hours> = { mon: 8 };
+// @ts-expect-error a key the key validator does not accept is not input that can pass
+export const otherHours: InferInput<typeof hours> = { wed: 8 };
+export const anyKeys: InferInput<ReturnType<typeof record<Validator<string>, Validator<number>>>> = { any: 1 };
+
+// A variant that asks for the tag is never given it, even when what it produces has none.
+tagged("type", {
+  // @ts-expect-error the variant accepts the tag property, which tagged does not pass on
+  a: transform(object({ type: literal("a"), x: number() }), (value) => ({ x: value.x })),
+});

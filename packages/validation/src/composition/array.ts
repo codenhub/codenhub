@@ -1,6 +1,7 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
-import { below, call, composed } from "../core/nesting";
+import { described } from "../core/describe";
+import { childOf, composed } from "../core/nesting";
 import { isArray } from "../core/objects";
 import { assertFunction, typeIssue } from "../core/result";
 import type {
@@ -9,6 +10,7 @@ import type {
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationResult,
@@ -48,33 +50,37 @@ export interface ArrayOptions extends SizeOptions, MessageOptions {}
 export function array<TItem extends AnyValidator>(
   item: TItem,
   ...rest: Rest<Infer<TItem>[], ArrayOptions>
-): Composed<TItem, Infer<TItem>[]>;
+): Composed<TItem, Infer<TItem>[], InferInput<TItem>[]>;
 export function array<TItem extends AnyValidator>(
   item: TItem,
   ...rest: AsyncRest<Infer<TItem>[], ArrayOptions>
-): AsyncValidator<Infer<TItem>[]>;
+): AsyncValidator<Infer<TItem>[], InferInput<TItem>[]>;
 export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("item", item);
-  const [options, reject, accept] = tail<ArrayOptions, unknown[]>(rest, "min max length");
+  const [options, reject, accept, checks] = tail<ArrayOptions, unknown[]>(rest, "min max length");
   assertSizeOptions(options);
+  const child = childOf(item);
 
-  return composed((input, place): Maybe<ValidationResult<unknown>> => {
-    if (!isArray(input)) {
-      return reject([typeIssue("array", input)], place);
-    }
-    const { length } = input;
-    const oversize = sizeIssues(length, "array", options);
-    if (oversize.length > 0) {
-      return reject(oversize, place);
-    }
-    return settle(
-      length,
-      // Read by index up to the length that was checked, never through the array's own iterator, which
-      // the input can replace to yield other items or never stop.
-      (index) => call(item, input[index], below(place, index)),
-      place,
-      options.message,
-      (values) => accept(values, place),
-    );
-  });
+  return described(
+    composed((input, place): Maybe<ValidationResult<unknown>> => {
+      if (!isArray(input)) {
+        return reject([typeIssue("array", input)], place);
+      }
+      const { length } = input;
+      const oversize = sizeIssues(length, "array", options);
+      if (oversize.length > 0) {
+        return reject(oversize, place);
+      }
+      return settle(
+        length,
+        // Read by index up to the length that was checked, never through the array's own iterator, which
+        // the input can replace to yield other items or never stop.
+        (index) => child(input[index], place, index),
+        place,
+        options.message,
+        (values) => accept(values, place),
+      );
+    }),
+    { kind: "array", options, checks, item },
+  );
 }

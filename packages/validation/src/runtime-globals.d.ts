@@ -35,6 +35,8 @@ declare const URL: {
   prototype: URL;
   new (url: string): URL;
   canParse(url: string): boolean;
+  /** Newer than `canParse`: Node.js 22, Chromium 126, Firefox 126 and Safari 18. */
+  parse?: (url: string) => URL | null;
 };
 
 interface TextDecoder {

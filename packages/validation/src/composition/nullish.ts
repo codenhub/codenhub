@@ -1,6 +1,7 @@
+import { described } from "../core/describe";
 import { call, composed } from "../core/nesting";
 import { assertFunction, pass } from "../core/result";
-import type { AnyValidator, Composed, Infer } from "../core/types";
+import type { AnyValidator, Composed, Infer, InferInput } from "../core/types";
 
 /**
  * Wraps a validator so `null` and `undefined` are accepted and passed through, and every other value
@@ -20,10 +21,14 @@ import type { AnyValidator, Composed, Infer } from "../core/types";
  */
 export function nullish<TValidator extends AnyValidator>(
   validator: TValidator,
-): Composed<TValidator, Infer<TValidator> | null | undefined> {
+): Composed<TValidator, Infer<TValidator> | null | undefined, InferInput<TValidator> | null | undefined> {
   assertFunction("validator", validator);
   const validate = composed((input, place) =>
     input === null || input === undefined ? pass(input) : call(validator, input, place),
   );
-  return validate as Composed<TValidator, Infer<TValidator> | null | undefined>;
+  return described(validate, { kind: "nullish", inner: validator }) as Composed<
+    TValidator,
+    Infer<TValidator> | null | undefined,
+    InferInput<TValidator> | null | undefined
+  >;
 }

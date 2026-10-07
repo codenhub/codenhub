@@ -1,5 +1,6 @@
 import { chain, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { described } from "../core/describe";
 import { call, composed } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, assertText, describeType, issue } from "../core/result";
@@ -9,6 +10,7 @@ import type {
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationResult,
@@ -31,12 +33,13 @@ type DeclaredKeys<T> = keyof {
  * The variants as `tagged` accepts them. A variant whose output type is an array or a
  * function, which cannot carry the tag, or declares the tag property, even as optional or beside an
  * index signature, which the variant is never given, is typed `never`, so passing it is a compile error
- * at that variant. An index signature alone, as a `record` has, declares no property, so it is accepted.
+ * at that variant. So is one that accepts the tag property and produces none, such as a `transform` that
+ * drops it, since it would wait for a property it is never given. An index signature alone, as a `record` has, declares no property, so it is accepted.
  */
 type CheckedVariants<TKey extends string, TVariants extends Variants> = {
   [TTag in keyof TVariants]: Infer<TVariants[TTag]> extends readonly unknown[] | ((...args: never[]) => unknown)
     ? never
-    : TKey extends DeclaredKeys<Infer<TVariants[TTag]>>
+    : TKey extends DeclaredKeys<Infer<TVariants[TTag]>> | DeclaredKeys<InferInput<TVariants[TTag]>>
       ? never
       : TVariants[TTag];
 };
@@ -50,6 +53,16 @@ type CheckedVariants<TKey extends string, TVariants extends Variants> = {
  */
 export type InferTagged<TKey extends string, TVariants extends Variants> = {
   [TTag in keyof TVariants & string]: Simplify<Infer<TVariants[TTag]> & { [K in TKey]: TTag }>;
+}[keyof TVariants & string];
+
+/**
+ * The union that can pass a set of variants: for each tag, what its variant accepts with the tag added.
+ *
+ * @typeParam TKey - The property that holds the tag.
+ * @typeParam TVariants - Variant validators, keyed by tag.
+ */
+export type InferTaggedInput<TKey extends string, TVariants extends Variants> = {
+  [TTag in keyof TVariants & string]: Simplify<InferInput<TVariants[TTag]> & { [K in TKey]: TTag }>;
 }[keyof TVariants & string];
 
 /**
@@ -99,12 +112,12 @@ export function tagged<const TKey extends string, const TVariants extends Varian
   key: TKey,
   variants: TVariants & CheckedVariants<TKey, TVariants>,
   ...rest: Rest<InferTagged<TKey, TVariants>, MessageOptions>
-): Composed<TVariants[keyof TVariants], InferTagged<TKey, TVariants>>;
+): Composed<TVariants[keyof TVariants], InferTagged<TKey, TVariants>, InferTaggedInput<TKey, TVariants>>;
 export function tagged<const TKey extends string, const TVariants extends Variants>(
   key: TKey,
   variants: TVariants & CheckedVariants<TKey, TVariants>,
   ...rest: AsyncRest<InferTagged<TKey, TVariants>, MessageOptions>
-): AsyncValidator<InferTagged<TKey, TVariants>>;
+): AsyncValidator<InferTagged<TKey, TVariants>, InferTaggedInput<TKey, TVariants>>;
 export function tagged(key: string, variants: Variants, ...rest: unknown[]): AnyValidator {
   assertText("tagged(key)", key);
   assertShape(variants, "variants");
@@ -116,33 +129,36 @@ export function tagged(key: string, variants: Variants, ...rest: unknown[]): Any
     throw new TypeError("tagged() needs at least one variant");
   }
   table.forEach((variant, tag) => assertFunction(`variants.${tag}`, variant));
-  const [, reject, accept] = tail<MessageOptions, object>(rest);
+  const [options, reject, accept, checks] = tail<MessageOptions, object>(rest);
 
-  return composed((input, place): Maybe<ValidationResult<unknown>> => {
-    if (!isPlainObject(input)) {
-      return reject([objectIssue(input)], place);
-    }
-    const tag = Object.hasOwn(input, key) ? input[key] : undefined;
-    const variant = typeof tag === "string" ? table.get(tag) : undefined;
-    if (variant === undefined) {
-      return reject([issue("invalid_union", { discriminator: key, options: [...tags] }, [key])], place);
-    }
-    const others = {};
-    for (const name of Object.keys(input)) {
-      if (name !== key) {
-        setOwn(others, name, input[name]);
+  return described(
+    composed((input, place): Maybe<ValidationResult<unknown>> => {
+      if (!isPlainObject(input)) {
+        return reject([objectIssue(input)], place);
       }
-    }
-    return chain(call(variant, others, place), (result) => {
-      if (!result.ok) {
-        return result;
+      const tag = Object.hasOwn(input, key) ? input[key] : undefined;
+      const variant = typeof tag === "string" ? table.get(tag) : undefined;
+      if (variant === undefined) {
+        return reject([issue("invalid_union", { discriminator: key, options: [...tags] }, [key])], place);
       }
-      if (!isPlainObject(result.value)) {
-        // Spreading it into the tagged output would take it apart, silently, so it is a bug in the schema.
-        throw new TypeError(`variants.${tag} must produce a plain object, received ${describeType(result.value)}`);
+      const others = {};
+      for (const name of Object.keys(input)) {
+        if (name !== key) {
+          setOwn(others, name, input[name]);
+        }
       }
-      // The tag is defined first, for its place in the output, and again last, so the variant cannot replace it.
-      return accept({ [key]: tag, ...result.value, [key]: tag }, place);
-    });
-  });
+      return chain(call(variant, others, place), (result) => {
+        if (!result.ok) {
+          return result;
+        }
+        if (!isPlainObject(result.value)) {
+          // Spreading it into the tagged output would take it apart, silently, so it is a bug in the schema.
+          throw new TypeError(`variants.${tag} must produce a plain object, received ${describeType(result.value)}`);
+        }
+        // The tag is defined first, for its place in the output, and again last, so the variant cannot replace it.
+        return accept({ [key]: tag, ...result.value, [key]: tag }, place);
+      });
+    }),
+    { kind: "tagged", options, checks, key, variants: Object.freeze(Object.fromEntries(table)) },
+  );
 }

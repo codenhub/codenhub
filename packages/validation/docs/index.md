@@ -9,6 +9,8 @@ description: What the validation package does, how to read a result, and where t
 
 This matters wherever data crosses a boundary you do not control: a request, a form, a query string, an environment variable, a file, a message from another service. TypeScript cannot check those at runtime, so the type you wrote for them is a promise nothing enforces until a validator does.
 
+The package is built for that boundary, where the input may be hostile. `email()` and `url()` return what the platform's URL parser read, so the value you store is the one a request or a mail server will use. What a failing input costs is bounded: a long list of bad items stops at 1,000 issues, and input nested too deep is one issue and never a stack overflow, while input that passes is checked in full, so give collections a `max`. An issue the package reports never holds the value that failed, so a log of failures holds no passwords; it does name the input's properties, in `path`, and a check you write decides what its own issue holds. [Compared with valibot, zod and yup](comparison.md) shows each of these beside the other libraries, with what it costs in size and speed.
+
 ## Installation
 
 ```sh
@@ -91,8 +93,9 @@ Issue paths lead down to the offending value, so a problem with `email` has the 
 A few functions combine validators into new ones:
 
 - `optional(validator)`, `nullable(validator)` and `nullish(validator)` accept `undefined`, `null` or both as well, and `optional(validator, value)` replaces a missing value with a default.
+- `brand(validator, name)` marks the type a validator produces, so only a validated value is accepted where that type is asked for, and `readonly(validator)` makes what it produces read-only in its type and freezes the object or array the validator made.
 - `pipe(a, b, c)` runs validators in order, feeding each the value the previous one produced. This is how you clean a string before checking a format: `pipe(string({ trim: true, case: "lower" }), email())`.
-- `check(test, issue)` adds a rule the validator cannot express, such as two fields having to match, given to the validator after its options, and `transform(validator, convert)` changes the value into another.
+- `check(test, issue)` adds a rule the validator cannot express, given to the validator after its options, and `checkFields(keys, test, issue)` one across properties of an object, such as two fields having to match, that runs as soon as those properties have passed, and `transform(validator, convert)` changes the value into another.
 - `array`, `tuple`, `record`, `set` and `map` validate collections, and `union`, `tagged` and `intersection` choose between or merge validators.
 - `url` and `email` take validators for their parts, such as `url({ host: hostname() })` to accept local hosts, and `searchParams` reads a query string into typed values.
 
@@ -112,7 +115,7 @@ import { is, number } from "@codenhub/validation";
 const isPort = (input: unknown): input is number => is(number({ int: true, min: 1, max: 65535 }), input);
 ```
 
-`is` returns a `boolean` and does not narrow the input, since a validator that trims, coerces or transforms produces another value than it was given. Where the validator keeps the value as it is, write the guard yourself, as above; otherwise read `result.value` from calling the validator. `is` accepts synchronous validators only.
+`is` returns a `boolean` and does not narrow its input, so the guard above names the type itself. A type guard also says that a value that fails is not of the type, which is false of a validator: `string({ min: 3 })` refuses `"ab"`, which is a string. Read `result.value` from calling the validator where you want the typed value. `is` accepts synchronous validators only.
 
 ## Throwing for invalid configuration
 
@@ -136,6 +139,8 @@ assert(options, { port: 0 }, { subject: "createServer:", messages: englishMessag
 - [Custom validators](custom-validators.md): add rules with `check`, build validators with `format` and `guard`, and validate asynchronously.
 - [Coercion](coercion.md): validate text input such as environment variables, query strings and form fields by converting it.
 - [Standard Schema](standard-schema.md): use a validator wherever a library accepts a Standard Schema.
+- [JSON Schema](json-schema.md): write a validator as a JSON Schema, for an HTTP API, the tools of a language model or a form generator.
 - [Issues and messages](errors.md): the shape of an issue, the built-in codes, message text, localization and form errors.
+- [Compared with valibot, zod and yup](comparison.md): where the package differs, what was measured, and when to choose one of them.
 - [API reference](reference/index.md): every export with its signature and documentation, generated from the source.
 - [Changelog](changelog/index.md): release notes, and the migrations from 0.1.0 and from 0.0.1.

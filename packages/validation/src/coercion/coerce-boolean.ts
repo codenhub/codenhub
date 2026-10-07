@@ -33,4 +33,4 @@ export const coerceBoolean = ((...args: unknown[]) =>
     }
     const word = String(input).trim().toLowerCase();
     return TRUE_WORDS.has(word) ? [true] : FALSE_WORDS.has(word) ? [false] : undefined;
-  })) as Factory<boolean, MessageOptions>;
+  })) as Factory<boolean, MessageOptions, boolean | number | string>;

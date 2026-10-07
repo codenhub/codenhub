@@ -91,7 +91,8 @@ The text comes from the first of these that exists:
 
 1. The issue's own `message`, which a validator's [`message` option](validators.md#wording-one-validator) or a check's message sets.
 2. An entry for its `code` in the message map you pass as the second argument.
-3. The generic "Invalid value".
+3. The entry `default` of that map, which words a code the map has no entry for.
+4. The generic "Invalid value".
 
 Three issues carry the issues behind them in `params.issues`: `invalid_key`, `invalid_union` from `union`, and `invalid_format` for a failed part of a URL or an email address. `englishMessages` words `invalid_key` with the first issue the key validator found, as in "Invalid key: Must be at least 3 characters", so a form says why the key is wrong, except a key given twice, in a URL's query or by two keys a key validator makes the same, which is "Must be given only once", and a failed part the same way, as in "Invalid email address domain: Expected one of "company.com"", and words that issue with the map it was given, so an override of `too_small` in a spread of `englishMessages` reaches the key's message too. It words `invalid_union` with the first issue of the one option whose kind the input had, when there is exactly one: every other option found only that the input is not its type, or not one of the values a `literal` or `oneOf` accepts. So `union([literal(""), email()])` given `"nope"` says "Invalid email address". Otherwise no option is the one meant, and it says "Does not match any of the allowed types", because listing what every option expected reads worse than saying none matched; the per-option issues are in `params.issues` for a message of your own. A quoted issue that sits deeper than the value the outer issue is shown at is prefixed with its path, as in "width: Must be at least 1" for the `width` of an object option, and a list of allowed values names the first ten and how many more there are.
 
@@ -99,9 +100,31 @@ Three issues carry the issues behind them in `params.issues`: `invalid_key`, `in
 
 An issue held in another's `params.issues` keeps the issues behind it only when none of them carries issues of its own, so issues nest at most three deep, whatever composes them. A union's issues are its options' lists, so a union held inside another issue, as one for a property of an object option inside an outer union is, keeps its code and path without its options' issues; a part or a key whose issues are plain, such as a domain's `{ options: ["company.com"] }` or a repeated key's `{ unique: true }`, keeps them. Without the rule, a recursive schema nests issues once per level, an asynchronous one 10,000 times, past what `JSON.stringify` can write, and where the levels share a result, as the options of a recursive union do through one `lazy`, each path through the nesting writes it out again: 430 bytes of input made a result of 350 MB. Wording that reaches an issue held without its issues says what it can without them, such as "Does not match any of the allowed types" for a union. A limit of `lazy` that stopped the validation behind such an issue is never dropped: the `too_big` issue, with its `maximum` and `type`, stands in its place. `flatten` and `standard` use the same wording, so neither lists nested issues separately.
 
+### Built-in languages
+
+Two maps ship with the package, each a value of its own, so a program bundles the languages it imports and no other:
+
+| Map                  | Language                         | `number({ min: 18 })(15)` |
+| -------------------- | -------------------------------- | ------------------------- |
+| `englishMessages`    | English                          | "Must be at least 18"     |
+| `portugueseMessages` | Portuguese, as written in Brazil | "Deve ser no mínimo 18"   |
+
+Both word the same nine codes and are used the same way, in `formatIssue`, `flatten`, `assert` and `standard`. For a program in several languages, choose the map where you show the issue:
+
+```ts
+import { englishMessages, formatIssue, portugueseMessages, type Messages } from "@codenhub/validation";
+
+const maps: Record<string, Messages> = { en: englishMessages, pt: portugueseMessages };
+const wordingFor = (locale: string): Messages => maps[locale] ?? englishMessages;
+
+formatIssue(issue, wordingFor("pt"));
+```
+
+What a map does not translate is what the issue holds as data: the names of types, as in "Esperado string, recebido number", the name of a format the package does not know, and the name of a part of a URL or an address. An issue whose code the map lacks, such as a custom check's, is worded by the map's `default` entry, "Valor inválido" in `portugueseMessages`. `englishMessages` has none, since `formatIssue`'s own last wording, "Invalid value", is English already.
+
 ### Rewording and localizing
 
-A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`, and the map it was found in, so it can word an issue nested in `params` with `formatIssue(nested, messages)` and the same map. To change some of the English, spread `englishMessages` and override the codes you want, since it is frozen and cannot be changed in place; to translate, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
+A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`, and the map it was found in, so it can word an issue nested in `params` with `formatIssue(nested, messages)` and the same map. To change some of the English, spread `englishMessages` and override the codes you want, since it is frozen and cannot be changed in place; to translate into a language that has no map here, write a map of your own. Cover the codes your validators can report, which the tables above list, and give it a `default` entry, text or a function of the issue, for every code you leave out, which would otherwise say "Invalid value" in English:
 
 ```ts
 import { englishMessages, formatIssue, type Messages } from "@codenhub/validation";
@@ -112,6 +135,7 @@ const pt: Messages = {
   invalid_type: (issue) => `Esperado ${String(issue.params?.expected)}`,
   too_small: (issue) => `Mínimo de ${String(issue.params?.minimum)}`,
   username_taken: "Este nome de usuário já existe",
+  default: "Valor inválido",
 };
 
 formatIssue(issue, shorter);
@@ -170,7 +194,7 @@ createI18n({ locales: ["en", 1] }); // TypeError: [I18n] locales[1]: Expected st
 ```
 
 - The message is the `subject`, written as you gave it, then the path of the first issue and its wording. Without a `subject` it starts at the path, and an issue at the value itself has no path.
-- The wording is the issue's own `message`, then the `messages` map, then "Invalid value". The map is optional here, since the path still says which option is wrong.
+- The wording is the issue's own `message`, then the `messages` map, its `default` entry included, then "Invalid value". The map is optional here, since the path still says which option is wrong.
 - The error's `cause` is the failure, so `error.cause.issues` lists the issues the validator reported, not only the first.
 - It accepts synchronous validators only, and throws a `TypeError` if the validator returns a promise.
 
@@ -223,4 +247,4 @@ It takes the same message map as `formatIssue`, which it requires too. Field key
 
 ## Reading the result
 
-A result is plain data, so it can be logged, sent to a client or stored, and because no issue holds the input, doing so does not leak what was submitted. No issue holds a bigint, which `JSON.stringify` cannot serialize: a bigint bound or expected value is written as its decimal digits beside `type: "bigint"`. The bounds of a `date` validator are `Date`s, which `JSON.stringify` turns into ISO strings, and `englishMessages` words either the same. A `literal` or `oneOf` of `undefined`, a symbol or an infinity holds that value as it is, which JSON writes as `null` or leaves out, so word such issues before sending them.
+A failed result is plain data, so it can be logged, sent to a client or stored, and because no issue the package reports holds a value of the input, doing so does not leak the values that were submitted; an issue does name the input's properties, in `path`, and a check you write decides what its own issue holds. A result that passed holds the value itself. No issue holds a bigint, which `JSON.stringify` cannot serialize: a bigint bound or expected value is written as its decimal digits beside `type: "bigint"`. The bounds of a `date` validator are `Date`s, which `JSON.stringify` turns into ISO strings, and `englishMessages` words either the same. A `literal` or `oneOf` of `undefined`, a symbol or an infinity holds that value as it is, which JSON writes as `null` or leaves out, so word such issues before sending them.

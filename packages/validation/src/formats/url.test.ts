@@ -3,9 +3,25 @@ import { describe, expect, it } from "vitest";
 import { oneOf } from "../primitives/one-of";
 import { unknown } from "../primitives/unknown";
 import { accepts, codesOf, issuesOf, valueOf } from "../test-utils";
+import { email } from "./email";
 import { url } from "./url";
 
 describe("url", () => {
+  it("should give the same answers on a runtime without URL.parse, which is newer than URL.canParse", () => {
+    const texts = ["https://Example.com/a/../b", "http://münchen.de", "not a url", "https://exa mple.com", "http://"];
+    const withParse = texts.map((text) => [url()(text), email()(`a@${text.slice(text.indexOf("//") + 2)}`)]);
+    const holder = URL as { parse?: unknown };
+    const { parse } = holder;
+    expect(parse).toBeTypeOf("function");
+    delete holder.parse;
+    try {
+      expect(texts.map((text) => [url()(text), email()(`a@${text.slice(text.indexOf("//") + 2)}`)])).toEqual(withParse);
+    } finally {
+      holder.parse = parse;
+    }
+    expect(withParse[0]?.[0]).toEqual({ ok: true, value: "https://example.com/b" });
+  });
+
   it("should accept absolute http and https URLs with public hosts, as the URL parser writes them", () => {
     expect(valueOf(url()("https://Example.com/a?b=1#c"))).toBe("https://example.com/a?b=1#c");
     expect(valueOf(url()("http://sub.example.co.uk"))).toBe("http://sub.example.co.uk/");

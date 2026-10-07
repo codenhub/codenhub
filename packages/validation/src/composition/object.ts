@@ -1,20 +1,23 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
+import { described } from "../core/describe";
 import { cap, MAX_ISSUES } from "../core/limit";
-import { append, below, call, composed } from "../core/nesting";
+import { append, childOf, composed, type Child } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
-import { assertFunction, failWith, issue } from "../core/result";
+import { assertFunction, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationIssue,
   ValidationResult,
 } from "../core/types";
+import { failWithFields, fieldChecksOf } from "./field-checks";
 
 /** Maps property names to the validators of their values. */
 export type Shape = Record<string, AnyValidator>;
@@ -33,6 +36,22 @@ type OptionalKeys<TShape extends Shape> = {
 export type InferShape<TShape extends Shape> = Simplify<
   { [K in Exclude<keyof TShape, OptionalKeys<TShape>>]: Infer<TShape[K]> } & {
     [K in OptionalKeys<TShape>]?: Infer<TShape[K]>;
+  }
+>;
+
+type OptionalInputKeys<TShape extends Shape> = {
+  [K in keyof TShape]: undefined extends InferInput<TShape[K]> ? K : never;
+}[keyof TShape];
+
+/**
+ * The object type that can pass a shape. A property whose validator accepts `undefined` is optional, so one
+ * with a default is optional here and present in what the shape produces.
+ *
+ * @typeParam TShape - Property validators.
+ */
+export type InferShapeInput<TShape extends Shape> = Simplify<
+  { [K in Exclude<keyof TShape, OptionalInputKeys<TShape>>]: InferInput<TShape[K]> } & {
+    [K in OptionalInputKeys<TShape>]?: InferInput<TShape[K]>;
   }
 >;
 
@@ -83,28 +102,33 @@ export interface ObjectOptions extends MessageOptions {
 export function object<TShape extends Shape>(
   shape: TShape,
   ...rest: Rest<InferShape<TShape>, ObjectOptions>
-): Composed<TShape[keyof TShape], InferShape<TShape>>;
+): Composed<TShape[keyof TShape], InferShape<TShape>, InferShapeInput<TShape>>;
 export function object<TShape extends Shape>(
   shape: TShape,
   ...rest: AsyncRest<InferShape<TShape>, ObjectOptions>
-): AsyncValidator<InferShape<TShape>>;
+): AsyncValidator<InferShape<TShape>, InferShapeInput<TShape>>;
 export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
   assertShape(shape);
   // The shape is read once, so changing it after the validator is made changes nothing.
   const keys = Object.keys(shape);
-  const validators = keys.map((key) => {
+  // The validators as they were read, which is what the description gives: reading the shape again would
+  // read a getter twice, and could describe another validator than the one that runs.
+  const read: Shape = {};
+  const children = keys.map((key) => {
     const validator: unknown = shape[key];
     assertFunction(`shape.${key}`, validator);
-    return validator as AnyValidator;
+    setOwn(read, key, validator);
+    return childOf(validator as AnyValidator);
   });
   const known = new Set(keys);
-  const [options, reject, accept] = tail<ObjectOptions, Record<string, unknown>>(rest, "unknownKeys");
+  const [options, reject, accept, checks] = tail<ObjectOptions, Record<string, unknown>>(rest, "unknownKeys");
+  const fieldChecks = fieldChecksOf(checks, keys);
   const unknownKeys = options.unknownKeys ?? "strip";
   if (unknownKeys !== "strip" && unknownKeys !== "strict" && unknownKeys !== "passthrough") {
     throw new TypeError(`unknownKeys must be "strip", "strict" or "passthrough", received "${String(unknownKeys)}"`);
   }
 
-  return composed((input, place): Maybe<ValidationResult<unknown>> => {
+  const validator = composed((input, place): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
       return reject([objectIssue(input)], place);
     }
@@ -122,34 +146,40 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
 
     // Everything the output takes from the input is read before any child runs, so neither a child that
     // changes the input nor a change made while one waits can reach the output.
-    const present = keys.map((key) => Object.hasOwn(input, key));
-    const values = keys.map((key, index) => (present[index] ? input[key] : undefined));
+    const present: boolean[] = [];
+    const values: unknown[] = [];
+    for (const key of keys) {
+      const isPresent = Object.hasOwn(input, key);
+      present.push(isPresent);
+      values.push(isPresent ? input[key] : undefined);
+    }
     const extra =
       unknownKeys === "passthrough"
         ? Object.keys(input)
             .filter((key) => !known.has(key))
             .map((key) => [key, input[key]] as const)
-        : [];
+        : undefined;
     const results = runEach(values.length, (index) =>
-      call(validators[index] as AnyValidator, values[index], below(place, keys[index] as string)),
+      (children[index] as Child)(values[index], place, keys[index] as string),
     );
     return chain(collect(results), (settled) => {
       const output: Record<string, unknown> = {};
-      settled.forEach((result, index) => {
-        const key = keys[index] as string;
+      for (let index = 0; index < settled.length; index += 1) {
+        const result = settled[index] as ValidationResult<unknown>;
         if (!result.ok) {
           append(issues, result.error.issues);
         } else if (result.value !== undefined || present[index]) {
-          setOwn(output, key, result.value);
+          setOwn(output, keys[index] as string, result.value);
         }
-      });
-      if (issues.length > 0) {
-        return failWith(issues);
       }
-      for (const [key, value] of extra) {
+      if (issues.length > 0) {
+        return failWithFields(issues, fieldChecks, settled, output, options.message, place);
+      }
+      for (const [key, value] of extra ?? []) {
         setOwn(output, key, value);
       }
       return accept(output, place);
     });
   });
+  return described(validator, { kind: "object", options, checks, shape: Object.freeze(read) });
 }

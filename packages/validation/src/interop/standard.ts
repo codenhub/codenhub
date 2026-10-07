@@ -1,6 +1,7 @@
 import { isThenable } from "../core/async";
+import { describe, described } from "../core/describe";
 import { assertFunction } from "../core/result";
-import type { AnyValidator, Infer, ValidationResult } from "../core/types";
+import type { AnyValidator, Infer, InferInput, ValidationResult } from "../core/types";
 import { assertMessages, formatIssue, type Messages } from "../messages/format-issue";
 import type { StandardSchemaV1 } from "./standard-schema";
 
@@ -15,7 +16,7 @@ import type { StandardSchemaV1 } from "./standard-schema";
  * `englishMessages` for the built-in English, or a map of your own. `~standard.validate` returns its result directly for a synchronous validator and a
  * `Promise` for an asynchronous one, even one that returns another kind of thenable, since callers
  * tell the two apart with `instanceof Promise`, as the specification shows, and would otherwise read a
- * pending result as one without issues. Input and output types are `unknown` and what the validator produces.
+ * pending result as one without issues. Input and output types are what the validator accepts, `InferInput`, and what it produces.
  *
  * @example
  * ```ts
@@ -37,7 +38,7 @@ import type { StandardSchemaV1 } from "./standard-schema";
 export function standard<TValidator extends AnyValidator>(
   validator: TValidator,
   messages: Messages,
-): TValidator & StandardSchemaV1<unknown, Infer<TValidator>> {
+): TValidator & StandardSchemaV1<InferInput<TValidator>, Infer<TValidator>> {
   assertFunction("validator", validator);
   assertMessages(messages);
   const wrapped = (input: unknown) => validator(input);
@@ -55,6 +56,9 @@ export function standard<TValidator extends AnyValidator>(
       return isThenable(result) ? (async () => toStandard(await result))() : toStandard(result);
     },
   };
-  return Object.assign(wrapped, { "~standard": props }) as unknown as TValidator &
-    StandardSchemaV1<unknown, Infer<TValidator>>;
+  const record = describe(validator);
+  // Described as the validator it wraps, which it behaves as.
+  return Object.assign(record === undefined ? wrapped : described(wrapped, record), {
+    "~standard": props,
+  }) as unknown as TValidator & StandardSchemaV1<InferInput<TValidator>, Infer<TValidator>>;
 }

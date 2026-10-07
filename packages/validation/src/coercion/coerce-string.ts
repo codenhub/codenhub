@@ -31,4 +31,4 @@ export const coerceString = ((...args: unknown[]) =>
     typeof input === "boolean"
       ? [String(input)]
       : undefined,
-  )) as Factory<string, StringOptions>;
+  )) as Factory<string, StringOptions, string | number | bigint | boolean>;

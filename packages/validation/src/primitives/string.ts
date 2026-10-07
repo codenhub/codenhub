@@ -1,4 +1,5 @@
 import { leaf, split } from "../core/checks";
+import { described } from "../core/describe";
 import { assertOption, assertOrder, assertSize, issue } from "../core/result";
 import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
 
@@ -76,7 +77,7 @@ export const string = ((...args: unknown[]) => {
     throw new TypeError(`case must be "lower" or "upper", received "${String(letterCase)}"`);
   }
 
-  return leaf<string>("string", isString, message, checks, (input, issues) => {
+  const validator = leaf<string>("string", isString, message, checks, (input, issues) => {
     let value = trim === true ? input.trim() : input;
     if (letterCase !== undefined) {
       value = letterCase === "lower" ? value.toLowerCase() : value.toUpperCase();
@@ -94,4 +95,5 @@ export const string = ((...args: unknown[]) => {
     }
     return value;
   });
+  return described(validator, { kind: "string", options, checks });
 }) as Factory<string, StringOptions>;

@@ -33,4 +33,4 @@ export const coerceBigint = ((...args: unknown[]) =>
       return [BigInt(input)];
     }
     return typeof input === "string" && DECIMAL_INTEGER_PATTERN.test(input.trim()) ? [BigInt(input.trim())] : undefined;
-  })) as Factory<bigint, BigintOptions>;
+  })) as Factory<bigint, BigintOptions, bigint | number | string>;

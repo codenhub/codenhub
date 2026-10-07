@@ -71,9 +71,21 @@ export type ValidationResult<T> = ValidationOk<T> | ValidationErr;
  *
  * Every validator in this package has this shape, and so does anything you write yourself.
  *
+ * It is called with any input, whatever `TInput` is: `TInput` is the type of input that can pass, which a
+ * form or a caller's types are written from, and never a limit on what may be given.
+ *
  * @typeParam T - The type of the value on success.
+ * @typeParam TInput - The type of input that can pass. `unknown` for a validator that does not say.
  */
-export type Validator<T> = (input: unknown) => ValidationResult<T>;
+export interface Validator<T, TInput = unknown> {
+  (input: unknown): ValidationResult<T>;
+  /**
+   * Never set: it only carries `TInput`, the type of input that can pass, for {@link InferInput}. Being
+   * optional, it lets any function of the right shape be a validator. The type is held in an object, since
+   * read straight from an optional property, an input type that includes `undefined` would lose it.
+   */
+  readonly "~types"?: { readonly input: TInput };
+}
 
 /**
  * A validator that may finish later, for rules that need I/O such as checking a name is not taken.
@@ -83,15 +95,21 @@ export type Validator<T> = (input: unknown) => ValidationResult<T>;
  * running it, such as `undefined` for an optional value. `await` handles both.
  *
  * @typeParam T - The type of the value on success.
+ * @typeParam TInput - The type of input that can pass. `unknown` for a validator that does not say.
  */
-export type AsyncValidator<T> = (input: unknown) => ValidationResult<T> | PromiseLike<ValidationResult<T>>;
+export interface AsyncValidator<T, TInput = unknown> {
+  (input: unknown): ValidationResult<T> | PromiseLike<ValidationResult<T>>;
+  /** Never set: it only carries `TInput`, as on {@link Validator}. */
+  readonly "~types"?: { readonly input: TInput };
+}
 
 /**
  * Any validator, synchronous or asynchronous.
  *
  * @typeParam T - The type of the value on success.
+ * @typeParam TInput - The type of input that can pass.
  */
-export type AnyValidator<T = unknown> = Validator<T> | AsyncValidator<T>;
+export type AnyValidator<T = unknown, TInput = unknown> = Validator<T, TInput> | AsyncValidator<T, TInput>;
 
 /**
  * A rule about a value that already has its type, given to a validator after its options:
@@ -137,15 +155,43 @@ export type Infer<TValidator extends AnyValidator> =
   Awaited<ReturnType<TValidator>> extends ValidationResult<infer T> ? T : never;
 
 /**
+ * The type of input that can pass a validator, which differs from what it produces wherever it changes
+ * the value: a default, a coercion, a `transform`. It is what a form holds before validation.
+ *
+ * @remarks
+ * A validator is called with any input; this is the type of the input it accepts, not a limit on its
+ * argument. A validator written by hand, typed `Validator<T>`, gives `unknown` unless it says otherwise,
+ * as `Validator<number, string>` does. Clean-up is not part of it: `string({ trim: true })` takes and
+ * produces `string`.
+ *
+ * @example
+ * ```ts
+ * const settings = object({ page: coerceNumber(), theme: optional(oneOf(["light", "dark"]), "light") });
+ * type Settings = Infer<typeof settings>; // { page: number; theme: "light" | "dark" }
+ * type SettingsInput = InferInput<typeof settings>; // { page: string | number; theme?: "light" | "dark" | undefined }
+ * ```
+ *
+ * @typeParam TValidator - The validator to read the type from.
+ */
+export type InferInput<TValidator extends AnyValidator> = TValidator extends {
+  readonly "~types"?: { readonly input: infer TInput };
+}
+  ? TInput
+  : unknown;
+
+/**
  * The validator type a composer returns: synchronous when every child validator is, asynchronous as
  * soon as one child is.
  *
  * @typeParam TChildren - The validators the composer runs.
  * @typeParam TOutput - The type the composed validator produces on success.
+ * @typeParam TInput - The type of input that can pass the composed validator.
  */
-export type Composed<TChildren extends AnyValidator, TOutput> = [TChildren] extends [Validator<unknown>]
-  ? Validator<TOutput>
-  : AsyncValidator<TOutput>;
+export type Composed<TChildren extends AnyValidator, TOutput, TInput = unknown> = [TChildren] extends [
+  Validator<unknown>,
+]
+  ? Validator<TOutput, TInput>
+  : AsyncValidator<TOutput, TInput>;
 
 /**
  * The factory of a validator of `T` with options `TOptions`: options first and optional, then any
@@ -154,12 +200,13 @@ export type Composed<TChildren extends AnyValidator, TOutput> = [TChildren] exte
  *
  * @typeParam T - The type the validators it makes produce.
  * @typeParam TOptions - Its options.
+ * @typeParam TInput - The type of input that can pass, which is `T` unless the validator converts its input.
  */
-export interface Factory<T, TOptions> {
-  (...checks: Check<T>[]): Validator<T>;
-  (options: TOptions, ...checks: Check<T>[]): Validator<T>;
-  (...checks: AsyncCheck<T>[]): AsyncValidator<T>;
-  (options: TOptions, ...checks: AsyncCheck<T>[]): AsyncValidator<T>;
+export interface Factory<T, TOptions, TInput = T> {
+  (...checks: Check<T>[]): Validator<T, TInput>;
+  (options: TOptions, ...checks: Check<T>[]): Validator<T, TInput>;
+  (...checks: AsyncCheck<T>[]): AsyncValidator<T, TInput>;
+  (options: TOptions, ...checks: AsyncCheck<T>[]): AsyncValidator<T, TInput>;
 }
 
 /**

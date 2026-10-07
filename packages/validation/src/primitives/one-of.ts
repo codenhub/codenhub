@@ -45,11 +45,11 @@ const isReverseMapping = (enumObject: EnumLike, key: string): boolean => {
 export function oneOf<const T extends readonly LiteralValue[] | EnumLike>(
   values: T,
   ...rest: Rest<ValuesOf<T>, MessageOptions>
-): Validator<ValuesOf<T>>;
+): Validator<ValuesOf<T>, ValuesOf<T>>;
 export function oneOf<const T extends readonly LiteralValue[] | EnumLike>(
   values: T,
   ...rest: AsyncRest<ValuesOf<T>, MessageOptions>
-): AsyncValidator<ValuesOf<T>>;
+): AsyncValidator<ValuesOf<T>, ValuesOf<T>>;
 export function oneOf(values: readonly LiteralValue[] | EnumLike, ...rest: unknown[]): AnyValidator {
   // Text would be read as a list of its characters. `Object(value) === value` holds for objects alone.
   // A `Set` or any other object of a class would be read as an enum with no members.
@@ -89,5 +89,6 @@ export function oneOf(values: readonly LiteralValue[] | EnumLike, ...rest: unkno
     },
     () => (isBigints ? { options: [...reported], type: "bigint" } : { options: [...reported] }),
     rest,
+    { kind: "oneOf", values: Object.freeze(options) },
   );
 }
