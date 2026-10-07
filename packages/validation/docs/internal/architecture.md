@@ -1,12 +1,12 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 scope: How the validation package is built and why, for whoever changes it next.
 ---
 
 # Validation architecture
 
-This records the invariants of `@codenhub/validation` and the reasoning behind decisions that are not obvious from the code. Public behavior lives in the package docs; this is for changing the package without breaking what it relies on. The release conditions of the next release live in [roadmap.md](roadmap.md), and [0.4.0.md](0.4.0.md) is the approved design of what follows 0.3.0: where it reverses a section here, this document describes the code until the change that implements it. [A validator can be described](#a-validator-can-be-described) is the first of those changes, with `pick`, `omit`, `required` and JSON Schema built on it, and the input type of [Types](#types) is the second.
+This records the invariants of `@codenhub/validation` and the reasoning behind decisions that are not obvious from the code. Public behavior lives in the package docs; this is for changing the package without breaking what it relies on. The release conditions of the next release live in [roadmap.md](roadmap.md), and [0.4.0.md](0.4.0.md) is the approved design of what follows 0.3.0: where it reverses a section here, this document describes the code until the change that implements it. Its steps 1 to 6 are built and described here; steps 7 to 12, its second pass, are not yet.
 
 ## What the package is for
 
