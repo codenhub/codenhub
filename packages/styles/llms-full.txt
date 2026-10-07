@@ -439,7 +439,7 @@ Presentation is two independent axes, so they get a column each. A `Yes` means t
 
 Every other text control floors a _cascaded_ `.edgeless` and honours its own: a `.edgeless` toolbar will not erase the line of a field nobody classed, while `.ipt.edgeless` is a consumer describing what they want and gets it.
 
-State and modifier classes such as `.interactive`, `.hoverable`, `.pressable`, `.invalid`, `.p-sm`, and `.vertical` sit above this map and are documented with their component.
+State and modifier classes such as `.interactive`, `.hoverable`, `.pressable`, `.p-sm`, and `.vertical` sit above this map and are documented with their component. An invalid control is marked with `aria-invalid="true"` rather than a class; see [Forms](docs/usage/forms.md).
 
 ## Elevation
 
