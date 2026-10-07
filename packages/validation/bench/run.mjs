@@ -51,10 +51,12 @@ const scenarios = [
 let kept;
 
 const filter = process.argv[2];
+let ran = 0;
 for (const [name, validator, input] of scenarios) {
   if (filter !== undefined && !name.includes(filter)) {
     continue;
   }
+  ran += 1;
   for (let warm = 0; warm < 20_000; warm += 1) {
     validator(input);
   }
@@ -69,8 +71,15 @@ for (const [name, validator, input] of scenarios) {
     elapsed = performance.now() - start;
   }
   const perSecond = (runs / elapsed) * 1000;
-  if (kept === undefined) {
-    throw new Error(`${name} returned no result`);
+  // A scenario that began to fail, or to pass, would be timed as another path than the one it names.
+  const fails = name.includes("invalid") || name.includes("bad");
+  if (kept?.ok !== !fails) {
+    throw new Error(`${name} should ${fails ? "fail" : "pass"}`);
   }
   console.log(`${name.padEnd(36)} ${(perSecond / 1e6).toFixed(2).padStart(8)} M ops/s`);
+}
+
+if (ran === 0) {
+  console.error(`No scenario has "${filter}" in its name`);
+  process.exitCode = 1;
 }

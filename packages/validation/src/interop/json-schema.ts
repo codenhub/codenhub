@@ -13,6 +13,7 @@ export interface JsonSchema {
   properties?: Record<string, JsonSchema>;
   /** The properties an object must have. */
   required?: string[];
+  /** Every other keyword of JSON Schema, such as `type`, `items` or `anyOf`. */
   [keyword: string]: unknown;
 }
 
@@ -266,7 +267,8 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
           ["gt", "exclusiveMinimum"],
           ["lt", "exclusiveMaximum"],
         ] as const) {
-          if (given[option] !== undefined) {
+          // A bound of an infinity shuts nothing out, and JSON has no value for one.
+          if (Number.isFinite(given[option])) {
             schema[keyword] = given[option];
           }
         }

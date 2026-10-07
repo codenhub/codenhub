@@ -647,6 +647,12 @@ export const frozenInput: InferInput<typeof frozen> = { name: "Ada", tags: ["a"]
 export const frozenUnknown: Infer<ReturnType<typeof readonly<Validator<unknown>>>> = Symbol("anything");
 export const inPortuguese: string = formatIssue({ code: "too_small", path: [] }, portugueseMessages);
 
+// readonly keeps the mark of a brand on a Map, whose type it replaces with the read-only kind.
+const markedStock = readonly(brand(map(string(), number()), "Stock"));
+export const sizeOfStock = (value: Infer<typeof markedStock>): number => value.size;
+// @ts-expect-error a map that did not go through the validator has no mark
+sizeOfStock(new Map<string, number>());
+
 // A brand marks what is there: a missing value an optional validator produced stays undefined.
 const maybeUserId = brand(optional(string()), "UserId");
 export const noUserId: Infer<typeof maybeUserId> = undefined;

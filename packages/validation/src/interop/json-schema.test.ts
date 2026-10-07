@@ -377,6 +377,10 @@ describe("toJsonSchema", () => {
     });
   });
 
+  it("should leave out a bound of an infinity, which JSON has no value for", () => {
+    expect(schemaOf(number({ min: -Infinity, max: Infinity, lt: 5 }))).toEqual({ type: "number", exclusiveMaximum: 5 });
+  });
+
   it("should write a choice JSON has no value for as a schema nothing passes", () => {
     expect(schemaOf(oneOf([undefined]))).toEqual({ not: {} });
     expect(schemaOf(union([literal(undefined)]))).toEqual({ not: {} });

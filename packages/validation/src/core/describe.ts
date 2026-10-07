@@ -54,8 +54,10 @@ export const described = <TTarget extends object>(
  * @example
  * ```ts
  * const user = object({ name: string({ min: 2 }) });
- * const { kind, shape } = describe(user) ?? {}; // "object", { name: [validator] }
- * describe((shape as { name: AnyValidator }).name)?.options; // { min: 2 }
+ * const record = describe(user);
+ * record?.kind; // "object"
+ * const shape = record?.["shape"] as { name: AnyValidator }; // { name: [validator] }
+ * describe(shape.name)?.options; // { min: 2 }
  * ```
  *
  * @param target - A validator or a check.

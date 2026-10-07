@@ -47,7 +47,7 @@ const signup = object(
 
 A check on an object is given the whole object, typed, so it can run only once every property has passed. On a form that is often too late: with a name still empty, the check above says nothing about the passwords, and the user learns they do not match only after fixing everything else.
 
-`checkFields(keys, test, issue?)` is a check that names the properties it needs. It runs as soon as those have passed, whatever the others did, and its test is given an object of those properties alone:
+`checkFields(keys, test, issue?)` is a check that names the properties it needs. It runs once those have passed, whether the others did or not, and its test is given an object of those properties alone. A validation still gives one result, so where another property waits, as one that asks a server does, the issue comes with the rest, when every property has answered:
 
 ```ts
 import { checkFields, object, string } from "@codenhub/validation";

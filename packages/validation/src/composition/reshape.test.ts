@@ -7,6 +7,7 @@ import { email } from "../formats/email";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
+import { nullable } from "./nullable";
 import { nullish } from "./nullish";
 import { object } from "./object";
 import { objectLike } from "./object-like";
@@ -183,6 +184,18 @@ describe("required", () => {
     );
     expect(issuesOf(checked({ a: "" })).map((issue) => issue.message)).toEqual(["Empty"]);
     expect(codesOf(checked({ a: "x", c: 1 }))).toEqual(["unrecognized_key"]);
+  });
+
+  it("should take off every wrapper that accepts a missing value, one inside another", () => {
+    const twice = required(partial(object({ a: optional(string()) })));
+    expect(codesOf(twice({}))).toEqual(["invalid_type"]);
+    expect(valueOf(twice({ a: "x" }))).toEqual({ a: "x" });
+    const mixed = required(object({ a: optional(nullish(string())), b: nullable(optional(string())) }));
+    expect(issuesOf(mixed({})).map((issue) => issue.path)).toEqual([["a"], ["b"]]);
+    expect(valueOf(mixed({ a: null, b: null }))).toEqual({ a: null, b: null });
+    // A nullable with nothing to take off inside is the validator it was given.
+    const plain = nullable(string());
+    expect(describeValidator(required(object({ a: plain })))?.["shape"]).toEqual({ a: plain });
   });
 
   it("should undo partial", () => {

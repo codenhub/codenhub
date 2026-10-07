@@ -98,11 +98,23 @@ export const mapping = (
   );
 };
 
-/** A property as `required` leaves it: what `optional` or `nullish` wrapped, and any other as it is. */
+/**
+ * A property as `required` leaves it: what `optional` or `nullish` wrapped, and any other as it is.
+ * Every such wrapper is taken off, and one inside a `nullable` too, since `partial` wraps a property
+ * that was optional already and one left on would still accept a missing value.
+ */
 export function unwrapped(property: AnyValidator): AnyValidator {
   const record = describe(property);
+  const inner = record?.["inner"] as AnyValidator;
   if (record?.kind === "optional") {
-    return record["inner"] as AnyValidator;
+    return unwrapped(inner);
   }
-  return record?.kind === "nullish" ? nullable(record["inner"] as AnyValidator) : property;
+  if (record?.kind === "nullish") {
+    return nullable(unwrapped(inner));
+  }
+  if (record?.kind === "nullable") {
+    const bare = unwrapped(inner);
+    return bare === inner ? property : nullable(bare);
+  }
+  return property;
 }

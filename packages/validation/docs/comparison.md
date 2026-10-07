@@ -43,7 +43,7 @@ yup throws the same `RangeError` on the nested input. A thrown `RangeError` is n
 
 ### An issue never holds a value of the input
 
-An issue the package reports has a `code`, a `path` and `params`, and none of them is the value that failed, so logging a failed validation cannot log a password or a token. It does name the input's properties, in `path` and for a key a strict object refuses, so keep a secret out of the keys of a `record`. A check or a validator you write decides what its own issue holds, so keep the value out of its `params` and `message`. Serialized, an issue of valibot and an error of yup contain the value; zod's does not.
+An issue the package reports has a `code`, a `path` and `params`, and none of them is the value that failed, so logging a failed validation cannot log a password or a token. It does name the input's properties, in `path` and for a key a strict object refuses, so keep a secret out of the keys of a `record`. The issue of a `literal` or a `oneOf` names the values it accepts, which the schema wrote: compare a secret, such as an API key, in code of your own and not with `literal`. A check or a validator you write decides what its own issue holds, so keep the value out of its `params` and `message`. Serialized, an issue of valibot and an error of yup contain the value; zod's does not.
 
 ### Mistakes in a schema are found early
 

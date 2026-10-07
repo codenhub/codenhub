@@ -368,7 +368,7 @@ yup throws the same `RangeError` on the nested input. A thrown `RangeError` is n
 
 ### An issue never holds a value of the input
 
-An issue the package reports has a `code`, a `path` and `params`, and none of them is the value that failed, so logging a failed validation cannot log a password or a token. It does name the input's properties, in `path` and for a key a strict object refuses, so keep a secret out of the keys of a `record`. A check or a validator you write decides what its own issue holds, so keep the value out of its `params` and `message`. Serialized, an issue of valibot and an error of yup contain the value; zod's does not.
+An issue the package reports has a `code`, a `path` and `params`, and none of them is the value that failed, so logging a failed validation cannot log a password or a token. It does name the input's properties, in `path` and for a key a strict object refuses, so keep a secret out of the keys of a `record`. The issue of a `literal` or a `oneOf` names the values it accepts, which the schema wrote: compare a secret, such as an API key, in code of your own and not with `literal`. A check or a validator you write decides what its own issue holds, so keep the value out of its `params` and `message`. Serialized, an issue of valibot and an error of yup contain the value; zod's does not.
 
 ### Mistakes in a schema are found early
 
@@ -462,7 +462,7 @@ const signup = object(
 
 A check on an object is given the whole object, typed, so it can run only once every property has passed. On a form that is often too late: with a name still empty, the check above says nothing about the passwords, and the user learns they do not match only after fixing everything else.
 
-`checkFields(keys, test, issue?)` is a check that names the properties it needs. It runs as soon as those have passed, whatever the others did, and its test is given an object of those properties alone:
+`checkFields(keys, test, issue?)` is a check that names the properties it needs. It runs once those have passed, whether the others did or not, and its test is given an object of those properties alone. A validation still gives one result, so where another property waits, as one that asks a server does, the issue comes with the rest, when every property has answered:
 
 ```ts
 import { checkFields, object, string } from "@codenhub/validation";
@@ -938,7 +938,7 @@ Three places bend that promise, each because the validator cleans a value before
 
 - **Clean-up options.** `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming. Text with spaces around five letters passes the validator and not the schema. `case` is the same, and so is `clamp` beside a limit, as in `number({ max: 10, clamp: { min: 0, max: 10 } })`: the schema describes the value as it is after cleaning. The range of a `clamp` is itself not written.
 - **Length of text.** A string's `length` counts an emoji, and any other character outside the Basic Multilingual Plane, as two, and JSON Schema counts it as one, so a `min` or `max` can differ by the number of such characters.
-- **Formats that accept several spellings.** `phone()` accepts `+55 (11) 98765-4321` and produces `+5511987654321`. A format JSON Schema has no name for is written under its own, such as `"format": "phone"`, which a reader that does not know it ignores.
+- **Formats that accept several spellings.** `phone()` accepts `+55 (11) 98765-4321` and produces `+5511987654321`. A check on such a format, as in `hostname(pattern(/^[a-z.]+$/))`, sees the spelling the format produces and is written for the text as it arrives, so `EXAMPLE.com` passes the validator and not the schema. A format JSON Schema has no name for is written under its own, such as `"format": "phone"`, which a reader that does not know it ignores.
 
 ## Input and output
 
@@ -996,7 +996,7 @@ The output side takes a default and the value of a `fallback` to pass the valida
 | `pattern`, `startsWith`, `endsWith`, `includes`, `nonBlank` | `pattern`                                                                                                                                                                                                                                       |
 | `multipleOf`, `nonZero`, `unique()`                         | `multipleOf`, `not: { const: 0 }` and `uniqueItems`                                                                                                                                                                                             |
 
-A property is left out of `required` when its validator accepts `undefined`: `optional`, `nullish`, `unknown`, `fallback`, a `union` with one of those, or a `lazy`, `nullable`, `readonly`, `transform` or `pipe` around one. An `intersection` is left out when every validator in it accepts `undefined`. JSON has no `undefined`, so `literal(undefined)` in a `union` is left out of its `anyOf`, and a `union` or a `oneOf` of nothing else is written as `{ not: {} }`, which no value passes.
+A property is left out of `required` when its validator accepts `undefined`: `optional`, `nullish`, `unknown`, `fallback`, a `literal` or a `oneOf` of `undefined`, a `union` with one of those, or a `lazy`, `nullable`, `readonly`, `transform` or `pipe` around one. An `intersection` is left out when every validator in it accepts `undefined`. JSON has no `undefined`, so `literal(undefined)` in a `union` is left out of its `anyOf`, and a `union` or a `oneOf` of nothing else is written as `{ not: {} }`, which no value passes.
 
 A recursive schema is written once, as a definition the schema refers to:
 
@@ -1527,7 +1527,8 @@ type Settings = Infer<typeof settings>; // { readonly theme: string; readonly ta
 
 - It freezes the value itself and not what is inside it, as `Object.freeze` does and as the type says. Wrap an inner validator too where its value must not change, as `tags` above.
 - A value that is the input itself is never frozen, since the caller owns it: `instanceOf`, `guard` and `unknown` produce what they were given, so `readonly` changes their type alone. `object`, `objectLike`, `array`, `tuple`, `record`, `set` and `map` produce a new value, which is frozen.
-- A `Map` or a `Set` is typed `ReadonlyMap` or `ReadonlySet`, and only the type protects it: freezing one does not stop `set` or `add`. A typed array cannot be frozen and is left as it is.
+- A `Map` or a `Set` is typed `ReadonlyMap` or `ReadonlySet`, and only the type protects it: freezing one does not stop `set` or `add`. A typed array cannot be frozen and is left as it is, and so is a `DataView`. The type covers properties and not methods, so a `Date` keeps its setters.
+- A value is taken to be yours when it is the input itself. One a `transform` takes from inside the input, such as `(value) => value.tags`, is frozen: copy it there when the caller must keep it changeable.
 - `pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after: `readonly(pick(user, ["name"]))`.
 
 ### `fallback`

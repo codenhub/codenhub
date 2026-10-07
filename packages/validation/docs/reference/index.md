@@ -220,8 +220,10 @@ Only what a factory of this package made is described. A validator or check writ
 
 ```ts
 const user = object({ name: string({ min: 2 }) });
-const { kind, shape } = describe(user) ?? {}; // "object", { name: [validator] }
-describe((shape as { name: AnyValidator }).name)?.options; // { min: 2 }
+const record = describe(user);
+record?.kind; // "object"
+const shape = record?.["shape"] as { name: AnyValidator }; // { name: [validator] }
+describe(shape.name)?.options; // { min: 2 }
 ```
 
 ### email
@@ -1220,7 +1222,9 @@ It freezes the value itself and not what is inside it, as `Object.freeze` does a
 
 - **The input.** A validator that produces the very value it was given, such as `instanceOf`, `guard` or `unknown`, has its type made read-only and nothing frozen, since freezing would change an object the caller owns. `object`, `objectLike`, `array`, `tuple` and `record` produce a new value, which is frozen.
 - **What a `Map` and a `Set` hold.** A new one is frozen as any other value is, which does not stop `set` or `add`, so only the type keeps them from being changed.
-- **A typed array**, which cannot be frozen.
+- **A typed array or a `DataView`.** A typed array cannot be frozen, and freezing a `DataView` would not stop it writing to its buffer.
+
+A value is taken to be the caller's when it is the input itself. One a `transform` or a validator written by hand takes from inside the input, such as `(value) => value.tags`, is not the input and is frozen: copy it there, `[...value.tags]`, when the caller must keep it changeable.
 
 `pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after.
 
@@ -3221,10 +3225,10 @@ The object type with only the properties named.
 ### ReadonlyOutput
 
 ```ts
-export type ReadonlyOutput<T> = unknown extends T ? T : T extends ReadonlyMap<infer TKey, infer TValue> ? ReadonlyMap<TKey, TValue> : T extends ReadonlySet<infer TItem> ? ReadonlySet<TItem> : Readonly<T>;
+export type ReadonlyOutput<T> = unknown extends T ? T : T extends ReadonlyMap<infer TKey, infer TValue> ? ReadonlyMap<TKey, TValue> & BrandOf<T> : T extends ReadonlySet<infer TItem> ? ReadonlySet<TItem> & BrandOf<T> : Readonly<T>;
 ```
 
-What `readonly` makes of the type a validator produces: its properties or items read-only, and a `Map` or a `Set` the read-only kind. `unknown` stays as it is.
+What `readonly` makes of the type a validator produces: its properties or items read-only, and a `Map` or a `Set` the read-only kind, with the mark of a `brand` kept. `unknown` stays as it is. `Readonly` covers properties and not methods, so a `Date` or a typed array keeps the ones that change it.
 
 **Type parameters**
 
@@ -4065,6 +4069,20 @@ uuid({ version: 7 })("123e4567-e89b-12d3-a456-426614174000"); // { ok: false, ..
 ```
 
 ## Internal types
+
+### BrandOf
+
+```ts
+type BrandOf<T> = T extends {
+    readonly "~brand": infer TBrand;
+} ? {
+    readonly "~brand": TBrand;
+} : unknown;
+```
+
+The mark `brand` put on a type, which naming the read-only kind of a `Map` or a `Set` would drop.
+
+Not exported; declared in `src/composition/readonly.ts`.
 
 ### CheckedVariants
 
