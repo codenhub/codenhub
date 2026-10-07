@@ -2092,6 +2092,32 @@ Use ARIA or data attributes when native attributes are not available for the ele
 
 `aria-disabled="true"` communicates disabled state but does not prevent activation. JavaScript or element choice must prevent activation when required.
 
+<!-- Source: docs/changelog/0.7.0.md -->
+
+# 0.7.0
+
+A button can be a liquid glass pane, the solo classes compose with presentation, intent, and elevation the way components do, and a round of fixes to nested layout gaps, dialog placement, a disabled field's hover, and focus and edges under `.pixel`.
+
+## Added
+
+- **Liquid glass buttons.** A `.btn` carrying `.glass-liquid` itself, in a glass scope, takes the blur, lens, and rim of a liquid pane, with a lens sized for a control. The fill is still the presentation's: `.solid` is an opaque plate under the rim, `.ghost` and `.soft` are clear panes. A liquid region alone still leaves its controls solid. See [Aesthetics → Liquid buttons](docs/usage/aesthetics.md#liquid-buttons).
+- **Solo classes compose with presentation, intent, and elevation.** Fill and edge come from the element or a container, intent and elevation from the element's own class, so `.pixel-solo.edgeless` drops its ring, `.glass-solo.solid.success` is an opaque green pane, and `.neobrutalism-solo.flat` has no slab. With none of those classes a solo element paints what it did. See [Aesthetics → Solo classes](docs/usage/aesthetics.md#solo-classes).
+
+## Changed
+
+- **A solo element inside a `.solid`, `.soft`, or `.ghost` container takes that fill and the theme's text colour**, since presentation cascades to it now as it does to components. A solo element whose own background does not follow the theme -- a dark toast on a light page -- inside such a container prints the theme's text; keep it out of the container, or give it `.solid` with an intent.
+- **A liquid region blurs what takes no liquid layers.** A bare `<table>` under `/native` or your own `@apply surface` inside a `.glass-liquid` region took its clearer ground with nothing blurred behind it; it takes liquid's lighter blur now.
+- **Liquid's corners stay off a solo element's contents.** `.glass-solo.glass-liquid` no longer hands liquid's corner tokens to what it holds, so a `.btn` inside a liquid solo toast keeps the page's corners.
+- **`.tight` and `.loose` stay on their own element.** They wrote `--layout-gap`, which inherits, so a plain `.stack`, `.view`, `.cluster`, or `.auto-grid` nested inside one took its gap. A nested layout keeps the default gap now; set `--layout-gap` on a container to change the gap of every layout inside it.
+- **Your margin places a component dialog.** The centring of an open `<dialog class="card">` (or `.panel`, `.surface`) overruled your margin utilities and unlayered CSS; it now sits in `utilities` at zero specificity, so `mt-8` or your own rule wins, and it still beats a `base` reset such as Preflight's. A margin reset in a cascade layer of your own, declared after the package's, now wins over the centring too, as it already does over every component property.
+
+## Fixed
+
+- **A focused `.solid.primary` control under `.pixel` shows its focus.** The inset focus ring is the primary colour, so it vanished into the fill; a line of the page colour now sits inside it. `.pixel-solo` takes the same line.
+- **Controls and surfaces under `.pixel` keep an edge in forced colours.** Pixel draws its edge as an inset shadow, which forced colours remove, so buttons, fields, and cards had no boundary; forced colours now draw a solid border and drop the clip. `.pixel-solo` draws an inward outline there.
+- **A `.disabled` text field holds still under the pointer.** The class spelling of disabled still darkened an `.ipt`'s line on hover, unlike `disabled`, `aria-disabled`, and `data-disabled`.
+- **`.sketch-rounded` beside `.sketch-solo` stays on the solo element.** Its radius tokens inherited into the element's contents, so a `.btn` inside a rounded sketch toast drew a sketch outline on a page with no sketch in scope.
+
 <!-- Source: docs/changelog/0.6.0.md -->
 
 # 0.6.0
