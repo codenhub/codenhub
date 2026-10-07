@@ -57,7 +57,7 @@ export function instanceOf(target: Constructor, ...rest: unknown[]): AnyValidato
       message,
       checks,
       undefined,
-      // A class with a `Symbol.hasInstance` of its own runs the consumer's code on `instanceof`, which a
+      // A class whose `Symbol.hasInstance`, own or inherited, is not the built-in one runs the consumer's code on `instanceof`, which a
       // fast test would run a second time for an invalid value.
       target[Symbol.hasInstance] === Function.prototype[Symbol.hasInstance],
     ),
