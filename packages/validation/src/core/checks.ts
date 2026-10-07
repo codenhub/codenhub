@@ -1,6 +1,6 @@
 import { chain, collect, detached, runEach, type Maybe } from "./async";
 import { described, type Description } from "./describe";
-import { placeAll, type Place } from "./nesting";
+import { MISS, placeAll, withFast, type Place } from "./nesting";
 import { isPlainObject } from "./objects";
 import { assertText, failWith, isPath, issue, pass, typeIssue } from "./result";
 import type {
@@ -152,14 +152,31 @@ export function leaf<T>(
   message: Message | undefined,
   checks: readonly AsyncCheck<T>[],
   inspect?: (value: T, issues: ValidationIssue[]) => T,
+  isQuick = true,
 ): (input: unknown) => Maybe<ValidationResult<T>> {
-  return (input) => {
+  const validator = (input: unknown): Maybe<ValidationResult<T>> => {
     if (!accepts(input)) {
       return failWith(word([typeIssue(expected, input)], message));
     }
     const issues: ValidationIssue[] = [];
     return finish(inspect === undefined ? (input as T) : inspect(input as T, issues), issues, message, checks);
   };
+  // Its fast test is the same work: a check could wait or call code a consumer wrote, so a leaf with one has none.
+  return withFast(
+    validator,
+    !isQuick || checks.length > 0
+      ? undefined
+      : inspect === undefined
+        ? (input) => (accepts(input) ? input : MISS)
+        : (input) => {
+            if (!accepts(input)) {
+              return MISS;
+            }
+            const issues: ValidationIssue[] = [];
+            const value = inspect(input as T, issues);
+            return issues.length === 0 ? value : MISS;
+          },
+  );
 }
 
 /**
@@ -196,13 +213,22 @@ export function member<T>(
 ): (input: unknown) => Maybe<ValidationResult<T>> {
   const [options, checks] = split<MessageOptions, T>(args);
   const { message } = options;
+  const validator = (input: unknown): Maybe<ValidationResult<T>> => {
+    const found = find(input);
+    return found === undefined
+      ? failWith(word([issue("invalid_value", params())], message))
+      : finish(found[0], [], message, checks);
+  };
   return described(
-    (input: unknown) => {
-      const found = find(input);
-      return found === undefined
-        ? failWith(word([issue("invalid_value", params())], message))
-        : finish(found[0], [], message, checks);
-    },
+    withFast(
+      validator,
+      checks.length > 0
+        ? undefined
+        : (input) => {
+            const found = find(input);
+            return found === undefined ? MISS : found[0];
+          },
+    ),
     { ...description, options, checks },
   );
 }

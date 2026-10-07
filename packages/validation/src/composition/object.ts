@@ -2,7 +2,7 @@ import { chain, collect, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
 import { described } from "../core/describe";
 import { cap, MAX_ISSUES } from "../core/limit";
-import { append, childOf, composed, type Child } from "../core/nesting";
+import { append, childOf, composed, fastOf, MISS, type Child, type Fast } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, issue } from "../core/result";
 import type {
@@ -128,6 +128,41 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
     throw new TypeError(`unknownKeys must be "strip", "strict" or "passthrough", received "${String(unknownKeys)}"`);
   }
 
+  // Valid input is answered without a list or a result for each property, when every property has a fast
+  // test and no check waits for the whole object; any miss runs the full work below, which says why.
+  const fastChildren = keys.map((key) => fastOf(read[key]));
+  const fast: Fast | undefined =
+    checks.length > 0 || fastChildren.includes(undefined)
+      ? undefined
+      : (input) => {
+          if (!isPlainObject(input)) {
+            return MISS;
+          }
+          if (unknownKeys === "strict" && Object.keys(input).some((key) => !known.has(key))) {
+            return MISS;
+          }
+          const output: Record<string, unknown> = {};
+          for (let index = 0; index < keys.length; index += 1) {
+            const key = keys[index] as string;
+            const isPresent = Object.hasOwn(input, key);
+            const value = (fastChildren[index] as Fast)(isPresent ? input[key] : undefined);
+            if (value === MISS) {
+              return MISS;
+            }
+            if (value !== undefined || isPresent) {
+              setOwn(output, key, value);
+            }
+          }
+          if (unknownKeys === "passthrough") {
+            for (const key of Object.keys(input)) {
+              if (!known.has(key)) {
+                setOwn(output, key, input[key]);
+              }
+            }
+          }
+          return output;
+        };
+
   const validator = composed((input, place): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
       return reject([objectIssue(input)], place);
@@ -180,6 +215,6 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
       }
       return accept(output, place);
     });
-  });
+  }, fast);
   return described(validator, { kind: "object", options, checks, shape: Object.freeze(read) });
 }

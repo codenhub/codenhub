@@ -93,6 +93,7 @@ The output side takes a default and the value of a `fallback` to pass the valida
 | `tagged`                                                    | `oneOf`, with the tag as a `const` property of each variant                                                                                                                                                                                     |
 | `nullable`, `nullish`                                       | `anyOf` with `type: "null"`                                                                                                                                                                                                                     |
 | `readonly`, `brand`                                         | What the validator inside is written as                                                                                                                                                                                                         |
+| `codec`                                                     | Its `input`, or its `output` with `io: "output"`                                                                                                                                                                                                |
 | `lazy`                                                      | A `$ref` to a definition under `$defs`                                                                                                                                                                                                          |
 | `pattern`, `startsWith`, `endsWith`, `includes`, `nonBlank` | `pattern`                                                                                                                                                                                                                                       |
 | `multipleOf`, `nonZero`, `unique()`                         | `multipleOf`, `not: { const: 0 }` and `uniqueItems`                                                                                                                                                                                             |
@@ -152,6 +153,10 @@ toJsonSchema(forecast);
 ```
 
 The keys are written on whatever schema the part is written as, beside a `$ref` for a `lazy` and beside an `anyOf` for a `nullable`, and the same on the input and the output side. Examples are written as given, and are not checked against the validator.
+
+## Drafts
+
+The schema is written in draft 2020-12 unless `target: "draft-07"` asks for the older draft, which some readers, such as the tools of a language model in the AI SDK, still take. In draft-07 the items of a `tuple` are listed under `items` and its `rest` under `additionalItems`, definitions are under `definitions`, and what `json` parses is not written, since that draft has no `contentSchema`. Any other target is a `TypeError`. [`standardJsonSchema`](standard-schema.md#with-its-json-schema) writes the draft a library asks for, through the same function.
 
 ## What cannot be written
 

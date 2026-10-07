@@ -51,7 +51,16 @@ export function instanceOf(target: Constructor, ...rest: unknown[]): AnyValidato
   const [options, checks] = split<MessageOptions, unknown>(rest);
   const { message } = options;
   return described(
-    leaf(`instance of ${target.name || "anonymous class"}`, (input) => isInstance(input, target), message, checks),
+    leaf(
+      `instance of ${target.name || "anonymous class"}`,
+      (input) => isInstance(input, target),
+      message,
+      checks,
+      undefined,
+      // A class whose `Symbol.hasInstance`, own or inherited, is not the built-in one runs the consumer's code on `instanceof`, which a
+      // fast test would run a second time for an invalid value.
+      target[Symbol.hasInstance] === Function.prototype[Symbol.hasInstance],
+    ),
     { kind: "instance", options, checks, target },
   );
 }
