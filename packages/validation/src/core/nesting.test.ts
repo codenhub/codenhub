@@ -106,14 +106,17 @@ describe("deep input with many issues", () => {
   };
 
   /**
-   * The fastest of five runs of each input, in milliseconds, so a pause of the machine during one does not
+   * The fastest of six runs of each input, in milliseconds, so a pause of the machine during one does not
    * count. The runs alternate between the inputs, so a busy stretch slows both rather than only the one
-   * timed during it.
+   * timed during it, and each input goes first in half the rounds, so neither always pays for collecting
+   * the garbage the other left.
    */
   const fastestOfEach = (first: Level, second: Level): [number, number] => {
-    let fastest: [number, number] = [Infinity, Infinity];
-    for (let round = 0; round < 5; round += 1) {
-      fastest = [Math.min(fastest[0], time(first)), Math.min(fastest[1], time(second))];
+    const fastest: [number, number] = [Infinity, Infinity];
+    for (let round = 0; round < 6; round += 1) {
+      for (const index of round % 2 === 0 ? [0, 1] : [1, 0]) {
+        fastest[index] = Math.min(fastest[index] ?? Infinity, time(index === 0 ? first : second));
+      }
     }
     return fastest;
   };
