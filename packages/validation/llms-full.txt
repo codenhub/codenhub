@@ -6,7 +6,7 @@ Validation for data you do not control: a request body, a query string, a form, 
 
 - **Formats return what a parser read.** `email()` and `url()` produce the address the platform's URL parser sees, so what you store and check is what a request or a mail server will use.
 - **What a failing input costs is bounded.** A long list of bad items stops at 1,000 issues, and input nested too deep is one issue and never a stack overflow. Input that passes is checked in full, so give collections a `max`.
-- **The issues the package reports never hold the input**, so logging a failed validation cannot log a password. They do name the input's properties, in `path`, and a check you write decides what its own issue holds.
+- **The issues the package reports never hold a value of the input**, so logging a failed validation cannot log a password. They do name the input's properties, in `path`, and a check you write decides what its own issue holds.
 
 Each validator is a function you import on its own, so a program ships only the checks it uses: a lone `boolean()` is 1.2 kB gzipped and an object with a string, an email and a number 5.8 kB. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies. [Compared with valibot, zod and yup](docs/comparison.md) has the measurements, and says when one of them is the better choice.
 
@@ -366,7 +366,7 @@ A failing input reports a bounded number of issues and never overflows the stack
 
 yup throws the same `RangeError` on the nested input. A thrown `RangeError` is not a validation result: code that expects `safeParse` never to throw does not catch it, and on a server it is an unhandled exception a few kilobytes of JSON can cause. An array stops after 1,000 issues and says so, and `lazy` stops at 128 levels by default; [`lazy`](docs/validators.md#lazy) says what is and is not limited.
 
-### An issue never holds the input
+### An issue never holds a value of the input
 
 An issue the package reports has a `code`, a `path` and `params`, and none of them is the value that failed, so logging a failed validation cannot log a password or a token. It does name the input's properties, in `path` and for a key a strict object refuses, so keep a secret out of the keys of a `record`. A check or a validator you write decides what its own issue holds, so keep the value out of its `params` and `message`. Serialized, an issue of valibot and an error of yup contain the value; zod's does not.
 
@@ -898,7 +898,7 @@ It takes the same message map as `formatIssue`, which it requires too. Field key
 
 ## Reading the result
 
-A result is plain data, so it can be logged, sent to a client or stored, and because no issue holds the input, doing so does not leak what was submitted. No issue holds a bigint, which `JSON.stringify` cannot serialize: a bigint bound or expected value is written as its decimal digits beside `type: "bigint"`. The bounds of a `date` validator are `Date`s, which `JSON.stringify` turns into ISO strings, and `englishMessages` words either the same. A `literal` or `oneOf` of `undefined`, a symbol or an infinity holds that value as it is, which JSON writes as `null` or leaves out, so word such issues before sending them.
+A result is plain data, so it can be logged, sent to a client or stored, and because no issue holds a value of the input, doing so does not leak the values that were submitted; an issue does name the input's properties, in `path`. No issue holds a bigint, which `JSON.stringify` cannot serialize: a bigint bound or expected value is written as its decimal digits beside `type: "bigint"`. The bounds of a `date` validator are `Date`s, which `JSON.stringify` turns into ISO strings, and `englishMessages` words either the same. A `literal` or `oneOf` of `undefined`, a symbol or an infinity holds that value as it is, which JSON writes as `null` or leaves out, so word such issues before sending them.
 
 <!-- Source: docs/json-schema.md -->
 
