@@ -12,7 +12,7 @@ import type {
 import { HOSTLESS_SCHEMES, toHostlessUrl } from "./hostless-url";
 import { toCanonicalIpv6 } from "./ip";
 import { assertParts, notFormat, partIssue, partsFormat, readQuery, type Part, type Reading } from "./parts";
-import { HOST_MAX_LENGTH, HOST_TEXT_MAX_LENGTH, isIdnHost, isPublicHost } from "./patterns";
+import { HOST_MAX_LENGTH, HOST_TEXT_MAX_LENGTH, isIdnHost, isPublicHost, readUrl } from "./patterns";
 
 /**
  * No whitespace and no control characters: a written URL holds neither (RFC 3986), and the parser would
@@ -248,10 +248,10 @@ export function url(...rest: unknown[]): AnyValidator {
   });
 
   const read = (text: string): Reading => {
-    if (!WRITTEN_URL_PATTERN.test(text) || hasOverlongHost(text) || !URL.canParse(text)) {
+    const parsed = WRITTEN_URL_PATTERN.test(text) && !hasOverlongHost(text) ? readUrl(text) : undefined;
+    if (parsed === undefined) {
       return notFormat("url");
     }
-    const parsed = new URL(text);
     const scheme = parsed.protocol.slice(0, -1);
     const isHostless = parsed.host === "" || HOSTLESS_SCHEMES.includes(scheme);
     const hasCredentials = parsed.username !== "" || parsed.password !== "";
