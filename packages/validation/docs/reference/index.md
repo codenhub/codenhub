@@ -231,6 +231,44 @@ signup({ name: "", password: "correct horse battery", confirm: "nope" });
 // fails with the issue of `name` and "Passwords must match" at `confirm`
 ```
 
+### codec
+
+```ts
+export declare function codec<TInput extends AnyValidator, TOutput extends AnyValidator>(input: TInput, output: TOutput, conversions: Conversions<TInput, TOutput>): Composed<TInput | TOutput, Infer<TOutput>, InferInput<TInput>>;
+```
+
+Creates a validator that reads a value as it is sent, such as text, into the value a program uses, such as a `Date`, and that `encode` can write back.
+
+It validates with `input`, gives what that produced to `decode`, and validates the result with `output`, so both ends are checked: `"2026-02-30"` fails the input, and a `decode` that returns an invalid date fails the output. `encode(validator, value)` runs the other way, through `encode`: it validates the value with `output`, gives what that produced to `encode`, and checks `input` accepts the result. Each function is written for one direction, and a pair of them is what lets a value go back.
+
+An exception thrown by either function propagates, as a `transform`'s does: it is a bug, not invalid input. Return a value the other validator refuses instead, to fail. Both functions are synchronous: one that returns a promise throws a `TypeError`, since the validator would wait while typed as not waiting, so a rule that waits goes in a check. It is synchronous when both validators are.
+
+**Parameters**
+
+- `input` — Validates the value as it is sent.
+- `output` — Validates the value as a program uses it.
+- `conversions` — `decode` and `encode`, each a function of one direction.
+
+**Type parameters**
+
+- `TInput` — The validator of the value as it is sent.
+- `TOutput` — The validator of the value as a program uses it.
+
+**Returns** — A validator that produces what `output` produces, from what `input` accepts.
+
+**Throws** — When `input` or `output` is not a function, `conversions` is not a plain object, or its `decode` or `encode` is not a function; and when validating, if `decode` returns a promise.
+
+**Example**
+
+```ts
+const timestamp = codec(datetime(), date(), {
+  decode: (text) => new Date(text),
+  encode: (value) => value.toISOString(),
+});
+timestamp("2026-10-07T12:00:00Z"); // { ok: true, value: Date }
+encode(timestamp, new Date(0)); // { ok: true, value: "1970-01-01T00:00:00.000Z" }
+```
+
 ### describe
 
 ```ts
@@ -280,6 +318,48 @@ The value is the address as mail is delivered to it: the local part as written, 
 email()("Ada@Example.COM"); // { ok: true, value: "Ada@example.com" }
 email()("ada@localhost"); // { ok: false, error: { issues: [{ code: "invalid_format", ... }] } }
 email({ domain: oneOf(["company.com"]), message: "Use your company address" });
+```
+
+### encode
+
+```ts
+export declare function encode<TValidator extends AnyValidator>(validator: TValidator, value: Infer<TValidator>): Encoded<TValidator>;
+```
+
+Writes a value back to what a validator accepts: a `Date` back to the text a `codec` read it from, an object of them back to an object of text, and the object `json` parsed back to JSON.
+
+The validator is read with `describe`, and each part written back as its kind says:
+
+- A `codec` validates the value with its output, runs its `encode`, and checks its input accepts the result.
+- A part that produces what it accepts, such as `string`, a format or a coercion, validates the value and gives what it produced, so `email()` gives the address as the parser reads it.
+- A composer, such as `object`, `array` or `union`, writes back each of its parts and keeps its options, and runs its checks on the value once its parts passed. A `pipe` writes its steps back from the last.
+- `json` and `searchParams` write the text: JSON, and a query string of each value as text, which they then read back, so text they would refuse fails. JSON holds less than JavaScript does: `NaN` is written as `null`, and a property that is `undefined` is left out, as `JSON.stringify` writes them.
+- `optional` with a default writes the default back as `undefined` when its inner part refuses it, since only `undefined` produced it. A `fallback` value its inner part refuses fails: every input its inner part refuses produces it, and which one was given is not known.
+
+So a value the validator could not have produced fails with the issues it has, at their paths. A part that cannot be written back throws a `TypeError` naming its place: a `transform`, whose function goes one way, and a validator written by hand; use a `codec` there. A coercion writes back the value it produced, which it accepts, so inside `json` a `bigint` from `coerceBigint` cannot be written as JSON: use a codec that writes it as text.
+
+**Parameters**
+
+- `validator` — A validator made by the factories of this package.
+- `value` — A value of the type the validator produces.
+
+**Type parameters**
+
+- `TValidator` — The validator to write the value back for.
+
+**Returns** — The value as the validator accepts it, or every issue found.
+
+**Throws** — When `validator` is not a function, or a part of it cannot be written back.
+
+**Example**
+
+```ts
+const timestamp = codec(datetime(), date(), {
+  decode: (text) => new Date(text),
+  encode: (value) => value.toISOString(),
+});
+const event = object({ name: string(), at: timestamp });
+encode(event, { name: "Launch", at: new Date(0) }); // { ok: true, value: { name: "Launch", at: "1970-01-01T00:00:00.000Z" } }
 ```
 
 ### endsWith
@@ -1521,6 +1601,42 @@ signup["~standard"].validate({ email: "nope" });
 // { issues: [{ message: "Invalid email address", path: ["email"] }, ...] }
 ```
 
+### standardJsonSchema
+
+```ts
+export declare function standardJsonSchema<TValidator extends AnyValidator>(validator: TValidator, messages?: Messages): TValidator & StandardSchemaV1<InferInput<TValidator>, Infer<TValidator>> & StandardJSONSchemaV1<InferInput<TValidator>, Infer<TValidator>>;
+```
+
+Makes a validator usable wherever a Standard Schema is accepted, as `standard` does, and also wherever one that can be written as a JSON Schema is, such as the tools of a language model in the AI SDK.
+
+What it returns is what `standard` returns with `~standard.jsonSchema` added, from the [Standard JSON Schema](https://standardschema.dev/json-schema) specification: `input({ target })` and `output({ target })` write the validator with `toJsonSchema`, its `io` and `target` as asked. Targets `"draft-2020-12"` and `"draft-07"` are written, and any other throws a `TypeError`, as the specification asks. A part of the validator JSON Schema cannot say, such as a custom check, throws too, unless `libraryOptions` is `{ unrepresentable: "any" }`.
+
+It is an export of its own so that `standard`, which a form in the browser uses, does not bundle the code that writes a JSON Schema. Give `meta` to the validator before passing it here: the schema is written from the validator this is given.
+
+**Parameters**
+
+- `validator` — A validator made by the factories of this package.
+- `messages` — Text for the issue codes, as `standard` takes it. Defaults to `englishMessages`.
+
+**Type parameters**
+
+- `TValidator` — The validator to expose.
+
+**Returns** — A validator that is also a Standard Schema and a Standard JSON Schema.
+
+**Throws** — When `validator` is not a function, or `messages` is not a message map.
+
+**Example**
+
+```ts
+// `tool` is the AI SDK's.
+const weather = tool({
+  description: "Get the weather in a city",
+  inputSchema: standardJsonSchema(object({ city: meta(string({ max: 100 }), { description: "The city" }) })),
+  execute: async ({ city }) => lookUp(city),
+});
+```
+
 ### startsWith
 
 ```ts
@@ -1588,13 +1704,13 @@ event({ type: "click", x: 1 }); // { ok: false, ... }, code "invalid_type" at pa
 export declare function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOptions): JsonSchema;
 ```
 
-Writes a validator as a JSON Schema, draft 2020-12, for whatever takes one: the body of an HTTP API, the arguments of a tool a language model calls, a form generator.
+Writes a validator as a JSON Schema, draft 2020-12 unless `target` asks for draft-07, for whatever takes one: the body of an HTTP API, the arguments of a tool a language model calls, a form generator.
 
 The schema is read from what [describe](#describe) gives, so only validators made by this package's factories can be written. It is written so that a value the validator accepts passes it, with the exceptions below, and it accepts some the validator refuses, since a validator checks more than a schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as the nearest JSON Schema `format`.
 
 The exceptions are where a validator cleans a value before it checks it, which is not written. `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming; text with spaces around five letters passes the validator and not the schema. A `case`, and a `clamp` beside a limit, are the same. Lengths differ for a character outside the Basic Multilingual Plane, such as an emoji, which a string's `length` counts as two and JSON Schema as one.
 
-A recursive schema is written with `$defs` and `$ref`, one definition for each `lazy`.
+A recursive schema is written with `$ref` and one definition for each `lazy`, under `$defs` in draft 2020-12 and under `definitions` in draft-07.
 
 **Parameters**
 
@@ -1999,6 +2115,35 @@ zoneless?: "utc" | undefined;
 
 How to read a date-time written without a zone, such as `2026-09-28T14:30` from an HTML `datetime-local` input. Such text names a time on some clock, not a moment, so without this option it fails: reading it in any one zone would move the moment, without a word, for everyone in another. `"utc"` reads it as UTC, for text you know is written in UTC. A date alone, `2026-09-28`, is always midnight UTC, as JavaScript reads it.
 
+### Conversions
+
+```ts
+export interface Conversions<TInput extends AnyValidator, TOutput extends AnyValidator>
+```
+
+The two functions of a [codec](#codec): one that turns what `input` produced into what `output` reads, and one that turns what `output` produced back into what `input` reads.
+
+**Type parameters**
+
+- `TInput` — The validator of the value as it is sent.
+- `TOutput` — The validator of the value as a program uses it.
+
+#### decode
+
+```ts
+readonly decode: (value: Infer<TInput>) => InferInput<TOutput>;
+```
+
+From the value as it is sent, once `input` passed it, to the value `output` validates.
+
+#### encode
+
+```ts
+readonly encode: (value: Infer<TOutput>) => InferInput<TInput>;
+```
+
+From the value as a program uses it, once `output` passed it, to the value `input` validates.
+
 ### DateOptions
 
 ```ts
@@ -2231,7 +2376,7 @@ Location of the failure relative to the value being validated. Defaults to that 
 export interface JsonSchema
 ```
 
-A JSON Schema, draft 2020-12, as plain data ready for `JSON.stringify`.
+A JSON Schema, draft 2020-12 or draft-07, as plain data ready for `JSON.stringify`.
 
 #### $defs
 
@@ -2248,6 +2393,14 @@ $schema?: string;
 ```
 
 The draft the schema is written in, on the schema `toJsonSchema` returns.
+
+#### definitions
+
+```ts
+definitions?: Record<string, JsonSchema>;
+```
+
+The same definitions, under the name draft-07 gives them.
 
 #### properties
 
@@ -2280,6 +2433,14 @@ io?: "input" | "output" | undefined;
 ```
 
 Which side of the validator to write. `"input"` is what a value must look like to pass, which is what the body of a request or the arguments of a tool must satisfy. `"output"` is what the validator produces. They differ where a validator changes its value: a default, a coercion, `json`, `fallback`.
+
+#### target
+
+```ts
+target?: "draft-2020-12" | "draft-07" | undefined;
+```
+
+The draft of JSON Schema to write. `"draft-07"` is for a reader that does not know 2020-12, such as some tools of language models: it writes a tuple with `items` and `additionalItems`, definitions under `definitions`, and leaves out the `contentSchema` of `json`, which that draft has no word for.
 
 #### unrepresentable
 
@@ -2512,6 +2673,124 @@ min?: number | undefined;
 ```
 
 Requires at least this many items. A non-negative integer.
+
+### StandardJSONSchemaV1
+
+```ts
+export interface StandardJSONSchemaV1<TInput = unknown, TOutput = TInput>
+export declare namespace StandardJSONSchemaV1
+```
+
+Interface of a schema that can also be written as a JSON Schema, from the Standard JSON Schema specification published in `@standard-schema/spec` 1.1. A library that needs a JSON Schema, such as one that declares the tools of a language model, calls `jsonSchema.input` or `jsonSchema.output`.
+
+**Type parameters**
+
+- `TInput` — The input type accepted by the schema.
+- `TOutput` — The output type produced after validation.
+
+#### ~standard
+
+```ts
+readonly "~standard": StandardJSONSchemaV1.Props<TInput, TOutput>;
+```
+
+The Standard JSON Schema properties.
+
+#### StandardJSONSchemaV1.Converter
+
+```ts
+interface Converter
+```
+
+Writes a side of the schema as a JSON Schema. Each may throw when it cannot.
+
+##### input
+
+```ts
+readonly input: (options: Options) => Record<string, unknown>;
+```
+
+Writes the input type as a JSON Schema.
+
+##### output
+
+```ts
+readonly output: (options: Options) => Record<string, unknown>;
+```
+
+Writes the output type as a JSON Schema.
+
+#### StandardJSONSchemaV1.Options
+
+```ts
+interface Options
+```
+
+Options a caller passes to `input` and `output`.
+
+##### libraryOptions
+
+```ts
+readonly libraryOptions?: Record<string, unknown> | undefined;
+```
+
+Options specific to the library behind the schema.
+
+##### target
+
+```ts
+readonly target: Target;
+```
+
+The draft of JSON Schema to write.
+
+#### StandardJSONSchemaV1.Props
+
+```ts
+interface Props<TInput = unknown, TOutput = TInput>
+```
+
+Properties defined on the `~standard` object of a schema that can be written as a JSON Schema.
+
+##### jsonSchema
+
+```ts
+readonly jsonSchema: Converter;
+```
+
+Methods that write the input or the output type as a JSON Schema.
+
+##### types
+
+```ts
+readonly types?: StandardSchemaV1.Types<TInput, TOutput> | undefined;
+```
+
+Inferred TypeScript types preserved for schema inspection.
+
+##### vendor
+
+```ts
+readonly vendor: string;
+```
+
+The vendor identifier of the schema library.
+
+##### version
+
+```ts
+readonly version: 1;
+```
+
+The version number of the specification (always 1).
+
+#### StandardJSONSchemaV1.Target
+
+```ts
+type Target = "draft-2020-12" | "draft-07" | "openapi-3.0" | (string & {});
+```
+
+The draft to write. A library throws for one it does not write.
 
 ### StandardSchemaV1
 
@@ -3164,6 +3443,14 @@ export type Constructor<T = unknown> = abstract new (...args: never[]) => T;
 ```
 
 A class a value can be checked against, including abstract ones.
+
+### Encoded
+
+```ts
+export type Encoded<TValidator extends AnyValidator> = [TValidator] extends [Validator<unknown>] ? ValidationResult<InferInput<TValidator>> : ValidationResult<InferInput<TValidator>> | PromiseLike<ValidationResult<InferInput<TValidator>>>;
+```
+
+The result of `encode`: ready for a synchronous validator, and to be awaited for an asynchronous one.
 
 ### EnumLike
 

@@ -53,6 +53,10 @@ import {
   omit,
   partial,
   pick,
+  standardJsonSchema,
+  type StandardJSONSchemaV1,
+  codec,
+  encode,
   audit,
   extend,
   meta,
@@ -395,6 +399,12 @@ export const asStandard: StandardSchemaV1<unknown, { email: string }> = exposed;
 export const standardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: "a@example.com" };
 // @ts-expect-error the output type is the validator's output
 export const badStandardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: 1 };
+// A Standard JSON Schema is a Standard Schema too, and writes either side.
+const described = standardJsonSchema(object({ email: email() }));
+export const describedAsStandard: StandardSchemaV1<{ email: string }, { email: string }> = described;
+export const describedAsJson: StandardJSONSchemaV1<{ email: string }, { email: string }> = described;
+export const describedInput: Record<string, unknown> = described["~standard"].jsonSchema.input({ target: "draft-07" });
+export const draft07: unknown = toJsonSchema(email(), { target: "draft-07" }).definitions;
 // The message map can be left out, and the English is used.
 export const exposedInEnglish: StandardSchemaV1<unknown, { email: string }> = standard(object({ email: email() }));
 // One type argument is input and output alike, as the specification defaults it.
@@ -618,6 +628,19 @@ export const extended: Infer<typeof promoted> = { id: 1, role: "owner" };
 // @ts-expect-error an added property is typed by its validator
 export const unknownRole: Infer<typeof promoted> = { id: 1, role: "guest" };
 export const extendedAtOnce: boolean = promoted({}).ok;
+// A codec produces its output type from its input type, and encode goes back.
+const isoStamp = codec(datetime(), date(), {
+  decode: (text) => new Date(text),
+  encode: (value) => value.toISOString(),
+});
+export const isoStampValue: Infer<typeof isoStamp> = new Date();
+export const isoStampInput: InferInput<typeof isoStamp> = "2026-10-07T00:00:00Z";
+const written = encode(object({ at: isoStamp }), { at: new Date() });
+export const writtenAt: string | undefined = written.ok ? written.value.at : undefined;
+// @ts-expect-error encode takes a value of the type the validator produces
+encode(isoStamp, "2026-10-07T00:00:00Z");
+// @ts-expect-error decode is given what the input produced
+codec(string(), number(), { decode: (value: number) => value, encode: String });
 // audit reads any validator and gives findings whose rule a test can switch on.
 export const findings: readonly { rule: "unbounded_size" | "unbounded_text" | "raised_limit" | "unreadable" }[] =
   audit(account);

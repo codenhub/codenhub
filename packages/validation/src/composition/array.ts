@@ -1,7 +1,7 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { described } from "../core/describe";
-import { childOf, composed } from "../core/nesting";
+import { childOf, composed, fastOf, MISS, type Fast } from "../core/nesting";
 import { isArray } from "../core/objects";
 import { assertFunction, typeIssue } from "../core/result";
 import type {
@@ -60,6 +60,34 @@ export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   const [options, reject, accept, checks] = tail<ArrayOptions, unknown[]>(rest, "min max length");
   assertSizeOptions(options);
   const child = childOf(item);
+  const fastItem = fastOf(item);
+  const { min, max, length: exact } = options;
+  // Valid input is answered without a result for each item, as `object` does, and any miss runs the full work.
+  const fast: Fast | undefined =
+    checks.length > 0 || fastItem === undefined
+      ? undefined
+      : (input) => {
+          if (!isArray(input)) {
+            return MISS;
+          }
+          const { length } = input;
+          if (
+            (min !== undefined && length < min) ||
+            (max !== undefined && length > max) ||
+            (exact !== undefined && length !== exact)
+          ) {
+            return MISS;
+          }
+          const values: unknown[] = [];
+          for (let index = 0; index < length; index += 1) {
+            const value = fastItem(input[index]);
+            if (value === MISS) {
+              return MISS;
+            }
+            values.push(value);
+          }
+          return values;
+        };
 
   return described(
     composed((input, place): Maybe<ValidationResult<unknown>> => {
@@ -80,7 +108,7 @@ export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
         options.message,
         (values) => accept(values, place),
       );
-    }),
+    }, fast),
     { kind: "array", options, checks, item },
   );
 }

@@ -5,6 +5,7 @@ import { guard } from "../builders/guard";
 import { coerceNumber } from "../coercion/coerce-number";
 import { coerceString } from "../coercion/coerce-string";
 import { array } from "../composition/array";
+import { codec } from "../composition/codec";
 import { json } from "../composition/json";
 import { lazy } from "../composition/lazy";
 import { map } from "../composition/map";
@@ -116,6 +117,8 @@ describe("audit", () => {
     expect(audit(pipe(optional(string({ max: 100 })), parsed))).toEqual([]);
     expect(audit(pipe(meta(coerceString({ max: 100 }), { title: "Body" }), parsed))).toEqual([]);
     expect(audit(pipe(union([string({ max: 10 }), email()]), parsed))).toEqual([]);
+    const trimmed = codec(string({ max: 100 }), string(), { decode: (text) => text.trim(), encode: (text) => text });
+    expect(audit(pipe(trimmed, parsed))).toEqual([]);
     expect(audit(pipe(union([string({ max: 10 }), string()]), parsed))).toEqual([
       { rule: "unbounded_text", path: "", kind: "string" },
       { rule: "unbounded_text", path: "", kind: "json" },
@@ -150,6 +153,12 @@ describe("audit", () => {
       { rule: "unbounded_text", path: "shown", kind: "string" },
       { rule: "unbounded_text", path: "checked", kind: "string" },
     ]);
+  });
+
+  it("should read a codec by what is sent, its input", () => {
+    const count = codec(string(), number(), { decode: Number, encode: String });
+    expect(audit(object({ count }))).toEqual([{ rule: "unbounded_text", path: "count", kind: "string" }]);
+    expect(audit(codec(name, number(), { decode: Number, encode: String }))).toEqual([]);
   });
 
   it("should give a frozen list, and refuse what is not a function", () => {

@@ -69,6 +69,12 @@ function boundsItself(record: Description | undefined): boolean {
       return parts("steps").some(boundsItself);
     case "union":
       return parts("members").every(boundsItself);
+    case "codec":
+      // What it produces is decoded from what its input read.
+      return (
+        boundsItself(describe(record["input"] as AnyValidator)) ||
+        boundsItself(describe(record["output"] as AnyValidator))
+      );
     case "lazy":
       return false;
     default:
@@ -192,6 +198,10 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
         }
         return;
       }
+      case "codec":
+        // What is sent is what the input reads; the output reads what the program made of it.
+        inner("input");
+        return;
       case "json":
       case "searchParams":
         if (!bounded) {

@@ -25,6 +25,8 @@ export { coerceNumber } from "./coercion/coerce-number";
 export { coerceString } from "./coercion/coerce-string";
 export { array, type ArrayOptions } from "./composition/array";
 export { brand, type Branded } from "./composition/brand";
+export { codec, type Conversions } from "./composition/codec";
+export { encode, type Encoded } from "./composition/encode";
 export { extend, type Extended } from "./composition/extend";
 export { fallback } from "./composition/fallback";
 export { intersection } from "./composition/intersection";
@@ -104,7 +106,8 @@ export { url, type UrlOptions } from "./formats/url";
 export { uuid, type UuidOptions } from "./formats/uuid";
 export { toJsonSchema, type JsonSchema, type JsonSchemaOptions } from "./interop/json-schema";
 export { standard } from "./interop/standard";
-export { type StandardSchemaV1 } from "./interop/standard-schema";
+export { standardJsonSchema } from "./interop/standard-json-schema";
+export { type StandardJSONSchemaV1, type StandardSchemaV1 } from "./interop/standard-schema";
 export {
   englishMessages,
   invalidFormatMessage,
