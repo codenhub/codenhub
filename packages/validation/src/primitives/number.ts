@@ -116,7 +116,8 @@ export const number = ((...args: unknown[]) => {
     assertOrder("clamp.min", clamp.min, "lt", lt, true);
   }
 
-  const isPlain = [clamp, min, max, gt, lt, int, safeInt].every((option) => option === undefined);
+  // `int: false` and `safeInt: false` ask for nothing, as leaving them out does.
+  const isPlain = [clamp, min, max, gt, lt].every((option) => option === undefined) && int !== true && safeInt !== true;
   // A number no option reads is the value as it is, and is passed without a list for issues it cannot have.
   const validator = leaf<number>(
     "number",

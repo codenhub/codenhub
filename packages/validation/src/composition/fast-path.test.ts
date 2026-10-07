@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import { format } from "../builders/format";
 import { guard } from "../builders/guard";
 import { fastOf } from "../core/nesting";
 import type { AnyValidator } from "../core/types";
 import { email } from "../formats/email";
 import { uuid } from "../formats/uuid";
 import { boolean } from "../primitives/boolean";
+import { instanceOf } from "../primitives/instance-of";
 import { literal } from "../primitives/literal";
 import { number } from "../primitives/number";
 import { oneOf } from "../primitives/one-of";
@@ -73,7 +75,8 @@ describe("the fast path of valid input", () => {
     ["a collection too long", { ...valid, tags: ["a", "b", "c", "d"] }],
     ["a value outside a choice", { ...valid, role: "root" }],
     ["text too short once trimmed", { ...valid, name: " A " }],
-    ["a missing property", { ...valid, kind: undefined }],
+    ["a property given as undefined", { ...valid, kind: undefined }],
+    ["a missing property", Object.fromEntries(Object.entries(valid).filter(([key]) => key !== "kind"))],
     ["no object", ["not", "an", "object"]],
     ["an unknown property, which is dropped", { ...valid, other: 1 }],
   ])("should give what the full work gives, for %s", (_, input) => {
@@ -118,6 +121,25 @@ describe("the fast path of valid input", () => {
       return input === "thing";
     });
     expect(object({ a: thing(), b: string() })({ a: "other", b: "x" }).ok).toBe(false);
+    expect(calls).toBe(1);
+  });
+
+  it("should run the test of a format or a class's own instanceof once, when a later part fails", () => {
+    let calls = 0;
+    const slug = format("slug", (text) => {
+      calls += 1;
+      return text === "ok";
+    });
+    expect(object({ a: slug(), b: string() })({ a: "ok", b: 1 }).ok).toBe(false);
+    expect(calls).toBe(1);
+    class Tagged {
+      static [Symbol.hasInstance](input: unknown): boolean {
+        calls += 1;
+        return input === "tagged";
+      }
+    }
+    calls = 0;
+    expect(object({ a: instanceOf(Tagged), b: string() })({ a: "tagged", b: 1 }).ok).toBe(false);
     expect(calls).toBe(1);
   });
 
