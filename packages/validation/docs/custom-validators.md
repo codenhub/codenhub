@@ -43,6 +43,35 @@ const signup = object(
 
 `data` needs no annotation: its type comes from the object. A check of the wrong type, such as a number check given to `string`, is a compile error.
 
+### A rule across fields that does not wait for the others
+
+A check on an object is given the whole object, typed, so it can run only once every property has passed. On a form that is often too late: with a name still empty, the check above says nothing about the passwords, and the user learns they do not match only after fixing everything else.
+
+`checkFields(keys, test, issue?)` is a check that names the properties it needs. It runs as soon as those have passed, whatever the others did, and its test is given an object of those properties alone:
+
+```ts
+import { checkFields, object, string } from "@codenhub/validation";
+
+const signup = object(
+  { name: string({ min: 2 }), password: string({ min: 8 }), confirm: string() },
+  checkFields(["password", "confirm"], (data) => data.password === data.confirm, {
+    path: ["confirm"],
+    message: "Passwords must match",
+  }),
+);
+
+signup({ name: "", password: "correct horse", confirm: "nope" });
+// fails with the issue of `name`, and "Passwords must match" at `confirm`
+```
+
+- It still waits for the properties it names: while `password` is too short, nothing is said about `confirm`, since the test would compare a value that is not valid.
+- Its issues come after those of the properties, in the order the checks were given.
+- `data` holds the named properties and no other, so the test cannot come to rely on one that may have failed. A property of the list that is absent, as an optional one may be, is absent from `data` too.
+- It takes its issue as `check` does, and a test that returns a promise makes the object asynchronous.
+- A name the object does not have is a `TypeError` when the object is created, since it is a misspelling.
+
+It works on `object` and `objectLike`. Keep `check` for a rule that needs the whole object, and use both on one object when you have both kinds.
+
 A check can also be written by hand, as a function that returns nothing for a value it accepts or the issues it found. Each issue it returns is an object, as `fail()` makes one: anything else in the list, such as `null`, throws a `TypeError` when the check reports it, and an issue without a `code` has code `custom`. Its `code` and `message` are text and its `path` a list of keys and indexes, as the `ValidationIssue` type says; a `path` that is not, such as `"confirm"`, throws a `TypeError` too, and building issues with `fail()` has the rest checked when they are made. Type it as `Check<T>`, which is how it reports several issues at once or chooses a path per failure:
 
 ```ts

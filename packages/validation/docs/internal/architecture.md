@@ -110,6 +110,15 @@ A check is given to a validator after its options: `string({ min: 3 }, startsWit
 
 Every check of a validator runs and every issue is reported, as for options. A check that returns a promise makes its validator asynchronous, and the types say so: each factory has overloads for synchronous checks, which return `Validator<T>`, and for any checks, which return `AsyncValidator<T>`. Overloads, not a generic list of checks, because a generic rest parameter loses the contextual type that lets `check((data) => …)` infer `data`. One shared helper runs the checks of every validator, so this costs each validator one call.
 
+`checkFields(keys, test, issue?)` is the one check that does not wait for every child. A form with a name, a password and its confirmation showed the price above at its worst: with the name empty, a check that the two match reported nothing, and the user learned of it only after fixing every other field. It names the properties its test reads, and `object` and `objectLike` run it once those have passed, whatever the rest did, on an object of the properties that passed; its test is given the named ones alone, so it is still given a value of its type.
+
+- **A check like any other, described.** It is a function of the whole object, made by `check`, that takes the named properties out and tests them, so given to any validator it runs as a check does. It carries a description, `{ kind: "check", fields }`, which is how `object` tells it from the rest when the object is made, and names where each property is in the shape. No second kind of argument, and no new signature for a factory.
+- **Run after the children, with the object's own checks when all passed.** When every property passed, it runs with the other checks, in the order given. When some failed, the ones whose properties all passed run, and their issues follow the properties' issues. A property it names that failed keeps it silent: its test would be given a value that is not valid.
+- **A name the shape lacks is a `TypeError` when the object is made**, as a key `pick` is given, since the check would never run.
+- **What it costs.** `object` asks each check once, when it is made, whether it names properties, and looks at a list that is usually empty when a property fails. No size budget moved, and an `object` of three strings validates as fast as before.
+
+Rejected: running every `check` on a partly valid object, which gives a test a value that is not of its type; and an option of `check`, `{ fields }`, which could not type the test's argument as the named properties, since an option does not change the type of an argument beside it.
+
 Checks replace `refine`, which wrapped a validator to add one rule. A check attaches to the validator instead, reports every issue with the others, and needs no second concept.
 
 ### Builders

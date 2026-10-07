@@ -117,6 +117,48 @@ const signup = object(
 );
 ```
 
+### checkFields
+
+```ts
+export declare function checkFields<T extends object, const TKey extends keyof T & string>(keys: readonly TKey[], test: (value: Pick<T, TKey>) => boolean, issue?: IssueInput | Message): Check<T>;
+export declare function checkFields<T extends object, const TKey extends keyof T & string>(keys: readonly TKey[], test: (value: Pick<T, TKey>) => boolean | PromiseLike<boolean>, issue?: IssueInput | Message): AsyncCheck<T>;
+```
+
+Makes a check of an object that needs only some of its properties, and so does not wait for the others: given to `object` or `objectLike`, it runs as soon as every property it names has passed, whatever the rest did.
+
+A check made by `check` is given the whole object, so it runs once every property has passed, and a form shows "Passwords must match" only after every other field is valid. This one is given an object of the named properties alone, typed so, and reports with the issues of the properties that failed.
+
+It takes the issue to report as `check` does: a message, a function that words the issue, or an issue with its own `code`, `path`, `params` and `message`. A property named here that the object does not have is a `TypeError` when the object is created. Given to any other validator it is a check like any other, run once the value has passed.
+
+**Parameters**
+
+- `keys` — The properties the test needs, each of which the object has.
+- `test` — Returns whether an object of those properties is acceptable.
+- `issue` — The message, or the issue to report. Defaults to the code `custom` at the object itself.
+
+**Type parameters**
+
+- `T` — The type of the object.
+- `TKey` — The properties the test reads.
+
+**Returns** — A check for an object with those properties.
+
+**Throws** — When `keys` is not a list of property names, `test` is not a function, or `issue` is not a message or an issue object.
+
+**Example**
+
+```ts
+const signup = object(
+  { name: string({ min: 2 }), password: string({ min: 12 }), confirm: string() },
+  checkFields(["password", "confirm"], (data) => data.password === data.confirm, {
+    path: ["confirm"],
+    message: "Passwords must match",
+  }),
+);
+signup({ name: "", password: "correct horse battery", confirm: "nope" });
+// fails with the issue of `name` and "Passwords must match" at `confirm`
+```
+
 ### describe
 
 ```ts

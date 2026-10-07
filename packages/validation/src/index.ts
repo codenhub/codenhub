@@ -5,6 +5,7 @@
  */
 
 export { check } from "./builders/check";
+export { checkFields } from "./builders/check-fields";
 export { endsWith } from "./checks/ends-with";
 export { includes } from "./checks/includes";
 export { lowercase } from "./checks/lowercase";

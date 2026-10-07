@@ -14,6 +14,7 @@ import type {
   ValidationIssue,
   ValidationResult,
 } from "../core/types";
+import { failWithFields, fieldChecksOf } from "./field-checks";
 import type { InferShape, InferShapeInput, Shape } from "./object";
 
 /**
@@ -67,6 +68,7 @@ export function objectLike(shape: Shape, ...rest: unknown[]): AnyValidator {
     return childOf(validator as AnyValidator);
   });
   const [options, reject, accept, checks] = tail<MessageOptions, Record<string, unknown>>(rest);
+  const fieldChecks = fieldChecksOf(checks, keys);
 
   return described(
     composed((input, place): Maybe<ValidationResult<unknown>> => {
@@ -95,7 +97,9 @@ export function objectLike(shape: Shape, ...rest: unknown[]): AnyValidator {
             setOwn(output, keys[index] as string, result.value);
           }
         });
-        return issues.length > 0 ? failWith(issues) : accept(output, place);
+        return issues.length > 0
+          ? failWithFields(issues, fieldChecks, settled, output, options.message, place)
+          : accept(output, place);
       });
     }),
     { kind: "objectLike", options, checks, shape: Object.freeze(read) },

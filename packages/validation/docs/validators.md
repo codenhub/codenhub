@@ -314,6 +314,8 @@ const signup = object(
 );
 ```
 
+That check says nothing while any property fails, since there is no whole object to give it. `checkFields(keys, test, issue?)` is a check that names the properties it needs and runs as soon as those have passed, so a form shows "Passwords must match" beside the other fields' problems: `checkFields(["password", "confirm"], (data) => data.password === data.confirm, { path: ["confirm"] })`. [Custom validators](custom-validators.md#a-rule-across-fields-that-does-not-wait-for-the-others) covers it.
+
 See [Reusing shapes](#reusing-shapes) for extending, omitting and making properties optional.
 
 ### `objectLike`
@@ -444,7 +446,7 @@ The built-in checks, each its own import, take their message last:
 
 A `pattern` that is not a regular expression, and a `multipleOf` step that is not a positive finite number, throw when the check is made. `multipleOf` is exact for every number as it is written, the shortest text that reads back as it, which is what JSON carries. Past `Number.MAX_SAFE_INTEGER` that text is not always the number the double holds: `2 ** 60` is written `1152921504606847000`, so it is not a multiple of `1024`, though `1e23` is one of `10`. A number computed in floating point is not always the decimal it looks like: `0.1 + 0.2` is `0.30000000000000004`, which is not a multiple of `0.1`.
 
-`check(test, issue?)` makes a check of your own; [Custom validators](custom-validators.md) covers it and the other builders. A check that returns a promise makes its validator asynchronous.
+`check(test, issue?)` makes a check of your own, and `checkFields(keys, test, issue?)` one for an object that waits only for the properties it names; [Custom validators](custom-validators.md) covers both and the other builders. A check that returns a promise makes its validator asynchronous.
 
 ## Choosing between validators
 
@@ -651,7 +653,7 @@ A validator inside another is given as the validator itself, to be described in 
 | `"json"`, `"searchParams"`                                                                    | `json`, `searchParams`                            | `inner`                                              |
 | `"check"`                                                                                     | Every built-in check                              | `code` and `params` of the issue it reports          |
 
-A check is described the same way, so the list in `checks` can be read too: `describe(pattern(/^a/))` gives `{ kind: "check", code: "invalid_format", params: { format: "regex", pattern: "/^a/" } }`. What nobody can read gives `undefined`: a validator or a check you wrote by hand, and a check made by `check`, whose test is a function. A reader of a schema decides what such a rule means to it, and code that turns a schema into another notation usually refuses it. The function a `transform` converts with, a `guard`'s test and a `lazy`'s getter are in the description as functions, for the same reason.
+A check is described the same way, so the list in `checks` can be read too: `describe(pattern(/^a/))` gives `{ kind: "check", code: "invalid_format", params: { format: "regex", pattern: "/^a/" } }`. A check made by `checkFields` gives `{ kind: "check", fields }`, the properties it waits for, and no `params`, since its test is a function. What nobody can read gives `undefined`: a validator or a check you wrote by hand, and a check made by `check`, whose test is a function. A reader of a schema decides what such a rule means to it, and code that turns a schema into another notation usually refuses it. The function a `transform` converts with, a `guard`'s test and a `lazy`'s getter are in the description as functions, for the same reason.
 
 What `standard` returns is described as the validator it wraps. The parts are typed as `unknown`, since what a part is depends on the kind: read `kind` first, then the parts of that kind from the table.
 

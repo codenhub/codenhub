@@ -9,6 +9,7 @@ import {
   bigint,
   boolean,
   check,
+  checkFields,
   coerceBigint,
   coerceBoolean,
   coerceDate,
@@ -539,6 +540,23 @@ export const maybeOptions = [
   base64({ url: maybeFlag }),
   searchParams(unknown(), { repeated: maybeFlag }),
 ];
+// A rule across properties is typed by the object it is given to, and its test by the properties it names.
+export const registration = object(
+  { name: string(), password: string(), confirm: string(), age: number() },
+  checkFields(["password", "confirm"], (data) => data.password === data.confirm, { path: ["confirm"] }),
+  // @ts-expect-error the test is given the named properties alone
+  checkFields(["password"], (data) => data.confirm === ""),
+  // @ts-expect-error only a property of the object can be named
+  checkFields(["pasword"], () => true),
+);
+export const registrationAtOnce: boolean = registration({}).ok;
+const registrationThatWaits = object(
+  { name: string() },
+  checkFields(["name"], async (data) => data.name !== ""),
+);
+// @ts-expect-error a test that waits makes the object asynchronous
+export const registrationRead: boolean = registrationThatWaits({}).ok;
+
 // The input type is what can pass, which differs from what is produced where a validator changes its value.
 const preferences = object({
   page: coerceNumber({ int: true }),

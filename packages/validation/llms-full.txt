@@ -51,7 +51,7 @@ Invalid input never throws, with one exception noted below. Every problem a vali
 Every validator takes options, then checks, which are rules for the rarer cases, and a `message` option for a sentence of its own:
 
 ```ts
-import { check, object, pattern, string } from "@codenhub/validation";
+import { checkFields, object, pattern, string } from "@codenhub/validation";
 
 const account = object(
   {
@@ -59,11 +59,14 @@ const account = object(
     password: string({ min: 12 }),
     confirm: string(),
   },
-  check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
+  checkFields(["password", "confirm"], (data) => data.password === data.confirm, {
+    path: ["confirm"],
+    message: "Passwords must match",
+  }),
 );
 ```
 
-Write a rule of your own with `check`, including one that needs to `await` something, a format with `format`, and a validator for any type with `guard`; what they make behaves exactly as the built-in ones do.
+`checkFields` is a rule across properties that runs as soon as the ones it names have passed, so a form shows it beside the other fields' problems and not after them. Write a rule of your own with `check`, including one that needs to `await` something, a format with `format`, and a validator for any type with `guard`; what they make behaves exactly as the built-in ones do.
 
 When invalid input is a caller's mistake, such as an options object passed to your function, `assert(validator, input, { subject, messages })` returns the value or throws a `TypeError` naming the first problem and where it is. `objectLike` validates class instances and other objects that are not plain, which `object` rejects.
 
@@ -193,7 +196,7 @@ A few functions combine validators into new ones:
 
 - `optional(validator)`, `nullable(validator)` and `nullish(validator)` accept `undefined`, `null` or both as well, and `optional(validator, value)` replaces a missing value with a default.
 - `pipe(a, b, c)` runs validators in order, feeding each the value the previous one produced. This is how you clean a string before checking a format: `pipe(string({ trim: true, case: "lower" }), email())`.
-- `check(test, issue)` adds a rule the validator cannot express, such as two fields having to match, given to the validator after its options, and `transform(validator, convert)` changes the value into another.
+- `check(test, issue)` adds a rule the validator cannot express, given to the validator after its options, and `checkFields(keys, test, issue)` one across properties of an object, such as two fields having to match, that runs as soon as those properties have passed, and `transform(validator, convert)` changes the value into another.
 - `array`, `tuple`, `record`, `set` and `map` validate collections, and `union`, `tagged` and `intersection` choose between or merge validators.
 - `url` and `email` take validators for their parts, such as `url({ host: hostname() })` to accept local hosts, and `searchParams` reads a query string into typed values.
 
@@ -351,6 +354,35 @@ const signup = object(
 ```
 
 `data` needs no annotation: its type comes from the object. A check of the wrong type, such as a number check given to `string`, is a compile error.
+
+### A rule across fields that does not wait for the others
+
+A check on an object is given the whole object, typed, so it can run only once every property has passed. On a form that is often too late: with a name still empty, the check above says nothing about the passwords, and the user learns they do not match only after fixing everything else.
+
+`checkFields(keys, test, issue?)` is a check that names the properties it needs. It runs as soon as those have passed, whatever the others did, and its test is given an object of those properties alone:
+
+```ts
+import { checkFields, object, string } from "@codenhub/validation";
+
+const signup = object(
+  { name: string({ min: 2 }), password: string({ min: 8 }), confirm: string() },
+  checkFields(["password", "confirm"], (data) => data.password === data.confirm, {
+    path: ["confirm"],
+    message: "Passwords must match",
+  }),
+);
+
+signup({ name: "", password: "correct horse", confirm: "nope" });
+// fails with the issue of `name`, and "Passwords must match" at `confirm`
+```
+
+- It still waits for the properties it names: while `password` is too short, nothing is said about `confirm`, since the test would compare a value that is not valid.
+- Its issues come after those of the properties, in the order the checks were given.
+- `data` holds the named properties and no other, so the test cannot come to rely on one that may have failed. A property of the list that is absent, as an optional one may be, is absent from `data` too.
+- It takes its issue as `check` does, and a test that returns a promise makes the object asynchronous.
+- A name the object does not have is a `TypeError` when the object is created, since it is a misspelling.
+
+It works on `object` and `objectLike`. Keep `check` for a rule that needs the whole object, and use both on one object when you have both kinds.
 
 A check can also be written by hand, as a function that returns nothing for a value it accepts or the issues it found. Each issue it returns is an object, as `fail()` makes one: anything else in the list, such as `null`, throws a `TypeError` when the check reports it, and an issue without a `code` has code `custom`. Its `code` and `message` are text and its `path` a list of keys and indexes, as the `ValidationIssue` type says; a `path` that is not, such as `"confirm"`, throws a `TypeError` too, and building issues with `fail()` has the rest checked when they are made. Type it as `Check<T>`, which is how it reports several issues at once or chooses a path per failure:
 
@@ -1244,6 +1276,8 @@ const signup = object(
 );
 ```
 
+That check says nothing while any property fails, since there is no whole object to give it. `checkFields(keys, test, issue?)` is a check that names the properties it needs and runs as soon as those have passed, so a form shows "Passwords must match" beside the other fields' problems: `checkFields(["password", "confirm"], (data) => data.password === data.confirm, { path: ["confirm"] })`. [Custom validators](docs/custom-validators.md#a-rule-across-fields-that-does-not-wait-for-the-others) covers it.
+
 See [Reusing shapes](#reusing-shapes) for extending, omitting and making properties optional.
 
 ### `objectLike`
@@ -1374,7 +1408,7 @@ The built-in checks, each its own import, take their message last:
 
 A `pattern` that is not a regular expression, and a `multipleOf` step that is not a positive finite number, throw when the check is made. `multipleOf` is exact for every number as it is written, the shortest text that reads back as it, which is what JSON carries. Past `Number.MAX_SAFE_INTEGER` that text is not always the number the double holds: `2 ** 60` is written `1152921504606847000`, so it is not a multiple of `1024`, though `1e23` is one of `10`. A number computed in floating point is not always the decimal it looks like: `0.1 + 0.2` is `0.30000000000000004`, which is not a multiple of `0.1`.
 
-`check(test, issue?)` makes a check of your own; [Custom validators](docs/custom-validators.md) covers it and the other builders. A check that returns a promise makes its validator asynchronous.
+`check(test, issue?)` makes a check of your own, and `checkFields(keys, test, issue?)` one for an object that waits only for the properties it names; [Custom validators](docs/custom-validators.md) covers both and the other builders. A check that returns a promise makes its validator asynchronous.
 
 ## Choosing between validators
 
@@ -1581,7 +1615,7 @@ A validator inside another is given as the validator itself, to be described in 
 | `"json"`, `"searchParams"`                                                                    | `json`, `searchParams`                            | `inner`                                              |
 | `"check"`                                                                                     | Every built-in check                              | `code` and `params` of the issue it reports          |
 
-A check is described the same way, so the list in `checks` can be read too: `describe(pattern(/^a/))` gives `{ kind: "check", code: "invalid_format", params: { format: "regex", pattern: "/^a/" } }`. What nobody can read gives `undefined`: a validator or a check you wrote by hand, and a check made by `check`, whose test is a function. A reader of a schema decides what such a rule means to it, and code that turns a schema into another notation usually refuses it. The function a `transform` converts with, a `guard`'s test and a `lazy`'s getter are in the description as functions, for the same reason.
+A check is described the same way, so the list in `checks` can be read too: `describe(pattern(/^a/))` gives `{ kind: "check", code: "invalid_format", params: { format: "regex", pattern: "/^a/" } }`. A check made by `checkFields` gives `{ kind: "check", fields }`, the properties it waits for, and no `params`, since its test is a function. What nobody can read gives `undefined`: a validator or a check you wrote by hand, and a check made by `check`, whose test is a function. A reader of a schema decides what such a rule means to it, and code that turns a schema into another notation usually refuses it. The function a `transform` converts with, a `guard`'s test and a `lazy`'s getter are in the description as functions, for the same reason.
 
 What `standard` returns is described as the validator it wraps. The parts are typed as `unknown`, since what a part is depends on the kind: read `kind` first, then the parts of that kind from the table.
 

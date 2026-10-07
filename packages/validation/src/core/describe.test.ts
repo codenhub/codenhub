@@ -114,6 +114,7 @@ const checks: Record<string, [check: unknown, params: Record<string, unknown>]> 
 const others = new Set([
   "assert",
   "check",
+  "checkFields",
   "describe",
   "englishMessages",
   "fail",

@@ -49,7 +49,7 @@ Invalid input never throws, with one exception noted below. Every problem a vali
 Every validator takes options, then checks, which are rules for the rarer cases, and a `message` option for a sentence of its own:
 
 ```ts
-import { check, object, pattern, string } from "@codenhub/validation";
+import { checkFields, object, pattern, string } from "@codenhub/validation";
 
 const account = object(
   {
@@ -57,11 +57,14 @@ const account = object(
     password: string({ min: 12 }),
     confirm: string(),
   },
-  check((data) => data.password === data.confirm, { path: ["confirm"], message: "Passwords must match" }),
+  checkFields(["password", "confirm"], (data) => data.password === data.confirm, {
+    path: ["confirm"],
+    message: "Passwords must match",
+  }),
 );
 ```
 
-Write a rule of your own with `check`, including one that needs to `await` something, a format with `format`, and a validator for any type with `guard`; what they make behaves exactly as the built-in ones do.
+`checkFields` is a rule across properties that runs as soon as the ones it names have passed, so a form shows it beside the other fields' problems and not after them. Write a rule of your own with `check`, including one that needs to `await` something, a format with `format`, and a validator for any type with `guard`; what they make behaves exactly as the built-in ones do.
 
 When invalid input is a caller's mistake, such as an options object passed to your function, `assert(validator, input, { subject, messages })` returns the value or throws a `TypeError` naming the first problem and where it is. `objectLike` validates class instances and other objects that are not plain, which `object` rejects.
 
