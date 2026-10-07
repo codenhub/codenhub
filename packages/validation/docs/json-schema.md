@@ -73,6 +73,8 @@ toJsonSchema(query, { io: "output" }).properties;
 | `searchParams(validator)`                    | A string                                                                                                                                        | The validator's schema                                 |
 | `fallback`                                   | Anything, since it never fails                                                                                                                  | The schema of the validator it wraps                   |
 
+The output side takes a default and the value of a `fallback` to pass the validator they are given to. Neither is validated, so `optional(string({ min: 3 }), "")` produces text its own output schema refuses: give a default its validator accepts.
+
 ## How each validator is written
 
 | Validator                                                   | Schema                                                                                                                                                                                                                                          |

@@ -115,7 +115,7 @@ import { is, number } from "@codenhub/validation";
 const isPort = (input: unknown): input is number => is(number({ int: true, min: 1, max: 65535 }), input);
 ```
 
-`is` also narrows its input, to the type the validator accepts: inside `if (is(string(), value))`, `value` is a string. That is not always the type the validator produces, since one that coerces or transforms produces another value than it was given: what passed `coerceNumber()` was a number or text, so read `result.value` from calling the validator for the number. `is` accepts synchronous validators only.
+`is` returns a `boolean` and does not narrow its input, so the guard above names the type itself. A type guard also says that a value that fails is not of the type, which is false of a validator: `string({ min: 3 })` refuses `"ab"`, which is a string. Read `result.value` from calling the validator where you want the typed value. `is` accepts synchronous validators only.
 
 ## Throwing for invalid configuration
 

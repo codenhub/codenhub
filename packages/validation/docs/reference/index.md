@@ -563,21 +563,17 @@ intersection(named, aged)({ name: "Ada", age: 36 }); // { ok: true, value: { nam
 ### is
 
 ```ts
-export declare function is<TValidator extends Validator<unknown>>(validator: TValidator, input: unknown): input is InferInput<TValidator>;
+export declare function is(validator: Validator<unknown>, input: unknown): boolean;
 ```
 
 Tests whether an input passes a validator.
 
-It narrows the input to the type the validator accepts, `InferInput`, which is not always the type it produces: a validator that coerces or transforms produces another value than it was given, such as a number from the text `"5"`, and what passed `coerceNumber()` was a number or text. Read `result.value` from calling the validator for what it produces. A validator written by hand that does not say what it accepts narrows nothing.
+It returns a `boolean` and narrows nothing. A type guard says two things, that a value that passes is of the type and that one that fails is not, and the second is false of a validator: `string({ min: 3 })` refuses `"ab"`, which is a string. Where the type is wanted, read `result.value` from calling the validator, or write the guard for the one type you mean, as below.
 
 **Parameters**
 
 - `validator` — A synchronous validator.
 - `input` — The value to test.
-
-**Type parameters**
-
-- `TValidator` — The validator, whose input type the input is narrowed to.
 
 **Returns** — `true` when the validator accepts the input.
 
@@ -588,8 +584,8 @@ It narrows the input to the type the validator accepts, `InferInput`, which is n
 ```ts
 const isPort = (input: unknown): input is number => is(number({ int: true, min: 1, max: 65535 }), input);
 
-if (is(string({ min: 1 }), value)) {
-  value.toUpperCase(); // value is a string here
+if (is(email(), value)) {
+  // value passes, and is still typed as it was
 }
 ```
 

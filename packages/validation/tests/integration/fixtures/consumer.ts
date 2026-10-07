@@ -141,14 +141,15 @@ export const checkedLater: AsyncValidator<string[]> = array(
   check(async (list) => list.length > 0),
 );
 
-// is() accepts only synchronous validators, and narrows its input to what the validator accepts, which
-// is not always what it produces: text that holds a number was text.
+// is() accepts only synchronous validators, and narrows nothing: a guard would also say that what
+// fails is not of the type, and a string too short for string({ min: 3 }) is a string.
 export const raw: unknown = "text";
 export const passes: boolean = is(string(), raw);
+// @ts-expect-error a value that passes is still typed as it was
 export const narrowed: string = is(string(), raw) ? raw : "";
-export const narrowedToInput: string | number = is(coerceNumber(), raw) ? raw : 0;
-// @ts-expect-error what passed a coercing validator may have been text, so it is not narrowed to a number
-export const narrowedToOutput: number = is(coerceNumber(), raw) ? raw : 0;
+export const text = "ab" as string | number;
+// @ts-expect-error a value that fails may still be text, so the other branch is not a number
+export const notNarrowed: number = is(string({ min: 3 }), text) ? 0 : text;
 // @ts-expect-error a validator that may finish later cannot be used as a synchronous guard
 export const badGuard = is(username, raw);
 

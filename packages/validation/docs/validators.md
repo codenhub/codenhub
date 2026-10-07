@@ -730,7 +730,7 @@ A validator is still called with any value at all. The input type says what can 
 
 ### `is`
 
-`is(validator, input)` returns whether `input` passes, and narrows `input` to the type the validator accepts, [`InferInput`](#inferinput): inside `if (is(string(), value))`, `value` is a `string`. That is the type of what was given, not of what the validator produces: what passed `coerceNumber()` was a number or the text of one, so `value` is `string | number` there, and the number is `result.value` from calling the validator. A validator written by hand that does not declare its input narrows nothing. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise.
+`is(validator, input)` returns whether `input` passes, as a `boolean`. It does not narrow `input`: a type guard also says that a value that fails is not of the type, and `string({ min: 3 })` refuses `"ab"`, which is a string. Read `result.value` from calling the validator for the typed value, or wrap `is` in a guard of your own for the one type you mean, `(input: unknown): input is number => is(number(), input)`. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise.
 
 ### `pass` and `fail`
 
