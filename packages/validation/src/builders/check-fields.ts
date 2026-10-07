@@ -37,7 +37,7 @@ import { check } from "./check";
  * @param test - Returns whether an object of those properties is acceptable.
  * @param issue - The message, or the issue to report. Defaults to the code `custom` at the object itself.
  * @returns A check for an object with those properties.
- * @throws {TypeError} When `keys` is not a list of property names, `test` is not a function, or `issue`
+ * @throws {TypeError} When `keys` is not a list of property names or is empty, `test` is not a function, or `issue`
  * is not a message or an issue object.
  */
 export function checkFields<T extends object, const TKey extends keyof T & string>(
@@ -60,6 +60,10 @@ export function checkFields(
   const fields = Object.freeze([...keys]);
   if (fields.some((key) => typeof key !== "string")) {
     throw new TypeError("checkFields() needs a list of property names");
+  }
+  // A check that names no property would wait for none, and run whenever any property failed.
+  if (fields.length === 0) {
+    throw new TypeError("checkFields() needs at least one property name");
   }
   assertFunction("test", test);
   const whole = check<Record<string, unknown>>(

@@ -184,7 +184,7 @@ It takes the issue to report as `check` does: a message, a function that words t
 
 **Returns** — A check for an object with those properties.
 
-**Throws** — When `keys` is not a list of property names, `test` is not a function, or `issue` is not a message or an issue object.
+**Throws** — When `keys` is not a list of property names or is empty, `test` is not a function, or `issue` is not a message or an issue object.
 
 **Example**
 

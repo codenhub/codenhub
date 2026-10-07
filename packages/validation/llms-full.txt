@@ -483,7 +483,7 @@ signup({ name: "", password: "correct horse", confirm: "nope" });
 - Its issues come after those of the properties, in the order the checks were given.
 - `data` holds the named properties and no other, so the test cannot come to rely on one that may have failed. A property of the list that is absent, as an optional one may be, is absent from `data` too.
 - It takes its issue as `check` does, and a test that returns a promise makes the object asynchronous.
-- A name the object does not have is a `TypeError` when the object is created, since it is a misspelling.
+- A name the object does not have is a `TypeError` when the object is created, since it is a misspelling. So is a list of no names, when the check is created.
 
 It works on `object` and `objectLike`. Keep `check` for a rule that needs the whole object, and use both on one object when you have both kinds.
 

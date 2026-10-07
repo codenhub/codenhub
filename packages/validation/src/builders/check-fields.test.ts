@@ -159,6 +159,7 @@ describe("checkFields", () => {
       "keys must be a list of property names, received string",
     );
     expect(() => checkFields([1 as never], () => true)).toThrow("checkFields() needs a list of property names");
+    expect(() => checkFields([], () => true)).toThrow("checkFields() needs at least one property name");
     expect(() => checkFields(["a"] as never, "nope" as never)).toThrow(TypeError);
     expect(() => checkFields(["a"] as never, () => true, 5 as never)).toThrow("issue must be a message or an issue");
   });
