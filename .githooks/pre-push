@@ -16,6 +16,12 @@
 # Bypass with `git push --no-verify` when the exception is a deliberate one.
 set -eu
 
+# A closed stderr, as when the caller pipes git through `head`, would kill this
+# hook with SIGPIPE mid-message, and git for Windows lets a push through a hook
+# killed that way. Ignoring the signal turns a failed write into an ordinary
+# error, so the hook's own verdict is what sets its exit status.
+trap "" PIPE
+
 PROTECTED=refs/heads/main
 
 # The commit types, as in `commit-msg`. Keep the two lists the same.
