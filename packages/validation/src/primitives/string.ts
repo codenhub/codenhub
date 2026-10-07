@@ -77,23 +77,34 @@ export const string = ((...args: unknown[]) => {
     throw new TypeError(`case must be "lower" or "upper", received "${String(letterCase)}"`);
   }
 
-  const validator = leaf<string>("string", isString, message, checks, (input, issues) => {
-    let value = trim === true ? input.trim() : input;
-    if (letterCase !== undefined) {
-      value = letterCase === "lower" ? value.toLowerCase() : value.toUpperCase();
-    }
-    if (min !== undefined && value.length < min) {
-      issues.push(lengthIssue("too_small", min, false));
-    }
-    if (max !== undefined && value.length > max) {
-      issues.push(lengthIssue("too_big", max, false));
-    }
-    if (length !== undefined && value.length !== length) {
-      issues.push(
-        value.length < length ? lengthIssue("too_small", length, true) : lengthIssue("too_big", length, true),
-      );
-    }
-    return value;
-  });
+  const isPlain =
+    trim !== true && letterCase === undefined && min === undefined && max === undefined && length === undefined;
+  // Text no option reads is the value as it is, and is passed without a list for issues it cannot have.
+  const validator = leaf<string>(
+    "string",
+    isString,
+    message,
+    checks,
+    isPlain
+      ? undefined
+      : (input, issues) => {
+          let value = trim === true ? input.trim() : input;
+          if (letterCase !== undefined) {
+            value = letterCase === "lower" ? value.toLowerCase() : value.toUpperCase();
+          }
+          if (min !== undefined && value.length < min) {
+            issues.push(lengthIssue("too_small", min, false));
+          }
+          if (max !== undefined && value.length > max) {
+            issues.push(lengthIssue("too_big", max, false));
+          }
+          if (length !== undefined && value.length !== length) {
+            issues.push(
+              value.length < length ? lengthIssue("too_small", length, true) : lengthIssue("too_big", length, true),
+            );
+          }
+          return value;
+        },
+  );
   return described(validator, { kind: "string", options, checks });
 }) as Factory<string, StringOptions>;

@@ -28,5 +28,6 @@ import { formatFactory } from "../formats/text-format";
 export function format(name: string, test: (text: string) => boolean): Factory<string, MessageOptions> {
   assertText("format(name)", name);
   assertFunction("test", test);
-  return formatFactory(name, (text) => (decided("format", test, text) ? text : undefined));
+  // The test is the consumer's code, so it has no fast test that would run it a second time.
+  return formatFactory(name, (text) => (decided("format", test, text) ? text : undefined), false);
 }
