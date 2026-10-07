@@ -140,12 +140,17 @@ export const assertValidMaxDepth = (maxDepth: number): void => {
 /**
  * Collects the error value and every nested wrapper candidate found within `maxDepth`,
  * skipping objects already visited so cyclic wrappers terminate. At the maximum depth, a
- * `cause` chain alone is followed further.
+ * `cause` chain alone is followed further. A candidate `isLeaf` accepts is collected but not
+ * looked into.
  *
  * @internal
  * @throws TypeError - If `maxDepth` is not an integer from 0 through the supported maximum.
  */
-export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_DEPTH): unknown[] => {
+export const getErrorCandidates = (
+  error: unknown,
+  maxDepth = ERROR_UNWRAP_MAX_DEPTH,
+  isLeaf?: (value: unknown) => boolean,
+): unknown[] => {
   assertValidMaxDepth(maxDepth);
 
   const visitedObjects = new Set<object>();
@@ -161,6 +166,10 @@ export const getErrorCandidates = (error: unknown, maxDepth = ERROR_UNWRAP_MAX_D
     const candidate = pendingCandidates[index];
 
     candidates.push(candidate.value);
+
+    if (isLeaf?.(candidate.value) === true) {
+      continue;
+    }
 
     let wrappedErrorCandidates: unknown[];
 

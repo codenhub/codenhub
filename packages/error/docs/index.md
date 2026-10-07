@@ -22,7 +22,7 @@ The global registry starts empty. Configure it during application initialization
 import { createAppError, getErrorRegistry } from "@codenhub/error";
 
 getErrorRegistry().codes.add("invalid_credentials", {
-  message: "Invalid email or password.",
+  message: "We couldn't sign you in. The email or password is incorrect. Check them and try again.",
   source: "my-app.auth",
 });
 
