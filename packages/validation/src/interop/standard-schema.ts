@@ -110,3 +110,49 @@ export declare namespace StandardSchemaV1 {
    */
   export type InferOutput<Schema extends StandardSchemaV1> = NonNullable<Schema["~standard"]["types"]>["output"];
 }
+
+/**
+ * Interface of a schema that can also be written as a JSON Schema, from the Standard JSON Schema
+ * specification published in `@standard-schema/spec` 1.1. A library that needs a JSON Schema, such as one
+ * that declares the tools of a language model, calls `jsonSchema.input` or `jsonSchema.output`.
+ *
+ * @typeParam TInput - The input type accepted by the schema.
+ * @typeParam TOutput - The output type produced after validation.
+ */
+export interface StandardJSONSchemaV1<TInput = unknown, TOutput = TInput> {
+  /** The Standard JSON Schema properties. */
+  readonly "~standard": StandardJSONSchemaV1.Props<TInput, TOutput>;
+}
+
+export declare namespace StandardJSONSchemaV1 {
+  /** Properties defined on the `~standard` object of a schema that can be written as a JSON Schema. */
+  export interface Props<TInput = unknown, TOutput = TInput> {
+    /** The version number of the specification (always 1). */
+    readonly version: 1;
+    /** The vendor identifier of the schema library. */
+    readonly vendor: string;
+    /** Inferred TypeScript types preserved for schema inspection. */
+    readonly types?: StandardSchemaV1.Types<TInput, TOutput> | undefined;
+    /** Methods that write the input or the output type as a JSON Schema. */
+    readonly jsonSchema: Converter;
+  }
+
+  /** Writes a side of the schema as a JSON Schema. Each may throw when it cannot. */
+  export interface Converter {
+    /** Writes the input type as a JSON Schema. */
+    readonly input: (options: Options) => Record<string, unknown>;
+    /** Writes the output type as a JSON Schema. */
+    readonly output: (options: Options) => Record<string, unknown>;
+  }
+
+  /** The draft to write. A library throws for one it does not write. */
+  export type Target = "draft-2020-12" | "draft-07" | "openapi-3.0" | (string & {});
+
+  /** Options a caller passes to `input` and `output`. */
+  export interface Options {
+    /** The draft of JSON Schema to write. */
+    readonly target: Target;
+    /** Options specific to the library behind the schema. */
+    readonly libraryOptions?: Record<string, unknown> | undefined;
+  }
+}

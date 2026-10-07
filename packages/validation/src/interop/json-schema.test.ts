@@ -253,6 +253,42 @@ describe("toJsonSchema", () => {
     expect(schemaOf(count, { io: "output" })).toEqual({ type: "number" });
   });
 
+  it("should write draft-07 when asked, with tuples and definitions as that draft names them", () => {
+    type Tree = { children: Tree[] };
+    const tree: Validator<Tree> = lazy(() => object({ children: array(tree) }));
+    expect(toJsonSchema(tree, { target: "draft-07" })).toEqual({
+      $schema: "http://json-schema.org/draft-07/schema#",
+      $ref: "#/definitions/schema1",
+      definitions: {
+        schema1: {
+          type: "object",
+          properties: { children: { type: "array", items: { $ref: "#/definitions/schema1" } } },
+          required: ["children"],
+        },
+      },
+    });
+    expect(toJsonSchema(tuple([string()], { rest: number() }), { target: "draft-07" })).toEqual({
+      $schema: "http://json-schema.org/draft-07/schema#",
+      type: "array",
+      items: [{ type: "string" }],
+      minItems: 1,
+      additionalItems: { type: "number" },
+    });
+    expect(toJsonSchema(tuple([string()]), { target: "draft-07" })["additionalItems"]).toBe(false);
+    expect(toJsonSchema(json(object({ a: string() })), { target: "draft-07" })).toEqual({
+      $schema: "http://json-schema.org/draft-07/schema#",
+      type: "string",
+      contentMediaType: "application/json",
+    });
+    expect(toJsonSchema(string(), { target: "draft-2020-12" })).toEqual(toJsonSchema(string()));
+  });
+
+  it("should refuse a target it does not write", () => {
+    expect(() => toJsonSchema(string(), { target: "openapi-3.0" as never })).toThrow(
+      new TypeError('target must be "draft-2020-12" or "draft-07", received "openapi-3.0"'),
+    );
+  });
+
   it("should write strict objects as closed, and a key named like a prototype member as a property", () => {
     const strict = object({ ["__proto__"]: string(), constructor: number() }, { unknownKeys: "strict" });
     const schema = schemaOf(strict);

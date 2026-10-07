@@ -53,6 +53,8 @@ import {
   omit,
   partial,
   pick,
+  standardJsonSchema,
+  type StandardJSONSchemaV1,
   codec,
   encode,
   audit,
@@ -397,6 +399,12 @@ export const asStandard: StandardSchemaV1<unknown, { email: string }> = exposed;
 export const standardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: "a@example.com" };
 // @ts-expect-error the output type is the validator's output
 export const badStandardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: 1 };
+// A Standard JSON Schema is a Standard Schema too, and writes either side.
+const described = standardJsonSchema(object({ email: email() }));
+export const describedAsStandard: StandardSchemaV1<{ email: string }, { email: string }> = described;
+export const describedAsJson: StandardJSONSchemaV1<{ email: string }, { email: string }> = described;
+export const describedInput: Record<string, unknown> = described["~standard"].jsonSchema.input({ target: "draft-07" });
+export const draft07: unknown = toJsonSchema(email(), { target: "draft-07" }).definitions;
 // The message map can be left out, and the English is used.
 export const exposedInEnglish: StandardSchemaV1<unknown, { email: string }> = standard(object({ email: email() }));
 // One type argument is input and output alike, as the specification defaults it.

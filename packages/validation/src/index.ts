@@ -106,7 +106,8 @@ export { url, type UrlOptions } from "./formats/url";
 export { uuid, type UuidOptions } from "./formats/uuid";
 export { toJsonSchema, type JsonSchema, type JsonSchemaOptions } from "./interop/json-schema";
 export { standard } from "./interop/standard";
-export { type StandardSchemaV1 } from "./interop/standard-schema";
+export { standardJsonSchema } from "./interop/standard-json-schema";
+export { type StandardJSONSchemaV1, type StandardSchemaV1 } from "./interop/standard-schema";
 export {
   englishMessages,
   invalidFormatMessage,

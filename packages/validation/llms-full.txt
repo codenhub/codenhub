@@ -1053,6 +1053,10 @@ toJsonSchema(forecast);
 
 The keys are written on whatever schema the part is written as, beside a `$ref` for a `lazy` and beside an `anyOf` for a `nullable`, and the same on the input and the output side. Examples are written as given, and are not checked against the validator.
 
+## Drafts
+
+The schema is written in draft 2020-12 unless `target: "draft-07"` asks for the older draft, which some readers, such as the tools of a language model in the AI SDK, still take. In draft-07 the items of a `tuple` are listed under `items` and its `rest` under `additionalItems`, definitions are under `definitions`, and what `json` parses is not written, since that draft has no `contentSchema`. Any other target is a `TypeError`. [`standardJsonSchema`](docs/standard-schema.md#with-its-json-schema) writes the draft a library asks for, through the same function.
+
 ## What cannot be written
 
 JSON Schema has no words for some of what a validator can check, and JSON has no value for some of what it can produce:
@@ -1120,6 +1124,28 @@ const age = standard(number({ min: 18 }), {
 ```
 
 Each issue's `path` is the issue's own path, as an array of strings and numbers.
+
+## With its JSON Schema
+
+Some libraries need to write the schema down too, such as the AI SDK, which sends the arguments of a tool to a language model as a JSON Schema. They read it from `~standard.jsonSchema`, which [Standard JSON Schema](https://standardschema.dev/json-schema) adds to the specification. `standardJsonSchema(validator, messages?)` returns what `standard` does with it added:
+
+```ts
+import { meta, number, object, optional, standardJsonSchema, string } from "@codenhub/validation";
+
+const forecast = standardJsonSchema(
+  object({
+    city: meta(string({ min: 1, max: 100 }), { description: "The city to get the weather for" }),
+    days: optional(number({ int: true, min: 1, max: 7 })),
+  }),
+);
+
+forecast["~standard"].jsonSchema.input({ target: "draft-07" });
+// { $schema: "http://json-schema.org/draft-07/schema#", type: "object", properties: { city: { ..., description: "The city to get the weather for" }, ... }, required: ["city"] }
+```
+
+`input` and `output` write the validator with [`toJsonSchema`](docs/json-schema.md), the side and the draft as asked. `"draft-2020-12"` and `"draft-07"` are written, and any other target throws a `TypeError`. A part JSON Schema cannot say throws too, unless the library passes `libraryOptions: { unrepresentable: "any" }`. Give [`meta`](docs/validators.md#meta) to the validator before passing it here, since the schema is written from the validator `standardJsonSchema` is given.
+
+It is a separate export so that `standard`, which a form in the browser uses, does not bundle the code that writes a schema: use `standard` where only validation is asked for, and `standardJsonSchema` where the schema is read too.
 
 ## A note on functions
 
@@ -1830,7 +1856,7 @@ So a value the validator could not have produced fails with the issues it has, a
 
 ## Exposing a validator to other libraries
 
-`standard(validator, messages?)` returns the validator with the `~standard` property that [Standard Schema](docs/standard-schema.md) asks for, so libraries that accept one can take it directly. Its `messages` map supplies the text that specification requires on every issue, the built-in English when left out.
+`standard(validator, messages?)` returns the validator with the `~standard` property that [Standard Schema](docs/standard-schema.md) asks for, so libraries that accept one can take it directly. Its `messages` map supplies the text that specification requires on every issue, the built-in English when left out. `standardJsonSchema(validator, messages?)` also carries the validator's JSON Schema, for a library that writes the schema down, such as the AI SDK for the tools of a language model: [With its JSON Schema](docs/standard-schema.md#with-its-json-schema).
 
 ## Wording one validator
 
@@ -1984,13 +2010,15 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 - `extend(validator, shape, ...rest)`, which makes a new object validator with the properties of one `object` made and those given, a property of the same name replacing the old one, as spreading two shapes does. What follows the shape is what follows one in `object`: options, which replace those of the object, and then checks on the new object. Like `pick`, it keeps the options of the object when given none and refuses one with checks.
 - `audit(validator)`, which reads a schema and lists every place where the size of what it accepts is left open: a collection or text with neither a `max` nor a `length`, a `lazy` whose limits were raised above their defaults, and a part it cannot read. A test asserts the list is empty, so a schema for input nobody controls keeps the bounds it needs.
 - `codec(input, output, { decode, encode })`, a validator that reads a value as it is sent, such as text, into the value a program uses, such as a `Date`, checking both ends, and `encode(validator, value)`, which writes a value back to what a validator accepts through every codec, composer, `json` and `searchParams` in it. A `transform` or a validator written by hand cannot be written back, and `encode` throws naming where it is.
+- `standardJsonSchema(validator, messages?)`, which returns what `standard` returns with `~standard.jsonSchema` added, from the Standard JSON Schema part of the specification, so a library that writes the schema down, such as the AI SDK for the tools of a language model, takes the validator as it is. It is an export of its own so that `standard` does not bundle the code that writes a schema.
+- The `target` option of `toJsonSchema`, `"draft-2020-12"` by default or `"draft-07"`, for a reader that does not know 2020-12.
 - `InferInput<typeof validator>`, the type of input that can pass, beside `Infer`, the type produced. They differ for `optional` with a default, the `coerce` validators, `transform`, `pipe`, `json`, `searchParams` and `fallback`. `Validator<T, TInput>` and `AsyncValidator<T, TInput>` take it as a second type, `unknown` when left out, so a validator written by hand is unchanged. A validator is still called with any value: the type says what can pass and limits no argument.
 - `checkFields(keys, test, issue?)`, a check for `object` and `objectLike` that names the properties it needs and runs as soon as those have passed, whatever the others did. A form with an empty name now shows "Passwords must match" beside the name's own issue, where a `check` waits until every property is valid. Its test is given the named properties alone, typed so, and a name the object lacks is a `TypeError` when the object is created.
 - `brand(validator, name)`, which marks the type a validator produces, leaving `null` and `undefined` unmarked, so only a value that went through the validator is accepted where that type is asked for. It returns the validator it was given and changes nothing at run time. `Branded<T, "Name">` is the marked type.
 - `readonly(validator)`, which makes what a validator produces read-only: in its type, a `Map` and a `Set` as `ReadonlyMap` and `ReadonlySet`, and by freezing the object or array the validator produced. It freezes one level, and never a value that is the input itself, such as what `instanceOf` or `unknown` produces.
 - `portugueseMessages`, the built-in wording in Portuguese as written in Brazil, used wherever `englishMessages` is: "Deve ser no mínimo 18", "Endereço de e-mail inválido". It is a separate value, so a program bundles only the languages it imports.
 - The entry `default` of a message map, which words an issue whose code has no entry of its own, such as the code of a custom check, where `formatIssue` said "Invalid value" in English whatever the language of the map. `portugueseMessages` has one, "Valor inválido"; a map of your own may give text or a function of the issue.
-- The types a consumer may need to name for the above: `Conversions`, `Encoded`, `AuditFinding`, `Meta`, `Extended`, `Description`, `JsonSchema`, `JsonSchemaOptions`, `Picked`, `Omitted`, `AllRequired`, `AllOptional`, `Reshaped`, `InferShapeInput`, `InferTupleInput`, `InferTaggedInput`, `InferRecordInput`, `Branded` and `ReadonlyOutput`.
+- The types a consumer may need to name for the above: `StandardJSONSchemaV1`, `Conversions`, `Encoded`, `AuditFinding`, `Meta`, `Extended`, `Description`, `JsonSchema`, `JsonSchemaOptions`, `Picked`, `Omitted`, `AllRequired`, `AllOptional`, `Reshaped`, `InferShapeInput`, `InferTupleInput`, `InferTaggedInput`, `InferRecordInput`, `Branded` and `ReadonlyOutput`.
 - [Compared with valibot, zod and yup](docs/comparison.md), a page that says where the package differs, what was measured, and when to choose one of the others.
 
 ## Changed

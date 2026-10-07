@@ -1601,6 +1601,42 @@ signup["~standard"].validate({ email: "nope" });
 // { issues: [{ message: "Invalid email address", path: ["email"] }, ...] }
 ```
 
+### standardJsonSchema
+
+```ts
+export declare function standardJsonSchema<TValidator extends AnyValidator>(validator: TValidator, messages?: Messages): TValidator & StandardSchemaV1<InferInput<TValidator>, Infer<TValidator>> & StandardJSONSchemaV1<InferInput<TValidator>, Infer<TValidator>>;
+```
+
+Makes a validator usable wherever a Standard Schema is accepted, as `standard` does, and also wherever one that can be written as a JSON Schema is, such as the tools of a language model in the AI SDK.
+
+What it returns is what `standard` returns with `~standard.jsonSchema` added, from the [Standard JSON Schema](https://standardschema.dev/json-schema) specification: `input({ target })` and `output({ target })` write the validator with `toJsonSchema`, its `io` and `target` as asked. Targets `"draft-2020-12"` and `"draft-07"` are written, and any other throws a `TypeError`, as the specification asks. A part JSON Schema cannot say throws too, unless `libraryOptions` is `{ unrepresentable: "any" }`.
+
+It is an export of its own so that `standard`, which a form in the browser uses, does not bundle the code that writes a JSON Schema. Give `meta` to the validator before passing it here: the schema is written from the validator this is given.
+
+**Parameters**
+
+- `validator` — A validator made by the factories of this package.
+- `messages` — Text for the issue codes, as `standard` takes it. Defaults to `englishMessages`.
+
+**Type parameters**
+
+- `TValidator` — The validator to expose.
+
+**Returns** — A validator that is also a Standard Schema and a Standard JSON Schema.
+
+**Throws** — When `validator` is not a function, or `messages` is not a message map.
+
+**Example**
+
+```ts
+// `tool` is the AI SDK's.
+const weather = tool({
+  description: "Get the weather in a city",
+  inputSchema: standardJsonSchema(object({ city: meta(string({ max: 100 }), { description: "The city" }) })),
+  execute: async ({ city }) => lookUp(city),
+});
+```
+
 ### startsWith
 
 ```ts
@@ -2358,6 +2394,14 @@ $schema?: string;
 
 The draft the schema is written in, on the schema `toJsonSchema` returns.
 
+#### definitions
+
+```ts
+definitions?: Record<string, JsonSchema>;
+```
+
+The same definitions, under the name draft-07 gives them.
+
 #### properties
 
 ```ts
@@ -2389,6 +2433,14 @@ io?: "input" | "output" | undefined;
 ```
 
 Which side of the validator to write. `"input"` is what a value must look like to pass, which is what the body of a request or the arguments of a tool must satisfy. `"output"` is what the validator produces. They differ where a validator changes its value: a default, a coercion, `json`, `fallback`.
+
+#### target
+
+```ts
+target?: "draft-2020-12" | "draft-07" | undefined;
+```
+
+The draft of JSON Schema to write. `"draft-07"` is for a reader that does not know 2020-12, such as some tools of language models: it writes a tuple with `items` and `additionalItems`, definitions under `definitions`, and leaves out the `contentSchema` of `json`, which that draft has no word for.
 
 #### unrepresentable
 
@@ -2621,6 +2673,124 @@ min?: number | undefined;
 ```
 
 Requires at least this many items. A non-negative integer.
+
+### StandardJSONSchemaV1
+
+```ts
+export interface StandardJSONSchemaV1<TInput = unknown, TOutput = TInput>
+export declare namespace StandardJSONSchemaV1
+```
+
+Interface of a schema that can also be written as a JSON Schema, from the Standard JSON Schema specification published in `@standard-schema/spec` 1.1. A library that needs a JSON Schema, such as one that declares the tools of a language model, calls `jsonSchema.input` or `jsonSchema.output`.
+
+**Type parameters**
+
+- `TInput` — The input type accepted by the schema.
+- `TOutput` — The output type produced after validation.
+
+#### ~standard
+
+```ts
+readonly "~standard": StandardJSONSchemaV1.Props<TInput, TOutput>;
+```
+
+The Standard JSON Schema properties.
+
+#### StandardJSONSchemaV1.Converter
+
+```ts
+interface Converter
+```
+
+Writes a side of the schema as a JSON Schema. Each may throw when it cannot.
+
+##### input
+
+```ts
+readonly input: (options: Options) => Record<string, unknown>;
+```
+
+Writes the input type as a JSON Schema.
+
+##### output
+
+```ts
+readonly output: (options: Options) => Record<string, unknown>;
+```
+
+Writes the output type as a JSON Schema.
+
+#### StandardJSONSchemaV1.Options
+
+```ts
+interface Options
+```
+
+Options a caller passes to `input` and `output`.
+
+##### libraryOptions
+
+```ts
+readonly libraryOptions?: Record<string, unknown> | undefined;
+```
+
+Options specific to the library behind the schema.
+
+##### target
+
+```ts
+readonly target: Target;
+```
+
+The draft of JSON Schema to write.
+
+#### StandardJSONSchemaV1.Props
+
+```ts
+interface Props<TInput = unknown, TOutput = TInput>
+```
+
+Properties defined on the `~standard` object of a schema that can be written as a JSON Schema.
+
+##### jsonSchema
+
+```ts
+readonly jsonSchema: Converter;
+```
+
+Methods that write the input or the output type as a JSON Schema.
+
+##### types
+
+```ts
+readonly types?: StandardSchemaV1.Types<TInput, TOutput> | undefined;
+```
+
+Inferred TypeScript types preserved for schema inspection.
+
+##### vendor
+
+```ts
+readonly vendor: string;
+```
+
+The vendor identifier of the schema library.
+
+##### version
+
+```ts
+readonly version: 1;
+```
+
+The version number of the specification (always 1).
+
+#### StandardJSONSchemaV1.Target
+
+```ts
+type Target = "draft-2020-12" | "draft-07" | "openapi-3.0" | (string & {});
+```
+
+The draft to write. A library throws for one it does not write.
 
 ### StandardSchemaV1
 
