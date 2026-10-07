@@ -76,7 +76,7 @@ function toQuery(value: unknown): string {
  *   read back, so text they would refuse fails. JSON holds less than JavaScript does: `NaN` is written as
  *   `null`, and a property that is `undefined` is left out, as `JSON.stringify` writes them.
  * - `optional` with a default writes the default back as `undefined` when its inner part refuses it, since
- *   only `undefined` produced it. A `fallback` value its inner part refuses fails: no one input produced it.
+ *   only `undefined` produced it. A `fallback` value its inner part refuses fails: every input its inner part refuses produces it, and which one was given is not known.
  *
  * So a value the validator could not have produced fails with the issues it has, at their paths. A part
  * that cannot be written back throws a `TypeError` naming its place: a `transform`, whose function goes one

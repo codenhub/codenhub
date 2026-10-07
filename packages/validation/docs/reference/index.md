@@ -334,7 +334,7 @@ The validator is read with `describe`, and each part written back as its kind sa
 - A part that produces what it accepts, such as `string`, a format or a coercion, validates the value and gives what it produced, so `email()` gives the address as the parser reads it.
 - A composer, such as `object`, `array` or `union`, writes back each of its parts and keeps its options, and runs its checks on the value once its parts passed. A `pipe` writes its steps back from the last.
 - `json` and `searchParams` write the text: JSON, and a query string of each value as text, which they then read back, so text they would refuse fails. JSON holds less than JavaScript does: `NaN` is written as `null`, and a property that is `undefined` is left out, as `JSON.stringify` writes them.
-- `optional` with a default writes the default back as `undefined` when its inner part refuses it, since only `undefined` produced it. A `fallback` value its inner part refuses fails: no one input produced it.
+- `optional` with a default writes the default back as `undefined` when its inner part refuses it, since only `undefined` produced it. A `fallback` value its inner part refuses fails: every input its inner part refuses produces it, and which one was given is not known.
 
 So a value the validator could not have produced fails with the issues it has, at their paths. A part that cannot be written back throws a `TypeError` naming its place: a `transform`, whose function goes one way, and a validator written by hand; use a `codec` there. A coercion writes back the value it produced, which it accepts, so inside `json` a `bigint` from `coerceBigint` cannot be written as JSON: use a codec that writes it as text.
 
