@@ -1,5 +1,5 @@
 /**
- * A predictable, frozen error shape representing a normalized application error.
+ * A predictable, immutable error shape representing a normalized application error.
  *
  * Implements the standard JavaScript `Error` interface and adds classification,
  * localization support, and original error wrapping. An explicit `toJSON` keeps JSON

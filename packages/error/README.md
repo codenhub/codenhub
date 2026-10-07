@@ -48,7 +48,7 @@ Runtime code does not access browser or Node.js globals, making it suitable for 
 - Configure the mutable global registry during application initialization.
 - Registry bucket contents are mutable, but bucket references cannot be replaced.
 - Batch registration and registry merging are atomic: invalid input leaves the target unchanged.
-- `AppError` instances, result objects, read-only registry snapshots, and every value returned by a bucket are frozen.
+- Result objects, read-only registry snapshots, and every value returned by a bucket are frozen. An `AppError`'s own properties cannot be changed or removed, but it accepts new ones, so a framework can annotate an error it catches.
 - An unmatched string never becomes the error message; supply `fallbackMessage` when user-facing text is needed.
 - JSON serialization is defined by `AppError.toJSON()` and includes `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable`, omitting diagnostic `cause` and `originalError` values. Send `error.toJSON()` across a worker, IPC, or IndexedDB boundary; a structured clone of the error itself can carry the raw `cause`.
 - `AppError.code` holds the registered code or name that matched, for branching on a specific failure. A message, prefix, or pattern match has no code; branch on its `messageKey`.

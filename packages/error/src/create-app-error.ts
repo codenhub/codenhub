@@ -42,6 +42,25 @@ export const DEFAULT_APP_ERROR_MESSAGE = "An unexpected error occurred.";
 
 const APP_ERROR_INSTANCES = new WeakSet<object>();
 
+// Freezing would also stop new properties, and frameworks add their own to every error they catch:
+// Koa assigns `status` and hapi's Boom assigns `isBoom`, and on a non-extensible error that
+// assignment throws inside the framework's error handler. Locking each existing property keeps the
+// classification fixed while the error stays extensible.
+const lockOwnProperties = (target: object): void => {
+  const descriptors = Object.getOwnPropertyDescriptors(target);
+
+  for (const key of Reflect.ownKeys(descriptors)) {
+    const descriptor = descriptors[key as keyof typeof descriptors];
+
+    if ("value" in descriptor) {
+      descriptor.writable = false;
+    }
+    descriptor.configurable = false;
+  }
+
+  Object.defineProperties(target, descriptors);
+};
+
 class AppErrorImpl extends Error implements AppError {
   readonly type: AppErrorType;
   readonly code: string | null;
@@ -68,7 +87,7 @@ class AppErrorImpl extends Error implements AppError {
       configurable: false,
     });
     APP_ERROR_INSTANCES.add(this);
-    Object.freeze(this);
+    lockOwnProperties(this);
   }
 
   // Serialization is declared explicitly so the published contract does not depend on which
@@ -228,7 +247,7 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
 };
 
 /**
- * Normalizes an unknown error value into a predictable, frozen `AppError`.
+ * Normalizes an unknown error value into a predictable, immutable `AppError`.
  *
  * Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`, `innerError`)
  * up to the configured depth, and a `cause` chain alone past the default depth, then resolves a classification in priority order across every
@@ -246,10 +265,10 @@ const normalizeAppError = (error: unknown, options: AppErrorOptions): AppError =
  *
  * @param error - The raw error value to normalize, such as an `Error`, plain object, or string.
  * @param options - Configuration controlling fallback message, registry source, and wrapper depth.
- * @returns A frozen AppError. An existing AppError is returned as-is unless a `registry` is
- * supplied and finds something that improves on it: only an unexpected match replaces an unknown
- * error, and only a known match that differs replaces a classified one. A `fallbackMessage` or
- * `maxDepth` alone never changes an AppError.
+ * @returns An AppError whose own properties cannot be changed or removed. An existing AppError is
+ * returned as-is unless a `registry` is supplied and finds something that improves on it: only an
+ * unexpected match replaces an unknown error, and only a known match that differs replaces a
+ * classified one. A `fallbackMessage` or `maxDepth` alone never changes an AppError.
  * @throws TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string,
  * `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer
  * from 0 through 3.

@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 scope: Workspace packages that expose errors to consumers.
 ---
 
@@ -30,7 +30,7 @@ Packages that do not expose errors do not need to follow this spec.
 
 ## `@codenhub/error` runtime contract
 
-`createAppError()` MUST be the only way to build an `AppError`: an instance MUST NOT expose the class that constructs it, and the prototype instances share MUST be frozen, so no code can build an `AppError` that no registry classified or replace its serialization. `createAppError()` MUST return a frozen `AppError`. Its own properties MUST NOT be writable, configurable, added, or removed after construction. The referenced `originalError` value is diagnostic input and is not recursively frozen. Default JSON serialization MUST include `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable`, and MUST omit diagnostic `cause` and `originalError` values. The package does not read that shape back, and a receiver reads the parsed fields directly. A helper that rebuilds an `AppError` from them was weighed and left out: it would let whoever controls the serialized text choose the message, and nothing needs the rebuilt instance yet.
+`createAppError()` MUST be the only way to build an `AppError`: an instance MUST NOT expose the class that constructs it, and the prototype instances share MUST be frozen, so no code can build an `AppError` that no registry classified or replace its serialization. Every own property of an `AppError` MUST be non-writable and non-configurable, so its classification cannot change or be removed after construction. The instance MUST stay extensible: frameworks add properties to the errors they catch, as Koa's `ctx.onerror` assigns `status` and hapi's `Boom.boomify` assigns `isBoom`, and on a frozen error that assignment throws inside the framework's own handler, which in Koa leaves the rejection unhandled and ends the process. Freezing the instance was the rule through 0.2 and was reversed for that reason; an added property cannot reach `toJSON()`, whose output is fixed. The referenced `originalError` value is diagnostic input and is not recursively frozen. Default JSON serialization MUST include `name`, `message`, `type`, `code`, `messageKey`, `source`, and `isRetryable`, and MUST omit diagnostic `cause` and `originalError` values. The package does not read that shape back, and a receiver reads the parsed fields directly. A helper that rebuilds an `AppError` from them was weighed and left out: it would let whoever controls the serialized text choose the message, and nothing needs the rebuilt instance yet.
 
 `AppError.code` MUST be the registry identifier that classified the error: the matched code, or the matched name when no code matched. It MUST be `null` for message, prefix, and pattern matches and for unknown errors. It exists so consumers can branch on a specific failure without comparing message text. A mapping matched by message, prefix, or pattern has no identifier to expose, so one failure can carry a code from one source and `null` from another; consumers branch on `messageKey` there, which is why a preset's keys are public API (see "`messageKey` conventions"). Letting feedback carry its own identifier was weighed and deferred: it adds surface that no application has asked for yet.
 
@@ -215,7 +215,7 @@ Set `isRetryable: true` only when the same operation can be repeated **without u
 |                                           | Service errors that may have run the request (5xx)  |
 |                                           | Rate limits                                         |
 
-When in doubt, omit `isRetryable` (defaults to `false`). Do not mark an error as retryable speculatively. A failure that is likely to pass on a second try but may follow a request the server already received is not retryable.
+When in doubt, omit `isRetryable` (defaults to `false`). Do not mark an error as retryable speculatively. A failure that is likely to pass on a second try but may follow a request the server already received is not retryable. Neither is a failure a service reports on a response it sent back, such as the Supabase `FunctionsRelayError`: the request arrived, and the service may have acted on it.
 
 A rate limit is not retryable, though repeating the operation is safe: the flag carries no delay, so code that retries on it does so at once and counts against the limit again. The message tells the reader how long to wait. Letting feedback carry a delay was weighed and left out as surface no application has asked for.
 

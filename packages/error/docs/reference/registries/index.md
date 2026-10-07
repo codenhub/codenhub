@@ -82,7 +82,7 @@ export declare const supabaseErrorCodes: Readonly<Record<string, Readonly<ErrorF
 
 Raw code mapping definitions for common Supabase service errors.
 
-Includes the Supabase Auth codes a person using the application can run into and act on, and selected Postgres database codes. Auth codes that only a developer can resolve, such as `bad_jwt` or the `hook_*` and `saml_*` families, are left out. The Auth codes follow the list Supabase publishes at https://supabase.com/docs/guides/auth/debugging/error-codes.
+Includes the Supabase Auth codes a person using the application can run into and act on, and selected Postgres database codes. Auth codes that only a developer can resolve, such as `bad_jwt` or the `hook_*` and `saml_*` families, are left out. The Auth codes follow the list Supabase publishes at https://supabase.com/docs/guides/auth/debugging/error-codes, plus `pkce_code_verifier_not_found`, which the Supabase Auth client raises itself.
 
 ### supabaseErrorNames
 
@@ -92,7 +92,7 @@ export declare const supabaseErrorNames: Readonly<Record<string, Readonly<ErrorF
 
 Raw name mapping definitions for common Supabase service errors.
 
-Includes name mappings for edge function execution issues.
+Includes name mappings for edge function execution issues and for the missing session the Supabase Auth client reports without a code.
 
 ### supabaseErrorRegistry
 

@@ -32,7 +32,8 @@ const METHOD_UNAVAILABLE = {
  * Includes the Supabase Auth codes a person using the application can run into and act on, and
  * selected Postgres database codes. Auth codes that only a developer can resolve, such as
  * `bad_jwt` or the `hook_*` and `saml_*` families, are left out. The Auth codes follow the list
- * Supabase publishes at https://supabase.com/docs/guides/auth/debugging/error-codes.
+ * Supabase publishes at https://supabase.com/docs/guides/auth/debugging/error-codes, plus
+ * `pkce_code_verifier_not_found`, which the Supabase Auth client raises itself.
  */
 export const supabaseErrorCodes = freezeFeedbackMap({
   invalid_credentials: {
@@ -158,6 +159,9 @@ export const supabaseErrorCodes = freezeFeedbackMap({
   flow_state_expired: SIGN_IN_INTERRUPTED,
   flow_state_not_found: SIGN_IN_INTERRUPTED,
   bad_oauth_callback: SIGN_IN_INTERRUPTED,
+  // Raised by the Supabase client, not the server, for a sign-in link opened in a different
+  // browser from the one that started it.
+  pkce_code_verifier_not_found: SIGN_IN_INTERRUPTED,
   bad_oauth_state: {
     message: SIGN_IN_INTERRUPTED.message,
     messageKey: "error.supabase.auth.badOAuthState",
@@ -229,7 +233,8 @@ export const supabaseErrorCodes = freezeFeedbackMap({
 /**
  * Raw name mapping definitions for common Supabase service errors.
  *
- * Includes name mappings for edge function execution issues.
+ * Includes name mappings for edge function execution issues and for the missing session the
+ * Supabase Auth client reports without a code.
  */
 export const supabaseErrorNames = freezeFeedbackMap({
   FunctionsHttpError: {
@@ -239,11 +244,13 @@ export const supabaseErrorNames = freezeFeedbackMap({
     source: "supabase.functions",
   },
   FunctionsRelayError: {
-    message: "We couldn't reach the service that handles this. Try again in a moment.",
+    message:
+      "We couldn't complete this because of a problem reaching the service that handles it. Check whether it went through before trying again.",
     messageKey: "error.supabase.functions.relay",
     source: "supabase.functions",
-    isRetryable: true,
   },
+  // Raised by the Supabase client, with no code, whenever a call needs a session and none is stored.
+  AuthSessionMissingError: SESSION_ENDED,
   FunctionsFetchError: {
     message: "We couldn't reach the server. Check your internet connection and try again.",
     messageKey: "error.supabase.functions.fetch",

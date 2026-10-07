@@ -151,6 +151,37 @@ describe("ready registries", () => {
     expect(createAppError({ name: "FunctionsFetchError" }, { registry }).isRetryable).toBe(false);
   });
 
+  it("should not mark a relay error as retryable", () => {
+    // functions-js raises it from a header on a response the relay sent back after it began
+    // processing the call, so the function may already have run.
+    expect(createAppError({ name: "FunctionsRelayError" }, { registry: supabaseErrorRegistry }).isRetryable).toBe(
+      false,
+    );
+  });
+
+  it("should classify the Auth errors the Supabase client raises without a server code", () => {
+    // auth-js raises these itself: a missing session carries a name and no code, and a missing
+    // PKCE verifier, from a link opened in another browser, carries a code the server never sends.
+    const sessionMissing = Object.assign(new Error("Auth session missing!"), { name: "AuthSessionMissingError" });
+    const verifierMissing = Object.assign(new Error("PKCE code verifier not found in storage."), {
+      name: "AuthPKCECodeVerifierMissingError",
+      code: "pkce_code_verifier_not_found",
+    });
+
+    expect(createAppError(sessionMissing, { registry: supabaseErrorRegistry })).toMatchObject({
+      type: "known",
+      code: "AuthSessionMissingError",
+      messageKey: "error.supabase.auth.sessionEnded",
+      isRetryable: false,
+    });
+    expect(createAppError(verifierMissing, { registry: supabaseErrorRegistry })).toMatchObject({
+      type: "known",
+      code: "pkce_code_verifier_not_found",
+      messageKey: "error.supabase.auth.signInInterrupted",
+      isRetryable: false,
+    });
+  });
+
   it("should not mark a rate limit as retryable", () => {
     // The flag carries no delay, so a loop that reads it would retry at once and count against
     // the limit again. The message tells the reader how long to wait.
