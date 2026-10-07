@@ -35,15 +35,15 @@ Maps the success value of a Result using the provided mapper function that retur
 ### andThenAsync
 
 ```ts
-export declare const andThenAsync: <T, U>(result: Result<T>, mapper: (value: T) => Promise<Result<U>>) => Promise<Result<U>>;
+export declare const andThenAsync: <T, U>(result: Result<T>, mapper: (value: T) => Result<U> | Promise<Result<U>>) => Promise<Result<U>>;
 ```
 
-Maps the success value of a Result asynchronously using the provided mapper function that returns a Promise of another Result. Prevents nested Result structures in asynchronous pipelines.
+Maps the success value of a Result using a mapper that returns another Result or a Promise of one. Prevents nested Result structures in asynchronous pipelines.
 
 **Parameters**
 
 - `result` — The Result instance to process.
-- `mapper` — The asynchronous function to map the success value to a Promise of a new Result.
+- `mapper` — The function to map the success value to a new Result or a Promise of one.
 
 **Type parameters**
 
@@ -102,7 +102,7 @@ Runs an async callback and captures a thrown or rejected value as a normalized `
 export declare function createAppError(error: unknown, options?: AppErrorOptions): AppError;
 ```
 
-Normalizes an unknown error value into a predictable, frozen `AppError`.
+Normalizes an unknown error value into a predictable, immutable `AppError`.
 
 Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`, `innerError`) up to the configured depth, and a `cause` chain alone past the default depth, then resolves a classification in priority order across every candidate found:
 
@@ -118,7 +118,7 @@ A deep known match outranks a shallow unexpected match. Ordinary unknown input n
 - `error` — The raw error value to normalize, such as an `Error`, plain object, or string.
 - `options` — Configuration controlling fallback message, registry source, and wrapper depth.
 
-**Returns** — A frozen AppError. An existing AppError is returned as-is unless a `registry` is supplied and finds something that improves on it: only an unexpected match replaces an unknown error, and only a known match that differs replaces a classified one. A `fallbackMessage` or `maxDepth` alone never changes an AppError.
+**Returns** — An AppError whose own properties cannot be changed or removed. An existing AppError is returned as-is unless a `registry` is supplied and finds something that improves on it: only an unexpected match replaces an unknown error, and only a known match that differs replaces a classified one. A `fallbackMessage` or `maxDepth` alone never changes an AppError.
 
 **Throws** — TypeError - If `options` is not an object, `fallbackMessage` is not a non-empty string, `registry` does not expose the read-facing registry surface, or `maxDepth` is not an integer from 0 through 3.
 
@@ -226,15 +226,15 @@ Maps the success value of a Result using the provided mapper function.
 ### mapAsync
 
 ```ts
-export declare const mapAsync: <T, U>(result: Result<T>, mapper: (value: T) => Promise<U>) => Promise<Result<U>>;
+export declare const mapAsync: <T, U>(result: Result<T>, mapper: (value: T) => U | Promise<U>) => Promise<Result<U>>;
 ```
 
-Maps the success value of a Result asynchronously using the provided async mapper function.
+Maps the success value of a Result using a mapper that may return a promise, awaiting its result.
 
 **Parameters**
 
 - `result` — The Result instance to map.
-- `mapper` — The asynchronous function to map the success value.
+- `mapper` — The function to map the success value, returning the value or a promise of it.
 
 **Type parameters**
 
@@ -357,7 +357,7 @@ Unwraps a Result, returning the value if successful, or the provided fallback va
 export interface AppError extends Error
 ```
 
-A predictable, frozen error shape representing a normalized application error.
+A predictable, immutable error shape representing a normalized application error.
 
 Implements the standard JavaScript `Error` interface and adds classification, localization support, and original error wrapping. An explicit `toJSON` keeps JSON serialization limited to the normalized fields, excluding diagnostic `cause` and `originalError` values on every engine.
 

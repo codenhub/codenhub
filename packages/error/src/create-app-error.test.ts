@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createAppError, isAppError, DEFAULT_APP_ERROR_MESSAGE, createErrorRegistry, getErrorRegistry } from "./index";
+import {
+  createAppError,
+  isAppError,
+  DEFAULT_APP_ERROR_MESSAGE,
+  createErrorRegistry,
+  getErrorRegistry,
+  type AppError,
+} from "./index";
 import { browserErrorRegistry } from "./registries/browser";
 
 afterEach(() => {
@@ -82,13 +89,32 @@ describe("createAppError — basic normalization", () => {
     expect(structuredClone(appError.toJSON())).toEqual(appError.toJSON());
   });
 
-  it("should freeze the complete AppError instance", () => {
+  it("should lock every own property of an AppError", () => {
     const appError = createAppError("internal detail");
 
-    expect(Object.isFrozen(appError)).toBe(true);
+    const changeable = Object.entries(Object.getOwnPropertyDescriptors(appError))
+      .filter(([, descriptor]) => descriptor.configurable || descriptor.writable === true)
+      .map(([key]) => key);
+
+    expect(changeable).toEqual([]);
     expect(() => {
       (appError as { message: string }).message = "Changed";
     }).toThrow(TypeError);
+    expect(Reflect.deleteProperty(appError, "type")).toBe(false);
+  });
+
+  it("should let a framework annotate a thrown AppError", () => {
+    // Koa's ctx.onerror assigns `err.status` and hapi's Boom.boomify assigns `err.isBoom` to every
+    // error they catch. On a non-extensible error that assignment throws inside the framework's
+    // own handler, which in Koa leaves the rejection unhandled and ends the process.
+    const appError = createAppError("internal detail") as AppError & { status?: number; isBoom?: boolean };
+
+    appError.status = 500;
+    appError.isBoom = true;
+
+    expect(appError.status).toBe(500);
+    expect(appError.isBoom).toBe(true);
+    expect(appError.toJSON()).not.toHaveProperty("status");
   });
 
   it("should serialize normalized errors when the original error is cyclic", () => {
