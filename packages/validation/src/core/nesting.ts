@@ -6,7 +6,7 @@
  * input controls. Any other validator, such as one written by hand, is called as usual, and its issues
  * are moved under the place once.
  */
-import { chain, within, type Maybe } from "./async";
+import { chain, isThenable, within, type Maybe } from "./async";
 import { failWith, isResult, notResult, ROOT_PATH } from "./result";
 import type { AnyValidator, ValidationIssue, ValidationPathSegment, ValidationResult } from "./types";
 
@@ -37,7 +37,9 @@ export function pathAt(
   for (let node: Place = place; node !== undefined; node = node.parent) {
     depth += 1;
   }
-  const full: ValidationPathSegment[] = Array.from({ length: depth + path.length });
+  // Every index is written below. `Array.from` with a length took half the time of a list of bad items.
+  // oxlint-disable-next-line unicorn/no-new-array
+  const full = new Array<ValidationPathSegment>(depth + path.length);
   let index = depth;
   for (let node: Place = place; node !== undefined; node = node.parent) {
     index -= 1;
@@ -86,14 +88,36 @@ export function composed(run: Run): (input: unknown) => Maybe<ValidationResult<u
  */
 export function call(validator: AnyValidator, input: unknown, place: Place): Maybe<ValidationResult<unknown>> {
   const run = runs.get(validator);
-  if (run !== undefined) {
-    return run(input, place);
-  }
-  return chain(validator(input), (result: ValidationResult<unknown>) => {
+  return run === undefined ? placed(validator(input), place) : run(input, place);
+}
+
+/** What a validator that is not a composer of this package returned for a value at `place`, as {@link call} gives it. */
+const placed = (returned: Maybe<ValidationResult<unknown>>, place: Place): Maybe<ValidationResult<unknown>> =>
+  chain(returned, (result: ValidationResult<unknown>) => {
     if (!isResult(result)) {
       // Written as a list, so a key that is empty or holds a dot is not read as the root or as two keys.
       throw notResult(`The validator at ${place === undefined ? "the root" : JSON.stringify(pathAt(place))}`);
     }
     return result.ok || place === undefined ? result : failWith(placeAll(result.error.issues, place));
   });
+
+/** Validates the value found at `segment` below `parent` with one child of a composer, as {@link call} does. */
+export type Child = (input: unknown, parent: Place, segment: ValidationPathSegment) => Maybe<ValidationResult<unknown>>;
+
+/**
+ * What {@link call} does for one child, with what can be known of the child when its composer is made
+ * learned then and not on each call: whether it is a composer of this package. A place is made for a
+ * composer, which needs one, and for any other child only when its result is not one that passed, since
+ * a value that passed has no issue to write a path for.
+ */
+export function childOf(validator: AnyValidator): Child {
+  const run = runs.get(validator);
+  return run === undefined
+    ? (input, parent, segment) => {
+        const returned = validator(input);
+        return !isThenable(returned) && (returned as ValidationResult<unknown> | undefined)?.ok === true
+          ? returned
+          : placed(returned, below(parent, segment));
+      }
+    : (input, parent, segment) => run(input, below(parent, segment));
 }

@@ -258,6 +258,39 @@ The package is `sideEffects: false`, every module is side-effect free at load, a
 
 `tests/integration/bundle-size.test.ts` bundles small consumer-shaped modules against the built `dist/` and asserts a gzip ceiling for each: one leaf validator, an object of a few fields, messages alone, and everything. A budget that fails means something made a validator a tenth heavier. The shared core, the code every validator carries, is where a byte costs most: it is paid once per validator family a consumer uses, so a helper there earns its place only if nearly every validator needs it. Each budget is what its scenario measured plus 10%, rounded up to ten bytes, so a fix that adds a few bytes passes without touching the test. When one fails on purpose, every scenario is measured again and every budget reset by the same rule, and the commit says what grew and why.
 
+## Speed
+
+Measured against valibot, zod and yup on 2026-10-07, the leaves were within a small factor of theirs and the composers about ten times slower: an `object` of three strings ran 1.1 million times a second where its three leaves alone allow about ten. [0.4.0.md](0.4.0.md#what-the-comparison-measured) has the comparison. Nothing had measured time before, only size, so each of these had been paid on every call without anyone seeing it:
+
+- **Defining every property of an output.** `setOwn` used `Object.defineProperty` for each, so that `__proto__` is data and no setter of a prototype runs: 45% of the time of an `object` of three strings. It now assigns a key the target does not have, its prototypes included, which nothing can intercept, and defines any other. Rejected: deciding it for each key of a shape when the validator is made, which a property added to `Object.prototype` afterwards would defeat.
+- **Two maps for each validation**, for the counts and results of `lazy`, which most validations never reach. Each is now made by the first `lazy` that needs it.
+- **Asking what a child is, and making it a place, for each value.** `call` looked the child up in the `WeakMap` of composers and was given a new `Place` on every call. `childOf` asks once, when the composer is made, and makes a place for a composer, which needs one, and for any other child only when its result is not one that passed. `object`, `objectLike`, `array`, `tuple`, `set` and `record` use it; the composers of one child, and `map`, `union` and `intersection`, still use `call`.
+- **Running checks there are none of.** `finish` returns the value at once without them, where it gathered an empty list through `runEach`, `collect` and `chain`.
+- **A list of every result, read a second time.** `settle`, behind `array`, `tuple` and `set`, reads each result as it is returned while none is pending, and from the first pending one starts the rest and waits for them together, as before. The limit of issues counts what was found on both sides of it.
+- **`Array.from` with a length** for each path written, 46% of the time of a list of bad items. `pathAt` makes the array with its length.
+
+Measured with `pnpm bench`, a whole run on Node.js 24.19, in millions of validations a second, before and after:
+
+| Scenario                               | Before | After |
+| -------------------------------------- | ------ | ----- |
+| `string()`                             | 39.7   | 103.8 |
+| `object` of no fields                  | 6.7    | 14.7  |
+| `object` of three strings              | 1.13   | 4.13  |
+| The same, strict                       | 1.03   | 3.06  |
+| An `object` in an `object`             | 0.75   | 2.71  |
+| `array` of 100 strings                 | 0.14   | 0.56  |
+| `tuple` of two numbers                 | 3.61   | 7.70  |
+| `record` of ten numbers                | 0.29   | 1.00  |
+| `union`, second option                 | 4.83   | 8.42  |
+| `tagged`                               | 1.02   | 3.27  |
+| Signup of three fields, valid          | 0.30   | 0.69  |
+| The same, invalid                      | 0.51   | 1.78  |
+| `array` of strings, a hundred bad ones | 0.02   | 0.07  |
+
+The figures move by about a tenth from one run to the next, and a scenario run alone is faster than in a whole run, so whole runs are compared. No test changed, four were added for what the changes could have broken, and every size budget held without being reset. Time is not held by a test, as size is: measured in CI it fails for reasons that are not the code's. A change to a composer or to `core/` is measured with `pnpm bench` before and after, and a loss is named in the commit as a size is.
+
+What is left in an `object` is what it promises: every value is read before any child runs, which takes a list, and the output is a new object. The signup schema is held by `email()`, which asks the URL parser twice, once whether the text parses and once for what it read: 38% of that schema's time. Asking once is a matter of the formats, not of the composers, and is not done here.
+
 ## Types
 
 There is no input-type parameter. Every validator accepts `unknown`, and that is the honest input type of a function that exists to check unknown data. `Infer<typeof validator>` reads the output type from either flavor.

@@ -1,7 +1,7 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
 import { cap, MAX_ISSUES } from "../core/limit";
-import { append, below, call, composed } from "../core/nesting";
+import { append, childOf, composed, type Child } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, failWith, issue } from "../core/result";
 import type {
@@ -92,10 +92,10 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
   assertShape(shape);
   // The shape is read once, so changing it after the validator is made changes nothing.
   const keys = Object.keys(shape);
-  const validators = keys.map((key) => {
+  const children = keys.map((key) => {
     const validator: unknown = shape[key];
     assertFunction(`shape.${key}`, validator);
-    return validator as AnyValidator;
+    return childOf(validator as AnyValidator);
   });
   const known = new Set(keys);
   const [options, reject, accept] = tail<ObjectOptions, Record<string, unknown>>(rest, "unknownKeys");
@@ -122,31 +122,36 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
 
     // Everything the output takes from the input is read before any child runs, so neither a child that
     // changes the input nor a change made while one waits can reach the output.
-    const present = keys.map((key) => Object.hasOwn(input, key));
-    const values = keys.map((key, index) => (present[index] ? input[key] : undefined));
+    const present: boolean[] = [];
+    const values: unknown[] = [];
+    for (const key of keys) {
+      const isPresent = Object.hasOwn(input, key);
+      present.push(isPresent);
+      values.push(isPresent ? input[key] : undefined);
+    }
     const extra =
       unknownKeys === "passthrough"
         ? Object.keys(input)
             .filter((key) => !known.has(key))
             .map((key) => [key, input[key]] as const)
-        : [];
+        : undefined;
     const results = runEach(values.length, (index) =>
-      call(validators[index] as AnyValidator, values[index], below(place, keys[index] as string)),
+      (children[index] as Child)(values[index], place, keys[index] as string),
     );
     return chain(collect(results), (settled) => {
       const output: Record<string, unknown> = {};
-      settled.forEach((result, index) => {
-        const key = keys[index] as string;
+      for (let index = 0; index < settled.length; index += 1) {
+        const result = settled[index] as ValidationResult<unknown>;
         if (!result.ok) {
           append(issues, result.error.issues);
         } else if (result.value !== undefined || present[index]) {
-          setOwn(output, key, result.value);
+          setOwn(output, keys[index] as string, result.value);
         }
-      });
+      }
       if (issues.length > 0) {
         return failWith(issues);
       }
-      for (const [key, value] of extra) {
+      for (const [key, value] of extra ?? []) {
         setOwn(output, key, value);
       }
       return accept(output, place);

@@ -36,20 +36,24 @@ export const countIssues = (result: ValidationResult<unknown>): number => (resul
 /**
  * Runs `work` for each index below `length`, as `runEach` does, until the results that are not pending
  * hold `MAX_ISSUES` issues, counted by `count`. The list is shorter than `length` when it stopped. A
- * pending result cannot be counted, so every item of a collection whose items wait is started.
+ * pending result cannot be counted, so every item of a collection whose items wait is started. A caller
+ * that ran the first items itself gives the index to go on `from`, the issues `found` so far, and the
+ * pending result that made it stop, which is waited for with the rest.
  */
 export function runItems<R>(
   length: number,
   work: (index: number) => Maybe<R>,
   count: (result: R) => number,
+  from = 0,
+  found = 0,
+  results: Maybe<R>[] = [],
 ): Maybe<R>[] {
-  const results: Maybe<R>[] = [];
-  let found = 0;
   try {
-    for (let index = 0; index < length && found < MAX_ISSUES; index += 1) {
+    for (let index = from; index < length && found < MAX_ISSUES; index += 1) {
       const result = work(index);
       results.push(result);
       if (!isThenable(result)) {
+        // oxlint-disable-next-line no-param-reassign
         found += count(result);
       }
     }

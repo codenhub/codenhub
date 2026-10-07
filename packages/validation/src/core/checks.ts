@@ -112,6 +112,10 @@ export function finish<T>(
   if (issues.length > 0) {
     return failWith(word(issues, message));
   }
+  if (checks.length === 0) {
+    // The usual case, and every leaf and composer ends here, so nothing is made for checks there are none of.
+    return pass(value);
+  }
   return chain(collect(runEach(checks.length, (index) => detached(checks[index] as AsyncCheck<T>, value))), (found) => {
     for (const list of found) {
       if (list !== undefined && !Array.isArray(list)) {
@@ -213,9 +217,11 @@ export function tail<TOptions extends MessageOptions, T>(
     options,
     (issues, place) => failWith(report(issues, place, options.message)),
     // A check reports relative to the value, as for a leaf, and its issues are moved to the place after.
-    (value, place) =>
-      chain(finish(value, [], options.message, checks), (result) =>
-        result.ok || place === undefined ? result : failWith(placeAll(result.error.issues, place)),
-      ),
+    checks.length === 0
+      ? pass
+      : (value, place) =>
+          chain(finish(value, [], options.message, checks), (result) =>
+            result.ok || place === undefined ? result : failWith(placeAll(result.error.issues, place)),
+          ),
   ];
 }

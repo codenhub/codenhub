@@ -33,6 +33,7 @@
     "access": "public"
   },
   "scripts": {
+    "bench": "pnpm build && node bench/run.mjs",
     "build": "tsdown src/index.ts --tsconfig tsconfig.src.json --format esm --dts --clean --no-fixed-extension",
     "prepublishOnly": "pnpm build && pnpm typecheck",
     "status:npm": "npm view @codenhub/validation version dist-tags time --json && npm dist-tag ls @codenhub/validation && npm access get status @codenhub/validation",

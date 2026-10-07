@@ -1,6 +1,6 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
-import { append, below, call, composed } from "../core/nesting";
+import { append, childOf, composed, type Child } from "../core/nesting";
 import { assertShape, isArray, setOwn } from "../core/objects";
 import { assertFunction, failWith, issue, typeIssue } from "../core/result";
 import type {
@@ -56,10 +56,10 @@ export function objectLike(shape: Shape, ...rest: unknown[]): AnyValidator {
   assertShape(shape);
   // The shape is read once, so changing it after the validator is made changes nothing.
   const keys = Object.keys(shape);
-  const validators = keys.map((key) => {
+  const children = keys.map((key) => {
     const validator: unknown = shape[key];
     assertFunction(`shape.${key}`, validator);
-    return validator as AnyValidator;
+    return childOf(validator as AnyValidator);
   });
   const [options, reject, accept] = tail<MessageOptions, Record<string, unknown>>(rest);
 
@@ -77,7 +77,7 @@ export function objectLike(shape: Shape, ...rest: unknown[]): AnyValidator {
         // Reported in the property's turn, as a property that failed, so the issues keep the order of the shape.
         return failWith(report([issue("invalid_value", { unreadable: true }, [key])], place, options.message));
       }
-      return call(validators[index] as AnyValidator, value, below(place, key));
+      return (children[index] as Child)(value, place, key);
     });
     return chain(collect(results), (settled) => {
       const issues: ValidationIssue[] = [];

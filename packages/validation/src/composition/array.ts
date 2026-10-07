@@ -1,6 +1,6 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
-import { below, call, composed } from "../core/nesting";
+import { childOf, composed } from "../core/nesting";
 import { isArray } from "../core/objects";
 import { assertFunction, typeIssue } from "../core/result";
 import type {
@@ -57,6 +57,7 @@ export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("item", item);
   const [options, reject, accept] = tail<ArrayOptions, unknown[]>(rest, "min max length");
   assertSizeOptions(options);
+  const child = childOf(item);
 
   return composed((input, place): Maybe<ValidationResult<unknown>> => {
     if (!isArray(input)) {
@@ -71,7 +72,7 @@ export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
       length,
       // Read by index up to the length that was checked, never through the array's own iterator, which
       // the input can replace to yield other items or never stop.
-      (index) => call(item, input[index], below(place, index)),
+      (index) => child(input[index], place, index),
       place,
       options.message,
       (values) => accept(values, place),

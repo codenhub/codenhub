@@ -1,7 +1,7 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { cap, MAX_ISSUES } from "../core/limit";
-import { below, call, composed } from "../core/nesting";
+import { childOf, composed } from "../core/nesting";
 import { sizeOfSet, valuesOf } from "../core/objects";
 import { assertFunction, repeatedItem, typeIssue } from "../core/result";
 import type {
@@ -57,6 +57,7 @@ export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("item", item);
   const [options, reject, accept] = tail<SizeOptions & MessageOptions, Set<unknown>>(rest, SIZE_OPTIONS);
   assertSizeOptions(options);
+  const child = childOf(item);
   return composed((input, place): Maybe<ValidationResult<unknown>> => {
     const size = sizeOfSet(input);
     if (size === undefined) {
@@ -69,7 +70,7 @@ export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
     const values = valuesOf(input);
     return settle(
       values.length,
-      (index) => call(item, values[index], below(place, index)),
+      (index) => child(values[index], place, index),
       place,
       options.message,
       (values) => {

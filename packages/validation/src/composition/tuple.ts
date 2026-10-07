@@ -1,6 +1,6 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
-import { below, call, composed } from "../core/nesting";
+import { childOf, composed, type Child } from "../core/nesting";
 import { isArray } from "../core/objects";
 import { assertFunction, assertList, assertOrder, assertSize, issue, typeIssue } from "../core/result";
 import type {
@@ -106,6 +106,9 @@ export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyVa
     assertOrder("the fixed items", length, "max", max);
   }
 
+  const children = fixed.map(childOf);
+  const restChild = rest === undefined ? undefined : childOf(rest);
+
   return composed((input, place): Maybe<ValidationResult<unknown>> => {
     if (!isArray(input)) {
       return reject([typeIssue("array", input)], place);
@@ -130,7 +133,7 @@ export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyVa
     return settle(
       size,
       // By index up to the length that was checked, never through the array's own iterator, as in `array`.
-      (index) => call((index < length ? fixed[index] : rest) as AnyValidator, input[index], below(place, index)),
+      (index) => ((index < length ? children[index] : restChild) as Child)(input[index], place, index),
       place,
       options.message,
       (values) => accept(values, place),

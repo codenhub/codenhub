@@ -1,7 +1,7 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
 import { cap, countIssues, runItems } from "../core/limit";
-import { append, below, call, composed } from "../core/nesting";
+import { append, childOf, composed } from "../core/nesting";
 import { isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, describeType, failWith, issue, nested, repeatedKey } from "../core/result";
 import type {
@@ -82,6 +82,7 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
   assertFunction("value", value);
   const [options, reject, accept] = tail<SizeOptions & MessageOptions, Record<string, unknown>>(rest, SIZE_OPTIONS);
   assertSizeOptions(options);
+  const child = childOf(value);
   return composed((input, place): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
       return reject([objectIssue(input)], place);
@@ -99,7 +100,7 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
       (index) => {
         const name = names[index] as string;
         return chain(key(name), (keyResult) =>
-          chain(call(value, values[index], below(place, name)), (valueResult) => ({ keyResult, valueResult })),
+          chain(child(values[index], place, name), (valueResult) => ({ keyResult, valueResult })),
         );
       },
       ({ keyResult, valueResult }) => countIssues(keyResult) + countIssues(valueResult),

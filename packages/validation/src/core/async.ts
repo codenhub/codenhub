@@ -14,10 +14,13 @@
 /** A value that may still be pending. */
 export type Maybe<T> = T | PromiseLike<T>;
 
-/** One validation: how many calls each `lazy` it reached has made, and the results each kept, keyed by that `lazy`. */
+/**
+ * One validation: how many calls each `lazy` it reached has made, and the results each kept, keyed by that
+ * `lazy`. Each map is made by the first `lazy` that needs it, since most validations reach none.
+ */
 interface Validation {
-  readonly calls: Map<object, number>;
-  readonly results: Map<object, unknown>;
+  calls: Map<object, number> | undefined;
+  results: Map<object, unknown> | undefined;
 }
 
 /** The validation running now, or undefined between validations and in a consumer's callback. */
@@ -42,7 +45,7 @@ function enter<A, R>(validation: Validation | undefined, work: (argument: A) => 
  * reaches shares each `lazy`'s count. Only composers start one, so a leaf never carries this.
  */
 export const within = <A, R>(work: (argument: A) => R, argument: A): R =>
-  enter(current ?? { calls: new Map(), results: new Map() }, work, argument);
+  enter(current ?? { calls: undefined, results: undefined }, work, argument);
 
 /**
  * Runs a callback the consumer wrote, such as a check's test or a transform's function, apart from
@@ -58,7 +61,7 @@ export function resultsOf<T>(key: object, make: () => T): T | undefined {
   if (current === undefined) {
     return undefined;
   }
-  const { results } = current;
+  const results = (current.results ??= new Map<object, unknown>());
   let kept = results.get(key) as T | undefined;
   if (kept === undefined) {
     kept = make();
@@ -76,14 +79,15 @@ export function spendCall(key: object): number {
     // Every composer runs within a validation, so this only guards a call made outside one.
     return 0;
   }
-  const spent = (current.calls.get(key) ?? 0) + 1;
-  current.calls.set(key, spent);
+  const calls = (current.calls ??= new Map<object, number>());
+  const spent = (calls.get(key) ?? 0) + 1;
+  calls.set(key, spent);
   return spent;
 }
 
 /** Takes back the call {@link spendCall} last counted for the `lazy` named by `key`, in the validation running now. */
 export function refundCall(key: object): void {
-  current?.calls.set(key, (current.calls.get(key) ?? 1) - 1);
+  current?.calls?.set(key, (current.calls.get(key) ?? 1) - 1);
 }
 
 /** Tests whether a value is a promise, or anything else with a `then` method. */

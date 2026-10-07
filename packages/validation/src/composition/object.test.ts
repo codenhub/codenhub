@@ -124,6 +124,25 @@ describe("object", () => {
       expect((output as { admin?: boolean }).admin).toBeUndefined();
       expect(Object.keys(output)).toEqual(["name", "__proto__"]);
     });
+
+    it("should keep a key Object.prototype holds as a setter or read-only as data of the output", () => {
+      const written: unknown[] = [];
+      Object.defineProperty(Object.prototype, "trapped", { set: (value) => written.push(value), configurable: true });
+      Object.defineProperty(Object.prototype, "locked", { value: "inherited", writable: false, configurable: true });
+      try {
+        const user = object({ trapped: string(), locked: string(), toString: string() });
+        const output = valueOf(user({ trapped: "a", locked: "b", toString: "c" }));
+        expect(written).toEqual([]);
+        expect(Object.entries(output)).toEqual([
+          ["trapped", "a"],
+          ["locked", "b"],
+          ["toString", "c"],
+        ]);
+      } finally {
+        delete (Object.prototype as Record<string, unknown>)["trapped"];
+        delete (Object.prototype as Record<string, unknown>)["locked"];
+      }
+    });
   });
 
   it("should read the shape once, when the validator is created", () => {
