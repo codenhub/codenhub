@@ -1077,7 +1077,7 @@ The package exports the `StandardSchemaV1` type so you can accept one in your ow
 
 ## Messages
 
-The specification requires a message on every issue, so `standard` builds one, from the message map given as its second argument: the built-in English when you give none, `portugueseMessages` for Portuguese, or a map of your own. A program that calls `standard` bundles the English, about 1.7 kB gzipped, even when it passes another map; one that never calls it bundles no text. A second argument that is not a map, such as `null` or text, is a `TypeError` when `standard` is called. Messages then come from [`formatIssue`](docs/errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
+The specification requires a message on every issue, so `standard` builds one, from the message map given as its second argument: the built-in English when you give none, `portugueseMessages` for Portuguese, or a map of your own. A program that calls `standard` bundles the English, about 1.7 kB gzipped, even when it passes another map; calling it is what brings the English in, so a program that words its issues with a map of its own and never calls `standard` does not bundle it. A second argument left out or given as `undefined` is the English; any other that is not a map, such as `null`, text or a list, is a `TypeError` when `standard` is called. Messages then come from [`formatIssue`](docs/errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
 
 ```ts
 import { englishMessages, number, standard } from "@codenhub/validation";
@@ -1856,7 +1856,7 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 
 ## Changed
 
-- `standard(validator)` words issues in English when given no message map, where 0.3.0 threw a `TypeError`. A map, such as `portugueseMessages`, is still accepted as the second argument, and anything else there is still a `TypeError`. A program that calls `standard` now bundles the English even when it passes a map of its own.
+- `standard(validator)` words issues in English when given no message map, where 0.3.0 threw a `TypeError`. `undefined` there gives the English too. A map, such as `portugueseMessages`, is still accepted as the second argument, and any other value there, such as `null`, text or a list, is still a `TypeError`. A program that calls `standard` now bundles the English even when it passes a map of its own.
 - **Breaking.** `standard(validator, messages)` reports the validator's input type to the library that takes it, where 0.3.0 reported `unknown`. A form library that types a field from a Standard Schema now types one for `coerceNumber()` as `string | number` and one for `optional(string(), "")` as `string | undefined`, so code that relied on the field being `unknown` may need the narrower type.
 - `Validator` and `AsyncValidator` are interfaces with a call signature, where they were function types, so that they can carry the input type. A function of the right shape is still a validator, and nothing a caller writes changes.
 - Every validator a factory of the package makes, and every built-in check, has a property named `~description`, which `describe` reads; a check made by `check` has none, since its rule is a function. The record it holds is frozen, and holds no input.
