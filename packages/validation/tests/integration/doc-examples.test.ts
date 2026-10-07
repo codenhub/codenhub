@@ -55,14 +55,24 @@ interface Example {
 }
 
 /**
- * Every TypeScript block of the public pages, each a module of its own. A block that imports nothing,
- * such as a list of calls written under the import of the block before it, is given an import of every
- * export.
+ * A block that imports a library other than this package, as the integrations page does. The suite does
+ * not install those libraries, so such a block is checked against the version its page names, outside
+ * the suite, and not here.
+ */
+const OTHER_LIBRARY = /^import\b[^;]*?\bfrom "(?!@codenhub\/validation")[^"]+";/m;
+
+/**
+ * Every TypeScript block of the public pages, each a module of its own, but one that imports another
+ * library. A block that imports nothing, such as a list of calls written under the import of the block
+ * before it, is given an import of every export.
  */
 function examples(exportNames: readonly string[]): Example[] {
   return pages.flatMap((page) => {
     const text = readFileSync(`${packageRoot}${page}`, "utf8");
-    return [...text.matchAll(/```ts\n([\s\S]*?)```/g)].map((match) => {
+    const blocks = [...text.matchAll(/```ts\n([\s\S]*?)```/g)].filter(
+      (match) => !OTHER_LIBRARY.test(match[1] as string),
+    );
+    return blocks.map((match) => {
       const firstLine = text.slice(0, match.index).split("\n").length + 1;
       const body = match[1] as string;
       const header = /^import /m.test(body)
