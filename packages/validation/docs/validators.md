@@ -734,18 +734,18 @@ const signup = object({ name: string({ max: 100 }), email: email(), tags: array(
 audit(signup); // [{ rule: "unbounded_size", path: "tags", kind: "array" }]
 ```
 
-In a test, assert the list is empty: `expect(audit(signup)).toEqual([])`. Each finding has a `rule`, the `path` of the part in the schema and its `kind`:
+Give `tags` a `max`, `array(string({ max: 20 }), { max: 10 })`, and the list is empty, which a test asserts: `expect(audit(signup)).toEqual([])`. Each finding has a `rule`, the `path` of the part in the schema and its `kind`:
 
 | `rule`             | Reported for                                                                                                                                      |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `"unbounded_size"` | An `array`, `set`, `map` or `record` without a `max` or `length`, and a `tuple` with `rest` and no `max`                                          |
 | `"unbounded_text"` | A `string` or `coerceString` without a `max` or `length`, a format that does not bound its own text, and `json` or `searchParams` given open text |
 | `"raised_limit"`   | A `lazy` whose `maxDepth` or `maxCalls` is above its default                                                                                      |
-| `"unreadable"`     | A validator it cannot read, such as one written by hand                                                                                           |
+| `"unreadable"`     | A validator it cannot read, such as one written by hand, whose bound it cannot tell                                                               |
 
-- **Formats that bound their own text** need no `max`: `email`, `uuid`, `ulid`, `cuid2`, `nanoid`, `ip`, `cidr`, `mac`, `port`, `phone`, `creditCard`, `isoDate`, `hostname` and `domain`. Any other, such as `url`, `hex`, `jwt` or one made with `format`, is text like any other: bound it with a `pipe`, as below.
+- **Formats whose input is bounded by what they accept** need no `max`: `email`, `uuid`, `ulid`, `cuid2`, `nanoid`, `ip`, `cidr`, `mac`, `port`, `phone`, `creditCard`, `isoDate`, `hostname` and `domain`. Any other, such as `url`, `hex`, `jwt` or one made with `format`, is text like any other: bound it with a `pipe`, as below.
 - **A bound before it counts.** A `pipe` step reads what the steps before it produced, so after a step that bounds its value nothing needs a bound of its own: in `pipe(string({ max: 10_000 }), json(object({ tags: array(string()) })))` the text is at most 10,000 characters, and so is everything parsed from it. `pipe(string({ max: 2048 }), url())` bounds a URL the same way.
-- **A path** joins property names with `.`, and writes `[]` for the items of an array or a set, `[0]` for an item of a tuple, `{}` for the keys and values of a record or a map, and `""` for the validator itself. A recursive schema is read once.
+- **A path** joins property names with `.`, and writes `[]` for the items of an array or a set, `[0]` for an item of a tuple, `{}` for the keys and values of a record or a map, and `""` for the validator itself. A recursive schema is read once at each place it is used, and not again where it refers to itself.
 - **What it does not judge** is whether a `max` is small enough: any number says someone decided. Checks are not read, since they run on a value that already passed, and neither is anything a `guard` or a validator written by hand does inside.
 
 ## Working with results

@@ -5,10 +5,12 @@ import type { AnyValidator } from "./types";
 /** A place in a schema where input nobody controls is not bounded, as {@link audit} reports it. */
 export interface AuditFinding {
   /**
-   * What is missing. `"unbounded_size"`: a collection without a `max` or `length`. `"unbounded_text"`: text
-   * without a `max` or `length`, a format that does not bound its own text, or `json` or `searchParams`
-   * given text no step before them bounded. `"raised_limit"`: a `lazy` whose `maxDepth` or `maxCalls` is
-   * above its default. `"unreadable"`: a validator that has no description, such as one written by hand.
+   * What is missing. `"unbounded_size"`: an array, a set, a map or a record without a `max` or `length`,
+   * or a tuple with `rest` and no `max`. `"unbounded_text"`: text without a `max` or `length`, a format that
+   * does not bound its own text, or `json` or `searchParams` given text no step before them bounded.
+   * `"raised_limit"`: a `lazy` whose `maxDepth` or `maxCalls` is above its default. `"unreadable"`: a
+   * validator that has no description, such as one written by hand, so whether it bounds its input cannot
+   * be told.
    */
   readonly rule: "unbounded_size" | "unbounded_text" | "raised_limit" | "unreadable";
   /**
@@ -21,7 +23,7 @@ export interface AuditFinding {
   readonly kind: string;
 }
 
-/** The formats whose text is bounded by what they accept, so they need no `max` of their own. */
+/** The formats whose input is bounded by what they accept, so they need no `max` of their own. */
 const BOUNDED_FORMATS = new Set([
   "email",
   "uuid",
@@ -47,18 +49,33 @@ const DEFAULT_LIMITS: Readonly<Record<string, number>> = { maxDepth: 128, maxCal
 const hasBound = (record: Description): boolean =>
   record.options?.["max"] !== undefined || record.options?.["length"] !== undefined;
 
-/** Whether a part bounds what it produces, so a step after it in a `pipe` reads a bounded value. */
+/**
+ * Whether a part bounds what it produces, so a step after it in a `pipe` reads a bounded value: a
+ * `string` or a collection with a bound, a format that bounds its input, a `pipe` with such a step, a
+ * `union` whose every option is one, and a wrapper of one, such as `optional`, `coerce` or another `pipe`.
+ */
 function boundsItself(record: Description | undefined): boolean {
   if (record === undefined) {
     return false;
   }
-  if (record.kind === "coerce") {
-    return boundsItself(describe(record["inner"] as AnyValidator));
+  const parts = (name: string): Description[] =>
+    (record[name] as AnyValidator[]).map((part) => describe(part) as Description);
+  switch (record.kind) {
+    case "string":
+      return hasBound(record);
+    case "format":
+      return BOUNDED_FORMATS.has(String(record["format"]));
+    case "pipe":
+      return parts("steps").some(boundsItself);
+    case "union":
+      return parts("members").every(boundsItself);
+    case "lazy":
+      return false;
+    default:
+      return COLLECTIONS.has(record.kind)
+        ? hasBound(record)
+        : record["inner"] !== undefined && boundsItself(describe(record["inner"] as AnyValidator));
   }
-  if (record.kind === "string" || COLLECTIONS.has(record.kind)) {
-    return hasBound(record);
-  }
-  return record.kind === "format" && BOUNDED_FORMATS.has(String(record["format"]));
 }
 
 /**
@@ -67,10 +84,11 @@ function boundsItself(record: Description | undefined): boolean {
  *
  * @remarks
  * Input that passes a validator is validated in full, so a body of a million items, or of text a gigabyte
- * long, costs what its size costs. Each collection needs a `max`, and each text a `max`, unless something
- * before it bounds it: text read by `json` or `searchParams` inside `pipe(string({ max }), ...)`, and
- * everything inside it, is bounded by that `max`. Formats whose text is bounded by what they accept, such
- * as `email`, `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other.
+ * long, costs what its size costs. Each array, set, map, record and text needs a `max` or a `length`, and
+ * a tuple with `rest` a `max`, unless something before it bounds it: text read by `json` or `searchParams`
+ * inside `pipe(string({ max }), ...)`, and everything inside it, is bounded by that `max`. A tuple without
+ * `rest` has its length already. Formats whose input is bounded by what they accept, such as `email`,
+ * `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other.
  *
  * It reads the schema and never calls it. Whether a `max` is small enough is not its to judge: any number
  * says someone decided. A check is not read, since it runs on a value that already passed.
@@ -80,7 +98,9 @@ function boundsItself(record: Description | undefined): boolean {
  * const signup = object({ name: string({ max: 100 }), tags: array(string({ max: 20 })) });
  * audit(signup); // [{ rule: "unbounded_size", path: "tags", kind: "array" }]
  *
- * expect(audit(signup)).toEqual([]); // in a test, once tags has a max
+ * // In a test, of the schema with every bound it needs:
+ * const bounded = object({ name: string({ max: 100 }), tags: array(string({ max: 20 }), { max: 10 }) });
+ * expect(audit(bounded)).toEqual([]);
  * ```
  *
  * @param validator - Any validator.
@@ -90,8 +110,11 @@ function boundsItself(record: Description | undefined): boolean {
 export function audit(validator: AnyValidator): readonly AuditFinding[] {
   assertFunction("validator", validator);
   const findings: AuditFinding[] = [];
-  // Each getter of a `lazy`, walked once, so a recursive schema ends.
-  const walked = new Set<unknown>();
+  // The getters of the `lazy` parts being walked, so a recursive schema ends where it refers to itself,
+  // and the same `lazy` at two places is walked at each, where its context may differ.
+  const walking = new Set<unknown>();
+  // The getters reported for raised limits, so a `lazy` used at two places is reported once.
+  const reported = new Set<unknown>();
   const at = (path: string, key: string): string => (path === "" ? key : `${path}.${key}`);
 
   const walk = (target: unknown, path: string, bounded: boolean): void => {
@@ -178,12 +201,17 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
         return;
       case "lazy": {
         const getter = record["getter"] as () => unknown;
-        if (!walked.has(getter)) {
-          walked.add(getter);
-          if (Object.entries(DEFAULT_LIMITS).some(([name, limit]) => Number(record.options?.[name] ?? limit) > limit)) {
-            report("raised_limit");
-          }
+        if (
+          !reported.has(getter) &&
+          Object.entries(DEFAULT_LIMITS).some(([name, limit]) => Number(record.options?.[name] ?? limit) > limit)
+        ) {
+          reported.add(getter);
+          report("raised_limit");
+        }
+        if (!walking.has(getter)) {
+          walking.add(getter);
           walk(getter(), path, bounded);
+          walking.delete(getter);
         }
         return;
       }

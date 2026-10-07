@@ -89,7 +89,7 @@ export declare function audit(validator: AnyValidator): readonly AuditFinding[];
 
 Finds where a schema accepts input of a size nothing bounds, so a test can hold a schema for input nobody controls to the bounds it needs.
 
-Input that passes a validator is validated in full, so a body of a million items, or of text a gigabyte long, costs what its size costs. Each collection needs a `max`, and each text a `max`, unless something before it bounds it: text read by `json` or `searchParams` inside `pipe(string({ max }), ...)`, and everything inside it, is bounded by that `max`. Formats whose text is bounded by what they accept, such as `email`, `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other.
+Input that passes a validator is validated in full, so a body of a million items, or of text a gigabyte long, costs what its size costs. Each array, set, map, record and text needs a `max` or a `length`, and a tuple with `rest` a `max`, unless something before it bounds it: text read by `json` or `searchParams` inside `pipe(string({ max }), ...)`, and everything inside it, is bounded by that `max`. A tuple without `rest` has its length already. Formats whose input is bounded by what they accept, such as `email`, `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other.
 
 It reads the schema and never calls it. Whether a `max` is small enough is not its to judge: any number says someone decided. A check is not read, since it runs on a value that already passed.
 
@@ -107,7 +107,9 @@ It reads the schema and never calls it. Whether a `max` is small enough is not i
 const signup = object({ name: string({ max: 100 }), tags: array(string({ max: 20 })) });
 audit(signup); // [{ rule: "unbounded_size", path: "tags", kind: "array" }]
 
-expect(audit(signup)).toEqual([]); // in a test, once tags has a max
+// In a test, of the schema with every bound it needs:
+const bounded = object({ name: string({ max: 100 }), tags: array(string({ max: 20 }), { max: 10 }) });
+expect(audit(bounded)).toEqual([]);
 ```
 
 ### brand
@@ -1903,7 +1905,7 @@ Where the part is in the schema: property names joined by `.`, `[]` for the item
 readonly rule: "unbounded_size" | "unbounded_text" | "raised_limit" | "unreadable";
 ```
 
-What is missing. `"unbounded_size"`: a collection without a `max` or `length`. `"unbounded_text"`: text without a `max` or `length`, a format that does not bound its own text, or `json` or `searchParams` given text no step before them bounded. `"raised_limit"`: a `lazy` whose `maxDepth` or `maxCalls` is above its default. `"unreadable"`: a validator that has no description, such as one written by hand.
+What is missing. `"unbounded_size"`: an array, a set, a map or a record without a `max` or `length`, or a tuple with `rest` and no `max`. `"unbounded_text"`: text without a `max` or `length`, a format that does not bound its own text, or `json` or `searchParams` given text no step before them bounded. `"raised_limit"`: a `lazy` whose `maxDepth` or `maxCalls` is above its default. `"unreadable"`: a validator that has no description, such as one written by hand, so whether it bounds its input cannot be told.
 
 ### Base64Options
 

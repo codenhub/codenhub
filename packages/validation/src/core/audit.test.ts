@@ -101,6 +101,28 @@ describe("audit", () => {
     ]);
   });
 
+  it("should walk a lazy at each place it is used, and report its raised limits once", () => {
+    const note = lazy(() => object({ text: string() }), { maxCalls: 20_000 });
+    const body = pipe(string({ max: 1000 }), json(note));
+    expect(audit(object({ sent: body, kept: note }))).toEqual([
+      { rule: "raised_limit", path: "sent", kind: "lazy" },
+      { rule: "unbounded_text", path: "kept.text", kind: "string" },
+    ]);
+  });
+
+  it("should count a bound held by a wrapper or a nested pipe for the steps after it", () => {
+    const parsed = json(object({ bio: string() }));
+    expect(audit(pipe(pipe(string({ max: 100 }), parsed), object({ bio: string() })))).toEqual([]);
+    expect(audit(pipe(optional(string({ max: 100 })), parsed))).toEqual([]);
+    expect(audit(pipe(meta(coerceString({ max: 100 }), { title: "Body" }), parsed))).toEqual([]);
+    expect(audit(pipe(union([string({ max: 10 }), email()]), parsed))).toEqual([]);
+    expect(audit(pipe(union([string({ max: 10 }), string()]), parsed))).toEqual([
+      { rule: "unbounded_text", path: "", kind: "string" },
+      { rule: "unbounded_text", path: "", kind: "json" },
+      { rule: "unbounded_text", path: "bio", kind: "string" },
+    ]);
+  });
+
   it("should name a part it cannot read rather than pass it in silence", () => {
     const byHand: Validator<string> = (input) => ({ ok: true, value: String(input) });
     expect(audit(object({ code: byHand, items: array(name, { max: 2 }) }))).toEqual([
