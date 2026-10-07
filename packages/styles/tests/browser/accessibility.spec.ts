@@ -227,7 +227,6 @@ test("uses system colors to distinguish checked custom toggles in forced colors"
 
   const expectSystemToggleColors = async (fixture: {
     checkboxClass: string;
-    isRadioFilled: boolean;
     radioClass: string;
     stylesUrl: string;
   }) => {
@@ -277,9 +276,9 @@ test("uses system colors to distinguish checked custom toggles in forced colors"
 
     expect(colors.checkboxBackground).toBe(colors.expectedHighlight);
     expect(colors.checkboxMark).toBe(colors.expectedHighlightText);
-    expect(colors.radioBackground).toBe(fixture.isRadioFilled ? colors.expectedHighlight : colors.expectedCanvas);
+    expect(colors.radioBackground).toBe(colors.expectedHighlight);
     expect(colors.radioBorder).toBe(colors.expectedHighlight);
-    expect(colors.radioMark).toBe(fixture.isRadioFilled ? colors.expectedHighlightText : colors.expectedHighlight);
+    expect(colors.radioMark).toBe(colors.expectedHighlightText);
     expect(colors.uncheckedCheckboxBackground).toBe(colors.expectedCanvas);
     expect(colors.uncheckedCheckboxBorder).toBe(colors.expectedCanvasText);
     expect(colors.uncheckedRadioBackground).toBe(colors.expectedCanvas);
@@ -288,16 +287,12 @@ test("uses system colors to distinguish checked custom toggles in forced colors"
 
   await expectSystemToggleColors({
     checkboxClass: "checkbox",
-    isRadioFilled: true,
     radioClass: "radio",
     stylesUrl: COMPONENT_STYLES_URL,
   });
-  await expectSystemToggleColors({
-    checkboxClass: "",
-    isRadioFilled: false,
-    radioClass: "",
-    stylesUrl: NATIVE_STYLES_URL,
-  });
+  /* The same look on both entrypoints: a checked radio is a filled disc with
+     its dot, the way it draws with forced colours off. */
+  await expectSystemToggleColors({ checkboxClass: "", radioClass: "", stylesUrl: NATIVE_STYLES_URL });
 });
 
 test("keeps the select arrow themed for every dark-mode path while light override wins", async ({ page }) => {

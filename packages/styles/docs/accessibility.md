@@ -82,7 +82,7 @@ The reset's rule is `!important` inside the `base` layer, and a layered `!import
 
 In forced colors, class-based form controls including `.text-control` receive a 2px `Highlight` system-color focus outline. The native entrypoint provides the same visible system outline for unclassed text inputs, selects, textareas, checkboxes, and radios.
 
-Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`, and `HighlightText` colors in forced-colors mode so checked and unchecked states remain distinct. Shape, size, and spacing remain unchanged.
+Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`, and `HighlightText` colors in forced-colors mode so checked and unchecked states remain distinct: checked is a `Highlight` fill with a `HighlightText` mark, on the classes and the native entrypoint alike. Shape, size, and spacing remain unchanged.
 
 ## Required outside CSS
 

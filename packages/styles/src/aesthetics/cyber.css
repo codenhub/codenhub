@@ -67,10 +67,15 @@
     --ui-rule-style: initial;
 
     /* The glow is light, not depth, so it is the halo: the component's own intent
-       colour at 40%, blurred, with no offset. Elevation does not scale it, so
-       every component glows -- fields and chips included -- and `.flat` does
-       not put it out. There is no depth, and the transparent depth colour keeps
-       `.raised` and `.floating` from drawing any. */
+       colour at 60%, blurred, with no offset. The 1px spread and the 60% put
+       the brightest point on the outline: at 40% with no spread the halo
+       peaked at about a fifth of the ink just outside the box, brighter than a
+       soft or capped neutral fill, so an edgeless element read as something in
+       front of a light -- a shadow -- rather than the light. An edged element
+       has its line for a source and read as lit either way. Elevation does
+       not scale it, so every component glows -- fields and chips included --
+       and `.flat` does not put it out. There is no depth, and the transparent
+       depth colour keeps `.raised` and `.floating` from drawing any. */
     --elevation-color: transparent;
     --ui-shadow-ink: 0%;
     --ui-shadow-x: 0px;
@@ -78,8 +83,8 @@
     --ui-shadow-blur: 0px;
     --ui-shadow-spread: 0px;
     --ui-halo-blur: var(--_cyber-glow);
-    --ui-halo-spread: 0px;
-    --ui-halo-ink: 40%;
+    --ui-halo-spread: 1px;
+    --ui-halo-ink: 60%;
 
     /* The glow holds still under the pointer and under a press; the press is the
        base scale, restated because a region nested inside another aesthetic must
@@ -191,7 +196,7 @@
   /* Always lit, in the element's own colour: the glow is a halo and not depth,
      so `.flat` leaves it on, as under the aesthetic class. */
   box-shadow:
-    0 0 var(--cyber-glow, 8px) 0 color-mix(in oklab, var(--_solo-ink) 40%, transparent),
+    0 0 var(--cyber-glow, 8px) 1px color-mix(in oklab, var(--_solo-ink) 60%, transparent),
     inset 0 0 0 100vmax var(--_solo-fill);
   font-family: var(--font-cyber, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
   transition: transform var(--motion-duration-normal, 200ms) var(--motion-ease, cubic-bezier(0.2, 0, 0, 1));

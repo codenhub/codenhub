@@ -1893,8 +1893,11 @@ test.describe("aesthetics", () => {
 
       const field = await readStyles(page, "ipt-default-none", ["box-shadow"]);
 
-      /* Offsetless and blurred: the glow sits evenly around the silhouette. */
-      const glows = /\b0px 0px 8px 0px\b/;
+      /* Offsetless and blurred: the glow sits evenly around the silhouette.
+         The 1px spread puts its brightest point on the outline, so an
+         edgeless element reads as the light and not as something in front
+         of one. */
+      const glows = /\b0px 0px 8px 1px\b/;
 
       expect(button["box-shadow"], "button glows").toMatch(glows);
       expect(card["box-shadow"], "card glows").toMatch(glows);
@@ -1902,13 +1905,13 @@ test.describe("aesthetics", () => {
       expect(flat, "a flat badge still glows").toMatch(glows);
       expect(field["box-shadow"], "field glows").toMatch(glows);
 
-      /* The glow is the intent colour itself, thinned: 40% of the intent over
-         nothing is 40% alpha rather than a darker shade. */
+      /* The glow is the intent colour itself, thinned: 60% of the intent over
+         nothing is 60% alpha rather than a darker shade. */
       const halo = button["box-shadow"]!.split(/,(?![^(]*\))/).find((layer) => glows.test(layer))!;
       const glow = readSrgb(readShadowColor(halo));
       const intent = readSrgb(success);
 
-      expect(glow.alpha, "glow alpha").toBeCloseTo(0.4, 2);
+      expect(glow.alpha, "glow alpha").toBeCloseTo(0.6, 2);
       expect(
         channelDistance([glow.red, glow.green, glow.blue], [intent.red, intent.green, intent.blue]),
         "glow hue",
@@ -1960,7 +1963,7 @@ test.describe("aesthetics", () => {
         return result;
       });
 
-      expect(measured.shadow, "glow").toMatch(/\b0px 0px 20px 0px\b/);
+      expect(measured.shadow, "glow").toMatch(/\b0px 0px 20px 1px\b/);
       /* A card with no intent draws its line in the neutral ink, so the ink knob
          is what colours it. */
       expectSameColor(measured.border, "rgb(0, 255, 255)", "ink");

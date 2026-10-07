@@ -594,7 +594,8 @@ test("gives a wrapped table's halo room without moving the table", async ({ page
   });
 
   expect(read.plain.padding).toBe("0px");
-  expect(read.cyber.padding).toBe("8px");
+  /* The blur and the spread: the whole of the halo. */
+  expect(read.cyber.padding).toBe("9px");
   expect(read.cyber.left).toBeCloseTo(read.plain.left, 1);
   expect(read.cyber.top).toBeCloseTo(read.plain.top, 1);
   expect(read.cyber.width).toBeCloseTo(read.plain.width, 1);

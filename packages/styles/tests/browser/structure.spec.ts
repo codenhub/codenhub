@@ -185,8 +185,8 @@ test.describe("shadow layers", () => {
        </div>`,
     );
 
-    expect(await read(page, "flat", "box-shadow")).toMatch(/0px 0px 8px 0px/);
-    expect(await read(page, "field", "box-shadow")).toMatch(/0px 0px 8px 0px/);
+    expect(await read(page, "flat", "box-shadow")).toMatch(/0px 0px 8px 1px/);
+    expect(await read(page, "field", "box-shadow")).toMatch(/0px 0px 8px 1px/);
   });
 });
 
