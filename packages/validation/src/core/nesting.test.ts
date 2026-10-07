@@ -98,15 +98,25 @@ describe("deep input with many issues", () => {
     return input;
   };
 
-  /** The fastest of three runs, in milliseconds, so a pause of the machine during one does not count. */
-  const fastest = (input: Level): number =>
-    Math.min(
-      ...Array.from({ length: 3 }, () => {
-        const start = performance.now();
-        level(input);
-        return performance.now() - start;
-      }),
-    );
+  /** How long one run takes, in milliseconds. */
+  const time = (input: Level): number => {
+    const start = performance.now();
+    level(input);
+    return performance.now() - start;
+  };
+
+  /**
+   * The fastest of five runs of each input, in milliseconds, so a pause of the machine during one does not
+   * count. The runs alternate between the inputs, so a busy stretch slows both rather than only the one
+   * timed during it.
+   */
+  const fastestOfEach = (first: Level, second: Level): [number, number] => {
+    let fastest: [number, number] = [Infinity, Infinity];
+    for (let round = 0; round < 5; round += 1) {
+      fastest = [Math.min(fastest[0], time(first)), Math.min(fastest[1], time(second))];
+    }
+    return fastest;
+  };
 
   const deep = nested(100);
 
@@ -122,7 +132,10 @@ describe("deep input with many issues", () => {
   // once, and sixteen when it is copied at every level. One level is no longer what the deep input is
   // compared with: a path of three segments became six times faster to write and one of a hundred three
   // times, so that ratio rose from 14 to 28 with nothing copied twice, and the test failed one run in two.
+  // The depths were once timed one after the other, and a CI runner busy only while the deep one ran
+  // measured a ratio of 10.04 where a quiet machine measures about five.
   it("should report them in time that grows with the input", { timeout: 30_000 }, () => {
-    expect(fastest(deep)).toBeLessThan(10 * fastest(nested(25)));
+    const [deepTime, shallowTime] = fastestOfEach(deep, nested(25));
+    expect(deepTime).toBeLessThan(10 * shallowTime);
   });
 });
