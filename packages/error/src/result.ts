@@ -242,16 +242,16 @@ export const unwrapOr = <T>(result: Result<T>, fallback: T): T => {
 };
 
 /**
- * Maps the success value of a Result asynchronously using the provided async mapper function.
+ * Maps the success value of a Result using a mapper that may return a promise, awaiting its result.
  *
  * @typeParam T - The type of the original value.
  * @typeParam U - The type of the mapped value.
  * @param result - The Result instance to map.
- * @param mapper - The asynchronous function to map the success value.
+ * @param mapper - The function to map the success value, returning the value or a promise of it.
  * @returns A Promise resolving to a new Result instance with the mapped value or the original Err. The promise rejects
  * if `mapper` throws or rejects; callback failures are not normalized.
  */
-export const mapAsync = async <T, U>(result: Result<T>, mapper: (value: T) => Promise<U>): Promise<Result<U>> => {
+export const mapAsync = async <T, U>(result: Result<T>, mapper: (value: T) => U | Promise<U>): Promise<Result<U>> => {
   if (!result.ok) {
     return result;
   }
@@ -259,19 +259,19 @@ export const mapAsync = async <T, U>(result: Result<T>, mapper: (value: T) => Pr
 };
 
 /**
- * Maps the success value of a Result asynchronously using the provided mapper function that returns a Promise of another Result.
+ * Maps the success value of a Result using a mapper that returns another Result or a Promise of one.
  * Prevents nested Result structures in asynchronous pipelines.
  *
  * @typeParam T - The type of the original success value.
  * @typeParam U - The type of the mapped success value.
  * @param result - The Result instance to process.
- * @param mapper - The asynchronous function to map the success value to a Promise of a new Result.
+ * @param mapper - The function to map the success value to a new Result or a Promise of one.
  * @returns A Promise resolving to the Result returned by the mapper or the original Err. The promise rejects if
  * `mapper` throws or rejects; callback failures are not normalized.
  */
 export const andThenAsync = async <T, U>(
   result: Result<T>,
-  mapper: (value: T) => Promise<Result<U>>,
+  mapper: (value: T) => Result<U> | Promise<Result<U>>,
 ): Promise<Result<U>> => {
   if (!result.ok) {
     return result;

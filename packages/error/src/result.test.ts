@@ -298,6 +298,14 @@ describe("mapAsync", () => {
     expect((mapped as Err).error.message).toBe("failed");
   });
 
+  it("should accept a mapper that returns a promise only on some paths", async () => {
+    const cache = new Map([[1, "cached"]]);
+    const lookUp = (key: number): string | Promise<string> => cache.get(key) ?? Promise.resolve("fetched");
+
+    expect(unwrap(await mapAsync(ok(1), lookUp))).toBe("cached");
+    expect(unwrap(await mapAsync(ok(2), lookUp))).toBe("fetched");
+  });
+
   it("should reject when the mapper rejects", async () => {
     await expect(mapAsync(ok("value"), async () => Promise.reject(new Error("Mapper failed")))).rejects.toThrow(
       "Mapper failed",
@@ -399,6 +407,15 @@ describe("andThenAsync", () => {
     expect(called).toBe(false);
     expect(mapped.ok).toBe(false);
     expect((mapped as Err).error.message).toBe("failed");
+  });
+
+  it("should accept a mapper that returns a promise only on some paths", async () => {
+    const cache = new Map([[1, ok("cached")]]);
+    const lookUp = (key: number): Result<string> | Promise<Result<string>> =>
+      cache.get(key) ?? Promise.resolve(ok("fetched"));
+
+    expect(unwrap(await andThenAsync(ok(1), lookUp))).toBe("cached");
+    expect(unwrap(await andThenAsync(ok(2), lookUp))).toBe("fetched");
   });
 
   it("should reject when the mapper rejects", async () => {
