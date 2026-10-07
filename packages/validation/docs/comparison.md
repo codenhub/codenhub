@@ -70,7 +70,7 @@ Read the ratios and not the figures: this is one schema on one machine.
 ## When to choose another
 
 - **valibot**, when size is what matters most, or when you need the widest set of ready-made checks. It is the smallest of the four by a wide margin and faster.
-- **zod**, when other tools must accept your schema. It is what most form libraries, API frameworks and SDKs for language models take first. Many of those take any [Standard Schema](standard-schema.md), which `standard(validator, messages)` gives them, and those that need a JSON Schema can have one from [`toJsonSchema`](json-schema.md), but a tool that asks for a zod schema by name needs zod.
+- **zod**, when other tools must accept your schema. It is what most form libraries, API frameworks and SDKs for language models take first. Many of those take any [Standard Schema](standard-schema.md), which `standard(validator)` gives them, and those that need a JSON Schema can have one from [`toJsonSchema`](json-schema.md), but a tool that asks for a zod schema by name needs zod.
 - **zod or valibot**, when validating valid data in a hot path, such as every row of a large file, and a pattern is a good enough test of an email or a URL.
 - **yup**, when a codebase already uses it. The measurements give no other reason.
 
@@ -80,13 +80,13 @@ Choose this package when the input comes from outside and what you do with the v
 
 Run against the versions above, except where marked.
 
-| Need                                           | This package                    | valibot                            | zod                        | yup                           |
-| ---------------------------------------------- | ------------------------------- | ---------------------------------- | -------------------------- | ----------------------------- |
-| A JSON Schema from a schema                    | `toJsonSchema`                  | a separate package (documentation) | `z.toJSONSchema`           | none built in (documentation) |
-| A type for the input, apart from the output    | `InferInput`                    | `InferInput` (documentation)       | `z.input` (documentation)  | not checked                   |
-| A rule across fields while another field fails | `checkFields`                   | `partialCheck`                     | `refine`                   | `ref`                         |
-| Standard Schema                                | `standard(validator, messages)` | built in (documentation)           | built in (documentation)   | built in (documentation)      |
-| Method chains, such as `string().min(2)`       | no, options and checks          | no, `pipe`                         | yes                        | yes                           |
-| Messages in other languages                    | English and Portuguese          | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
+| Need                                           | This package           | valibot                            | zod                        | yup                           |
+| ---------------------------------------------- | ---------------------- | ---------------------------------- | -------------------------- | ----------------------------- |
+| A JSON Schema from a schema                    | `toJsonSchema`         | a separate package (documentation) | `z.toJSONSchema`           | none built in (documentation) |
+| A type for the input, apart from the output    | `InferInput`           | `InferInput` (documentation)       | `z.input` (documentation)  | not checked                   |
+| A rule across fields while another field fails | `checkFields`          | `partialCheck`                     | `refine`                   | `ref`                         |
+| Standard Schema                                | `standard(validator)`  | built in (documentation)           | built in (documentation)   | built in (documentation)      |
+| Method chains, such as `string().min(2)`       | no, options and checks | no, `pipe`                         | yes                        | yes                           |
+| Messages in other languages                    | English and Portuguese | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
 
 English and Portuguese ship with this package, so a program in another language writes its own message map: [Issues and messages](errors.md#rewording-and-localizing) shows how.

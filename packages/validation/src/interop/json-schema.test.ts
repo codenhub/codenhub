@@ -16,10 +16,12 @@ import { coerceBoolean } from "../coercion/coerce-boolean";
 import { coerceDate } from "../coercion/coerce-date";
 import { coerceNumber } from "../coercion/coerce-number";
 import { array } from "../composition/array";
+import { codec } from "../composition/codec";
 import { fallback } from "../composition/fallback";
 import { intersection } from "../composition/intersection";
 import { json } from "../composition/json";
 import { lazy } from "../composition/lazy";
+import { meta } from "../composition/meta";
 import { nullable } from "../composition/nullable";
 import { nullish } from "../composition/nullish";
 import { object } from "../composition/object";
@@ -198,6 +200,93 @@ describe("toJsonSchema", () => {
       h: nullable(string()),
     });
     expect(schemaOf(loose)["required"]).toEqual(["h"]);
+  });
+
+  it("should write what meta says on the part it was given to, under JSON Schema's names", () => {
+    const tool = meta(
+      object({
+        city: meta(string({ min: 1 }), { description: "The city", examples: ["Lisbon"] }),
+        units: meta(optional(oneOf(["c", "f"])), { title: "Units", deprecated: true }),
+      }),
+      { title: "Weather", description: "What the weather is" },
+    );
+    expect(schemaOf(tool)).toEqual({
+      type: "object",
+      title: "Weather",
+      description: "What the weather is",
+      properties: {
+        city: { type: "string", minLength: 1, description: "The city", examples: ["Lisbon"] },
+        units: { enum: ["c", "f"], title: "Units", deprecated: true },
+      },
+      required: ["city"],
+    });
+  });
+
+  it("should write meta on a part it wraps, a validator written by hand and a recursive one", () => {
+    const byHand: Validator<string> = (input) => ({ ok: true, value: input as string });
+    expect(schemaOf(meta(byHand, { title: "Text" }), { unrepresentable: "any" })).toEqual({ title: "Text" });
+    expect(() => toJsonSchema(meta(byHand, { title: "Text" }))).toThrow("a validator written by hand at the root");
+    type Tree = { children: Tree[] };
+    const tree: Validator<Tree> = lazy(() => object({ children: array(tree) }));
+    expect(schemaOf(meta(tree, { description: "A tree" }))).toMatchObject({
+      $ref: "#/$defs/schema1",
+      description: "A tree",
+    });
+    expect(schemaOf(meta(nullable(string()), { title: "Name" }))).toEqual({
+      anyOf: [{ type: "string" }, { type: "null" }],
+      title: "Name",
+    });
+  });
+
+  it("should write a codec as its input, or its output with io output", () => {
+    const stamp = codec(datetime(), date(), {
+      decode: (text) => new Date(text),
+      encode: (value) => value.toISOString(),
+    });
+    expect(schemaOf(object({ at: stamp }))).toEqual({
+      type: "object",
+      properties: { at: { type: "string", format: "date-time" } },
+      required: ["at"],
+    });
+    expect(() => toJsonSchema(stamp, { io: "output" })).toThrow('a validator of kind "date"');
+    const count = codec(string(), number(), { decode: Number, encode: String });
+    expect(schemaOf(count, { io: "output" })).toEqual({ type: "number" });
+  });
+
+  it("should write draft-07 when asked, with tuples and definitions as that draft names them", () => {
+    type Tree = { children: Tree[] };
+    const tree: Validator<Tree> = lazy(() => object({ children: array(tree) }));
+    expect(toJsonSchema(tree, { target: "draft-07" })).toEqual({
+      $schema: "http://json-schema.org/draft-07/schema#",
+      $ref: "#/definitions/schema1",
+      definitions: {
+        schema1: {
+          type: "object",
+          properties: { children: { type: "array", items: { $ref: "#/definitions/schema1" } } },
+          required: ["children"],
+        },
+      },
+    });
+    expect(toJsonSchema(tuple([string()], { rest: number() }), { target: "draft-07" })).toEqual({
+      $schema: "http://json-schema.org/draft-07/schema#",
+      type: "array",
+      items: [{ type: "string" }],
+      minItems: 1,
+      additionalItems: { type: "number" },
+    });
+    expect(toJsonSchema(tuple([string()]), { target: "draft-07" })["additionalItems"]).toBe(false);
+    expect(toJsonSchema(json(object({ a: string() })), { target: "draft-07" })).toEqual({
+      $schema: "http://json-schema.org/draft-07/schema#",
+      type: "string",
+      contentMediaType: "application/json",
+    });
+    expect(toJsonSchema(string(), { target: "draft-2020-12" })).toEqual(toJsonSchema(string()));
+  });
+
+  it("should refuse a target it does not write", () => {
+    expect(() => toJsonSchema(string(), { target: "openapi-3.0" as never })).toThrow(
+      new TypeError('target must be "draft-2020-12" or "draft-07", received "openapi-3.0"'),
+    );
   });
 
   it("should write strict objects as closed, and a key named like a prototype member as a property", () => {

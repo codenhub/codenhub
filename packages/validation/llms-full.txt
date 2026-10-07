@@ -88,6 +88,7 @@ When invalid input is a caller's mistake, such as an options object passed to yo
 - [Coercion](docs/coercion.md)
 - [Standard Schema](docs/standard-schema.md)
 - [JSON Schema](docs/json-schema.md)
+- [Integrations](docs/integrations.md)
 - [Compared with valibot, zod and yup](docs/comparison.md)
 - [Changelog](docs/changelog/index.md)
 
@@ -107,7 +108,7 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
 - `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal`, `printer.local` and `nas.home`. Whether the top-level domain exists is not checked. A validator for the host replaces that rule: `url({ host: hostname() })` accepts any hostname and `url({ host: union([domain(), ip()]) })` any public domain or IP address, of any range. Neither resolves the name, so a public name can still point at a private address.
 - Exceptions thrown by your own callbacks propagate. They are bugs, not invalid input. So do exceptions from code inside the input itself: a getter or a `Proxy` trap that throws while a validator reads the value, except under `objectLike`, which reports a property it could not read as an issue. Data parsed from JSON holds neither.
-- A recursive `lazy` validator stops at `maxDepth` levels, 128 by default, and fails with `too_big` instead of exhausting the stack, so deeply nested or cyclic input is reported like any other bad input, as long as the recursion is synchronous. An asynchronous rule inside a recursive schema starts each level it awaits before from a fresh stack, which `maxDepth` does not count, but `maxCalls` does: each level is a `lazy` call, and the count lasts across the awaits of this package, such as an asynchronous `check`'s, so such a schema, given a cyclic object, stops too. An await inside a validator you write yourself is not seen, and what it calls after it is counted afresh, so put asynchronous work in a `check`, or bound such a validator yourself. `lazy` stops after `maxCalls` calls in one validation, 10,000 by default, as a backstop for work that grows faster than the input. A `lazy` gives the result it found for an object at a path again when the same object is reached there again in one validation, so the options of a recursive `union` of objects share the children's result and the work grows with the input; a schema that makes a new object at every level, such as with a `transform` that copies its value, cannot share it, and could otherwise run for hours on a few hundred bytes. At that default a validation it stops holds about 10 MB of issues for each `lazy`. Raise it for trusted recursive data with more nodes, or use `tagged` for objects told apart by a property. Nothing else limits how much input is checked: a large input that passes is validated in full, and asynchronous rules of every item start at once. What a failing input reports is limited, as the last note here says. Cap the size of untrusted input, and give `array`, `set`, `map`, `record` and a `tuple` with `rest` a `max`, before validating it. A byte limit is not enough for a value received by structured clone, such as `event.data` from `postMessage`, a worker or Electron IPC: it can hold a sparse array whose length costs nothing to send, or the same array at many places, so a message of a few bytes holds millions of items. Only `max` bounds those.
+- A recursive `lazy` validator stops at `maxDepth` levels, 128 by default, and fails with `too_big` instead of exhausting the stack, so deeply nested or cyclic input is reported like any other bad input, as long as the recursion is synchronous. An asynchronous rule inside a recursive schema starts each level it awaits before from a fresh stack, which `maxDepth` does not count, but `maxCalls` does: each level is a `lazy` call, and the count lasts across the awaits of this package, such as an asynchronous `check`'s, so such a schema, given a cyclic object, stops too. An await inside a validator you write yourself is not seen, and what it calls after it is counted afresh, so put asynchronous work in a `check`, or bound such a validator yourself. `lazy` stops after `maxCalls` calls in one validation, 10,000 by default, as a backstop for work that grows faster than the input. A `lazy` gives the result it found for an object at a path again when the same object is reached there again in one validation, so the options of a recursive `union` of objects share the children's result and the work grows with the input; a schema that makes a new object at every level, such as with a `transform` that copies its value, cannot share it, and could otherwise run for hours on a few hundred bytes. At that default a validation it stops holds about 10 MB of issues for each `lazy`. Raise it for trusted recursive data with more nodes, or use `tagged` for objects told apart by a property. Nothing else limits how much input is checked: a large input that passes is validated in full, and asynchronous rules of every item start at once. What a failing input reports is limited, as the last note here says. Cap the size of untrusted input, and give `array`, `set`, `map`, `record` and a `tuple` with `rest` a `max`, before validating it; `audit(validator)` lists every place a schema leaves open, for a test to assert there is none. A byte limit is not enough for a value received by structured clone, such as `event.data` from `postMessage`, a worker or Electron IPC: it can hold a sparse array whose length costs nothing to send, or the same array at many places, so a message of a few bytes holds millions of items. Only `max` bounds those.
 - A collection stops once its items have reported 1,000 issues, and adds one `too_big` issue that says so, so a long list of bad items costs a bounded amount of memory and time instead of about a thousand times its size. Input that passes is still validated in full: cap the size of untrusted input and give collections a `max`.
 
 ## License
@@ -253,6 +254,7 @@ assert(options, { port: 0 }, { subject: "createServer:", messages: englishMessag
 - [Coercion](docs/coercion.md): validate text input such as environment variables, query strings and form fields by converting it.
 - [Standard Schema](docs/standard-schema.md): use a validator wherever a library accepts a Standard Schema.
 - [JSON Schema](docs/json-schema.md): write a validator as a JSON Schema, for an HTTP API, the tools of a language model or a form generator.
+- [Integrations](docs/integrations.md): use a validator with react-hook-form, TanStack Form, tRPC, Hono, the AI SDK, the Model Context Protocol and OpenAPI.
 - [Issues and messages](docs/errors.md): the shape of an issue, the built-in codes, message text, localization and form errors.
 - [Compared with valibot, zod and yup](docs/comparison.md): where the package differs, what was measured, and when to choose one of them.
 - [API reference](docs/reference/index.md): every export with its signature and documentation, generated from the source.
@@ -395,7 +397,7 @@ Read the ratios and not the figures: this is one schema on one machine.
 ## When to choose another
 
 - **valibot**, when size is what matters most, or when you need the widest set of ready-made checks. It is the smallest of the four by a wide margin and faster.
-- **zod**, when other tools must accept your schema. It is what most form libraries, API frameworks and SDKs for language models take first. Many of those take any [Standard Schema](docs/standard-schema.md), which `standard(validator, messages)` gives them, and those that need a JSON Schema can have one from [`toJsonSchema`](docs/json-schema.md), but a tool that asks for a zod schema by name needs zod.
+- **zod**, when other tools must accept your schema. It is what most form libraries, API frameworks and SDKs for language models take first. Many of those take any [Standard Schema](docs/standard-schema.md), which `standard(validator)` gives them, and those that need a JSON Schema can have one from [`toJsonSchema`](docs/json-schema.md), but a tool that asks for a zod schema by name needs zod.
 - **zod or valibot**, when validating valid data in a hot path, such as every row of a large file, and a pattern is a good enough test of an email or a URL.
 - **yup**, when a codebase already uses it. The measurements give no other reason.
 
@@ -405,14 +407,14 @@ Choose this package when the input comes from outside and what you do with the v
 
 Run against the versions above, except where marked.
 
-| Need                                           | This package                    | valibot                            | zod                        | yup                           |
-| ---------------------------------------------- | ------------------------------- | ---------------------------------- | -------------------------- | ----------------------------- |
-| A JSON Schema from a schema                    | `toJsonSchema`                  | a separate package (documentation) | `z.toJSONSchema`           | none built in (documentation) |
-| A type for the input, apart from the output    | `InferInput`                    | `InferInput` (documentation)       | `z.input` (documentation)  | not checked                   |
-| A rule across fields while another field fails | `checkFields`                   | `partialCheck`                     | `refine`                   | `ref`                         |
-| Standard Schema                                | `standard(validator, messages)` | built in (documentation)           | built in (documentation)   | built in (documentation)      |
-| Method chains, such as `string().min(2)`       | no, options and checks          | no, `pipe`                         | yes                        | yes                           |
-| Messages in other languages                    | English and Portuguese          | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
+| Need                                           | This package           | valibot                            | zod                        | yup                           |
+| ---------------------------------------------- | ---------------------- | ---------------------------------- | -------------------------- | ----------------------------- |
+| A JSON Schema from a schema                    | `toJsonSchema`         | a separate package (documentation) | `z.toJSONSchema`           | none built in (documentation) |
+| A type for the input, apart from the output    | `InferInput`           | `InferInput` (documentation)       | `z.input` (documentation)  | not checked                   |
+| A rule across fields while another field fails | `checkFields`          | `partialCheck`                     | `refine`                   | `ref`                         |
+| Standard Schema                                | `standard(validator)`  | built in (documentation)           | built in (documentation)   | built in (documentation)      |
+| Method chains, such as `string().min(2)`       | no, options and checks | no, `pipe`                         | yes                        | yes                           |
+| Messages in other languages                    | English and Portuguese | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
 
 English and Portuguese ship with this package, so a program in another language writes its own message map: [Issues and messages](docs/errors.md#rewording-and-localizing) shows how.
 
@@ -900,6 +902,194 @@ It takes the same message map as `formatIssue`, which it requires too. Field key
 
 A failed result is plain data, so it can be logged, sent to a client or stored, and because no issue the package reports holds a value of the input, doing so does not leak the values that were submitted; an issue does name the input's properties, in `path`, and a check you write decides what its own issue holds. A result that passed holds the value itself. No issue holds a bigint, which `JSON.stringify` cannot serialize: a bigint bound or expected value is written as its decimal digits beside `type: "bigint"`. The bounds of a `date` validator are `Date`s, which `JSON.stringify` turns into ISO strings, and `englishMessages` words either the same. A `literal` or `oneOf` of `undefined`, a symbol or an infinity holds that value as it is, which JSON writes as `null` or leaves out, so word such issues before sending them.
 
+<!-- Source: docs/integrations.md -->
+
+# Integrations
+
+A validator goes where a library asks for a schema in one of three ways: as a [Standard Schema](docs/standard-schema.md), which most form libraries and frameworks accept; as a [JSON Schema](docs/json-schema.md), which tools of language models and OpenAPI documents are written in; or called directly, as any function is. Each example below was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
+
+## Forms
+
+A form holds what the user typed, which is the validator's input type and not what it produces, so type the form's values with [`InferInput`](docs/validators.md#inferinput) and what it submits with `Infer`. A field of `coerceNumber()` holds text or a number, and what is submitted is a number.
+
+### react-hook-form
+
+Checked with react-hook-form 7.89.0 and @hookform/resolvers 5.9.1.
+
+```ts
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
+import { useForm } from "react-hook-form";
+
+import { email, object, standard, string, type Infer, type InferInput } from "@codenhub/validation";
+
+const signup = standard(object({ name: string({ trim: true, min: 2, max: 100 }), email: email() }));
+
+export function useSignupForm() {
+  return useForm<InferInput<typeof signup>, unknown, Infer<typeof signup>>({
+    resolver: standardSchemaResolver(signup),
+  });
+}
+```
+
+The resolver gives each field the message of its first issue, in English unless `standard` is given another message map, and the values the validator produced on submit: the name trimmed, and the address as its parser reads it.
+
+### TanStack Form
+
+Checked with @tanstack/form-core 1.33.5. The framework adapters, such as `useForm` of @tanstack/react-form, take the same `validators` option.
+
+```ts
+import { FormApi } from "@tanstack/form-core";
+
+import { email, object, standard, string } from "@codenhub/validation";
+
+export const form = new FormApi({
+  defaultValues: { name: "", email: "" },
+  validators: { onChange: standard(object({ name: string({ min: 2, max: 100 }), email: email() })) },
+});
+```
+
+A validator given to `validators` reports each issue under its field, `form.state.fieldMeta.email.errors`, as `{ message, path }`.
+
+## RPC and HTTP
+
+### tRPC
+
+Checked with @trpc/server 11.19.0.
+
+```ts
+import { initTRPC } from "@trpc/server";
+
+import { email, object, standard, string } from "@codenhub/validation";
+
+const t = initTRPC.create();
+
+export const appRouter = t.router({
+  signup: t.procedure.input(standard(object({ name: string({ min: 2, max: 100 }), email: email() }))).mutation(({ input }) => ({ id: "u1", ...input })),
+});
+```
+
+Input that fails is a `TRPCError` with the code `BAD_REQUEST` and the issues as its cause, and the procedure receives what the validator produced.
+
+### Hono
+
+Checked with hono 4.13.13 and @hono/standard-validator 0.4.0.
+
+```ts
+import { sValidator } from "@hono/standard-validator";
+import { Hono } from "hono";
+
+import { email, object, standard, string } from "@codenhub/validation";
+
+const signup = standard(object({ name: string({ min: 2, max: 100 }), email: email() }));
+
+const app = new Hono();
+
+app.post(
+  "/signup",
+  // Without a hook, the 400 response repeats the body it was sent, a password included.
+  sValidator("json", signup, (result, c) => {
+    if (!result.success) {
+      return c.json({ issues: result.error }, 400);
+    }
+  }),
+  (c) => c.json(c.req.valid("json"), 201),
+);
+```
+
+Give `sValidator` a hook as above. Without one, the response to input that fails repeats the input it was sent, which this package's issues never hold, so a password or a token sent to the endpoint would come back in the response and in whatever logs it.
+
+## Tools of a language model
+
+A model chooses a tool and fills in its arguments from the JSON Schema of its input, so describe each argument with [`meta`](docs/validators.md#meta): the description is what the model reads.
+
+### AI SDK
+
+Checked with ai 7.0.131. The AI SDK writes a tool's input with `~standard.jsonSchema`, which [`standardJsonSchema`](docs/standard-schema.md#with-its-json-schema) adds and `standard` does not, in draft-07.
+
+```ts
+import { tool } from "ai";
+
+import { meta, number, object, optional, standardJsonSchema, string } from "@codenhub/validation";
+
+export const forecast = tool({
+  description: "Get the weather forecast for a city",
+  inputSchema: standardJsonSchema(
+    object({
+      city: meta(string({ min: 1, max: 100 }), { description: "The city, such as Lisbon" }),
+      days: optional(meta(number({ int: true, min: 1, max: 7 }), { description: "How many days ahead" })),
+    }),
+  ),
+  execute: async ({ city, days = 1 }) => `${city}: sunny for ${days} days`,
+});
+```
+
+Arguments the model sends that fail are refused before `execute` runs, with the issues worded in English.
+
+### Model Context Protocol
+
+Checked with @modelcontextprotocol/sdk 1.32.1. Its `McpServer.registerTool` takes zod schemas only, so the tool is declared on the `Server` below it, which takes a JSON Schema, and its arguments are validated in the handler.
+
+```ts
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+
+import { englishMessages, formatIssue, meta, number, object, optional, string, toJsonSchema } from "@codenhub/validation";
+
+const forecastInput = object({
+  city: meta(string({ min: 1, max: 100 }), { description: "The city, such as Lisbon" }),
+  days: optional(meta(number({ int: true, min: 1, max: 7 }), { description: "How many days ahead" })),
+});
+
+export const server = new Server({ name: "weather", version: "1.0.0" }, { capabilities: { tools: {} } });
+
+server.setRequestHandler(ListToolsRequestSchema, () => ({
+  tools: [
+    {
+      name: "forecast",
+      description: "Get the weather forecast for a city",
+      inputSchema: { ...toJsonSchema(forecastInput), type: "object" as const },
+    },
+  ],
+}));
+
+server.setRequestHandler(CallToolRequestSchema, (request) => {
+  const result = forecastInput(request.params.arguments);
+  if (!result.ok) {
+    const text = result.error.issues.map((issue) => formatIssue(issue, englishMessages)).join("\n");
+    return { isError: true, content: [{ type: "text", text }] };
+  }
+  const { city, days = 1 } = result.value;
+  return { content: [{ type: "text", text: `${city}: sunny for ${days} days` }] };
+});
+```
+
+## OpenAPI
+
+OpenAPI 3.1 writes schemas in JSON Schema 2020-12, which `toJsonSchema` writes, so a schema goes under `components.schemas` as it is. OpenAPI 3.0 uses an older dialect, which `toJsonSchema` does not write.
+
+```ts
+import { email, meta, object, string, toJsonSchema } from "@codenhub/validation";
+
+const signup = meta(object({ name: string({ min: 2, max: 100 }), email: email() }), {
+  title: "Signup",
+  examples: [{ name: "Ada Lovelace", email: "ada@example.com" }],
+});
+
+export const document = {
+  openapi: "3.1.0",
+  info: { title: "Accounts", version: "1.0.0" },
+  paths: {
+    "/signup": {
+      post: {
+        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/Signup" } } } },
+        responses: { "201": { description: "Created" } },
+      },
+    },
+  },
+  components: { schemas: { Signup: toJsonSchema(signup) } },
+};
+```
+
 <!-- Source: docs/json-schema.md -->
 
 # JSON Schema
@@ -992,6 +1182,7 @@ The output side takes a default and the value of a `fallback` to pass the valida
 | `tagged`                                                    | `oneOf`, with the tag as a `const` property of each variant                                                                                                                                                                                     |
 | `nullable`, `nullish`                                       | `anyOf` with `type: "null"`                                                                                                                                                                                                                     |
 | `readonly`, `brand`                                         | What the validator inside is written as                                                                                                                                                                                                         |
+| `codec`                                                     | Its `input`, or its `output` with `io: "output"`                                                                                                                                                                                                |
 | `lazy`                                                      | A `$ref` to a definition under `$defs`                                                                                                                                                                                                          |
 | `pattern`, `startsWith`, `endsWith`, `includes`, `nonBlank` | `pattern`                                                                                                                                                                                                                                       |
 | `multipleOf`, `nonZero`, `unique()`                         | `multipleOf`, `not: { const: 0 }` and `uniqueItems`                                                                                                                                                                                             |
@@ -1021,6 +1212,40 @@ toJsonSchema(category).$defs;
 ```
 
 Build a recursive schema once and refer to it, as the [validator reference](docs/validators.md#lazy) says. One built anew at every level, as `lazy(() => build())` inside `build` does, has no end to write, and `toJsonSchema` throws a `TypeError` saying so.
+
+## Saying what a value is for
+
+A schema that gives only the types tells a reader what to send and not what it means. [`meta`](docs/validators.md#meta) adds a title, a description, examples and whether a value is deprecated to the part it is given to, and `toJsonSchema` writes each under JSON Schema's keyword of the same name. A language model reads the `description` of a tool's arguments to decide what to put in them, and an OpenAPI document shows all four.
+
+```ts
+import { meta, number, object, string, toJsonSchema } from "@codenhub/validation";
+
+const forecast = meta(
+  object({
+    city: meta(string({ min: 1 }), { description: "The city to get the weather for", examples: ["Lisbon"] }),
+    days: meta(number({ int: true, min: 1, max: 7 }), { description: "How many days ahead" }),
+  }),
+  { title: "Forecast" },
+);
+
+toJsonSchema(forecast);
+// {
+//   $schema: "https://json-schema.org/draft/2020-12/schema",
+//   type: "object",
+//   title: "Forecast",
+//   properties: {
+//     city: { type: "string", minLength: 1, description: "The city to get the weather for", examples: ["Lisbon"] },
+//     days: { type: "integer", minimum: 1, maximum: 7, description: "How many days ahead" },
+//   },
+//   required: ["city", "days"],
+// }
+```
+
+The keys are written on whatever schema the part is written as, beside a `$ref` for a `lazy` and beside an `anyOf` for a `nullable`, and the same on the input and the output side. Examples are written as given, and are not checked against the validator.
+
+## Drafts
+
+The schema is written in draft 2020-12 unless `target: "draft-07"` asks for the older draft, which some readers, such as the tools of a language model in the AI SDK, still take. In draft-07 the items of a `tuple` are listed under `items` and its `rest` under `additionalItems`, definitions are under `definitions`, and what `json` parses is not written, since that draft has no `contentSchema`. Any other target is a `TypeError`. [`standardJsonSchema`](docs/standard-schema.md#with-its-json-schema) writes the draft a library asks for, through the same function.
 
 ## What cannot be written
 
@@ -1052,9 +1277,9 @@ To send a date as JSON, validate the text it travels as, with `datetime()` or `i
 [Standard Schema](https://standardschema.dev/) is a small shared interface that lets libraries accept a validator without depending on the one that made it. Form libraries, API frameworks and routers that support it take any conforming validator, from any library, directly. `standard` makes a validator conforming.
 
 ```ts
-import { email, englishMessages, number, object, standard } from "@codenhub/validation";
+import { email, number, object, standard } from "@codenhub/validation";
 
-const signup = standard(object({ email: email(), age: number({ int: true }) }), englishMessages);
+const signup = standard(object({ email: email(), age: number({ int: true }) }));
 
 signup["~standard"].validate({ email: "nope", age: 1.5 });
 // {
@@ -1077,7 +1302,7 @@ The package exports the `StandardSchemaV1` type so you can accept one in your ow
 
 ## Messages
 
-The specification requires a message on every issue, and this is the one place this package builds it, so a program that never uses `standard` never bundles the text. `standard` therefore takes the message map as its second argument, and it is required, so `standard` throws a `TypeError` when created without one: pass `englishMessages` for the built-in English, or a map of your own. Messages then come from [`formatIssue`](docs/errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
+The specification requires a message on every issue, so `standard` builds one, from the message map given as its second argument: the built-in English when you give none, `portugueseMessages` for Portuguese, or a map of your own. A program that calls `standard` bundles the English, about 1.7 kB gzipped, even when it passes another map; calling it is what brings the English in, so a program that words its issues with a map of its own and never calls `standard` does not bundle it. A second argument left out or given as `undefined` is the English; any other that is not a map, such as `null`, text or a list, is a `TypeError` when `standard` is called. Messages then come from [`formatIssue`](docs/errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
 
 ```ts
 import { englishMessages, number, standard } from "@codenhub/validation";
@@ -1090,9 +1315,31 @@ const age = standard(number({ min: 18 }), {
 
 Each issue's `path` is the issue's own path, as an array of strings and numbers.
 
+## With its JSON Schema
+
+Some libraries need to write the schema down too, such as the AI SDK, which sends the arguments of a tool to a language model as a JSON Schema. They read it from `~standard.jsonSchema`, which [Standard JSON Schema](https://standardschema.dev/json-schema) adds to the specification. `standardJsonSchema(validator, messages?)` returns what `standard` does with it added:
+
+```ts
+import { meta, number, object, optional, standardJsonSchema, string } from "@codenhub/validation";
+
+const forecast = standardJsonSchema(
+  object({
+    city: meta(string({ min: 1, max: 100 }), { description: "The city to get the weather for" }),
+    days: optional(number({ int: true, min: 1, max: 7 })),
+  }),
+);
+
+forecast["~standard"].jsonSchema.input({ target: "draft-07" });
+// { $schema: "http://json-schema.org/draft-07/schema#", type: "object", properties: { city: { ..., description: "The city to get the weather for" }, ... }, required: ["city"] }
+```
+
+`input` and `output` write the validator with [`toJsonSchema`](docs/json-schema.md), the side and the draft as asked. `"draft-2020-12"` and `"draft-07"` are written, and any other target throws a `TypeError`. When a part of the validator cannot be written as JSON Schema, such as a custom check, `toJsonSchema` throws for it, and so do `input` and `output`, unless the library passes `libraryOptions: { unrepresentable: "any" }`. Give [`meta`](docs/validators.md#meta) to the validator before passing it here, since the schema is written from the validator `standardJsonSchema` is given.
+
+It is a separate export so that `standard`, which a form in the browser uses, does not bundle the code that writes a schema: use `standard` where only validation is asked for, and `standardJsonSchema` where the schema is read too.
+
 ## A note on functions
 
-A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator, englishMessages)["~standard"] }`.
+A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator)["~standard"] }`.
 
 <!-- Source: docs/validators.md -->
 
@@ -1531,6 +1778,28 @@ type Settings = Infer<typeof settings>; // { readonly theme: string; readonly ta
 - A value is taken to be yours when it is the input itself. When a `transform` returns a value from inside the input, such as `(value) => value.tags`, that value is frozen: copy it there when the caller must keep it changeable.
 - `pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after: `readonly(pick(user, ["name"]))`.
 
+### `meta`
+
+`meta(validator, { title, description, examples, deprecated })` says what a validator is for, for whoever reads the schema: a person reading an API's documentation, or a language model choosing a tool and filling in its arguments. [`toJsonSchema`](docs/json-schema.md#saying-what-a-value-is-for) writes each key beside the types, under JSON Schema's name for it.
+
+```ts
+import { meta, number, object, string } from "@codenhub/validation";
+
+const forecast = meta(
+  object({
+    city: meta(string({ min: 1 }), { description: "The city to get the weather for", examples: ["Lisbon"] }),
+    days: meta(number({ int: true, min: 1, max: 7 }), { description: "How many days ahead" }),
+  }),
+  { title: "Forecast", description: "The weather for the coming days" },
+);
+```
+
+- It returns a new validator that validates exactly as the one given, whose description is that one's with `meta` added. The validator given is not changed, so the same one can be described differently in two places.
+- A `meta` given to a validator that has one replaces the keys it names and keeps the others. A key given as `undefined` is not given.
+- `title` and `description` are text, `examples` a list of JSON values, `null`, booleans, finite numbers, text, and lists and plain objects of them, and `deprecated` `true` or `false`; any other value, or any other key, is a `TypeError` when the validator is made. A JSON Schema is JSON, so an example of a `Date` is written as its text. Examples are kept as given and not validated, since they may show the input or the output.
+- `pick`, `omit`, `required`, `partial` and `extend` read through it to the object it describes. What they make has no `meta`, since a title written for one object is rarely right for another: give it one of its own.
+- What `standard` made stays a Standard Schema under `meta`.
+
 ### `fallback`
 
 `fallback(validator, value)` replaces a value that fails `validator` with a fallback, so the result never fails. The fallback is trusted and is not validated, and a function receives the issues that were found, which is the place to log them. A primitive is used as it is. An array or object must come from a function, such as `fallback(array(string()), () => [])`, since one value would be shared by every result and a change to one would show up in the next: the types reject it, and `fallback` throws a `TypeError` when created from JavaScript. A function is called with the issues, so a fallback that is itself a function has to be returned from one: `fallback(validator, () => callback)`, and the types reject the callback itself whenever the wrapped validator can produce a function. For the same reason a function that reads an argument, such as `Array` or `String`, would be given the issues: write `() => []`, not `Array`. A value whose validation `lazy` stopped at one of its limits, such as cyclic input or input nested past `maxDepth`, fails too, so it is replaced like any other failure; when those limits must surface, keep `fallback` off a recursive schema. This turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
@@ -1548,6 +1817,31 @@ import { string, transform } from "@codenhub/validation";
 
 const length = transform(string(), (text) => text.length);
 ```
+
+A `transform` goes one way: [`encode`](#writing-a-value-back) cannot write its value back, and throws naming where it is. Where a value must go back, as a `Date` to the text a request carries, use a `codec`.
+
+### `codec`
+
+`codec(input, output, { decode, encode })` reads a value as it is sent into the value a program uses, and can write it back. It validates with `input`, gives what that produced to `decode`, and validates the result with `output`, so both ends are checked. [`encode`](#writing-a-value-back) runs the other way, through `encode`.
+
+```ts
+import { bigint, codec, date, datetime, pattern, string } from "@codenhub/validation";
+
+const timestamp = codec(datetime(), date(), {
+  decode: (text) => new Date(text),
+  encode: (value) => value.toISOString(),
+});
+// The input accepts only the text BigInt reads, so decode never throws.
+const amount = codec(string({ max: 40 }, pattern(/^-?\d+$/)), bigint(), {
+  decode: (text) => BigInt(text),
+  encode: (value) => value.toString(),
+});
+```
+
+- `decode` is given what `input` produced and returns what `output` validates; `encode` is given what `output` produced and returns what `input` validates. Each is typed so.
+- A function that throws is a bug and propagates, as a `transform`'s does. To fail, return a value the other validator refuses: a `decode` that gives an invalid `Date` fails `date()`. Or let `input` accept only what `decode` can read, as `amount` does, since `BigInt` throws for other text.
+- Both are synchronous: one that returns a promise throws a `TypeError` when it is called, since the codec is typed as not waiting. A rule that waits goes in a check.
+- It is described as `{ kind: "codec", input, output, decode, encode }`, and written as a JSON Schema as its `input`, or its `output` with `io: "output"`. An output JSON Schema cannot say, such as the `Date` of `timestamp`, throws there unless given `unrepresentable: "any"`, as [JSON Schema](docs/json-schema.md) says.
 
 ## Checks
 
@@ -1691,12 +1985,12 @@ const update = object(partial(user)); // every property optional
 const withAge = object({ ...user, age: number() });
 ```
 
-### `pick`, `omit`, `required` and `partial` on a validator
+### `pick`, `omit`, `required`, `partial` and `extend` on a validator
 
-When what you have is the validator and not its shape, such as one another module exports, the same four are functions of the validator. Each takes a validator `object` made and returns a new one, and leaves the one it was given as it is:
+When what you have is the validator and not its shape, such as one another module exports, these are functions of the validator. Each takes a validator `object` made and returns a new one, and leaves the one it was given as it is:
 
 ```ts
-import { email, number, object, omit, optional, partial, pick, required, string } from "@codenhub/validation";
+import { boolean, email, extend, number, object, omit, optional, partial, pick, required, string } from "@codenhub/validation";
 
 const user = object({ id: number(), name: string({ min: 2 }), email: email(), bio: optional(string()) });
 
@@ -1704,10 +1998,12 @@ const contact = pick(user, ["name", "email"]); // { name: string; email: string 
 const draft = omit(user, ["id"]); // everything but the id
 const patch = partial(user); // every property optional
 const complete = required(user); // bio is required too
+const admin = extend(user, { admin: boolean() }); // every property of user, and admin
 ```
 
 - `pick(validator, keys)` keeps the named properties and `omit(validator, keys)` leaves them out. A key the object does not have is a `TypeError` when the validator is created, since it is a misspelling.
 - `partial(validator)` wraps every property in `optional`, as `partial(shape)` does.
+- `extend(validator, shape)` adds the properties of `shape`, as spreading one shape into another does: a property the object has is replaced by the one given, in its place.
 - `required(validator)` makes every property required: one made with `optional` becomes the validator it wrapped, so its default is removed too and a missing property fails, and one made with `nullish` becomes `nullable`, which still accepts `null`. A property that accepts `undefined` some other way, such as `unknown()`, is kept as it is.
 
 The new object keeps the options of the one it came from, `unknownKeys` and `message`, and takes options and checks of its own after its arguments, as `object` does: `pick(user, ["name"], { unknownKeys: "strict" }, check(...))`.
@@ -1720,9 +2016,37 @@ They need a validator `object` made, which is how they know its shape: `objectLi
 
 The coercing validators accept text that holds a value, convert it, and then apply the constraints of their strict counterpart: `coerceString` and `string`, `coerceNumber` and `number`, `coerceBoolean` and `boolean`, `coerceBigint` and `bigint`, `coerceDate` and `date`. They take the same options, `coerceDate` also `zoneless`, which says how to read a date-time without a zone, and fail with `invalid_type` and `coerced: true` in `params` when the value cannot be converted. [Coercion](docs/coercion.md) lists exactly what each accepts and refuses, and how to read a whole environment or form with them.
 
+## Writing a value back
+
+`encode(validator, value)` writes a value of the type a validator produces back to what the validator accepts: the `Date` a `codec` read back to its text, an object of them back to an object of text, and what `json` parsed back to JSON. It returns a result, as a validator does.
+
+```ts
+import { codec, date, datetime, encode, object, string } from "@codenhub/validation";
+
+const timestamp = codec(datetime(), date(), {
+  decode: (text) => new Date(text),
+  encode: (value) => value.toISOString(),
+});
+const event = object({ name: string(), at: timestamp });
+
+encode(event, { name: "Launch", at: new Date(0) });
+// { ok: true, value: { name: "Launch", at: "1970-01-01T00:00:00.000Z" } }
+```
+
+- **A `codec`** validates the value with its output, runs its `encode`, and checks its input accepts the result.
+- **A part that produces what it accepts**, such as `string`, `number`, a format or a coercion, validates the value and gives what it produced: `email()` gives the address as the parser reads it, and `coerceNumber()` gives the number, which it accepts.
+- **A composer**, such as `object`, `array`, `tuple`, `record`, `map`, `set`, `union` or `tagged`, writes back each of its parts with its own options, and runs its checks on the value once its parts passed. `optional`, `nullable` and `nullish` keep what they let through, and a `pipe` writes its steps back from the last.
+- **`json` and `searchParams`** write text: `JSON.stringify` of what their validator wrote back, and a query string with each value as text and each item of a list as a repeated key. The text is then read back by the validator it came from, so text it would refuse fails: a list written as a repeated key, which `searchParams` reads only with `repeated: true`, and `undefined`, which is no JSON. JSON holds less than JavaScript, so what `JSON.stringify` changes is changed: `NaN` is written as `null`, and a property that is `undefined` is left out.
+- **`optional` with a default** writes the default back as `undefined` when its inner part refuses it, since only `undefined` produced it: `optional(string({ min: 3 }), "")` writes `""` back as `undefined`. A default made by a function cannot be compared, and a `fallback` value its inner part refuses fails, since every input its inner part refuses produces it, and which one was given is not known.
+- **What cannot go back throws** a `TypeError` naming its place: a `transform`, whose function goes one way, and a validator written by hand. Use a `codec` there.
+
+So a value the validator could not have produced fails with the issues it has, at their paths: `encode(timestamp, new Date(Number.NaN))` fails as `date()` would. It is synchronous unless a part waits. A coercion writes back the value it produced, which it accepts, so inside `json` a `bigint` from `coerceBigint()` cannot be written as JSON: use a codec that writes it as text, as `amount` above does.
+
+`encode` builds, on each call, a validator of each part of the schema the other way, from the same factories, so it bundles every composer: about 8 kB gzipped with an object and a codec.
+
 ## Exposing a validator to other libraries
 
-`standard(validator, messages)` returns the validator with the `~standard` property that [Standard Schema](docs/standard-schema.md) asks for, so libraries that accept one can take it directly. Its `messages` map, such as `englishMessages`, supplies the text that specification requires on every issue.
+`standard(validator, messages?)` returns the validator with the `~standard` property that [Standard Schema](docs/standard-schema.md) asks for, so libraries that accept one can take it directly. Its `messages` map supplies the text that specification requires on every issue, the built-in English when left out. `standardJsonSchema(validator, messages?)` also carries the validator's JSON Schema, for a library that writes the schema down, such as the AI SDK for the tools of a language model: [With its JSON Schema](docs/standard-schema.md#with-its-json-schema).
 
 ## Wording one validator
 
@@ -1781,15 +2105,42 @@ A validator inside another is given as the validator itself, to be described in 
 | `"fallback"`                                                                                  | `fallback`                                        | `inner`, `value`; no `options` or `checks`                                                                                      |
 | `"transform"`                                                                                 | `transform`                                       | `inner`, `convert`; no `options` or `checks`                                                                                    |
 | `"pipe"`                                                                                      | `pipe`                                            | `steps`; no `options` or `checks`                                                                                               |
+| `"codec"`                                                                                     | `codec`                                           | `input`, `output`, `decode`, `encode`; no `options` or `checks`                                                                 |
 | `"lazy"`                                                                                      | `lazy`                                            | `getter`, which returns the validator                                                                                           |
 | `"json"`, `"searchParams"`                                                                    | `json`, `searchParams`                            | `inner`                                                                                                                         |
 | `"check"`                                                                                     | Every built-in check                              | `code` and `params` of the issue it reports                                                                                     |
 
 A check is described the same way, so the list in `checks` can be read too: `describe(pattern(/^a/))` gives `{ kind: "check", code: "invalid_format", params: { format: "regex", pattern: "/^a/" } }`. A check made by `checkFields` gives `{ kind: "check", fields }`, the properties it waits for, and no `params`, since its test is a function. What nobody can read gives `undefined`: a validator or a check you wrote by hand, and a check made by `check`, whose test is a function. A reader of a schema decides what such a rule means to it, and code that turns a schema into another notation usually refuses it. The function a `transform` converts with and a `lazy`'s getter are in the description as functions, for the same reason. The test of a `guard` and what a format reads with are not in it: a `guard` gives the `expected` it names and a format its name.
 
-What `standard` returns is described as the validator it wraps. The parts are typed as `unknown`, since what a part is depends on the kind: read `kind` first, then the parts of that kind from the table.
+What `standard` returns is described as the validator it wraps, and so is what `meta` returns, with a `meta` part added: `{ title, description, examples, deprecated }`, each key only when given. A validator written by hand that `meta` was given is described as `{ kind: "meta", inner, meta }`. The parts are typed as `unknown`, since what a part is depends on the kind: read `kind` first, then the parts of that kind from the table.
 
 To write a whole schema as JSON Schema, for an HTTP API or the tools of a language model, see [JSON Schema](docs/json-schema.md).
+
+## Checking a schema for the bounds it needs
+
+Input that passes a validator is validated in full, so a body of a million items, or of text a gigabyte long, costs what its size costs, and is what you store. `audit(validator)` reads a schema, without calling it, and lists every place where the size of what it accepts is left open, so a test can hold a schema for input nobody controls to the bounds it needs:
+
+```ts
+import { array, audit, email, object, string } from "@codenhub/validation";
+
+const signup = object({ name: string({ max: 100 }), email: email(), tags: array(string({ max: 20 })) });
+
+audit(signup); // [{ rule: "unbounded_size", path: "tags", kind: "array" }]
+```
+
+Give `tags` a `max`, `array(string({ max: 20 }), { max: 10 })`, and the list is empty, which a test asserts: `expect(audit(signup)).toEqual([])`. Each finding has a `rule`, the `path` of the part in the schema and its `kind`:
+
+| `rule`             | Reported for                                                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"unbounded_size"` | An `array`, `set`, `map` or `record` without a `max` or `length`, and a `tuple` with `rest` and no `max`                                          |
+| `"unbounded_text"` | A `string` or `coerceString` without a `max` or `length`, a format that does not bound its own text, and `json` or `searchParams` given open text |
+| `"raised_limit"`   | A `lazy` whose `maxDepth` or `maxCalls` is above its default                                                                                      |
+| `"unreadable"`     | A validator it cannot read, such as one written by hand, whose bound it cannot tell                                                               |
+
+- **Formats whose input is bounded by what they accept** need no `max`: `email`, `uuid`, `ulid`, `cuid2`, `nanoid`, `ip`, `cidr`, `mac`, `port`, `phone`, `creditCard`, `isoDate`, `hostname` and `domain`. Any other, such as `url`, `hex`, `jwt` or one made with `format`, is text like any other: bound it with a `pipe`, as below.
+- **A bound before it counts.** A `pipe` step reads what the steps before it produced, so after a step that bounds its value nothing needs a bound of its own: in `pipe(string({ max: 10_000 }), json(object({ tags: array(string()) })))` the text is at most 10,000 characters, and so is everything parsed from it. `pipe(string({ max: 2048 }), url())` bounds a URL the same way.
+- **A path** joins property names with `.`, and writes `[]` for the items of an array or a set, `[0]` for an item of a tuple, `{}` for the keys and values of a record or a map, and `""` for the validator itself. A recursive schema is read once at each place it is used, and not again where it refers to itself.
+- **What it does not judge** is whether a `max` is small enough: any number says someone decided. Checks are not read, since they run on a value that already passed, and neither is anything a `guard` or a validator written by hand does inside.
 
 ## Working with results
 
@@ -1845,17 +2196,25 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 - `describe(validator)`, which returns what a validator is made of as plain, frozen data: its `kind`, the `options` it was given, its `checks`, and the validators inside it. Every factory and every built-in check of the package records it; a validator or a check written by hand gives `undefined`. [Reading a schema](docs/validators.md#reading-a-schema) lists what each kind holds.
 - `toJsonSchema(validator, { io, unrepresentable })`, which writes a validator as a JSON Schema, draft 2020-12, for an OpenAPI document, the tools of a language model or a form generator. It writes what the validator accepts, or what it produces with `io: "output"`. A part JSON Schema cannot say, such as a custom check, a `date` or what a `transform` returns, which only `io: "output"` asks for, throws a `TypeError` naming where it is, or is written as accepting anything with `unrepresentable: "any"`. [JSON Schema](docs/json-schema.md) covers it.
 - `pick(validator, keys)`, `omit(validator, keys)` and `required(validator)`, which make a new object validator from one `object` made, and `partial(validator)`, which `partial` accepts beside a shape. The new validator keeps the options of the one it was made from. One that carries checks is refused with a `TypeError`, since a check was written for the whole object.
+- `meta(validator, { title, description, examples, deprecated })`, which says what a validator is for. `toJsonSchema` writes each key on the part it is given to, so the tools of a language model and an OpenAPI document carry a description of every argument. It returns a validator that behaves as the one given, and `describe` gives that one's description with `meta` added. Each example is a JSON value, since a JSON Schema is JSON.
+- `extend(validator, shape, ...rest)`, which makes a new object validator with the properties of one `object` made and those given, a property of the same name replacing the old one, as spreading two shapes does. What follows the shape is what follows one in `object`: options, which replace those of the object, and then checks on the new object. Like `pick`, it keeps the options of the object when given none and refuses one with checks.
+- `audit(validator)`, which reads a schema and lists every place where the size of what it accepts is left open: a collection or text with neither a `max` nor a `length`, a `lazy` whose limits were raised above their defaults, and a part it cannot read. A test asserts the list is empty, so a schema for input nobody controls keeps the bounds it needs.
+- `codec(input, output, { decode, encode })`, a validator that reads a value as it is sent, such as text, into the value a program uses, such as a `Date`, checking both ends, and `encode(validator, value)`, which writes a value back to what a validator accepts through every codec, composer, `json` and `searchParams` in it. A `transform` or a validator written by hand cannot be written back, and `encode` throws naming where it is.
+- `standardJsonSchema(validator, messages?)`, which returns what `standard` returns with `~standard.jsonSchema` added, from the Standard JSON Schema part of the specification, so a library that writes the schema down, such as the AI SDK for the tools of a language model, takes the validator as it is. It is an export of its own so that `standard` does not bundle the code that writes a schema.
+- The `target` option of `toJsonSchema`, `"draft-2020-12"` by default or `"draft-07"`, for a reader that does not know 2020-12.
 - `InferInput<typeof validator>`, the type of input that can pass, beside `Infer`, the type produced. They differ for `optional` with a default, the `coerce` validators, `transform`, `pipe`, `json`, `searchParams` and `fallback`. `Validator<T, TInput>` and `AsyncValidator<T, TInput>` take it as a second type, `unknown` when left out, so a validator written by hand is unchanged. A validator is still called with any value: the type says what can pass and limits no argument.
 - `checkFields(keys, test, issue?)`, a check for `object` and `objectLike` that names the properties it needs and runs as soon as those have passed, whatever the others did. A form with an empty name now shows "Passwords must match" beside the name's own issue, where a `check` waits until every property is valid. Its test is given the named properties alone, typed so, and a name the object lacks is a `TypeError` when the object is created.
 - `brand(validator, name)`, which marks the type a validator produces, leaving `null` and `undefined` unmarked, so only a value that went through the validator is accepted where that type is asked for. It returns the validator it was given and changes nothing at run time. `Branded<T, "Name">` is the marked type.
 - `readonly(validator)`, which makes what a validator produces read-only: in its type, a `Map` and a `Set` as `ReadonlyMap` and `ReadonlySet`, and by freezing the object or array the validator produced. It freezes one level, and never a value that is the input itself, such as what `instanceOf` or `unknown` produces.
 - `portugueseMessages`, the built-in wording in Portuguese as written in Brazil, used wherever `englishMessages` is: "Deve ser no mínimo 18", "Endereço de e-mail inválido". It is a separate value, so a program bundles only the languages it imports.
 - The entry `default` of a message map, which words an issue whose code has no entry of its own, such as the code of a custom check, where `formatIssue` said "Invalid value" in English whatever the language of the map. `portugueseMessages` has one, "Valor inválido"; a map of your own may give text or a function of the issue.
-- The types a consumer may need to name for the above: `Description`, `JsonSchema`, `JsonSchemaOptions`, `Picked`, `Omitted`, `AllRequired`, `AllOptional`, `Reshaped`, `InferShapeInput`, `InferTupleInput`, `InferTaggedInput`, `InferRecordInput`, `Branded` and `ReadonlyOutput`.
+- The types a consumer may need to name for the above: `StandardJSONSchemaV1`, `Conversions`, `Encoded`, `AuditFinding`, `Meta`, `Extended`, `Description`, `JsonSchema`, `JsonSchemaOptions`, `Picked`, `Omitted`, `AllRequired`, `AllOptional`, `Reshaped`, `InferShapeInput`, `InferTupleInput`, `InferTaggedInput`, `InferRecordInput`, `Branded` and `ReadonlyOutput`.
+- [Integrations](docs/integrations.md), a page with an example for each of react-hook-form, TanStack Form, tRPC, Hono, the AI SDK, the Model Context Protocol and OpenAPI, each run against the version it names.
 - [Compared with valibot, zod and yup](docs/comparison.md), a page that says where the package differs, what was measured, and when to choose one of the others.
 
 ## Changed
 
+- `standard(validator)` words issues in English when given no message map, where 0.3.0 threw a `TypeError`. `undefined` there gives the English too. A map, such as `portugueseMessages`, is still accepted as the second argument, and any other value there, such as `null`, text or a list, is still a `TypeError`. A program that calls `standard` now bundles the English even when it passes a map of its own.
 - **Breaking.** `standard(validator, messages)` reports the validator's input type to the library that takes it, where 0.3.0 reported `unknown`. A form library that types a field from a Standard Schema now types one for `coerceNumber()` as `string | number` and one for `optional(string(), "")` as `string | undefined`, so code that relied on the field being `unknown` may need the narrower type.
 - `Validator` and `AsyncValidator` are interfaces with a call signature, where they were function types, so that they can carry the input type. A function of the right shape is still a validator, and nothing a caller writes changes.
 - Every validator a factory of the package makes, and every built-in check, has a property named `~description`, which `describe` reads; a check made by `check` has none, since its rule is a function. The record it holds is frozen, and holds no input.
@@ -1875,7 +2234,8 @@ Measured on Node.js 24.19 on one machine, valid input, in millions of validation
 | `{ name, email, age }`, as a form | 0.53  | 0.93  |
 
 - `object`, `objectLike`, `array`, `set`, `tuple` and `record` no longer make a path, a list or a closure for a child that passes without waiting. What they guarantee is unchanged: the input is read before any child runs, results keep the order of the children, and a pending result of a sibling is handled when a child throws.
-- `email()` and `url()` parse the text once, with `URL.parse` where the runtime has it, where they asked whether it parses and then parsed it.
+- Valid input is answered without the full work where a validator can: a built-in leaf or format, and `optional`, `nullable` and `nullish`, each without checks, and an `object` or `array` all of whose parts can, which no longer makes a result, a path or a list for each part that passes. A part whose answer would run code you wrote has no quick answer and is always validated in full, so that code runs once: a check, which also takes the quick answer from a leaf it is added to, the test of a `guard` or of a `format` you made, `instanceOf` a class with a custom `Symbol.hasInstance`, and `optional` with a default made by a function. Input that fails is validated as before and reports the same issues, for input that gives the same value each time it is read, as data parsed from JSON does. Measured before and after this change in a whole run of `pnpm bench`, an `object` of three strings went from 3.8 to 8.7 million validations a second and an `array` of 100 strings from 0.55 to 2.0; the table above was measured before it, and is measured again for the release. A getter, or a `Proxy` trap that reads a value, is read once for input that passes, while a trap that lists or tests keys, as a strict object asks both, may run more than once; for input that fails, what the quick answer read before it stopped is read again, and a format the quick answer reached parses the text a second time, so one that gives another value the second time, or changes the input as it is read, can change the result.
+- `email()` and `url()` parse text that passes once, with `URL.parse` where the runtime has it, where they asked whether it parses and then parsed it.
 
 ## Size
 

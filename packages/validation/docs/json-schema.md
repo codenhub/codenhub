@@ -93,6 +93,7 @@ The output side takes a default and the value of a `fallback` to pass the valida
 | `tagged`                                                    | `oneOf`, with the tag as a `const` property of each variant                                                                                                                                                                                     |
 | `nullable`, `nullish`                                       | `anyOf` with `type: "null"`                                                                                                                                                                                                                     |
 | `readonly`, `brand`                                         | What the validator inside is written as                                                                                                                                                                                                         |
+| `codec`                                                     | Its `input`, or its `output` with `io: "output"`                                                                                                                                                                                                |
 | `lazy`                                                      | A `$ref` to a definition under `$defs`                                                                                                                                                                                                          |
 | `pattern`, `startsWith`, `endsWith`, `includes`, `nonBlank` | `pattern`                                                                                                                                                                                                                                       |
 | `multipleOf`, `nonZero`, `unique()`                         | `multipleOf`, `not: { const: 0 }` and `uniqueItems`                                                                                                                                                                                             |
@@ -122,6 +123,40 @@ toJsonSchema(category).$defs;
 ```
 
 Build a recursive schema once and refer to it, as the [validator reference](validators.md#lazy) says. One built anew at every level, as `lazy(() => build())` inside `build` does, has no end to write, and `toJsonSchema` throws a `TypeError` saying so.
+
+## Saying what a value is for
+
+A schema that gives only the types tells a reader what to send and not what it means. [`meta`](validators.md#meta) adds a title, a description, examples and whether a value is deprecated to the part it is given to, and `toJsonSchema` writes each under JSON Schema's keyword of the same name. A language model reads the `description` of a tool's arguments to decide what to put in them, and an OpenAPI document shows all four.
+
+```ts
+import { meta, number, object, string, toJsonSchema } from "@codenhub/validation";
+
+const forecast = meta(
+  object({
+    city: meta(string({ min: 1 }), { description: "The city to get the weather for", examples: ["Lisbon"] }),
+    days: meta(number({ int: true, min: 1, max: 7 }), { description: "How many days ahead" }),
+  }),
+  { title: "Forecast" },
+);
+
+toJsonSchema(forecast);
+// {
+//   $schema: "https://json-schema.org/draft/2020-12/schema",
+//   type: "object",
+//   title: "Forecast",
+//   properties: {
+//     city: { type: "string", minLength: 1, description: "The city to get the weather for", examples: ["Lisbon"] },
+//     days: { type: "integer", minimum: 1, maximum: 7, description: "How many days ahead" },
+//   },
+//   required: ["city", "days"],
+// }
+```
+
+The keys are written on whatever schema the part is written as, beside a `$ref` for a `lazy` and beside an `anyOf` for a `nullable`, and the same on the input and the output side. Examples are written as given, and are not checked against the validator.
+
+## Drafts
+
+The schema is written in draft 2020-12 unless `target: "draft-07"` asks for the older draft, which some readers, such as the tools of a language model in the AI SDK, still take. In draft-07 the items of a `tuple` are listed under `items` and its `rest` under `additionalItems`, definitions are under `definitions`, and what `json` parses is not written, since that draft has no `contentSchema`. Any other target is a `TypeError`. [`standardJsonSchema`](standard-schema.md#with-its-json-schema) writes the draft a library asks for, through the same function.
 
 ## What cannot be written
 

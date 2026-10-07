@@ -10,6 +10,7 @@
  */
 
 interface URLSearchParams {
+  append(name: string, value: string): void;
   toString(): string;
   [Symbol.iterator](): IterableIterator<[string, string]>;
 }

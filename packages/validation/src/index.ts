@@ -25,11 +25,15 @@ export { coerceNumber } from "./coercion/coerce-number";
 export { coerceString } from "./coercion/coerce-string";
 export { array, type ArrayOptions } from "./composition/array";
 export { brand, type Branded } from "./composition/brand";
+export { codec, type Conversions } from "./composition/codec";
+export { encode, type Encoded } from "./composition/encode";
+export { extend, type Extended } from "./composition/extend";
 export { fallback } from "./composition/fallback";
 export { intersection } from "./composition/intersection";
 export { json } from "./composition/json";
 export { lazy, type LazyOptions } from "./composition/lazy";
 export { map } from "./composition/map";
+export { meta, type Meta } from "./composition/meta";
 export { nullable } from "./composition/nullable";
 export { nullish } from "./composition/nullish";
 export { object, type InferShape, type InferShapeInput, type ObjectOptions, type Shape } from "./composition/object";
@@ -50,6 +54,7 @@ export { transform } from "./composition/transform";
 export { tuple, type InferTuple, type InferTupleInput, type TupleOptions } from "./composition/tuple";
 export { union } from "./composition/union";
 export { assert, type AssertOptions } from "./core/assert";
+export { audit, type AuditFinding } from "./core/audit";
 export { is } from "./core/is";
 export { describe, type Description } from "./core/describe";
 export { fail, pass, type IssueInput } from "./core/result";
@@ -101,7 +106,8 @@ export { url, type UrlOptions } from "./formats/url";
 export { uuid, type UuidOptions } from "./formats/uuid";
 export { toJsonSchema, type JsonSchema, type JsonSchemaOptions } from "./interop/json-schema";
 export { standard } from "./interop/standard";
-export { type StandardSchemaV1 } from "./interop/standard-schema";
+export { standardJsonSchema } from "./interop/standard-json-schema";
+export { type StandardJSONSchemaV1, type StandardSchemaV1 } from "./interop/standard-schema";
 export {
   englishMessages,
   invalidFormatMessage,
