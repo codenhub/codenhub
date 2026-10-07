@@ -6,7 +6,7 @@ scope: How the validation package is built and why, for whoever changes it next.
 
 # Validation architecture
 
-This records the invariants of `@codenhub/validation` and the reasoning behind decisions that are not obvious from the code. Public behavior lives in the package docs; this is for changing the package without breaking what it relies on. The release conditions of the next release live in [roadmap.md](roadmap.md).
+This records the invariants of `@codenhub/validation` and the reasoning behind decisions that are not obvious from the code. Public behavior lives in the package docs; this is for changing the package without breaking what it relies on. The release conditions of the next release live in [roadmap.md](roadmap.md), and [0.4.0.md](0.4.0.md) is the approved design of what follows 0.3.0: where it reverses a section here, [What a function cannot do](#what-a-function-cannot-do) and [Types](#types), this document describes the code until the change that implements it.
 
 ## What the package is for
 
