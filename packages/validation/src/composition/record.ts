@@ -31,6 +31,18 @@ export type InferRecord<TKey extends string, TValue> = string extends TKey
   : Partial<Record<TKey, TValue>>;
 
 /**
+ * The type of input that can pass a record: the keys its key validator accepts, when it names them, and
+ * any key otherwise.
+ *
+ * @typeParam TKey - The validator for keys.
+ * @typeParam TValue - The validator for values.
+ */
+export type InferRecordInput<TKey extends AnyValidator, TValue extends AnyValidator> = InferRecord<
+  [InferInput<TKey>] extends [string] ? InferInput<TKey> : string,
+  InferInput<TValue>
+>;
+
+/**
  * Creates a validator for plain objects used as a dictionary: any number of keys, all following
  * the same rules.
  *
@@ -73,16 +85,12 @@ export function record<TKey extends AnyValidator<string>, TValue extends AnyVali
   key: TKey,
   value: TValue,
   ...rest: Rest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>
-): Composed<
-  TKey | TValue,
-  InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>,
-  Record<string, InferInput<TValue>>
->;
+): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, InferRecordInput<TKey, TValue>>;
 export function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(
   key: TKey,
   value: TValue,
   ...rest: AsyncRest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>
-): AsyncValidator<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, Record<string, InferInput<TValue>>>;
+): AsyncValidator<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, InferRecordInput<TKey, TValue>>;
 export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("key", key);
   assertFunction("value", value);

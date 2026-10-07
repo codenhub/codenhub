@@ -46,6 +46,9 @@ const scenarios = [
   ["array of strings, a hundred bad items", array(string()), strings.map((_, index) => index)],
 ];
 
+// Each result is kept where the engine cannot prove it unused, so the object a validator returns is made.
+let kept;
+
 const filter = process.argv[2];
 for (const [name, validator, input] of scenarios) {
   if (filter !== undefined && !name.includes(filter)) {
@@ -59,11 +62,14 @@ for (const [name, validator, input] of scenarios) {
   let elapsed = 0;
   while (elapsed < 500) {
     for (let batch = 0; batch < 1000; batch += 1) {
-      validator(input);
+      kept = validator(input);
     }
     runs += 1000;
     elapsed = performance.now() - start;
   }
   const perSecond = (runs / elapsed) * 1000;
+  if (kept === undefined) {
+    throw new Error(`${name} returned no result`);
+  }
   console.log(`${name.padEnd(36)} ${(perSecond / 1e6).toFixed(2).padStart(8)} M ops/s`);
 }

@@ -39,6 +39,16 @@ describe("pick", () => {
     expect(valueOf(pick(strict, ["a"], { unknownKeys: "strip" })({ a: "x", b: "y" }))).toEqual({ a: "x" });
   });
 
+  it("should keep the options of the object when its own are given as undefined, which is no options", () => {
+    const strict = object({ a: string(), b: string() }, { unknownKeys: "strict", message: "Bad" });
+    const inherit = undefined as { unknownKeys?: "strict" } | undefined;
+    for (const made of [pick(strict, ["a"], inherit), omit(strict, ["b"], inherit), required(strict, inherit)]) {
+      expect(issuesOf(made({ a: "x", b: "y", c: 1 })).map((issue) => issue.message)).toContain("Bad");
+      expect(describeValidator(made)?.options).toEqual({ unknownKeys: "strict", message: "Bad" });
+    }
+    expect(describeValidator(partial(strict))?.options).toEqual({ unknownKeys: "strict", message: "Bad" });
+  });
+
   it("should take checks on the new object, with its options kept", () => {
     const strict = object({ a: string(), b: string() }, { unknownKeys: "strict" });
     const picked = pick(
@@ -88,6 +98,20 @@ describe("omit", () => {
     expect(valueOf(profile(ada))).toEqual({ id: 1, name: "Ada" });
     expect(valueOf(profile({ id: 1, name: "Ada" }))).toEqual({ id: 1, name: "Ada" });
     expect(codesOf(profile({ id: 1 }))).toEqual(["invalid_type"]);
+  });
+
+  it("should keep the options of the object unless given its own, and take checks", () => {
+    const strict = object({ a: string(), b: string() }, { unknownKeys: "strict" });
+    expect(codesOf(omit(strict, ["b"])({ a: "x", c: 1 }))).toEqual(["unrecognized_key"]);
+    expect(valueOf(omit(strict, ["b"], { unknownKeys: "strip" })({ a: "x", c: 1 }))).toEqual({ a: "x" });
+    const checked = omit(
+      strict,
+      ["b"],
+      check((value) => value.a !== "", "Empty"),
+    );
+    expect(issuesOf(checked({ a: "" })).map((issue) => issue.message)).toEqual(["Empty"]);
+    expect(codesOf(checked({ a: "x", c: 1 }))).toEqual(["unrecognized_key"]);
+    expect(() => omit(strict, "b" as never)).toThrow("keys must be a list of property names, received string");
   });
 
   it("should refuse a key the object does not have", () => {
@@ -140,6 +164,18 @@ describe("required", () => {
       id: 1,
     });
     expect(issuesOf(published({ id: 1 })).map((issue) => issue.path)).toEqual([["title"], ["views"], ["note"]]);
+  });
+
+  it("should keep the options of the object unless given its own, and take checks", () => {
+    const strict = object({ a: optional(string()) }, { unknownKeys: "strict" });
+    expect(codesOf(required(strict)({ a: "x", c: 1 }))).toEqual(["unrecognized_key"]);
+    expect(valueOf(required(strict, { unknownKeys: "strip" })({ a: "x", c: 1 }))).toEqual({ a: "x" });
+    const checked = required(
+      strict,
+      check((value) => value.a !== "", "Empty"),
+    );
+    expect(issuesOf(checked({ a: "" })).map((issue) => issue.message)).toEqual(["Empty"]);
+    expect(codesOf(checked({ a: "x", c: 1 }))).toEqual(["unrecognized_key"]);
   });
 
   it("should undo partial", () => {

@@ -3,12 +3,15 @@ import type { AnyValidator, Composed, Infer, InferInput } from "../core/types";
 
 /**
  * A type marked with a name, so a value of the plain type is not accepted where the marked one is asked
- * for. The mark exists in the types alone: no value has the property.
+ * for. The mark exists in the types alone: no value has the property. `null` and `undefined` are left
+ * unmarked, so what an `optional` or a `nullable` validator produces keeps them.
  *
  * @typeParam T - The type that is marked.
  * @typeParam TName - The name of the mark.
  */
-export type Branded<T, TName extends string> = T & { readonly "~brand": { readonly [K in TName]: true } };
+export type Branded<T, TName extends string> = T extends null | undefined
+  ? T
+  : T & { readonly "~brand": { readonly [K in TName]: true } };
 
 /**
  * Marks what a validator produces with a name, in the types alone, so only a value that went through the

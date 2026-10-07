@@ -9,7 +9,7 @@ description: What the validation package does, how to read a result, and where t
 
 This matters wherever data crosses a boundary you do not control: a request, a form, a query string, an environment variable, a file, a message from another service. TypeScript cannot check those at runtime, so the type you wrote for them is a promise nothing enforces until a validator does.
 
-The package is built for that boundary, where the input may be hostile. `email()` and `url()` return what the platform's URL parser read, so the value you store is the one a request or a mail server will use. A long list of bad items or deeply nested input is reported as an issue in bounded time and memory. An issue never holds the value that failed, so a log of failures holds no passwords. [Compared with valibot, zod and yup](comparison.md) shows each of these beside the other libraries, with what it costs in size and speed.
+The package is built for that boundary, where the input may be hostile. `email()` and `url()` return what the platform's URL parser read, so the value you store is the one a request or a mail server will use. What a failing input costs is bounded: a long list of bad items stops at 1,000 issues, and input nested too deep is one issue and never a stack overflow, while input that passes is checked in full, so give collections a `max`. An issue the package reports never holds the value that failed, so a log of failures holds no passwords; a check you write decides what its own issue holds. [Compared with valibot, zod and yup](comparison.md) shows each of these beside the other libraries, with what it costs in size and speed.
 
 ## Installation
 
@@ -93,7 +93,7 @@ Issue paths lead down to the offending value, so a problem with `email` has the 
 A few functions combine validators into new ones:
 
 - `optional(validator)`, `nullable(validator)` and `nullish(validator)` accept `undefined`, `null` or both as well, and `optional(validator, value)` replaces a missing value with a default.
-- `brand(validator, name)` marks the type a validator produces, so only a validated value is accepted where that type is asked for, and `readonly(validator)` makes what it produces read-only and freezes it.
+- `brand(validator, name)` marks the type a validator produces, so only a validated value is accepted where that type is asked for, and `readonly(validator)` makes what it produces read-only in its type and freezes the object or array the validator made.
 - `pipe(a, b, c)` runs validators in order, feeding each the value the previous one produced. This is how you clean a string before checking a format: `pipe(string({ trim: true, case: "lower" }), email())`.
 - `check(test, issue)` adds a rule the validator cannot express, given to the validator after its options, and `checkFields(keys, test, issue)` one across properties of an object, such as two fields having to match, that runs as soon as those properties have passed, and `transform(validator, convert)` changes the value into another.
 - `array`, `tuple`, `record`, `set` and `map` validate collections, and `union`, `tagged` and `intersection` choose between or merge validators.

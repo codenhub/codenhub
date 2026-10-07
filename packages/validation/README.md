@@ -3,8 +3,8 @@
 Validation for data you do not control: a request body, a query string, a form, a message from another origin. A validator gives you either the typed value or every reason it is not one, and is built for input that may be hostile:
 
 - **Formats return what a parser read.** `email()` and `url()` produce the address the platform's URL parser sees, so what you store and check is what a request or a mail server will use.
-- **Work is bounded.** A long list of bad items or deeply nested input is reported as an issue, in bounded time and memory, and never as a stack overflow.
-- **Issues never hold the input**, so logging a failed validation cannot log a password.
+- **What a failing input costs is bounded.** A long list of bad items stops at 1,000 issues, and input nested too deep is one issue and never a stack overflow. Input that passes is checked in full, so give collections a `max`.
+- **The issues the package reports never hold the input**, so logging a failed validation cannot log a password. A check you write decides what its own issue holds.
 
 Each validator is a function you import on its own, so a program ships only the checks it uses: a lone `boolean()` is 1.2 kB gzipped and an object with a string, an email and a number 5.8 kB. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies. [Compared with valibot, zod and yup](docs/comparison.md) has the measurements, and says when one of them is the better choice.
 

@@ -11,6 +11,7 @@ import { nonZero } from "../checks/non-zero";
 import { pattern } from "../checks/pattern";
 import { startsWith } from "../checks/starts-with";
 import { unique } from "../checks/unique";
+import { coerceBigint } from "../coercion/coerce-bigint";
 import { coerceBoolean } from "../coercion/coerce-boolean";
 import { coerceDate } from "../coercion/coerce-date";
 import { coerceNumber } from "../coercion/coerce-number";
@@ -226,6 +227,10 @@ describe("toJsonSchema", () => {
       expect(schemaOf(coerceNumber({ int: true }), { io: "output" })).toEqual({ type: "integer" });
       expect(schemaOf(coerceBoolean())).toEqual({ type: ["boolean", "string", "number"] });
       expect(schemaOf(coerceDate())).toEqual({ type: ["string", "integer"] });
+      // What a coercion to a date or a bigint produces has no JSON Schema, so the output side says so.
+      expect(() => toJsonSchema(coerceDate(), { io: "output" })).toThrow(TypeError);
+      expect(() => toJsonSchema(coerceBigint(), { io: "output" })).toThrow(TypeError);
+      expect(schemaOf(coerceDate(), { io: "output", unrepresentable: "any" })).toEqual({});
     });
 
     it("should write a transform and a pipe by the side asked for", () => {

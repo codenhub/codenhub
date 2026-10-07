@@ -1253,8 +1253,8 @@ if (result.ok) {
 ### record
 
 ```ts
-export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: Rest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, Record<string, InferInput<TValue>>>;
-export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncValidator<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, Record<string, InferInput<TValue>>>;
+export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: Rest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, InferRecordInput<TKey, TValue>>;
+export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncValidator<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, InferRecordInput<TKey, TValue>>;
 ```
 
 Creates a validator for plain objects used as a dictionary: any number of keys, all following the same rules.
@@ -1397,7 +1397,7 @@ export declare function standard<TValidator extends AnyValidator>(validator: TVa
 
 Makes a validator usable wherever a [Standard Schema](https://standardschema.dev/) is accepted, such as form libraries, API frameworks and routers, without an adapter on their side.
 
-The result is a validator that behaves exactly as the one you gave, plus the `~standard` property the specification asks for. The one you gave is not modified. The specification requires a message on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass: `englishMessages` for the built-in English, or a map of your own. `~standard.validate` returns its result directly for a synchronous validator and a `Promise` for an asynchronous one, even one that returns another kind of thenable, since callers tell the two apart with `instanceof Promise`, as the specification shows, and would otherwise read a pending result as one without issues. Input and output types are `unknown` and what the validator produces.
+The result is a validator that behaves exactly as the one you gave, plus the `~standard` property the specification asks for. The one you gave is not modified. The specification requires a message on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass: `englishMessages` for the built-in English, or a map of your own. `~standard.validate` returns its result directly for a synchronous validator and a `Promise` for an asynchronous one, even one that returns another kind of thenable, since callers tell the two apart with `instanceof Promise`, as the specification shows, and would otherwise read a pending result as one without issues. Input and output types are what the validator accepts, `InferInput`, and what it produces.
 
 **Parameters**
 
@@ -2941,14 +2941,14 @@ export type AsyncRest<T, TOptions> = [options?: TOptions, ...checks: AsyncCheck<
 ### Branded
 
 ```ts
-export type Branded<T, TName extends string> = T & {
+export type Branded<T, TName extends string> = T extends null | undefined ? T : T & {
     readonly "~brand": {
         readonly [K in TName]: true;
     };
 };
 ```
 
-A type marked with a name, so a value of the plain type is not accepted where the marked one is asked for. The mark exists in the types alone: no value has the property.
+A type marked with a name, so a value of the plain type is not accepted where the marked one is asked for. The mark exists in the types alone: no value has the property. `null` and `undefined` are left unmarked, so what an `optional` or a `nullable` validator produces keeps them.
 
 **Type parameters**
 
@@ -3058,6 +3058,21 @@ The object type a record produces. A record with open string keys always has eve
 
 - `TKey` — The type of the keys.
 - `TValue` — The type of the values.
+
+### InferRecordInput
+
+```ts
+export type InferRecordInput<TKey extends AnyValidator, TValue extends AnyValidator> = InferRecord<[
+    InferInput<TKey>
+] extends [string] ? InferInput<TKey> : string, InferInput<TValue>>;
+```
+
+The type of input that can pass a record: the keys its key validator accepts, when it names them, and any key otherwise.
+
+**Type parameters**
+
+- `TKey` — The validator for keys.
+- `TValue` — The validator for values.
 
 ### InferShape
 
@@ -4057,11 +4072,11 @@ uuid({ version: 7 })("123e4567-e89b-12d3-a456-426614174000"); // { ok: false, ..
 
 ```ts
 type CheckedVariants<TKey extends string, TVariants extends Variants> = {
-    [TTag in keyof TVariants]: Infer<TVariants[TTag]> extends readonly unknown[] | ((...args: never[]) => unknown) ? never : TKey extends DeclaredKeys<Infer<TVariants[TTag]>> ? never : TVariants[TTag];
+    [TTag in keyof TVariants]: Infer<TVariants[TTag]> extends readonly unknown[] | ((...args: never[]) => unknown) ? never : TKey extends DeclaredKeys<Infer<TVariants[TTag]>> | DeclaredKeys<InferInput<TVariants[TTag]>> ? never : TVariants[TTag];
 };
 ```
 
-The variants as `tagged` accepts them. A variant whose output type is an array or a function, which cannot carry the tag, or declares the tag property, even as optional or beside an index signature, which the variant is never given, is typed `never`, so passing it is a compile error at that variant. An index signature alone, as a `record` has, declares no property, so it is accepted.
+The variants as `tagged` accepts them. A variant whose output type is an array or a function, which cannot carry the tag, or declares the tag property, even as optional or beside an index signature, which the variant is never given, is typed `never`, so passing it is a compile error at that variant. So is one that accepts the tag property and produces none, such as a `transform` that drops it, since it would wait for a property it is never given. An index signature alone, as a `record` has, declares no property, so it is accepted.
 
 Not exported; declared in `src/composition/tagged.ts`.
 

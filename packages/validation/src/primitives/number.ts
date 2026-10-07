@@ -138,5 +138,7 @@ export const number = ((...args: unknown[]) => {
     }
     return value;
   });
-  return described(validator, { kind: "number", options, checks });
+  // The range the validator clamps to, and not the caller's object, which may change after.
+  const read = clamp === undefined ? options : Object.freeze({ ...options, clamp: Object.freeze(clamp) });
+  return described(validator, { kind: "number", options: read, checks });
 }) as Factory<number, NumberOptions>;

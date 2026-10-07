@@ -16,7 +16,7 @@ import type { StandardSchemaV1 } from "./standard-schema";
  * `englishMessages` for the built-in English, or a map of your own. `~standard.validate` returns its result directly for a synchronous validator and a
  * `Promise` for an asynchronous one, even one that returns another kind of thenable, since callers
  * tell the two apart with `instanceof Promise`, as the specification shows, and would otherwise read a
- * pending result as one without issues. Input and output types are `unknown` and what the validator produces.
+ * pending result as one without issues. Input and output types are what the validator accepts, `InferInput`, and what it produces.
  *
  * @example
  * ```ts

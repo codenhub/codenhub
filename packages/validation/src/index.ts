@@ -39,7 +39,7 @@ export { omit } from "./composition/omit";
 export { partial, type AllOptional, type PartialShape } from "./composition/partial";
 export { pick } from "./composition/pick";
 export { pipe } from "./composition/pipe";
-export { record, type InferRecord } from "./composition/record";
+export { record, type InferRecord, type InferRecordInput } from "./composition/record";
 export { required } from "./composition/required";
 export type { AllRequired, Omitted, Picked, Reshaped } from "./composition/reshape";
 export { set } from "./composition/set";

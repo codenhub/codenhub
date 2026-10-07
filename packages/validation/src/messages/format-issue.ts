@@ -125,7 +125,8 @@ export function formatIssue(issue: ValidationIssue, messages: Messages): string 
   }
   // The entry for the code, then the map's own wording for a code it lacks, which a translation gives so
   // that no issue is worded in English.
-  const custom = entryOf(messages, issue.code) ?? entryOf(messages, DEFAULT_ENTRY);
+  const own = entryOf(messages, issue.code);
+  const custom = own === undefined ? entryOf(messages, DEFAULT_ENTRY) : own;
   if (custom === undefined) {
     return FALLBACK_MESSAGE;
   }

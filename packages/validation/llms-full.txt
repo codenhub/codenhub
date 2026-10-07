@@ -5,8 +5,8 @@
 Validation for data you do not control: a request body, a query string, a form, a message from another origin. A validator gives you either the typed value or every reason it is not one, and is built for input that may be hostile:
 
 - **Formats return what a parser read.** `email()` and `url()` produce the address the platform's URL parser sees, so what you store and check is what a request or a mail server will use.
-- **Work is bounded.** A long list of bad items or deeply nested input is reported as an issue, in bounded time and memory, and never as a stack overflow.
-- **Issues never hold the input**, so logging a failed validation cannot log a password.
+- **What a failing input costs is bounded.** A long list of bad items stops at 1,000 issues, and input nested too deep is one issue and never a stack overflow. Input that passes is checked in full, so give collections a `max`.
+- **The issues the package reports never hold the input**, so logging a failed validation cannot log a password. A check you write decides what its own issue holds.
 
 Each validator is a function you import on its own, so a program ships only the checks it uses: a lone `boolean()` is 1.2 kB gzipped and an object with a string, an email and a number 5.8 kB. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies. [Compared with valibot, zod and yup](docs/comparison.md) has the measurements, and says when one of them is the better choice.
 
@@ -122,7 +122,7 @@ Licensed under Apache-2.0.
 
 This matters wherever data crosses a boundary you do not control: a request, a form, a query string, an environment variable, a file, a message from another service. TypeScript cannot check those at runtime, so the type you wrote for them is a promise nothing enforces until a validator does.
 
-The package is built for that boundary, where the input may be hostile. `email()` and `url()` return what the platform's URL parser read, so the value you store is the one a request or a mail server will use. A long list of bad items or deeply nested input is reported as an issue in bounded time and memory. An issue never holds the value that failed, so a log of failures holds no passwords. [Compared with valibot, zod and yup](docs/comparison.md) shows each of these beside the other libraries, with what it costs in size and speed.
+The package is built for that boundary, where the input may be hostile. `email()` and `url()` return what the platform's URL parser read, so the value you store is the one a request or a mail server will use. What a failing input costs is bounded: a long list of bad items stops at 1,000 issues, and input nested too deep is one issue and never a stack overflow, while input that passes is checked in full, so give collections a `max`. An issue the package reports never holds the value that failed, so a log of failures holds no passwords; a check you write decides what its own issue holds. [Compared with valibot, zod and yup](docs/comparison.md) shows each of these beside the other libraries, with what it costs in size and speed.
 
 ## Installation
 
@@ -206,7 +206,7 @@ Issue paths lead down to the offending value, so a problem with `email` has the 
 A few functions combine validators into new ones:
 
 - `optional(validator)`, `nullable(validator)` and `nullish(validator)` accept `undefined`, `null` or both as well, and `optional(validator, value)` replaces a missing value with a default.
-- `brand(validator, name)` marks the type a validator produces, so only a validated value is accepted where that type is asked for, and `readonly(validator)` makes what it produces read-only and freezes it.
+- `brand(validator, name)` marks the type a validator produces, so only a validated value is accepted where that type is asked for, and `readonly(validator)` makes what it produces read-only in its type and freezes the object or array the validator made.
 - `pipe(a, b, c)` runs validators in order, feeding each the value the previous one produced. This is how you clean a string before checking a format: `pipe(string({ trim: true, case: "lower" }), email())`.
 - `check(test, issue)` adds a rule the validator cannot express, given to the validator after its options, and `checkFields(keys, test, issue)` one across properties of an object, such as two fields having to match, that runs as soon as those properties have passed, and `transform(validator, convert)` changes the value into another.
 - `array`, `tuple`, `record`, `set` and `map` validate collections, and `union`, `tagged` and `intersection` choose between or merge validators.
@@ -355,9 +355,9 @@ They also accept less by default. A URL is `http` or `https` to a public host na
 
 The others can be made as strict with a pattern or a rule of your own. Here it is what you get without asking.
 
-### Work and memory are bounded
+### What a failing input costs is bounded
 
-A failing input costs a bounded amount, whatever its size.
+A failing input reports a bounded number of issues and never overflows the stack. Input that passes is checked in full, so a `max` on a collection is what bounds the work for it.
 
 | Case                                                | This package                   | valibot               | zod                   |
 | --------------------------------------------------- | ------------------------------ | --------------------- | --------------------- |
@@ -368,7 +368,7 @@ yup throws the same `RangeError` on the nested input. A thrown `RangeError` is n
 
 ### An issue never holds the input
 
-An issue has a `code`, a `path` and `params`, and none of them is the value that failed, so logging a failed validation cannot log a password or a token. Serialized, an issue of valibot and an error of yup contain the value; zod's does not.
+An issue the package reports has a `code`, a `path` and `params`, and none of them is the value that failed, so logging a failed validation cannot log a password or a token. A check or a validator you write decides what its own issue holds, so keep the value out of its `params` and `message`. Serialized, an issue of valibot and an error of yup contain the value; zod's does not.
 
 ### Mistakes in a schema are found early
 
@@ -377,7 +377,7 @@ An issue has a `code`, a `path` and `params`, and none of them is the value that
 
 ## What it costs
 
-The same schema in each library, `{ name: string of at least 2, email, age: optional integer }`, bundled with rolldown 1.2.12, minified and gzipped at level 9. Speed is the best of five runs of a million validations.
+The same schema in each library, `{ name: string of at least 2, email, age: optional integer }`, bundled with rolldown 1.2.12, minified and gzipped at level 9. Speed is the best of five runs of a million validations, each returning whether the input passed. The script that ran the four libraries is not in the repository, since it installs the other three; `pnpm bench` in the package measures this package alone.
 
 | Library        | That object, gzipped | A lone `boolean`, gzipped | Valid input, M ops/s | Invalid input, M ops/s |
 | -------------- | -------------------- | ------------------------- | -------------------- | ---------------------- |
@@ -395,7 +395,7 @@ Read the ratios and not the figures: this is one schema on one machine.
 ## When to choose another
 
 - **valibot**, when size is what matters most, or when you need the widest set of ready-made checks. It is the smallest of the four by a wide margin and faster.
-- **zod**, when other tools must accept your schema. It is what most form libraries, API frameworks and SDKs for language models take first. Many of those take any [Standard Schema](docs/standard-schema.md), which `standard(validator)` gives them, and those that need a JSON Schema can have one from [`toJsonSchema`](docs/json-schema.md), but a tool that asks for a zod schema by name needs zod.
+- **zod**, when other tools must accept your schema. It is what most form libraries, API frameworks and SDKs for language models take first. Many of those take any [Standard Schema](docs/standard-schema.md), which `standard(validator, messages)` gives them, and those that need a JSON Schema can have one from [`toJsonSchema`](docs/json-schema.md), but a tool that asks for a zod schema by name needs zod.
 - **zod or valibot**, when validating valid data in a hot path, such as every row of a large file, and a pattern is a good enough test of an email or a URL.
 - **yup**, when a codebase already uses it. The measurements give no other reason.
 
@@ -405,14 +405,14 @@ Choose this package when the input comes from outside and what you do with the v
 
 Run against the versions above, except where marked.
 
-| Need                                           | This package           | valibot                            | zod                        | yup                           |
-| ---------------------------------------------- | ---------------------- | ---------------------------------- | -------------------------- | ----------------------------- |
-| A JSON Schema from a schema                    | `toJsonSchema`         | a separate package (documentation) | `z.toJSONSchema`           | none built in (documentation) |
-| A type for the input, apart from the output    | `InferInput`           | `InferInput` (documentation)       | `z.input` (documentation)  | not checked                   |
-| A rule across fields while another field fails | `checkFields`          | `partialCheck`                     | `refine`                   | `ref`                         |
-| Standard Schema                                | `standard(validator)`  | built in (documentation)           | built in (documentation)   | built in (documentation)      |
-| Method chains, such as `string().min(2)`       | no, options and checks | no, `pipe`                         | yes                        | yes                           |
-| Messages in other languages                    | English and Portuguese | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
+| Need                                           | This package                    | valibot                            | zod                        | yup                           |
+| ---------------------------------------------- | ------------------------------- | ---------------------------------- | -------------------------- | ----------------------------- |
+| A JSON Schema from a schema                    | `toJsonSchema`                  | a separate package (documentation) | `z.toJSONSchema`           | none built in (documentation) |
+| A type for the input, apart from the output    | `InferInput`                    | `InferInput` (documentation)       | `z.input` (documentation)  | not checked                   |
+| A rule across fields while another field fails | `checkFields`                   | `partialCheck`                     | `refine`                   | `ref`                         |
+| Standard Schema                                | `standard(validator, messages)` | built in (documentation)           | built in (documentation)   | built in (documentation)      |
+| Method chains, such as `string().min(2)`       | no, options and checks          | no, `pipe`                         | yes                        | yes                           |
+| Messages in other languages                    | English and Portuguese          | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
 
 English and Portuguese ship with this package, so a program in another language writes its own message map: [Issues and messages](docs/errors.md#rewording-and-localizing) shows how.
 
@@ -961,15 +961,15 @@ toJsonSchema(query, { io: "output" }).properties;
 // and both are required
 ```
 
-| Validator                    | Input                                                | Output                               |
-| ---------------------------- | ---------------------------------------------------- | ------------------------------------ |
-| `optional(validator, value)` | The validator's schema with `default`, not required  | The validator's schema, required     |
-| The `coerce` validators      | The types they convert from                          | The type they produce                |
-| `transform`                  | The schema of the validator it converts from         | Cannot be written                    |
-| `pipe`                       | Its first validator                                  | Its last                             |
-| `json(validator)`            | A string, with `contentSchema` for what it parses to | The validator's schema               |
-| `searchParams(validator)`    | A string                                             | The validator's schema               |
-| `fallback`                   | Anything, since it never fails                       | The schema of the validator it wraps |
+| Validator                    | Input                                                                                     | Output                               |
+| ---------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------ |
+| `optional(validator, value)` | The validator's schema, not required, with `default` when the default is a JSON primitive | The validator's schema, required     |
+| The `coerce` validators      | The types they convert from                                                               | The type they produce                |
+| `transform`                  | The schema of the validator it converts from                                              | Cannot be written                    |
+| `pipe`                       | Its first validator                                                                       | Its last                             |
+| `json(validator)`            | A string, with `contentSchema` for what it parses to                                      | The validator's schema               |
+| `searchParams(validator)`    | A string                                                                                  | The validator's schema               |
+| `fallback`                   | Anything, since it never fails                                                            | The schema of the validator it wraps |
 
 ## How each validator is written
 
@@ -1040,7 +1040,7 @@ toJsonSchema(post, { unrepresentable: "any" }).properties;
 // { title: { type: "string" }, createdAt: {} }
 ```
 
-To send a date as JSON, validate the text it travels as, with `datetime()` or `isoDate()`, or convert it with `coerceDate()`, whose input side is a string or a number.
+To send a date as JSON, validate the text it travels as, with `datetime()` or `isoDate()`, or convert it with `coerceDate()`, whose input side is a string or a whole number of milliseconds.
 
 <!-- Source: docs/standard-schema.md -->
 
@@ -1068,7 +1068,7 @@ Pass `signup` to the library that asks for a Standard Schema, and it will call `
 
 A validator that behaves exactly as the one you gave, with the `~standard` property added, so it is still an ordinary validator you can call and compose. The validator you gave is not modified, so the same one can be exposed twice, with different messages for different audiences.
 
-`~standard.validate` returns `{ value }` on success and `{ issues }` on failure, and never both. It returns its result directly for a synchronous validator and a `Promise` for an asynchronous one, which the specification allows. That holds even for a validator of your own that returns another kind of thenable, such as a query builder's, since callers tell the two apart with `instanceof Promise` and would read anything else as a result without issues. The input type is what the validator accepts, [`InferInput`](docs/validators.md#inferinput), and the output type is what it produces, so a library that infers types from a Standard Schema gets both: a form library types a field that holds text for `coerceNumber()` as text, and what it hands you after validation as a number.
+`~standard.validate` returns `{ value }` on success and `{ issues }` on failure, and never both. It returns its result directly for a synchronous validator and a `Promise` for an asynchronous one, which the specification allows. That holds even for a validator of your own that returns another kind of thenable, such as a query builder's, since callers tell the two apart with `instanceof Promise` and would read anything else as a result without issues. The input type is what the validator accepts, [`InferInput`](docs/validators.md#inferinput), and the output type is what it produces, so a library that infers types from a Standard Schema gets both: a form library types the field of a `coerceNumber()` as `string | number`, since a number passes as it is, and what it hands you after validation as a number.
 
 The package exports the `StandardSchemaV1` type so you can accept one in your own code.
 
@@ -1509,7 +1509,7 @@ if (result.ok) {
 // loadUser("not validated") is a compile error
 ```
 
-Nothing changes at run time: `brand` returns the validator it was given, so it validates, is described and is written as a JSON Schema as before, and `pick` and the others still read a branded `object`. The input type is not marked, since what is given to a validator has not passed it yet. Brands add up, so `brand(brand(string(), "A"), "B")` produces a type with both. `Branded<T, "Name">` is the marked type, for when you need to write it.
+Nothing changes at run time: `brand` returns the validator it was given, so it validates, is described and is written as a JSON Schema as before, and `pick` and the others still read a branded `object`. The input type is not marked, since what is given to a validator has not passed it yet. `null` and `undefined` are left unmarked, so `brand(optional(string()), "Id")` produces a marked string or `undefined`. Brands add up, so `brand(brand(string(), "A"), "B")` produces a type with both. `Branded<T, "Name">` is the marked type, for when you need to write it.
 
 ### `readonly`
 
@@ -1704,7 +1704,7 @@ const complete = required(user); // bio is required too
 
 - `pick(validator, keys)` keeps the named properties and `omit(validator, keys)` leaves them out. A key the object does not have is a `TypeError` when the validator is created, since it is a misspelling.
 - `partial(validator)` wraps every property in `optional`, as `partial(shape)` does.
-- `required(validator)` makes every property required: one made with `optional` becomes the validator it wrapped, so a default goes with it, and one made with `nullish` becomes `nullable`, which still accepts `null`. A property that accepts `undefined` some other way, such as `unknown()`, is kept as it is.
+- `required(validator)` makes every property required: one made with `optional` becomes the validator it wrapped, so its default is removed too and a missing property fails, and one made with `nullish` becomes `nullable`, which still accepts `null`. A property that accepts `undefined` some other way, such as `unknown()`, is kept as it is.
 
 The new object keeps the options of the one it came from, `unknownKeys` and `message`, and takes options and checks of its own after its arguments, as `object` does: `pick(user, ["name"], { unknownKeys: "strict" }, check(...))`.
 
@@ -1755,31 +1755,31 @@ describe(shape["nickname"] as AnyValidator)?.kind; // "optional"
 
 A validator inside another is given as the validator itself, to be described in turn, so a recursive schema is read one level at a time and never without end. The description and its options are frozen, and are a copy of what the factory was given, so changing an options object afterwards changes neither the validator nor what it says of itself.
 
-| `kind`                                                                                        | Made by                                           | Beside `options` and `checks`                        |
-| --------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------- |
-| `"string"`, `"number"`, `"bigint"`, `"boolean"`, `"date"`, `"symbol"`, `"unknown"`, `"never"` | The validator of that name                        |                                                      |
-| `"function"`                                                                                  | `func`                                            |                                                      |
-| `"literal"`                                                                                   | `literal`                                         | `value`                                              |
-| `"oneOf"`                                                                                     | `oneOf`                                           | `values`, a list, for an enum too                    |
-| `"instance"`                                                                                  | `instanceOf`                                      | `target`, the class                                  |
-| `"guard"`                                                                                     | A factory `guard` made                            | `expected`                                           |
-| `"format"`                                                                                    | Every format, `port`, and a factory `format` made | `format`, its name, as in the issue it reports       |
-| `"coerce"`                                                                                    | The `coerce` validators                           | `inner`, the strict validator, which has the options |
-| `"object"`, `"objectLike"`                                                                    | `object`, `objectLike`                            | `shape`                                              |
-| `"array"`, `"set"`                                                                            | `array`, `set`                                    | `item`                                               |
-| `"tuple"`                                                                                     | `tuple`                                           | `items`, and `rest` when it has one                  |
-| `"record"`, `"map"`                                                                           | `record`, `map`                                   | `key`, `value`                                       |
-| `"union"`, `"intersection"`                                                                   | `union`, `intersection`                           | `members`                                            |
-| `"tagged"`                                                                                    | `tagged`                                          | `key`, `variants`                                    |
-| `"optional"`                                                                                  | `optional`                                        | `inner`, `default`; no `options` or `checks`         |
-| `"nullable"`, `"nullish"`                                                                     | `nullable`, `nullish`                             | `inner`; no `options` or `checks`                    |
-| `"readonly"`                                                                                  | `readonly`                                        | `inner`; no `options` or `checks`                    |
-| `"fallback"`                                                                                  | `fallback`                                        | `inner`, `value`; no `options` or `checks`           |
-| `"transform"`                                                                                 | `transform`                                       | `inner`, `convert`; no `options` or `checks`         |
-| `"pipe"`                                                                                      | `pipe`                                            | `steps`; no `options` or `checks`                    |
-| `"lazy"`                                                                                      | `lazy`                                            | `getter`, which returns the validator                |
-| `"json"`, `"searchParams"`                                                                    | `json`, `searchParams`                            | `inner`                                              |
-| `"check"`                                                                                     | Every built-in check                              | `code` and `params` of the issue it reports          |
+| `kind`                                                                                        | Made by                                           | Beside `options` and `checks`                                                                                                   |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `"string"`, `"number"`, `"bigint"`, `"boolean"`, `"date"`, `"symbol"`, `"unknown"`, `"never"` | The validator of that name                        |                                                                                                                                 |
+| `"function"`                                                                                  | `func`                                            |                                                                                                                                 |
+| `"literal"`                                                                                   | `literal`                                         | `value`                                                                                                                         |
+| `"oneOf"`                                                                                     | `oneOf`                                           | `values`, a list, for an enum too                                                                                               |
+| `"instance"`                                                                                  | `instanceOf`                                      | `target`, the class                                                                                                             |
+| `"guard"`                                                                                     | A factory `guard` made                            | `expected`                                                                                                                      |
+| `"format"`                                                                                    | Every format, `port`, and a factory `format` made | `format`, its name, as in the issue it reports                                                                                  |
+| `"coerce"`                                                                                    | The `coerce` validators                           | `inner`, the strict validator, which has the options; `options` for an option of the coercion's own, `zoneless` of `coerceDate` |
+| `"object"`, `"objectLike"`                                                                    | `object`, `objectLike`                            | `shape`                                                                                                                         |
+| `"array"`, `"set"`                                                                            | `array`, `set`                                    | `item`                                                                                                                          |
+| `"tuple"`                                                                                     | `tuple`                                           | `items`, and `rest` when it has one                                                                                             |
+| `"record"`, `"map"`                                                                           | `record`, `map`                                   | `key`, `value`                                                                                                                  |
+| `"union"`, `"intersection"`                                                                   | `union`, `intersection`                           | `members`                                                                                                                       |
+| `"tagged"`                                                                                    | `tagged`                                          | `key`, `variants`                                                                                                               |
+| `"optional"`                                                                                  | `optional`                                        | `inner`, `default`; no `options` or `checks`                                                                                    |
+| `"nullable"`, `"nullish"`                                                                     | `nullable`, `nullish`                             | `inner`; no `options` or `checks`                                                                                               |
+| `"readonly"`                                                                                  | `readonly`                                        | `inner`; no `options` or `checks`                                                                                               |
+| `"fallback"`                                                                                  | `fallback`                                        | `inner`, `value`; no `options` or `checks`                                                                                      |
+| `"transform"`                                                                                 | `transform`                                       | `inner`, `convert`; no `options` or `checks`                                                                                    |
+| `"pipe"`                                                                                      | `pipe`                                            | `steps`; no `options` or `checks`                                                                                               |
+| `"lazy"`                                                                                      | `lazy`                                            | `getter`, which returns the validator                                                                                           |
+| `"json"`, `"searchParams"`                                                                    | `json`, `searchParams`                            | `inner`                                                                                                                         |
+| `"check"`                                                                                     | Every built-in check                              | `code` and `params` of the issue it reports                                                                                     |
 
 A check is described the same way, so the list in `checks` can be read too: `describe(pattern(/^a/))` gives `{ kind: "check", code: "invalid_format", params: { format: "regex", pattern: "/^a/" } }`. A check made by `checkFields` gives `{ kind: "check", fields }`, the properties it waits for, and no `params`, since its test is a function. What nobody can read gives `undefined`: a validator or a check you wrote by hand, and a check made by `check`, whose test is a function. A reader of a schema decides what such a rule means to it, and code that turns a schema into another notation usually refuses it. The function a `transform` converts with, a `guard`'s test and a `lazy`'s getter are in the description as functions, for the same reason.
 
@@ -1834,20 +1834,20 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 
 # 0.4.0
 
-0.4.0 adds what a comparison with valibot, zod and yup found missing: a schema another program can read, a type for what a validator accepts, and a rule across fields that a form sees at once. It also makes objects and collections about four times faster on valid input. Every call that 0.3.0 accepted is accepted, and returns what it returned; the two breaking changes are in the types.
+0.4.0 adds what a comparison with valibot, zod and yup found missing: a schema another program can read, a type for what a validator accepts, and a rule across fields that a form sees at once. It also makes objects and collections about three times faster on valid input. Every call that 0.3.0 accepted is accepted, and returns what it returned, with one exception in wording: a message map that has an entry named `default` now words unknown codes with it. The two breaking changes are in the types.
 
 ## Added
 
 - `describe(validator)`, which returns what a validator is made of as plain, frozen data: its `kind`, the `options` it was given, its `checks`, and the validators inside it. Every factory and every built-in check of the package records it; a validator or a check written by hand gives `undefined`. [Reading a schema](docs/validators.md#reading-a-schema) lists what each kind holds.
-- `toJsonSchema(validator, { io, unrepresentable })`, which writes a validator as a JSON Schema, draft 2020-12, for an OpenAPI document, the tools of a language model or a form generator. It writes what the validator accepts, or what it produces with `io: "output"`. A part JSON Schema cannot say, such as a `transform`, a custom check or a `date`, throws a `TypeError` naming where it is, or is written as accepting anything with `unrepresentable: "any"`. [JSON Schema](docs/json-schema.md) covers it.
+- `toJsonSchema(validator, { io, unrepresentable })`, which writes a validator as a JSON Schema, draft 2020-12, for an OpenAPI document, the tools of a language model or a form generator. It writes what the validator accepts, or what it produces with `io: "output"`. A part JSON Schema cannot say, such as a custom check, a `date` or what a `transform` returns, which only `io: "output"` asks for, throws a `TypeError` naming where it is, or is written as accepting anything with `unrepresentable: "any"`. [JSON Schema](docs/json-schema.md) covers it.
 - `pick(validator, keys)`, `omit(validator, keys)` and `required(validator)`, which make a new object validator from one `object` made, and `partial(validator)`, which `partial` accepts beside a shape. The new validator keeps the options of the one it was made from. One that carries checks is refused with a `TypeError`, since a check was written for the whole object.
 - `InferInput<typeof validator>`, the type of input that can pass, beside `Infer`, the type produced. They differ for `optional` with a default, the `coerce` validators, `transform`, `pipe`, `json`, `searchParams` and `fallback`. `Validator<T, TInput>` and `AsyncValidator<T, TInput>` take it as a second type, `unknown` when left out, so a validator written by hand is unchanged. A validator is still called with any value: the type says what can pass and limits no argument.
 - `checkFields(keys, test, issue?)`, a check for `object` and `objectLike` that names the properties it needs and runs as soon as those have passed, whatever the others did. A form with an empty name now shows "Passwords must match" beside the name's own issue, where a `check` waits until every property is valid. Its test is given the named properties alone, typed so, and a name the object lacks is a `TypeError` when the object is created.
-- `brand(validator, name)`, which marks the type a validator produces, so only a value that went through the validator is accepted where that type is asked for. It returns the validator it was given and changes nothing at run time. `Branded<T, "Name">` is the marked type.
+- `brand(validator, name)`, which marks the type a validator produces, leaving `null` and `undefined` unmarked, so only a value that went through the validator is accepted where that type is asked for. It returns the validator it was given and changes nothing at run time. `Branded<T, "Name">` is the marked type.
 - `readonly(validator)`, which makes what a validator produces read-only: in its type, a `Map` and a `Set` as `ReadonlyMap` and `ReadonlySet`, and by freezing the object or array the validator produced. It freezes one level, and never a value that is the input itself, such as what `instanceOf` or `unknown` produces.
 - `portugueseMessages`, the built-in wording in Portuguese as written in Brazil, used wherever `englishMessages` is: "Deve ser no mínimo 18", "Endereço de e-mail inválido". It is a separate value, so a program bundles only the languages it imports.
 - The entry `default` of a message map, which words an issue whose code has no entry of its own, such as the code of a custom check, where `formatIssue` said "Invalid value" in English whatever the language of the map. `portugueseMessages` has one, "Valor inválido"; a map of your own may give text or a function of the issue.
-- The types a consumer may need to name for the above: `Description`, `JsonSchema`, `JsonSchemaOptions`, `Picked`, `Omitted`, `AllRequired`, `AllOptional`, `Reshaped`, `InferShapeInput`, `InferTupleInput`, `InferTaggedInput`, `Branded` and `ReadonlyOutput`.
+- The types a consumer may need to name for the above: `Description`, `JsonSchema`, `JsonSchemaOptions`, `Picked`, `Omitted`, `AllRequired`, `AllOptional`, `Reshaped`, `InferShapeInput`, `InferTupleInput`, `InferTaggedInput`, `InferRecordInput`, `Branded` and `ReadonlyOutput`.
 - [Compared with valibot, zod and yup](docs/comparison.md), a page that says where the package differs, what was measured, and when to choose one of the others.
 
 ## Changed
@@ -1861,15 +1861,15 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 
 ## Performance
 
-Measured on Node.js 24.19 on one machine, valid input, in millions of validations a second. `pnpm bench` in the package runs them.
+Measured on Node.js 24.19 on one machine, valid input, in millions of validations a second, the published 0.3.0 against this release with every result kept. `pnpm bench` in the package runs them.
 
 | Validator                         | 0.3.0 | 0.4.0 |
 | --------------------------------- | ----- | ----- |
-| `string()`                        | 39.7  | 103.8 |
-| `object` of three strings         | 1.13  | 4.13  |
-| `array` of 100 strings            | 0.14  | 0.56  |
-| `email()`                         | 1.1   | 1.3   |
-| `{ name, email, age }`, as a form | 0.30  | 0.7   |
+| `string()`                        | 39    | 72    |
+| `object` of three strings         | 1.25  | 4.2   |
+| `array` of 100 strings            | 0.20  | 0.65  |
+| `email()`                         | 1.1   | 1.5   |
+| `{ name, email, age }`, as a form | 0.53  | 0.93  |
 
 - `object`, `objectLike`, `array`, `set`, `tuple` and `record` no longer make a path, a list or a closure for a child that passes without waiting. What they guarantee is unchanged: the input is read before any child runs, results keep the order of the children, and a pending result of a sibling is handled when a child throws.
 - `email()` and `url()` parse the text once, with `URL.parse` where the runtime has it, where they asked whether it parses and then parsed it.

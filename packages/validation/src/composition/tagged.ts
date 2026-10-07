@@ -33,12 +33,13 @@ type DeclaredKeys<T> = keyof {
  * The variants as `tagged` accepts them. A variant whose output type is an array or a
  * function, which cannot carry the tag, or declares the tag property, even as optional or beside an
  * index signature, which the variant is never given, is typed `never`, so passing it is a compile error
- * at that variant. An index signature alone, as a `record` has, declares no property, so it is accepted.
+ * at that variant. So is one that accepts the tag property and produces none, such as a `transform` that
+ * drops it, since it would wait for a property it is never given. An index signature alone, as a `record` has, declares no property, so it is accepted.
  */
 type CheckedVariants<TKey extends string, TVariants extends Variants> = {
   [TTag in keyof TVariants]: Infer<TVariants[TTag]> extends readonly unknown[] | ((...args: never[]) => unknown)
     ? never
-    : TKey extends DeclaredKeys<Infer<TVariants[TTag]>>
+    : TKey extends DeclaredKeys<Infer<TVariants[TTag]>> | DeclaredKeys<InferInput<TVariants[TTag]>>
       ? never
       : TVariants[TTag];
 };

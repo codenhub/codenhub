@@ -293,9 +293,9 @@ export function assertFunction(name: string, value: unknown): void {
  * Rejects a list of validators that is not a list, such as a single validator passed without its
  * brackets, since it is a mistake in the schema and not in the input.
  */
-export function assertList(name: string, value: unknown): void {
+export function assertList(name: string, value: unknown, of = "validators"): void {
   if (!Array.isArray(value)) {
-    throw new TypeError(`${name} must be a list of validators, received ${value === null ? "null" : typeof value}`);
+    throw new TypeError(`${name} must be a list of ${of}, received ${value === null ? "null" : typeof value}`);
   }
 }
 

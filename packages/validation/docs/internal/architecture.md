@@ -307,7 +307,7 @@ Rejected: a registry, above; describing children when the parent is made, which 
 - **The input side by default.** What a request body or a tool call must satisfy is what the validator accepts. `io: "output"` writes what it produces. They differ at `optional` with a default, the `coerce` validators, `transform`, `pipe`, `json`, `searchParams` and `fallback`.
 - **What cannot be written throws**, naming the part and its place, and `unrepresentable: "any"` writes `{}` there and leaves a check out. Writing it loosely by default was rejected: a schema would be weaker than its author believed with nothing to say so.
 - **A format is written under JSON Schema's name where it has one, and under its own otherwise.** `format` is an open vocabulary and a reader ignores a name it does not know, so `"format": "phone"` is honest and harmless, and a format is never a reason to throw.
-- **A definition for each `lazy`, keyed by its getter.** Keyed by the `lazy` or by what the getter returns, a schema built anew at each level, `lazy(build)` inside `build`, never met the same key twice. A getter written where the schema is built, `lazy(() => build())`, is new each time too, so more than 64 definitions open one inside another is taken for that and throws, where it would run out of stack.
+- **A definition for each `lazy`, keyed by its getter.** The getter is the one thing that stays the same in a schema built anew at each level, `lazy(build)` inside `build`, which is written as one definition. The two other keys tried, the `lazy` itself and what its getter returns, are new at each level there and never met twice. A getter written where the schema is built, `lazy(() => build())`, is new each time as well, and no key is left: more than 64 definitions open one inside another is taken for that and throws, where it would run out of stack.
 - **`literal(undefined)` in a `union`, and `undefined` in `oneOf`, are left out**, since they say a value may be absent, which an object says by not requiring the property.
 
 Checked once against Ajv 8 in draft 2020-12 mode, outside the suite since it is a dependency the package does not have: 17 schemas and 68 values, objects, bounds, checks, tuples, records, unions, a tagged union with a strict variant, a recursive tree and formats, and the schema and the validator gave the same answer for every one.
@@ -318,7 +318,7 @@ Adding the two grew the bundle of every export past its budget, 19810 to 21191 b
 
 `brand(validator, name)` and `readonly(validator)` exist for the type they give, and each does as little at run time as that type allows.
 
-- **`brand` returns the validator it was given.** A wrapper would cost a call for every validation and hide the description, so a branded `object` could not be picked from or written as a JSON Schema. The name is read by the types alone. The mark is a property that no value has, `"~brand"`, keyed by the name so two brands add up, and it is a text key and not a `unique symbol` so two copies of the package agree on it, as [Dependency model](#dependency-model) needs. The input type is left unmarked: what is given to a validator has not passed it.
+- **`brand` returns the validator it was given.** A wrapper would cost a call for every validation and hide the description, so a branded `object` could not be picked from or written as a JSON Schema. The name is read by the types alone. The mark is a property that no value has, `"~brand"`, keyed by the name so two brands add up, and it is a text key and not a `unique symbol` so two copies of the package agree on it, as [Dependency model](#dependency-model) needs. The input type is left unmarked: what is given to a validator has not passed it. `null` and `undefined` are left unmarked too: intersected with the mark they would be `never`, and `brand(optional(string()), "Id")` was first typed as always producing text, where it produces `undefined` for a missing value.
 - **`readonly` freezes what was produced and never what was given.** A validator such as `instanceOf`, `guard` or `unknown` produces the input itself, and freezing it would change an object the caller owns, far from where the schema is written, so there the type alone is read-only. It tells the two apart by identity, `value !== input`, which costs nothing. It freezes one level, which is what `Readonly` says, and leaves a typed array, which throws when frozen. A `Map` and a `Set` are typed as the read-only kind, since freezing them stops nothing.
 - **`readonly` is described, as `{ kind: "readonly", inner }`**, and `toJsonSchema` writes what is inside it. `pick` and the others refuse it, as they refuse any validator that is not an `object`: reshaping first and wrapping after says the same, and unwrapping it would have to decide whether the result is still frozen.
 
@@ -343,29 +343,29 @@ Measured against valibot, zod and yup on 2026-10-07, the leaves were within a sm
 - **Asking what a child is, and making it a place, for each value.** `call` looked the child up in the `WeakMap` of composers and was given a new `Place` on every call. `childOf` asks once, when the composer is made, and makes a place for a composer, which needs one, and for any other child only when its result is not one that passed. `object`, `objectLike`, `array`, `tuple`, `set` and `record` use it; the composers of one child, and `map`, `union` and `intersection`, still use `call`.
 - **Running checks there are none of.** `finish` returns the value at once without them, where it gathered an empty list through `runEach`, `collect` and `chain`.
 - **A list of every result, read a second time.** `settle`, behind `array`, `tuple` and `set`, reads each result as it is returned while none is pending, and from the first pending one starts the rest and waits for them together, as before. The limit of issues counts what was found on both sides of it.
-- **`Array.from` with a length** for each path written, 46% of the time of a list of bad items. `pathAt` makes the array with its length.
+- **A path built with `Array.from` and a length**, 46% of the time of a list of bad items. `pathAt` now makes it with `new Array` of that length.
 
-Measured with `pnpm bench`, a whole run on Node.js 24.19, in millions of validations a second, before and after:
+Measured with `pnpm bench`, a whole run on Node.js 24.19, in millions of validations a second, the published 0.3.0 against 0.4.0. The benchmark keeps each result. As first written it discarded them, which let the engine skip making the object a validator returns, and it reported `string()` at 103.8 where 72 is what a caller gets; the table is the second measurement:
 
-| Scenario                               | Before | After |
-| -------------------------------------- | ------ | ----- |
-| `string()`                             | 39.7   | 103.8 |
-| `object` of no fields                  | 6.7    | 14.7  |
-| `object` of three strings              | 1.13   | 4.13  |
-| The same, strict                       | 1.03   | 3.06  |
-| An `object` in an `object`             | 0.75   | 2.71  |
-| `array` of 100 strings                 | 0.14   | 0.56  |
-| `tuple` of two numbers                 | 3.61   | 7.70  |
-| `record` of ten numbers                | 0.29   | 1.00  |
-| `union`, second option                 | 4.83   | 8.42  |
-| `tagged`                               | 1.02   | 3.27  |
-| Signup of three fields, valid          | 0.30   | 0.69  |
-| The same, invalid                      | 0.51   | 1.78  |
-| `array` of strings, a hundred bad ones | 0.02   | 0.07  |
+| Scenario                               | 0.3.0 | 0.4.0 |
+| -------------------------------------- | ----- | ----- |
+| `string()`                             | 39    | 72    |
+| `object` of no fields                  | 6.3   | 16.6  |
+| `object` of three strings              | 1.25  | 4.2   |
+| The same, strict                       | 1.11  | 3.2   |
+| An `object` in an `object`             | 0.92  | 2.8   |
+| `array` of 100 strings                 | 0.20  | 0.65  |
+| `tuple` of two numbers                 | 4.4   | 10.8  |
+| `record` of ten numbers                | 0.37  | 1.17  |
+| `union`, second option                 | 6.3   | 10.2  |
+| `tagged`                               | 1.52  | 4.2   |
+| Signup of three fields, valid          | 0.53  | 0.93  |
+| The same, invalid                      | 0.70  | 2.0   |
+| `array` of strings, a hundred bad ones | 0.03  | 0.10  |
 
 The figures move by about a tenth from one run to the next, and a scenario run alone is faster than in a whole run, so whole runs are compared. Four tests were added for what the changes could have broken, and every size budget held without being reset. One test was changed, and not to pass a regression: `src/core/nesting.test.ts` compared an input 100 levels deep with one of a single level, to catch paths copied at every level, and that ratio rose from 14 to 28 because a short path became six times faster to write and a long one three, so the test failed about one run in two. It now compares 100 levels with 25. Time is not held by a test, as size is: measured in CI it fails for reasons that are not the code's. A change to a composer or to `core/` is measured with `pnpm bench` before and after, and a loss is named in the commit as a size is.
 
-What is left in an `object` is what it promises: every value is read before any child runs, which takes a list, and the output is a new object. The signup schema is held by `email()`, whose time is the URL parser's. It asked the parser twice, once whether the text parses and once for what it read, and `readUrl` in `formats/patterns.ts` now asks once where the runtime has `URL.parse`, and as before where it has only `URL.canParse`, so the runtimes the package supports are unchanged. Measured on Node.js 24.19, `email()` went from 1.1 to 1.3 million validations a second and `url()` from 0.87 to 1.1; the signup schema gains less than the tenth its runs differ by. Text that reaches the parser and does not parse, such as `a@exa mple`, went from 14 million to 8, since `URL.parse` takes 205 ns to refuse what `URL.canParse` refuses in 125; most text that is no address is refused before the parser. Reading inside a `try` was rejected: the exception takes 10 µs.
+What is left in an `object` is what it promises: every value is read before any child runs, which takes a list, and the output is a new object. The signup schema is held by `email()`, whose time is the URL parser's. It asked the parser twice, once whether the text parses and once for what it read, and `readUrl` in `formats/patterns.ts` now asks once where the runtime has `URL.parse`, and as before where it has only `URL.canParse`, so the runtimes the package supports are unchanged. Measured on Node.js 24.19, `email()` went from 1.1 to 1.5 million validations a second with results kept, 1.3 as first measured, and `url()` from 0.87 to 1.1; the signup schema gains less than the tenth its runs differ by. Text that reaches the parser and does not parse, such as `a@exa mple`, went from 14 million to 8, since `URL.parse` takes 205 ns to refuse what `URL.canParse` refuses in 125; most text that is no address is refused before the parser. Reading inside a `try` was rejected: the exception takes 10 µs.
 
 ## Types
 

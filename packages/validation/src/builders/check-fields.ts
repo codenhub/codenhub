@@ -55,7 +55,7 @@ export function checkFields(
   test: (value: never) => boolean | PromiseLike<boolean>,
   issue?: IssueInput | Message,
 ): AsyncCheck<object> {
-  assertList("keys", keys);
+  assertList("keys", keys, "property names");
   // Copied, so changing the list after the check is made changes nothing.
   const fields = Object.freeze([...keys]);
   if (fields.some((key) => typeof key !== "string")) {

@@ -208,4 +208,28 @@ group("the description of a validator", () => {
     const getter = describe(item)?.["getter"] as () => unknown;
     expect(getter()).toBe(tree);
   });
+
+  it("should freeze the list of checks, which is the one the validator runs", () => {
+    const short = api.string(api.startsWith("a"));
+    const checks = describe(short)?.checks as unknown[];
+    expect(Object.isFrozen(checks)).toBe(true);
+    expect(() => checks.pop()).toThrow(TypeError);
+    expect(short("b").ok).toBe(false);
+  });
+
+  it("should give the range a number clamps to, and not the object it was given", () => {
+    const range = { min: 0, max: 10 };
+    const clamped = api.number({ clamp: range });
+    range.max = 99;
+    const options = describe(clamped)?.options as { clamp: { min: number; max: number } };
+    expect(options.clamp).toEqual({ min: 0, max: 10 });
+    expect(Object.isFrozen(options.clamp)).toBe(true);
+    expect(clamped(50)).toEqual({ ok: true, value: 10 });
+  });
+
+  it("should give the option that is a coercion's own, and none where it has none", () => {
+    expect(describe(api.coerceDate({ zoneless: "utc" }))?.options).toEqual({ zoneless: "utc" });
+    expect(describe(api.coerceDate())?.options).toBeUndefined();
+    expect(describe(api.coerceNumber({ int: true }))?.options).toBeUndefined();
+  });
 });

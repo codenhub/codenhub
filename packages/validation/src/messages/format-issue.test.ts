@@ -263,6 +263,9 @@ describe("formatIssue", () => {
     expect(formatIssue(unknownCode, { default: undefined })).toBe("Invalid value");
     expect(formatIssue(unknownCode, Object.create({ default: "Inherited" }) as Messages)).toBe("Invalid value");
     expect(() => formatIssue(unknownCode, { default: 5 as never })).toThrow(TypeError);
+    // An entry of null is a mistake in the map, and the default entry does not hide it.
+    expect(() => formatIssue(unknownCode, { username_taken: null as never, default: "Outro" })).toThrow(TypeError);
+    expect(() => formatIssue(unknownCode, { username_taken: null as never })).toThrow(TypeError);
     expect(flatten({ issues: [unknownCode] }, { default: "Valor inválido" }).formErrors).toEqual(["Valor inválido"]);
   });
 

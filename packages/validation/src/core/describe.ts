@@ -34,6 +34,10 @@ export const described = <TTarget extends object>(
   // Options are an interface of their own for each factory, which has no index signature to read as a record.
   record: Omit<Description, "options"> & { readonly options?: object },
 ): TTarget => {
+  // The list of checks is the one the validator runs, so a reader that changed it would change the validator.
+  if (Array.isArray(record.checks)) {
+    Object.freeze(record.checks);
+  }
   (target as Record<string, unknown>)[DESCRIPTION] = Object.freeze(record);
   return target;
 };

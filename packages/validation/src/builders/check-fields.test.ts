@@ -155,7 +155,9 @@ describe("checkFields", () => {
       "checkFields() names a property the object does not have: b",
     );
     expect(() => objectLike({ a: string() }, misspelled)).toThrow("does not have: b");
-    expect(() => checkFields("a" as never, () => true)).toThrow(TypeError);
+    expect(() => checkFields("a" as never, () => true)).toThrow(
+      "keys must be a list of property names, received string",
+    );
     expect(() => checkFields([1 as never], () => true)).toThrow("checkFields() needs a list of property names");
     expect(() => checkFields(["a"] as never, "nope" as never)).toThrow(TypeError);
     expect(() => checkFields(["a"] as never, () => true, 5 as never)).toThrow("issue must be a message or an issue");

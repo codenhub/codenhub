@@ -645,3 +645,22 @@ frozenValue.seen.add(1);
 export const frozenInput: InferInput<typeof frozen> = { name: "Ada", tags: ["a"], seen: new Set([1]) };
 export const frozenUnknown: Infer<ReturnType<typeof readonly<Validator<unknown>>>> = Symbol("anything");
 export const inPortuguese: string = formatIssue({ code: "too_small", path: [] }, portugueseMessages);
+
+// A brand marks what is there: a missing value an optional validator produced stays undefined.
+const maybeUserId = brand(optional(string()), "UserId");
+export const noUserId: Infer<typeof maybeUserId> = undefined;
+// @ts-expect-error text that is there must still have gone through the validator
+export const plainUserId: Infer<typeof maybeUserId> = "u1";
+
+// A record whose keys are named accepts those keys.
+const hours = record(oneOf(["mon", "tue"]), number());
+export const someHours: InferInput<typeof hours> = { mon: 8 };
+// @ts-expect-error a key the key validator does not accept is not input that can pass
+export const otherHours: InferInput<typeof hours> = { wed: 8 };
+export const anyKeys: InferInput<ReturnType<typeof record<Validator<string>, Validator<number>>>> = { any: 1 };
+
+// A variant that asks for the tag is never given it, even when what it produces has none.
+tagged("type", {
+  // @ts-expect-error the variant accepts the tag property, which tagged does not pass on
+  a: transform(object({ type: literal("a"), x: number() }), (value) => ({ x: value.x })),
+});

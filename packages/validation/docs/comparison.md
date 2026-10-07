@@ -30,9 +30,9 @@ They also accept less by default. A URL is `http` or `https` to a public host na
 
 The others can be made as strict with a pattern or a rule of your own. Here it is what you get without asking.
 
-### Work and memory are bounded
+### What a failing input costs is bounded
 
-A failing input costs a bounded amount, whatever its size.
+A failing input reports a bounded number of issues and never overflows the stack. Input that passes is checked in full, so a `max` on a collection is what bounds the work for it.
 
 | Case                                                | This package                   | valibot               | zod                   |
 | --------------------------------------------------- | ------------------------------ | --------------------- | --------------------- |
@@ -43,7 +43,7 @@ yup throws the same `RangeError` on the nested input. A thrown `RangeError` is n
 
 ### An issue never holds the input
 
-An issue has a `code`, a `path` and `params`, and none of them is the value that failed, so logging a failed validation cannot log a password or a token. Serialized, an issue of valibot and an error of yup contain the value; zod's does not.
+An issue the package reports has a `code`, a `path` and `params`, and none of them is the value that failed, so logging a failed validation cannot log a password or a token. A check or a validator you write decides what its own issue holds, so keep the value out of its `params` and `message`. Serialized, an issue of valibot and an error of yup contain the value; zod's does not.
 
 ### Mistakes in a schema are found early
 
@@ -52,7 +52,7 @@ An issue has a `code`, a `path` and `params`, and none of them is the value that
 
 ## What it costs
 
-The same schema in each library, `{ name: string of at least 2, email, age: optional integer }`, bundled with rolldown 1.2.12, minified and gzipped at level 9. Speed is the best of five runs of a million validations.
+The same schema in each library, `{ name: string of at least 2, email, age: optional integer }`, bundled with rolldown 1.2.12, minified and gzipped at level 9. Speed is the best of five runs of a million validations, each returning whether the input passed. The script that ran the four libraries is not in the repository, since it installs the other three; `pnpm bench` in the package measures this package alone.
 
 | Library        | That object, gzipped | A lone `boolean`, gzipped | Valid input, M ops/s | Invalid input, M ops/s |
 | -------------- | -------------------- | ------------------------- | -------------------- | ---------------------- |
@@ -70,7 +70,7 @@ Read the ratios and not the figures: this is one schema on one machine.
 ## When to choose another
 
 - **valibot**, when size is what matters most, or when you need the widest set of ready-made checks. It is the smallest of the four by a wide margin and faster.
-- **zod**, when other tools must accept your schema. It is what most form libraries, API frameworks and SDKs for language models take first. Many of those take any [Standard Schema](standard-schema.md), which `standard(validator)` gives them, and those that need a JSON Schema can have one from [`toJsonSchema`](json-schema.md), but a tool that asks for a zod schema by name needs zod.
+- **zod**, when other tools must accept your schema. It is what most form libraries, API frameworks and SDKs for language models take first. Many of those take any [Standard Schema](standard-schema.md), which `standard(validator, messages)` gives them, and those that need a JSON Schema can have one from [`toJsonSchema`](json-schema.md), but a tool that asks for a zod schema by name needs zod.
 - **zod or valibot**, when validating valid data in a hot path, such as every row of a large file, and a pattern is a good enough test of an email or a URL.
 - **yup**, when a codebase already uses it. The measurements give no other reason.
 
@@ -80,13 +80,13 @@ Choose this package when the input comes from outside and what you do with the v
 
 Run against the versions above, except where marked.
 
-| Need                                           | This package           | valibot                            | zod                        | yup                           |
-| ---------------------------------------------- | ---------------------- | ---------------------------------- | -------------------------- | ----------------------------- |
-| A JSON Schema from a schema                    | `toJsonSchema`         | a separate package (documentation) | `z.toJSONSchema`           | none built in (documentation) |
-| A type for the input, apart from the output    | `InferInput`           | `InferInput` (documentation)       | `z.input` (documentation)  | not checked                   |
-| A rule across fields while another field fails | `checkFields`          | `partialCheck`                     | `refine`                   | `ref`                         |
-| Standard Schema                                | `standard(validator)`  | built in (documentation)           | built in (documentation)   | built in (documentation)      |
-| Method chains, such as `string().min(2)`       | no, options and checks | no, `pipe`                         | yes                        | yes                           |
-| Messages in other languages                    | English and Portuguese | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
+| Need                                           | This package                    | valibot                            | zod                        | yup                           |
+| ---------------------------------------------- | ------------------------------- | ---------------------------------- | -------------------------- | ----------------------------- |
+| A JSON Schema from a schema                    | `toJsonSchema`                  | a separate package (documentation) | `z.toJSONSchema`           | none built in (documentation) |
+| A type for the input, apart from the output    | `InferInput`                    | `InferInput` (documentation)       | `z.input` (documentation)  | not checked                   |
+| A rule across fields while another field fails | `checkFields`                   | `partialCheck`                     | `refine`                   | `ref`                         |
+| Standard Schema                                | `standard(validator, messages)` | built in (documentation)           | built in (documentation)   | built in (documentation)      |
+| Method chains, such as `string().min(2)`       | no, options and checks          | no, `pipe`                         | yes                        | yes                           |
+| Messages in other languages                    | English and Portuguese          | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
 
 English and Portuguese ship with this package, so a program in another language writes its own message map: [Issues and messages](errors.md#rewording-and-localizing) shows how.

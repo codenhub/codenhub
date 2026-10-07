@@ -62,15 +62,15 @@ toJsonSchema(query, { io: "output" }).properties;
 // and both are required
 ```
 
-| Validator                    | Input                                                | Output                               |
-| ---------------------------- | ---------------------------------------------------- | ------------------------------------ |
-| `optional(validator, value)` | The validator's schema with `default`, not required  | The validator's schema, required     |
-| The `coerce` validators      | The types they convert from                          | The type they produce                |
-| `transform`                  | The schema of the validator it converts from         | Cannot be written                    |
-| `pipe`                       | Its first validator                                  | Its last                             |
-| `json(validator)`            | A string, with `contentSchema` for what it parses to | The validator's schema               |
-| `searchParams(validator)`    | A string                                             | The validator's schema               |
-| `fallback`                   | Anything, since it never fails                       | The schema of the validator it wraps |
+| Validator                    | Input                                                                                     | Output                               |
+| ---------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------ |
+| `optional(validator, value)` | The validator's schema, not required, with `default` when the default is a JSON primitive | The validator's schema, required     |
+| The `coerce` validators      | The types they convert from                                                               | The type they produce                |
+| `transform`                  | The schema of the validator it converts from                                              | Cannot be written                    |
+| `pipe`                       | Its first validator                                                                       | Its last                             |
+| `json(validator)`            | A string, with `contentSchema` for what it parses to                                      | The validator's schema               |
+| `searchParams(validator)`    | A string                                                                                  | The validator's schema               |
+| `fallback`                   | Anything, since it never fails                                                            | The schema of the validator it wraps |
 
 ## How each validator is written
 
@@ -141,4 +141,4 @@ toJsonSchema(post, { unrepresentable: "any" }).properties;
 // { title: { type: "string" }, createdAt: {} }
 ```
 
-To send a date as JSON, validate the text it travels as, with `datetime()` or `isoDate()`, or convert it with `coerceDate()`, whose input side is a string or a number.
+To send a date as JSON, validate the text it travels as, with `datetime()` or `isoDate()`, or convert it with `coerceDate()`, whose input side is a string or a whole number of milliseconds.
