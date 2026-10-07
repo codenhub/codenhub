@@ -64,8 +64,8 @@ const OTHER_LIBRARY = /^import\b[^;]*?\bfrom "(?!@codenhub\/validation")[^"]+";/
 const INTEGRATIONS = "docs/integrations.md";
 
 /**
- * Every TypeScript block of the public pages, each a module of its own, but one of the integrations page
- * that imports another library. A block that imports nothing, such as a list of calls written under the import of the block
+ * Every TypeScript block of the public pages, each a module of its own. The one exception is a block of
+ * the integrations page that imports another library, which is left out. A block that imports nothing, such as a list of calls written under the import of the block
  * before it, is given an import of every export.
  */
 function examples(exportNames: readonly string[]): Example[] {
