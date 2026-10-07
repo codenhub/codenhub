@@ -788,7 +788,7 @@ const signup = object({ name: string({ max: 100 }), email: email(), tags: array(
 audit(signup); // [{ rule: "unbounded_size", path: "tags", kind: "array" }]
 ```
 
-Give `tags` a `max`, as `const bounded = object({ ..., tags: array(string({ max: 20 }), { max: 10 }) })`, and the list is empty, which a test asserts: `expect(audit(bounded)).toEqual([])`. Each finding has a `rule`, the `path` of the part in the schema and its `kind`:
+Give `tags` a `max`, as `const bounded = object({ name: string({ max: 100 }), email: email(), tags: array(string({ max: 20 }), { max: 10 }) })`, and the list is empty, which a test asserts: `expect(audit(bounded)).toEqual([])`. Each finding has a `rule`, the `path` of the part in the schema and its `kind`:
 
 | `rule`             | Reported for                                                                                                                                      |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
