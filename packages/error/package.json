@@ -56,11 +56,14 @@
     "status:npm": "npm view @codenhub/error version dist-tags time --json && npm dist-tag ls @codenhub/error && npm access get status @codenhub/error",
     "status:pack": "npm pack --dry-run --ignore-scripts",
     "test": "vitest run",
+    "test:browser": "playwright test",
+    "test:browser:watch": "playwright test --ui",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest --exclude src/package.test.ts",
     "typecheck": "tsc -b"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "tsdown": "catalog:",

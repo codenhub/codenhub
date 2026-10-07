@@ -4,7 +4,7 @@
  * @packageDocumentation
  */
 
-export { createAppError, isAppError, DEFAULT_APP_ERROR_MESSAGE } from "./create-app-error";
+export { appErrorFromJSON, createAppError, isAppError, DEFAULT_APP_ERROR_MESSAGE } from "./create-app-error";
 export { createErrorRegistry, getErrorRegistry, setErrorRegistry, freezeRegistry } from "./registry";
 export {
   andThen,

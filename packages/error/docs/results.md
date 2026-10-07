@@ -7,14 +7,19 @@ title: Results
 `Result<T>` is the union `Ok<T> | Err`. `Ok<T>` contains `{ ok: true, value }`; `Err` contains `{ ok: false, error: AppError }`.
 
 ```ts
-import { err, ok, type Result } from "@codenhub/error";
+import { err, getErrorRegistry, ok, type Result } from "@codenhub/error";
 
-const loadName = (value: string | null): Result<string> => (value === null ? err({ code: "my-app.missing_name" }, { fallbackMessage: "Name is missing." }) : ok(value));
+getErrorRegistry().codes.add("my-app.missing_name", {
+  message: "We couldn't save this because the name is empty. Enter a name and try again.",
+  source: "my-app",
+});
+
+const loadName = (value: string | null): Result<string> => (value === null ? err({ code: "my-app.missing_name" }) : ok(value));
 ```
 
 `ok(value)` wraps a success value, and `ok()` creates `Ok<void>`. `err(error, options?)` normalizes failures through the same pipeline as `createAppError`. Both return frozen result objects.
 
-A string is treated as message text: it is matched against the `messages`, `prefixes`, and `patterns` buckets, at every wrapper depth, and never against `codes`. Pass `{ code: "..." }` to raise a failure by its registered code. An unmatched string never becomes the message, so raw diagnostic text is not surfaced to users; supply `fallbackMessage` when user-facing text is needed.
+A string is treated as message text: it is matched against the `messages`, `prefixes`, and `patterns` buckets, at every wrapper depth, and never against `codes`. Pass `{ code: "..." }` to raise a failure by its registered code. The code has to be registered first: an unregistered one resolves to an unknown error whose `code` is `null`, whatever `fallbackMessage` says. An unmatched string never becomes the message, so raw diagnostic text is not surfaced to users; supply `fallbackMessage` when user-facing text is needed.
 
 Use `attempt` and `attemptAsync` at boundaries where existing code throws:
 

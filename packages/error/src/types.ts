@@ -43,8 +43,10 @@ export interface AppError extends Error {
   /**
    * Whether the failed operation can be repeated as it is, without user intervention and without
    * the risk that it runs twice. True only for failures that happen before the operation takes
-   * effect, such as a refused connection. It holds for an error the local runtime raised; a
-   * code copied into a response body says nothing about the request that carried it.
+   * effect, such as a refused connection. It describes the call that raised the matched failure,
+   * which can sit several wrappers down, so retry on it only where the code made that call itself.
+   * It holds for an error the local runtime raised; a code copied into a response body says
+   * nothing about the request that carried it.
    */
   readonly isRetryable: boolean;
 

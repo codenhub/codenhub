@@ -295,6 +295,9 @@ importers:
 
   packages/error:
     devDependencies:
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.61.1
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1

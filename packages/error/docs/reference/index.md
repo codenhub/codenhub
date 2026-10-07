@@ -52,6 +52,22 @@ Maps the success value of a Result using a mapper that returns another Result or
 
 **Returns** — A Promise resolving to the Result returned by the mapper or the original Err. The promise rejects if `mapper` throws or rejects; callback failures are not normalized.
 
+### appErrorFromJSON
+
+```ts
+export declare function appErrorFromJSON(value: unknown): AppError;
+```
+
+Rebuilds an `AppError` from the shape `AppError.toJSON()` produces, for the receiving side of a boundary an error was sent across as JSON, such as a server response read by a client.
+
+No registry is consulted: the rebuilt error carries the fields it was sent with, and the parsed value becomes its `originalError`. Whoever produced the value therefore chooses the message, so use this only on data from a source the application trusts to word its errors, such as its own server. Pass anything else to `createAppError`.
+
+**Parameters**
+
+- `value` — The parsed JSON value, typically `JSON.parse` output or a response body field.
+
+**Returns** — The rebuilt AppError. An existing AppError is returned as it is. A value that does not have exactly the serialized field types is normalized as raw input, as by `createAppError(value)`.
+
 ### attempt
 
 ```ts
@@ -111,7 +127,9 @@ Unrolls nested wrapper fields (`cause`, `originalError`, `error`, `err`, `inner`
 3. Any remaining `AppError` candidate.
 4. An unknown error carrying the fallback message.
 
-A deep known match outranks a shallow unexpected match. Ordinary unknown input never throws, including objects and proxies whose inspected properties throw. A raw string is matched against the registry like any other candidate; when nothing matches, the resolved message is the fallback rather than the string itself, so raw text is never surfaced to consumers.
+A deep known match outranks a shallow unexpected match. A nested `AppError` is a candidate as it stands: the raw value inside it is classified again only when a `registry` is supplied.
+
+Ordinary unknown input never throws, including objects and proxies whose inspected properties throw. A raw string is matched against the registry like any other candidate; when nothing matches, the resolved message is the fallback rather than the string itself, so raw text is never surfaced to consumers.
 
 **Parameters**
 
@@ -375,7 +393,7 @@ The registry identifier that classified this error: the matched code, or the mat
 readonly isRetryable: boolean;
 ```
 
-Whether the failed operation can be repeated as it is, without user intervention and without the risk that it runs twice. True only for failures that happen before the operation takes effect, such as a refused connection. It holds for an error the local runtime raised; a code copied into a response body says nothing about the request that carried it.
+Whether the failed operation can be repeated as it is, without user intervention and without the risk that it runs twice. True only for failures that happen before the operation takes effect, such as a refused connection. It describes the call that raised the matched failure, which can sit several wrappers down, so retry on it only where the code made that call itself. It holds for an error the local runtime raised; a code copied into a response body says nothing about the request that carried it.
 
 #### messageKey
 

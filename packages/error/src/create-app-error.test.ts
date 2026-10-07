@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  appErrorFromJSON,
   createAppError,
   isAppError,
   DEFAULT_APP_ERROR_MESSAGE,
@@ -863,5 +864,155 @@ describe("createAppError — option validation", () => {
       type: "known",
       source: "browser",
     });
+  });
+});
+
+describe("createAppError — a nested AppError keeps the classification it was given", () => {
+  it("should not classify the raw value of a nested unknown AppError against the global registry", () => {
+    getErrorRegistry().codes.add("user_not_found", { message: "We couldn't find this account." });
+    const payments = createErrorRegistry();
+    const fromPayments = createAppError(
+      { code: "user_not_found" },
+      { registry: payments, fallbackMessage: "We couldn't process the payment." },
+    );
+
+    const result = createAppError(new Error("checkout failed", { cause: fromPayments }));
+
+    expect(result.type).toBe("unknown");
+    expect(result.code).toBe(null);
+    expect(result.message).toBe("We couldn't process the payment.");
+  });
+
+  it("should not make a nested AppError retryable through its raw value", () => {
+    getErrorRegistry().codes.add("ECONNREFUSED", { message: "We couldn't connect.", isRetryable: true });
+    const fromResponseBody = createAppError({ code: "ECONNREFUSED" }, { registry: createErrorRegistry() });
+
+    const result = createAppError(new Error("billing failed", { cause: fromResponseBody }));
+
+    expect(result.isRetryable).toBe(false);
+  });
+
+  it("should not replace a nested unexpected AppError with a global match for its raw value", () => {
+    getErrorRegistry().codes.add("23505", { message: "Global wording." });
+    const service = createErrorRegistry();
+    service.patterns.add(/duplicate/i, { message: "Service wording." });
+    const fromService = createAppError({ code: "23505", message: "duplicate key" }, { registry: service });
+
+    const result = createAppError(new Error("save failed", { cause: fromService }));
+
+    expect(result.type).toBe("unexpected");
+    expect(result.message).toBe("Service wording.");
+  });
+
+  it("should classify the raw value of a nested AppError when a registry is supplied", () => {
+    const registry = createErrorRegistry();
+    registry.codes.add("user_not_found", { message: "We couldn't find this account." });
+    const nested = createAppError({ code: "user_not_found" }, { registry: createErrorRegistry() });
+
+    const result = createAppError(new Error("checkout failed", { cause: nested }), { registry });
+
+    expect(result.type).toBe("known");
+    expect(result.code).toBe("user_not_found");
+  });
+
+  it("should still classify the wrapper around a nested AppError", () => {
+    getErrorRegistry().codes.add("checkout_failed", { message: "We couldn't finish the checkout." });
+    const nested = createAppError({ code: "anything" }, { registry: createErrorRegistry() });
+
+    const result = createAppError(Object.assign(new Error("x", { cause: nested }), { code: "checkout_failed" }));
+
+    expect(result.code).toBe("checkout_failed");
+  });
+});
+
+describe("appErrorFromJSON", () => {
+  const roundTrip = (error: AppError): unknown => JSON.parse(JSON.stringify(error));
+
+  it.each([
+    ["a code match", { code: "23505" }],
+    ["a name match", { name: "AbortError" }],
+    ["a pattern match", new TypeError("Failed to fetch")],
+    ["an unknown error", { code: "unmapped" }],
+  ])("should rebuild %s from its serialized shape", (_label, raw) => {
+    const registry = createErrorRegistry([browserErrorRegistry]);
+    registry.codes.add("23505", { message: "Already exists.", messageKey: "error.app.exists", source: "app.db" });
+    const original = createAppError(raw, { registry, fallbackMessage: "Could not save." });
+
+    const rebuilt = appErrorFromJSON(roundTrip(original));
+
+    expect(isAppError(rebuilt)).toBe(true);
+    expect(rebuilt).toBeInstanceOf(Error);
+    expect(rebuilt.toJSON()).toEqual(original.toJSON());
+  });
+
+  it("should not consult a registry for a serialized AppError", () => {
+    getErrorRegistry().codes.add("23505", { message: "Receiver wording." });
+
+    const rebuilt = appErrorFromJSON({
+      name: "AppError",
+      message: "Sender wording.",
+      type: "known",
+      code: "23505",
+      messageKey: null,
+      source: null,
+      isRetryable: false,
+    });
+
+    expect(rebuilt.message).toBe("Sender wording.");
+  });
+
+  it("should keep the parsed value as originalError", () => {
+    const parsed = roundTrip(createAppError("anything"));
+
+    expect(appErrorFromJSON(parsed).originalError).toBe(parsed);
+  });
+
+  it("should return an AppError as it is", () => {
+    const error = createAppError("anything");
+
+    expect(appErrorFromJSON(error)).toBe(error);
+  });
+
+  const serialized = {
+    name: "AppError",
+    message: "Sender wording.",
+    type: "known",
+    code: "sender_code",
+    messageKey: null,
+    source: null,
+    isRetryable: true,
+  };
+
+  it.each([
+    ["another name", { ...serialized, name: "Error" }],
+    ["an empty message", { ...serialized, message: " " }],
+    ["an unsupported type", { ...serialized, type: "fatal" }],
+    ["a numeric code", { ...serialized, code: 23505 }],
+    ["a missing messageKey", { ...serialized, messageKey: undefined }],
+    ["a non-string source", { ...serialized, source: 1 }],
+    ["a non-boolean isRetryable", { ...serialized, isRetryable: "true" }],
+  ])("should normalize a value with %s as raw input", (_label, value) => {
+    const result = appErrorFromJSON(value);
+
+    expect(result.type).toBe("unknown");
+    expect(result.message).toBe(DEFAULT_APP_ERROR_MESSAGE);
+    expect(result.isRetryable).toBe(false);
+  });
+
+  it.each([null, undefined, "text", 1, [], new Error("raw")])("should normalize %s as raw input", (value) => {
+    expect(appErrorFromJSON(value).type).toBe("unknown");
+  });
+
+  it("should not throw for a value whose fields throw when read", () => {
+    const hostile = new Proxy(
+      {},
+      {
+        get() {
+          throw new Error("unreadable");
+        },
+      },
+    );
+
+    expect(appErrorFromJSON(hostile).type).toBe("unknown");
   });
 });
