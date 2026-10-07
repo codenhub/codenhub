@@ -371,7 +371,7 @@ export declare function formatIssue(issue: ValidationIssue, messages: Messages):
 
 Turns an issue into text a person can read.
 
-The text comes from the first of these that exists: the issue's own `message`, an entry for its `code` in `messages`, then the generic "Invalid value". The built-in English wording is not carried here, so a program that words its own issues does not bundle it: pass `englishMessages` for it, or a map of your own, or both spread together. The map is required, so leaving it out is a compile error and not a form that says "Invalid value" for everything; a program whose issues all carry their own `message` passes `{}`.
+The text comes from the first of these that exists: the issue's own `message`, an entry for its `code` in `messages`, the entry `default` of `messages`, then the generic "Invalid value". The built-in English wording is not carried here, so a program that words its own issues does not bundle it: pass `englishMessages` for it, or a map of your own, or both spread together. The map is required, so leaving it out is a compile error and not a form that says "Invalid value" for everything; a program whose issues all carry their own `message` passes `{}`.
 
 **Parameters**
 
@@ -3177,6 +3177,8 @@ Message text keyed by issue code, such as `englishMessages` or a translation.
 
 A string is used as it is. A function receives the issue, so it can word the message from `params`, and the map it was found in, so it can word an issue nested in `params`, such as the one behind an `invalid_key`, with the same map. This is how messages are worded and localized.
 
+The entry `default` words an issue whose code has no entry of its own, such as the code of a custom check, in place of the English "Invalid value".
+
 ### Omitted
 
 ```ts
@@ -3865,7 +3867,7 @@ export declare const portugueseMessages: Messages;
 
 The built-in Portuguese wording for every issue the validators can report, as a message map.
 
-It is what [englishMessages](#englishmessages) is, in Portuguese as written in Brazil: pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Deve ser no mínimo 18". It is a separate value, so a program bundles the wording of the languages it imports and no other. To change some of the wording, spread it and override the codes you want: `{ ...portugueseMessages, too_small: "Muito curto" }`. It is frozen. The names of types, such as `string` in "Esperado string, recebido number", are the ones the issue holds and are not translated, and a custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
+It is what [englishMessages](#englishmessages) is, in Portuguese as written in Brazil: pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Deve ser no mínimo 18". It is a separate value, so a program bundles the wording of the languages it imports and no other. To change some of the wording, spread it and override the codes you want: `{ ...portugueseMessages, too_small: "Muito curto" }`. It is frozen. The names of types, such as `string` in "Esperado string, recebido number", are the ones the issue holds and are not translated, and a custom validator's own codes are not in it: one without a `message` on the issue or an entry of your own is worded "Valor inválido", by the entry `default`.
 
 **Example**
 

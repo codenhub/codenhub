@@ -7,6 +7,9 @@ import type { ValidationFailure, ValidationIssue, ValidationPathSegment } from "
  * A string is used as it is. A function receives the issue, so it can word the message from
  * `params`, and the map it was found in, so it can word an issue nested in `params`, such as the one
  * behind an `invalid_key`, with the same map. This is how messages are worded and localized.
+ *
+ * The entry `default` words an issue whose code has no entry of its own, such as the code of a custom
+ * check, in place of the English "Invalid value".
  */
 export type Messages = Readonly<
   Record<string, string | ((issue: ValidationIssue, messages: Messages) => string) | undefined>
@@ -79,6 +82,13 @@ export function assertMessages(messages: unknown): void {
   }
 }
 
+/** The entry of a map that words an issue whose code has no entry. */
+const DEFAULT_ENTRY = "default";
+
+/** Reads an entry a map has itself, so a code such as `constructor` finds nothing of `Object.prototype`. */
+const entryOf = (messages: Messages, key: string): Messages[string] =>
+  Object.hasOwn(messages, key) ? messages[key] : undefined;
+
 /** What {@link formatIssue} says when nothing supplies text for an issue. */
 const FALLBACK_MESSAGE = "Invalid value";
 
@@ -87,7 +97,8 @@ const FALLBACK_MESSAGE = "Invalid value";
  *
  * @remarks
  * The text comes from the first of these that exists: the issue's own `message`, an entry for its
- * `code` in `messages`, then the generic "Invalid value". The built-in English wording is not carried
+ * `code` in `messages`, the entry `default` of `messages`, then the generic "Invalid value". The built-in
+ * English wording is not carried
  * here, so a program that words its own issues does not bundle it: pass `englishMessages` for it, or a
  * map of your own, or both spread together. The map is required, so leaving it out is a compile error
  * and not a form that says "Invalid value" for everything; a program whose issues all carry their own
@@ -112,7 +123,9 @@ export function formatIssue(issue: ValidationIssue, messages: Messages): string 
   if (issue.message !== undefined) {
     return issue.message;
   }
-  const custom = Object.hasOwn(messages, issue.code) ? messages[issue.code] : undefined;
+  // The entry for the code, then the map's own wording for a code it lacks, which a translation gives so
+  // that no issue is worded in English.
+  const custom = entryOf(messages, issue.code) ?? entryOf(messages, DEFAULT_ENTRY);
   if (custom === undefined) {
     return FALLBACK_MESSAGE;
   }

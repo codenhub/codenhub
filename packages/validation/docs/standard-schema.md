@@ -33,7 +33,7 @@ The package exports the `StandardSchemaV1` type so you can accept one in your ow
 
 ## Messages
 
-The specification requires a message on every issue, and this is the one place this package builds it, so a program that never uses `standard` never bundles the text. `standard` therefore takes the message map as its second argument, and it is required, so `standard` throws a `TypeError` when created without one: pass `englishMessages` for the built-in English, or a map of your own. Messages then come from [`formatIssue`](errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then "Invalid value".
+The specification requires a message on every issue, and this is the one place this package builds it, so a program that never uses `standard` never bundles the text. `standard` therefore takes the message map as its second argument, and it is required, so `standard` throws a `TypeError` when created without one: pass `englishMessages` for the built-in English, or a map of your own. Messages then come from [`formatIssue`](errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
 
 ```ts
 import { englishMessages, number, standard } from "@codenhub/validation";

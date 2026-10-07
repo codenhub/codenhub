@@ -701,7 +701,7 @@ To write a whole schema as JSON Schema, for an HTTP API or the tools of a langua
 
 ### `formatIssue`, `flatten`, `formatPath` and the message maps
 
-`formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then a message map you pass, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](errors.md) explains all of them. `portugueseMessages` is the same map in Portuguese, as written in Brazil; [Issues and messages](errors.md#built-in-languages) covers both.
+`formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then the entry for its code in a message map you pass, then the map's `default` entry, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](errors.md) explains all of them. `portugueseMessages` is the same map in Portuguese, as written in Brazil; [Issues and messages](errors.md#built-in-languages) covers both.
 
 ### `assert`
 

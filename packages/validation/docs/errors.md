@@ -91,7 +91,8 @@ The text comes from the first of these that exists:
 
 1. The issue's own `message`, which a validator's [`message` option](validators.md#wording-one-validator) or a check's message sets.
 2. An entry for its `code` in the message map you pass as the second argument.
-3. The generic "Invalid value".
+3. The entry `default` of that map, which words a code the map has no entry for.
+4. The generic "Invalid value".
 
 Three issues carry the issues behind them in `params.issues`: `invalid_key`, `invalid_union` from `union`, and `invalid_format` for a failed part of a URL or an email address. `englishMessages` words `invalid_key` with the first issue the key validator found, as in "Invalid key: Must be at least 3 characters", so a form says why the key is wrong, except a key given twice, in a URL's query or by two keys a key validator makes the same, which is "Must be given only once", and a failed part the same way, as in "Invalid email address domain: Expected one of "company.com"", and words that issue with the map it was given, so an override of `too_small` in a spread of `englishMessages` reaches the key's message too. It words `invalid_union` with the first issue of the one option whose kind the input had, when there is exactly one: every other option found only that the input is not its type, or not one of the values a `literal` or `oneOf` accepts. So `union([literal(""), email()])` given `"nope"` says "Invalid email address". Otherwise no option is the one meant, and it says "Does not match any of the allowed types", because listing what every option expected reads worse than saying none matched; the per-option issues are in `params.issues` for a message of your own. A quoted issue that sits deeper than the value the outer issue is shown at is prefixed with its path, as in "width: Must be at least 1" for the `width` of an object option, and a list of allowed values names the first ten and how many more there are.
 
@@ -119,11 +120,11 @@ const wordingFor = (locale: string): Messages => maps[locale] ?? englishMessages
 formatIssue(issue, wordingFor("pt"));
 ```
 
-What a map does not translate is what the issue holds as data: the names of types, as in "Esperado string, recebido number", the name of a format the package does not know, and the name of a part of a URL or an address. The last wording, "Invalid value" for an issue whose code the map lacks, is `formatIssue`'s own and is English in every language, so give a custom code an entry or a `message`.
+What a map does not translate is what the issue holds as data: the names of types, as in "Esperado string, recebido number", the name of a format the package does not know, and the name of a part of a URL or an address. An issue whose code the map lacks, such as a custom check's, is worded by the map's `default` entry, "Valor inválido" in `portugueseMessages`. `englishMessages` has none, since `formatIssue`'s own last wording, "Invalid value", is English already.
 
 ### Rewording and localizing
 
-A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`, and the map it was found in, so it can word an issue nested in `params` with `formatIssue(nested, messages)` and the same map. To change some of the English, spread `englishMessages` and override the codes you want, since it is frozen and cannot be changed in place; to translate into a language that has no map here, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
+A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`, and the map it was found in, so it can word an issue nested in `params` with `formatIssue(nested, messages)` and the same map. To change some of the English, spread `englishMessages` and override the codes you want, since it is frozen and cannot be changed in place; to translate into a language that has no map here, write a map of your own. Cover the codes your validators can report, which the tables above list, and give it a `default` entry, text or a function of the issue, for every code you leave out, which would otherwise say "Invalid value" in English:
 
 ```ts
 import { englishMessages, formatIssue, type Messages } from "@codenhub/validation";
@@ -134,6 +135,7 @@ const pt: Messages = {
   invalid_type: (issue) => `Esperado ${String(issue.params?.expected)}`,
   too_small: (issue) => `Mínimo de ${String(issue.params?.minimum)}`,
   username_taken: "Este nome de usuário já existe",
+  default: "Valor inválido",
 };
 
 formatIssue(issue, shorter);
@@ -192,7 +194,7 @@ createI18n({ locales: ["en", 1] }); // TypeError: [I18n] locales[1]: Expected st
 ```
 
 - The message is the `subject`, written as you gave it, then the path of the first issue and its wording. Without a `subject` it starts at the path, and an issue at the value itself has no path.
-- The wording is the issue's own `message`, then the `messages` map, then "Invalid value". The map is optional here, since the path still says which option is wrong.
+- The wording is the issue's own `message`, then the `messages` map, its `default` entry included, then "Invalid value". The map is optional here, since the path still says which option is wrong.
 - The error's `cause` is the failure, so `error.cause.issues` lists the issues the validator reported, not only the first.
 - It accepts synchronous validators only, and throws a `TypeError` if the validator returns a promise.
 

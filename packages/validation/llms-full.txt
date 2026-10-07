@@ -740,7 +740,8 @@ The text comes from the first of these that exists:
 
 1. The issue's own `message`, which a validator's [`message` option](docs/validators.md#wording-one-validator) or a check's message sets.
 2. An entry for its `code` in the message map you pass as the second argument.
-3. The generic "Invalid value".
+3. The entry `default` of that map, which words a code the map has no entry for.
+4. The generic "Invalid value".
 
 Three issues carry the issues behind them in `params.issues`: `invalid_key`, `invalid_union` from `union`, and `invalid_format` for a failed part of a URL or an email address. `englishMessages` words `invalid_key` with the first issue the key validator found, as in "Invalid key: Must be at least 3 characters", so a form says why the key is wrong, except a key given twice, in a URL's query or by two keys a key validator makes the same, which is "Must be given only once", and a failed part the same way, as in "Invalid email address domain: Expected one of "company.com"", and words that issue with the map it was given, so an override of `too_small` in a spread of `englishMessages` reaches the key's message too. It words `invalid_union` with the first issue of the one option whose kind the input had, when there is exactly one: every other option found only that the input is not its type, or not one of the values a `literal` or `oneOf` accepts. So `union([literal(""), email()])` given `"nope"` says "Invalid email address". Otherwise no option is the one meant, and it says "Does not match any of the allowed types", because listing what every option expected reads worse than saying none matched; the per-option issues are in `params.issues` for a message of your own. A quoted issue that sits deeper than the value the outer issue is shown at is prefixed with its path, as in "width: Must be at least 1" for the `width` of an object option, and a list of allowed values names the first ten and how many more there are.
 
@@ -768,11 +769,11 @@ const wordingFor = (locale: string): Messages => maps[locale] ?? englishMessages
 formatIssue(issue, wordingFor("pt"));
 ```
 
-What a map does not translate is what the issue holds as data: the names of types, as in "Esperado string, recebido number", the name of a format the package does not know, and the name of a part of a URL or an address. The last wording, "Invalid value" for an issue whose code the map lacks, is `formatIssue`'s own and is English in every language, so give a custom code an entry or a `message`.
+What a map does not translate is what the issue holds as data: the names of types, as in "Esperado string, recebido number", the name of a format the package does not know, and the name of a part of a URL or an address. An issue whose code the map lacks, such as a custom check's, is worded by the map's `default` entry, "Valor inválido" in `portugueseMessages`. `englishMessages` has none, since `formatIssue`'s own last wording, "Invalid value", is English already.
 
 ### Rewording and localizing
 
-A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`, and the map it was found in, so it can word an issue nested in `params` with `formatIssue(nested, messages)` and the same map. To change some of the English, spread `englishMessages` and override the codes you want, since it is frozen and cannot be changed in place; to translate into a language that has no map here, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
+A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`, and the map it was found in, so it can word an issue nested in `params` with `formatIssue(nested, messages)` and the same map. To change some of the English, spread `englishMessages` and override the codes you want, since it is frozen and cannot be changed in place; to translate into a language that has no map here, write a map of your own. Cover the codes your validators can report, which the tables above list, and give it a `default` entry, text or a function of the issue, for every code you leave out, which would otherwise say "Invalid value" in English:
 
 ```ts
 import { englishMessages, formatIssue, type Messages } from "@codenhub/validation";
@@ -783,6 +784,7 @@ const pt: Messages = {
   invalid_type: (issue) => `Esperado ${String(issue.params?.expected)}`,
   too_small: (issue) => `Mínimo de ${String(issue.params?.minimum)}`,
   username_taken: "Este nome de usuário já existe",
+  default: "Valor inválido",
 };
 
 formatIssue(issue, shorter);
@@ -841,7 +843,7 @@ createI18n({ locales: ["en", 1] }); // TypeError: [I18n] locales[1]: Expected st
 ```
 
 - The message is the `subject`, written as you gave it, then the path of the first issue and its wording. Without a `subject` it starts at the path, and an issue at the value itself has no path.
-- The wording is the issue's own `message`, then the `messages` map, then "Invalid value". The map is optional here, since the path still says which option is wrong.
+- The wording is the issue's own `message`, then the `messages` map, its `default` entry included, then "Invalid value". The map is optional here, since the path still says which option is wrong.
 - The error's `cause` is the failure, so `error.cause.issues` lists the issues the validator reported, not only the first.
 - It accepts synchronous validators only, and throws a `TypeError` if the validator returns a promise.
 
@@ -1070,7 +1072,7 @@ The package exports the `StandardSchemaV1` type so you can accept one in your ow
 
 ## Messages
 
-The specification requires a message on every issue, and this is the one place this package builds it, so a program that never uses `standard` never bundles the text. `standard` therefore takes the message map as its second argument, and it is required, so `standard` throws a `TypeError` when created without one: pass `englishMessages` for the built-in English, or a map of your own. Messages then come from [`formatIssue`](docs/errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then "Invalid value".
+The specification requires a message on every issue, and this is the one place this package builds it, so a program that never uses `standard` never bundles the text. `standard` therefore takes the message map as its second argument, and it is required, so `standard` throws a `TypeError` when created without one: pass `englishMessages` for the built-in English, or a map of your own. Messages then come from [`formatIssue`](docs/errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
 
 ```ts
 import { englishMessages, number, standard } from "@codenhub/validation";
@@ -1787,7 +1789,7 @@ To write a whole schema as JSON Schema, for an HTTP API or the tools of a langua
 
 ### `formatIssue`, `flatten`, `formatPath` and the message maps
 
-`formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then a message map you pass, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](docs/errors.md) explains all of them. `portugueseMessages` is the same map in Portuguese, as written in Brazil; [Issues and messages](docs/errors.md#built-in-languages) covers both.
+`formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then the entry for its code in a message map you pass, then the map's `default` entry, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](docs/errors.md) explains all of them. `portugueseMessages` is the same map in Portuguese, as written in Brazil; [Issues and messages](docs/errors.md#built-in-languages) covers both.
 
 ### `assert`
 
@@ -1825,6 +1827,61 @@ A validator is still called with any value at all. The input type says what can 
 ### Types
 
 The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, `Check<T>` and `AsyncCheck<T>`, `Infer`, `InferInput`, `ValidationResult<T>`, `ValidationIssue`, `Message`, `Messages` and the options interface of each validator, such as `StringOptions` or `UrlOptions`. The others exported, such as `Composed`, `Factory`, `Rest`, `InferShape` and `InferTagged`, are the machinery of the signatures: they are exported so that a validator you export from a library of your own can be named in its declarations. Each is documented in the source and listed in the [API reference](docs/reference/index.md).
+
+<!-- Source: docs/changelog/0.4.0.md -->
+
+# 0.4.0
+
+0.4.0 adds what a comparison with valibot, zod and yup found missing: a schema another program can read, a type for what a validator accepts, and a rule across fields that a form sees at once. It also makes objects and collections about four times faster on valid input. Every call that 0.3.0 accepted is accepted, and returns what it returned; the two breaking changes are in the types.
+
+## Added
+
+- `describe(validator)`, which returns what a validator is made of as plain, frozen data: its `kind`, the `options` it was given, its `checks`, and the validators inside it. Every factory and every built-in check of the package records it; a validator or a check written by hand gives `undefined`. [Reading a schema](docs/validators.md#reading-a-schema) lists what each kind holds.
+- `toJsonSchema(validator, { io, unrepresentable })`, which writes a validator as a JSON Schema, draft 2020-12, for an OpenAPI document, the tools of a language model or a form generator. It writes what the validator accepts, or what it produces with `io: "output"`. A part JSON Schema cannot say, such as a `transform`, a custom check or a `date`, throws a `TypeError` naming where it is, or is written as accepting anything with `unrepresentable: "any"`. [JSON Schema](docs/json-schema.md) covers it.
+- `pick(validator, keys)`, `omit(validator, keys)` and `required(validator)`, which make a new object validator from one `object` made, and `partial(validator)`, which `partial` accepts beside a shape. The new validator keeps the options of the one it was made from. One that carries checks is refused with a `TypeError`, since a check was written for the whole object.
+- `InferInput<typeof validator>`, the type of input that can pass, beside `Infer`, the type produced. They differ for `optional` with a default, the `coerce` validators, `transform`, `pipe`, `json`, `searchParams` and `fallback`. `Validator<T, TInput>` and `AsyncValidator<T, TInput>` take it as a second type, `unknown` when left out, so a validator written by hand is unchanged. A validator is still called with any value: the type says what can pass and limits no argument.
+- `checkFields(keys, test, issue?)`, a check for `object` and `objectLike` that names the properties it needs and runs as soon as those have passed, whatever the others did. A form with an empty name now shows "Passwords must match" beside the name's own issue, where a `check` waits until every property is valid. Its test is given the named properties alone, typed so, and a name the object lacks is a `TypeError` when the object is created.
+- `brand(validator, name)`, which marks the type a validator produces, so only a value that went through the validator is accepted where that type is asked for. It returns the validator it was given and changes nothing at run time. `Branded<T, "Name">` is the marked type.
+- `readonly(validator)`, which makes what a validator produces read-only: in its type, a `Map` and a `Set` as `ReadonlyMap` and `ReadonlySet`, and by freezing the object or array the validator produced. It freezes one level, and never a value that is the input itself, such as what `instanceOf` or `unknown` produces.
+- `portugueseMessages`, the built-in wording in Portuguese as written in Brazil, used wherever `englishMessages` is: "Deve ser no mínimo 18", "Endereço de e-mail inválido". It is a separate value, so a program bundles only the languages it imports.
+- The entry `default` of a message map, which words an issue whose code has no entry of its own, such as the code of a custom check, where `formatIssue` said "Invalid value" in English whatever the language of the map. `portugueseMessages` has one, "Valor inválido"; a map of your own may give text or a function of the issue.
+- The types a consumer may need to name for the above: `Description`, `JsonSchema`, `JsonSchemaOptions`, `Picked`, `Omitted`, `AllRequired`, `AllOptional`, `Reshaped`, `InferShapeInput`, `InferTupleInput`, `InferTaggedInput`, `Branded` and `ReadonlyOutput`.
+- [Compared with valibot, zod and yup](docs/comparison.md), a page that says where the package differs, what was measured, and when to choose one of the others.
+
+## Changed
+
+- **Breaking.** `is(validator, input)` is a type guard: it narrows `input` to the type the validator accepts, `InferInput`, where 0.3.0 returned `boolean` and narrowed nothing. Inside `if (is(string(), value))`, `value` is a `string`. Code that compiled may stop compiling where the `else` branch is now narrowed too: with `value` typed `string | number`, the branch after a failed `is(string(), value)` sees a `number`, so code there that used it as text is a compile error. A validator written by hand that does not declare its input narrows nothing, as before.
+- **Breaking.** `standard(validator, messages)` reports the validator's input type to the library that takes it, where 0.3.0 reported `unknown`. A form library that types a field from a Standard Schema now types one for `coerceNumber()` as `string | number` and one for `optional(string(), "")` as `string | undefined`, so code that relied on the field being `unknown` may need the narrower type.
+- `Validator` and `AsyncValidator` are interfaces with a call signature, where they were function types, so that they can carry the input type. A function of the right shape is still a validator, and nothing a caller writes changes.
+- Every validator and check the package makes has a property named `~description`, which `describe` reads. The record it holds is frozen, and holds no input.
+- A message map with an entry named `default` words every code it has no entry for with it, as above. A map that used `default` as the code of one of its own issues now words other unknown codes with that text too.
+- The package description, the README and the documentation overview lead with what the package is for, validating input nobody you trust controls, and state its size as a measurement.
+
+## Performance
+
+Measured on Node.js 24.19 on one machine, valid input, in millions of validations a second. `pnpm bench` in the package runs them.
+
+| Validator                         | 0.3.0 | 0.4.0 |
+| --------------------------------- | ----- | ----- |
+| `string()`                        | 39.7  | 103.8 |
+| `object` of three strings         | 1.13  | 4.13  |
+| `array` of 100 strings            | 0.14  | 0.56  |
+| `email()`                         | 1.1   | 1.3   |
+| `{ name, email, age }`, as a form | 0.30  | 0.7   |
+
+- `object`, `objectLike`, `array`, `set`, `tuple` and `record` no longer make a path, a list or a closure for a child that passes without waiting. What they guarantee is unchanged: the input is read before any child runs, results keep the order of the children, and a pending result of a sibling is handled when a child throws.
+- `email()` and `url()` parse the text once, with `URL.parse` where the runtime has it, where they asked whether it parses and then parsed it.
+
+## Size
+
+A program that reads no schema pays for the description every validator now carries: a lone `boolean()` is 1.24 kB gzipped, from 1.19 kB, and an object with a string, an email and an optional integer 5.79 kB, from 5.37 kB. `toJsonSchema` with an object of one string is 5.1 kB, and `portugueseMessages` with `formatIssue` 2.5 kB.
+
+## Migrating from 0.3.0
+
+- Where an `else` branch after `is` stops compiling, the compiler now knows the value is not of the validator's input type there. Remove the code that treated it as one, or call the validator and read `result.ok` where no narrowing is wanted.
+- Where a form library's field type changed, type the field as `InferInput<typeof validator>`, which is what the library now reads.
+- A check that compares fields of a form, such as a password and its confirmation, is better written with `checkFields`. `check` still works and still waits for every property.
+- A translation that worded custom codes one by one to avoid "Invalid value" can give one `default` entry.
 
 <!-- Source: docs/changelog/0.3.0.md -->
 

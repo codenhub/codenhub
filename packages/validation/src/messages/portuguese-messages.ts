@@ -188,8 +188,8 @@ const describeKey = (issue: ValidationIssue, messages: Messages): string => {
  * wording, spread it and override the codes you want:
  * `{ ...portugueseMessages, too_small: "Muito curto" }`. It is frozen. The names of types, such as
  * `string` in "Esperado string, recebido number", are the ones the issue holds and are not translated,
- * and a custom validator's own codes are not in it; give them a `message` on the issue or an entry of
- * your own.
+ * and a custom validator's own codes are not in it: one without a `message` on the issue or an entry
+ * of your own is worded "Valor inválido", by the entry `default`.
  *
  * @example
  * ```ts
@@ -209,4 +209,5 @@ export const portugueseMessages: Messages = /* @__PURE__ */ Object.freeze({
   unrecognized_key: (issue: ValidationIssue) => `Chave não reconhecida ${formatValue(issue.params?.key)}`,
   invalid_intersection: () => "Valores conflitantes",
   invalid_union: describeUnion,
+  default: "Valor inválido",
 });

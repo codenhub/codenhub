@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { check } from "../builders/check";
 import { format } from "../builders/format";
 import { multipleOf } from "../checks/multiple-of";
 import { nonBlank } from "../checks/non-blank";
@@ -41,8 +42,7 @@ interface Node {
 
 describe("portugueseMessages", () => {
   it("should word every code englishMessages does, and be frozen", () => {
-    expect(Object.keys(portugueseMessages).toSorted()).toEqual(Object.keys(englishMessages).toSorted());
-    expect(Object.values(portugueseMessages).map((wording) => typeof wording)).toEqual(Array(9).fill("function"));
+    expect(Object.keys(portugueseMessages).toSorted()).toEqual([...Object.keys(englishMessages), "default"].toSorted());
     expect(Object.isFrozen(portugueseMessages)).toBe(true);
   });
 
@@ -141,6 +141,12 @@ describe("portugueseMessages", () => {
     ]);
     const conflict = intersection(object({ a: string({ trim: true }) }), object({ a: string() }));
     expect(said(conflict({ a: " x " }))).toEqual(["Valores conflitantes"]);
+  });
+
+  it("should word a code it has no entry for in Portuguese, and never in English", () => {
+    expect(said(string(check(() => false))("a"))).toEqual(["Valor inválido"]);
+    expect(formatIssue({ code: "username_taken", path: [] }, portugueseMessages)).toBe("Valor inválido");
+    expect(formatIssue({ code: "constructor", path: [] }, portugueseMessages)).toBe("Valor inválido");
   });
 
   it("should word an issue quoted inside another with the map in use, and group them for a form", () => {

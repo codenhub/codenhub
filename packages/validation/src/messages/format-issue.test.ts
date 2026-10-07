@@ -254,6 +254,18 @@ describe("formatIssue", () => {
     expect(formatIssue(issue({ code: "custom" }), { custom: undefined })).toBe("Invalid value");
   });
 
+  it("should word a code the map lacks with the map's default entry, as text or as a function", () => {
+    const unknownCode = issue({ code: "username_taken" });
+    expect(formatIssue(unknownCode, { default: "Valor inválido" })).toBe("Valor inválido");
+    expect(formatIssue(unknownCode, { default: (found) => `Erro: ${found.code}` })).toBe("Erro: username_taken");
+    expect(formatIssue(unknownCode, { default: "Outro", username_taken: "Em uso" })).toBe("Em uso");
+    expect(formatIssue(issue({ code: "custom", message: "Own" }), { default: "Outro" })).toBe("Own");
+    expect(formatIssue(unknownCode, { default: undefined })).toBe("Invalid value");
+    expect(formatIssue(unknownCode, Object.create({ default: "Inherited" }) as Messages)).toBe("Invalid value");
+    expect(() => formatIssue(unknownCode, { default: 5 as never })).toThrow(TypeError);
+    expect(flatten({ issues: [unknownCode] }, { default: "Valor inválido" }).formErrors).toEqual(["Valor inválido"]);
+  });
+
   it("should describe the built-in codes the validators report", () => {
     const messageOf = (result: ValidationResult<unknown>): string[] =>
       issuesOf(result).map((found) => formatIssue(found));
