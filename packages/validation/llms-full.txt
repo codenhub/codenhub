@@ -1027,11 +1027,11 @@ Arguments the model sends that fail are refused before `execute` runs, with the 
 
 ### Model Context Protocol
 
-Checked with @modelcontextprotocol/sdk 1.32.1. Its `McpServer.registerTool` takes zod schemas only, so the tool is declared on the `Server` below it, which takes a JSON Schema, and its arguments are validated in the handler.
+Checked with @modelcontextprotocol/sdk 1.32.1. Its `McpServer.registerTool` takes zod schemas only, so the tool is declared on the `Server` below it, which takes a JSON Schema, and the handler refuses a tool it does not have and validates the arguments.
 
 ```ts
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from "@modelcontextprotocol/sdk/types.js";
 
 import { englishMessages, formatIssue, meta, number, object, optional, string, toJsonSchema } from "@codenhub/validation";
 
@@ -1053,6 +1053,9 @@ server.setRequestHandler(ListToolsRequestSchema, () => ({
 }));
 
 server.setRequestHandler(CallToolRequestSchema, (request) => {
+  if (request.params.name !== "forecast") {
+    throw new McpError(ErrorCode.InvalidParams, `Unknown tool: ${request.params.name}`);
+  }
   const result = forecastInput(request.params.arguments);
   if (!result.ok) {
     const text = result.error.issues.map((issue) => formatIssue(issue, englishMessages)).join("\n");
@@ -1241,7 +1244,7 @@ toJsonSchema(forecast);
 // }
 ```
 
-The keys are written on whatever schema the part is written as, beside a `$ref` for a `lazy` and beside an `anyOf` for a `nullable`, and the same on the input and the output side. Examples are written as given, and are not checked against the validator.
+The keys are written on whatever schema the part is written as, beside a `$ref` for a `lazy` and beside an `anyOf` for a `nullable`, and the same on the input and the output side. In draft-07, which ignores a keyword beside a `$ref`, the reference is wrapped in an `allOf` and the keys are written beside that. Examples are written as given, and are not checked against the validator.
 
 ## Drafts
 
@@ -2128,7 +2131,7 @@ const signup = object({ name: string({ max: 100 }), email: email(), tags: array(
 audit(signup); // [{ rule: "unbounded_size", path: "tags", kind: "array" }]
 ```
 
-Give `tags` a `max`, `array(string({ max: 20 }), { max: 10 })`, and the list is empty, which a test asserts: `expect(audit(signup)).toEqual([])`. Each finding has a `rule`, the `path` of the part in the schema and its `kind`:
+Give `tags` a `max`, as `const bounded = object({ ..., tags: array(string({ max: 20 }), { max: 10 }) })`, and the list is empty, which a test asserts: `expect(audit(bounded)).toEqual([])`. Each finding has a `rule`, the `path` of the part in the schema and its `kind`:
 
 | `rule`             | Reported for                                                                                                                                      |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |

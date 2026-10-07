@@ -132,7 +132,7 @@ export declare namespace StandardJSONSchemaV1 {
     /** The vendor identifier of the schema library. */
     readonly vendor: string;
     /** Inferred TypeScript types preserved for schema inspection. */
-    readonly types?: StandardSchemaV1.Types<TInput, TOutput> | undefined;
+    readonly types?: Types<TInput, TOutput> | undefined;
     /** Methods that write the input or the output type as a JSON Schema. */
     readonly jsonSchema: Converter;
   }
@@ -147,6 +147,15 @@ export declare namespace StandardJSONSchemaV1 {
 
   /** The draft to write. A library throws for one it does not write. */
   export type Target = "draft-2020-12" | "draft-07" | "openapi-3.0" | (string & {});
+
+  /** The input and output types of a schema, as Standard Schema gives them. */
+  export type Types<TInput = unknown, TOutput = TInput> = StandardSchemaV1.Types<TInput, TOutput>;
+
+  /** Infers the input type of a schema that can be written as a JSON Schema. */
+  export type InferInput<Schema extends StandardJSONSchemaV1> = NonNullable<Schema["~standard"]["types"]>["input"];
+
+  /** Infers the output type of a schema that can be written as a JSON Schema. */
+  export type InferOutput<Schema extends StandardJSONSchemaV1> = NonNullable<Schema["~standard"]["types"]>["output"];
 
   /** Options a caller passes to `input` and `output`. */
   export interface Options {

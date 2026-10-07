@@ -152,7 +152,7 @@ toJsonSchema(forecast);
 // }
 ```
 
-The keys are written on whatever schema the part is written as, beside a `$ref` for a `lazy` and beside an `anyOf` for a `nullable`, and the same on the input and the output side. Examples are written as given, and are not checked against the validator.
+The keys are written on whatever schema the part is written as, beside a `$ref` for a `lazy` and beside an `anyOf` for a `nullable`, and the same on the input and the output side. In draft-07, which ignores a keyword beside a `$ref`, the reference is wrapped in an `allOf` and the keys are written beside that. Examples are written as given, and are not checked against the validator.
 
 ## Drafts
 

@@ -126,11 +126,11 @@ Arguments the model sends that fail are refused before `execute` runs, with the 
 
 ### Model Context Protocol
 
-Checked with @modelcontextprotocol/sdk 1.32.1. Its `McpServer.registerTool` takes zod schemas only, so the tool is declared on the `Server` below it, which takes a JSON Schema, and its arguments are validated in the handler.
+Checked with @modelcontextprotocol/sdk 1.32.1. Its `McpServer.registerTool` takes zod schemas only, so the tool is declared on the `Server` below it, which takes a JSON Schema, and the handler refuses a tool it does not have and validates the arguments.
 
 ```ts
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from "@modelcontextprotocol/sdk/types.js";
 
 import { englishMessages, formatIssue, meta, number, object, optional, string, toJsonSchema } from "@codenhub/validation";
 
@@ -152,6 +152,9 @@ server.setRequestHandler(ListToolsRequestSchema, () => ({
 }));
 
 server.setRequestHandler(CallToolRequestSchema, (request) => {
+  if (request.params.name !== "forecast") {
+    throw new McpError(ErrorCode.InvalidParams, `Unknown tool: ${request.params.name}`);
+  }
   const result = forecastInput(request.params.arguments);
   if (!result.ok) {
     const text = result.error.issues.map((issue) => formatIssue(issue, englishMessages)).join("\n");

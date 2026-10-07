@@ -283,6 +283,30 @@ describe("toJsonSchema", () => {
     expect(toJsonSchema(string(), { target: "draft-2020-12" })).toEqual(toJsonSchema(string()));
   });
 
+  it("should keep what is said of a reference in draft-07, which ignores a keyword beside a $ref", () => {
+    type Tree = { children: Tree[] };
+    const tree: Validator<Tree> = lazy(() => object({ children: array(tree) }));
+    const described = toJsonSchema(object({ root: meta(tree, { title: "Root" }) }), { target: "draft-07" });
+    expect((described["properties"] as Record<string, unknown>)["root"]).toEqual({
+      allOf: [{ $ref: "#/definitions/schema1" }],
+      title: "Root",
+    });
+    const name = optional(
+      lazy(() => string()),
+      "Ada",
+    );
+    expect(toJsonSchema(object({ name }), { target: "draft-07" })["properties"]).toEqual({
+      name: { allOf: [{ $ref: "#/definitions/schema1" }], default: "Ada" },
+    });
+    // Draft 2020-12 reads a keyword beside a $ref, so it is written there.
+    expect(
+      (toJsonSchema(object({ root: meta(tree, { title: "Root" }) }))["properties"] as Record<string, unknown>)["root"],
+    ).toEqual({
+      $ref: "#/$defs/schema1",
+      title: "Root",
+    });
+  });
+
   it("should refuse a target it does not write", () => {
     expect(() => toJsonSchema(string(), { target: "openapi-3.0" as never })).toThrow(
       new TypeError('target must be "draft-2020-12" or "draft-07", received "openapi-3.0"'),

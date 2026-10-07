@@ -252,11 +252,18 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
     return schema;
   };
 
+  /**
+   * `schema` with the keywords of `extra` beside it. Draft-07 ignores every keyword beside a `$ref`, so
+   * there a reference is wrapped in an `allOf` first, and what is said of it is still read.
+   */
+  const beside = (schema: JsonSchema, extra: object): JsonSchema =>
+    isDraft07 && schema["$ref"] !== undefined ? { allOf: [schema], ...extra } : { ...schema, ...extra };
+
   /** The schema of a part, with what `meta` says of it. */
   const convert = (target: unknown, path: string): JsonSchema => {
     const schema = write(target, path);
     const said = describe(target as AnyValidator)?.["meta"];
-    return said === undefined ? schema : { ...schema, ...(said as object) };
+    return said === undefined ? schema : beside(schema, said as object);
   };
 
   const write = (target: unknown, path: string): JsonSchema => {
@@ -412,7 +419,7 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
       }
       case "optional": {
         const fallback = record["default"];
-        return isInput && isJsonPrimitive(fallback) ? { ...child("inner"), default: fallback } : child("inner");
+        return isInput && isJsonPrimitive(fallback) ? beside(child("inner"), { default: fallback }) : child("inner");
       }
       case "nullable":
       case "nullish":

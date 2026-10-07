@@ -404,6 +404,10 @@ const described = standardJsonSchema(object({ email: email() }));
 export const describedAsStandard: StandardSchemaV1<{ email: string }, { email: string }> = described;
 export const describedAsJson: StandardJSONSchemaV1<{ email: string }, { email: string }> = described;
 export const describedInput: Record<string, unknown> = described["~standard"].jsonSchema.input({ target: "draft-07" });
+// The namespace has the specification's helpers too.
+export const describedOutput: StandardJSONSchemaV1.InferOutput<typeof described> = { email: "a@example.com" };
+// @ts-expect-error the input type is the validator's input
+export const badDescribedInput: StandardJSONSchemaV1.InferInput<typeof described> = { email: 1 };
 export const draft07: unknown = toJsonSchema(email(), { target: "draft-07" }).definitions;
 // The message map can be left out, and the English is used.
 export const exposedInEnglish: StandardSchemaV1<unknown, { email: string }> = standard(object({ email: email() }));

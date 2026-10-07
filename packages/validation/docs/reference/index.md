@@ -2763,7 +2763,7 @@ Methods that write the input or the output type as a JSON Schema.
 ##### types
 
 ```ts
-readonly types?: StandardSchemaV1.Types<TInput, TOutput> | undefined;
+readonly types?: Types<TInput, TOutput> | undefined;
 ```
 
 Inferred TypeScript types preserved for schema inspection.
@@ -2784,6 +2784,22 @@ readonly version: 1;
 
 The version number of the specification (always 1).
 
+#### StandardJSONSchemaV1.InferInput
+
+```ts
+type InferInput<Schema extends StandardJSONSchemaV1> = NonNullable<Schema["~standard"]["types"]>["input"];
+```
+
+Infers the input type of a schema that can be written as a JSON Schema.
+
+#### StandardJSONSchemaV1.InferOutput
+
+```ts
+type InferOutput<Schema extends StandardJSONSchemaV1> = NonNullable<Schema["~standard"]["types"]>["output"];
+```
+
+Infers the output type of a schema that can be written as a JSON Schema.
+
 #### StandardJSONSchemaV1.Target
 
 ```ts
@@ -2791,6 +2807,14 @@ type Target = "draft-2020-12" | "draft-07" | "openapi-3.0" | (string & {});
 ```
 
 The draft to write. A library throws for one it does not write.
+
+#### StandardJSONSchemaV1.Types
+
+```ts
+type Types<TInput = unknown, TOutput = TInput> = StandardSchemaV1.Types<TInput, TOutput>;
+```
+
+The input and output types of a schema, as Standard Schema gives them.
 
 ### StandardSchemaV1
 
