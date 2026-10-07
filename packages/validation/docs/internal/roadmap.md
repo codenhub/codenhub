@@ -30,6 +30,7 @@ This records what `@codenhub/validation` is building toward, what it takes to re
 
 - Every step of [0.4.0.md](0.4.0.md) is built, or dropped with its reason and measurement recorded there.
 - The [comparison](../comparison.md) is measured again against the released versions of valibot, zod, yup, ArkType and TypeBox, and reviewing it finds nothing left that would significantly improve the package. A finding that would is another step of 0.4.0.
+- `README.md` and every public page describe 0.4.0 as it ships, `llms.txt` and `llms-full.txt` are current, and the examples of the docs type-check and run against the built package.
 - `pnpm verify` passes, the changelog entry describes the release as it ships, with its date, and `hub release validation` reports it ready.
 
 ## Versioning until 1.0
@@ -45,7 +46,7 @@ This records what `@codenhub/validation` is building toward, what it takes to re
 
 ## Later / Possible
 
-Each is additive, so it fits a 0.4.x release. Anything here that the release bar of [Current Focus](#current-focus) finds would significantly improve the package moves into 0.4.0 instead.
+Each is additive, so it fits a 0.4.x release. When the release bar of [Current Focus](#current-focus) finds that an item here would significantly improve the package, that item moves into 0.4.0 instead.
 
 - **A page on accepting a validator.** What a package that takes one from its caller declares, `Validator<T>` or a Standard Schema, how it reports a failure, and what it costs when the caller passes none.
 
