@@ -81,6 +81,47 @@ assert(config, { locales: ["en", 1] }, { subject: "[I18n]", messages });
 // TypeError: [I18n] locales[1]: Expected string, received number
 ```
 
+### brand
+
+```ts
+export declare function brand<TValidator extends AnyValidator, const TName extends string>(validator: TValidator, name: TName): Composed<TValidator, Branded<Infer<TValidator>, TName>, InferInput<TValidator>>;
+```
+
+Marks what a validator produces with a name, in the types alone, so only a value that went through the validator is accepted where the marked type is asked for.
+
+TypeScript treats two types of the same shape as one, so a function that takes a `string` it calls a user id also takes an email, or text nobody validated. A brand makes the validated type its own: `Infer` of the result is the type with the mark, and the only way to a value of it is the validator.
+
+Nothing changes at run time. The validator is returned as it is, so it validates, is described and is written as a JSON Schema exactly as before, and `name` is read by the types only. The input type is not marked, since what is given to a validator has not passed it yet. Brands add up: `brand(brand(string(), "A"), "B")` produces a type with both.
+
+**Parameters**
+
+- `validator` — The validator to mark the output of.
+- `name` — The name of the mark, such as `"UserId"`.
+
+**Type parameters**
+
+- `TValidator` — The validator whose output is marked.
+- `TName` — The name of the mark.
+
+**Returns** — The same validator, typed as producing the marked type.
+
+**Throws** — When `validator` is not a function or `name` is not text.
+
+**Example**
+
+```ts
+const userId = brand(uuid(), "UserId");
+type UserId = Infer<typeof userId>;
+
+declare function loadUser(id: UserId): Promise<User>;
+
+const result = userId(input);
+if (result.ok) {
+  await loadUser(result.value);
+}
+await loadUser("not validated"); // a compile error
+```
+
 ### check
 
 ```ts
@@ -1167,6 +1208,46 @@ The first failure stops the pipe, because a later step has nothing valid to work
 ```ts
 const address = pipe(string({ trim: true, case: "lower" }), email());
 address("  Ada@Example.com "); // { ok: true, value: "ada@example.com" }
+```
+
+### readonly
+
+```ts
+export declare function readonly<TValidator extends AnyValidator>(validator: TValidator): Composed<TValidator, ReadonlyOutput<Infer<TValidator>>, InferInput<TValidator>>;
+```
+
+Wraps a validator so the value it produces cannot be changed: its type is read-only, and the object or array is frozen.
+
+It freezes the value itself and not what is inside it, as `Object.freeze` does and as the type says: wrap an inner validator too where its value must not change. Three things are left as they are:
+
+- **The input.** A validator that produces the very value it was given, such as `instanceOf`, `guard` or `unknown`, has its type made read-only and nothing frozen, since freezing would change an object the caller owns. `object`, `objectLike`, `array`, `tuple` and `record` produce a new value, which is frozen.
+- **A `Map` and a `Set`.** Freezing one does not stop `set` or `add`, so only the type keeps them from being changed.
+- **A typed array**, which cannot be frozen.
+
+`pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after.
+
+**Parameters**
+
+- `validator` — The validator whose value is made read-only.
+
+**Type parameters**
+
+- `TValidator` — The wrapped validator.
+
+**Returns** — A validator that produces the same value, frozen, typed read-only.
+
+**Throws** — When `validator` is not a function.
+
+**Example**
+
+```ts
+const settings = readonly(object({ theme: string(), tags: readonly(array(string())) }));
+type Settings = Infer<typeof settings>; // { readonly theme: string; readonly tags: readonly string[] }
+
+const result = settings(input);
+if (result.ok) {
+  result.value.theme = "dark"; // a compile error, and a TypeError in strict mode
+}
 ```
 
 ### record
@@ -2857,6 +2938,23 @@ export type AsyncRest<T, TOptions> = [options?: TOptions, ...checks: AsyncCheck<
 
 [Rest](#rest) where a check may be an [AsyncCheck](#asynccheck).
 
+### Branded
+
+```ts
+export type Branded<T, TName extends string> = T & {
+    readonly "~brand": {
+        readonly [K in TName]: true;
+    };
+};
+```
+
+A type marked with a name, so a value of the plain type is not accepted where the marked one is asked for. The mark exists in the types alone: no value has the property.
+
+**Type parameters**
+
+- `T` — The type that is marked.
+- `TName` — The name of the mark.
+
 ### Check
 
 ```ts
@@ -3104,6 +3202,18 @@ export type Picked<T, K extends keyof T> = Simplify<Pick<T, K>>;
 ```
 
 The object type with only the properties named.
+
+### ReadonlyOutput
+
+```ts
+export type ReadonlyOutput<T> = unknown extends T ? T : T extends ReadonlyMap<infer TKey, infer TValue> ? ReadonlyMap<TKey, TValue> : T extends ReadonlySet<infer TItem> ? ReadonlySet<TItem> : Readonly<T>;
+```
+
+What `readonly` makes of the type a validator produces: its properties or items read-only, and a `Map` or a `Set` the read-only kind. `unknown` stays as it is.
+
+**Type parameters**
+
+- `T` — The type the wrapped validator produces.
 
 ### Reshaped
 
@@ -3745,6 +3855,25 @@ Creates a validator for network ports: whole numbers from 1 to 65535. Port 0, wh
 port()(8080); // { ok: true, value: 8080 }
 port()(70_000); // { ok: false, ... }, code "invalid_format"
 url({ port: optional(port()) }); // a URL's port is a number, or absent
+```
+
+### portugueseMessages
+
+```ts
+export declare const portugueseMessages: Messages;
+```
+
+The built-in Portuguese wording for every issue the validators can report, as a message map.
+
+It is what [englishMessages](#englishmessages) is, in Portuguese as written in Brazil: pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Deve ser no mínimo 18". It is a separate value, so a program bundles the wording of the languages it imports and no other. To change some of the wording, spread it and override the codes you want: `{ ...portugueseMessages, too_small: "Muito curto" }`. It is frozen. The names of types, such as `string` in "Esperado string, recebido number", are the ones the issue holds and are not translated, and a custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
+
+**Example**
+
+```ts
+const result = number({ min: 18 })(15);
+if (!result.ok) {
+  formatIssue(result.error.issues[0], portugueseMessages); // "Deve ser no mínimo 18"
+}
 ```
 
 ### semver

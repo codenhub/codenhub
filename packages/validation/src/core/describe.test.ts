@@ -78,6 +78,7 @@ const validators: Record<string, [validator: unknown, kind: string, parts?: Reco
   phone: [api.phone(), "format", { format: "phone" }],
   pipe: [api.pipe(name, email()), "pipe"],
   port: [api.port(), "format", { format: "port" }],
+  readonly: [api.readonly(name), "readonly", { inner: name }],
   record: [api.record(name, number()), "record", { key: name }],
   searchParams: [api.searchParams(object({})), "searchParams"],
   semver: [api.semver(), "format", { format: "semver" }],
@@ -113,6 +114,7 @@ const checks: Record<string, [check: unknown, params: Record<string, unknown>]> 
 /** The exports that make neither a validator nor a check that can be read. */
 const others = new Set([
   "assert",
+  "brand",
   "check",
   "checkFields",
   "describe",
@@ -131,6 +133,7 @@ const others = new Set([
   "omit",
   "partial",
   "pick",
+  "portugueseMessages",
   "required",
   "pass",
   "standard",

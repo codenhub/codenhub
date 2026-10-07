@@ -24,6 +24,7 @@ export { coerceDate, type CoerceDateOptions } from "./coercion/coerce-date";
 export { coerceNumber } from "./coercion/coerce-number";
 export { coerceString } from "./coercion/coerce-string";
 export { array, type ArrayOptions } from "./composition/array";
+export { brand, type Branded } from "./composition/brand";
 export { fallback } from "./composition/fallback";
 export { intersection } from "./composition/intersection";
 export { json } from "./composition/json";
@@ -44,6 +45,7 @@ export type { AllRequired, Omitted, Picked, Reshaped } from "./composition/resha
 export { set } from "./composition/set";
 export { type SizeOptions } from "./composition/size";
 export { tagged, type InferTagged, type InferTaggedInput, type Variants } from "./composition/tagged";
+export { readonly, type ReadonlyOutput } from "./composition/readonly";
 export { transform } from "./composition/transform";
 export { tuple, type InferTuple, type InferTupleInput, type TupleOptions } from "./composition/tuple";
 export { union } from "./composition/union";
@@ -112,6 +114,7 @@ export {
   tooSmallMessage,
   unrecognizedKeyMessage,
 } from "./messages/english-messages";
+export { portugueseMessages } from "./messages/portuguese-messages";
 export { flatten, formatIssue, formatPath, type FlattenedErrors, type Messages } from "./messages/format-issue";
 export { bigint, type BigintOptions } from "./primitives/bigint";
 export { boolean } from "./primitives/boolean";

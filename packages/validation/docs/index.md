@@ -93,6 +93,7 @@ Issue paths lead down to the offending value, so a problem with `email` has the 
 A few functions combine validators into new ones:
 
 - `optional(validator)`, `nullable(validator)` and `nullish(validator)` accept `undefined`, `null` or both as well, and `optional(validator, value)` replaces a missing value with a default.
+- `brand(validator, name)` marks the type a validator produces, so only a validated value is accepted where that type is asked for, and `readonly(validator)` makes what it produces read-only and freezes it.
 - `pipe(a, b, c)` runs validators in order, feeding each the value the previous one produced. This is how you clean a string before checking a format: `pipe(string({ trim: true, case: "lower" }), email())`.
 - `check(test, issue)` adds a rule the validator cannot express, given to the validator after its options, and `checkFields(keys, test, issue)` one across properties of an object, such as two fields having to match, that runs as soon as those properties have passed, and `transform(validator, convert)` changes the value into another.
 - `array`, `tuple`, `record`, `set` and `map` validate collections, and `union`, `tagged` and `intersection` choose between or merge validators.

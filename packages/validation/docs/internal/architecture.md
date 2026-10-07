@@ -216,6 +216,17 @@ The wording of each code is also an export of its own, `invalidTypeMessage`, `to
 
 That split is what keeps validators small (no string per rule) and makes localization a data problem: a map keyed by code. A consumer that never asks for text never bundles any.
 
+### Other languages
+
+A map in another language is a module and an export of its own, as the English is: `portugueseMessages`, in `messages/portuguese-messages.ts`, is the first, in Portuguese as written in Brazil. One is added when someone will maintain it, since wording nobody reads goes stale with every new param.
+
+- **What every language reads the same is shared.** `messages/wording.ts` holds what is not words: reading a param, quoting the issue behind another, the moment of a date limit, the first ten of a list, and which option of a union the input was meant for. It was inside the English module until there was a second language, and moving it changed no bundle: the English scenario measures what it did.
+- **A language words whole sentences.** The English builds "Invalid" and the name of the format; Portuguese cannot, since the adjective agrees with the noun, "URL inválida" and "Endereço de e-mail inválido", so its table holds the sentence for each format. A format it does not know is "Formato cpf inválido".
+- **Only the map is exported.** The English also exports the wording of each code, for a program that reports two or three. A second language would add nine names each, and nobody has asked for a part of one, so a program that wants less than the map builds its own from `portugueseMessages.too_small` and the like, which bundles the whole module. The exports are added when an adopter shows the need.
+- **What stays English.** The names of types and of parts are data of the issue, the same in every language so a program can test them. `formatIssue`'s last wording, "Invalid value" for a code the map lacks, is its own and is not a map's to change. A program in Portuguese with a custom code and no entry for it shows English there; a default entry of the map would fix it and is a change to `Messages` nobody has needed yet.
+
+It measures 2.53 kB gzipped with `formatIssue`, where the English measures 2.33: the sentence for each format costs what the English saves by building it.
+
 ### One validator's own wording
 
 A map words every issue of a code alike, which is wrong for a form where one field needs its own sentence. So every validator takes a `message` option, a string or a function of the issue returning one, and every built-in check takes a message as its last argument:
@@ -300,6 +311,14 @@ Rejected: a registry, above; describing children when the parent is made, which 
 Checked once against Ajv 8 in draft 2020-12 mode, outside the suite since it is a dependency the package does not have: 17 schemas and 68 values, objects, bounds, checks, tuples, records, unions, a tagged union with a strict variant, a recursive tree and formats, and the schema and the validator gave the same answer for every one.
 
 Adding the two grew the bundle of every export past its budget, 19810 to 21191 bytes, so every scenario was measured again and every budget reset by the rule of [Tree-shaking is a contract](#tree-shaking-is-a-contract), with a scenario for `toJsonSchema` and one for `pick`.
+
+### Wrappers that change the type
+
+`brand(validator, name)` and `readonly(validator)` exist for the type they give, and each does as little at run time as that type allows.
+
+- **`brand` returns the validator it was given.** A wrapper would cost a call for every validation and hide the description, so a branded `object` could not be picked from or written as a JSON Schema. The name is read by the types alone. The mark is a property that no value has, `"~brand"`, keyed by the name so two brands add up, and it is a text key and not a `unique symbol` so two copies of the package agree on it, as [Dependency model](#dependency-model) needs. The input type is left unmarked: what is given to a validator has not passed it.
+- **`readonly` freezes what was produced and never what was given.** A validator such as `instanceOf`, `guard` or `unknown` produces the input itself, and freezing it would change an object the caller owns, far from where the schema is written, so there the type alone is read-only. It tells the two apart by identity, `value !== input`, which costs nothing. It freezes one level, which is what `Readonly` says, and leaves a typed array, which throws when frozen. A `Map` and a `Set` are typed as the read-only kind, since freezing them stops nothing.
+- **`readonly` is described, as `{ kind: "readonly", inner }`**, and `toJsonSchema` writes what is inside it. `pick` and the others refuse it, as they refuse any validator that is not an `object`: reshaping first and wrapping after says the same, and unwrapping it would have to decide whether the result is still frozen.
 
 ## Tree-shaking is a contract
 

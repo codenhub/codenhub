@@ -8,6 +8,7 @@ import {
   base64,
   bigint,
   boolean,
+  brand,
   check,
   checkFields,
   coerceBigint,
@@ -52,6 +53,8 @@ import {
   omit,
   partial,
   pick,
+  portugueseMessages,
+  readonly,
   required,
   pass,
   pipe,
@@ -606,3 +609,39 @@ export const incomplete: Infer<typeof whole> = { id: 1, name: "Ada" };
 export const accountSchema: string[] | undefined = toJsonSchema(account, { io: "output" }).required;
 
 export const maybeAsserted: string = assert(string(), "a", { subject: maybeWording, messages: undefined });
+
+// A brand marks what a validator produces, in the types alone, and leaves what it accepts unmarked.
+const userId = brand(string(), "UserId");
+type UserId = Infer<typeof userId>;
+declare function loadUser(id: UserId): void;
+const idResult = userId("u1");
+if (idResult.ok) {
+  loadUser(idResult.value);
+  takeText(idResult.value);
+}
+// @ts-expect-error text that did not go through the validator is not a user id
+loadUser("u1");
+export const brandInput: InferInput<typeof userId> = "u1";
+const orderId = brand(string(), "OrderId");
+declare const anOrder: Infer<typeof orderId>;
+// @ts-expect-error two brands of the same type do not stand for each other
+loadUser(anOrder);
+declare function takeText(text: string): void;
+const takenId = brand(string(check(async () => true)), "Free");
+// @ts-expect-error a brand keeps an asynchronous validator asynchronous
+export const takenAtOnce: boolean = takenId("a").ok;
+
+// readonly makes what a validator produces read-only, a Map and a Set the read-only kind.
+const frozen = readonly(object({ name: string(), tags: readonly(array(string())), seen: readonly(set(number())) }));
+declare const frozenValue: Infer<typeof frozen>;
+export const frozenTags: readonly string[] = frozenValue.tags;
+export const frozenSeen: ReadonlySet<number> = frozenValue.seen;
+// @ts-expect-error a property of what readonly produced cannot be assigned
+frozenValue.name = "Ada";
+// @ts-expect-error nor an item added
+frozenValue.tags.push("a");
+// @ts-expect-error nor a set added to
+frozenValue.seen.add(1);
+export const frozenInput: InferInput<typeof frozen> = { name: "Ada", tags: ["a"], seen: new Set([1]) };
+export const frozenUnknown: Infer<ReturnType<typeof readonly<Validator<unknown>>>> = Symbol("anything");
+export const inPortuguese: string = formatIssue({ code: "too_small", path: [] }, portugueseMessages);

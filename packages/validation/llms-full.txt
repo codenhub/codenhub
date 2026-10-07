@@ -100,7 +100,7 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 ## Notes
 
 - A validator returns `{ ok: true, value }` or `{ ok: false, error }`. Bad input is never thrown, except by code the input carries, below; a bad option, such as `string({ min: -1 })`, throws when the validator is created.
-- Issues never contain an input value, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English, which is a separate import so a program that words its own issues does not bundle it, or your own to reword or localize. Keys are another matter: a path leads through the input's own keys, and a strict `object` names each key it does not recognize.
+- Issues never contain an input value, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English or `portugueseMessages` for Portuguese, each a separate import so a program bundles only the wording it uses, or your own to reword or localize. Keys are another matter: a path leads through the input's own keys, and a strict `object` names each key it does not recognize.
 - Rules never rewrite the value unless you ask: `trim`, `case` and `clamp` are the options that do. Formats with several spellings are the exception, and produce one: `email()` and `url()` produce what the URL parser reads, such as `https://example.com/admin` for `https://Example.com/public/../admin`, so a check made later on the value sees what a request or a mail server will, `domain()` produces lowercase ASCII with internationalized labels in punycode, and `ip()`, `cidr()`, `hostname()`, `uuid()`, `ulid()`, `phone()`, `mac()` and `creditCard()` produce a canonical spelling.
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
 - `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal`, `printer.local` and `nas.home`. Whether the top-level domain exists is not checked. A validator for the host replaces that rule: `url({ host: hostname() })` accepts any hostname and `url({ host: union([domain(), ip()]) })` any public domain or IP address, of any range. Neither resolves the name, so a public name can still point at a private address.
@@ -204,6 +204,7 @@ Issue paths lead down to the offending value, so a problem with `email` has the 
 A few functions combine validators into new ones:
 
 - `optional(validator)`, `nullable(validator)` and `nullish(validator)` accept `undefined`, `null` or both as well, and `optional(validator, value)` replaces a missing value with a default.
+- `brand(validator, name)` marks the type a validator produces, so only a validated value is accepted where that type is asked for, and `readonly(validator)` makes what it produces read-only and freezes it.
 - `pipe(a, b, c)` runs validators in order, feeding each the value the previous one produced. This is how you clean a string before checking a format: `pipe(string({ trim: true, case: "lower" }), email())`.
 - `check(test, issue)` adds a rule the validator cannot express, given to the validator after its options, and `checkFields(keys, test, issue)` one across properties of an object, such as two fields having to match, that runs as soon as those properties have passed, and `transform(validator, convert)` changes the value into another.
 - `array`, `tuple`, `record`, `set` and `map` validate collections, and `union`, `tagged` and `intersection` choose between or merge validators.
@@ -409,9 +410,9 @@ Run against the versions above, except where marked.
 | A rule across fields while another field fails | `checkFields`          | `partialCheck`                     | `refine`                   | `ref`                         |
 | Standard Schema                                | `standard(validator)`  | built in (documentation)           | built in (documentation)   | built in (documentation)      |
 | Method chains, such as `string().min(2)`       | no, options and checks | no, `pipe`                         | yes                        | yes                           |
-| Messages in other languages                    | a map you write        | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
+| Messages in other languages                    | English and Portuguese | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
 
-Only English ships with this package today, so a program in another language writes its own message map: [Issues and messages](docs/errors.md) shows how.
+English and Portuguese ship with this package, so a program in another language writes its own message map: [Issues and messages](docs/errors.md#rewording-and-localizing) shows how.
 
 <!-- Source: docs/custom-validators.md -->
 
@@ -747,9 +748,31 @@ Three issues carry the issues behind them in `params.issues`: `invalid_key`, `in
 
 An issue held in another's `params.issues` keeps the issues behind it only when none of them carries issues of its own, so issues nest at most three deep, whatever composes them. A union's issues are its options' lists, so a union held inside another issue, as one for a property of an object option inside an outer union is, keeps its code and path without its options' issues; a part or a key whose issues are plain, such as a domain's `{ options: ["company.com"] }` or a repeated key's `{ unique: true }`, keeps them. Without the rule, a recursive schema nests issues once per level, an asynchronous one 10,000 times, past what `JSON.stringify` can write, and where the levels share a result, as the options of a recursive union do through one `lazy`, each path through the nesting writes it out again: 430 bytes of input made a result of 350 MB. Wording that reaches an issue held without its issues says what it can without them, such as "Does not match any of the allowed types" for a union. A limit of `lazy` that stopped the validation behind such an issue is never dropped: the `too_big` issue, with its `maximum` and `type`, stands in its place. `flatten` and `standard` use the same wording, so neither lists nested issues separately.
 
+### Built-in languages
+
+Two maps ship with the package, each a value of its own, so a program bundles the languages it imports and no other:
+
+| Map                  | Language                         | `number({ min: 18 })(15)` |
+| -------------------- | -------------------------------- | ------------------------- |
+| `englishMessages`    | English                          | "Must be at least 18"     |
+| `portugueseMessages` | Portuguese, as written in Brazil | "Deve ser no mínimo 18"   |
+
+Both word the same nine codes and are used the same way, in `formatIssue`, `flatten`, `assert` and `standard`. For a program in several languages, choose the map where you show the issue:
+
+```ts
+import { englishMessages, formatIssue, portugueseMessages, type Messages } from "@codenhub/validation";
+
+const maps: Record<string, Messages> = { en: englishMessages, pt: portugueseMessages };
+const wordingFor = (locale: string): Messages => maps[locale] ?? englishMessages;
+
+formatIssue(issue, wordingFor("pt"));
+```
+
+What a map does not translate is what the issue holds as data: the names of types, as in "Esperado string, recebido number", the name of a format the package does not know, and the name of a part of a URL or an address. The last wording, "Invalid value" for an issue whose code the map lacks, is `formatIssue`'s own and is English in every language, so give a custom code an entry or a `message`.
+
 ### Rewording and localizing
 
-A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`, and the map it was found in, so it can word an issue nested in `params` with `formatIssue(nested, messages)` and the same map. To change some of the English, spread `englishMessages` and override the codes you want, since it is frozen and cannot be changed in place; to translate, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
+A message map is an object from code to text. A string is used as it is, and a function receives the issue, so it can use `params`, and the map it was found in, so it can word an issue nested in `params` with `formatIssue(nested, messages)` and the same map. To change some of the English, spread `englishMessages` and override the codes you want, since it is frozen and cannot be changed in place; to translate into a language that has no map here, write a map of your own, and every code you leave out says "Invalid value", so cover the codes your validators can report, which the tables above list:
 
 ```ts
 import { englishMessages, formatIssue, type Messages } from "@codenhub/validation";
@@ -961,11 +984,12 @@ toJsonSchema(query, { io: "output" }).properties;
 | `union`, `intersection`                                     | `anyOf` and `allOf`                                                                                                                                                                                                                             |
 | `tagged`                                                    | `oneOf`, with the tag as a `const` property of each variant                                                                                                                                                                                     |
 | `nullable`, `nullish`                                       | `anyOf` with `type: "null"`                                                                                                                                                                                                                     |
+| `readonly`, `brand`                                         | What the validator inside is written as                                                                                                                                                                                                         |
 | `lazy`                                                      | A `$ref` to a definition under `$defs`                                                                                                                                                                                                          |
 | `pattern`, `startsWith`, `endsWith`, `includes`, `nonBlank` | `pattern`                                                                                                                                                                                                                                       |
 | `multipleOf`, `nonZero`, `unique()`                         | `multipleOf`, `not: { const: 0 }` and `uniqueItems`                                                                                                                                                                                             |
 
-A property is left out of `required` when its validator accepts `undefined`: `optional`, `nullish`, `unknown`, `fallback`, a `union` with one of those, or a `lazy`, `nullable`, `transform` or `pipe` around one. JSON has no `undefined`, so `literal(undefined)` in a `union` is left out of its `anyOf`.
+A property is left out of `required` when its validator accepts `undefined`: `optional`, `nullish`, `unknown`, `fallback`, a `union` with one of those, or a `lazy`, `nullable`, `readonly`, `transform` or `pipe` around one. JSON has no `undefined`, so `literal(undefined)` in a `union` is left out of its `anyOf`.
 
 A recursive schema is written once, as a definition the schema refers to:
 
@@ -1462,6 +1486,43 @@ const role = optional(oneOf(["admin", "user"]), "user");
 const tags = optional(array(string()), () => []);
 ```
 
+### `brand`
+
+`brand(validator, name)` marks what a validator produces with a name, in the types alone. TypeScript treats two types of the same shape as one, so a function that takes a `string` it calls a user id also takes an email, or text nobody validated. With a brand, the only way to a value of the type is through the validator:
+
+```ts
+import { brand, uuid, type Infer } from "@codenhub/validation";
+
+const userId = brand(uuid(), "UserId");
+type UserId = Infer<typeof userId>;
+
+declare function loadUser(id: UserId): Promise<unknown>;
+
+const result = userId(input);
+if (result.ok) {
+  await loadUser(result.value);
+}
+// loadUser("not validated") is a compile error
+```
+
+Nothing changes at run time: `brand` returns the validator it was given, so it validates, is described and is written as a JSON Schema as before, and `pick` and the others still read a branded `object`. The input type is not marked, since what is given to a validator has not passed it yet. Brands add up, so `brand(brand(string(), "A"), "B")` produces a type with both. `Branded<T, "Name">` is the marked type, for when you need to write it.
+
+### `readonly`
+
+`readonly(validator)` makes what a validator produces read-only: in its type, and by freezing the object or array.
+
+```ts
+import { array, object, readonly, string, type Infer } from "@codenhub/validation";
+
+const settings = readonly(object({ theme: string(), tags: readonly(array(string())) }));
+type Settings = Infer<typeof settings>; // { readonly theme: string; readonly tags: readonly string[] }
+```
+
+- It freezes the value itself and not what is inside it, as `Object.freeze` does and as the type says. Wrap an inner validator too where its value must not change, as `tags` above.
+- A value that is the input itself is never frozen, since the caller owns it: `instanceOf`, `guard` and `unknown` produce what they were given, so `readonly` changes their type alone. `object`, `objectLike`, `array`, `tuple`, `record`, `set` and `map` produce a new value, which is frozen.
+- A `Map` or a `Set` is typed `ReadonlyMap` or `ReadonlySet`, and only the type protects it: freezing one does not stop `set` or `add`. A typed array cannot be frozen and is left as it is.
+- `pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after: `readonly(pick(user, ["name"]))`.
+
 ### `fallback`
 
 `fallback(validator, value)` replaces a value that fails `validator` with a fallback, so the result never fails. The fallback is trusted and is not validated, and a function receives the issues that were found, which is the place to log them. A primitive is used as it is. An array or object must come from a function, such as `fallback(array(string()), () => [])`, since one value would be shared by every result and a change to one would show up in the next: the types reject it, and `fallback` throws a `TypeError` when created from JavaScript. A function is called with the issues, so a fallback that is itself a function has to be returned from one: `fallback(validator, () => callback)`, and the types reject the callback itself whenever the wrapped validator can produce a function. For the same reason a function that reads an argument, such as `Array` or `String`, would be given the issues: write `() => []`, not `Array`. A value whose validation `lazy` stopped at one of its limits, such as cyclic input or input nested past `maxDepth`, fails too, so it is replaced like any other failure; when those limits must surface, keep `fallback` off a recursive schema. This turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
@@ -1708,6 +1769,7 @@ A validator inside another is given as the validator itself, to be described in 
 | `"tagged"`                                                                                    | `tagged`                                          | `key`, `variants`                                    |
 | `"optional"`                                                                                  | `optional`                                        | `inner`, `default`; no `options` or `checks`         |
 | `"nullable"`, `"nullish"`                                                                     | `nullable`, `nullish`                             | `inner`; no `options` or `checks`                    |
+| `"readonly"`                                                                                  | `readonly`                                        | `inner`; no `options` or `checks`                    |
 | `"fallback"`                                                                                  | `fallback`                                        | `inner`, `value`; no `options` or `checks`           |
 | `"transform"`                                                                                 | `transform`                                       | `inner`, `convert`; no `options` or `checks`         |
 | `"pipe"`                                                                                      | `pipe`                                            | `steps`; no `options` or `checks`                    |
@@ -1723,9 +1785,9 @@ To write a whole schema as JSON Schema, for an HTTP API or the tools of a langua
 
 ## Working with results
 
-### `formatIssue`, `flatten`, `formatPath` and `englishMessages`
+### `formatIssue`, `flatten`, `formatPath` and the message maps
 
-`formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then a message map you pass, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](docs/errors.md) explains all of them.
+`formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then a message map you pass, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](docs/errors.md) explains all of them. `portugueseMessages` is the same map in Portuguese, as written in Brazil; [Issues and messages](docs/errors.md#built-in-languages) covers both.
 
 ### `assert`
 

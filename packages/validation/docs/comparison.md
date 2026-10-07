@@ -87,6 +87,6 @@ Run against the versions above, except where marked.
 | A rule across fields while another field fails | `checkFields`          | `partialCheck`                     | `refine`                   | `ref`                         |
 | Standard Schema                                | `standard(validator)`  | built in (documentation)           | built in (documentation)   | built in (documentation)      |
 | Method chains, such as `string().min(2)`       | no, options and checks | no, `pipe`                         | yes                        | yes                           |
-| Messages in other languages                    | a map you write        | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
+| Messages in other languages                    | English and Portuguese | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
 
-Only English ships with this package today, so a program in another language writes its own message map: [Issues and messages](errors.md) shows how.
+English and Portuguese ship with this package, so a program in another language writes its own message map: [Issues and messages](errors.md#rewording-and-localizing) shows how.

@@ -148,6 +148,7 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
       case "fallback":
         return isInput || inner();
       case "nullable":
+      case "readonly":
       case "transform":
         return inner();
       case "lazy":
@@ -363,6 +364,8 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
       case "nullable":
       case "nullish":
         return { anyOf: [child("inner"), { type: "null" }] };
+      case "readonly":
+        return child("inner");
       case "fallback":
         return isInput ? {} : child("inner");
       case "transform":

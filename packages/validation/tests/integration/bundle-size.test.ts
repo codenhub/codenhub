@@ -147,6 +147,16 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
     budget: 2530,
   },
   {
+    name: "formatIssue with the Portuguese wording",
+    source: `import { formatIssue, portugueseMessages } from "DIST"; export const describe = (issue: Parameters<typeof formatIssue>[0]) => formatIssue(issue, portugueseMessages);`,
+    budget: 2780,
+  },
+  {
+    name: "brand and readonly",
+    source: `import { brand, readonly, string } from "DIST"; export const check = readonly(brand(string(), "Name"));`,
+    budget: 2330,
+  },
+  {
     name: "assert with the wording of two codes",
     source: `import { assert, invalidTypeMessage, string, tooSmallMessage } from "DIST"; const messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage }; export const read = (input: unknown) => assert(string({ min: 1 }), input, { messages });`,
     budget: 3150,
