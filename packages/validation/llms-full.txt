@@ -2015,6 +2015,7 @@ Measured on Node.js 24.19 on one machine, valid input, in millions of validation
 | `{ name, email, age }`, as a form | 0.53  | 0.93  |
 
 - `object`, `objectLike`, `array`, `set`, `tuple` and `record` no longer make a path, a list or a closure for a child that passes without waiting. What they guarantee is unchanged: the input is read before any child runs, results keep the order of the children, and a pending result of a sibling is handled when a child throws.
+- Valid input is answered without the full work where a validator can: a leaf, a format or `optional`, `nullable` and `nullish` without checks, and an `object` or `array` all of whose parts can, which no longer makes a result, a path or a list for each part that passes. Input that fails is validated as before and reports the same issues. In a whole run of `pnpm bench`, an `object` of three strings went from 3.8 to 8.7 million validations a second and an `array` of 100 strings from 0.55 to 2.0. A getter in the input is read once for input that passes and again for input that fails.
 - `email()` and `url()` parse the text once, with `URL.parse` where the runtime has it, where they asked whether it parses and then parsed it.
 
 ## Size

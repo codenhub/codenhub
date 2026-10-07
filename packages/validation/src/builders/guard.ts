@@ -29,7 +29,15 @@ export function guard<T>(expected: string, accepts: (input: unknown) => input is
   assertFunction("accepts", accepts);
   return ((...args: unknown[]) => {
     const [options, checks] = split<MessageOptions, T>(args);
-    const validator = leaf(expected, (input) => decided("guard", accepts, input), options.message, checks);
+    // No fast test: the test is the consumer's code, which a miss would run a second time.
+    const validator = leaf(
+      expected,
+      (input) => decided("guard", accepts, input),
+      options.message,
+      checks,
+      undefined,
+      false,
+    );
     return described(validator, { kind: "guard", expected, options, checks });
   }) as Factory<T, MessageOptions>;
 }

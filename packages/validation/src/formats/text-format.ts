@@ -1,6 +1,7 @@
 import type { Maybe } from "../core/async";
 import { finish, split, word } from "../core/checks";
 import { described } from "../core/describe";
+import { MISS, withFast } from "../core/nesting";
 import { failWith, issue, typeIssue } from "../core/result";
 import type { AsyncCheck, Factory, Message, MessageOptions, ValidationResult } from "../core/types";
 
@@ -12,24 +13,26 @@ const isString = (input: unknown): boolean => typeof input === "string";
  * undefined for any other, which fails with `invalid_format` naming the format. The checks run only on a
  * value of the format, so a check can rely on it being one, as it can for `url` and `email`.
  */
-export const formatLeaf =
-  <T>(
-    expected: string,
-    accepts: (input: unknown) => boolean,
-    format: string,
-    read: (input: T) => T | undefined,
-    message: Message | undefined,
-    checks: readonly AsyncCheck<T>[],
-  ): ((input: unknown) => Maybe<ValidationResult<T>>) =>
-  (input) => {
-    if (!accepts(input)) {
-      return failWith(word([typeIssue(expected, input)], message));
-    }
-    const value = read(input as T);
-    return value === undefined
-      ? failWith(word([issue("invalid_format", { format })], message))
-      : finish(value, [], message, checks);
-  };
+export const formatLeaf = <T>(
+  expected: string,
+  accepts: (input: unknown) => boolean,
+  format: string,
+  read: (input: T) => T | undefined,
+  message: Message | undefined,
+  checks: readonly AsyncCheck<T>[],
+): ((input: unknown) => Maybe<ValidationResult<T>>) =>
+  withFast(
+    (input: unknown): Maybe<ValidationResult<T>> => {
+      if (!accepts(input)) {
+        return failWith(word([typeIssue(expected, input)], message));
+      }
+      const value = read(input as T);
+      return value === undefined
+        ? failWith(word([issue("invalid_format", { format })], message))
+        : finish(value, [], message, checks);
+    },
+    checks.length > 0 ? undefined : (input) => (accepts(input) ? (read(input as T) ?? MISS) : MISS),
+  );
 
 /** Builds the validator for a string format, as {@link formatLeaf} does for a string. */
 export const stringFormat = (

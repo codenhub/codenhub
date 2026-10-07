@@ -7,7 +7,7 @@
  * are moved under the place once.
  */
 import { chain, isThenable, within, type Maybe } from "./async";
-import { failWith, isResult, notResult, ROOT_PATH } from "./result";
+import { failWith, isResult, notResult, pass, ROOT_PATH } from "./result";
 import type { AnyValidator, ValidationIssue, ValidationPathSegment, ValidationResult } from "./types";
 
 /**
@@ -21,6 +21,32 @@ export type Run = (input: unknown, place: Place) => Maybe<ValidationResult<unkno
 
 /** The work of each composer this package made, so another can reach it with a place. */
 const runs = new WeakMap<object, Run>();
+
+/** What a fast test returns for a value it does not pass, so the full validation runs and says why. */
+export const MISS: unique symbol = Symbol("miss");
+
+/**
+ * A validator's answer for input that passes, without what only failing input needs: the value it would
+ * produce, or {@link MISS}. It calls no code a consumer wrote, waits for nothing, and is the same answer
+ * the validator gives, so a composer whose every child has one answers valid input with no result, place
+ * or list for each child, and falls back to its full work on a miss.
+ */
+export type Fast = (input: unknown) => unknown;
+
+/** The fast test of each validator that has one. */
+const fasts = new WeakMap<object, Fast>();
+
+/** The fast test of a validator, or undefined when it has none. */
+export const fastOf = (validator: unknown): Fast | undefined =>
+  typeof validator === "function" ? fasts.get(validator) : undefined;
+
+/** Gives a validator its fast test, when there is one, and returns the validator. */
+export function withFast<T extends object>(validator: T, fast: Fast | undefined): T {
+  if (fast !== undefined) {
+    fasts.set(validator, fast);
+  }
+  return validator;
+}
 
 /** The place of a value one segment below `place`. */
 export const below = (place: Place, segment: ValidationPathSegment): Place => ({ segment, parent: place });
@@ -72,11 +98,17 @@ export const placeAll = (issues: readonly ValidationIssue[], place: Place): Vali
  * Makes a composer from its work: called on its own, it validates from the root, as one run, and
  * reports paths relative to its input; another composer reaches its work directly, with a place.
  */
-export function composed(run: Run): (input: unknown) => Maybe<ValidationResult<unknown>> {
+export function composed(run: Run, fast?: Fast): (input: unknown) => Maybe<ValidationResult<unknown>> {
   const fromRoot = (input: unknown): Maybe<ValidationResult<unknown>> => run(input, undefined);
-  const validator = (input: unknown): Maybe<ValidationResult<unknown>> => within(fromRoot, input);
+  const validator =
+    fast === undefined
+      ? (input: unknown): Maybe<ValidationResult<unknown>> => within(fromRoot, input)
+      : (input: unknown): Maybe<ValidationResult<unknown>> => {
+          const value = fast(input);
+          return value === MISS ? within(fromRoot, input) : pass(value);
+        };
   runs.set(validator, run);
-  return validator;
+  return withFast(validator, fast);
 }
 
 /**
@@ -85,7 +117,10 @@ export function composed(run: Run): (input: unknown) => Maybe<ValidationResult<u
  */
 export function sameAs(validator: AnyValidator): AnyValidator {
   const run = runs.get(validator);
-  return run === undefined ? (input: unknown) => validator(input) : (composed(run) as AnyValidator);
+  const fast = fasts.get(validator);
+  return run === undefined
+    ? withFast((input: unknown) => validator(input), fast)
+    : (composed(run, fast) as AnyValidator);
 }
 
 /**
@@ -121,6 +156,13 @@ export type Child = (input: unknown, parent: Place, segment: ValidationPathSegme
  */
 export function childOf(validator: AnyValidator): Child {
   const run = runs.get(validator);
+  const fast = fasts.get(validator);
+  if (run !== undefined && fast !== undefined) {
+    return (input, parent, segment) => {
+      const value = fast(input);
+      return value === MISS ? run(input, below(parent, segment)) : pass(value);
+    };
+  }
   return run === undefined
     ? (input, parent, segment) => {
         const returned = validator(input);

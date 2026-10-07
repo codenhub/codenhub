@@ -1,6 +1,7 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { finish, word } from "../core/checks";
 import { cap, MAX_ISSUES } from "../core/limit";
+import { fastOf, MISS, withFast, type Fast } from "../core/nesting";
 import { setOwn } from "../core/objects";
 import { assertFunction, failWith, issue, nested, repeatedKey, typeIssue } from "../core/result";
 import type { AnyValidator, AsyncCheck, Message, ValidationIssue, ValidationResult } from "../core/types";
@@ -76,8 +77,29 @@ export function partsFormat(
   read: (text: string) => Reading,
   message: Message | undefined,
   checks: readonly AsyncCheck<string>[],
+  validators: readonly (AnyValidator | undefined)[],
 ): (input: unknown) => Maybe<ValidationResult<string>> {
-  return (input) => {
+  // `validators` are those the format may give its parts, so whether every one has a fast test is known now.
+  const given = validators.filter((validator) => validator !== undefined);
+  const fast =
+    checks.length > 0 || given.some((validator) => fastOf(validator) === undefined)
+      ? undefined
+      : (input: unknown): unknown => {
+          if (typeof input !== "string") {
+            return MISS;
+          }
+          const reading = read(input);
+          if ("issues" in reading) {
+            return MISS;
+          }
+          for (const [, validator, part] of reading.parts) {
+            if ((fastOf(validator) as Fast)(part) === MISS) {
+              return MISS;
+            }
+          }
+          return reading.value;
+        };
+  return withFast((input: unknown): Maybe<ValidationResult<string>> => {
     if (typeof input !== "string") {
       return failWith(word([typeIssue("string", input)], message));
     }
@@ -99,7 +121,7 @@ export function partsFormat(
       });
       return issues.length > 0 ? failWith(word(issues, message)) : finish(value, [], message, checks);
     });
-  };
+  }, fast);
 }
 
 /** The issue of a composite format whose text is not of the format. */

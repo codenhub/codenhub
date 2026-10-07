@@ -96,6 +96,7 @@ export function email(...rest: unknown[]): AnyValidator {
     },
     message,
     checks,
+    [local, domain],
   );
   return described(validator, { kind: "format", format: "email", options, checks });
 }
