@@ -1,4 +1,5 @@
 import { split } from "../core/checks";
+import { described } from "../core/describe";
 import { assertOption } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
 import { stringFormat } from "./text-format";
@@ -39,13 +40,17 @@ export interface Base64Options extends MessageOptions {
  * @throws {TypeError} When `url` is not a boolean.
  */
 export const base64 = ((...args: unknown[]) => {
-  const [{ url, message }, checks] = split<Base64Options, string>(args, "url");
+  const [options, checks] = split<Base64Options, string>(args, "url");
+  const { url, message } = options;
   assertOption("url", url, "boolean");
   const pattern = url === true ? BASE64URL_PATTERN : BASE64_PATTERN;
-  return stringFormat(
-    url === true ? "base64url" : "base64",
-    (text) => (pattern.test(text) ? text : undefined),
-    message,
-    checks,
+  return described(
+    stringFormat(
+      url === true ? "base64url" : "base64",
+      (text) => (pattern.test(text) ? text : undefined),
+      message,
+      checks,
+    ),
+    { kind: "format", format: "base64", options, checks },
   );
 }) as Factory<string, Base64Options>;

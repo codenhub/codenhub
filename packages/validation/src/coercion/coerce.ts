@@ -1,5 +1,6 @@
 import type { Maybe } from "../core/async";
 import { word } from "../core/checks";
+import { described } from "../core/describe";
 import { describeType, failWith, issue } from "../core/result";
 import type { AnyValidator, Message, ValidationResult } from "../core/types";
 
@@ -17,10 +18,13 @@ export function coercing<T>(
 ): (input: unknown) => Maybe<ValidationResult<T>> {
   const [first] = args;
   const message = typeof first === "object" ? (first as { message?: Message } | null)?.message : undefined;
-  return (input) => {
-    const converted = convert(input);
-    return converted === undefined
-      ? failWith(word([issue("invalid_type", { expected, received: describeType(input), coerced: true })], message))
-      : strict(converted[0]);
-  };
+  return described(
+    (input: unknown) => {
+      const converted = convert(input);
+      return converted === undefined
+        ? failWith(word([issue("invalid_type", { expected, received: describeType(input), coerced: true })], message))
+        : strict(converted[0]);
+    },
+    { kind: "coerce", inner: strict },
+  );
 }

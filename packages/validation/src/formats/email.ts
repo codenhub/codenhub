@@ -1,4 +1,5 @@
 import { split } from "../core/checks";
+import { described } from "../core/describe";
 import { assertOption } from "../core/result";
 import type {
   AnyValidator,
@@ -71,13 +72,11 @@ export function email<const TOptions extends EmailOptions>(
 export function email(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function email(options: EmailOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
 export function email(...rest: unknown[]): AnyValidator {
-  const [{ allowPlus = true, domain, local, message }, checks] = split<EmailOptions, string>(
-    rest,
-    "allowPlus domain local",
-  );
+  const [options, checks] = split<EmailOptions, string>(rest, "allowPlus domain local");
+  const { allowPlus = true, domain, local, message } = options;
   assertOption("allowPlus", allowPlus, "boolean");
   assertParts({ domain, local });
-  return partsFormat(
+  const validator = partsFormat(
     "email",
     (text) => {
       // A domain validator replaces the rule that the domain is public, never the rule that it is a host.
@@ -98,4 +97,5 @@ export function email(...rest: unknown[]): AnyValidator {
     message,
     checks,
   );
+  return described(validator, { kind: "format", format: "email", options, checks });
 }

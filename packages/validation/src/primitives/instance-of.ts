@@ -1,4 +1,5 @@
 import { leaf, split } from "../core/checks";
+import { described } from "../core/describe";
 import { isInstance } from "../core/objects";
 import { assertFunction } from "../core/result";
 import type { AnyValidator, AsyncRest, AsyncValidator, MessageOptions, Rest, Validator } from "../core/types";
@@ -47,6 +48,10 @@ export function instanceOf(target: Constructor, ...rest: unknown[]): AnyValidato
   } catch {
     throw new TypeError("target must be a class or a function with a prototype");
   }
-  const [{ message }, checks] = split<MessageOptions, unknown>(rest);
-  return leaf(`instance of ${target.name || "anonymous class"}`, (input) => isInstance(input, target), message, checks);
+  const [options, checks] = split<MessageOptions, unknown>(rest);
+  const { message } = options;
+  return described(
+    leaf(`instance of ${target.name || "anonymous class"}`, (input) => isInstance(input, target), message, checks),
+    { kind: "instance", options, checks, target },
+  );
 }

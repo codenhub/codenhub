@@ -89,5 +89,6 @@ export function oneOf(values: readonly LiteralValue[] | EnumLike, ...rest: unkno
     },
     () => (isBigints ? { options: [...reported], type: "bigint" } : { options: [...reported] }),
     rest,
+    { kind: "oneOf", values: Object.freeze(options) },
   );
 }

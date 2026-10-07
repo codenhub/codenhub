@@ -44,5 +44,6 @@ export function literal(value: LiteralValue, ...rest: unknown[]): AnyValidator {
     (input) => (input === value ? [value] : undefined),
     () => (typeof value === "bigint" ? { expected: String(value), type: "bigint" } : { expected: value }),
     rest,
+    { kind: "literal", value },
   );
 }

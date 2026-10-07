@@ -1,5 +1,6 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
+import { described } from "../core/describe";
 import { cap, MAX_ISSUES } from "../core/limit";
 import { append, childOf, composed, type Child } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
@@ -92,19 +93,23 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
   assertShape(shape);
   // The shape is read once, so changing it after the validator is made changes nothing.
   const keys = Object.keys(shape);
+  // The validators as they were read, which is what the description gives: reading the shape again would
+  // read a getter twice, and could describe another validator than the one that runs.
+  const read: Shape = {};
   const children = keys.map((key) => {
     const validator: unknown = shape[key];
     assertFunction(`shape.${key}`, validator);
+    setOwn(read, key, validator);
     return childOf(validator as AnyValidator);
   });
   const known = new Set(keys);
-  const [options, reject, accept] = tail<ObjectOptions, Record<string, unknown>>(rest, "unknownKeys");
+  const [options, reject, accept, checks] = tail<ObjectOptions, Record<string, unknown>>(rest, "unknownKeys");
   const unknownKeys = options.unknownKeys ?? "strip";
   if (unknownKeys !== "strip" && unknownKeys !== "strict" && unknownKeys !== "passthrough") {
     throw new TypeError(`unknownKeys must be "strip", "strict" or "passthrough", received "${String(unknownKeys)}"`);
   }
 
-  return composed((input, place): Maybe<ValidationResult<unknown>> => {
+  const validator = composed((input, place): Maybe<ValidationResult<unknown>> => {
     if (!isPlainObject(input)) {
       return reject([objectIssue(input)], place);
     }
@@ -157,4 +162,5 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
       return accept(output, place);
     });
   });
+  return described(validator, { kind: "object", options, checks, shape: Object.freeze(read) });
 }

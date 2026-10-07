@@ -1,4 +1,5 @@
 import { split } from "../core/checks";
+import { described } from "../core/describe";
 import { assertOption, issue } from "../core/result";
 import type {
   AnyValidator,
@@ -329,5 +330,5 @@ export function url(...rest: unknown[]): AnyValidator {
     }
     return { value: parsed.href, parts };
   };
-  return partsFormat("url", read, message, checks);
+  return described(partsFormat("url", read, message, checks), { kind: "format", format: "url", options, checks });
 }

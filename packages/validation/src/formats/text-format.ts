@@ -1,5 +1,6 @@
 import type { Maybe } from "../core/async";
 import { finish, split, word } from "../core/checks";
+import { described } from "../core/describe";
 import { failWith, issue, typeIssue } from "../core/result";
 import type { AsyncCheck, Factory, Message, MessageOptions, ValidationResult } from "../core/types";
 
@@ -48,6 +49,6 @@ export const formatFactory = (
   read: (text: string) => string | undefined,
 ): Factory<string, MessageOptions> =>
   ((...args: unknown[]) => {
-    const [{ message }, checks] = split<MessageOptions, string>(args);
-    return stringFormat(format, read, message, checks);
+    const [options, checks] = split<MessageOptions, string>(args);
+    return described(stringFormat(format, read, options.message, checks), { kind: "format", format, options, checks });
   }) as Factory<string, MessageOptions>;

@@ -1,4 +1,5 @@
 import { leaf, split } from "../core/checks";
+import { described } from "../core/describe";
 import { assertBounds, assertOption, assertOrder, describeType, issue } from "../core/result";
 import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
 
@@ -115,7 +116,7 @@ export const number = ((...args: unknown[]) => {
     assertOrder("clamp.min", clamp.min, "lt", lt, true);
   }
 
-  return leaf<number>("number", isNumber, message, checks, (input, issues) => {
+  const validator = leaf<number>("number", isNumber, message, checks, (input, issues) => {
     const value = clamp === undefined ? input : Math.min(Math.max(input, clamp.min), clamp.max);
     if (min !== undefined && value < min) {
       issues.push(outOfRange("min", min, true));
@@ -137,4 +138,5 @@ export const number = ((...args: unknown[]) => {
     }
     return value;
   });
+  return described(validator, { kind: "number", options, checks });
 }) as Factory<number, NumberOptions>;

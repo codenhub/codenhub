@@ -1,4 +1,5 @@
 import { chain, type Maybe } from "../core/async";
+import { described } from "../core/describe";
 import { call, composed } from "../core/nesting";
 import { assertFunction, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationResult } from "../core/types";
@@ -44,5 +45,8 @@ export function pipe<const TValidators extends readonly [AnyValidator, ...AnyVal
         pass(input),
       ),
   );
-  return validate as unknown as Composed<TValidators[number], Output<TValidators>>;
+  return described(validate, { kind: "pipe", steps: Object.freeze([...validators]) }) as unknown as Composed<
+    TValidators[number],
+    Output<TValidators>
+  >;
 }

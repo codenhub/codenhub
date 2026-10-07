@@ -1,5 +1,6 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { described } from "../core/describe";
 import { cap, MAX_ISSUES } from "../core/limit";
 import { childOf, composed } from "../core/nesting";
 import { sizeOfSet, valuesOf } from "../core/objects";
@@ -55,41 +56,44 @@ export function set<TItem extends AnyValidator>(
 ): AsyncValidator<Set<Infer<TItem>>>;
 export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("item", item);
-  const [options, reject, accept] = tail<SizeOptions & MessageOptions, Set<unknown>>(rest, SIZE_OPTIONS);
+  const [options, reject, accept, checks] = tail<SizeOptions & MessageOptions, Set<unknown>>(rest, SIZE_OPTIONS);
   assertSizeOptions(options);
   const child = childOf(item);
-  return composed((input, place): Maybe<ValidationResult<unknown>> => {
-    const size = sizeOfSet(input);
-    if (size === undefined) {
-      return reject([typeIssue("set", input)], place);
-    }
-    const oversize = sizeIssues(size, "set", options);
-    if (oversize.length > 0) {
-      return reject(oversize, place);
-    }
-    const values = valuesOf(input);
-    return settle(
-      values.length,
-      (index) => child(values[index], place, index),
-      place,
-      options.message,
-      (values) => {
-        // A value that validation made equal to an earlier one is reported, not merged, so the output
-        // holds as many values as the size options were checked against.
-        const output = new Set<unknown>();
-        const repeats: ValidationIssue[] = [];
-        values.forEach((value, index) => {
-          if (output.has(value)) {
-            // One past the limit, which is how the list is known to be cut.
-            if (repeats.length <= MAX_ISSUES) {
-              repeats.push(repeatedItem(index));
+  return described(
+    composed((input, place): Maybe<ValidationResult<unknown>> => {
+      const size = sizeOfSet(input);
+      if (size === undefined) {
+        return reject([typeIssue("set", input)], place);
+      }
+      const oversize = sizeIssues(size, "set", options);
+      if (oversize.length > 0) {
+        return reject(oversize, place);
+      }
+      const values = valuesOf(input);
+      return settle(
+        values.length,
+        (index) => child(values[index], place, index),
+        place,
+        options.message,
+        (values) => {
+          // A value that validation made equal to an earlier one is reported, not merged, so the output
+          // holds as many values as the size options were checked against.
+          const output = new Set<unknown>();
+          const repeats: ValidationIssue[] = [];
+          values.forEach((value, index) => {
+            if (output.has(value)) {
+              // One past the limit, which is how the list is known to be cut.
+              if (repeats.length <= MAX_ISSUES) {
+                repeats.push(repeatedItem(index));
+              }
+            } else {
+              output.add(value);
             }
-          } else {
-            output.add(value);
-          }
-        });
-        return repeats.length > 0 ? reject(cap(repeats, undefined, undefined), place) : accept(output, place);
-      },
-    );
-  });
+          });
+          return repeats.length > 0 ? reject(cap(repeats, undefined, undefined), place) : accept(output, place);
+        },
+      );
+    }),
+    { kind: "set", options, checks, item },
+  );
 }

@@ -1,4 +1,5 @@
 import { leaf, split } from "../core/checks";
+import { described } from "../core/describe";
 import type { Factory, MessageOptions } from "../core/types";
 
 const always = (): boolean => true;
@@ -14,6 +15,7 @@ const always = (): boolean => true;
  * ```
  */
 export const unknown = ((...args: unknown[]) => {
-  const [{ message }, checks] = split<MessageOptions, unknown>(args);
-  return leaf("unknown", always, message, checks);
+  const [options, checks] = split<MessageOptions, unknown>(args);
+  const { message } = options;
+  return described(leaf("unknown", always, message, checks), { kind: "unknown", options, checks });
 }) as Factory<unknown, MessageOptions>;

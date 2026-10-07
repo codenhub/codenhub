@@ -1,4 +1,5 @@
 import { assertMessage, word } from "../core/checks";
+import { described } from "../core/describe";
 import { cap, MAX_ISSUES } from "../core/limit";
 import { assertFunction, repeatedItem } from "../core/result";
 import type { Check, Message, ValidationIssue } from "../core/types";
@@ -38,17 +39,20 @@ export function unique<T>(by?: (item: T) => unknown, message?: Message): Check<r
   }
   assertMessage(message);
   const keyOf = by ?? ((item: T): unknown => item);
-  return (items) => {
-    const seen = new Set<unknown>();
-    const repeats: ValidationIssue[] = [];
-    items.forEach((item, index) => {
-      const key = keyOf(item);
-      // One past the limit of a collection, which is how the list is known to be cut.
-      if (seen.has(key) && repeats.length <= MAX_ISSUES) {
-        repeats.push(repeatedItem(index));
-      }
-      seen.add(key);
-    });
-    return repeats.length > 0 ? word(cap(repeats, undefined, message), message) : undefined;
-  };
+  return described<Check<readonly T[]>>(
+    (items) => {
+      const seen = new Set<unknown>();
+      const repeats: ValidationIssue[] = [];
+      items.forEach((item, index) => {
+        const key = keyOf(item);
+        // One past the limit of a collection, which is how the list is known to be cut.
+        if (seen.has(key) && repeats.length <= MAX_ISSUES) {
+          repeats.push(repeatedItem(index));
+        }
+        seen.add(key);
+      });
+      return repeats.length > 0 ? word(cap(repeats, undefined, message), message) : undefined;
+    },
+    { kind: "check", code: "invalid_value", params: Object.freeze({ unique: true }), by },
+  );
 }

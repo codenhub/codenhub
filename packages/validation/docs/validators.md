@@ -582,6 +582,54 @@ const form = object({
 
 An issue that carries a message is worded by it first, before any message map, so this is how one field gets its own sentence while a map words the rest. [Issues and messages](errors.md) has the order.
 
+## Reading a schema
+
+`describe(validator)` returns what a validator is made of, as plain data: its `kind`, the `options` it was given, its `checks`, and the validators inside it. A program walks a schema with it, to write the schema in another notation, to build a form from it, or to make another validator from its parts.
+
+```ts
+import { describe, email, object, optional, string, type AnyValidator } from "@codenhub/validation";
+
+const signup = object({ name: string({ min: 2 }), email: email(), nickname: optional(string()) });
+
+const top = describe(signup);
+top?.kind; // "object"
+const shape = top?.["shape"] as Record<string, AnyValidator>;
+describe(shape["name"] as AnyValidator)?.options; // { min: 2 }
+describe(shape["email"] as AnyValidator)?.["format"]; // "email"
+describe(shape["nickname"] as AnyValidator)?.kind; // "optional"
+```
+
+A validator inside another is given as the validator itself, to be described in turn, so a recursive schema is read one level at a time and never without end. The description and its options are frozen, and are a copy of what the factory was given, so changing an options object afterwards changes neither the validator nor what it says of itself.
+
+| `kind`                                                                                        | Made by                                           | Beside `options` and `checks`                        |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------- |
+| `"string"`, `"number"`, `"bigint"`, `"boolean"`, `"date"`, `"symbol"`, `"unknown"`, `"never"` | The validator of that name                        |                                                      |
+| `"function"`                                                                                  | `func`                                            |                                                      |
+| `"literal"`                                                                                   | `literal`                                         | `value`                                              |
+| `"oneOf"`                                                                                     | `oneOf`                                           | `values`, a list, for an enum too                    |
+| `"instance"`                                                                                  | `instanceOf`                                      | `target`, the class                                  |
+| `"guard"`                                                                                     | A factory `guard` made                            | `expected`                                           |
+| `"format"`                                                                                    | Every format, `port`, and a factory `format` made | `format`, its name, as in the issue it reports       |
+| `"coerce"`                                                                                    | The `coerce` validators                           | `inner`, the strict validator, which has the options |
+| `"object"`, `"objectLike"`                                                                    | `object`, `objectLike`                            | `shape`                                              |
+| `"array"`, `"set"`                                                                            | `array`, `set`                                    | `item`                                               |
+| `"tuple"`                                                                                     | `tuple`                                           | `items`, and `rest` when it has one                  |
+| `"record"`, `"map"`                                                                           | `record`, `map`                                   | `key`, `value`                                       |
+| `"union"`, `"intersection"`                                                                   | `union`, `intersection`                           | `members`                                            |
+| `"tagged"`                                                                                    | `tagged`                                          | `key`, `variants`                                    |
+| `"optional"`                                                                                  | `optional`                                        | `inner`, `default`; no `options` or `checks`         |
+| `"nullable"`, `"nullish"`                                                                     | `nullable`, `nullish`                             | `inner`; no `options` or `checks`                    |
+| `"fallback"`                                                                                  | `fallback`                                        | `inner`, `value`; no `options` or `checks`           |
+| `"transform"`                                                                                 | `transform`                                       | `inner`, `convert`; no `options` or `checks`         |
+| `"pipe"`                                                                                      | `pipe`                                            | `steps`; no `options` or `checks`                    |
+| `"lazy"`                                                                                      | `lazy`                                            | `getter`, which returns the validator                |
+| `"json"`, `"searchParams"`                                                                    | `json`, `searchParams`                            | `inner`                                              |
+| `"check"`                                                                                     | Every built-in check                              | `code` and `params` of the issue it reports          |
+
+A check is described the same way, so the list in `checks` can be read too: `describe(pattern(/^a/))` gives `{ kind: "check", code: "invalid_format", params: { format: "regex", pattern: "/^a/" } }`. What nobody can read gives `undefined`: a validator or a check you wrote by hand, and a check made by `check`, whose test is a function. A reader of a schema decides what such a rule means to it, and code that turns a schema into another notation usually refuses it. The function a `transform` converts with, a `guard`'s test and a `lazy`'s getter are in the description as functions, for the same reason.
+
+What `standard` returns is described as the validator it wraps. The parts are typed as `unknown`, since what a part is depends on the kind: read `kind` first, then the parts of that kind from the table.
+
 ## Working with results
 
 ### `formatIssue`, `flatten`, `formatPath` and `englishMessages`

@@ -1,4 +1,5 @@
 import { split } from "../core/checks";
+import { described } from "../core/describe";
 import type { Factory, MessageOptions } from "../core/types";
 import { IPV4_PATTERN } from "./patterns";
 import { stringFormat } from "./text-format";
@@ -125,14 +126,13 @@ export function toIpAddress(text: string, version: "v4" | "v6" | undefined): str
  * @throws {TypeError} When `version` is given and is not `"v4"` or `"v6"`.
  */
 export const ip = ((...args: unknown[]) => {
-  const [{ version, message }, checks] = split<IpOptions, string>(args, "version");
+  const [options, checks] = split<IpOptions, string>(args, "version");
+  const { version, message } = options;
   if (version !== undefined && version !== "v4" && version !== "v6") {
     throw new TypeError(`version must be "v4" or "v6", received "${String(version)}"`);
   }
-  return stringFormat(
-    version === undefined ? "ip" : `ip${version}`,
-    (text) => toIpAddress(text, version),
-    message,
-    checks,
+  return described(
+    stringFormat(version === undefined ? "ip" : `ip${version}`, (text) => toIpAddress(text, version), message, checks),
+    { kind: "format", format: "ip", options, checks },
   );
 }) as Factory<string, IpOptions>;

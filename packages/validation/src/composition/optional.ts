@@ -1,4 +1,5 @@
 import { detached } from "../core/async";
+import { described } from "../core/describe";
 import { call, composed } from "../core/nesting";
 import { assertFunction, assertUnshared, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer } from "../core/types";
@@ -53,11 +54,12 @@ export function optional<TValidator extends AnyValidator>(
 export function optional(validator: AnyValidator, value?: Fallback<unknown>): AnyValidator {
   assertFunction("validator", validator);
   assertUnshared("A default object", value);
-  return composed((input, place) =>
+  const optionalValidator = composed((input, place) =>
     input === undefined
       ? // Called with no argument, as its type says, so a function that reads one, such as `Array` or
         // `String`, produces its default and not one made from `undefined`.
         pass(typeof value === "function" ? detached(() => (value as () => unknown)(), undefined) : value)
       : call(validator, input, place),
   );
+  return described(optionalValidator, { kind: "optional", inner: validator, default: value });
 }

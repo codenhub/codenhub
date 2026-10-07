@@ -44,6 +44,7 @@ export { tuple, type InferTuple, type TupleOptions } from "./composition/tuple";
 export { union } from "./composition/union";
 export { assert, type AssertOptions } from "./core/assert";
 export { is } from "./core/is";
+export { describe, type Description } from "./core/describe";
 export { fail, pass, type IssueInput } from "./core/result";
 export type {
   AnyValidator,

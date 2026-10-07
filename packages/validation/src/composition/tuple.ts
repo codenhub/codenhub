@@ -1,5 +1,6 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { described } from "../core/describe";
 import { childOf, composed, type Child } from "../core/nesting";
 import { isArray } from "../core/objects";
 import { assertFunction, assertList, assertOrder, assertSize, issue, typeIssue } from "../core/result";
@@ -84,7 +85,7 @@ export function tuple<
   ...rest: AsyncRest<InferTuple<TItems, TRest>, TupleOptions<TRest>>
 ): AsyncValidator<InferTuple<TItems, TRest>>;
 export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyValidator {
-  const [options, reject, accept] = tail<TupleOptions<AnyValidator | undefined>, unknown[]>(args, "rest max");
+  const [options, reject, accept, checks] = tail<TupleOptions<AnyValidator | undefined>, unknown[]>(args, "rest max");
   const { rest, max } = options;
   assertList("items", items);
   // Copied, so changing the list after the validator is made changes nothing.
@@ -109,34 +110,37 @@ export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyVa
   const children = fixed.map(childOf);
   const restChild = rest === undefined ? undefined : childOf(rest);
 
-  return composed((input, place): Maybe<ValidationResult<unknown>> => {
-    if (!isArray(input)) {
-      return reject([typeIssue("array", input)], place);
-    }
-    const size = input.length;
-    if (max !== undefined && size > max) {
-      return reject([issue("too_big", { maximum: max, type: "array" })], place);
-    }
-    if (size < length || (rest === undefined && size > length)) {
-      const isShort = size < length;
-      return reject(
-        [
-          issue(isShort ? "too_small" : "too_big", {
-            [isShort ? "minimum" : "maximum"]: length,
-            type: "array",
-            ...(rest === undefined && { exact: true }),
-          }),
-        ],
+  return described(
+    composed((input, place): Maybe<ValidationResult<unknown>> => {
+      if (!isArray(input)) {
+        return reject([typeIssue("array", input)], place);
+      }
+      const size = input.length;
+      if (max !== undefined && size > max) {
+        return reject([issue("too_big", { maximum: max, type: "array" })], place);
+      }
+      if (size < length || (rest === undefined && size > length)) {
+        const isShort = size < length;
+        return reject(
+          [
+            issue(isShort ? "too_small" : "too_big", {
+              [isShort ? "minimum" : "maximum"]: length,
+              type: "array",
+              ...(rest === undefined && { exact: true }),
+            }),
+          ],
+          place,
+        );
+      }
+      return settle(
+        size,
+        // By index up to the length that was checked, never through the array's own iterator, as in `array`.
+        (index) => ((index < length ? children[index] : restChild) as Child)(input[index], place, index),
         place,
+        options.message,
+        (values) => accept(values, place),
       );
-    }
-    return settle(
-      size,
-      // By index up to the length that was checked, never through the array's own iterator, as in `array`.
-      (index) => ((index < length ? children[index] : restChild) as Child)(input[index], place, index),
-      place,
-      options.message,
-      (values) => accept(values, place),
-    );
-  });
+    }),
+    { kind: "tuple", options, checks, items: Object.freeze(fixed), rest },
+  );
 }

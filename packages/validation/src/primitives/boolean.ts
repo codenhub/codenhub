@@ -1,4 +1,5 @@
 import { leaf, split } from "../core/checks";
+import { described } from "../core/describe";
 import type { Factory, MessageOptions } from "../core/types";
 
 const isBoolean = (input: unknown): input is boolean => typeof input === "boolean";
@@ -15,6 +16,6 @@ const isBoolean = (input: unknown): input is boolean => typeof input === "boolea
  * ```
  */
 export const boolean = ((...args: unknown[]) => {
-  const [{ message }, checks] = split<MessageOptions, boolean>(args);
-  return leaf("boolean", isBoolean, message, checks);
+  const [options, checks] = split<MessageOptions, boolean>(args);
+  return described(leaf("boolean", isBoolean, options.message, checks), { kind: "boolean", options, checks });
 }) as Factory<boolean, MessageOptions>;

@@ -1,4 +1,5 @@
 import { chain, detached, type Maybe } from "../core/async";
+import { described } from "../core/describe";
 import { call, composed } from "../core/nesting";
 import { assertFunction, pass } from "../core/result";
 import type { AnyValidator, AsyncValidator, ValidationResult, Validator } from "../core/types";
@@ -49,11 +50,12 @@ export function transform<T, R>(validator: AnyValidator<T>, convert: (value: T) 
 export function transform<T, R>(validator: AnyValidator<T>, convert: (value: T) => Maybe<R>): AnyValidator<R> {
   assertFunction("validator", validator);
   assertFunction("convert", convert);
-  return composed((input, place) =>
+  const validate = composed((input, place) =>
     chain(
       call(validator, input, place) as Maybe<ValidationResult<T>>,
       (result): Maybe<ValidationResult<R>> =>
         result.ok ? chain(detached(convert, result.value), (converted) => pass(converted)) : result,
     ),
-  ) as AnyValidator<R>;
+  );
+  return described(validate, { kind: "transform", inner: validator, convert }) as AnyValidator<R>;
 }

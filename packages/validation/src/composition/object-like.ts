@@ -1,5 +1,6 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
+import { described } from "../core/describe";
 import { append, childOf, composed, type Child } from "../core/nesting";
 import { assertShape, isArray, setOwn } from "../core/objects";
 import { assertFunction, failWith, issue, typeIssue } from "../core/result";
@@ -56,40 +57,47 @@ export function objectLike(shape: Shape, ...rest: unknown[]): AnyValidator {
   assertShape(shape);
   // The shape is read once, so changing it after the validator is made changes nothing.
   const keys = Object.keys(shape);
+  // The validators as they were read, which is what the description gives: reading the shape again would
+  // read a getter twice, and could describe another validator than the one that runs.
+  const read: Shape = {};
   const children = keys.map((key) => {
     const validator: unknown = shape[key];
     assertFunction(`shape.${key}`, validator);
+    setOwn(read, key, validator);
     return childOf(validator as AnyValidator);
   });
-  const [options, reject, accept] = tail<MessageOptions, Record<string, unknown>>(rest);
+  const [options, reject, accept, checks] = tail<MessageOptions, Record<string, unknown>>(rest);
 
-  return composed((input, place): Maybe<ValidationResult<unknown>> => {
-    if (typeof input !== "object" || input === null || isArray(input)) {
-      return reject([typeIssue("object", input)], place);
-    }
-
-    const results = runEach(keys.length, (index) => {
-      const key = keys[index] as string;
-      let value: unknown;
-      try {
-        value = (input as Record<string, unknown>)[key];
-      } catch {
-        // Reported in the property's turn, as a property that failed, so the issues keep the order of the shape.
-        return failWith(report([issue("invalid_value", { unreadable: true }, [key])], place, options.message));
+  return described(
+    composed((input, place): Maybe<ValidationResult<unknown>> => {
+      if (typeof input !== "object" || input === null || isArray(input)) {
+        return reject([typeIssue("object", input)], place);
       }
-      return (children[index] as Child)(value, place, key);
-    });
-    return chain(collect(results), (settled) => {
-      const issues: ValidationIssue[] = [];
-      const output: Record<string, unknown> = {};
-      settled.forEach((result, index) => {
-        if (!result.ok) {
-          append(issues, result.error.issues);
-        } else if (result.value !== undefined) {
-          setOwn(output, keys[index] as string, result.value);
+
+      const results = runEach(keys.length, (index) => {
+        const key = keys[index] as string;
+        let value: unknown;
+        try {
+          value = (input as Record<string, unknown>)[key];
+        } catch {
+          // Reported in the property's turn, as a property that failed, so the issues keep the order of the shape.
+          return failWith(report([issue("invalid_value", { unreadable: true }, [key])], place, options.message));
         }
+        return (children[index] as Child)(value, place, key);
       });
-      return issues.length > 0 ? failWith(issues) : accept(output, place);
-    });
-  });
+      return chain(collect(results), (settled) => {
+        const issues: ValidationIssue[] = [];
+        const output: Record<string, unknown> = {};
+        settled.forEach((result, index) => {
+          if (!result.ok) {
+            append(issues, result.error.issues);
+          } else if (result.value !== undefined) {
+            setOwn(output, keys[index] as string, result.value);
+          }
+        });
+        return issues.length > 0 ? failWith(issues) : accept(output, place);
+      });
+    }),
+    { kind: "objectLike", options, checks, shape: Object.freeze(read) },
+  );
 }

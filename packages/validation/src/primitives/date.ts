@@ -1,4 +1,5 @@
 import { leaf, split } from "../core/checks";
+import { described } from "../core/describe";
 import { timeOf } from "../core/objects";
 import { assertOrder, describeType, issue } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
@@ -59,14 +60,17 @@ export const date = ((...args: unknown[]) => {
   const min = readBound("Minimum date", options.min);
   const max = readBound("Maximum date", options.max);
   assertOrder("min", min, "max", max);
-  return leaf<Date>("valid date", isValidDate, options.message, checks, (value, issues) => {
-    const time = timeOf(value) as number;
-    if (min !== undefined && time < min) {
-      issues.push(issue("too_small", { minimum: new Date(min), inclusive: true, type: "date" }));
-    }
-    if (max !== undefined && time > max) {
-      issues.push(issue("too_big", { maximum: new Date(max), inclusive: true, type: "date" }));
-    }
-    return value;
-  });
+  return described(
+    leaf<Date>("valid date", isValidDate, options.message, checks, (value, issues) => {
+      const time = timeOf(value) as number;
+      if (min !== undefined && time < min) {
+        issues.push(issue("too_small", { minimum: new Date(min), inclusive: true, type: "date" }));
+      }
+      if (max !== undefined && time > max) {
+        issues.push(issue("too_big", { maximum: new Date(max), inclusive: true, type: "date" }));
+      }
+      return value;
+    }),
+    { kind: "date", options, checks },
+  );
 }) as Factory<Date, DateOptions>;

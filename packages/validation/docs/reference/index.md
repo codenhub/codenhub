@@ -117,6 +117,30 @@ const signup = object(
 );
 ```
 
+### describe
+
+```ts
+export declare function describe(target: AnyValidator | AsyncCheck<never>): Description | undefined;
+```
+
+Reads what a validator or a check is made of, so a program can walk a schema: to write it in another notation, build a form from it, or derive another validator.
+
+Only what a factory of this package made is described. A validator or check written by hand, and a check made by `check`, is a function like any other and gives `undefined`, as does anything that is not a function: to a reader of the schema it is a rule that cannot be read.
+
+**Parameters**
+
+- `target` — A validator or a check.
+
+**Returns** — Its description, or `undefined` when it carries none.
+
+**Example**
+
+```ts
+const user = object({ name: string({ min: 2 }) });
+const { kind, shape } = describe(user) ?? {}; // "object", { name: [validator] }
+describe((shape as { name: AnyValidator }).name)?.options; // { min: 2 }
+```
+
 ### email
 
 ```ts
@@ -1610,6 +1634,40 @@ precision?: number | undefined;
 ```
 
 Exact number of fractional-second digits, an integer from 0 to 9. `0` forbids them; they are optional and unbounded when omitted.
+
+### Description
+
+```ts
+export interface Description
+```
+
+What a factory of this package made, as plain data: a validator's kind, the options it read, its checks, and whatever a validator of that kind is made of, such as the `shape` of an `object` or the `item` of an `array`. A built-in check has one too, of kind `"check"`, with the `code` and `params` of the issue it reports.
+
+The record and its options are frozen. A child is given as the validator itself, to be described in turn, so a recursive schema is described one level at a time.
+
+#### checks
+
+```ts
+readonly checks?: readonly AsyncCheck<never>[];
+```
+
+The checks given to the validator, each described in turn, for a validator that takes checks.
+
+#### kind
+
+```ts
+readonly kind: string;
+```
+
+What was made, such as `"string"`, `"object"`, `"format"` or `"check"`.
+
+#### options
+
+```ts
+readonly options?: Readonly<Record<string, unknown>>;
+```
+
+The options the factory read, `message` included, for a validator that takes options.
 
 ### EmailOptions
 

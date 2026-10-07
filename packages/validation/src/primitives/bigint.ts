@@ -1,4 +1,5 @@
 import { leaf, split } from "../core/checks";
+import { described } from "../core/describe";
 import { assertBounds, assertOption, issue } from "../core/result";
 import type { Factory, MessageOptions, ValidationIssue } from "../core/types";
 
@@ -50,19 +51,22 @@ export const bigint = ((...args: unknown[]) => {
   if (gt !== undefined && lt !== undefined && lt - gt <= 1n) {
     throw new RangeError(`No bigint lies between gt ${gt} and lt ${lt}`);
   }
-  return leaf<bigint>("bigint", isBigint, message, checks, (value, issues) => {
-    if (min !== undefined && value < min) {
-      issues.push(outOfRange("min", min, true));
-    }
-    if (gt !== undefined && value <= gt) {
-      issues.push(outOfRange("min", gt, false));
-    }
-    if (max !== undefined && value > max) {
-      issues.push(outOfRange("max", max, true));
-    }
-    if (lt !== undefined && value >= lt) {
-      issues.push(outOfRange("max", lt, false));
-    }
-    return value;
-  });
+  return described(
+    leaf<bigint>("bigint", isBigint, message, checks, (value, issues) => {
+      if (min !== undefined && value < min) {
+        issues.push(outOfRange("min", min, true));
+      }
+      if (gt !== undefined && value <= gt) {
+        issues.push(outOfRange("min", gt, false));
+      }
+      if (max !== undefined && value > max) {
+        issues.push(outOfRange("max", max, true));
+      }
+      if (lt !== undefined && value >= lt) {
+        issues.push(outOfRange("max", lt, false));
+      }
+      return value;
+    }),
+    { kind: "bigint", options, checks },
+  );
 }) as Factory<bigint, BigintOptions>;

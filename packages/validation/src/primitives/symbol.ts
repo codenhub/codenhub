@@ -1,4 +1,5 @@
 import { leaf, split } from "../core/checks";
+import { described } from "../core/describe";
 import type { Factory, MessageOptions } from "../core/types";
 
 const isSymbol = (input: unknown): boolean => typeof input === "symbol";
@@ -13,6 +14,7 @@ const isSymbol = (input: unknown): boolean => typeof input === "symbol";
  * ```
  */
 export const symbol = ((...args: unknown[]) => {
-  const [{ message }, checks] = split<MessageOptions, symbol>(args);
-  return leaf("symbol", isSymbol, message, checks);
+  const [options, checks] = split<MessageOptions, symbol>(args);
+  const { message } = options;
+  return described(leaf("symbol", isSymbol, message, checks), { kind: "symbol", options, checks });
 }) as Factory<symbol, MessageOptions>;

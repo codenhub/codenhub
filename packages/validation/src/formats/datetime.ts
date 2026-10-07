@@ -1,4 +1,5 @@
 import { split } from "../core/checks";
+import { described } from "../core/describe";
 import { assertOption, assertSize } from "../core/result";
 import type { Factory, MessageOptions } from "../core/types";
 import { isCalendarDate } from "./calendar";
@@ -62,10 +63,8 @@ export interface DatetimeOptions extends MessageOptions {
  * @throws {RangeError} When `precision` is not an integer from 0 to 9.
  */
 export const datetime = ((...args: unknown[]) => {
-  const [{ offset, local, precision, message }, checks] = split<DatetimeOptions, string>(
-    args,
-    "offset local precision",
-  );
+  const [options, checks] = split<DatetimeOptions, string>(args, "offset local precision");
+  const { offset, local, precision, message } = options;
   assertOption("offset", offset, "boolean");
   assertOption("local", local, "boolean");
   const fraction = fractionPattern(precision);
@@ -75,13 +74,16 @@ export const datetime = ((...args: unknown[]) => {
   // precision asks for a fraction of them. A time with a zone keeps the rules it has without `local`.
   const times = local === true && precision === undefined ? `(?:${clock}|(?:[01]\\d|2[0-3]):[0-5]\\d)` : clock;
   const pattern = new RegExp(`^(\\d{4}-\\d{2}-\\d{2})T${times}$`);
-  return stringFormat(
-    "datetime",
-    (text) => {
-      const date = pattern.exec(text)?.[1];
-      return date !== undefined && isCalendarDate(date) ? text : undefined;
-    },
-    message,
-    checks,
+  return described(
+    stringFormat(
+      "datetime",
+      (text) => {
+        const date = pattern.exec(text)?.[1];
+        return date !== undefined && isCalendarDate(date) ? text : undefined;
+      },
+      message,
+      checks,
+    ),
+    { kind: "format", format: "datetime", options, checks },
   );
 }) as Factory<string, DatetimeOptions>;

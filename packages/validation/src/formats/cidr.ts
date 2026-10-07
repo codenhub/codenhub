@@ -1,4 +1,5 @@
 import { split } from "../core/checks";
+import { described } from "../core/describe";
 import type { Factory } from "../core/types";
 import { toIpAddress, type IpOptions } from "./ip";
 import { stringFormat } from "./text-format";
@@ -36,14 +37,13 @@ const toCidr = (text: string, version: "v4" | "v6" | undefined): string | undefi
  * @throws {TypeError} When `version` is given and is not `"v4"` or `"v6"`.
  */
 export const cidr = ((...args: unknown[]) => {
-  const [{ version, message }, checks] = split<IpOptions, string>(args, "version");
+  const [options, checks] = split<IpOptions, string>(args, "version");
+  const { version, message } = options;
   if (version !== undefined && version !== "v4" && version !== "v6") {
     throw new TypeError(`version must be "v4" or "v6", received "${String(version)}"`);
   }
-  return stringFormat(
-    version === undefined ? "cidr" : `cidr${version}`,
-    (text) => toCidr(text, version),
-    message,
-    checks,
+  return described(
+    stringFormat(version === undefined ? "cidr" : `cidr${version}`, (text) => toCidr(text, version), message, checks),
+    { kind: "format", format: "cidr", options, checks },
   );
 }) as Factory<string, IpOptions>;

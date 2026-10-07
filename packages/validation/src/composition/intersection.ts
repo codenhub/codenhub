@@ -1,5 +1,6 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { described } from "../core/describe";
 import { cap, MAX_ISSUES } from "../core/limit";
 import { call, composed } from "../core/nesting";
 import { entriesOf, isArray, isPlainObject, setOwn, sizeOfMap, sizeOfSet, timeOf, valuesOf } from "../core/objects";
@@ -239,16 +240,19 @@ export function intersection<TLeft extends AnyValidator, TRight extends AnyValid
 export function intersection(left: AnyValidator, right: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("left", left);
   assertFunction("right", right);
-  const [, reject, accept] = tail<MessageOptions, unknown>(rest);
-  return composed(
-    (input, place): Maybe<ValidationResult<unknown>> =>
-      chain(collect(runEach(2, (index) => call(index === 0 ? left : right, input, place))), ([first, second]) => {
-        if (first?.ok && second?.ok) {
-          const conflicts: ValidationIssue[] = [];
-          const merged = merge(first.value, second.value, conflicts);
-          return conflicts.length > 0 ? reject(cap(conflicts, undefined, undefined), place) : accept(merged, place);
-        }
-        return failWith([first, second].flatMap((result) => (result?.ok === false ? result.error.issues : [])));
-      }),
+  const [options, reject, accept, checks] = tail<MessageOptions, unknown>(rest);
+  return described(
+    composed(
+      (input, place): Maybe<ValidationResult<unknown>> =>
+        chain(collect(runEach(2, (index) => call(index === 0 ? left : right, input, place))), ([first, second]) => {
+          if (first?.ok && second?.ok) {
+            const conflicts: ValidationIssue[] = [];
+            const merged = merge(first.value, second.value, conflicts);
+            return conflicts.length > 0 ? reject(cap(conflicts, undefined, undefined), place) : accept(merged, place);
+          }
+          return failWith([first, second].flatMap((result) => (result?.ok === false ? result.error.issues : [])));
+        }),
+    ),
+    { kind: "intersection", options, checks, members: Object.freeze([left, right]) },
   );
 }

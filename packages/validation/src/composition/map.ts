@@ -1,5 +1,6 @@
 import { chain, collect, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
+import { described } from "../core/describe";
 import { cap, countIssues, runItems } from "../core/limit";
 import { append, below, call, composed } from "../core/nesting";
 import { entriesOf, sizeOfMap } from "../core/objects";
@@ -60,62 +61,68 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
 export function map(key: AnyValidator, value: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("key", key);
   assertFunction("value", value);
-  const [options, reject, accept] = tail<SizeOptions & MessageOptions, Map<unknown, unknown>>(rest, SIZE_OPTIONS);
+  const [options, reject, accept, checks] = tail<SizeOptions & MessageOptions, Map<unknown, unknown>>(
+    rest,
+    SIZE_OPTIONS,
+  );
   assertSizeOptions(options);
-  return composed((input, place): Maybe<ValidationResult<unknown>> => {
-    const size = sizeOfMap(input);
-    if (size === undefined) {
-      return reject([typeIssue("map", input)], place);
-    }
-    const oversize = sizeIssues(size, "map", options);
-    if (oversize.length > 0) {
-      return reject(oversize, place);
-    }
-    const entries = entriesOf(input);
-    // A string key is its own segment; any other is the position, a number, so segments never collide.
-    const segments = entries.map(([name], index) => (typeof name === "string" ? name : index));
-    const results = runItems(
-      entries.length,
-      (index) => {
-        const [name, item] = entries[index] as [unknown, unknown];
-        return chain(key(name), (keyResult) =>
-          chain(call(value, item, below(place, segments[index] as ValidationPathSegment)), (valueResult) => ({
-            keyResult,
-            valueResult,
-          })),
-        );
-      },
-      ({ keyResult, valueResult }) => countIssues(keyResult) + countIssues(valueResult),
-    );
-    return chain(collect(results), (settled) => {
-      const issues: ValidationIssue[] = [];
-      const output = new Map<unknown, unknown>();
-      settled.forEach(({ keyResult, valueResult }, index) => {
-        const segment = segments[index] as ValidationPathSegment;
-        if (!keyResult.ok) {
-          // Wrapped, so a bad key is not mistaken for a bad value at the same path.
-          issues.push(
-            ...report(
-              [issue("invalid_key", { issues: keyResult.error.issues.map(nested) }, [segment])],
-              place,
-              options.message,
-            ),
+  return described(
+    composed((input, place): Maybe<ValidationResult<unknown>> => {
+      const size = sizeOfMap(input);
+      if (size === undefined) {
+        return reject([typeIssue("map", input)], place);
+      }
+      const oversize = sizeIssues(size, "map", options);
+      if (oversize.length > 0) {
+        return reject(oversize, place);
+      }
+      const entries = entriesOf(input);
+      // A string key is its own segment; any other is the position, a number, so segments never collide.
+      const segments = entries.map(([name], index) => (typeof name === "string" ? name : index));
+      const results = runItems(
+        entries.length,
+        (index) => {
+          const [name, item] = entries[index] as [unknown, unknown];
+          return chain(key(name), (keyResult) =>
+            chain(call(value, item, below(place, segments[index] as ValidationPathSegment)), (valueResult) => ({
+              keyResult,
+              valueResult,
+            })),
           );
-        }
-        if (!valueResult.ok) {
-          append(issues, valueResult.error.issues);
-        }
-        if (keyResult.ok && valueResult.ok) {
-          if (output.has(keyResult.value)) {
-            issues.push(...report([repeatedKey(segment)], place, options.message));
-          } else {
-            output.set(keyResult.value, valueResult.value);
+        },
+        ({ keyResult, valueResult }) => countIssues(keyResult) + countIssues(valueResult),
+      );
+      return chain(collect(results), (settled) => {
+        const issues: ValidationIssue[] = [];
+        const output = new Map<unknown, unknown>();
+        settled.forEach(({ keyResult, valueResult }, index) => {
+          const segment = segments[index] as ValidationPathSegment;
+          if (!keyResult.ok) {
+            // Wrapped, so a bad key is not mistaken for a bad value at the same path.
+            issues.push(
+              ...report(
+                [issue("invalid_key", { issues: keyResult.error.issues.map(nested) }, [segment])],
+                place,
+                options.message,
+              ),
+            );
           }
-        }
+          if (!valueResult.ok) {
+            append(issues, valueResult.error.issues);
+          }
+          if (keyResult.ok && valueResult.ok) {
+            if (output.has(keyResult.value)) {
+              issues.push(...report([repeatedKey(segment)], place, options.message));
+            } else {
+              output.set(keyResult.value, valueResult.value);
+            }
+          }
+        });
+        return issues.length > 0
+          ? failWith(cap(issues, place, options.message, settled.length < entries.length))
+          : accept(output, place);
       });
-      return issues.length > 0
-        ? failWith(cap(issues, place, options.message, settled.length < entries.length))
-        : accept(output, place);
-    });
-  });
+    }),
+    { kind: "map", options, checks, key, value },
+  );
 }

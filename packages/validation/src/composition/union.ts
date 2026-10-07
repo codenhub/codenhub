@@ -1,5 +1,6 @@
 import { chain, isThenable, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { described } from "../core/describe";
 import { composed } from "../core/nesting";
 import { assertFunction, assertList, isResult, issue, nested, notResult } from "../core/result";
 import type {
@@ -57,39 +58,42 @@ export function union(options: readonly AnyValidator[], ...rest: unknown[]): Any
     throw new TypeError("union() needs at least one option");
   }
   tried.forEach((option, index) => assertFunction(`options[${index}]`, option));
-  const [, reject, accept] = tail<MessageOptions, unknown>(rest);
-  return composed((input, place): Maybe<ValidationResult<unknown>> => {
-    const found: (readonly ValidationIssue[])[] = [];
-    // Tried in a loop while the results are ready, and not by one call inside another: every option that
-    // failed would stay on the stack while the next ran, so a recursive union of twenty options overflowed
-    // it inside the default depth of `lazy`. Each option is called on its own, so what it found is relative
-    // to the value, as `params.issues` holds it.
-    const attempt = (start: number): Maybe<ValidationResult<unknown>> => {
-      for (let index = start; index < tried.length; index += 1) {
-        const result = (tried[index] as AnyValidator)(input);
-        if (isThenable(result)) {
-          return chain(result, (settled) => {
-            if (!isResult(settled)) {
-              throw notResult(`options[${index}]`);
-            }
-            if (settled.ok) {
-              return accept(settled.value, place);
-            }
-            found.push(settled.error.issues.map(nested));
-            return attempt(index + 1);
-          });
+  const [settings, reject, accept, checks] = tail<MessageOptions, unknown>(rest);
+  return described(
+    composed((input, place): Maybe<ValidationResult<unknown>> => {
+      const found: (readonly ValidationIssue[])[] = [];
+      // Tried in a loop while the results are ready, and not by one call inside another: every option that
+      // failed would stay on the stack while the next ran, so a recursive union of twenty options overflowed
+      // it inside the default depth of `lazy`. Each option is called on its own, so what it found is relative
+      // to the value, as `params.issues` holds it.
+      const attempt = (start: number): Maybe<ValidationResult<unknown>> => {
+        for (let index = start; index < tried.length; index += 1) {
+          const result = (tried[index] as AnyValidator)(input);
+          if (isThenable(result)) {
+            return chain(result, (settled) => {
+              if (!isResult(settled)) {
+                throw notResult(`options[${index}]`);
+              }
+              if (settled.ok) {
+                return accept(settled.value, place);
+              }
+              found.push(settled.error.issues.map(nested));
+              return attempt(index + 1);
+            });
+          }
+          // A mistake in the schema, such as `string` for `string()`, named by its option.
+          if (!isResult(result)) {
+            throw notResult(`options[${index}]`);
+          }
+          if (result.ok) {
+            return accept(result.value, place);
+          }
+          found.push(result.error.issues.map(nested));
         }
-        // A mistake in the schema, such as `string` for `string()`, named by its option.
-        if (!isResult(result)) {
-          throw notResult(`options[${index}]`);
-        }
-        if (result.ok) {
-          return accept(result.value, place);
-        }
-        found.push(result.error.issues.map(nested));
-      }
-      return reject([issue("invalid_union", { issues: found })], place);
-    };
-    return attempt(0);
-  });
+        return reject([issue("invalid_union", { issues: found })], place);
+      };
+      return attempt(0);
+    }),
+    { kind: "union", options: settings, checks, members: Object.freeze(tried) },
+  );
 }

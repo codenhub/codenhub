@@ -1,5 +1,6 @@
 import { chain, detached, isThenable, refundCall, resultsOf, spendCall, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
+import { described } from "../core/describe";
 import { call, composed, type Place } from "../core/nesting";
 import { assertFunction, assertOption, issue } from "../core/result";
 import type {
@@ -192,7 +193,7 @@ export function lazy<TValidator extends AnyValidator>(
 ): AsyncValidator<Infer<TValidator>>;
 export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("getter", getter);
-  const [options, reject, accept] = tail<LazyOptions, unknown>(rest, "maxDepth maxCalls");
+  const [options, reject, accept, checks] = tail<LazyOptions, unknown>(rest, "maxDepth maxCalls");
   const { maxDepth = DEFAULT_MAX_DEPTH, maxCalls = DEFAULT_MAX_CALLS } = options;
   assertLimit("maxDepth", maxDepth);
   assertLimit("maxCalls", maxCalls);
@@ -260,20 +261,23 @@ export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidat
   // An object reached again at the same path in one validation, as each option of a `union` reaches the
   // children, is validated once. The path is part of the key, since the issues are written at it. A
   // primitive is not kept: it has no children, so validating it again cannot multiply the work.
-  return composed((input, place) => {
-    const paths = resultsOf(self, newPaths);
-    const isPrimitive = (typeof input !== "object" && typeof input !== "function") || input === null;
-    if (isPrimitive || paths === undefined) {
-      return validate(input, place, isPrimitive);
-    }
-    const spot = spotOf(place, paths);
-    const kept = (spot.results ??= new Map());
-    const found = kept.get(input as object);
-    if (found !== undefined) {
-      return found;
-    }
-    const result = validate(input, place, false);
-    kept.set(input as object, result);
-    return result;
-  });
+  return described(
+    composed((input, place) => {
+      const paths = resultsOf(self, newPaths);
+      const isPrimitive = (typeof input !== "object" && typeof input !== "function") || input === null;
+      if (isPrimitive || paths === undefined) {
+        return validate(input, place, isPrimitive);
+      }
+      const spot = spotOf(place, paths);
+      const kept = (spot.results ??= new Map());
+      const found = kept.get(input as object);
+      if (found !== undefined) {
+        return found;
+      }
+      const result = validate(input, place, false);
+      kept.set(input as object, result);
+      return result;
+    }),
+    { kind: "lazy", options, checks, getter },
+  );
 }

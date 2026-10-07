@@ -1,4 +1,5 @@
 import { chain, detached } from "../core/async";
+import { described } from "../core/describe";
 import { assertFunction, assertUnshared, pass } from "../core/result";
 import type { AnyValidator, Composed, Infer, ValidationIssue } from "../core/types";
 import type { AnyFunction } from "../primitives/func";
@@ -59,5 +60,5 @@ export function fallback<TValidator extends AnyValidator>(
               : value,
           ),
     );
-  return validate as Composed<TValidator, Infer<TValidator>>;
+  return described(validate, { kind: "fallback", inner: validator, value }) as Composed<TValidator, Infer<TValidator>>;
 }
