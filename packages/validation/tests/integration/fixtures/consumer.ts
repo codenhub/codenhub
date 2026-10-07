@@ -53,6 +53,7 @@ import {
   omit,
   partial,
   pick,
+  audit,
   extend,
   meta,
   portugueseMessages,
@@ -617,6 +618,9 @@ export const extended: Infer<typeof promoted> = { id: 1, role: "owner" };
 // @ts-expect-error an added property is typed by its validator
 export const unknownRole: Infer<typeof promoted> = { id: 1, role: "guest" };
 export const extendedAtOnce: boolean = promoted({}).ok;
+// audit reads any validator and gives findings whose rule a test can switch on.
+export const findings: readonly { rule: "unbounded_size" | "unbounded_text" | "raised_limit" | "unreadable" }[] =
+  audit(account);
 // meta changes what a validator says, not its type.
 const titled = meta(account, { title: "Account", examples: [{ id: 1, name: "Ada" }] });
 export const titledValue: Infer<typeof titled> = { id: 1, name: "Ada" };

@@ -722,6 +722,32 @@ What `standard` returns is described as the validator it wraps, and so is what `
 
 To write a whole schema as JSON Schema, for an HTTP API or the tools of a language model, see [JSON Schema](json-schema.md).
 
+## Checking a schema for the bounds it needs
+
+Input that passes a validator is validated in full, so a body of a million items, or of text a gigabyte long, costs what its size costs, and is what you store. `audit(validator)` reads a schema, without calling it, and lists every place where the size of what it accepts is left open, so a test can hold a schema for input nobody controls to the bounds it needs:
+
+```ts
+import { array, audit, email, object, string } from "@codenhub/validation";
+
+const signup = object({ name: string({ max: 100 }), email: email(), tags: array(string({ max: 20 })) });
+
+audit(signup); // [{ rule: "unbounded_size", path: "tags", kind: "array" }]
+```
+
+In a test, assert the list is empty: `expect(audit(signup)).toEqual([])`. Each finding has a `rule`, the `path` of the part in the schema and its `kind`:
+
+| `rule`             | Reported for                                                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `"unbounded_size"` | An `array`, `set`, `map` or `record` without a `max` or `length`, and a `tuple` with `rest` and no `max`                                          |
+| `"unbounded_text"` | A `string` or `coerceString` without a `max` or `length`, a format that does not bound its own text, and `json` or `searchParams` given open text |
+| `"raised_limit"`   | A `lazy` whose `maxDepth` or `maxCalls` is above its default                                                                                      |
+| `"unreadable"`     | A validator it cannot read, such as one written by hand                                                                                           |
+
+- **Formats that bound their own text** need no `max`: `email`, `uuid`, `ulid`, `cuid2`, `nanoid`, `ip`, `cidr`, `mac`, `port`, `phone`, `creditCard`, `isoDate`, `hostname` and `domain`. Any other, such as `url`, `hex`, `jwt` or one made with `format`, is text like any other: bound it with a `pipe`, as below.
+- **A bound before it counts.** A `pipe` step reads what the steps before it produced, so after a step that bounds its value nothing needs a bound of its own: in `pipe(string({ max: 10_000 }), json(object({ tags: array(string()) })))` the text is at most 10,000 characters, and so is everything parsed from it. `pipe(string({ max: 2048 }), url())` bounds a URL the same way.
+- **A path** joins property names with `.`, and writes `[]` for the items of an array or a set, `[0]` for an item of a tuple, `{}` for the keys and values of a record or a map, and `""` for the validator itself. A recursive schema is read once.
+- **What it does not judge** is whether a `max` is small enough: any number says someone decided. Checks are not read, since they run on a value that already passed, and neither is anything a `guard` or a validator written by hand does inside.
+
 ## Working with results
 
 ### `formatIssue`, `flatten`, `formatPath` and the message maps

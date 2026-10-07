@@ -318,6 +318,18 @@ Checked once against Ajv 8 in draft 2020-12 mode, outside the suite since it is 
 
 Adding the two grew the bundle of every export past its budget, 19810 to 21191 bytes, so every scenario was measured again and every budget reset by the rule of [Tree-shaking is a contract](#tree-shaking-is-a-contract), with a scenario for `toJsonSchema` and one for `pick`.
 
+### Bounds a schema leaves open
+
+Input that passes is validated in full, which [The limit of issues](#the-limit-of-issues) leaves to the caller to bound with a `max` on each collection and a cap on the input. `audit` (`core/audit.ts`) checks that a schema does, by walking its description: none of valibot, zod or yup checks it, and it is a step further along what the package is for rather than a gap it closes.
+
+- **Four rules, each a place where the size of what passes is open**: a collection without `max` or `length`, text without one, a `lazy` whose limits were raised, and a part that cannot be read. The last is reported rather than passed, since a check that says nothing of what it could not see reads as a clean bill.
+- **A bound before a part counts.** A `pipe` step reads what the steps before it produced, so after a step that bounds its own value, a `string` or a collection with `max` or `length` or a format below, nothing is reported. That is how `json` and `searchParams`, which read text, are bounded, and with them everything parsed from that text.
+- **Formats are listed by name as bounding their text** where what they accept has a length limit: `email`, `uuid`, `ulid`, `cuid2`, `nanoid`, `ip`, `cidr`, `mac`, `port`, `phone`, `creditCard`, `isoDate`, `hostname` and `domain`. The others, `url`, `hex`, `base64`, `jwt`, `slug`, `semver`, `duration`, `datetime` and `time`, accept text of any length, as one of `format` does since its rule cannot be read. A new format is added to the list when it bounds its text.
+- **The path is written as in the errors of `toJsonSchema`**, as text, since the items of an array have no index to write.
+- **Not judged:** whether a `max` is small enough. Any number says someone decided, and a default would be a number this package chose for every schema.
+
+Measured with rolldown, an `object` with an `array` of strings audited is 4301 bytes gzipped. Adding it took the bundle of every export past its budget, so every scenario was measured again and every budget reset by the rule of [Tree-shaking is a contract](#tree-shaking-is-a-contract). Against the code before steps 7 to 9, the bundle of every export grew 878 bytes, for `meta`, `extend`, `audit` and the default map of `standard`, and every other scenario 4 to 14 bytes; the budgets had been set before earlier steps of 0.4.0 grew them within their tenth, so most rose more than that.
+
 ### Wrappers that change the type
 
 `brand(validator, name)` and `readonly(validator)` exist for the type they give, and each does as little at run time as that type allows.

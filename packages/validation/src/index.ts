@@ -52,6 +52,7 @@ export { transform } from "./composition/transform";
 export { tuple, type InferTuple, type InferTupleInput, type TupleOptions } from "./composition/tuple";
 export { union } from "./composition/union";
 export { assert, type AssertOptions } from "./core/assert";
+export { audit, type AuditFinding } from "./core/audit";
 export { is } from "./core/is";
 export { describe, type Description } from "./core/describe";
 export { fail, pass, type IssueInput } from "./core/result";

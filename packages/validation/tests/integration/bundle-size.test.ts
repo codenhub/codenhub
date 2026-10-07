@@ -192,6 +192,11 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
     budget: 6370,
   },
   {
+    name: "audit",
+    source: `import { array, audit, object, string } from "DIST"; export const findings = audit(object({ tags: array(string()) }));`,
+    budget: 4740,
+  },
+  {
     name: "everything",
     source: `export * from "DIST";`,
     budget: 25760,
