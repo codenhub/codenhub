@@ -1,5 +1,5 @@
-import { chain, type Maybe } from "../core/async";
-import { describe } from "../core/describe";
+import { chain, decided, type Maybe } from "../core/async";
+import { describe, type Description } from "../core/describe";
 import { call, composed } from "../core/nesting";
 import { assertFunction, pass } from "../core/result";
 import type { AnyValidator, AsyncCheck, Infer, InferInput, ValidationResult, Validator } from "../core/types";
@@ -72,7 +72,11 @@ function toQuery(value: unknown): string {
  *   gives what it produced, so `email()` gives the address as the parser reads it.
  * - A composer, such as `object`, `array` or `union`, writes back each of its parts and keeps its options,
  *   and runs its checks on the value once its parts passed. A `pipe` writes its steps back from the last.
- * - `json` and `searchParams` write the text: JSON, and a query string of each value as text.
+ * - `json` and `searchParams` write the text: JSON, and a query string of each value as text, which they then
+ *   read back, so text they would refuse fails. JSON holds less than JavaScript does: `NaN` is written as
+ *   `null`, and a property that is `undefined` is left out, as `JSON.stringify` writes them.
+ * - `optional` with a default writes the default back as `undefined` when its inner part refuses it, since
+ *   only `undefined` produced it. A `fallback` value its inner part refuses fails: no one input produced it.
  *
  * So a value the validator could not have produced fails with the issues it has, at their paths. A part
  * that cannot be written back throws a `TypeError` naming its place: a `transform`, whose function goes one
@@ -108,12 +112,17 @@ export function encode<TValidator extends AnyValidator>(
     throw new TypeError(`encode cannot write back ${what} at ${path === "" ? "the root" : path}. Use a codec there`);
   };
 
-  /** Runs `checks`, written for the value as it was given, once `encoded` passed. */
-  const checked = (encoded: AnyValidator, checks: readonly AsyncCheck<never>[] | undefined): AnyValidator => {
-    if (checks === undefined || checks.length === 0) {
+  /**
+   * Runs the checks of `record`, written for the value as it was given, once `encoded` passed, with the
+   * `message` of its options, as validating does.
+   */
+  const checked = (encoded: AnyValidator, record: Description): AnyValidator => {
+    const checks = (record.checks ?? []) as readonly AsyncCheck<never>[];
+    if (checks.length === 0) {
       return encoded;
     }
-    const rules = (unknown as Make)(...checks);
+    const message = record.options?.["message"];
+    const rules = (unknown as Make)(...(message === undefined ? [] : [{ message }]), ...checks);
     return composed((given, place) =>
       chain(
         call(encoded, given, place),
@@ -152,7 +161,17 @@ export function encode<TValidator extends AnyValidator>(
           encoderOf(each, path === "" ? key : `${path}.${key}`),
         ]),
       );
-    const over = (encoded: AnyValidator): AnyValidator => checked(encoded, record.checks);
+    const over = (encoded: AnyValidator): AnyValidator => checked(encoded, record);
+    // The text `json` or `searchParams` wrote, once the validator it came from reads it back, so text it
+    // would refuse, such as JSON of `undefined` or a list written as a key it reads only once, fails.
+    const readBack = (writer: AnyValidator): AnyValidator =>
+      composed((given, place) =>
+        chain(
+          call(writer, given, place),
+          (written): Maybe<ValidationResult<unknown>> =>
+            written.ok ? chain(call(target, written.value, place), (read) => (read.ok ? written : read)) : written,
+        ),
+      ) as AnyValidator;
 
     switch (record.kind) {
       case "codec": {
@@ -163,7 +182,7 @@ export function encode<TValidator extends AnyValidator>(
             if (!produced.ok) {
               return produced;
             }
-            const written = write(produced.value);
+            const written = decided("codec", write, produced.value, "encode");
             return chain(call(input, written, place), (read) => (read.ok ? pass(written) : read));
           }),
         ) as AnyValidator;
@@ -195,8 +214,19 @@ export function encode<TValidator extends AnyValidator>(
         );
         return over((tagged as Make)(record["key"], variants, options));
       }
-      case "optional":
-        return (optional as Make)(part("inner"));
+      case "optional": {
+        const kept = (optional as Make)(part("inner"));
+        const given = record["default"];
+        // A default the inner part refuses was produced from `undefined` alone, so it is written back as that.
+        // One a function makes cannot be compared, and is written back as the inner part writes it.
+        return given === undefined || typeof given === "function"
+          ? kept
+          : (composed((value, place) =>
+              chain(call(kept, value, place), (result) =>
+                result.ok || !Object.is(value, given) ? result : pass(undefined),
+              ),
+            ) as AnyValidator);
+      }
       case "nullable":
         return (nullable as Make)(part("inner"));
       case "nullish":
@@ -217,10 +247,10 @@ export function encode<TValidator extends AnyValidator>(
       }
       case "json": {
         const inner = record["inner"] === undefined ? (unknown as Make)() : part("inner");
-        return (transform as Make)(over(inner), (written: unknown) => JSON.stringify(written));
+        return readBack((transform as Make)(over(inner), (written: unknown) => JSON.stringify(written)));
       }
       case "searchParams":
-        return (transform as Make)(over(part("inner")), toQuery);
+        return readBack((transform as Make)(over(part("inner")), toQuery));
       case "transform":
         return refuse("a transform", path);
       default:

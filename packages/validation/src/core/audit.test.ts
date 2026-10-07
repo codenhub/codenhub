@@ -117,6 +117,8 @@ describe("audit", () => {
     expect(audit(pipe(optional(string({ max: 100 })), parsed))).toEqual([]);
     expect(audit(pipe(meta(coerceString({ max: 100 }), { title: "Body" }), parsed))).toEqual([]);
     expect(audit(pipe(union([string({ max: 10 }), email()]), parsed))).toEqual([]);
+    const trimmed = codec(string({ max: 100 }), string(), { decode: (text) => text.trim(), encode: (text) => text });
+    expect(audit(pipe(trimmed, parsed))).toEqual([]);
     expect(audit(pipe(union([string({ max: 10 }), string()]), parsed))).toEqual([
       { rule: "unbounded_text", path: "", kind: "string" },
       { rule: "unbounded_text", path: "", kind: "json" },

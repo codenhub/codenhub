@@ -1,4 +1,4 @@
-import { chain, detached, type Maybe } from "../core/async";
+import { chain, decided, type Maybe } from "../core/async";
 import { described } from "../core/describe";
 import { call, composed } from "../core/nesting";
 import { isPlainObject } from "../core/objects";
@@ -31,8 +31,9 @@ export interface Conversions<TInput extends AnyValidator, TOutput extends AnyVal
  * result. Each function is written for one direction, and a pair of them is what lets a value go back.
  *
  * An exception thrown by either function propagates, as a `transform`'s does: it is a bug, not invalid
- * input. Return a value the other validator refuses instead, to fail. It is synchronous when both
- * validators are.
+ * input. Return a value the other validator refuses instead, to fail. Both functions are synchronous: one
+ * that returns a promise throws a `TypeError`, since the validator would wait while typed as not waiting,
+ * so a rule that waits goes in a check. It is synchronous when both validators are.
  *
  * @example
  * ```ts
@@ -50,7 +51,8 @@ export interface Conversions<TInput extends AnyValidator, TOutput extends AnyVal
  * @param output - Validates the value as a program uses it.
  * @param conversions - `decode` and `encode`, each a function of one direction.
  * @returns A validator that produces what `output` produces, from what `input` accepts.
- * @throws {TypeError} When `input`, `output`, `decode` or `encode` is not a function.
+ * @throws {TypeError} When `input` or `output` is not a function, `conversions` is not a plain object, or
+ * its `decode` or `encode` is not a function; and when validating, if `decode` returns a promise.
  */
 export function codec<TInput extends AnyValidator, TOutput extends AnyValidator>(
   input: TInput,
@@ -70,9 +72,7 @@ export function codec<TInput extends AnyValidator, TOutput extends AnyValidator>
       call(input, given, place),
       (read): Maybe<ValidationResult<unknown>> =>
         read.ok
-          ? chain(detached(decode as (value: unknown) => unknown, read.value), (decoded) =>
-              call(output, decoded, place),
-            )
+          ? call(output, decided("codec", decode as (value: unknown) => unknown, read.value, "decode"), place)
           : read,
     ),
   );

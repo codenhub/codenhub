@@ -12,6 +12,7 @@ import { date } from "../primitives/date";
 import { literal } from "../primitives/literal";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
+import { unknown } from "../primitives/unknown";
 import { codesOf, isPending, issuesOf, valueOf } from "../test-utils";
 import { array } from "./array";
 import { codec } from "./codec";
@@ -62,6 +63,17 @@ describe("codec", () => {
     expect(describeValidator(isoDate)).toMatchObject({ kind: "codec" });
     const record = describeValidator(isoDate) as Record<string, unknown>;
     expect(Object.keys(record).toSorted()).toEqual(["decode", "encode", "input", "kind", "output"]);
+  });
+
+  it("should refuse a decode or an encode that returns a promise, when it is called", () => {
+    const waiting = codec(string(), unknown(), { decode: async (text) => text, encode: (value) => String(value) });
+    expect(() => waiting("a")).toThrow(
+      new TypeError("codec() needs a synchronous decode. Put a rule that waits in a check."),
+    );
+    const writing = codec(unknown(), string(), { decode: (value) => String(value), encode: async (text) => text });
+    expect(() => encode(writing, "a")).toThrow(
+      new TypeError("codec() needs a synchronous encode. Put a rule that waits in a check."),
+    );
   });
 
   it("should refuse what is not a function", () => {
@@ -145,6 +157,40 @@ describe("encode", () => {
     expect(valueOf(encode(query, { page: 2 }))).toBe("page=2");
     const tags = searchParams(object({ tag: array(string()) }), { repeated: true });
     expect(valueOf(encode(tags, { tag: ["a b", "c"] }))).toBe("tag=a+b&tag=c");
+  });
+
+  it("should read the text it wrote back, and fail for text json or searchParams would refuse", () => {
+    expect(codesOf(encode(json(), undefined))).toEqual(["invalid_type"]);
+    // JSON holds less than JavaScript: what JSON.stringify writes is what is written.
+    expect(valueOf(encode(json(), Number.NaN))).toBe("null");
+    const once = searchParams(object({ tag: union([string(), array(string())]) }));
+    expect(codesOf(encode(once, { tag: ["a", "b"] }))).toEqual(["invalid_key"]);
+  });
+
+  it("should write a default the inner part refuses back as undefined, and fail for such a fallback", () => {
+    expect(valueOf(encode(optional(string({ min: 3 }), "x"), "x"))).toBeUndefined();
+    expect(valueOf(encode(optional(string(), ""), ""))).toBe("");
+    const named = object({ name: optional(string({ min: 3 }), "x") });
+    expect(valueOf(named(valueOf(encode(named, { name: "x" }))))).toEqual({ name: "x" });
+    expect(
+      codesOf(
+        encode(
+          optional(string({ min: 3 }), () => "x"),
+          "x",
+        ),
+      ),
+    ).toEqual(["too_small"]);
+    expect(codesOf(encode(fallback(number({ min: 1 }), 0), 0))).toEqual(["too_small"]);
+  });
+
+  it("should word the issues of a composer's checks with its message, as validating does", () => {
+    const refused = object(
+      { a: string() },
+      { message: "Not this" },
+      check(() => false),
+    );
+    expect(issuesOf(encode(refused, { a: "x" }))).toEqual(issuesOf(refused({ a: "x" })));
+    expect(issuesOf(encode(refused, { a: "x" }))[0]?.message).toBe("Not this");
   });
 
   it("should write back a tagged union and a recursive schema", () => {

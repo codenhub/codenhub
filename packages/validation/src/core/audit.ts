@@ -69,6 +69,12 @@ function boundsItself(record: Description | undefined): boolean {
       return parts("steps").some(boundsItself);
     case "union":
       return parts("members").every(boundsItself);
+    case "codec":
+      // What it produces is decoded from what its input read.
+      return (
+        boundsItself(describe(record["input"] as AnyValidator)) ||
+        boundsItself(describe(record["output"] as AnyValidator))
+      );
     case "lazy":
       return false;
     default:

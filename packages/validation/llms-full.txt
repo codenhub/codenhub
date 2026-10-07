@@ -1609,21 +1609,23 @@ A `transform` goes one way: [`encode`](#writing-a-value-back) cannot write its v
 `codec(input, output, { decode, encode })` reads a value as it is sent into the value a program uses, and can write it back. It validates with `input`, gives what that produced to `decode`, and validates the result with `output`, so both ends are checked. [`encode`](#writing-a-value-back) runs the other way, through `encode`.
 
 ```ts
-import { bigint, codec, date, datetime, string } from "@codenhub/validation";
+import { bigint, codec, date, datetime, pattern, string } from "@codenhub/validation";
 
 const timestamp = codec(datetime(), date(), {
   decode: (text) => new Date(text),
   encode: (value) => value.toISOString(),
 });
-const amount = codec(string({ max: 40 }), bigint(), {
+// The input accepts only the text BigInt reads, so decode never throws.
+const amount = codec(string({ max: 40 }, pattern(/^-?\d+$/)), bigint(), {
   decode: (text) => BigInt(text),
   encode: (value) => value.toString(),
 });
 ```
 
 - `decode` is given what `input` produced and returns what `output` validates; `encode` is given what `output` produced and returns what `input` validates. Each is typed so.
-- A function that throws is a bug and propagates, as a `transform`'s does. To fail, return a value the other validator refuses: a `decode` that gives an invalid `Date` fails `date()`.
-- It is described as `{ kind: "codec", input, output, decode, encode }`, and written as a JSON Schema as its `input`, or its `output` with `io: "output"`.
+- A function that throws is a bug and propagates, as a `transform`'s does. To fail, return a value the other validator refuses: a `decode` that gives an invalid `Date` fails `date()`. Or let `input` accept only what `decode` can read, as `amount` does, since `BigInt` throws for other text.
+- Both are synchronous: one that returns a promise throws a `TypeError` when it is called, since the codec is typed as not waiting. A rule that waits goes in a check.
+- It is described as `{ kind: "codec", input, output, decode, encode }`, and written as a JSON Schema as its `input`, or its `output` with `io: "output"`. An output JSON Schema cannot say, such as the `Date` of `timestamp`, throws there unless given `unrepresentable: "any"`, as [JSON Schema](docs/json-schema.md) says.
 
 ## Checks
 
@@ -1818,7 +1820,8 @@ encode(event, { name: "Launch", at: new Date(0) });
 - **A `codec`** validates the value with its output, runs its `encode`, and checks its input accepts the result.
 - **A part that produces what it accepts**, such as `string`, `number`, a format or a coercion, validates the value and gives what it produced: `email()` gives the address as the parser reads it, and `coerceNumber()` gives the number, which it accepts.
 - **A composer**, such as `object`, `array`, `tuple`, `record`, `map`, `set`, `union` or `tagged`, writes back each of its parts with its own options, and runs its checks on the value once its parts passed. `optional`, `nullable` and `nullish` keep what they let through, and a `pipe` writes its steps back from the last.
-- **`json` and `searchParams`** write text: `JSON.stringify` of what their validator wrote back, and a query string with each value as text and each item of a list as a repeated key.
+- **`json` and `searchParams`** write text: `JSON.stringify` of what their validator wrote back, and a query string with each value as text and each item of a list as a repeated key. The text is then read back by the validator it came from, so text it would refuse fails: a list written as a repeated key, which `searchParams` reads only with `repeated: true`, and `undefined`, which is no JSON. JSON holds less than JavaScript, so what `JSON.stringify` changes is changed: `NaN` is written as `null`, and a property that is `undefined` is left out.
+- **`optional` with a default** writes the default back as `undefined` when its inner part refuses it, since only `undefined` produced it: `optional(string({ min: 3 }), "")` writes `""` back as `undefined`. A default made by a function cannot be compared, and a `fallback` value its inner part refuses fails, since no one input produced it.
 - **What cannot go back throws** a `TypeError` naming its place: a `transform`, whose function goes one way, and a validator written by hand. Use a `codec` there.
 
 So a value the validator could not have produced fails with the issues it has, at their paths: `encode(timestamp, new Date(Number.NaN))` fails as `date()` would. It is synchronous unless a part waits. A coercion writes back the value it produced, which it accepts, so inside `json` a `bigint` from `coerceBigint()` cannot be written as JSON: use a codec that writes it as text, as `amount` above does.
@@ -1886,6 +1889,7 @@ A validator inside another is given as the validator itself, to be described in 
 | `"fallback"`                                                                                  | `fallback`                                        | `inner`, `value`; no `options` or `checks`                                                                                      |
 | `"transform"`                                                                                 | `transform`                                       | `inner`, `convert`; no `options` or `checks`                                                                                    |
 | `"pipe"`                                                                                      | `pipe`                                            | `steps`; no `options` or `checks`                                                                                               |
+| `"codec"`                                                                                     | `codec`                                           | `input`, `output`, `decode`, `encode`; no `options` or `checks`                                                                 |
 | `"lazy"`                                                                                      | `lazy`                                            | `getter`, which returns the validator                                                                                           |
 | `"json"`, `"searchParams"`                                                                    | `json`, `searchParams`                            | `inner`                                                                                                                         |
 | `"check"`                                                                                     | Every built-in check                              | `code` and `params` of the issue it reports                                                                                     |
