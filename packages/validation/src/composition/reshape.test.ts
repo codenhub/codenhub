@@ -43,15 +43,23 @@ describe("pick", () => {
     expect(valueOf(pick(strict, ["a"], { unknownKeys: "strip" })({ a: "x", b: "y" }))).toEqual({ a: "x" });
   });
 
-  it("should keep the options of the object when its own are given as undefined, which is no options", () => {
-    const strict = object({ a: string(), b: string() }, { unknownKeys: "strict", message: "Bad" });
-    const inherit = undefined as { unknownKeys?: "strict" } | undefined;
-    for (const made of [pick(strict, ["a"], inherit), omit(strict, ["b"], inherit), required(strict, inherit)]) {
-      expect(issuesOf(made({ a: "x", b: "y", c: 1 })).map((issue) => issue.message)).toContain("Bad");
-      expect(describeValidator(made)?.options).toEqual({ unknownKeys: "strict", message: "Bad" });
-    }
-    expect(describeValidator(partial(strict))?.options).toEqual({ unknownKeys: "strict", message: "Bad" });
-  });
+  it.each([undefined, null])(
+    "should keep the options of the object when its own are given as %s, which is no options",
+    (none) => {
+      const strict = object({ a: string(), b: string() }, { unknownKeys: "strict", message: "Bad" });
+      const inherit = none as { unknownKeys?: "strict" } | undefined;
+      for (const made of [
+        pick(strict, ["a"], inherit),
+        omit(strict, ["b"], inherit),
+        required(strict, inherit),
+        extend(strict, {}, inherit),
+      ]) {
+        expect(issuesOf(made({ a: "x", b: "y", c: 1 })).map((issue) => issue.message)).toContain("Bad");
+        expect(describeValidator(made)?.options).toEqual({ unknownKeys: "strict", message: "Bad" });
+      }
+      expect(describeValidator(partial(strict))?.options).toEqual({ unknownKeys: "strict", message: "Bad" });
+    },
+  );
 
   it("should take checks on the new object, with its options kept", () => {
     const strict = object({ a: string(), b: string() }, { unknownKeys: "strict" });

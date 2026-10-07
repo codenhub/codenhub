@@ -456,7 +456,7 @@ const forecast = meta(
 
 - It returns a new validator that validates exactly as the one given, whose description is that one's with `meta` added. The validator given is not changed, so the same one can be described differently in two places.
 - A `meta` given to a validator that has one replaces the keys it names and keeps the others. A key given as `undefined` is not given.
-- `title` and `description` are text, `examples` a list and `deprecated` `true` or `false`; any other value, or any other key, is a `TypeError` when the validator is made. Examples are kept as given and not validated, since they may show the input or the output.
+- `title` and `description` are text, `examples` a list of JSON values, `null`, booleans, finite numbers, text, and lists and plain objects of them, and `deprecated` `true` or `false`; any other value, or any other key, is a `TypeError` when the validator is made. A JSON Schema is JSON, so an example of a `Date` is written as its text. Examples are kept as given and not validated, since they may show the input or the output.
 - `pick`, `omit`, `required`, `partial` and `extend` read through it to the object it describes. What they make has no `meta`, since a title written for one object is rarely right for another: give it one of its own.
 - What `standard` made stays a Standard Schema under `meta`.
 

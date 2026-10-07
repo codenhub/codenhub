@@ -14,6 +14,12 @@ import { pick } from "./pick";
 
 const user = object({ name: string({ min: 2 }), email: email() });
 
+function cyclic(): unknown {
+  const self: Record<string, unknown> = {};
+  self["self"] = self;
+  return self;
+}
+
 describe("meta", () => {
   it("should behave as the validator it was given, with the same results", () => {
     const described = meta(user, { title: "User" });
@@ -46,11 +52,21 @@ describe("meta", () => {
     });
   });
 
-  it("should keep the examples it was given, not a list changed later", () => {
-    const examples = ["Ada"];
+  it("should keep a key it was given before, when given it again as undefined", () => {
+    const described = meta(meta(number(), { title: "Age" }), { title: undefined, deprecated: true });
+    expect(describeValidator(described)?.["meta"]).toEqual({ title: "Age", deprecated: true });
+  });
+
+  it("should keep the examples it was given, not a list or an object changed later", () => {
+    const address = { city: "Lisbon", lines: ["Rua Augusta"] };
+    const examples: unknown[] = ["Ada", address, null, 1.5, true];
     const described = meta(string(), { examples });
     examples.push("Grace");
-    expect(describeValidator(described)?.["meta"]).toEqual({ examples: ["Ada"] });
+    address.lines.push("2");
+    const kept = describeValidator(described)?.["meta"] as { examples: unknown[] };
+    expect(kept).toEqual({ examples: ["Ada", { city: "Lisbon", lines: ["Rua Augusta"] }, null, 1.5, true] });
+    expect(Object.isFrozen(kept.examples[1])).toBe(true);
+    expect(Object.isFrozen((kept.examples[1] as { lines: unknown }).lines)).toBe(true);
   });
 
   it("should give a validator written by hand a description that holds it and the meta", () => {
@@ -86,7 +102,19 @@ describe("meta", () => {
     ["an unknown key", { titel: "User" }, "Unknown meta titel"],
     ["a title that is not text", { title: 1 }, "meta title must be text"],
     ["a description that is not text", { description: null }, "meta description must be text"],
-    ["examples that are not a list", { examples: "Ada" }, "meta examples must be a list"],
+    ["examples that are not a list", { examples: "Ada" }, "meta examples must be a list of JSON values"],
+    ["a bigint example", { examples: [1n] }, "meta examples must be a list of JSON values"],
+    ["a Date example", { examples: [new Date(0)] }, "meta examples must be a list of JSON values"],
+    ["an undefined example", { examples: [undefined] }, "meta examples must be a list of JSON values"],
+    ["a NaN example", { examples: [{ age: Number.NaN }] }, "meta examples must be a list of JSON values"],
+    ["a function example", { examples: [() => 1] }, "meta examples must be a list of JSON values"],
+    [
+      "a list with a hole",
+      { examples: [Object.assign([], { 0: 1, 2: 3 })] },
+      "meta examples must be a list of JSON values",
+    ],
+    ["an example that holds itself", { examples: [cyclic()] }, "meta examples must be a list of JSON values"],
+    ["a symbol key", { title: "User", [Symbol("hidden")]: 1 }, "Unknown meta Symbol(hidden)"],
     ["deprecated that is not true or false", { deprecated: "yes" }, "meta deprecated must be true or false"],
   ])("should refuse %s when it is made", (_, given, message) => {
     expect(() => meta(string(), given as never)).toThrow(new TypeError(message));

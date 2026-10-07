@@ -2300,7 +2300,7 @@ What the value is, and what it is for.
 readonly examples?: readonly unknown[] | undefined;
 ```
 
-Values that show what is expected. They are written as given, and not validated.
+Values that show what is expected, each a JSON value: `null`, a boolean, a finite number, text, or a list or plain object of them. They are written as given, and not validated.
 
 #### title
 
