@@ -41,6 +41,45 @@ test("applies shared gap density modifiers to views", async ({ page }) => {
   expect(Number.parseFloat(gaps.tight)).toBeLessThan(Number.parseFloat(gaps.loose));
 });
 
+/* A density class is a modifier on its own element, like `.p-xs` on a card: a
+   plain layout nested inside a `.tight` or `.loose` one keeps the default gap.
+   `--layout-gap` set on a container still reaches it, because that is the
+   token a consumer sets, not a class. */
+test("keeps a density modifier on its own element", async ({ page }) => {
+  await page.goto(LAYOUT_URL);
+
+  const gaps = await page.evaluate(() => {
+    const read = (outer: string, style = "") => {
+      const host = document.createElement("div");
+      host.className = outer;
+      host.setAttribute("style", style);
+      const inner = document.createElement("div");
+      inner.className = "stack";
+      host.append(inner);
+      document.body.append(host);
+
+      return { inner: getComputedStyle(inner).rowGap, outer: getComputedStyle(host).rowGap };
+    };
+    const plain = document.createElement("div");
+    plain.className = "stack";
+    document.body.append(plain);
+
+    return {
+      knob: read("stack", "--layout-gap: 2.5rem"),
+      loose: read("cluster loose"),
+      plain: getComputedStyle(plain).rowGap,
+      tight: read("stack tight"),
+    };
+  });
+
+  expect(gaps.tight.outer).toBe("8px");
+  expect(gaps.tight.inner, "inside .tight").toBe(gaps.plain);
+  expect(gaps.loose.outer).toBe("24px");
+  expect(gaps.loose.inner, "inside .loose").toBe(gaps.plain);
+  expect(gaps.knob.outer).toBe("40px");
+  expect(gaps.knob.inner, "a container's --layout-gap").toBe("40px");
+});
+
 test("provides opt-in section width and spacing helpers", async ({ page }) => {
   await page.goto(LAYOUT_URL);
 

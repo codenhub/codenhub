@@ -8,7 +8,7 @@ order: 9
 
 ## Layout
 
-Layout helpers use the shared `--layout-gap` token. `.tight` sets it to `0.5rem` and `.loose` sets it to `1.5rem` within a view, stack, cluster, or auto-grid.
+Layout helpers use the shared `--layout-gap` token, which reaches every layout inside the element that sets it. `.tight` (`0.5rem`) and `.loose` (`1.5rem`) set the gap of the view, stack, cluster, or auto-grid they sit on, and a layout nested inside keeps its own.
 
 - `.view` is a flex container; `.vertical` and `.horizontal` set its direction, and horizontal views wrap with centered cross-axis alignment.
 - `.stack` is a vertical flex stack.
