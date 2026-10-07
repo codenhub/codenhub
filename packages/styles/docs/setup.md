@@ -112,13 +112,13 @@ Avoid importing overlapping entrypoints in the same build unless duplicate gener
 
 Every entrypoint maps its CSS into Tailwind's four cascade layers (with documented unlayered exceptions), in Tailwind's order, and declares that order before using a layer, so the result does not depend on which file loads first:
 
-| Layer        | Holds                                                                                          |
-| ------------ | ---------------------------------------------------------------------------------------------- |
-| `theme`      | Tailwind's theme, the foundation tokens, the theme selectors, and `/palette`.                  |
-| `base`       | The reset and the classless element styles.                                                    |
-| `components` | The intent, presentation, elevation, and aesthetic classes.                                    |
-| `utilities`  | Every component (`.btn`, `.card`, `.ipt`, ...), next to your own Tailwind utilities.           |
-| _unlayered_  | The `forced-colors` and reduced-motion overrides, the `<dialog>` fix, and the `-solo` classes. |
+| Layer        | Holds                                                                                                 |
+| ------------ | ----------------------------------------------------------------------------------------------------- |
+| `theme`      | Tailwind's theme, the foundation tokens, the theme selectors, and `/palette`.                         |
+| `base`       | The reset and the classless element styles.                                                           |
+| `components` | The intent, presentation, elevation, and aesthetic classes.                                           |
+| `utilities`  | Every component (`.btn`, `.card`, `.ipt`, ...), next to your own Tailwind utilities.                  |
+| _unlayered_  | The `forced-colors` and reduced-motion overrides, the closed-`<dialog>` fix, and the `-solo` classes. |
 
 What that means in practice:
 

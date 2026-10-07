@@ -452,16 +452,34 @@ test("stops component motion under reduced motion without the reset", async ({ p
 /* The user agent hides a closed `<dialog>` and centres an open one, but both
    rules lose to any author rule, and `.card`'s own `display` and a margin reset
    beat them. The fix travels with the components it exists for, so it holds on
-   `/components`, and reaches only dialogs carrying one of them. */
+   `/components`, and reaches only dialogs carrying one of them.
+
+   The centring is the package's default and nothing more: it beats a reset in
+   `base` (Tailwind's Preflight puts `margin: 0` on every element there), and
+   a consumer's own margin -- a utility beside the components, or unlayered CSS
+   -- beats it, so a dialog can still be placed. */
 test("keeps a component dialog closed until opened, and centred once open", async ({ page }) => {
   await page.setContent("<!doctype html><html><body></body></html>");
   await page.addStyleTag({ url: COMPONENT_STYLES_URL });
-  await page.addStyleTag({ content: "@layer consumer { dialog { margin: 0; } }" });
+  await page.addStyleTag({
+    content: [
+      "@layer base { * { margin: 0; } }",
+      "@layer utilities { .mt-8 { margin-top: 2rem; } }",
+      ".my-dialog { margin-inline-start: 3rem; }",
+    ].join("\n"),
+  });
 
   const dialogs = await page.evaluate(() => {
-    document.body.innerHTML =
-      '<dialog class="card" id="closed">Closed</dialog><dialog class="card" id="open">Open</dialog><dialog id="plain">Plain</dialog>';
-    (document.getElementById("open") as HTMLDialogElement).showModal();
+    document.body.innerHTML = [
+      '<dialog class="card" id="closed">Closed</dialog>',
+      '<dialog class="card" id="open">Open</dialog>',
+      '<dialog class="card mt-8" id="utility">Utility</dialog>',
+      '<dialog class="card my-dialog" id="unlayered">Unlayered</dialog>',
+      '<dialog id="plain">Plain</dialog>',
+    ].join("");
+    for (const id of ["open", "utility", "unlayered"]) {
+      (document.getElementById(id) as HTMLDialogElement).show();
+    }
     (document.getElementById("plain") as HTMLDialogElement).show();
     const read = (id: string) => getComputedStyle(document.getElementById(id)!);
 
@@ -469,12 +487,16 @@ test("keeps a component dialog closed until opened, and centred once open", asyn
       closedDisplay: read("closed").display,
       openMarginLeft: read("open").marginLeft,
       plainMarginLeft: read("plain").marginLeft,
+      unlayeredMarginLeft: read("unlayered").marginLeft,
+      utilityMarginTop: read("utility").marginTop,
     };
   });
 
   expect(dialogs.closedDisplay).toBe("none");
-  expect(Number.parseFloat(dialogs.openMarginLeft)).toBeGreaterThan(0);
-  expect(dialogs.plainMarginLeft, "a dialog the package does not style keeps the consumer's margin").toBe("0px");
+  expect(Number.parseFloat(dialogs.openMarginLeft), "centred over a reset in base").toBeGreaterThan(0);
+  expect(dialogs.plainMarginLeft, "a dialog the package does not style keeps the reset's margin").toBe("0px");
+  expect(dialogs.utilityMarginTop, "a consumer's utility").toBe("32px");
+  expect(dialogs.unlayeredMarginLeft, "a consumer's unlayered CSS").toBe("48px");
 });
 
 /* The reset's reduced-motion rule is `!important` in `base`, which beats any

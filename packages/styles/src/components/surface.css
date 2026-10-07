@@ -162,14 +162,23 @@
    three are the containers a consumer reaches for.
 
    Here rather than in the reset, so every entrypoint that ships `.card` ships
-   the fix, `/components` included. Unlayered, because a behaviour override has
-   to win over any layered rule whatever its specificity, and scoped to the
-   package's own containers, so a dialog the package does not style keeps
-   whatever margin its author gives it. */
+   the fix, `/components` included, and scoped to the package's own containers,
+   so a dialog the package does not style keeps whatever margin its author
+   gives it.
+
+   The two halves sit in different places. Hiding a closed dialog is
+   behaviour, so it is unlayered and beats any layered rule whatever its
+   specificity. Centring an open one is a default, so it is in `utilities` at
+   zero specificity: it beats a reset in `base`, and a consumer's own margin
+   -- a utility, or unlayered CSS -- beats it. Unlayered at 0-2-1 it overruled
+   `mt-8` and `.my-dialog { margin-top: 2rem }` alike, and a dialog could not
+   be placed. */
 dialog:is(.card, .panel, .surface):not([open]) {
   display: none;
 }
 
-dialog:is(.card, .panel, .surface)[open] {
-  margin: auto;
+@layer utilities {
+  :where(dialog:is(.card, .panel, .surface)[open]) {
+    margin: auto;
+  }
 }
