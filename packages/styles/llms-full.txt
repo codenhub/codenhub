@@ -2055,7 +2055,7 @@ The reset's rule is `!important` inside the `base` layer, and a layered `!import
 
 In forced colors, class-based form controls including `.text-control` receive a 2px `Highlight` system-color focus outline. The native entrypoint provides the same visible system outline for unclassed text inputs, selects, textareas, checkboxes, and radios.
 
-Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`, and `HighlightText` colors in forced-colors mode so checked and unchecked states remain distinct. Shape, size, and spacing remain unchanged.
+Custom checkboxes and radios use the system `Canvas`, `CanvasText`, `Highlight`, and `HighlightText` colors in forced-colors mode so checked and unchecked states remain distinct: checked is a `Highlight` fill with a `HighlightText` mark, on the classes and the native entrypoint alike. Shape, size, and spacing remain unchanged.
 
 ## Required outside CSS
 
@@ -2118,6 +2118,7 @@ A button can be a liquid glass pane, the solo classes compose with presentation,
 - **Controls and surfaces under `.pixel` keep an edge in forced colours.** Pixel draws its edge as an inset shadow, which forced colours remove, so buttons, fields, and cards had no boundary; forced colours now draw a solid border and drop the clip. `.pixel-solo` draws an inward outline there.
 - **A `.disabled` text field holds still under the pointer.** The class spelling of disabled still darkened an `.ipt`'s line on hover, unlike `disabled`, `aria-disabled`, and `data-disabled`.
 - **`.sketch-rounded` beside `.sketch-solo` stays on the solo element.** Its radius tokens inherited into the element's contents, so a `.btn` inside a rounded sketch toast drew a sketch outline on a page with no sketch in scope.
+- **A checked native radio looks like a checked `.radio` in forced colours.** Under `/native` it drew a Highlight ring and dot on Canvas, where `.radio` draws a Highlight disc with a HighlightText dot, so `<input type="radio" class="radio">` changed look with the entrypoint. Both draw the disc now.
 
 <!-- Source: docs/changelog/0.6.0.md -->
 
