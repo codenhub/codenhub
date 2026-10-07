@@ -1394,17 +1394,17 @@ ids(new Set()); // { ok: false, ... }, code "too_small"
 ### standard
 
 ```ts
-export declare function standard<TValidator extends AnyValidator>(validator: TValidator, messages: Messages): TValidator & StandardSchemaV1<InferInput<TValidator>, Infer<TValidator>>;
+export declare function standard<TValidator extends AnyValidator>(validator: TValidator, messages?: Messages): TValidator & StandardSchemaV1<InferInput<TValidator>, Infer<TValidator>>;
 ```
 
 Makes a validator usable wherever a [Standard Schema](https://standardschema.dev/) is accepted, such as form libraries, API frameworks and routers, without an adapter on their side.
 
-The result is a validator that behaves exactly as the one you gave, plus the `~standard` property the specification asks for. The one you gave is not modified. The specification requires a message on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass: `englishMessages` for the built-in English, or a map of your own. `~standard.validate` returns its result directly for a synchronous validator and a `Promise` for an asynchronous one, even one that returns another kind of thenable, since callers tell the two apart with `instanceof Promise`, as the specification shows, and would otherwise read a pending result as one without issues. Input and output types are what the validator accepts, `InferInput`, and what it produces.
+The result is a validator that behaves exactly as the one you gave, plus the `~standard` property the specification asks for. The one you gave is not modified. The specification requires a message on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass, the built-in English when you pass none. A program that calls `standard` bundles the English even when it passes a map of its own. `~standard.validate` returns its result directly for a synchronous validator and a `Promise` for an asynchronous one, even one that returns another kind of thenable, since callers tell the two apart with `instanceof Promise`, as the specification shows, and would otherwise read a pending result as one without issues. Input and output types are what the validator accepts, `InferInput`, and what it produces.
 
 **Parameters**
 
 - `validator` — The validator to expose as a Standard Schema.
-- `messages` — Text for the issue codes, such as `englishMessages`. Required, because the specification needs a message on every issue and there is no built-in default to fall back on.
+- `messages` — Text for the issue codes, such as `portugueseMessages` or a map of your own. Defaults to `englishMessages`.
 
 **Type parameters**
 
@@ -1417,7 +1417,7 @@ The result is a validator that behaves exactly as the one you gave, plus the `~s
 **Example**
 
 ```ts
-const signup = standard(object({ email: email(), age: number({ int: true }) }), englishMessages);
+const signup = standard(object({ email: email(), age: number({ int: true }) }));
 
 signup["~standard"].validate({ email: "nope" });
 // { issues: [{ message: "Invalid email address", path: ["email"] }, ...] }

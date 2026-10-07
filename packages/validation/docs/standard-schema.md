@@ -8,9 +8,9 @@ description: Use a validator wherever a library accepts a Standard Schema, such 
 [Standard Schema](https://standardschema.dev/) is a small shared interface that lets libraries accept a validator without depending on the one that made it. Form libraries, API frameworks and routers that support it take any conforming validator, from any library, directly. `standard` makes a validator conforming.
 
 ```ts
-import { email, englishMessages, number, object, standard } from "@codenhub/validation";
+import { email, number, object, standard } from "@codenhub/validation";
 
-const signup = standard(object({ email: email(), age: number({ int: true }) }), englishMessages);
+const signup = standard(object({ email: email(), age: number({ int: true }) }));
 
 signup["~standard"].validate({ email: "nope", age: 1.5 });
 // {
@@ -33,7 +33,7 @@ The package exports the `StandardSchemaV1` type so you can accept one in your ow
 
 ## Messages
 
-The specification requires a message on every issue, and this is the one place this package builds it, so a program that never uses `standard` never bundles the text. `standard` therefore takes the message map as its second argument, and it is required, so `standard` throws a `TypeError` when created without one: pass `englishMessages` for the built-in English, or a map of your own. Messages then come from [`formatIssue`](errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
+The specification requires a message on every issue, so `standard` builds one, from the message map given as its second argument: the built-in English when you give none, `portugueseMessages` for Portuguese, or a map of your own. A program that calls `standard` bundles the English, about 1.7 kB gzipped, even when it passes another map; one that never calls it bundles no text. A second argument that is not a map, such as `null` or text, is a `TypeError` when `standard` is called. Messages then come from [`formatIssue`](errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
 
 ```ts
 import { englishMessages, number, standard } from "@codenhub/validation";
@@ -48,4 +48,4 @@ Each issue's `path` is the issue's own path, as an array of strings and numbers.
 
 ## A note on functions
 
-A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator, englishMessages)["~standard"] }`.
+A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator)["~standard"] }`.

@@ -392,6 +392,8 @@ export const asStandard: StandardSchemaV1<unknown, { email: string }> = exposed;
 export const standardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: "a@example.com" };
 // @ts-expect-error the output type is the validator's output
 export const badStandardOutput: StandardSchemaV1.InferOutput<typeof exposed> = { email: 1 };
+// The message map can be left out, and the English is used.
+export const exposedInEnglish: StandardSchemaV1<unknown, { email: string }> = standard(object({ email: email() }));
 // One type argument is input and output alike, as the specification defaults it.
 export const sameShape: StandardSchemaV1.InferOutput<StandardSchemaV1<{ id: string }>> = { id: "a" };
 // @ts-expect-error the output defaults to the input, not to unknown

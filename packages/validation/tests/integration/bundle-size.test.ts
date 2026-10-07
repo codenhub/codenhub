@@ -137,6 +137,11 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
     budget: 4510,
   },
   {
+    name: "standard with an object and no map",
+    source: `import { object, standard, string } from "DIST"; export const check = standard(object({ name: string() }));`,
+    budget: 5750,
+  },
+  {
     name: "formatIssue with your own wording",
     source: `import { formatIssue } from "DIST"; export const describe = (issue: Parameters<typeof formatIssue>[0]) => formatIssue(issue, { too_small: "Too short" });`,
     budget: 390,

@@ -2,6 +2,7 @@ import { isThenable } from "../core/async";
 import { describe, described } from "../core/describe";
 import { assertFunction } from "../core/result";
 import type { AnyValidator, Infer, InferInput, ValidationResult } from "../core/types";
+import { englishMessages } from "../messages/english-messages";
 import { assertMessages, formatIssue, type Messages } from "../messages/format-issue";
 import type { StandardSchemaV1 } from "./standard-schema";
 
@@ -12,15 +13,16 @@ import type { StandardSchemaV1 } from "./standard-schema";
  * @remarks
  * The result is a validator that behaves exactly as the one you gave, plus the `~standard` property
  * the specification asks for. The one you gave is not modified. The specification requires a message
- * on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass:
- * `englishMessages` for the built-in English, or a map of your own. `~standard.validate` returns its result directly for a synchronous validator and a
+ * on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass,
+ * the built-in English when you pass none. A program that calls `standard` bundles the English even when
+ * it passes a map of its own. `~standard.validate` returns its result directly for a synchronous validator and a
  * `Promise` for an asynchronous one, even one that returns another kind of thenable, since callers
  * tell the two apart with `instanceof Promise`, as the specification shows, and would otherwise read a
  * pending result as one without issues. Input and output types are what the validator accepts, `InferInput`, and what it produces.
  *
  * @example
  * ```ts
- * const signup = standard(object({ email: email(), age: number({ int: true }) }), englishMessages);
+ * const signup = standard(object({ email: email(), age: number({ int: true }) }));
  *
  * signup["~standard"].validate({ email: "nope" });
  * // { issues: [{ message: "Invalid email address", path: ["email"] }, ...] }
@@ -28,8 +30,8 @@ import type { StandardSchemaV1 } from "./standard-schema";
  *
  * @typeParam TValidator - The validator to expose.
  * @param validator - The validator to expose as a Standard Schema.
- * @param messages - Text for the issue codes, such as `englishMessages`. Required, because the specification
- * needs a message on every issue and there is no built-in default to fall back on.
+ * @param messages - Text for the issue codes, such as `portugueseMessages` or a map of your own. Defaults to
+ * `englishMessages`.
  * @returns A validator that is also a Standard Schema.
  * @throws {TypeError} When `validator` is not a function, or `messages` is not a message map. Validating
  * throws one too when the entry of `messages` that words an issue is neither text nor a function that
@@ -37,7 +39,7 @@ import type { StandardSchemaV1 } from "./standard-schema";
  */
 export function standard<TValidator extends AnyValidator>(
   validator: TValidator,
-  messages: Messages,
+  messages: Messages = englishMessages,
 ): TValidator & StandardSchemaV1<InferInput<TValidator>, Infer<TValidator>> {
   assertFunction("validator", validator);
   assertMessages(messages);

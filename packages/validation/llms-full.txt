@@ -395,7 +395,7 @@ Read the ratios and not the figures: this is one schema on one machine.
 ## When to choose another
 
 - **valibot**, when size is what matters most, or when you need the widest set of ready-made checks. It is the smallest of the four by a wide margin and faster.
-- **zod**, when other tools must accept your schema. It is what most form libraries, API frameworks and SDKs for language models take first. Many of those take any [Standard Schema](docs/standard-schema.md), which `standard(validator, messages)` gives them, and those that need a JSON Schema can have one from [`toJsonSchema`](docs/json-schema.md), but a tool that asks for a zod schema by name needs zod.
+- **zod**, when other tools must accept your schema. It is what most form libraries, API frameworks and SDKs for language models take first. Many of those take any [Standard Schema](docs/standard-schema.md), which `standard(validator)` gives them, and those that need a JSON Schema can have one from [`toJsonSchema`](docs/json-schema.md), but a tool that asks for a zod schema by name needs zod.
 - **zod or valibot**, when validating valid data in a hot path, such as every row of a large file, and a pattern is a good enough test of an email or a URL.
 - **yup**, when a codebase already uses it. The measurements give no other reason.
 
@@ -405,14 +405,14 @@ Choose this package when the input comes from outside and what you do with the v
 
 Run against the versions above, except where marked.
 
-| Need                                           | This package                    | valibot                            | zod                        | yup                           |
-| ---------------------------------------------- | ------------------------------- | ---------------------------------- | -------------------------- | ----------------------------- |
-| A JSON Schema from a schema                    | `toJsonSchema`                  | a separate package (documentation) | `z.toJSONSchema`           | none built in (documentation) |
-| A type for the input, apart from the output    | `InferInput`                    | `InferInput` (documentation)       | `z.input` (documentation)  | not checked                   |
-| A rule across fields while another field fails | `checkFields`                   | `partialCheck`                     | `refine`                   | `ref`                         |
-| Standard Schema                                | `standard(validator, messages)` | built in (documentation)           | built in (documentation)   | built in (documentation)      |
-| Method chains, such as `string().min(2)`       | no, options and checks          | no, `pipe`                         | yes                        | yes                           |
-| Messages in other languages                    | English and Portuguese          | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
+| Need                                           | This package           | valibot                            | zod                        | yup                           |
+| ---------------------------------------------- | ---------------------- | ---------------------------------- | -------------------------- | ----------------------------- |
+| A JSON Schema from a schema                    | `toJsonSchema`         | a separate package (documentation) | `z.toJSONSchema`           | none built in (documentation) |
+| A type for the input, apart from the output    | `InferInput`           | `InferInput` (documentation)       | `z.input` (documentation)  | not checked                   |
+| A rule across fields while another field fails | `checkFields`          | `partialCheck`                     | `refine`                   | `ref`                         |
+| Standard Schema                                | `standard(validator)`  | built in (documentation)           | built in (documentation)   | built in (documentation)      |
+| Method chains, such as `string().min(2)`       | no, options and checks | no, `pipe`                         | yes                        | yes                           |
+| Messages in other languages                    | English and Portuguese | ready-made (documentation)         | ready-made (documentation) | ready-made (documentation)    |
 
 English and Portuguese ship with this package, so a program in another language writes its own message map: [Issues and messages](docs/errors.md#rewording-and-localizing) shows how.
 
@@ -1052,9 +1052,9 @@ To send a date as JSON, validate the text it travels as, with `datetime()` or `i
 [Standard Schema](https://standardschema.dev/) is a small shared interface that lets libraries accept a validator without depending on the one that made it. Form libraries, API frameworks and routers that support it take any conforming validator, from any library, directly. `standard` makes a validator conforming.
 
 ```ts
-import { email, englishMessages, number, object, standard } from "@codenhub/validation";
+import { email, number, object, standard } from "@codenhub/validation";
 
-const signup = standard(object({ email: email(), age: number({ int: true }) }), englishMessages);
+const signup = standard(object({ email: email(), age: number({ int: true }) }));
 
 signup["~standard"].validate({ email: "nope", age: 1.5 });
 // {
@@ -1077,7 +1077,7 @@ The package exports the `StandardSchemaV1` type so you can accept one in your ow
 
 ## Messages
 
-The specification requires a message on every issue, and this is the one place this package builds it, so a program that never uses `standard` never bundles the text. `standard` therefore takes the message map as its second argument, and it is required, so `standard` throws a `TypeError` when created without one: pass `englishMessages` for the built-in English, or a map of your own. Messages then come from [`formatIssue`](docs/errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
+The specification requires a message on every issue, so `standard` builds one, from the message map given as its second argument: the built-in English when you give none, `portugueseMessages` for Portuguese, or a map of your own. A program that calls `standard` bundles the English, about 1.7 kB gzipped, even when it passes another map; one that never calls it bundles no text. A second argument that is not a map, such as `null` or text, is a `TypeError` when `standard` is called. Messages then come from [`formatIssue`](docs/errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
 
 ```ts
 import { englishMessages, number, standard } from "@codenhub/validation";
@@ -1092,7 +1092,7 @@ Each issue's `path` is the issue's own path, as an array of strings and numbers.
 
 ## A note on functions
 
-A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator, englishMessages)["~standard"] }`.
+A validator here is a function, and `standard` attaches `~standard` to a function. The specification allows any object, and libraries that follow it read the property, so this works. A library that insists on `typeof schema === "object"` before looking would not recognize it; if you meet one, wrap the validator in an object of your own: `{ "~standard": standard(validator)["~standard"] }`.
 
 <!-- Source: docs/validators.md -->
 
@@ -1722,7 +1722,7 @@ The coercing validators accept text that holds a value, convert it, and then app
 
 ## Exposing a validator to other libraries
 
-`standard(validator, messages)` returns the validator with the `~standard` property that [Standard Schema](docs/standard-schema.md) asks for, so libraries that accept one can take it directly. Its `messages` map, such as `englishMessages`, supplies the text that specification requires on every issue.
+`standard(validator, messages?)` returns the validator with the `~standard` property that [Standard Schema](docs/standard-schema.md) asks for, so libraries that accept one can take it directly. Its `messages` map supplies the text that specification requires on every issue, the built-in English when left out.
 
 ## Wording one validator
 
@@ -1856,6 +1856,7 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 
 ## Changed
 
+- `standard(validator)` words issues in English when given no message map, where 0.3.0 threw a `TypeError`. A map, such as `portugueseMessages`, is still accepted as the second argument, and anything else there is still a `TypeError`. A program that calls `standard` now bundles the English even when it passes a map of its own.
 - **Breaking.** `standard(validator, messages)` reports the validator's input type to the library that takes it, where 0.3.0 reported `unknown`. A form library that types a field from a Standard Schema now types one for `coerceNumber()` as `string | number` and one for `optional(string(), "")` as `string | undefined`, so code that relied on the field being `unknown` may need the narrower type.
 - `Validator` and `AsyncValidator` are interfaces with a call signature, where they were function types, so that they can carry the input type. A function of the right shape is still a validator, and nothing a caller writes changes.
 - Every validator a factory of the package makes, and every built-in check, has a property named `~description`, which `describe` reads; a check made by `check` has none, since its rule is a function. The record it holds is frozen, and holds no input.

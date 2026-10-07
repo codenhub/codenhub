@@ -629,7 +629,7 @@ The coercing validators accept text that holds a value, convert it, and then app
 
 ## Exposing a validator to other libraries
 
-`standard(validator, messages)` returns the validator with the `~standard` property that [Standard Schema](standard-schema.md) asks for, so libraries that accept one can take it directly. Its `messages` map, such as `englishMessages`, supplies the text that specification requires on every issue.
+`standard(validator, messages?)` returns the validator with the `~standard` property that [Standard Schema](standard-schema.md) asks for, so libraries that accept one can take it directly. Its `messages` map supplies the text that specification requires on every issue, the built-in English when left out.
 
 ## Wording one validator
 

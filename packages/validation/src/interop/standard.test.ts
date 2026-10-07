@@ -63,8 +63,20 @@ describe("standard", () => {
     expect(portuguese["~standard"].validate(0)).toEqual({ issues: [{ message: "Muito pequeno", path: [] }] });
   });
 
+  it("should word issues in English when given no message map", () => {
+    const signup = standard(object({ email: email(), age: number({ min: 18 }) }));
+    expect(signup["~standard"].validate({ email: "nope", age: 3 })).toEqual({
+      issues: [
+        { message: "Invalid email address", path: ["email"] },
+        { message: "Must be at least 18", path: ["age"] },
+      ],
+    });
+    expect(standard(string(), undefined)["~standard"].validate(1)).toEqual(
+      standard(string(), englishMessages)["~standard"].validate(1),
+    );
+  });
+
   it.each([
-    ["nothing", undefined, "undefined"],
     ["null", null, "null"],
     ["text", "en", "string"],
     ["a list", [], "array"],
