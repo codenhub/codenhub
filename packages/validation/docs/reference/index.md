@@ -1224,7 +1224,7 @@ It freezes the value itself and not what is inside it, as `Object.freeze` does a
 - **What a `Map` and a `Set` hold.** A new one is frozen as any other value is, which does not stop `set` or `add`, so only the type keeps them from being changed.
 - **A typed array or a `DataView`.** A typed array cannot be frozen, and freezing a `DataView` would not stop it writing to its buffer.
 
-A value is taken to be the caller's when it is the input itself. One a `transform` or a validator written by hand takes from inside the input, such as `(value) => value.tags`, is not the input and is frozen: copy it there, `[...value.tags]`, when the caller must keep it changeable.
+A value is taken to be the caller's when it is the input itself. When a `transform` or a validator written by hand returns a value from inside the input, such as `(value) => value.tags`, that value is not the input and is frozen: copy it there, `[...value.tags]`, when the caller must keep it changeable.
 
 `pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after.
 

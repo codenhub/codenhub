@@ -435,7 +435,7 @@ type Settings = Infer<typeof settings>; // { readonly theme: string; readonly ta
 - It freezes the value itself and not what is inside it, as `Object.freeze` does and as the type says. Wrap an inner validator too where its value must not change, as `tags` above.
 - A value that is the input itself is never frozen, since the caller owns it: `instanceOf`, `guard` and `unknown` produce what they were given, so `readonly` changes their type alone. `object`, `objectLike`, `array`, `tuple`, `record`, `set` and `map` produce a new value, which is frozen.
 - A `Map` or a `Set` is typed `ReadonlyMap` or `ReadonlySet`, and only the type protects it: freezing one does not stop `set` or `add`. A typed array cannot be frozen and is left as it is, and so is a `DataView`. The type covers properties and not methods, so a `Date` keeps its setters.
-- A value is taken to be yours when it is the input itself. One a `transform` takes from inside the input, such as `(value) => value.tags`, is frozen: copy it there when the caller must keep it changeable.
+- A value is taken to be yours when it is the input itself. When a `transform` returns a value from inside the input, such as `(value) => value.tags`, that value is frozen: copy it there when the caller must keep it changeable.
 - `pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after: `readonly(pick(user, ["name"]))`.
 
 ### `fallback`
