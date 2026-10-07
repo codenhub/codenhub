@@ -1,6 +1,12 @@
 # @codenhub/validation
 
-Checks that a value is what you need it to be, and gives you either the typed value or every reason it is not. Each validator is a small function you import on its own, so a package or app ships only the checks it uses. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies.
+Validation for data you do not control: a request body, a query string, a form, a message from another origin. A validator gives you either the typed value or every reason it is not one, and is built for input that may be hostile:
+
+- **Formats return what a parser read.** `email()` and `url()` produce the address the platform's URL parser sees, so what you store and check is what a request or a mail server will use.
+- **Work is bounded.** A long list of bad items or deeply nested input is reported as an issue, in bounded time and memory, and never as a stack overflow.
+- **Issues never hold the input**, so logging a failed validation cannot log a password.
+
+Each validator is a function you import on its own, so a program ships only the checks it uses: a lone `boolean()` is 1.2 kB gzipped and an object with a string, an email and a number 5.8 kB. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies. [Compared with valibot, zod and yup](docs/comparison.md) has the measurements, and says when one of them is the better choice.
 
 > **Experimental:** pre-1.0. The API of 0.3.0 is meant to hold for every 0.3.x release; a change that breaks callers, if one proves necessary, ships as the next minor and is listed in the [changelog](docs/changelog/index.md).
 >
@@ -78,6 +84,7 @@ When invalid input is a caller's mistake, such as an options object passed to yo
 - [Coercion](docs/coercion.md)
 - [Standard Schema](docs/standard-schema.md)
 - [JSON Schema](docs/json-schema.md)
+- [Compared with valibot, zod and yup](docs/comparison.md)
 - [Changelog](docs/changelog/index.md)
 
 ## Requirements

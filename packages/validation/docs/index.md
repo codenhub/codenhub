@@ -9,6 +9,8 @@ description: What the validation package does, how to read a result, and where t
 
 This matters wherever data crosses a boundary you do not control: a request, a form, a query string, an environment variable, a file, a message from another service. TypeScript cannot check those at runtime, so the type you wrote for them is a promise nothing enforces until a validator does.
 
+The package is built for that boundary, where the input may be hostile. `email()` and `url()` return what the platform's URL parser read, so the value you store is the one a request or a mail server will use. A long list of bad items or deeply nested input is reported as an issue in bounded time and memory. An issue never holds the value that failed, so a log of failures holds no passwords. [Compared with valibot, zod and yup](comparison.md) shows each of these beside the other libraries, with what it costs in size and speed.
+
 ## Installation
 
 ```sh
@@ -138,5 +140,6 @@ assert(options, { port: 0 }, { subject: "createServer:", messages: englishMessag
 - [Standard Schema](standard-schema.md): use a validator wherever a library accepts a Standard Schema.
 - [JSON Schema](json-schema.md): write a validator as a JSON Schema, for an HTTP API, the tools of a language model or a form generator.
 - [Issues and messages](errors.md): the shape of an issue, the built-in codes, message text, localization and form errors.
+- [Compared with valibot, zod and yup](comparison.md): where the package differs, what was measured, and when to choose one of them.
 - [API reference](reference/index.md): every export with its signature and documentation, generated from the source.
 - [Changelog](changelog/index.md): release notes, and the migrations from 0.1.0 and from 0.0.1.

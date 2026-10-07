@@ -22,7 +22,7 @@ This records the definition of done of the 0.3.0 release, which is out, and poin
 
 ## Current Focus
 
-[0.4.0.md](0.4.0.md) is the spec of the work after 0.3.0, in the order it is built: composers as fast as their leaves allow, validators that can be described, an input type, a rule across fields that does not wait for the others, what the package says it is for, and `brand`, `readonly` and message maps in other languages. It came from measuring the package against valibot, zod and yup on 2026-10-07, and it reverses three entries this roadmap had under Not Planned, naming for each what the entry did not weigh. The first step is a 0.3.x release, and the first that changes a signature is 0.4.0. Steps 1 to 4 are built and not released.
+[0.4.0.md](0.4.0.md) is the spec of the work after 0.3.0, in the order it is built: composers as fast as their leaves allow, validators that can be described, an input type, a rule across fields that does not wait for the others, what the package says it is for, and `brand`, `readonly` and message maps in other languages. It came from measuring the package against valibot, zod and yup on 2026-10-07, and it reverses three entries this roadmap had under Not Planned, naming for each what the entry did not weigh. The first step is a 0.3.x release, and the first that changes a signature is 0.4.0. Steps 1 to 5 are built and not released.
 
 ## Released: 0.3.0
 
