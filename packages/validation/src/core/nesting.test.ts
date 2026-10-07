@@ -117,9 +117,12 @@ describe("deep input with many issues", () => {
   });
 
   // Each composer used to copy the path of every issue below it, which cost the square of the depth for
-  // each issue: 100 levels took about 100 times what one level took, and take under 10 times now. The
-  // two are compared, not timed alone, so a slower or busier machine changes both and not the answer.
+  // each issue. Two depths are compared, not one timed alone, so a slower or busier machine changes both
+  // and not the answer: four times the depth takes about five times as long when each path is written
+  // once, and sixteen when it is copied at every level. One level is no longer what the deep input is
+  // compared with: a path of three segments became six times faster to write and one of a hundred three
+  // times, so that ratio rose from 14 to 28 with nothing copied twice, and the test failed one run in two.
   it("should report them in time that grows with the input", { timeout: 30_000 }, () => {
-    expect(fastest(deep)).toBeLessThan(30 * fastest(nested(1)));
+    expect(fastest(deep)).toBeLessThan(10 * fastest(nested(25)));
   });
 });
