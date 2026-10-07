@@ -16,6 +16,7 @@ import { coerceBoolean } from "../coercion/coerce-boolean";
 import { coerceDate } from "../coercion/coerce-date";
 import { coerceNumber } from "../coercion/coerce-number";
 import { array } from "../composition/array";
+import { codec } from "../composition/codec";
 import { fallback } from "../composition/fallback";
 import { intersection } from "../composition/intersection";
 import { json } from "../composition/json";
@@ -235,6 +236,21 @@ describe("toJsonSchema", () => {
       anyOf: [{ type: "string" }, { type: "null" }],
       title: "Name",
     });
+  });
+
+  it("should write a codec as its input, or its output with io output", () => {
+    const stamp = codec(datetime(), date(), {
+      decode: (text) => new Date(text),
+      encode: (value) => value.toISOString(),
+    });
+    expect(schemaOf(object({ at: stamp }))).toEqual({
+      type: "object",
+      properties: { at: { type: "string", format: "date-time" } },
+      required: ["at"],
+    });
+    expect(() => toJsonSchema(stamp, { io: "output" })).toThrow('a validator of kind "date"');
+    const count = codec(string(), number(), { decode: Number, encode: String });
+    expect(schemaOf(count, { io: "output" })).toEqual({ type: "number" });
   });
 
   it("should write strict objects as closed, and a key named like a prototype member as a property", () => {

@@ -25,6 +25,8 @@ export { coerceNumber } from "./coercion/coerce-number";
 export { coerceString } from "./coercion/coerce-string";
 export { array, type ArrayOptions } from "./composition/array";
 export { brand, type Branded } from "./composition/brand";
+export { codec, type Conversions } from "./composition/codec";
+export { encode, type Encoded } from "./composition/encode";
 export { extend, type Extended } from "./composition/extend";
 export { fallback } from "./composition/fallback";
 export { intersection } from "./composition/intersection";

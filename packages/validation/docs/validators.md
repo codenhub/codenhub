@@ -478,6 +478,29 @@ import { string, transform } from "@codenhub/validation";
 const length = transform(string(), (text) => text.length);
 ```
 
+A `transform` goes one way: [`encode`](#writing-a-value-back) cannot write its value back, and throws naming where it is. Where a value must go back, as a `Date` to the text a request carries, use a `codec`.
+
+### `codec`
+
+`codec(input, output, { decode, encode })` reads a value as it is sent into the value a program uses, and can write it back. It validates with `input`, gives what that produced to `decode`, and validates the result with `output`, so both ends are checked. [`encode`](#writing-a-value-back) runs the other way, through `encode`.
+
+```ts
+import { bigint, codec, date, datetime, string } from "@codenhub/validation";
+
+const timestamp = codec(datetime(), date(), {
+  decode: (text) => new Date(text),
+  encode: (value) => value.toISOString(),
+});
+const amount = codec(string({ max: 40 }), bigint(), {
+  decode: (text) => BigInt(text),
+  encode: (value) => value.toString(),
+});
+```
+
+- `decode` is given what `input` produced and returns what `output` validates; `encode` is given what `output` produced and returns what `input` validates. Each is typed so.
+- A function that throws is a bug and propagates, as a `transform`'s does. To fail, return a value the other validator refuses: a `decode` that gives an invalid `Date` fails `date()`.
+- It is described as `{ kind: "codec", input, output, decode, encode }`, and written as a JSON Schema as its `input`, or its `output` with `io: "output"`.
+
 ## Checks
 
 A check is a rule about a value that already has its type, given to a validator after its options. It runs once the value has its type and has passed the validator's own options: for a leaf, once the input has passed the type test and every option, such as `min`, `max` or `int`; for a format, once the text is of the format, so a check given to `ip()` or `uuid()` never sees text that is not an address or a UUID; for an object or a collection, once every child has passed, since before that there is no value of the type to check. While an option fails, no check runs and only the issues of the options are reported, every one that fails, so `max` keeps a long string from a costly `pattern`, and an asynchronous check, such as one that asks a server whether a name is taken, never sees a value the options already rejected. Once the options pass, every check runs and every issue is reported.
@@ -650,6 +673,33 @@ They need a validator `object` made, which is how they know its shape: `objectLi
 ## Coercing text input
 
 The coercing validators accept text that holds a value, convert it, and then apply the constraints of their strict counterpart: `coerceString` and `string`, `coerceNumber` and `number`, `coerceBoolean` and `boolean`, `coerceBigint` and `bigint`, `coerceDate` and `date`. They take the same options, `coerceDate` also `zoneless`, which says how to read a date-time without a zone, and fail with `invalid_type` and `coerced: true` in `params` when the value cannot be converted. [Coercion](coercion.md) lists exactly what each accepts and refuses, and how to read a whole environment or form with them.
+
+## Writing a value back
+
+`encode(validator, value)` writes a value of the type a validator produces back to what the validator accepts: the `Date` a `codec` read back to its text, an object of them back to an object of text, and what `json` parsed back to JSON. It returns a result, as a validator does.
+
+```ts
+import { codec, date, datetime, encode, object, string } from "@codenhub/validation";
+
+const timestamp = codec(datetime(), date(), {
+  decode: (text) => new Date(text),
+  encode: (value) => value.toISOString(),
+});
+const event = object({ name: string(), at: timestamp });
+
+encode(event, { name: "Launch", at: new Date(0) });
+// { ok: true, value: { name: "Launch", at: "1970-01-01T00:00:00.000Z" } }
+```
+
+- **A `codec`** validates the value with its output, runs its `encode`, and checks its input accepts the result.
+- **A part that produces what it accepts**, such as `string`, `number`, a format or a coercion, validates the value and gives what it produced: `email()` gives the address as the parser reads it, and `coerceNumber()` gives the number, which it accepts.
+- **A composer**, such as `object`, `array`, `tuple`, `record`, `map`, `set`, `union` or `tagged`, writes back each of its parts with its own options, and runs its checks on the value once its parts passed. `optional`, `nullable` and `nullish` keep what they let through, and a `pipe` writes its steps back from the last.
+- **`json` and `searchParams`** write text: `JSON.stringify` of what their validator wrote back, and a query string with each value as text and each item of a list as a repeated key.
+- **What cannot go back throws** a `TypeError` naming its place: a `transform`, whose function goes one way, and a validator written by hand. Use a `codec` there.
+
+So a value the validator could not have produced fails with the issues it has, at their paths: `encode(timestamp, new Date(Number.NaN))` fails as `date()` would. It is synchronous unless a part waits. A coercion writes back the value it produced, which it accepts, so inside `json` a `bigint` from `coerceBigint()` cannot be written as JSON: use a codec that writes it as text, as `amount` above does.
+
+`encode` builds, on each call, a validator of each part of the schema the other way, from the same factories, so it bundles every composer: about 8 kB gzipped with an object and a codec.
 
 ## Exposing a validator to other libraries
 

@@ -159,6 +159,8 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
         return mayBeAbsent((record["getter"] as () => unknown)(), seen);
       case "pipe":
         return mayBeAbsent((record["steps"] as unknown[]).at(isInput ? 0 : -1), seen);
+      case "codec":
+        return mayBeAbsent(record[isInput ? "input" : "output"], seen);
       case "union":
         return (record["members"] as unknown[]).some((member) => mayBeAbsent(member, seen));
       case "intersection":
@@ -405,6 +407,8 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
         return isInput ? child("inner") : anything("what a transform returns");
       case "pipe":
         return convert((record["steps"] as unknown[]).at(isInput ? 0 : -1), path);
+      case "codec":
+        return child(isInput ? "input" : "output");
       case "lazy": {
         const getter = record["getter"] as () => unknown;
         let name = names.get(getter);

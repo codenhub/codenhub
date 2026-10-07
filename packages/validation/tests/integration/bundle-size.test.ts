@@ -197,6 +197,16 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
     budget: 4740,
   },
   {
+    name: "codec",
+    source: `import { codec, date, datetime } from "DIST"; export const check = codec(datetime(), date(), { decode: (text) => new Date(text), encode: (value) => value.toISOString() });`,
+    budget: 2780,
+  },
+  {
+    name: "encode with an object and a codec",
+    source: `import { codec, date, datetime, encode, object } from "DIST"; const at = codec(datetime(), date(), { decode: (text) => new Date(text), encode: (value) => value.toISOString() }); export const written = encode(object({ at }), { at: new Date(0) });`,
+    budget: 9060,
+  },
+  {
     name: "everything",
     source: `export * from "DIST";`,
     budget: 25760,

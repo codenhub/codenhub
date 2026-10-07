@@ -53,6 +53,8 @@ import {
   omit,
   partial,
   pick,
+  codec,
+  encode,
   audit,
   extend,
   meta,
@@ -618,6 +620,19 @@ export const extended: Infer<typeof promoted> = { id: 1, role: "owner" };
 // @ts-expect-error an added property is typed by its validator
 export const unknownRole: Infer<typeof promoted> = { id: 1, role: "guest" };
 export const extendedAtOnce: boolean = promoted({}).ok;
+// A codec produces its output type from its input type, and encode goes back.
+const isoStamp = codec(datetime(), date(), {
+  decode: (text) => new Date(text),
+  encode: (value) => value.toISOString(),
+});
+export const isoStampValue: Infer<typeof isoStamp> = new Date();
+export const isoStampInput: InferInput<typeof isoStamp> = "2026-10-07T00:00:00Z";
+const written = encode(object({ at: isoStamp }), { at: new Date() });
+export const writtenAt: string | undefined = written.ok ? written.value.at : undefined;
+// @ts-expect-error encode takes a value of the type the validator produces
+encode(isoStamp, "2026-10-07T00:00:00Z");
+// @ts-expect-error decode is given what the input produced
+codec(string(), number(), { decode: (value: number) => value, encode: String });
 // audit reads any validator and gives findings whose rule a test can switch on.
 export const findings: readonly { rule: "unbounded_size" | "unbounded_text" | "raised_limit" | "unreadable" }[] =
   audit(account);

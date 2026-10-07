@@ -231,6 +231,44 @@ signup({ name: "", password: "correct horse battery", confirm: "nope" });
 // fails with the issue of `name` and "Passwords must match" at `confirm`
 ```
 
+### codec
+
+```ts
+export declare function codec<TInput extends AnyValidator, TOutput extends AnyValidator>(input: TInput, output: TOutput, conversions: Conversions<TInput, TOutput>): Composed<TInput | TOutput, Infer<TOutput>, InferInput<TInput>>;
+```
+
+Creates a validator that reads a value as it is sent, such as text, into the value a program uses, such as a `Date`, and that `encode` can write back.
+
+It validates with `input`, gives what that produced to `decode`, and validates the result with `output`, so both ends are checked: `"2026-02-30"` fails the input, and a `decode` that returns an invalid date fails the output. `encode(validator, value)` runs the other way, through `encode`: it validates the value with `output`, gives what that produced to `encode`, and checks `input` accepts the result. Each function is written for one direction, and a pair of them is what lets a value go back.
+
+An exception thrown by either function propagates, as a `transform`'s does: it is a bug, not invalid input. Return a value the other validator refuses instead, to fail. It is synchronous when both validators are.
+
+**Parameters**
+
+- `input` — Validates the value as it is sent.
+- `output` — Validates the value as a program uses it.
+- `conversions` — `decode` and `encode`, each a function of one direction.
+
+**Type parameters**
+
+- `TInput` — The validator of the value as it is sent.
+- `TOutput` — The validator of the value as a program uses it.
+
+**Returns** — A validator that produces what `output` produces, from what `input` accepts.
+
+**Throws** — When `input`, `output`, `decode` or `encode` is not a function.
+
+**Example**
+
+```ts
+const timestamp = codec(datetime(), date(), {
+  decode: (text) => new Date(text),
+  encode: (value) => value.toISOString(),
+});
+timestamp("2026-10-07T12:00:00Z"); // { ok: true, value: Date }
+encode(timestamp, new Date(0)); // { ok: true, value: "1970-01-01T00:00:00.000Z" }
+```
+
 ### describe
 
 ```ts
@@ -280,6 +318,47 @@ The value is the address as mail is delivered to it: the local part as written, 
 email()("Ada@Example.COM"); // { ok: true, value: "Ada@example.com" }
 email()("ada@localhost"); // { ok: false, error: { issues: [{ code: "invalid_format", ... }] } }
 email({ domain: oneOf(["company.com"]), message: "Use your company address" });
+```
+
+### encode
+
+```ts
+export declare function encode<TValidator extends AnyValidator>(validator: TValidator, value: Infer<TValidator>): Encoded<TValidator>;
+```
+
+Writes a value back to what a validator accepts: a `Date` back to the text a `codec` read it from, an object of them back to an object of text, and the object `json` parsed back to JSON.
+
+The validator is read with `describe`, and each part written back as its kind says:
+
+- A `codec` validates the value with its output, runs its `encode`, and checks its input accepts the result.
+- A part that produces what it accepts, such as `string`, a format or a coercion, validates the value and gives what it produced, so `email()` gives the address as the parser reads it.
+- A composer, such as `object`, `array` or `union`, writes back each of its parts and keeps its options, and runs its checks on the value once its parts passed. A `pipe` writes its steps back from the last.
+- `json` and `searchParams` write the text: JSON, and a query string of each value as text.
+
+So a value the validator could not have produced fails with the issues it has, at their paths. A part that cannot be written back throws a `TypeError` naming its place: a `transform`, whose function goes one way, and a validator written by hand; use a `codec` there. A coercion writes back the value it produced, which it accepts, so inside `json` a `bigint` from `coerceBigint` cannot be written as JSON: use a codec that writes it as text.
+
+**Parameters**
+
+- `validator` — A validator made by the factories of this package.
+- `value` — A value of the type the validator produces.
+
+**Type parameters**
+
+- `TValidator` — The validator to write the value back for.
+
+**Returns** — The value as the validator accepts it, or every issue found.
+
+**Throws** — When `validator` is not a function, or a part of it cannot be written back.
+
+**Example**
+
+```ts
+const timestamp = codec(datetime(), date(), {
+  decode: (text) => new Date(text),
+  encode: (value) => value.toISOString(),
+});
+const event = object({ name: string(), at: timestamp });
+encode(event, { name: "Launch", at: new Date(0) }); // { ok: true, value: { name: "Launch", at: "1970-01-01T00:00:00.000Z" } }
 ```
 
 ### endsWith
@@ -1999,6 +2078,35 @@ zoneless?: "utc" | undefined;
 
 How to read a date-time written without a zone, such as `2026-09-28T14:30` from an HTML `datetime-local` input. Such text names a time on some clock, not a moment, so without this option it fails: reading it in any one zone would move the moment, without a word, for everyone in another. `"utc"` reads it as UTC, for text you know is written in UTC. A date alone, `2026-09-28`, is always midnight UTC, as JavaScript reads it.
 
+### Conversions
+
+```ts
+export interface Conversions<TInput extends AnyValidator, TOutput extends AnyValidator>
+```
+
+The two functions of a [codec](#codec): one that turns what `input` produced into what `output` reads, and one that turns what `output` produced back into what `input` reads.
+
+**Type parameters**
+
+- `TInput` — The validator of the value as it is sent.
+- `TOutput` — The validator of the value as a program uses it.
+
+#### decode
+
+```ts
+readonly decode: (value: Infer<TInput>) => InferInput<TOutput>;
+```
+
+From the value as it is sent, once `input` passed it, to the value `output` validates.
+
+#### encode
+
+```ts
+readonly encode: (value: Infer<TOutput>) => InferInput<TInput>;
+```
+
+From the value as a program uses it, once `output` passed it, to the value `input` validates.
+
 ### DateOptions
 
 ```ts
@@ -3164,6 +3272,14 @@ export type Constructor<T = unknown> = abstract new (...args: never[]) => T;
 ```
 
 A class a value can be checked against, including abstract ones.
+
+### Encoded
+
+```ts
+export type Encoded<TValidator extends AnyValidator> = [TValidator] extends [Validator<unknown>] ? ValidationResult<InferInput<TValidator>> : ValidationResult<InferInput<TValidator>> | PromiseLike<ValidationResult<InferInput<TValidator>>>;
+```
+
+The result of `encode`: ready for a synchronous validator, and to be awaited for an asynchronous one.
 
 ### EnumLike
 

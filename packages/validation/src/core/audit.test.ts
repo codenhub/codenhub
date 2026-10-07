@@ -5,6 +5,7 @@ import { guard } from "../builders/guard";
 import { coerceNumber } from "../coercion/coerce-number";
 import { coerceString } from "../coercion/coerce-string";
 import { array } from "../composition/array";
+import { codec } from "../composition/codec";
 import { json } from "../composition/json";
 import { lazy } from "../composition/lazy";
 import { map } from "../composition/map";
@@ -150,6 +151,12 @@ describe("audit", () => {
       { rule: "unbounded_text", path: "shown", kind: "string" },
       { rule: "unbounded_text", path: "checked", kind: "string" },
     ]);
+  });
+
+  it("should read a codec by what is sent, its input", () => {
+    const count = codec(string(), number(), { decode: Number, encode: String });
+    expect(audit(object({ count }))).toEqual([{ rule: "unbounded_text", path: "count", kind: "string" }]);
+    expect(audit(codec(name, number(), { decode: Number, encode: String }))).toEqual([]);
   });
 
   it("should give a frozen list, and refuse what is not a function", () => {

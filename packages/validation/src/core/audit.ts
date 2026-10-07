@@ -192,6 +192,10 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
         }
         return;
       }
+      case "codec":
+        // What is sent is what the input reads; the output reads what the program made of it.
+        inner("input");
+        return;
       case "json":
       case "searchParams":
         if (!bounded) {
