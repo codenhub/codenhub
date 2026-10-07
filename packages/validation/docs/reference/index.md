@@ -274,6 +274,40 @@ Requires a string to end with a suffix. It fails with `invalid_format` and `para
 string(endsWith(".pdf", "Upload a PDF"));
 ```
 
+### extend
+
+```ts
+export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(validator: TValidator, shape: TShape, ...rest: Rest<Extended<Infer<TValidator>, TShape>, ObjectOptions>): TValidator extends Validator<unknown> ? Composed<TShape[keyof TShape], Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>> : AsyncValidator<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
+export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(validator: TValidator, shape: TShape, ...rest: AsyncRest<Extended<Infer<TValidator>, TShape>, ObjectOptions>): AsyncValidator<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
+```
+
+Creates an object validator with the properties of another and those given, as spreading the shape of one into another does for an object made from shapes.
+
+A module that exports an object validator, and not its shape, is extended with this. A property of the same name as one the object has replaces it, in its place. The validator must be one `object` made, since its shape is read from what it describes itself with. The new object keeps its options, `unknownKeys` and `message`, unless options are given here. One with checks is refused: a check reads the whole object and may read a property that is replaced, so give the checks the new object needs here instead.
+
+**Parameters**
+
+- `validator` — A validator made by `object`, without checks.
+- `shape` — Validator of each property added or replaced.
+- `rest` — Options, replacing those of the object, then checks on the new object.
+
+**Type parameters**
+
+- `TValidator` — The object validator to extend.
+- `TShape` — The validators of the properties added.
+
+**Returns** — A validator made by `object`, of the properties of both.
+
+**Throws** — When the validator was not made by `object` or has checks, or `shape` is not a plain object of validators.
+
+**Example**
+
+```ts
+const user = object({ name: string(), email: email() });
+const admin = extend(user, { role: oneOf(["owner", "editor"]) });
+admin({ name: "Ada", email: "ada@example.com", role: "owner" }); // { ok: true, value: { name: "Ada", ... } }
+```
+
 ### fail
 
 ```ts
@@ -758,6 +792,39 @@ A wrong size is reported at once, without validating the entries. An issue's pat
 ```ts
 const stock = map(string(), number({ int: true, min: 0 }));
 stock(new Map([["apples", 3]])); // { ok: true, value: Map { "apples" => 3 } }
+```
+
+### meta
+
+```ts
+export declare function meta<TValidator extends AnyValidator>(validator: TValidator, given: Meta): TValidator;
+```
+
+Says what a validator is for, so that `toJsonSchema` writes it beside the types: a title, a description, examples, and whether the value is deprecated.
+
+Returns a new validator that validates exactly as the one given, and whose description is that one's with `meta` added. The validator given is not changed, so the same one can be described differently in two places. A `meta` given to a validator that has one replaces the keys it names and keeps the others; a key given as `undefined` is not given. A validator written by hand, which has no description, is described as `{ kind: "meta", inner, meta }`.
+
+`pick`, `omit`, `required`, `partial` and `extend` read through it to the object it describes, and what they make has no `meta`: a title written for one object is rarely right for another.
+
+**Parameters**
+
+- `validator` — Any validator.
+- `given` — What to say about it.
+
+**Type parameters**
+
+- `TValidator` — The validator to describe.
+
+**Returns** — A validator that behaves as the one given.
+
+**Throws** — When `validator` is not a function, `given` is not a plain object, or a key of it is unknown or not of its type.
+
+**Example**
+
+```ts
+const city = meta(string({ min: 1 }), { description: "The city to get the weather for", examples: ["Lisbon"] });
+toJsonSchema(object({ city }));
+// { ..., properties: { city: { type: "string", minLength: 1, description: "The city to get the weather for", examples: ["Lisbon"] } }, ... }
 ```
 
 ### multipleOf
@@ -2203,6 +2270,46 @@ message?: Message | undefined;
 
 Wording for every issue this validator reports itself, and every issue one of its checks reports without a message of its own. Issues a child validator reports keep their own wording.
 
+### Meta
+
+```ts
+export interface Meta
+```
+
+What a validator is for, written for a reader: a person reading an API's documentation, or a language model choosing a tool and filling its arguments. Each key is the JSON Schema keyword of the same name.
+
+#### deprecated
+
+```ts
+readonly deprecated?: boolean | undefined;
+```
+
+Whether the value is on its way out, and should no longer be sent.
+
+#### description
+
+```ts
+readonly description?: string | undefined;
+```
+
+What the value is, and what it is for.
+
+#### examples
+
+```ts
+readonly examples?: readonly unknown[] | undefined;
+```
+
+Values that show what is expected. They are written as given, and not validated.
+
+#### title
+
+```ts
+readonly title?: string | undefined;
+```
+
+A short name for the value.
+
 ### NumberOptions
 
 ```ts
@@ -3002,6 +3109,19 @@ export type EnumLike = Readonly<Record<string, string | number>>;
 ```
 
 An object made by a TypeScript `enum`, or written like one.
+
+### Extended
+
+```ts
+export type Extended<T, TShape extends Shape> = Simplify<Omit<T, keyof TShape> & InferShape<TShape>>;
+```
+
+The object type with the properties of `TShape` added, replacing any of the same name.
+
+**Type parameters**
+
+- `T` — The object type extended.
+- `TShape` — The validators of the properties added.
 
 ### Infer
 
@@ -4199,7 +4319,7 @@ type Simplify<T> = {
 } & {};
 ```
 
-Not exported; declared in `src/composition/object.ts`, `src/composition/reshape.ts`, `src/composition/tagged.ts`.
+Not exported; declared in `src/composition/extend.ts`, `src/composition/object.ts`, `src/composition/reshape.ts`, `src/composition/tagged.ts`.
 
 ### Transformed
 

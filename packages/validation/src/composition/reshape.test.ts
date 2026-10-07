@@ -4,9 +4,12 @@ import { check } from "../builders/check";
 import { describe as describeValidator } from "../core/describe";
 import type { Validator } from "../core/types";
 import { email } from "../formats/email";
+import { boolean } from "../primitives/boolean";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
+import { extend } from "./extend";
+import { meta } from "./meta";
 import { nullable } from "./nullable";
 import { nullish } from "./nullish";
 import { object } from "./object";
@@ -214,5 +217,66 @@ describe("required", () => {
       ),
     ).toThrow("required() cannot keep the checks");
     expect(() => required(string() as never)).toThrow("required() needs a validator made by object()");
+  });
+});
+
+describe("extend", () => {
+  it("should add properties to those of the object, each validated as before", () => {
+    const admin = extend(user, { admin: boolean() });
+    expect(valueOf(admin({ ...ada, admin: true }))).toEqual({ ...ada, admin: true });
+    expect(codesOf(admin({ ...ada, name: "A" }))).toEqual(["too_small", "invalid_type"]);
+    expect(Object.keys(describeValidator(admin)?.["shape"] as object)).toEqual(["id", "name", "email", "admin"]);
+  });
+
+  it("should replace a property the object has, in its place, as spreading the shape does", () => {
+    const named = extend(user, { name: optional(string()) });
+    expect(valueOf(named({ id: 1, email: "ada@example.com" }))).toEqual({ id: 1, email: "ada@example.com" });
+    expect(Object.keys(describeValidator(named)?.["shape"] as object)).toEqual(["id", "name", "email"]);
+  });
+
+  it("should keep the options of the object unless given its own, and take checks", () => {
+    const strict = object({ a: string() }, { unknownKeys: "strict", message: "Bad" });
+    expect(describeValidator(extend(strict, { b: string() }))?.options).toEqual({
+      unknownKeys: "strict",
+      message: "Bad",
+    });
+    expect(valueOf(extend(strict, { b: string() }, { unknownKeys: "strip" })({ a: "x", b: "y", c: 1 }))).toEqual({
+      a: "x",
+      b: "y",
+    });
+    const confirmed = extend(
+      object({ password: string() }),
+      { confirm: string() },
+      check((value) => value.password === value.confirm, "Must match"),
+    );
+    expect(issuesOf(confirmed({ password: "a", confirm: "b" }))[0]?.message).toBe("Must match");
+  });
+
+  it("should stay synchronous for synchronous parts, and wait for an asynchronous property it adds", async () => {
+    expect(isPending(extend(user, { admin: boolean() })({ ...ada, admin: true }))).toBe(false);
+    const result = extend(user, { handle: isFree })({ ...ada, handle: "taken" });
+    expect(isPending(result)).toBe(true);
+    expect(codesOf(await result)).toEqual(["taken"]);
+  });
+
+  it("should read through meta, and give an object without it", () => {
+    const admin = extend(meta(user, { title: "User" }), { admin: boolean() });
+    expect(valueOf(admin({ ...ada, admin: false }))).toEqual({ ...ada, admin: false });
+    expect(describeValidator(admin)?.["meta"]).toBeUndefined();
+  });
+
+  it("should refuse what is no shape, a validator object did not make, and one with checks", () => {
+    expect(() => extend(user, "admin" as never)).toThrow(TypeError);
+    expect(() => extend(user, { admin: 1 as never })).toThrow(TypeError);
+    expect(() => extend(string() as never, {})).toThrow("extend() needs a validator made by object()");
+    expect(() =>
+      extend(
+        object(
+          { a: string() },
+          check(() => true),
+        ),
+        {},
+      ),
+    ).toThrow("extend() cannot keep the checks");
   });
 });

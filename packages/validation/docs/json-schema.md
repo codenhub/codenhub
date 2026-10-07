@@ -123,6 +123,36 @@ toJsonSchema(category).$defs;
 
 Build a recursive schema once and refer to it, as the [validator reference](validators.md#lazy) says. One built anew at every level, as `lazy(() => build())` inside `build` does, has no end to write, and `toJsonSchema` throws a `TypeError` saying so.
 
+## Saying what a value is for
+
+A schema that gives only the types tells a reader what to send and not what it means. [`meta`](validators.md#meta) adds a title, a description, examples and whether a value is deprecated to the part it is given to, and `toJsonSchema` writes each under JSON Schema's keyword of the same name. A language model reads the `description` of a tool's arguments to decide what to put in them, and an OpenAPI document shows all four.
+
+```ts
+import { meta, number, object, string, toJsonSchema } from "@codenhub/validation";
+
+const forecast = meta(
+  object({
+    city: meta(string({ min: 1 }), { description: "The city to get the weather for", examples: ["Lisbon"] }),
+    days: meta(number({ int: true, min: 1, max: 7 }), { description: "How many days ahead" }),
+  }),
+  { title: "Forecast" },
+);
+
+toJsonSchema(forecast);
+// {
+//   $schema: "https://json-schema.org/draft/2020-12/schema",
+//   type: "object",
+//   title: "Forecast",
+//   properties: {
+//     city: { type: "string", minLength: 1, description: "The city to get the weather for", examples: ["Lisbon"] },
+//     days: { type: "integer", minimum: 1, maximum: 7, description: "How many days ahead" },
+//   },
+//   required: ["city", "days"],
+// }
+```
+
+The keys are written on whatever schema the part is written as, beside a `$ref` for a `lazy` and beside an `anyOf` for a `nullable`, and the same on the input and the output side. Examples are written as given, and are not checked against the validator.
+
 ## What cannot be written
 
 JSON Schema has no words for some of what a validator can check, and JSON has no value for some of what it can produce:

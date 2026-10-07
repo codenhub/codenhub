@@ -182,6 +182,16 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
     budget: 3540,
   },
   {
+    name: "extend",
+    source: `import { extend, object, string } from "DIST"; export const check = extend(object({ name: string() }), { id: string() });`,
+    budget: 3650,
+  },
+  {
+    name: "toJsonSchema with meta",
+    source: `import { meta, object, string, toJsonSchema } from "DIST"; export const schema = toJsonSchema(object({ name: meta(string(), { description: "Name" }) }));`,
+    budget: 6160,
+  },
+  {
     name: "everything",
     source: `export * from "DIST";`,
     budget: 23320,

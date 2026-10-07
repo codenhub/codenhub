@@ -53,6 +53,8 @@ import {
   omit,
   partial,
   pick,
+  extend,
+  meta,
   portugueseMessages,
   readonly,
   required,
@@ -610,6 +612,17 @@ export const complete: Infer<typeof whole> = { id: 1, name: "Ada", bio: "Mathema
 // @ts-expect-error bio is required once the object is
 export const incomplete: Infer<typeof whole> = { id: 1, name: "Ada" };
 export const accountSchema: string[] | undefined = toJsonSchema(account, { io: "output" }).required;
+const promoted = extend(account, { role: oneOf(["owner", "editor"]), name: optional(string()) });
+export const extended: Infer<typeof promoted> = { id: 1, role: "owner" };
+// @ts-expect-error an added property is typed by its validator
+export const unknownRole: Infer<typeof promoted> = { id: 1, role: "guest" };
+export const extendedAtOnce: boolean = promoted({}).ok;
+// meta changes what a validator says, not its type.
+const titled = meta(account, { title: "Account", examples: [{ id: 1, name: "Ada" }] });
+export const titledValue: Infer<typeof titled> = { id: 1, name: "Ada" };
+export const titledAtOnce: boolean = titled({}).ok;
+// @ts-expect-error meta takes only the keys it knows
+meta(account, { titel: "Account" });
 
 export const maybeAsserted: string = assert(string(), "a", { subject: maybeWording, messages: undefined });
 

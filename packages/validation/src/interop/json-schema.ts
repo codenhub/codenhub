@@ -153,6 +153,7 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
       case "nullable":
       case "readonly":
       case "transform":
+      case "meta":
         return inner();
       case "lazy":
         return mayBeAbsent((record["getter"] as () => unknown)(), seen);
@@ -233,7 +234,14 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
     return schema;
   };
 
+  /** The schema of a part, with what `meta` says of it. */
   const convert = (target: unknown, path: string): JsonSchema => {
+    const schema = write(target, path);
+    const said = describe(target as AnyValidator)?.["meta"];
+    return said === undefined ? schema : { ...schema, ...(said as object) };
+  };
+
+  const write = (target: unknown, path: string): JsonSchema => {
     const record = describe(target as AnyValidator);
     if (record === undefined) {
       return refuse("a validator written by hand", path) ?? {};
@@ -389,6 +397,7 @@ export function toJsonSchema(validator: AnyValidator, options: JsonSchemaOptions
       case "nullish":
         return { anyOf: [child("inner"), { type: "null" }] };
       case "readonly":
+      case "meta":
         return child("inner");
       case "fallback":
         return isInput ? {} : child("inner");

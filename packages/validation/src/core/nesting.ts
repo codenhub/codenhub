@@ -80,6 +80,15 @@ export function composed(run: Run): (input: unknown) => Maybe<ValidationResult<u
 }
 
 /**
+ * A new function that validates as `validator` does, for a wrapper that changes what a validator carries
+ * and not what it does. A composer's copy shares its work, so another composer still reaches it with a place.
+ */
+export function sameAs(validator: AnyValidator): AnyValidator {
+  const run = runs.get(validator);
+  return run === undefined ? (input: unknown) => validator(input) : (composed(run) as AnyValidator);
+}
+
+/**
  * Validates a value found at `place` with any validator, and returns its result with every issue at
  * its full path: a composer of this package writes them so itself, and any other validator's issues are
  * moved there once. An issue written by hand without a path is given the place as its path; at the root

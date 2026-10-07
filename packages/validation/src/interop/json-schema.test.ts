@@ -20,6 +20,7 @@ import { fallback } from "../composition/fallback";
 import { intersection } from "../composition/intersection";
 import { json } from "../composition/json";
 import { lazy } from "../composition/lazy";
+import { meta } from "../composition/meta";
 import { nullable } from "../composition/nullable";
 import { nullish } from "../composition/nullish";
 import { object } from "../composition/object";
@@ -198,6 +199,42 @@ describe("toJsonSchema", () => {
       h: nullable(string()),
     });
     expect(schemaOf(loose)["required"]).toEqual(["h"]);
+  });
+
+  it("should write what meta says on the part it was given to, under JSON Schema's names", () => {
+    const tool = meta(
+      object({
+        city: meta(string({ min: 1 }), { description: "The city", examples: ["Lisbon"] }),
+        units: meta(optional(oneOf(["c", "f"])), { title: "Units", deprecated: true }),
+      }),
+      { title: "Weather", description: "What the weather is" },
+    );
+    expect(schemaOf(tool)).toEqual({
+      type: "object",
+      title: "Weather",
+      description: "What the weather is",
+      properties: {
+        city: { type: "string", minLength: 1, description: "The city", examples: ["Lisbon"] },
+        units: { enum: ["c", "f"], title: "Units", deprecated: true },
+      },
+      required: ["city"],
+    });
+  });
+
+  it("should write meta on a part it wraps, a validator written by hand and a recursive one", () => {
+    const byHand: Validator<string> = (input) => ({ ok: true, value: input as string });
+    expect(schemaOf(meta(byHand, { title: "Text" }), { unrepresentable: "any" })).toEqual({ title: "Text" });
+    expect(() => toJsonSchema(meta(byHand, { title: "Text" }))).toThrow("a validator written by hand at the root");
+    type Tree = { children: Tree[] };
+    const tree: Validator<Tree> = lazy(() => object({ children: array(tree) }));
+    expect(schemaOf(meta(tree, { description: "A tree" }))).toMatchObject({
+      $ref: "#/$defs/schema1",
+      description: "A tree",
+    });
+    expect(schemaOf(meta(nullable(string()), { title: "Name" }))).toEqual({
+      anyOf: [{ type: "string" }, { type: "null" }],
+      title: "Name",
+    });
   });
 
   it("should write strict objects as closed, and a key named like a prototype member as a property", () => {

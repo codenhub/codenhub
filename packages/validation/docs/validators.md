@@ -438,6 +438,28 @@ type Settings = Infer<typeof settings>; // { readonly theme: string; readonly ta
 - A value is taken to be yours when it is the input itself. When a `transform` returns a value from inside the input, such as `(value) => value.tags`, that value is frozen: copy it there when the caller must keep it changeable.
 - `pick`, `omit`, `required` and `partial` read an `object`, so reshape first and wrap after: `readonly(pick(user, ["name"]))`.
 
+### `meta`
+
+`meta(validator, { title, description, examples, deprecated })` says what a validator is for, for whoever reads the schema: a person reading an API's documentation, or a language model choosing a tool and filling in its arguments. [`toJsonSchema`](json-schema.md#saying-what-a-value-is-for) writes each key beside the types, under JSON Schema's name for it.
+
+```ts
+import { meta, number, object, string } from "@codenhub/validation";
+
+const forecast = meta(
+  object({
+    city: meta(string({ min: 1 }), { description: "The city to get the weather for", examples: ["Lisbon"] }),
+    days: meta(number({ int: true, min: 1, max: 7 }), { description: "How many days ahead" }),
+  }),
+  { title: "Forecast", description: "The weather for the coming days" },
+);
+```
+
+- It returns a new validator that validates exactly as the one given, whose description is that one's with `meta` added. The validator given is not changed, so the same one can be described differently in two places.
+- A `meta` given to a validator that has one replaces the keys it names and keeps the others. A key given as `undefined` is not given.
+- `title` and `description` are text, `examples` a list and `deprecated` `true` or `false`; any other value, or any other key, is a `TypeError` when the validator is made. Examples are kept as given and not validated, since they may show the input or the output.
+- `pick`, `omit`, `required`, `partial` and `extend` read through it to the object it describes. What they make has no `meta`, since a title written for one object is rarely right for another: give it one of its own.
+- What `standard` made stays a Standard Schema under `meta`.
+
 ### `fallback`
 
 `fallback(validator, value)` replaces a value that fails `validator` with a fallback, so the result never fails. The fallback is trusted and is not validated, and a function receives the issues that were found, which is the place to log them. A primitive is used as it is. An array or object must come from a function, such as `fallback(array(string()), () => [])`, since one value would be shared by every result and a change to one would show up in the next: the types reject it, and `fallback` throws a `TypeError` when created from JavaScript. A function is called with the issues, so a fallback that is itself a function has to be returned from one: `fallback(validator, () => callback)`, and the types reject the callback itself whenever the wrapped validator can produce a function. For the same reason a function that reads an argument, such as `Array` or `String`, would be given the issues: write `() => []`, not `Array`. A value whose validation `lazy` stopped at one of its limits, such as cyclic input or input nested past `maxDepth`, fails too, so it is replaced like any other failure; when those limits must surface, keep `fallback` off a recursive schema. This turns bad input into a valid-looking value, so reserve it for data where a sensible default is safer than an error, such as a stored preference that may be out of date.
@@ -598,12 +620,12 @@ const update = object(partial(user)); // every property optional
 const withAge = object({ ...user, age: number() });
 ```
 
-### `pick`, `omit`, `required` and `partial` on a validator
+### `pick`, `omit`, `required`, `partial` and `extend` on a validator
 
-When what you have is the validator and not its shape, such as one another module exports, the same four are functions of the validator. Each takes a validator `object` made and returns a new one, and leaves the one it was given as it is:
+When what you have is the validator and not its shape, such as one another module exports, these are functions of the validator. Each takes a validator `object` made and returns a new one, and leaves the one it was given as it is:
 
 ```ts
-import { email, number, object, omit, optional, partial, pick, required, string } from "@codenhub/validation";
+import { boolean, email, extend, number, object, omit, optional, partial, pick, required, string } from "@codenhub/validation";
 
 const user = object({ id: number(), name: string({ min: 2 }), email: email(), bio: optional(string()) });
 
@@ -611,10 +633,12 @@ const contact = pick(user, ["name", "email"]); // { name: string; email: string 
 const draft = omit(user, ["id"]); // everything but the id
 const patch = partial(user); // every property optional
 const complete = required(user); // bio is required too
+const admin = extend(user, { admin: boolean() }); // every property of user, and admin
 ```
 
 - `pick(validator, keys)` keeps the named properties and `omit(validator, keys)` leaves them out. A key the object does not have is a `TypeError` when the validator is created, since it is a misspelling.
 - `partial(validator)` wraps every property in `optional`, as `partial(shape)` does.
+- `extend(validator, shape)` adds the properties of `shape`, as spreading one shape into another does: a property the object has is replaced by the one given, in its place.
 - `required(validator)` makes every property required: one made with `optional` becomes the validator it wrapped, so its default is removed too and a missing property fails, and one made with `nullish` becomes `nullable`, which still accepts `null`. A property that accepts `undefined` some other way, such as `unknown()`, is kept as it is.
 
 The new object keeps the options of the one it came from, `unknownKeys` and `message`, and takes options and checks of its own after its arguments, as `object` does: `pick(user, ["name"], { unknownKeys: "strict" }, check(...))`.
@@ -694,7 +718,7 @@ A validator inside another is given as the validator itself, to be described in 
 
 A check is described the same way, so the list in `checks` can be read too: `describe(pattern(/^a/))` gives `{ kind: "check", code: "invalid_format", params: { format: "regex", pattern: "/^a/" } }`. A check made by `checkFields` gives `{ kind: "check", fields }`, the properties it waits for, and no `params`, since its test is a function. What nobody can read gives `undefined`: a validator or a check you wrote by hand, and a check made by `check`, whose test is a function. A reader of a schema decides what such a rule means to it, and code that turns a schema into another notation usually refuses it. The function a `transform` converts with and a `lazy`'s getter are in the description as functions, for the same reason. The test of a `guard` and what a format reads with are not in it: a `guard` gives the `expected` it names and a format its name.
 
-What `standard` returns is described as the validator it wraps. The parts are typed as `unknown`, since what a part is depends on the kind: read `kind` first, then the parts of that kind from the table.
+What `standard` returns is described as the validator it wraps, and so is what `meta` returns, with a `meta` part added: `{ title, description, examples, deprecated }`, each key only when given. A validator written by hand that `meta` was given is described as `{ kind: "meta", inner, meta }`. The parts are typed as `unknown`, since what a part is depends on the kind: read `kind` first, then the parts of that kind from the table.
 
 To write a whole schema as JSON Schema, for an HTTP API or the tools of a language model, see [JSON Schema](json-schema.md).
 

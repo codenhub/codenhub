@@ -1,9 +1,10 @@
 /*
- * Validators made from the parts of an `object` validator: `pick`, `omit`, `required`, and `partial` given
+ * Validators made from the parts of an `object` validator: `pick`, `omit`, `required`, `extend`, and `partial` given
  * a validator. Each reads the shape and options the object describes itself with, changes the shape, and
  * makes a new `object` of it, so what it returns is an `object` like any other.
  */
 import { describe } from "../core/describe";
+import { assertShape } from "../core/objects";
 import { assertList } from "../core/result";
 import type { AnyValidator, AsyncValidator, Validator } from "../core/types";
 import { nullable } from "./nullable";
@@ -81,6 +82,14 @@ export const picking = (
 ): AnyValidator => {
   const [shape, options] = partsOf(name, validator);
   return rebuild(select(name, shape, keys, isKept), options, rest);
+};
+
+/** Makes an object validator of the properties of another with those of `added` added or replaced. See `extend` in `extend.ts`. */
+export const extending = (validator: unknown, added: unknown, rest: readonly unknown[]): AnyValidator => {
+  const [shape, options] = partsOf("extend", validator);
+  assertShape(added);
+  // A key the object has keeps its place and takes the new validator, as spreading the shape does.
+  return rebuild({ ...shape, ...(added as Shape) }, options, rest);
 };
 
 /** Makes an object validator whose every property is changed by `change`. */
