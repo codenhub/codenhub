@@ -116,7 +116,7 @@ test.describe("solo utilities", () => {
     expect(tile["box-shadow"], "tile bar").toMatch(/\b0px 4px 0px 0px\b/);
 
     expect(cyber["border-top-width"], "cyber line").toBe("1px");
-    expect(cyber["box-shadow"], "cyber glow").toMatch(/\b0px 0px 8px 0px\b/);
+    expect(cyber["box-shadow"], "cyber glow").toMatch(/\b0px 0px 8px 1px\b/);
     /* A pane takes the surface diagonal: top-right and bottom-left. */
     expect(cyber["border-top-left-radius"], "cyber top-left").toBe("0px");
     if (browserName === "chromium") {
@@ -192,7 +192,7 @@ test.describe("solo utilities", () => {
     expect((await read(page, "#pixel", shadow))["box-shadow"], "pixel unit").toMatch(/\b6px\b/);
     expect((await read(page, "#chunky-tile", shadow))["box-shadow"], "tile lift").toMatch(/\b0px 6px 0px 0px\b/);
     expect((await read(page, "#chunky-tile", radius))["border-top-left-radius"], "tile corner").toBe("16px");
-    expect((await read(page, "#cyber", shadow))["box-shadow"], "cyber glow").toMatch(/\b0px 0px 20px 0px\b/);
+    expect((await read(page, "#cyber", shadow))["box-shadow"], "cyber glow").toMatch(/\b0px 0px 20px 1px\b/);
   });
 
   /* The whole reason a solo class reads no `--ui-*` or `--elevation-color`: an
@@ -521,7 +521,7 @@ test.describe("solo utilities", () => {
         /\b2px 2px 0px 0px\b/,
       );
       expect((await read(page, "#glow", ["box-shadow"]))["box-shadow"], "the glow is not depth").toMatch(
-        /\b0px 0px 8px 0px\b/,
+        /\b0px 0px 8px 1px\b/,
       );
     });
 
