@@ -671,9 +671,26 @@ To write a whole schema as JSON Schema, for an HTTP API or the tools of a langua
 
 `Infer<typeof validator>` is the type a validator produces. It reads the output of either a synchronous or an asynchronous validator.
 
+### `InferInput`
+
+`InferInput<typeof validator>` is the type of input that can pass, which is the type a form holds before it is validated. The two differ wherever a validator changes its value:
+
+```ts
+import { coerceNumber, object, oneOf, optional, type Infer, type InferInput } from "@codenhub/validation";
+
+const settings = object({ page: coerceNumber(), theme: optional(oneOf(["light", "dark"]), "light") });
+
+type Settings = Infer<typeof settings>; // { page: number; theme: "light" | "dark" }
+type SettingsInput = InferInput<typeof settings>; // { page: string | number; theme?: "light" | "dark" | undefined }
+```
+
+It differs from `Infer` for `optional` with a default, the `coerce` validators, `transform`, `pipe`, which accepts what its first validator does, `json`, which accepts text, `searchParams`, which accepts text or a `URLSearchParams`, typed as `string | Iterable<[string, string]>` so that the type names no global of a runtime, and `fallback`, which accepts anything. Clean-up is not a difference: `string({ trim: true })` accepts and produces a `string`.
+
+A validator is still called with any value at all. The input type says what can pass, for the types of a form or of a caller, and is never a limit on the argument. A validator you write by hand has `unknown` unless its type says otherwise, as `Validator<number, string>` does for one that reads a number from text. `standard` gives the input type to the library that takes the schema, so a form library types its fields from it.
+
 ### `is`
 
-`is(validator, input)` returns whether `input` passes, as a `boolean`. It does not narrow the type of `input`: a validator that trims, coerces or transforms produces another value than it was given, such as a number from the text `"5"`, so the input is not of the type the validator produces. Read `result.value` from calling the validator for that, or, where the validator keeps the value as it is, write the guard yourself: `(input: unknown): input is number => is(number(), input)`. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise.
+`is(validator, input)` returns whether `input` passes, and narrows `input` to the type the validator accepts, [`InferInput`](#inferinput): inside `if (is(string(), value))`, `value` is a `string`. That is the type of what was given, not of what the validator produces: what passed `coerceNumber()` was a number or the text of one, so `value` is `string | number` there, and the number is `result.value` from calling the validator. A validator written by hand that does not declare its input narrows nothing. It accepts synchronous validators only, and throws a `TypeError` if the validator turns out to return a promise.
 
 ### `pass` and `fail`
 
@@ -681,4 +698,4 @@ To write a whole schema as JSON Schema, for an HTTP API or the tools of a langua
 
 ### Types
 
-The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, `Check<T>` and `AsyncCheck<T>`, `Infer`, `ValidationResult<T>`, `ValidationIssue`, `Message`, `Messages` and the options interface of each validator, such as `StringOptions` or `UrlOptions`. The others exported, such as `Composed`, `Factory`, `Rest`, `InferShape` and `InferTagged`, are the machinery of the signatures: they are exported so that a validator you export from a library of your own can be named in its declarations. Each is documented in the source and listed in the [API reference](reference/index.md).
+The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, `Check<T>` and `AsyncCheck<T>`, `Infer`, `InferInput`, `ValidationResult<T>`, `ValidationIssue`, `Message`, `Messages` and the options interface of each validator, such as `StringOptions` or `UrlOptions`. The others exported, such as `Composed`, `Factory`, `Rest`, `InferShape` and `InferTagged`, are the machinery of the signatures: they are exported so that a validator you export from a library of your own can be named in its declarations. Each is documented in the source and listed in the [API reference](reference/index.md).

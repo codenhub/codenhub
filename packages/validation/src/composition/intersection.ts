@@ -11,6 +11,7 @@ import type {
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationIssue,
@@ -231,12 +232,12 @@ export function intersection<TLeft extends AnyValidator, TRight extends AnyValid
   left: TLeft,
   right: TRight,
   ...rest: Rest<Infer<TLeft> & Infer<TRight>, MessageOptions>
-): Composed<TLeft | TRight, Infer<TLeft> & Infer<TRight>>;
+): Composed<TLeft | TRight, Infer<TLeft> & Infer<TRight>, InferInput<TLeft> & InferInput<TRight>>;
 export function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(
   left: TLeft,
   right: TRight,
   ...rest: AsyncRest<Infer<TLeft> & Infer<TRight>, MessageOptions>
-): AsyncValidator<Infer<TLeft> & Infer<TRight>>;
+): AsyncValidator<Infer<TLeft> & Infer<TRight>, InferInput<TLeft> & InferInput<TRight>>;
 export function intersection(left: AnyValidator, right: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("left", left);
   assertFunction("right", right);

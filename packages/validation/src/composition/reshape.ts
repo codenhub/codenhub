@@ -10,8 +10,8 @@ import { nullable } from "./nullable";
 import { object, type ObjectOptions, type Shape } from "./object";
 
 /** A validator of `T` that is synchronous when the validator it was made from is. */
-export type Reshaped<TValidator extends AnyValidator, T> =
-  TValidator extends Validator<unknown> ? Validator<T> : AsyncValidator<T>;
+export type Reshaped<TValidator extends AnyValidator, T, TInput = unknown> =
+  TValidator extends Validator<unknown> ? Validator<T, TInput> : AsyncValidator<T, TInput>;
 
 type Simplify<T> = { [K in keyof T]: T[K] } & {};
 

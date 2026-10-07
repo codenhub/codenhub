@@ -1,12 +1,12 @@
 import { assertShape } from "../core/objects";
-import type { AnyValidator, AsyncRest, AsyncValidator, Composed, Infer, Rest } from "../core/types";
+import type { AnyValidator, AsyncRest, AsyncValidator, Composed, Infer, Rest, InferInput } from "../core/types";
 import type { ObjectOptions, Shape } from "./object";
 import { optional } from "./optional";
 import { mapping, type Reshaped } from "./reshape";
 
 /** A shape with every property wrapped in `optional`. */
 export type PartialShape<TShape extends Shape> = {
-  [K in keyof TShape]: Composed<TShape[K], Infer<TShape[K]> | undefined>;
+  [K in keyof TShape]: Composed<TShape[K], Infer<TShape[K]> | undefined, InferInput<TShape[K]> | undefined>;
 };
 
 /** The object type with every property optional. */
@@ -39,11 +39,11 @@ export function partial<TShape extends Shape>(shape: TShape): PartialShape<TShap
 export function partial<TValidator extends AnyValidator<object>>(
   validator: TValidator,
   ...rest: Rest<AllOptional<Infer<TValidator>>, ObjectOptions>
-): Reshaped<TValidator, AllOptional<Infer<TValidator>>>;
+): Reshaped<TValidator, AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
 export function partial<TValidator extends AnyValidator<object>>(
   validator: TValidator,
   ...rest: AsyncRest<AllOptional<Infer<TValidator>>, ObjectOptions>
-): AsyncValidator<AllOptional<Infer<TValidator>>>;
+): AsyncValidator<AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
 export function partial(shape: Shape | AnyValidator, ...rest: unknown[]): Shape | AnyValidator {
   if (typeof shape === "function") {
     return mapping("partial", shape, optional, rest);

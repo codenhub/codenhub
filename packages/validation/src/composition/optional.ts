@@ -2,7 +2,7 @@ import { detached } from "../core/async";
 import { described } from "../core/describe";
 import { call, composed } from "../core/nesting";
 import { assertFunction, assertUnshared, pass } from "../core/result";
-import type { AnyValidator, Composed, Infer } from "../core/types";
+import type { AnyValidator, Composed, Infer, InferInput } from "../core/types";
 import type { AnyFunction } from "../primitives/func";
 import type { LiteralValue } from "../primitives/literal";
 
@@ -46,11 +46,11 @@ type Fallback<T> = [Extract<T, AnyFunction>] extends [never] ? (T & LiteralValue
  */
 export function optional<TValidator extends AnyValidator>(
   validator: TValidator,
-): Composed<TValidator, Infer<TValidator> | undefined>;
+): Composed<TValidator, Infer<TValidator> | undefined, InferInput<TValidator> | undefined>;
 export function optional<TValidator extends AnyValidator>(
   validator: TValidator,
   value: Fallback<Exclude<Infer<TValidator>, undefined>>,
-): Composed<TValidator, Exclude<Infer<TValidator>, undefined>>;
+): Composed<TValidator, Exclude<Infer<TValidator>, undefined>, InferInput<TValidator> | undefined>;
 export function optional(validator: AnyValidator, value?: Fallback<unknown>): AnyValidator {
   assertFunction("validator", validator);
   assertUnshared("A default object", value);

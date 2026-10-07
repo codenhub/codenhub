@@ -10,6 +10,7 @@ import type {
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationResult,
@@ -49,11 +50,11 @@ export interface ArrayOptions extends SizeOptions, MessageOptions {}
 export function array<TItem extends AnyValidator>(
   item: TItem,
   ...rest: Rest<Infer<TItem>[], ArrayOptions>
-): Composed<TItem, Infer<TItem>[]>;
+): Composed<TItem, Infer<TItem>[], InferInput<TItem>[]>;
 export function array<TItem extends AnyValidator>(
   item: TItem,
   ...rest: AsyncRest<Infer<TItem>[], ArrayOptions>
-): AsyncValidator<Infer<TItem>[]>;
+): AsyncValidator<Infer<TItem>[], InferInput<TItem>[]>;
 export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("item", item);
   const [options, reject, accept, checks] = tail<ArrayOptions, unknown[]>(rest, "min max length");

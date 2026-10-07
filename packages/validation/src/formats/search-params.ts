@@ -55,11 +55,11 @@ export interface SearchParamsOptions extends MessageOptions {
 export function searchParams<TValidator extends AnyValidator>(
   validator: TValidator,
   ...rest: Rest<Infer<TValidator>, SearchParamsOptions>
-): Composed<TValidator, Infer<TValidator>>;
+): Composed<TValidator, Infer<TValidator>, string | Iterable<[string, string]>>;
 export function searchParams<TValidator extends AnyValidator>(
   validator: TValidator,
   ...rest: AsyncRest<Infer<TValidator>, SearchParamsOptions>
-): AsyncValidator<Infer<TValidator>>;
+): AsyncValidator<Infer<TValidator>, string | Iterable<[string, string]>>;
 export function searchParams(validator: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("validator", validator);
   const [options, reject, accept, checks] = tail<SearchParamsOptions, unknown>(rest, "repeated");

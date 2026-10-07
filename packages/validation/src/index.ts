@@ -30,7 +30,7 @@ export { lazy, type LazyOptions } from "./composition/lazy";
 export { map } from "./composition/map";
 export { nullable } from "./composition/nullable";
 export { nullish } from "./composition/nullish";
-export { object, type InferShape, type ObjectOptions, type Shape } from "./composition/object";
+export { object, type InferShape, type InferShapeInput, type ObjectOptions, type Shape } from "./composition/object";
 export { objectLike } from "./composition/object-like";
 export { optional } from "./composition/optional";
 export { omit } from "./composition/omit";
@@ -42,9 +42,9 @@ export { required } from "./composition/required";
 export type { AllRequired, Omitted, Picked, Reshaped } from "./composition/reshape";
 export { set } from "./composition/set";
 export { type SizeOptions } from "./composition/size";
-export { tagged, type InferTagged, type Variants } from "./composition/tagged";
+export { tagged, type InferTagged, type InferTaggedInput, type Variants } from "./composition/tagged";
 export { transform } from "./composition/transform";
-export { tuple, type InferTuple, type TupleOptions } from "./composition/tuple";
+export { tuple, type InferTuple, type InferTupleInput, type TupleOptions } from "./composition/tuple";
 export { union } from "./composition/union";
 export { assert, type AssertOptions } from "./core/assert";
 export { is } from "./core/is";
@@ -59,6 +59,7 @@ export type {
   Composed,
   Factory,
   Infer,
+  InferInput,
   Message,
   MessageOptions,
   Rest,

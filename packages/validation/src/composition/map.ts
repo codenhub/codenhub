@@ -11,6 +11,7 @@ import type {
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationIssue,
@@ -52,12 +53,12 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
   key: TKey,
   value: TValue,
   ...rest: Rest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>
-): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>>;
+): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>, Map<InferInput<TKey>, InferInput<TValue>>>;
 export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
   key: TKey,
   value: TValue,
   ...rest: AsyncRest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>
-): AsyncValidator<Map<Infer<TKey>, Infer<TValue>>>;
+): AsyncValidator<Map<Infer<TKey>, Infer<TValue>>, Map<InferInput<TKey>, InferInput<TValue>>>;
 export function map(key: AnyValidator, value: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("key", key);
   assertFunction("value", value);

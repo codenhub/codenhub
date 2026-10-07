@@ -10,6 +10,7 @@ import type {
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationResult,
@@ -51,6 +52,16 @@ type CheckedVariants<TKey extends string, TVariants extends Variants> = {
  */
 export type InferTagged<TKey extends string, TVariants extends Variants> = {
   [TTag in keyof TVariants & string]: Simplify<Infer<TVariants[TTag]> & { [K in TKey]: TTag }>;
+}[keyof TVariants & string];
+
+/**
+ * The union that can pass a set of variants: for each tag, what its variant accepts with the tag added.
+ *
+ * @typeParam TKey - The property that holds the tag.
+ * @typeParam TVariants - Variant validators, keyed by tag.
+ */
+export type InferTaggedInput<TKey extends string, TVariants extends Variants> = {
+  [TTag in keyof TVariants & string]: Simplify<InferInput<TVariants[TTag]> & { [K in TKey]: TTag }>;
 }[keyof TVariants & string];
 
 /**
@@ -100,12 +111,12 @@ export function tagged<const TKey extends string, const TVariants extends Varian
   key: TKey,
   variants: TVariants & CheckedVariants<TKey, TVariants>,
   ...rest: Rest<InferTagged<TKey, TVariants>, MessageOptions>
-): Composed<TVariants[keyof TVariants], InferTagged<TKey, TVariants>>;
+): Composed<TVariants[keyof TVariants], InferTagged<TKey, TVariants>, InferTaggedInput<TKey, TVariants>>;
 export function tagged<const TKey extends string, const TVariants extends Variants>(
   key: TKey,
   variants: TVariants & CheckedVariants<TKey, TVariants>,
   ...rest: AsyncRest<InferTagged<TKey, TVariants>, MessageOptions>
-): AsyncValidator<InferTagged<TKey, TVariants>>;
+): AsyncValidator<InferTagged<TKey, TVariants>, InferTaggedInput<TKey, TVariants>>;
 export function tagged(key: string, variants: Variants, ...rest: unknown[]): AnyValidator {
   assertText("tagged(key)", key);
   assertShape(variants, "variants");

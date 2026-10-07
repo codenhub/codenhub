@@ -1,4 +1,4 @@
-import type { AnyValidator, AsyncRest, AsyncValidator, Infer, Rest } from "../core/types";
+import type { AnyValidator, AsyncRest, AsyncValidator, Infer, Rest, InferInput } from "../core/types";
 import type { ObjectOptions } from "./object";
 import { picking, type Omitted, type Reshaped } from "./reshape";
 
@@ -30,12 +30,12 @@ export function omit<TValidator extends AnyValidator<object>, const TKey extends
   validator: TValidator,
   keys: readonly TKey[],
   ...rest: Rest<Omitted<Infer<TValidator>, TKey>, ObjectOptions>
-): Reshaped<TValidator, Omitted<Infer<TValidator>, TKey>>;
+): Reshaped<TValidator, Omitted<Infer<TValidator>, TKey>, Omit<InferInput<TValidator>, TKey>>;
 export function omit<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(
   validator: TValidator,
   keys: readonly TKey[],
   ...rest: AsyncRest<Omitted<Infer<TValidator>, TKey>, ObjectOptions>
-): AsyncValidator<Omitted<Infer<TValidator>, TKey>>;
+): AsyncValidator<Omitted<Infer<TValidator>, TKey>, Omit<InferInput<TValidator>, TKey>>;
 export function omit(validator: AnyValidator, keys: readonly unknown[], ...rest: unknown[]): AnyValidator {
   return picking("omit", validator, keys, false, rest);
 }

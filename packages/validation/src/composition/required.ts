@@ -1,4 +1,4 @@
-import type { AnyValidator, AsyncRest, AsyncValidator, Infer, Rest } from "../core/types";
+import type { AnyValidator, AsyncRest, AsyncValidator, Infer, Rest, InferInput } from "../core/types";
 import type { ObjectOptions } from "./object";
 import { mapping, unwrapped, type AllRequired, type Reshaped } from "./reshape";
 
@@ -31,11 +31,11 @@ import { mapping, unwrapped, type AllRequired, type Reshaped } from "./reshape";
 export function required<TValidator extends AnyValidator<object>>(
   validator: TValidator,
   ...rest: Rest<AllRequired<Infer<TValidator>>, ObjectOptions>
-): Reshaped<TValidator, AllRequired<Infer<TValidator>>>;
+): Reshaped<TValidator, AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
 export function required<TValidator extends AnyValidator<object>>(
   validator: TValidator,
   ...rest: AsyncRest<AllRequired<Infer<TValidator>>, ObjectOptions>
-): AsyncValidator<AllRequired<Infer<TValidator>>>;
+): AsyncValidator<AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
 export function required(validator: AnyValidator, ...rest: unknown[]): AnyValidator {
   return mapping("required", validator, unwrapped, rest);
 }

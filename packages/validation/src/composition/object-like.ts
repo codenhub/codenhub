@@ -14,7 +14,7 @@ import type {
   ValidationIssue,
   ValidationResult,
 } from "../core/types";
-import type { InferShape, Shape } from "./object";
+import type { InferShape, InferShapeInput, Shape } from "./object";
 
 /**
  * Creates a validator for any object that has the given properties, such as a class instance.
@@ -48,11 +48,11 @@ import type { InferShape, Shape } from "./object";
 export function objectLike<TShape extends Shape>(
   shape: TShape,
   ...rest: Rest<InferShape<TShape>, MessageOptions>
-): Composed<TShape[keyof TShape], InferShape<TShape>>;
+): Composed<TShape[keyof TShape], InferShape<TShape>, InferShapeInput<TShape>>;
 export function objectLike<TShape extends Shape>(
   shape: TShape,
   ...rest: AsyncRest<InferShape<TShape>, MessageOptions>
-): AsyncValidator<InferShape<TShape>>;
+): AsyncValidator<InferShape<TShape>, InferShapeInput<TShape>>;
 export function objectLike(shape: Shape, ...rest: unknown[]): AnyValidator {
   assertShape(shape);
   // The shape is read once, so changing it after the validator is made changes nothing.

@@ -9,6 +9,7 @@ import type {
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationPathSegment,
@@ -186,11 +187,11 @@ function spotOf(place: Place, { root, spots }: Paths): Spot {
 export function lazy<TValidator extends AnyValidator>(
   getter: () => TValidator,
   ...rest: Rest<Infer<TValidator>, LazyOptions>
-): Composed<TValidator, Infer<TValidator>>;
+): Composed<TValidator, Infer<TValidator>, InferInput<TValidator>>;
 export function lazy<TValidator extends AnyValidator>(
   getter: () => TValidator,
   ...rest: AsyncRest<Infer<TValidator>, LazyOptions>
-): AsyncValidator<Infer<TValidator>>;
+): AsyncValidator<Infer<TValidator>, InferInput<TValidator>>;
 export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("getter", getter);
   const [options, reject, accept, checks] = tail<LazyOptions, unknown>(rest, "maxDepth maxCalls");

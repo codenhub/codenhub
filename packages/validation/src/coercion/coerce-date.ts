@@ -98,4 +98,4 @@ export const coerceDate = ((...args: unknown[]) => {
     const parsed = typeof input === "string" ? readIso(input.trim(), isUtc) : undefined;
     return parsed === undefined ? undefined : [parsed];
   });
-}) as Factory<Date, CoerceDateOptions>;
+}) as Factory<Date, CoerceDateOptions, Date | number | string>;

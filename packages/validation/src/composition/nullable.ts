@@ -1,7 +1,7 @@
 import { described } from "../core/describe";
 import { call, composed } from "../core/nesting";
 import { assertFunction, pass } from "../core/result";
-import type { AnyValidator, Composed, Infer } from "../core/types";
+import type { AnyValidator, Composed, Infer, InferInput } from "../core/types";
 
 /**
  * Wraps a validator so `null` is accepted and passed through, and every other value goes to the
@@ -22,8 +22,12 @@ import type { AnyValidator, Composed, Infer } from "../core/types";
  */
 export function nullable<TValidator extends AnyValidator>(
   validator: TValidator,
-): Composed<TValidator, Infer<TValidator> | null> {
+): Composed<TValidator, Infer<TValidator> | null, InferInput<TValidator> | null> {
   assertFunction("validator", validator);
   const validate = composed((input, place) => (input === null ? pass(null) : call(validator, input, place)));
-  return described(validate, { kind: "nullable", inner: validator }) as Composed<TValidator, Infer<TValidator> | null>;
+  return described(validate, { kind: "nullable", inner: validator }) as Composed<
+    TValidator,
+    Infer<TValidator> | null,
+    InferInput<TValidator> | null
+  >;
 }

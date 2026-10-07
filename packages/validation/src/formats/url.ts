@@ -212,13 +212,13 @@ type UrlParts<TOptions> = Extract<
  * instance `"https:"` with its colon, or is `javascript`, `vbscript` or `data`, whose URLs run script, a
  * part validator is not a function, or `repeated` is not a boolean.
  */
-export function url(...checks: Check<string>[]): Validator<string>;
+export function url(...checks: Check<string>[]): Validator<string, string>;
 export function url<const TOptions extends UrlOptions>(
   options: TOptions,
   ...checks: Check<string>[]
-): Composed<UrlParts<TOptions>, string>;
-export function url(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
-export function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
+): Composed<UrlParts<TOptions>, string, string>;
+export function url(...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
+export function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
 export function url(...rest: unknown[]): AnyValidator {
   const [options, checks] = split<UrlOptions, string>(rest, "protocols credentials host port path query repeated");
   const {

@@ -30,10 +30,10 @@ const isFunction = (input: unknown): boolean => typeof input === "function";
  */
 export function func<T extends AnyFunction = (...args: unknown[]) => unknown>(
   ...rest: Rest<T, MessageOptions>
-): Validator<T>;
+): Validator<T, T>;
 export function func<T extends AnyFunction = (...args: unknown[]) => unknown>(
   ...rest: AsyncRest<T, MessageOptions>
-): AsyncValidator<T>;
+): AsyncValidator<T, T>;
 export function func(...rest: unknown[]): AnyValidator {
   const [options, checks] = split<MessageOptions, AnyFunction>(rest);
   const { message } = options;

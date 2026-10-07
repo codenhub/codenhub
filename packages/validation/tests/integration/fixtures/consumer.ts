@@ -72,6 +72,7 @@ import {
   type AsyncValidator,
   type Check,
   type Infer,
+  type InferInput,
   type Messages,
   type StandardSchemaV1,
   type ValidationIssue,
@@ -136,12 +137,14 @@ export const checkedLater: AsyncValidator<string[]> = array(
   check(async (list) => list.length > 0),
 );
 
-// is() accepts only synchronous validators, and answers whether the input passes without narrowing it,
-// since a validator may produce another value than it was given.
+// is() accepts only synchronous validators, and narrows its input to what the validator accepts, which
+// is not always what it produces: text that holds a number was text.
 export const raw: unknown = "text";
 export const passes: boolean = is(string(), raw);
-// @ts-expect-error is() does not narrow its input
 export const narrowed: string = is(string(), raw) ? raw : "";
+export const narrowedToInput: string | number = is(coerceNumber(), raw) ? raw : 0;
+// @ts-expect-error what passed a coercing validator may have been text, so it is not narrowed to a number
+export const narrowedToOutput: number = is(coerceNumber(), raw) ? raw : 0;
 // @ts-expect-error a validator that may finish later cannot be used as a synchronous guard
 export const badGuard = is(username, raw);
 
@@ -536,6 +539,35 @@ export const maybeOptions = [
   base64({ url: maybeFlag }),
   searchParams(unknown(), { repeated: maybeFlag }),
 ];
+// The input type is what can pass, which differs from what is produced where a validator changes its value.
+const preferences = object({
+  page: coerceNumber({ int: true }),
+  theme: optional(oneOf(["light", "dark"]), "light"),
+  tags: array(transform(string(), (text) => text.length)),
+  note: nullable(string()),
+});
+export const preferencesInput: InferInput<typeof preferences> = { page: "2", tags: ["a"], note: null };
+export const preferencesOutput: Infer<typeof preferences> = { page: 2, theme: "light", tags: [1], note: null };
+// @ts-expect-error a default makes the property present in what is produced
+export const withoutTheme: Infer<typeof preferences> = { page: 2, tags: [1], note: null };
+// @ts-expect-error what a transform produces is not what it accepts
+export const lengthsAsInput: InferInput<typeof preferences> = { page: 1, tags: [1], note: null };
+// A validator written by hand accepts whatever it does not say, and may say.
+export const handInput: InferInput<typeof even> = Symbol("anything");
+const fromText: Validator<number, string> = (input) => ({ ok: true, value: Number(input) });
+export const textInput: InferInput<typeof fromText> = "5";
+// @ts-expect-error it declared text as its input
+export const numberInput: InferInput<typeof fromText> = 5;
+// A validator is still called with anything, whatever input type it declares.
+export const calledWithAnything: boolean = string()(Symbol("not a string")).ok;
+// A Standard Schema carries the input type to the library that takes it.
+const standardPreferences = standard(preferences, englishMessages);
+export const standardInput: StandardSchemaV1.InferInput<typeof standardPreferences> = {
+  page: "2",
+  tags: [],
+  note: null,
+};
+
 // A validator made from another keeps what the types can know of it: the properties, and whether it waits.
 const account = object({ id: number(), name: string(), bio: optional(string()) });
 const contact = pick(account, ["name"]);

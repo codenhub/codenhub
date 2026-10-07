@@ -12,13 +12,13 @@ import type { AnyValidator, AsyncValidator, ValidationResult, Validator } from "
  * such as `JSON.parse`, has opted out of type checking, and is taken at its word as synchronous: typing
  * it asynchronous would make the most common conversion need an `await` it never needs.
  */
-type Transformed<R> = 0 extends 1 & R
-  ? Validator<R>
+type Transformed<R, TInput> = 0 extends 1 & R
+  ? Validator<R, TInput>
   : [unknown] extends [R]
-    ? AsyncValidator<Awaited<R>>
+    ? AsyncValidator<Awaited<R>, TInput>
     : [Extract<R, PromiseLike<unknown>>] extends [never]
-      ? Validator<R>
-      : AsyncValidator<Awaited<R>>;
+      ? Validator<R, TInput>
+      : AsyncValidator<Awaited<R>, TInput>;
 
 /**
  * Changes the value a validator produced into another value, such as text into a `Date`.
@@ -44,9 +44,18 @@ type Transformed<R> = 0 extends 1 & R
  * @returns A validator that produces what `convert` returns.
  * @throws {TypeError} When `validator` or `convert` is not a function.
  */
-export function transform<T, R>(validator: AnyValidator<T>, convert: (value: T) => PromiseLike<R>): AsyncValidator<R>;
-export function transform<T, R>(validator: Validator<T>, convert: (value: T) => R): Transformed<R>;
-export function transform<T, R>(validator: AnyValidator<T>, convert: (value: T) => R): AsyncValidator<Awaited<R>>;
+export function transform<T, R, TInput = unknown>(
+  validator: AnyValidator<T, TInput>,
+  convert: (value: T) => PromiseLike<R>,
+): AsyncValidator<R, TInput>;
+export function transform<T, R, TInput = unknown>(
+  validator: Validator<T, TInput>,
+  convert: (value: T) => R,
+): Transformed<R, TInput>;
+export function transform<T, R, TInput = unknown>(
+  validator: AnyValidator<T, TInput>,
+  convert: (value: T) => R,
+): AsyncValidator<Awaited<R>, TInput>;
 export function transform<T, R>(validator: AnyValidator<T>, convert: (value: T) => Maybe<R>): AnyValidator<R> {
   assertFunction("validator", validator);
   assertFunction("convert", convert);

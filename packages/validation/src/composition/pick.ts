@@ -1,4 +1,4 @@
-import type { AnyValidator, AsyncRest, AsyncValidator, Infer, Rest } from "../core/types";
+import type { AnyValidator, AsyncRest, AsyncValidator, Infer, Rest, InferInput } from "../core/types";
 import type { ObjectOptions } from "./object";
 import { picking, type Picked, type Reshaped } from "./reshape";
 
@@ -30,12 +30,16 @@ export function pick<TValidator extends AnyValidator<object>, const TKey extends
   validator: TValidator,
   keys: readonly TKey[],
   ...rest: Rest<Picked<Infer<TValidator>, TKey>, ObjectOptions>
-): Reshaped<TValidator, Picked<Infer<TValidator>, TKey>>;
+): Reshaped<
+  TValidator,
+  Picked<Infer<TValidator>, TKey>,
+  Pick<InferInput<TValidator>, TKey & keyof InferInput<TValidator>>
+>;
 export function pick<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(
   validator: TValidator,
   keys: readonly TKey[],
   ...rest: AsyncRest<Picked<Infer<TValidator>, TKey>, ObjectOptions>
-): AsyncValidator<Picked<Infer<TValidator>, TKey>>;
+): AsyncValidator<Picked<Infer<TValidator>, TKey>, Pick<InferInput<TValidator>, TKey & keyof InferInput<TValidator>>>;
 export function pick(validator: AnyValidator, keys: readonly unknown[], ...rest: unknown[]): AnyValidator {
   return picking("pick", validator, keys, true, rest);
 }

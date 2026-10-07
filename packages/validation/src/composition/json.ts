@@ -37,16 +37,16 @@ import type {
  * @returns A validator that produces what `validator` produces, or `unknown` without one.
  * @throws {TypeError} When `validator` is given and is not a function, `undefined` included.
  */
-export function json(): Validator<unknown>;
-export function json(options: MessageOptions): Validator<unknown>;
+export function json(): Validator<unknown, string>;
+export function json(options: MessageOptions): Validator<unknown, string>;
 export function json<TValidator extends AnyValidator>(
   validator: TValidator,
   ...rest: Rest<Infer<TValidator>, MessageOptions>
-): Composed<TValidator, Infer<TValidator>>;
+): Composed<TValidator, Infer<TValidator>, string>;
 export function json<TValidator extends AnyValidator>(
   validator: TValidator,
   ...rest: AsyncRest<Infer<TValidator>, MessageOptions>
-): AsyncValidator<Infer<TValidator>>;
+): AsyncValidator<Infer<TValidator>, string>;
 export function json(...args: unknown[]): AnyValidator {
   // A function in first place is the validator of the parsed value, and an object or no argument at all
   // is the options. Anything else, such as an import that resolved to null or a key with no validator,

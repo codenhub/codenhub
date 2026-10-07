@@ -10,6 +10,7 @@ import type {
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationResult,
@@ -28,6 +29,21 @@ export type InferTuple<
   TItems extends readonly AnyValidator[],
   TRest extends AnyValidator | undefined = undefined,
 > = TRest extends AnyValidator ? [...InferItems<TItems>, ...Infer<TRest>[]] : InferItems<TItems>;
+
+type InferItemInputs<TItems extends readonly AnyValidator[]> = {
+  -readonly [K in keyof TItems]: InferInput<TItems[K]>;
+};
+
+/**
+ * The array type that can pass a tuple: what each fixed item accepts, then any number of what `rest` accepts.
+ *
+ * @typeParam TItems - The validators of the fixed positions.
+ * @typeParam TRest - The validator of the remaining positions, or `undefined` for none.
+ */
+export type InferTupleInput<
+  TItems extends readonly AnyValidator[],
+  TRest extends AnyValidator | undefined = undefined,
+> = TRest extends AnyValidator ? [...InferItemInputs<TItems>, ...InferInput<TRest>[]] : InferItemInputs<TItems>;
 
 /** Options for {@link tuple}. */
 export interface TupleOptions<TRest extends AnyValidator | undefined = undefined> extends MessageOptions {
@@ -76,14 +92,14 @@ export function tuple<
 >(
   items: TItems,
   ...rest: Rest<InferTuple<TItems, TRest>, TupleOptions<TRest>>
-): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>>;
+): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>, InferTupleInput<TItems, TRest>>;
 export function tuple<
   const TItems extends readonly [AnyValidator, ...AnyValidator[]],
   TRest extends AnyValidator | undefined = undefined,
 >(
   items: TItems,
   ...rest: AsyncRest<InferTuple<TItems, TRest>, TupleOptions<TRest>>
-): AsyncValidator<InferTuple<TItems, TRest>>;
+): AsyncValidator<InferTuple<TItems, TRest>, InferTupleInput<TItems, TRest>>;
 export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyValidator {
   const [options, reject, accept, checks] = tail<TupleOptions<AnyValidator | undefined>, unknown[]>(args, "rest max");
   const { rest, max } = options;

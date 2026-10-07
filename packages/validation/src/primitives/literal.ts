@@ -26,11 +26,11 @@ export type LiteralValue = string | number | boolean | bigint | symbol | null | 
  * @throws {TypeError} When `value` is an object or a function, which equals only itself.
  * @throws {RangeError} When `value` is `NaN`, which no value equals, so the literal would accept nothing.
  */
-export function literal<const T extends LiteralValue>(value: T, ...rest: Rest<T, MessageOptions>): Validator<T>;
+export function literal<const T extends LiteralValue>(value: T, ...rest: Rest<T, MessageOptions>): Validator<T, T>;
 export function literal<const T extends LiteralValue>(
   value: T,
   ...rest: AsyncRest<T, MessageOptions>
-): AsyncValidator<T>;
+): AsyncValidator<T, T>;
 export function literal(value: LiteralValue, ...rest: unknown[]): AnyValidator {
   // An object or a function equals only itself, so the literal would reject every value parsed from input.
   if (Object(value) === value) {

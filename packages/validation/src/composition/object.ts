@@ -11,6 +11,7 @@ import type {
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationIssue,
@@ -34,6 +35,22 @@ type OptionalKeys<TShape extends Shape> = {
 export type InferShape<TShape extends Shape> = Simplify<
   { [K in Exclude<keyof TShape, OptionalKeys<TShape>>]: Infer<TShape[K]> } & {
     [K in OptionalKeys<TShape>]?: Infer<TShape[K]>;
+  }
+>;
+
+type OptionalInputKeys<TShape extends Shape> = {
+  [K in keyof TShape]: undefined extends InferInput<TShape[K]> ? K : never;
+}[keyof TShape];
+
+/**
+ * The object type that can pass a shape. A property whose validator accepts `undefined` is optional, so one
+ * with a default is optional here and present in what the shape produces.
+ *
+ * @typeParam TShape - Property validators.
+ */
+export type InferShapeInput<TShape extends Shape> = Simplify<
+  { [K in Exclude<keyof TShape, OptionalInputKeys<TShape>>]: InferInput<TShape[K]> } & {
+    [K in OptionalInputKeys<TShape>]?: InferInput<TShape[K]>;
   }
 >;
 
@@ -84,11 +101,11 @@ export interface ObjectOptions extends MessageOptions {
 export function object<TShape extends Shape>(
   shape: TShape,
   ...rest: Rest<InferShape<TShape>, ObjectOptions>
-): Composed<TShape[keyof TShape], InferShape<TShape>>;
+): Composed<TShape[keyof TShape], InferShape<TShape>, InferShapeInput<TShape>>;
 export function object<TShape extends Shape>(
   shape: TShape,
   ...rest: AsyncRest<InferShape<TShape>, ObjectOptions>
-): AsyncValidator<InferShape<TShape>>;
+): AsyncValidator<InferShape<TShape>, InferShapeInput<TShape>>;
 export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
   assertShape(shape);
   // The shape is read once, so changing it after the validator is made changes nothing.

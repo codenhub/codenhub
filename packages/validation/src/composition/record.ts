@@ -11,6 +11,7 @@ import type {
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationIssue,
@@ -72,12 +73,16 @@ export function record<TKey extends AnyValidator<string>, TValue extends AnyVali
   key: TKey,
   value: TValue,
   ...rest: Rest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>
-): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>>;
+): Composed<
+  TKey | TValue,
+  InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>,
+  Record<string, InferInput<TValue>>
+>;
 export function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(
   key: TKey,
   value: TValue,
   ...rest: AsyncRest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>
-): AsyncValidator<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>>;
+): AsyncValidator<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, Record<string, InferInput<TValue>>>;
 export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("key", key);
   assertFunction("value", value);

@@ -9,6 +9,7 @@ import type {
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationIssue,
@@ -44,11 +45,11 @@ import type {
 export function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(
   options: TOptions,
   ...rest: Rest<Infer<TOptions[number]>, MessageOptions>
-): Composed<TOptions[number], Infer<TOptions[number]>>;
+): Composed<TOptions[number], Infer<TOptions[number]>, InferInput<TOptions[number]>>;
 export function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(
   options: TOptions,
   ...rest: AsyncRest<Infer<TOptions[number]>, MessageOptions>
-): AsyncValidator<Infer<TOptions[number]>>;
+): AsyncValidator<Infer<TOptions[number]>, InferInput<TOptions[number]>>;
 export function union(options: readonly AnyValidator[], ...rest: unknown[]): AnyValidator {
   assertList("options", options);
   // Copied, so changing the list after the validator is made changes nothing.

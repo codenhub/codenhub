@@ -64,13 +64,13 @@ type EmailParts<TOptions> = Extract<TOptions[keyof TOptions & ("domain" | "local
  * @returns A validator that produces the address, its domain as the parser reads it.
  * @throws {TypeError} When `domain` or `local` is not a function, or `allowPlus` is not a boolean.
  */
-export function email(...checks: Check<string>[]): Validator<string>;
+export function email(...checks: Check<string>[]): Validator<string, string>;
 export function email<const TOptions extends EmailOptions>(
   options: TOptions,
   ...checks: Check<string>[]
-): Composed<EmailParts<TOptions>, string>;
-export function email(...checks: AsyncCheck<string>[]): AsyncValidator<string>;
-export function email(options: EmailOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string>;
+): Composed<EmailParts<TOptions>, string, string>;
+export function email(...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
+export function email(options: EmailOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
 export function email(...rest: unknown[]): AnyValidator {
   const [options, checks] = split<EmailOptions, string>(rest, "allowPlus domain local");
   const { allowPlus = true, domain, local, message } = options;

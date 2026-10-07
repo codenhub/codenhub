@@ -116,7 +116,7 @@ import { fail, pass, type Validator } from "@codenhub/validation";
 const even: Validator<number> = (input) => (typeof input === "number" && input % 2 === 0 ? pass(input) : fail({ code: "not_even" }));
 ```
 
-The parameter is `unknown` because a validator exists to check data you do not trust yet. The `Validator<number>` annotation makes the compiler check your function against the contract and tells `Infer` what it produces. A hand-written validator works everywhere a built-in does, inside `object`, `optional` and `pipe`, but has no `message` option or checks unless you write them, which is what the builders are for.
+The parameter is `unknown` because a validator exists to check data you do not trust yet. The `Validator<number>` annotation makes the compiler check your function against the contract and tells `Infer` what it produces. A second type says what it accepts, for [`InferInput`](validators.md#inferinput): `Validator<number, string>` is a validator that reads a number from text. Without it the input type is `unknown`. A hand-written validator works everywhere a built-in does, inside `object`, `optional` and `pipe`, but has no `message` option or checks unless you write them, which is what the builders are for.
 
 `fail` takes one or more issues, and throws a `TypeError` for none, since a failure with no issue says nothing, and for a `path` that is not a list, such as `"confirm"` where `["confirm"]` was meant, which would be split into one segment per letter. Each can set:
 

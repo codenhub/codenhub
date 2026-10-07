@@ -11,6 +11,7 @@ import type {
   AsyncValidator,
   Composed,
   Infer,
+  InferInput,
   MessageOptions,
   Rest,
   ValidationIssue,
@@ -49,11 +50,11 @@ import { SIZE_OPTIONS, assertSizeOptions, sizeIssues, type SizeOptions } from ".
 export function set<TItem extends AnyValidator>(
   item: TItem,
   ...rest: Rest<Set<Infer<TItem>>, SizeOptions & MessageOptions>
-): Composed<TItem, Set<Infer<TItem>>>;
+): Composed<TItem, Set<Infer<TItem>>, Set<InferInput<TItem>>>;
 export function set<TItem extends AnyValidator>(
   item: TItem,
   ...rest: AsyncRest<Set<Infer<TItem>>, SizeOptions & MessageOptions>
-): AsyncValidator<Set<Infer<TItem>>>;
+): AsyncValidator<Set<Infer<TItem>>, Set<InferInput<TItem>>>;
 export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("item", item);
   const [options, reject, accept, checks] = tail<SizeOptions & MessageOptions, Set<unknown>>(rest, SIZE_OPTIONS);
