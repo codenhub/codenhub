@@ -15,7 +15,8 @@ import type { StandardJSONSchemaV1, StandardSchemaV1 } from "./standard-schema";
  * Schema](https://standardschema.dev/json-schema) specification: `input({ target })` and
  * `output({ target })` write the validator with `toJsonSchema`, its `io` and `target` as asked. Targets
  * `"draft-2020-12"` and `"draft-07"` are written, and any other throws a `TypeError`, as the specification
- * asks. A part JSON Schema cannot say throws too, unless `libraryOptions` is `{ unrepresentable: "any" }`.
+ * asks. A part of the validator JSON Schema cannot say, such as a custom check, throws too, unless
+ * `libraryOptions` is `{ unrepresentable: "any" }`.
  *
  * It is an export of its own so that `standard`, which a form in the browser uses, does not bundle the
  * code that writes a JSON Schema. Give `meta` to the validator before passing it here: the schema is
@@ -47,7 +48,9 @@ export function standardJsonSchema<TValidator extends AnyValidator>(
   const writer =
     (io: "input" | "output") =>
     (options: StandardJSONSchemaV1.Options): Record<string, unknown> => {
-      if (!isPlainObject(options)) {
+      // The specification makes `target` required, so leaving it out is refused as an unknown one is, and
+      // not read as the default draft.
+      if (!isPlainObject(options) || options.target === undefined) {
         throw new TypeError("options must be an object with a target");
       }
       const unrepresentable = options.libraryOptions?.["unrepresentable"];

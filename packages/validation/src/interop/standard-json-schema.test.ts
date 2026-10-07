@@ -41,6 +41,7 @@ describe("standardJsonSchema", () => {
   it("should throw for a target it does not write, and for a part that cannot be written unless told", () => {
     const { jsonSchema } = standardJsonSchema(object({ at: date() }))["~standard"];
     expect(() => jsonSchema.input({ target: "openapi-3.0" })).toThrow(TypeError);
+    expect(() => jsonSchema.input({} as never)).toThrow(new TypeError("options must be an object with a target"));
     expect(() => jsonSchema.input({ target: "draft-07" })).toThrow("cannot write");
     expect(jsonSchema.input({ target: "draft-07", libraryOptions: { unrepresentable: "any" } })).toMatchObject({
       properties: { at: {} },

@@ -1609,7 +1609,7 @@ export declare function standardJsonSchema<TValidator extends AnyValidator>(vali
 
 Makes a validator usable wherever a Standard Schema is accepted, as `standard` does, and also wherever one that can be written as a JSON Schema is, such as the tools of a language model in the AI SDK.
 
-What it returns is what `standard` returns with `~standard.jsonSchema` added, from the [Standard JSON Schema](https://standardschema.dev/json-schema) specification: `input({ target })` and `output({ target })` write the validator with `toJsonSchema`, its `io` and `target` as asked. Targets `"draft-2020-12"` and `"draft-07"` are written, and any other throws a `TypeError`, as the specification asks. A part JSON Schema cannot say throws too, unless `libraryOptions` is `{ unrepresentable: "any" }`.
+What it returns is what `standard` returns with `~standard.jsonSchema` added, from the [Standard JSON Schema](https://standardschema.dev/json-schema) specification: `input({ target })` and `output({ target })` write the validator with `toJsonSchema`, its `io` and `target` as asked. Targets `"draft-2020-12"` and `"draft-07"` are written, and any other throws a `TypeError`, as the specification asks. A part of the validator JSON Schema cannot say, such as a custom check, throws too, unless `libraryOptions` is `{ unrepresentable: "any" }`.
 
 It is an export of its own so that `standard`, which a form in the browser uses, does not bundle the code that writes a JSON Schema. Give `meta` to the validator before passing it here: the schema is written from the validator this is given.
 
@@ -1704,13 +1704,13 @@ event({ type: "click", x: 1 }); // { ok: false, ... }, code "invalid_type" at pa
 export declare function toJsonSchema(validator: AnyValidator, options?: JsonSchemaOptions): JsonSchema;
 ```
 
-Writes a validator as a JSON Schema, draft 2020-12, for whatever takes one: the body of an HTTP API, the arguments of a tool a language model calls, a form generator.
+Writes a validator as a JSON Schema, draft 2020-12 unless `target` asks for draft-07, for whatever takes one: the body of an HTTP API, the arguments of a tool a language model calls, a form generator.
 
 The schema is read from what [describe](#describe) gives, so only validators made by this package's factories can be written. It is written so that a value the validator accepts passes it, with the exceptions below, and it accepts some the validator refuses, since a validator checks more than a schema can say: a format's exact rules, such as which hosts of an `email` are public, are written as the nearest JSON Schema `format`.
 
 The exceptions are where a validator cleans a value before it checks it, which is not written. `string({ trim: true, max: 5 })` is written with `maxLength: 5`, which describes text that needs no trimming; text with spaces around five letters passes the validator and not the schema. A `case`, and a `clamp` beside a limit, are the same. Lengths differ for a character outside the Basic Multilingual Plane, such as an emoji, which a string's `length` counts as two and JSON Schema as one.
 
-A recursive schema is written with `$defs` and `$ref`, one definition for each `lazy`.
+A recursive schema is written with `$ref` and one definition for each `lazy`, under `$defs` in draft 2020-12 and under `definitions` in draft-07.
 
 **Parameters**
 
@@ -2376,7 +2376,7 @@ Location of the failure relative to the value being validated. Defaults to that 
 export interface JsonSchema
 ```
 
-A JSON Schema, draft 2020-12, as plain data ready for `JSON.stringify`.
+A JSON Schema, draft 2020-12 or draft-07, as plain data ready for `JSON.stringify`.
 
 #### $defs
 

@@ -3,7 +3,7 @@ import { isPlainObject } from "../core/objects";
 import { assertFunction } from "../core/result";
 import type { AnyValidator } from "../core/types";
 
-/** A JSON Schema, draft 2020-12, as plain data ready for `JSON.stringify`. */
+/** A JSON Schema, draft 2020-12 or draft-07, as plain data ready for `JSON.stringify`. */
 export interface JsonSchema {
   /** The draft the schema is written in, on the schema `toJsonSchema` returns. */
   $schema?: string;
@@ -76,8 +76,8 @@ const isJsonPrimitive = (value: unknown): boolean =>
   value === null || typeof value === "string" || typeof value === "boolean" || Number.isFinite(value);
 
 /**
- * Writes a validator as a JSON Schema, draft 2020-12, for whatever takes one: the body of an HTTP API,
- * the arguments of a tool a language model calls, a form generator.
+ * Writes a validator as a JSON Schema, draft 2020-12 unless `target` asks for draft-07, for whatever takes
+ * one: the body of an HTTP API, the arguments of a tool a language model calls, a form generator.
  *
  * @remarks
  * The schema is read from what {@link describe} gives, so only validators made by this package's
@@ -92,7 +92,8 @@ const isJsonPrimitive = (value: unknown): boolean =>
  * a `clamp` beside a limit, are the same. Lengths differ for a character outside the Basic Multilingual
  * Plane, such as an emoji, which a string's `length` counts as two and JSON Schema as one.
  *
- * A recursive schema is written with `$defs` and `$ref`, one definition for each `lazy`.
+ * A recursive schema is written with `$ref` and one definition for each `lazy`, under `$defs` in draft
+ * 2020-12 and under `definitions` in draft-07.
  *
  * @example
  * ```ts

@@ -64,7 +64,7 @@ forecast["~standard"].jsonSchema.input({ target: "draft-07" });
 // { $schema: "http://json-schema.org/draft-07/schema#", type: "object", properties: { city: { ..., description: "The city to get the weather for" }, ... }, required: ["city"] }
 ```
 
-`input` and `output` write the validator with [`toJsonSchema`](json-schema.md), the side and the draft as asked. `"draft-2020-12"` and `"draft-07"` are written, and any other target throws a `TypeError`. A part JSON Schema cannot say throws too, unless the library passes `libraryOptions: { unrepresentable: "any" }`. Give [`meta`](validators.md#meta) to the validator before passing it here, since the schema is written from the validator `standardJsonSchema` is given.
+`input` and `output` write the validator with [`toJsonSchema`](json-schema.md), the side and the draft as asked. `"draft-2020-12"` and `"draft-07"` are written, and any other target throws a `TypeError`. When a part of the validator cannot be written as JSON Schema, such as a custom check, `toJsonSchema` throws for it, and so do `input` and `output`, unless the library passes `libraryOptions: { unrepresentable: "any" }`. Give [`meta`](validators.md#meta) to the validator before passing it here, since the schema is written from the validator `standardJsonSchema` is given.
 
 It is a separate export so that `standard`, which a form in the browser uses, does not bundle the code that writes a schema: use `standard` where only validation is asked for, and `standardJsonSchema` where the schema is read too.
 
