@@ -170,6 +170,17 @@ describe("skill catalog", () => {
       expect(long).toEqual([]);
     });
 
+    // The user may not have another skill installed, and an agent sent looking for one wastes the turn.
+    it("should name no other bundled skill", () => {
+      const others = skills.filter((other) => other.id !== skill.id).map((other) => `\`${other.id}\``);
+      const named = files
+        .filter((file) => file.endsWith(".md"))
+        .flatMap((file) =>
+          others.filter((name) => read(path.join(skill.path, file)).includes(name)).map((name) => `${file}: ${name}`),
+        );
+      expect(named).toEqual([]);
+    });
+
     it("should describe itself to Codex in agents/openai.yaml", () => {
       const yaml = path.join(skill.path, "agents", "openai.yaml");
       expect(fs.existsSync(yaml)).toBe(true);
