@@ -35,6 +35,7 @@ const PRODUCE_WHAT_THEY_ACCEPT = new Set([
   "bigint",
   "boolean",
   "date",
+  "file",
   "symbol",
   "unknown",
   "never",

@@ -70,8 +70,19 @@ const describeLimit = ({ params }: ValidationIssue, isMin: boolean): string => {
     const wording = isExact ? "exatamente" : isMin ? "no mínimo" : "no máximo";
     return `Deve conter ${wording} ${bound} ${counts[limit === 1 ? 0 : 1]}`;
   }
-  if (type === "string" || isExact) {
-    const counted = type === "string" ? (limit === 1 ? "caractere" : "caracteres") : limit === 1 ? "item" : "itens";
+  if (type === "string" || type === "file" || isExact) {
+    const counted =
+      type === "string"
+        ? limit === 1
+          ? "caractere"
+          : "caracteres"
+        : type === "file"
+          ? limit === 1
+            ? "byte"
+            : "bytes"
+          : limit === 1
+            ? "item"
+            : "itens";
     const wording = isExact
       ? "exatamente"
       : isMin

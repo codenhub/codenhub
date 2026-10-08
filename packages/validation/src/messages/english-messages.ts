@@ -35,7 +35,10 @@ const FORMAT_NAMES: Readonly<Record<string, string>> = {
 };
 
 /** Singular and plural of what a string limit counts. */
-const UNITS: Readonly<Record<string, readonly [string, string]>> = { string: ["character", "characters"] };
+const UNITS: Readonly<Record<string, readonly [string, string]>> = {
+  string: ["character", "characters"],
+  file: ["byte", "bytes"],
+};
 /** What each collection's size counts, singular and plural. */
 const COLLECTIONS: Readonly<Record<string, readonly [string, string]>> = {
   array: ["item", "items"],

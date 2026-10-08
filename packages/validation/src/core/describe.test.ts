@@ -42,6 +42,7 @@ const validators: Record<string, [validator: unknown, kind: string, parts?: Reco
   creditCard: [api.creditCard(), "format", { format: "creditCard" }],
   cuid2: [api.cuid2(), "format", { format: "cuid2" }],
   date: [api.date(), "date"],
+  file: [api.file({ maxSize: 1 }), "file", { options: { maxSize: 1 } }],
   datetime: [api.datetime({ offset: true }), "format", { format: "datetime", options: { offset: true } }],
   domain: [api.domain(), "format", { format: "domain" }],
   duration: [api.duration(), "format", { format: "duration" }],
@@ -82,6 +83,7 @@ const validators: Record<string, [validator: unknown, kind: string, parts?: Reco
   readonly: [api.readonly(name), "readonly", { inner: name }],
   record: [api.record(name, number()), "record", { key: name }],
   searchParams: [api.searchParams(object({})), "searchParams"],
+  formData: [api.formData(object({}), { repeated: true }), "formData", { options: { repeated: true } }],
   semver: [api.semver(), "format", { format: "semver" }],
   set: [api.set(name), "set", { item: name }],
   slug: [api.slug(), "format", { format: "slug" }],
@@ -108,6 +110,7 @@ const checks: Record<string, [check: unknown, params: Record<string, unknown>]> 
   nonZero: [api.nonZero(), { format: "nonZero" }],
   pattern: [pattern(/^a/i), { format: "regex", pattern: "/^a/i" }],
   startsWith: [api.startsWith("a"), { format: "startsWith", value: "a" }],
+  contentType: [api.contentType(["image/png"]), { options: ["image/png"], content: true }],
   unique: [api.unique(), { unique: true }],
   uppercase: [api.uppercase(), { format: "uppercase" }],
 };

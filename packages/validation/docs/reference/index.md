@@ -269,6 +269,36 @@ timestamp("2026-10-07T12:00:00Z"); // { ok: true, value: Date }
 encode(timestamp, new Date(0)); // { ok: true, value: "1970-01-01T00:00:00.000Z" }
 ```
 
+### contentType
+
+```ts
+export declare function contentType(types: readonly string[], message?: Message): AsyncCheck<GlobalFile>;
+```
+
+Creates a check for `file` that reads the first bytes of the file and passes when they are those of one of the media types given, whatever type the file declares.
+
+The type a file declares is whatever the client said, so a `types` option alone lets through a script named `photo.png`. This reads what the file holds instead, as far as its first bytes tell: the signature of a format, not proof that the rest of it is well formed, so a program that decodes the file still handles a file it cannot decode. It knows `image/png`, `image/jpeg`, `image/gif`, `image/webp` and `application/pdf`. Reading is asynchronous, so a `file` given it is an `AsyncValidator`, and it runs once every option of the `file` passed, so `maxSize` refuses a large file before it is read. A file that does not match is one `invalid_value` issue, `{ options, content: true }`, and one that cannot be read, such as a file removed from the disk, `{ unreadable: true }`; neither holds a byte of it.
+
+**Parameters**
+
+- `types` — The media types the content may be, each one this check knows.
+- `message` — Text or a function for the issue it reports, in place of the map's wording.
+
+**Returns** — An asynchronous check for `file`.
+
+**Throws**
+
+- When `types` is not a list, holds a type the check does not know, or `message` is neither text nor a function.
+- When `types` is empty.
+
+**Example**
+
+```ts
+const avatar = file({ maxSize: 1_000_000 }, contentType(["image/png", "image/jpeg"]));
+await avatar(new File([pngBytes], "me.png")); // { ok: true, value: File }
+await avatar(new File(["<script>"], "me.png", { type: "image/png" })); // { ok: false, ... }
+```
+
 ### describe
 
 ```ts
@@ -561,6 +591,41 @@ A key that is empty or holds `.`, `[`, `]` or `"` is written quoted in brackets,
 formatPath(["user", "addresses", 0, "street"]); // "user.addresses[0].street"
 formatPath([0, "title"]); // "[0].title"
 formatPath(["a.b"]); // '["a.b"]'
+```
+
+### formData
+
+```ts
+export declare function formData<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, FormDataOptions>): Composed<TValidator, Infer<TValidator>, GlobalFormData>;
+export declare function formData<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, FormDataOptions>): AsyncValidator<Infer<TValidator>, GlobalFormData>;
+```
+
+Creates a validator that reads a `FormData` into an object of its fields, each a string or a `File`, or with `repeated` every value of every key as an array, and validates that object. The value is what the validator produces.
+
+A `FormData` from another realm, such as an iframe, is read too, and an object that only claims to be one is not. A key given more than once fails, at its path with `invalid_key`, up to the 1,000 issues a collection reports, unless `repeated` is set, as `searchParams` reads a query: a check that saw one of two values while a server read the other would pass a value nobody checked. Anything that is not a `FormData` fails with `invalid_type` and `{ expected: "form data", received }`.
+
+The form is read before it reaches the validator, by `request.formData()` or the like, which reads the whole body: cap the size of the body where the request is read, and give each `file` a `maxSize`.
+
+**Parameters**
+
+- `validator` — Validates the object of fields.
+- `rest` — Options, then checks, which run on what the validator produced.
+
+**Type parameters**
+
+- `TValidator` — The validator of the fields.
+
+**Returns** — A validator that produces what `validator` produces.
+
+**Throws** — When `validator` or a check is not a function, or `repeated` is not a boolean.
+
+**Example**
+
+```ts
+const signup = formData(object({ name: string({ min: 2, max: 100 }), avatar: optional(file({ maxSize: 1_000_000 })) }));
+signup(await request.formData()); // { ok: true, value: { name: "Ada", avatar: File } }
+
+const upload = formData(object({ photos: array(file({ maxSize: 5_000_000 }), { max: 10 }) }), { repeated: true });
 ```
 
 ### func
@@ -2287,6 +2352,42 @@ export interface Factory<T, TOptions, TInput = T>
 
 The factory of a validator of `T` with options `TOptions`: options first and optional, then any checks. It makes a [Validator](#validator) while every check is a [Check](#check), and an [AsyncValidator](#asyncvalidator) as soon as one is an [AsyncCheck](#asynccheck).
 
+### FileOptions
+
+```ts
+export interface FileOptions extends MessageOptions
+```
+
+Options for [file](#file).
+
+#### maxSize
+
+```ts
+maxSize?: number | undefined;
+```
+
+Allows at most this many bytes. A non-negative integer. A file is held in memory by whoever read the form, so `audit` reports a `file` without one.
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+#### minSize
+
+```ts
+minSize?: number | undefined;
+```
+
+Requires at least this many bytes. A non-negative integer.
+
+#### types
+
+```ts
+types?: readonly string[] | undefined;
+```
+
+The media types the file may declare, such as `["image/png", "image/jpeg"]`, compared without letter case and without parameters such as `;charset=utf-8`. The client chooses what it declares, so this says nothing of the content: `contentType` reads that.
+
 ### FlattenedErrors
 
 ```ts
@@ -2310,6 +2411,26 @@ formErrors: string[];
 ```
 
 Messages of issues at the root, which belong to no field.
+
+### FormDataOptions
+
+```ts
+export interface FormDataOptions extends MessageOptions
+```
+
+Options for [formData](#formdata).
+
+#### message
+
+Inherited from [MessageOptions](#messageoptions).
+
+#### repeated
+
+```ts
+repeated?: boolean | undefined;
+```
+
+Gives the validator every value of every key as an array, and accepts a key given more than once, as a form with several files in one field or several checked boxes of one name sends it.
 
 ### IpOptions
 
@@ -4113,6 +4234,30 @@ if (!result.ok) {
 }
 ```
 
+### file
+
+```ts
+export declare const file: Factory<GlobalFile, FileOptions>;
+```
+
+Creates a validator for a `File`, such as one a form sends, from this realm or another, such as an iframe.
+
+A `Blob` is no file, since a form sends a file with its name, and an object that only claims to be one is not one either. `minSize` and `maxSize` bound its size in bytes, each failing one reporting its own issue, with `type: "file"`. `types` checks the media type it declares, which the client chooses freely: to check what it holds, add the `contentType` check. The value is the file itself; its content is never read, and no issue holds its name, its type or its content.
+
+**Throws**
+
+- When `minSize` or `maxSize` is not a non-negative integer, `minSize` is above `maxSize`, or `types` is empty.
+- When `minSize` or `maxSize` is not a number, `types` is not a list of media types, or a check is not a function.
+
+**Example**
+
+```ts
+const avatar = file({ maxSize: 1_000_000, types: ["image/png", "image/jpeg"] });
+avatar(new File(["..."], "me.png", { type: "image/png" })); // { ok: true, value: File }
+avatar("me.png"); // { ok: false, error: { issues: [{ code: "invalid_type", ... }] } }
+file({ maxSize: 1_000_000 }, contentType(["image/png"])); // an AsyncValidator, which reads the first bytes
+```
+
 ### hex
 
 ```ts
@@ -4612,6 +4757,22 @@ type Fallback<T> = [Extract<T, AnyFunction>] extends [never] ? (T & LiteralValue
 A primitive value, or a function called for every use to produce the value. An object or a list would be shared by every result, so it is produced by a function. When a function is among the types of the value, only the function that produces it is accepted, since the value itself would be called.
 
 Not exported; declared in `src/composition/optional.ts`.
+
+### FileLike
+
+```ts
+interface FileLike {
+    readonly name: string;
+    readonly size: number;
+    readonly type: string;
+    readonly lastModified: number;
+    arrayBuffer(): Promise<ArrayBuffer>;
+}
+```
+
+The members of a `File` that are the same in every runtime, which is what `file` produces for a program compiled without the types of the DOM or of Node.js.
+
+Not exported; declared in `src/primitives/file.ts`.
 
 ### InferItemInputs
 

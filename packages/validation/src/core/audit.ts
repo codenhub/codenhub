@@ -152,6 +152,12 @@ export function audit(validator: AnyValidator): readonly AuditFinding[] {
           report("unbounded_text");
         }
         return;
+      case "file":
+        // A file is held by whoever read the form, whatever bounded the text around it.
+        if (record.options?.["maxSize"] === undefined) {
+          report("unbounded_size");
+        }
+        return;
       case "array":
       case "set":
         if (!bounded && !hasBound(record)) {
