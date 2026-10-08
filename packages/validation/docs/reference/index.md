@@ -277,7 +277,7 @@ export declare function contentType(types: readonly string[], message?: Message)
 
 Creates a check for `file` that reads the first bytes of the file and passes when they are those of one of the media types given, whatever type the file declares.
 
-The type a file declares is whatever the client said, so a `types` option alone lets through a script named `photo.png`. This reads what the file holds instead, as far as its first bytes tell: the signature of a format, not proof that the rest of it is well formed, so a program that decodes the file still handles a file it cannot decode. It knows `image/png`, `image/jpeg`, `image/gif`, `image/webp` and `application/pdf`. Reading is asynchronous, so a `file` given it is an `AsyncValidator`, and it runs once every option of the `file` passed, so `maxSize` refuses a large file before it is read. A file that does not match is one `invalid_value` issue, `{ options, content: true }`, and one that cannot be read, such as a file removed from the disk, `{ unreadable: true }`; neither holds a byte of it.
+The type a file declares is whatever the client said, so a `types` option alone lets through a script named `photo.png`. This reads what the file holds instead, as far as its first bytes tell: the signature of a format, not proof that the rest of it is well formed, so a program that decodes the file still handles a file it cannot decode. It knows `image/png`, `image/jpeg`, `image/gif`, `image/webp` and `application/pdf`. Reading is asynchronous, so a `file` given it is an `AsyncValidator`, and it runs once every option of the `file` passed, so `maxSize` refuses a large file before it is read. A file that does not match is one `invalid_value` issue, `{ options, content: true }`, and one that cannot be read, such as a file removed from the disk, `{ unreadable: true }`; neither holds a byte of it. `GlobalFile`, the type it checks, is the `File` that `file` produces.
 
 **Parameters**
 
@@ -605,6 +605,8 @@ Creates a validator that reads a `FormData` into an object of its fields, each a
 A `FormData` from another realm, such as an iframe, is read too, and an object that only claims to be one is not. A key given more than once fails, at its path with `invalid_key`, up to the 1,000 issues a collection reports, unless `repeated` is set, as `searchParams` reads a query: a check that saw one of two values while a server read the other would pass a value nobody checked. Anything that is not a `FormData` fails with `invalid_type` and `{ expected: "form data", received }`.
 
 The form is read before it reaches the validator, by `request.formData()` or the like, which reads the whole body: cap the size of the body where the request is read, and give each `file` a `maxSize`.
+
+`GlobalFormData`, the type it accepts, is the runtime's `FormData`: the DOM's or Node.js's where the program is compiled with their types, and otherwise any iterable of `[name, value]` entries, each value text or a `File` as `file` produces it. Either way, only a real `FormData` passes.
 
 **Parameters**
 
@@ -4243,6 +4245,8 @@ export declare const file: Factory<GlobalFile, FileOptions>;
 Creates a validator for a `File`, such as one a form sends, from this realm or another, such as an iframe.
 
 A `Blob` is no file, since a form sends a file with its name, and an object that only claims to be one is not one either. `minSize` and `maxSize` bound its size in bytes, each failing one reporting its own issue, with `type: "file"`. `types` checks the media type it declares, which the client chooses freely: to check what it holds, add the `contentType` check. The value is the file itself; its content is never read, and no issue holds its name, its type or its content.
+
+`GlobalFile`, the type it produces, is the runtime's `File`: the DOM's or Node.js's where the program is compiled with their types, and otherwise an object with the `name`, `size`, `type`, `lastModified` and `arrayBuffer` every runtime's `File` has.
 
 **Throws**
 

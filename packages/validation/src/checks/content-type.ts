@@ -39,7 +39,8 @@ const matches = (bytes: Uint8Array, signature: readonly (number | undefined)[]):
  * `application/pdf`. Reading is asynchronous, so a `file` given it is an `AsyncValidator`, and it runs once
  * every option of the `file` passed, so `maxSize` refuses a large file before it is read. A file that does
  * not match is one `invalid_value` issue, `{ options, content: true }`, and one that cannot be read, such as
- * a file removed from the disk, `{ unreadable: true }`; neither holds a byte of it.
+ * a file removed from the disk, `{ unreadable: true }`; neither holds a byte of it. `GlobalFile`, the type
+ * it checks, is the `File` that `file` produces.
  *
  * @example
  * ```ts

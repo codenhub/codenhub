@@ -72,6 +72,10 @@ const readTypes = (types: readonly string[] | undefined): readonly string[] | un
  * to check what it holds, add the `contentType` check. The value is the file itself; its content is never
  * read, and no issue holds its name, its type or its content.
  *
+ * `GlobalFile`, the type it produces, is the runtime's `File`: the DOM's or Node.js's where the program
+ * is compiled with their types, and otherwise an object with the `name`, `size`, `type`, `lastModified` and
+ * `arrayBuffer` every runtime's `File` has.
+ *
  * @example
  * ```ts
  * const avatar = file({ maxSize: 1_000_000, types: ["image/png", "image/jpeg"] });

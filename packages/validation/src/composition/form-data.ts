@@ -51,6 +51,10 @@ export interface FormDataOptions extends MessageOptions {
  * The form is read before it reaches the validator, by `request.formData()` or the like, which reads the
  * whole body: cap the size of the body where the request is read, and give each `file` a `maxSize`.
  *
+ * `GlobalFormData`, the type it accepts, is the runtime's `FormData`: the DOM's or Node.js's where the
+ * program is compiled with their types, and otherwise any iterable of `[name, value]` entries, each value
+ * text or a `File` as `file` produces it. Either way, only a real `FormData` passes.
+ *
  * @example
  * ```ts
  * const signup = formData(object({ name: string({ min: 2, max: 100 }), avatar: optional(file({ maxSize: 1_000_000 })) }));
