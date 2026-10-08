@@ -677,7 +677,7 @@ They need a validator `object` made, which is how they know its shape: `objectLi
 A form that sends a file arrives as a `FormData`, from `request.formData()` on a server or `new FormData(form)` in the browser. `formData` reads it and `file` checks each file in it:
 
 ```ts
-import { array, contentType, file, formData, object, optional, string } from "@codenhub/validation";
+import { contentType, file, formData, object, optional, string } from "@codenhub/validation";
 
 const profile = formData(
   object({

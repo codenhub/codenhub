@@ -44,7 +44,7 @@ const matches = (bytes: Uint8Array, signature: readonly (number | undefined)[]):
  * @example
  * ```ts
  * const avatar = file({ maxSize: 1_000_000 }, contentType(["image/png", "image/jpeg"]));
- * await avatar(new File([pngBytes], "me.png")); // { ok: true, value: File }
+ * await avatar(new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], "me.png")); // { ok: true, value: File }
  * await avatar(new File(["<script>"], "me.png", { type: "image/png" })); // { ok: false, ... }
  * ```
  *

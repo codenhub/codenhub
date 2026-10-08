@@ -34,7 +34,7 @@ const FORMAT_NAMES: Readonly<Record<string, string>> = {
   duration: "duration",
 };
 
-/** Singular and plural of what a string limit counts. */
+/** Singular and plural of what a limit of text or of a file counts. */
 const UNITS: Readonly<Record<string, readonly [string, string]>> = {
   string: ["character", "characters"],
   file: ["byte", "bytes"],

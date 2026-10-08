@@ -6,7 +6,7 @@ import type { AnyValidator } from "./types";
 export interface AuditFinding {
   /**
    * What is missing. `"unbounded_size"`: an array, a set, a map or a record without a `max` or `length`,
-   * or a tuple with `rest` and no `max`. `"unbounded_text"`: text without a `max` or `length`, a format that
+   * a tuple with `rest` and no `max`, or a `file` without a `maxSize`. `"unbounded_text"`: text without a `max` or `length`, a format that
    * does not bound its own text, or `json` or `searchParams` given text no step before them bounded.
    * `"raised_limit"`: a `lazy` whose `maxDepth` or `maxCalls` is above its default. `"unreadable"`: a
    * validator that has no description, such as one written by hand, so whether it bounds its input cannot
@@ -91,7 +91,7 @@ function boundsItself(record: Description | undefined): boolean {
  * @remarks
  * Input that passes a validator is validated in full, so a body of a million items, or of text a gigabyte
  * long, costs what its size costs. Each array, set, map, record and text needs a `max` or a `length`, and
- * a tuple with `rest` a `max`, unless something before it bounds it: text read by `json` or `searchParams`
+ * a tuple with `rest` a `max`, and a `file` a `maxSize`, unless something before it bounds it: text read by `json` or `searchParams`
  * inside `pipe(string({ max }), ...)`, and everything inside it, is bounded by that `max`. A tuple without
  * `rest` has its length already. Formats whose input is bounded by what they accept, such as `email`,
  * `uuid` and `ip`, need none; others, such as `url`, `hex` and `jwt`, are text like any other.
