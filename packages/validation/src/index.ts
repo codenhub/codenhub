@@ -5,6 +5,7 @@
  */
 
 export { check } from "./builders/check";
+export { contentType } from "./checks/content-type";
 export { checkFields } from "./builders/check-fields";
 export { endsWith } from "./checks/ends-with";
 export { includes } from "./checks/includes";
@@ -29,6 +30,7 @@ export { codec, type Conversions } from "./composition/codec";
 export { encode, type Encoded } from "./composition/encode";
 export { extend, type Extended } from "./composition/extend";
 export { fallback } from "./composition/fallback";
+export { formData, type FormDataOptions } from "./composition/form-data";
 export { intersection } from "./composition/intersection";
 export { json } from "./composition/json";
 export { lazy, type LazyOptions } from "./composition/lazy";
@@ -125,6 +127,7 @@ export { flatten, formatIssue, formatPath, type FlattenedErrors, type Messages }
 export { bigint, type BigintOptions } from "./primitives/bigint";
 export { boolean } from "./primitives/boolean";
 export { date, type DateOptions } from "./primitives/date";
+export { file, type FileOptions } from "./primitives/file";
 export { func, type AnyFunction } from "./primitives/func";
 export { instanceOf, type Constructor } from "./primitives/instance-of";
 export { literal, type LiteralValue } from "./primitives/literal";

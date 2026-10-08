@@ -50,3 +50,31 @@ declare const TextDecoder: {
 };
 
 declare function atob(data: string): string;
+
+interface Blob {
+  readonly size: number;
+  readonly type: string;
+  slice(start?: number, end?: number): Blob;
+  arrayBuffer(): Promise<ArrayBuffer>;
+}
+
+declare const Blob: {
+  prototype: Blob;
+};
+
+interface File extends Blob {
+  readonly name: string;
+  readonly lastModified: number;
+}
+
+declare const File: {
+  prototype: File;
+};
+
+interface FormData {
+  entries(): IterableIterator<[string, string | File]>;
+}
+
+declare const FormData: {
+  prototype: FormData;
+};

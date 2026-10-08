@@ -672,6 +672,45 @@ An object with checks is refused with a `TypeError`. A check reads the whole obj
 
 They need a validator `object` made, which is how they know its shape: `objectLike`, a `pipe` or `transform` around an object, and a validator written by hand are a `TypeError`. [Reading a schema](#reading-a-schema) is how they read it, and how you would write one of your own.
 
+## Forms with files
+
+A form that sends a file arrives as a `FormData`, from `request.formData()` on a server or `new FormData(form)` in the browser. `formData` reads it and `file` checks each file in it:
+
+```ts
+import { contentType, file, formData, object, optional, string } from "@codenhub/validation";
+
+const profile = formData(
+  object({
+    name: string({ trim: true, min: 2, max: 100 }),
+    avatar: optional(file({ maxSize: 1_000_000 }, contentType(["image/png", "image/jpeg"]))),
+  }),
+);
+
+export const readProfile = async (request: Request) => profile(await request.formData());
+```
+
+### `formData`
+
+`formData(validator, options?, ...checks)` reads a `FormData`, from this realm or another such as an iframe, into an object of its fields, each a string or a `File`, and produces what `validator` makes of it. A key given more than once fails at its path with `invalid_key`, as in [`searchParams`](#searchparams), unless `repeated` is set, which gives every key a list, as a field of several files or several checked boxes of one name needs: `formData(object({ photos: array(file({ maxSize: 5_000_000 }), { max: 10 }) }), { repeated: true })`. Anything else, a `URLSearchParams` or a plain object included, fails with `invalid_type` and `{ expected: "form data", received }`.
+
+The form has been read before it reaches the validator, and reading it reads the whole body, so cap the size of the body where the request is read, and give each `file` a `maxSize`. `audit` reads through `formData` to what it holds, and does not report it. `toJsonSchema` and `encode` refuse it, as they do any validator they cannot write.
+
+### `file`
+
+`file(options?, ...checks)` accepts a `File`, from this realm or another, and produces it. A `Blob` is no file, since a form sends a file with its name, and neither is an object that only claims to be one. Its content is never read by the options, and no issue holds its name, its type or a byte of it.
+
+| Option    | Fails with                                                     |
+| --------- | -------------------------------------------------------------- |
+| `minSize` | `too_small`, `{ minimum, type: "file" }`, in bytes             |
+| `maxSize` | `too_big`, `{ maximum, type: "file" }`, in bytes               |
+| `types`   | `invalid_value`, `{ options, type: "file" }`, the types listed |
+
+`types` compares the media type the file declares without letter case and without parameters such as `;charset=utf-8`. The client declares whatever it likes, so `types` alone lets through a script named `photo.png` with the type `image/png`. `audit` reports a `file` without a `maxSize`, since the program holds whatever size it accepts.
+
+### `contentType`
+
+`contentType(types, message?)` is a check for `file` that reads the first bytes of the file and passes when they are those of one of the types given, whatever the file declares. It knows `image/png`, `image/jpeg`, `image/gif`, `image/webp` and `application/pdf`, and throws for any other. The first bytes are the signature of a format, not proof that the rest is well formed, so a program that decodes the file still handles one it cannot decode. Reading is asynchronous, so a `file` given it is an `AsyncValidator`, and it runs once every option of the `file` passed, so `maxSize` refuses a large file before a byte of it is read. Content that does not match fails with `invalid_value` and `{ options, content: true }`, and a file that cannot be read with `{ unreadable: true }`.
+
 ## Coercing text input
 
 The coercing validators accept text that holds a value, convert it, and then apply the constraints of their strict counterpart: `coerceString` and `string`, `coerceNumber` and `number`, `coerceBoolean` and `boolean`, `coerceBigint` and `bigint`, `coerceDate` and `date`. They take the same options, `coerceDate` also `zoneless`, which says how to read a date-time without a zone, and fail with `invalid_type` and `coerced: true` in `params` when the value cannot be converted. [Coercion](coercion.md) lists exactly what each accepts and refuses, and how to read a whole environment or form with them.
@@ -792,7 +831,7 @@ Give `tags` a `max`, as `const bounded = object({ name: string({ max: 100 }), em
 
 | `rule`             | Reported for                                                                                                                                      |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"unbounded_size"` | An `array`, `set`, `map` or `record` without a `max` or `length`, and a `tuple` with `rest` and no `max`                                          |
+| `"unbounded_size"` | An `array`, `set`, `map` or `record` without a `max` or `length`, a `tuple` with `rest` and no `max`, and a `file` without a `maxSize`            |
 | `"unbounded_text"` | A `string` or `coerceString` without a `max` or `length`, a format that does not bound its own text, and `json` or `searchParams` given open text |
 | `"raised_limit"`   | A `lazy` whose `maxDepth` or `maxCalls` is above its default                                                                                      |
 | `"unreadable"`     | A validator it cannot read, such as one written by hand, whose bound it cannot tell                                                               |

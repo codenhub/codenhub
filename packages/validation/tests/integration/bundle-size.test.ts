@@ -216,6 +216,17 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
     source: `import { object, standardJsonSchema, string } from "DIST"; export const check = standardJsonSchema(object({ name: string() }));`,
     budget: 8750,
   },
+  { name: "file", source: `import { file } from "DIST"; export const check = file({ maxSize: 1000 });`, budget: 2170 },
+  {
+    name: "file with contentType",
+    source: `import { contentType, file } from "DIST"; export const check = file({ maxSize: 1000 }, contentType(["image/png"]));`,
+    budget: 2610,
+  },
+  {
+    name: "formData with an object",
+    source: `import { file, formData, object, string } from "DIST"; export const check = formData(object({ name: string(), avatar: file() }));`,
+    budget: 4590,
+  },
   {
     name: "everything",
     source: `export * from "DIST";`,

@@ -111,6 +111,35 @@ export const sizeOfSet = (value: unknown): number | undefined => sizeOf(Set.prot
 export const queryOf = (value: unknown): string | undefined =>
   brand(() => URLSearchParams.prototype.toString.call(value as URLSearchParams));
 
+/**
+ * Reads a getter of a built-in prototype on a value. It is looked up when called, as `size` is, and checks
+ * the value's own slot, so it throws for a value that only claims the prototype.
+ */
+const own = (prototype: object, key: string, value: unknown): unknown =>
+  (Object.getOwnPropertyDescriptor(prototype, key)?.get as (() => unknown) | undefined)?.call(value);
+
+/**
+ * The size and declared media type of a `File`, or undefined when the value is not one, in any realm. Its
+ * tag is asked first, so most values that are not a file are refused without the throw of a getter that
+ * checks its slot, and a value that only claims the tag is refused by that throw. A `Blob` is no file: a
+ * form sends a file with its name.
+ */
+export const fileOf = (value: unknown): { size: number; type: string } | undefined =>
+  slot(value, () => {
+    if (Object.prototype.toString.call(value) !== "[object File]") {
+      return undefined;
+    }
+    own(File.prototype, "name", value);
+    return { size: own(Blob.prototype, "size", value) as number, type: own(Blob.prototype, "type", value) as string };
+  });
+
+/**
+ * The entries of a `FormData`, or undefined when the value is not one, in any realm, read with the built-in
+ * iterator, which checks the value's own slot.
+ */
+export const formEntriesOf = (value: unknown): [string, unknown][] | undefined =>
+  slot(value, () => [...FormData.prototype.entries.call(value as FormData)]);
+
 /** The entries of a value already known to be a `Map`, read with the built-in iterator. */
 export const entriesOf = (map: unknown): [unknown, unknown][] => [
   ...Map.prototype.entries.call(map as Map<unknown, unknown>),

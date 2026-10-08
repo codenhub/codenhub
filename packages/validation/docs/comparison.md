@@ -65,7 +65,7 @@ The same schema in each library, `{ name: string of at least 2, email, age: opti
 Read the ratios and not the figures: this is one schema on one machine.
 
 - **Size.** A program ships the validators it imports and no others, so a lone `boolean` is 1.24 kB. valibot is smaller, about a quarter of the size for this object. zod/mini is the same size and zod four times larger.
-- **Speed on valid input is the weakest figure here**, six to nine times behind valibot and zod for this schema. Most of it is `email()`: the URL parser takes most of a microsecond, where the others test a pattern. The rest is `object`: one of three plain strings validates about 4 million times a second here and about 12 million in valibot.
+- **Speed on valid input is the weakest figure here**, six to nine times behind valibot and zod for this schema. Most of it is `email()`, which reads the domain as the URL parser does, where the others test a pattern. Since these figures were taken, it no longer asks the parser for an ASCII domain such as `example.com`, which it reads the same way by lowercasing it: on Node.js 24.14.1 that took `email()` from 0.76 to 1.65 million validations a second and this schema from 0.58 to 1.08. The rest is `object`: one of three plain strings validates about 4 million times a second here and about 12 million in valibot.
 
 ## When to choose another
 

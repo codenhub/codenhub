@@ -5,6 +5,7 @@ import { unknown } from "../primitives/unknown";
 import { domain } from "./domain";
 import { email } from "./email";
 import { ip } from "./ip";
+import { toAsciiHost } from "./patterns";
 import { url } from "./url";
 
 /*
@@ -138,6 +139,42 @@ describe("agreement with the URL parser", () => {
     const domainOf = (address: string): string => address.slice(address.indexOf("@") + 1);
     expect(values.filter(([, value]) => new URL(`http://${domainOf(value)}`).hostname !== domainOf(value))).toEqual([]);
     expect(values.filter(([, value]) => valueOf(validate(value)) !== value)).toEqual([]);
+  });
+
+  it("toAsciiHost should read every ASCII host as the parser reads it, without asking it for most", () => {
+    // What toAsciiHost returned before it answered an ASCII host itself: the parser's reading, within the limits of a host.
+    const parsed = (host: string): string | undefined => {
+      const hostname = URL.parse(`http://${host}`)?.hostname;
+      return hostname !== undefined && hostname.length <= 253 ? hostname : undefined;
+    };
+    // Every class the shortcut tells apart: case, hyphens and empty labels, `xn--` labels valid or not,
+    // last labels the parser reads as a number, a trailing dot or two, and labels and hosts past their limits.
+    const pieces = [..."aZ09-.", "xn--", "XN--", "xn--mnchen-3ya", "0x", "0X1f", "08", "1.2.3", "..", "a".repeat(63)];
+    const hosts = [
+      ...strings(23, 6000, 6, pieces),
+      ...[252, 253, 254].map((length) => "a.".repeat(length).slice(0, length)),
+      "a",
+      "A.B",
+      ".",
+      "..",
+      ".a",
+      "a.",
+      "a..",
+      "1",
+      "a.1",
+      "a.1.",
+      "a.1..",
+      "a.0x",
+      "a.0xg",
+      "a.08",
+      "a.-1",
+      // Text the parser maps to another host, which the shortcut must leave to it.
+      "münchen.de",
+      "ＥＸＡＭＰＬＥ.com",
+      "a。b",
+    ];
+    expect(hosts.filter((host) => toAsciiHost(host) !== parsed(host))).toEqual([]);
+    expect(hosts.filter((host) => parsed(host) !== undefined).length).toBeGreaterThan(1000);
   });
 
   it("domain should only ever return a host the parser writes back unchanged", () => {
