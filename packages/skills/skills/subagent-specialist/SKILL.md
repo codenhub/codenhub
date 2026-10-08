@@ -156,7 +156,7 @@ If the domains turn out not to be independent, stop treating them as parallel wo
 
 ## Delegated Audits and Reviews
 
-When the work is an audit or review the user asked for, split it by area, not by question, and use the `audit` skill when it is available:
+When the work is an audit or review the user asked for, split it by area, not by question:
 
 - Give every worker its area and the same evidence standard and classification, verbatim.
 - Before reporting, merge duplicates and resolve every contradiction between workers: re-check the case and report one answer, or one question when it cannot be settled.

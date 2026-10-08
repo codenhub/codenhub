@@ -39,7 +39,7 @@ Ask every question of every entry point in scope, so two audits cover the same g
 6. **Do the docs tell the truth?** Claims match behavior, and examples run as shown.
 7. **Is what consumers rely on tested?** A relied-upon behavior with no test is a gap.
 
-Over-engineering and code that could be deleted are out of scope; use the `ponytail-review` skill when it is available.
+Over-engineering and code that could be deleted are out of scope; leave them to a review for complexity.
 
 ## Evidence
 

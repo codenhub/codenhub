@@ -74,4 +74,4 @@ Example: "Add a cache for these API responses."
 
 ## Boundaries
 
-Governs what you build, not how you write prose; pair with the `caveman` skill for terse replies. For reviewing existing code for over-engineering, use the `ponytail-review` skill.
+Governs what you build, not how you write prose, and not reviews of existing code.
