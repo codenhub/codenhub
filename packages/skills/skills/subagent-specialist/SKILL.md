@@ -79,6 +79,8 @@ Never ignore a subagent that says it is stuck. If it reported `BLOCKED`, the set
 
 ### 4. Run Spec Compliance Review First
 
+Match the reviewers to the risk. For a mechanical, fully specified task that touches one or two files and has tests covering it, review the diff yourself: spec compliance first, then the code quality points in step 5. Every other task gets both reviewer subagents; each starts without context, so two reviewers on a trivial task cost more than the task did.
+
 - Verify what was requested against the actual code.
 - Check for missing requirements.
 - Check for over-building and extra features.
