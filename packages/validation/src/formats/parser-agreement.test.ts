@@ -168,6 +168,10 @@ describe("agreement with the URL parser", () => {
       "a.0xg",
       "a.08",
       "a.-1",
+      // Text the parser maps to another host, which the shortcut must leave to it.
+      "münchen.de",
+      "ＥＸＡＭＰＬＥ.com",
+      "a。b",
     ];
     expect(hosts.filter((host) => toAsciiHost(host) !== parsed(host))).toEqual([]);
     expect(hosts.filter((host) => parsed(host) !== undefined).length).toBeGreaterThan(1000);

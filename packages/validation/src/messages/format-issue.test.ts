@@ -79,7 +79,9 @@ describe("without the English wording", () => {
     expect(formatWith(found as ValidationIssue, {})).toBe("Invalid value");
     expect(flatten({ issues: [found as ValidationIssue] }, {}).formErrors).toEqual(["Invalid value"]);
   });
+});
 
+describe("without a map", () => {
   it("should word with the English when no map is given, and refuse what is not a map", () => {
     const [found] = issuesOf(number({ min: 18 })(15));
     expect(formatWith(found as ValidationIssue)).toBe("Must be at least 18");
