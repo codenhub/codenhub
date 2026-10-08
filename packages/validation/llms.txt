@@ -13,7 +13,6 @@ A validator takes any input and returns `{ ok: true, value }` or `{ ok: false, e
 - [Standard Schema](docs/standard-schema.md): `standard(validator, messages?)` for libraries that accept a Standard Schema, and `standardJsonSchema` for those that also read its JSON Schema.
 - [JSON Schema](docs/json-schema.md): `toJsonSchema(validator, { io, unrepresentable, target })`, what each validator is written as, input against output, `meta`, the two drafts, and what cannot be written.
 - [Integrations](docs/integrations.md): react-hook-form, TanStack Form, tRPC, Hono, the AI SDK, the Model Context Protocol and OpenAPI, and a validator as one field of a zod or valibot schema, each example run against the version it names.
-- [Comparison](docs/comparison.md): How the package differs from valibot, zod and yup, what was measured, and when to choose one of them.
 - [Issues and messages](docs/errors.md): The shape of an issue, built-in codes and params, message text, the `message` option, localization and form errors.
 - [API reference](docs/reference/index.md): Every export with its signature and documentation, generated from the source.
 - [Changelog](docs/changelog/index.md): Release notes, and the migrations from 0.1.0 and from 0.0.1.

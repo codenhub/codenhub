@@ -22,16 +22,25 @@ This records what `@codenhub/validation` is building toward, what it takes to re
 
 ## Current Focus
 
-**0.4.0 is in a restructure phase, and it is released when we can say "this is the best package we can build".** It will not be the last word: there will be improvements after it. The bar is that, compared once more with the libraries a team would choose instead, nobody working on it can see anything left that would significantly improve the package. Until then, everything that bar finds goes into 0.4.0 rather than a later minor, signatures included, since nothing of 0.4.0 is published and no caller has to migrate twice.
+**0.4.0 is in a restructure phase, and it is released when we can say "this is the best package we can build".** It will not be the last word: there will be improvements after it. The bar is that nobody working on it can see anything left that would significantly improve the package. Until then, everything that bar finds goes into 0.4.0 rather than a later minor, signatures included, since nothing of 0.4.0 is published and no caller has to migrate twice.
 
 [0.4.0.md](0.4.0.md) is the spec of that work, in the order it is built. Its first six steps came from measuring the package against valibot, zod and yup on 2026-10-07 and are built. Its second pass, steps 7 to 13, came from a second comparison the same day, which asked what they still had that a consumer would choose them for, and is built. Its third pass, steps 14 to 18, came from a third, which asked when a consumer would still choose them, and found mostly reach: what the package does best cannot be had without the rest of it, and the first call of a form or a hand-off still asks for more than theirs do. Each step is its own pull request, in the order its dependencies need, and step 18, a measurement, was dropped by what it measured. The [0.4.0 changelog](../changelog/0.4.0.md) is kept current with what is built, and the package's version is 0.4.0. It is not published: the workspace catalog and the packages that depend on this one stay on 0.3.0 until it is.
 
 0.4.0 is released when:
 
 - Every step of [0.4.0.md](0.4.0.md) is built, or dropped with its reason and measurement recorded there.
-- The [comparison](../comparison.md) is measured again against the released versions of valibot, zod, yup, ArkType and TypeBox, and reviewing it finds nothing left that would significantly improve the package. A finding that would is another step of 0.4.0.
 - `README.md` and every public page describe 0.4.0 as it ships, `llms.txt` and `llms-full.txt` are current, and the examples of the docs type-check and run against the built package.
 - `pnpm verify` passes, the changelog entry describes the release as it ships, with its date, and `hub release validation` reports it ready.
+
+### No comparison with other libraries
+
+The package publishes no comparison with other validation libraries, and its release waits on none. Until 2026-10-08 it published `docs/comparison.md`, which measured it against valibot, zod and yup, and 0.4.0 was held until that page was measured again against their released versions and ArkType and TypeBox. The owner removed both on 2026-10-08. What that did not weigh:
+
+- **No use has shown it.** The package has not been used in production, so a page saying where it does better than libraries used in thousands of live apps claims what nothing has tested.
+- **It is a commitment to compete.** A published comparison sets the package against those libraries before its own future is settled.
+- **It is upkeep paid on their schedule.** Keeping it true means following each library's releases and running their benchmarks again, for a package with no real-world use yet.
+
+The measurements of 2026-10-07 stay in [0.4.0.md](0.4.0.md) as the evidence for the steps they led to, not as a claim about those libraries today. A comparison may come back once the package has been used for real, as [Versioning until 1.0](#versioning-until-10) asks of 1.0. Rejected: keeping the page with a note that it may be out of date, which keeps the upkeep and the claim.
 
 ## Versioning until 1.0
 

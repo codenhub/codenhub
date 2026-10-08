@@ -6,7 +6,7 @@ Validation for data you do not control: a request body, a query string, a form, 
 - **What a failing input costs is bounded.** A long list of bad items stops at 1,000 issues, and input nested too deep is one issue and never a stack overflow. Input that passes is checked in full, so give collections a `max`.
 - **The issues the package reports never hold a value of the input**, so logging a failed validation cannot log a password. They do name the input's properties, in `path`, and a check you write decides what its own issue holds.
 
-Each validator is a function you import on its own, so a program ships only the checks it uses: a lone `boolean()` is 1.2 kB gzipped and an object with a string, an email and a number 5.8 kB. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies. [Compared with valibot, zod and yup](docs/comparison.md) has the measurements, and says when one of them is the better choice.
+Each validator is a function you import on its own, so a program ships only the checks it uses: a lone `boolean()` is 1.2 kB gzipped and an object with a string, an email and a number 5.8 kB. Works for a single value such as an email or a port, and for whole objects such as a form. No dependencies.
 
 > **Experimental:** pre-1.0. The API of 0.4.0 is meant to hold for every 0.4.x release; a change that breaks callers, if one proves necessary, ships as the next minor and is listed in the [changelog](docs/changelog/index.md).
 >
@@ -87,7 +87,6 @@ When invalid input is a caller's mistake, such as an options object passed to yo
 - [Standard Schema](docs/standard-schema.md)
 - [JSON Schema](docs/json-schema.md)
 - [Integrations](docs/integrations.md)
-- [Compared with valibot, zod and yup](docs/comparison.md)
 - [Changelog](docs/changelog/index.md)
 
 ## Requirements
