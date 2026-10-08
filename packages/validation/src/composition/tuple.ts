@@ -1,7 +1,7 @@
 import type { Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { described } from "../core/describe";
-import { childOf, composed, type Child } from "../core/nesting";
+import { childOf, composed, fastOf, MISS, type Child, type Fast } from "../core/nesting";
 import { isArray } from "../core/objects";
 import { assertFunction, assertList, assertOrder, assertSize, issue, typeIssue } from "../core/result";
 import type {
@@ -126,6 +126,31 @@ export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyVa
   const children = fixed.map(childOf);
   const restChild = rest === undefined ? undefined : childOf(rest);
 
+  // Valid input is answered without a result for each item when every item has a fast test, as in `array`.
+  const fastItems = fixed.map(fastOf);
+  const fastRest = rest === undefined ? undefined : fastOf(rest);
+  const fast: Fast | undefined =
+    checks.length > 0 || fastItems.includes(undefined) || (rest !== undefined && fastRest === undefined)
+      ? undefined
+      : (input) => {
+          if (!isArray(input)) {
+            return MISS;
+          }
+          const size = input.length;
+          if ((max !== undefined && size > max) || size < length || (rest === undefined && size > length)) {
+            return MISS;
+          }
+          const output: unknown[] = [];
+          for (let index = 0; index < size; index += 1) {
+            const value = ((index < length ? fastItems[index] : fastRest) as Fast)(input[index]);
+            if (value === MISS) {
+              return MISS;
+            }
+            output.push(value);
+          }
+          return output;
+        };
+
   return described(
     composed((input, place): Maybe<ValidationResult<unknown>> => {
       if (!isArray(input)) {
@@ -156,7 +181,7 @@ export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyVa
         options.message,
         (values) => accept(values, place),
       );
-    }),
+    }, fast),
     { kind: "tuple", options, checks, items: Object.freeze(fixed), rest },
   );
 }

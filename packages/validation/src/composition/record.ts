@@ -2,7 +2,7 @@ import { chain, collect, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
 import { described } from "../core/describe";
 import { cap, countIssues, runItems } from "../core/limit";
-import { append, childOf, composed } from "../core/nesting";
+import { append, childOf, composed, fastOf, MISS, type Fast } from "../core/nesting";
 import { isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, describeType, failWith, issue, nested, repeatedKey } from "../core/result";
 import type {
@@ -100,6 +100,37 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
   );
   assertSizeOptions(options);
   const child = childOf(value);
+
+  // Valid input is answered without a result for each entry when the key and the value have a fast test.
+  // A key that is not text or is produced twice is a miss, so the full work throws or reports it.
+  const fastKey = fastOf(key);
+  const fastValue = fastOf(value);
+  const fast: Fast | undefined =
+    checks.length > 0 || fastKey === undefined || fastValue === undefined
+      ? undefined
+      : (input) => {
+          if (!isPlainObject(input)) {
+            return MISS;
+          }
+          const names = Object.keys(input);
+          if (sizeIssues(names.length, "record", options).length > 0) {
+            return MISS;
+          }
+          const output: Record<string, unknown> = {};
+          for (const name of names) {
+            const produced = fastKey(name);
+            if (produced === MISS || typeof produced !== "string" || Object.hasOwn(output, produced)) {
+              return MISS;
+            }
+            const item = fastValue(input[name]);
+            if (item === MISS) {
+              return MISS;
+            }
+            setOwn(output, produced, item);
+          }
+          return output;
+        };
+
   return described(
     composed((input, place): Maybe<ValidationResult<unknown>> => {
       if (!isPlainObject(input)) {
@@ -159,7 +190,7 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
           ? failWith(cap(issues, place, options.message, settled.length < names.length))
           : accept(output, place);
       });
-    }),
+    }, fast),
     { kind: "record", options, checks, key, value },
   );
 }
