@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-06
+last_updated: 2026-10-07
 scope: repo-wide direction for the workspace's packages and deploy surfaces
 ---
 
@@ -35,6 +35,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
 ## Later / Possible
 
 - **New packages.** `@codenhub/a11y` (focus management, ARIA primitives, accessibility utilities); `@codenhub/ui` (high-level layout and composite primitives).
+- **A Node.js floor at the oldest maintained LTS, for libraries that other libraries depend on.** [#203](https://github.com/codenhub/codenhub/issues/203) set every package's floor to the pinned Node.js, 24, and rejected this one, weighing that it drops Node.js 22 before its end of life in April 2027; `docs/specs/packages-lifecycle.md`, "Node.js support", has the rule and the rejected alternative. It did not weigh that a library's floor becomes the floor of every library that depends on it, so a package such as `@codenhub/validation` passes `>=24` on to packages outside this repository that would otherwise support 22. What `@codenhub/validation` names as its needs, `Object.hasOwn`, `URL.canParse` and `require()` of an ES module, are all in Node.js 22.12, and its tests passed on 22 when [#202](https://github.com/codenhub/codenhub/pull/202) ran them, before 0.2.0 raised its floor. Revisiting it means that alternative, a CI job on each such package's floor, and it lapses in April 2027 when 22 reaches its end of life.
 
 ## Not Planned
 
