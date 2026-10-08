@@ -1,7 +1,7 @@
 import { chain, isThenable, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { described } from "../core/describe";
-import { composed } from "../core/nesting";
+import { composed, fastOf, MISS, type Fast } from "../core/nesting";
 import { assertFunction, assertList, isResult, issue, nested, notResult } from "../core/result";
 import type {
   AnyValidator,
@@ -60,6 +60,23 @@ export function union(options: readonly AnyValidator[], ...rest: unknown[]): Any
   }
   tried.forEach((option, index) => assertFunction(`options[${index}]`, option));
   const [settings, reject, accept, checks] = tail<MessageOptions, unknown>(rest);
+
+  // Valid input is answered by the first option whose fast test passes it, when every option has one. A
+  // fast test misses only where its validator fails, so that option is the first the full work accepts.
+  const fastOptions = tried.map(fastOf);
+  const fast: Fast | undefined =
+    checks.length > 0 || fastOptions.includes(undefined)
+      ? undefined
+      : (input) => {
+          for (const option of fastOptions) {
+            const value = (option as Fast)(input);
+            if (value !== MISS) {
+              return value;
+            }
+          }
+          return MISS;
+        };
+
   return described(
     composed((input, place): Maybe<ValidationResult<unknown>> => {
       const found: (readonly ValidationIssue[])[] = [];
@@ -94,7 +111,7 @@ export function union(options: readonly AnyValidator[], ...rest: unknown[]): Any
         return reject([issue("invalid_union", { issues: found })], place);
       };
       return attempt(0);
-    }),
+    }, fast),
     { kind: "union", options: settings, checks, members: Object.freeze(tried) },
   );
 }
