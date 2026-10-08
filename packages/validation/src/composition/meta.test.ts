@@ -4,6 +4,8 @@ import { describe as describeValidator } from "../core/describe";
 import type { Validator } from "../core/types";
 import { email } from "../formats/email";
 import { standard } from "../interop/standard";
+import { standardJsonSchema } from "../interop/standard-json-schema";
+import { portugueseMessages } from "../messages/portuguese-messages";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
 import { codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
@@ -91,6 +93,20 @@ describe("meta", () => {
     expect(exposed["~standard"].validate({ name: "A", email: "ada@example.com" })).toEqual({
       issues: [{ message: "Must be at least 2 characters", path: ["name"] }],
     });
+  });
+
+  it("should keep the wording of the map standard was given, and not word issues briefly", () => {
+    const given = standard(user, portugueseMessages);
+    const exposed = meta(given, { title: "User" });
+    expect(exposed["~standard"]).toBe(given["~standard"]);
+    expect(exposed["~standard"].validate({ name: "Ada", email: "x" })).toEqual(
+      given["~standard"].validate({ name: "Ada", email: "x" }),
+    );
+  });
+
+  it("should keep the JSON Schema of a validator standardJsonSchema made", () => {
+    const exposed = meta(standardJsonSchema(user), { title: "User" });
+    expect(exposed["~standard"]).toHaveProperty("jsonSchema");
   });
 
   it("should let pick read the object it describes", () => {

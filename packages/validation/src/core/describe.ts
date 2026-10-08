@@ -41,7 +41,8 @@ export const described = <TTarget extends object>(
   }
   (target as Record<string, unknown>)[DESCRIPTION] = Object.freeze(record);
   // A validator is a Standard Schema as it is; a check is not one, since it is given a value already validated.
-  if (record.kind !== "check") {
+  // One it already carries, such as the one `meta` keeps from a validator `standard` made, is left as it is.
+  if (record.kind !== "check" && !Object.hasOwn(target, "~standard")) {
     (target as Record<string, unknown>)["~standard"] = ownStandard(target as (input: unknown) => unknown);
   }
   return target;
