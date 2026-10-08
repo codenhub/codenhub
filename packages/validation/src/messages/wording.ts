@@ -4,7 +4,7 @@
  */
 import { timeOf } from "../core/objects";
 import type { ValidationIssue } from "../core/types";
-import { formatIssue, formatPath, type Messages } from "./format-issue";
+import { formatPath, wordIssue, type Messages } from "./word";
 
 /** Reads an entry of a table of words, so a name such as `constructor` is no entry of `Object.prototype`. */
 export const entryOf = <T>(table: Readonly<Record<string, T>>, key: string): T | undefined =>
@@ -32,7 +32,7 @@ export const listOf = (
  * property of the box to fix.
  */
 export const quote = (found: ValidationIssue, messages: Messages): string =>
-  `${found.path?.length > 0 ? `${formatPath(found.path)}: ` : ""}${formatIssue(found, messages)}`;
+  `${found.path?.length > 0 ? `${formatPath(found.path)}: ` : ""}${wordIssue(found, messages)}`;
 
 /** Reads a parameter as text, so a missing or unusual one degrades to a readable message and not a crash. */
 export const param = (issue: ValidationIssue, name: string): string => String(issue.params?.[name]);

@@ -53,7 +53,7 @@ export const check = object({ name: string({ min: 2 }), email: email(), age: opt
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 8970,
+    budget: 8980,
   },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 1730 },
   { name: "url", source: `import { url } from "DIST"; export const check = url();`, budget: 5800 },
@@ -144,17 +144,17 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
   {
     name: "formatIssue with your own wording",
     source: `import { formatIssue } from "DIST"; export const describe = (issue: Parameters<typeof formatIssue>[0]) => formatIssue(issue, { too_small: "Too short" });`,
-    budget: 420,
+    budget: 2610,
   },
   {
     name: "formatIssue with the English wording",
     source: `import { englishMessages, formatIssue } from "DIST"; export const describe = (issue: Parameters<typeof formatIssue>[0]) => formatIssue(issue, englishMessages);`,
-    budget: 2580,
+    budget: 2600,
   },
   {
     name: "formatIssue with the Portuguese wording",
     source: `import { formatIssue, portugueseMessages } from "DIST"; export const describe = (issue: Parameters<typeof formatIssue>[0]) => formatIssue(issue, portugueseMessages);`,
-    budget: 2800,
+    budget: 3740,
   },
   {
     name: "brand and readonly",
@@ -174,7 +174,7 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
   {
     name: "toJsonSchema",
     source: `import { object, string, toJsonSchema } from "DIST"; export const schema = toJsonSchema(object({ name: string() }));`,
-    budget: 6240,
+    budget: 6380,
   },
   {
     name: "pick",
@@ -189,7 +189,7 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
   {
     name: "toJsonSchema with meta",
     source: `import { meta, object, string, toJsonSchema } from "DIST"; export const schema = toJsonSchema(object({ name: meta(string(), { description: "Name" }) }));`,
-    budget: 6700,
+    budget: 6840,
   },
   {
     name: "audit",
@@ -209,12 +209,12 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
   {
     name: "standardJsonSchema with an object",
     source: `import { object, standardJsonSchema, string } from "DIST"; export const check = standardJsonSchema(object({ name: string() }));`,
-    budget: 8720,
+    budget: 8750,
   },
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 28020,
+    budget: 28270,
   },
 ];
 

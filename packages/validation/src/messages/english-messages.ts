@@ -1,5 +1,5 @@
 import type { ValidationIssue } from "../core/types";
-import type { Messages } from "./format-issue";
+import type { Messages } from "./word";
 import { entryOf, formatValue, listOf, meantIssue, momentOf, param, quote } from "./wording";
 
 const FORMAT_NAMES: Readonly<Record<string, string>> = {
@@ -279,10 +279,11 @@ export const invalidUnionMessage: QuotingWording = describeUnion;
  * The built-in English wording for every issue the validators can report, as a message map.
  *
  * @remarks
- * Pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Must be at least
- * 18". It is a separate value, not something `formatIssue` carries, so a program that words its own
- * issues, or that never shows one, does not bundle it, and one that can report only a few codes takes
- * the wording of each on its own, such as {@link invalidTypeMessage}. To change some of the wording,
+ * `formatIssue`, `flatten` and `standard` use it when given no map, for text such as "Must be at least
+ * 18", and `assert` uses it when passed it. It is a separate value, so a program that never calls those
+ * three, such as one that checks its options with `assert` and its own wording, does not bundle it, and
+ * one that can report only a few codes takes the wording of each on its own, such as
+ * {@link invalidTypeMessage}. To change some of the wording,
  * spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is
  * frozen, so no code can reword the messages of every other user of it in the process. A custom
  * validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
@@ -291,7 +292,7 @@ export const invalidUnionMessage: QuotingWording = describeUnion;
  * ```ts
  * const result = number({ min: 18 })(15);
  * if (!result.ok) {
- *   formatIssue(result.error.issues[0], englishMessages); // "Must be at least 18"
+ *   formatIssue(result.error.issues[0], { ...englishMessages, too_small: "Too young" }); // "Too young"
  * }
  * ```
  */

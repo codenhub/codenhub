@@ -1,7 +1,7 @@
 import { isPlainObject } from "../core/objects";
 import type { AnyValidator, Infer, InferInput } from "../core/types";
 import { englishMessages } from "../messages/english-messages";
-import type { Messages } from "../messages/format-issue";
+import type { Messages } from "../messages/word";
 import { toJsonSchema, type JsonSchemaOptions } from "./json-schema";
 import { standard } from "./standard";
 import type { StandardJSONSchemaV1, StandardSchemaV1 } from "./standard-schema";

@@ -3,7 +3,7 @@ import { describe, described } from "../core/describe";
 import { assertFunction } from "../core/result";
 import type { AnyValidator, Infer, InferInput, ValidationResult } from "../core/types";
 import { englishMessages } from "../messages/english-messages";
-import { assertMessages, formatIssue, type Messages } from "../messages/format-issue";
+import { assertMessages, wordIssue, type Messages } from "../messages/word";
 import type { StandardSchemaV1 } from "./standard-schema";
 
 /**
@@ -48,7 +48,7 @@ export function standard<TValidator extends AnyValidator>(
   const toStandard = (result: ValidationResult<Output>): StandardSchemaV1.Result<Output> =>
     result.ok
       ? { value: result.value }
-      : { issues: result.error.issues.map((issue) => ({ message: formatIssue(issue, messages), path: issue.path })) };
+      : { issues: result.error.issues.map((issue) => ({ message: wordIssue(issue, messages), path: issue.path })) };
   const props: StandardSchemaV1.Props<unknown, Output> = {
     version: 1,
     vendor: "codenhub",

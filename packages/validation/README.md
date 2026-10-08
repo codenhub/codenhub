@@ -25,14 +25,14 @@ pnpm add @codenhub/validation
 A validator is a function. Call it with any value and read the result:
 
 ```ts
-import { email, englishMessages, formatIssue } from "@codenhub/validation";
+import { email, formatIssue } from "@codenhub/validation";
 
 const result = email()(input);
 
 if (result.ok) {
   result.value; // string
 } else {
-  formatIssue(result.error.issues[0], englishMessages); // "Invalid email address"
+  formatIssue(result.error.issues[0]); // "Invalid email address"
 }
 ```
 
@@ -52,7 +52,7 @@ type Signup = Infer<typeof signup>; // { name: string; email: string; age?: numb
 const result = signup(requestBody);
 ```
 
-Invalid input never throws, with one exception noted below. Every problem a validator reports is in `result.error.issues`, each with a `code`, a `path` to the offending value and `params` describing the failure. Turn an issue into text with `formatIssue`, or group them by field for a form with `flatten`, passing `englishMessages` or a map of your own.
+Invalid input never throws, with one exception noted below. Every problem a validator reports is in `result.error.issues`, each with a `code`, a `path` to the offending value and `params` describing the failure. Turn an issue into text with `formatIssue`, or group them by field for a form with `flatten`, in English unless you pass a map of your own.
 
 Every validator takes options, then checks, which are rules for the rarer cases, and a `message` option for a sentence of its own:
 
@@ -101,7 +101,7 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 ## Notes
 
 - A validator returns `{ ok: true, value }` or `{ ok: false, error }`. Bad input is never thrown, except by code the input carries, below; a bad option, such as `string({ min: -1 })`, throws when the validator is created.
-- Issues never contain an input value, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English or `portugueseMessages` for Portuguese, each a separate import so a program bundles only the wording it uses, or your own to reword or localize. Keys are another matter: a path leads through the input's own keys, and a strict `object` names each key it does not recognize.
+- Issues never contain an input value, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue` or `flatten`, in English unless you pass another message map: `portugueseMessages` for Portuguese, or your own to reword or localize. A program that never asks, or checks its options with `assert` and wording of its own, does not bundle the English. Keys are another matter: a path leads through the input's own keys, and a strict `object` names each key it does not recognize.
 - Rules never rewrite the value unless you ask: `trim`, `case` and `clamp` are the options that do. Formats with several spellings are the exception, and produce one: `email()` and `url()` produce what the URL parser reads, such as `https://example.com/admin` for `https://Example.com/public/../admin`, so a check made later on the value sees what a request or a mail server will, `domain()` produces lowercase ASCII with internationalized labels in punycode, and `ip()`, `cidr()`, `hostname()`, `uuid()`, `ulid()`, `phone()`, `mac()` and `creditCard()` produce a canonical spelling.
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
 - `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal`, `printer.local` and `nas.home`. Whether the top-level domain exists is not checked. A validator for the host replaces that rule: `url({ host: hostname() })` accepts any hostname and `url({ host: union([domain(), ip()]) })` any public domain or IP address, of any range. Neither resolves the name, so a public name can still point at a private address.

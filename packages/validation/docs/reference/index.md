@@ -469,7 +469,7 @@ pageSize("lots"); // { ok: true, value: 20 }
 ### flatten
 
 ```ts
-export declare function flatten(failure: ValidationFailure, messages: Messages): FlattenedErrors;
+export declare function flatten(failure: ValidationFailure, messages?: Messages): FlattenedErrors;
 ```
 
 Groups the messages of a failure for display: issues at the root go to `formErrors`, the rest are keyed by their [formatPath](#formatpath) notation in `fieldErrors`, an object with no prototype so that a field named like an `Object.prototype` member cannot collide with it. Test for a field with `in` or `Object.hasOwn`, since it has no `hasOwnProperty`.
@@ -477,11 +477,11 @@ Groups the messages of a failure for display: issues at the root go to `formErro
 **Parameters**
 
 - `failure` — The `error` of a failed result.
-- `messages` — Text for the codes it names, as for [formatIssue](#formatissue).
+- `messages` — Text for the codes it names, `englishMessages` unless given, as for [formatIssue](#formatissue).
 
 **Returns** — The grouped messages.
 
-**Throws** — When `messages` is not a message map, such as when it was left out, or the entry that words an issue is neither text nor a function that returns text.
+**Throws** — When `messages` is not a message map, such as `null`, or the entry that words an issue is neither text nor a function that returns text.
 
 ### format
 
@@ -513,28 +513,29 @@ slug({ message: "Use lowercase words and hyphens" })("Hello World"); // { ok: fa
 ### formatIssue
 
 ```ts
-export declare function formatIssue(issue: ValidationIssue, messages: Messages): string;
+export declare function formatIssue(issue: ValidationIssue, messages?: Messages): string;
 ```
 
 Turns an issue into text a person can read.
 
-The text comes from the first of these that exists: the issue's own `message`, an entry for its `code` in `messages`, the entry `default` of `messages`, then the generic "Invalid value". The built-in English wording is not carried here, so a program that words its own issues does not bundle it: pass `englishMessages` for it, or a map of your own, or both spread together. The map is required, so leaving it out is a compile error and not a form that says "Invalid value" for everything; a program whose issues all carry their own `message` passes `{}`.
+The text comes from the first of these that exists: the issue's own `message`, an entry for its `code` in `messages`, the entry `default` of `messages`, then the generic "Invalid value". The map is `englishMessages` unless another is given, such as `portugueseMessages`, a map of your own, or the English spread with your own entries. A program that calls `formatIssue` bundles the English even when it passes another map, since the default is referenced.
 
 **Parameters**
 
 - `issue` — The issue to describe.
-- `messages` — Text for the codes it names, such as `englishMessages`, or `{}` for none.
+- `messages` — Text for the codes it names, `englishMessages` unless given, or `{}` for none.
 
 **Returns** — The message.
 
-**Throws** — When `messages` is not a message map, such as when it was left out, or the entry that words an issue is neither text nor a function that returns text.
+**Throws** — When `messages` is not a message map, such as `null`, or the entry that words an issue is neither text nor a function that returns text.
 
 **Example**
 
 ```ts
 const result = number({ min: 18 })(15);
 if (!result.ok) {
-  formatIssue(result.error.issues[0], englishMessages); // "Must be at least 18"
+  formatIssue(result.error.issues[0]); // "Must be at least 18"
+  formatIssue(result.error.issues[0], portugueseMessages); // "Deve ser no mínimo 18"
 }
 ```
 
@@ -4101,14 +4102,14 @@ export declare const englishMessages: Messages;
 
 The built-in English wording for every issue the validators can report, as a message map.
 
-Pass it to `formatIssue`, `flatten`, `assert` or `standard` to get text such as "Must be at least 18". It is a separate value, not something `formatIssue` carries, so a program that words its own issues, or that never shows one, does not bundle it, and one that can report only a few codes takes the wording of each on its own, such as [invalidTypeMessage](#invalidtypemessage). To change some of the wording, spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is frozen, so no code can reword the messages of every other user of it in the process. A custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
+`formatIssue`, `flatten` and `standard` use it when given no map, for text such as "Must be at least 18", and `assert` uses it when passed it. It is a separate value, so a program that never calls those three, such as one that checks its options with `assert` and its own wording, does not bundle it, and one that can report only a few codes takes the wording of each on its own, such as [invalidTypeMessage](#invalidtypemessage). To change some of the wording, spread it and override the codes you want: `{ ...englishMessages, too_small: "Too short" }`. It is frozen, so no code can reword the messages of every other user of it in the process. A custom validator's own codes are not in it; give them a `message` on the issue or an entry of your own.
 
 **Example**
 
 ```ts
 const result = number({ min: 18 })(15);
 if (!result.ok) {
-  formatIssue(result.error.issues[0], englishMessages); // "Must be at least 18"
+  formatIssue(result.error.issues[0], { ...englishMessages, too_small: "Too young" }); // "Too young"
 }
 ```
 

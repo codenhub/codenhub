@@ -132,7 +132,7 @@ Checked with @modelcontextprotocol/sdk 1.32.1. Its `McpServer.registerTool` take
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from "@modelcontextprotocol/sdk/types.js";
 
-import { englishMessages, formatIssue, meta, number, object, optional, string, toJsonSchema } from "@codenhub/validation";
+import { formatIssue, meta, number, object, optional, string, toJsonSchema } from "@codenhub/validation";
 
 const forecastInput = object({
   city: meta(string({ min: 1, max: 100 }), { description: "The city, such as Lisbon" }),
@@ -157,7 +157,7 @@ server.setRequestHandler(CallToolRequestSchema, (request) => {
   }
   const result = forecastInput(request.params.arguments);
   if (!result.ok) {
-    const text = result.error.issues.map((issue) => formatIssue(issue, englishMessages)).join("\n");
+    const text = result.error.issues.map((issue) => formatIssue(issue)).join("\n");
     return { isError: true, content: [{ type: "text", text }] };
   }
   const { city, days = 1 } = result.value;

@@ -47,7 +47,7 @@ Because a validator is only a function, you can write your own with no helper at
 A result is one of two plain objects, so you branch on `ok`:
 
 ```ts
-import { email, englishMessages, formatIssue } from "@codenhub/validation";
+import { email, formatIssue } from "@codenhub/validation";
 
 const result = email()(input);
 
@@ -55,7 +55,7 @@ if (result.ok) {
   save(result.value); // typed as string
 } else {
   for (const issue of result.error.issues) {
-    console.log(issue.path, formatIssue(issue, englishMessages));
+    console.log(issue.path, formatIssue(issue));
   }
 }
 ```
