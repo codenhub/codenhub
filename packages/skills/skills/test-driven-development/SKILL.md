@@ -22,13 +22,11 @@ Apply this workflow for:
 - behavior changes
 - refactors that can affect behavior
 
-Exceptions need the user's explicit approval for that exact change in this conversation. Never approve one yourself; urgency is not approval.
+Edits no tool reads, such as comments, whitespace, key order, or descriptive text, need no test and no approval; say in the report that the change was one.
 
-- throwaway prototypes
-- generated code
-- edits no tool reads: comments, whitespace, key order, or descriptive text
+Throwaway prototypes and generated code need the user's explicit approval for that exact change in this conversation. Never approve one yourself; urgency is not approval.
 
-Anything a runtime, build, or deploy reads, such as flags, permissions, routes, dependency pins, or environment keys, is behavior and needs a test. When a change looks like an exception, ask once. Without a yes, or when unsure whether tooling reads it, run full TDD.
+Anything a runtime, build, or deploy reads, such as flags, permissions, routes, dependency pins, or environment keys, is behavior and needs a test. When a change looks like a prototype or generated code, ask once. Without a yes, or when unsure whether tooling reads it, run full TDD.
 
 ## Removing Code
 
