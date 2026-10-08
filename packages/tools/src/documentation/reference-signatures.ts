@@ -580,24 +580,122 @@ export function attachSignatures(
   return { ...model, entrypoints };
 }
 
-/** An unexported declaration found in an emitted `.d.ts`. */
-interface InternalDeclaration {
-  text: string;
-  doc?: string;
-  /** Other unexported declarations of the same file that this one names. */
-  references: string[];
+/** A type a declaration names: its leftmost identifier, and the module of an `import("…")` type. */
+interface NamedType {
+  name: string;
+  module?: string;
 }
 
-function isLocalTypeDeclaration(
-  statement: ts.Statement,
-): statement is ts.TypeAliasDeclaration | ts.InterfaceDeclaration | ts.EnumDeclaration | ts.ClassDeclaration {
+function leftmostName(name: ts.EntityName | ts.Expression): string | undefined {
+  let current: ts.Node = name;
+  while (ts.isQualifiedName(current) || ts.isPropertyAccessExpression(current)) {
+    current = ts.isQualifiedName(current) ? current.left : current.expression;
+  }
+  return ts.isIdentifier(current) ? current.text : undefined;
+}
+
+/** `infer` names a conditional type's `extends` clause binds, leaving out a nested conditional's own. */
+function inferNames(extendsType: ts.TypeNode): string[] {
+  const names: string[] = [];
+  const visit = (current: ts.Node): void => {
+    if (ts.isInferTypeNode(current)) {
+      names.push(current.typeParameter.name.text);
+    }
+    if (ts.isConditionalTypeNode(current)) {
+      [current.checkType, current.trueType, current.falseType].forEach(visit);
+      return;
+    }
+    ts.forEachChild(current, visit);
+  };
+  visit(extendsType);
+  return names;
+}
+
+/** Names a node binds for its children: type parameters, a mapped-type key, or a namespace's own members. */
+function boundNames(node: ts.Node): string[] {
+  if (ts.isMappedTypeNode(node)) {
+    return [node.typeParameter.name.text];
+  }
+  if (ts.isModuleBlock(node)) {
+    return [...collectDeclarationNodes(node.statements).keys()];
+  }
+  const { typeParameters } = node as { typeParameters?: readonly ts.TypeParameterDeclaration[] };
+  return (typeParameters ?? []).map((parameter) => parameter.name.text);
+}
+
+/**
+ * Types a declaration names as its `.d.ts` text prints them, leaving out a name where
+ * something binds it for its own use: a type parameter, a mapped-type key, an `infer`
+ * binding in its conditional's true branch, or a namespace's own member.
+ */
+function namedTypes(node: ts.Node): NamedType[] {
+  const named: NamedType[] = [];
+  const add = (scope: ReadonlySet<string>, name: string | undefined, module?: string): void => {
+    if (name !== undefined && (module !== undefined || !scope.has(name))) {
+      named.push(module === undefined ? { name } : { module, name });
+    }
+  };
+  const visit = (current: ts.Node, outer: ReadonlySet<string>): void => {
+    const bound = boundNames(current);
+    const scope = bound.length === 0 ? outer : new Set([...outer, ...bound]);
+    if (ts.isTypeReferenceNode(current)) {
+      add(scope, leftmostName(current.typeName));
+    } else if (ts.isExpressionWithTypeArguments(current)) {
+      add(scope, leftmostName(current.expression));
+    } else if (ts.isTypeQueryNode(current)) {
+      add(scope, leftmostName(current.exprName));
+    } else if (
+      ts.isImportTypeNode(current) &&
+      current.qualifier !== undefined &&
+      ts.isLiteralTypeNode(current.argument) &&
+      ts.isStringLiteral(current.argument.literal)
+    ) {
+      add(scope, leftmostName(current.qualifier), current.argument.literal.text);
+    } else if (ts.isConditionalTypeNode(current)) {
+      visit(current.checkType, scope);
+      visit(current.extendsType, scope);
+      visit(current.trueType, new Set([...scope, ...inferNames(current.extendsType)]));
+      visit(current.falseType, scope);
+      return;
+    }
+    ts.forEachChild(current, (child) => visit(child, scope));
+  };
+  visit(node, new Set());
+  return named;
+}
+
+/** Global names that a package's hand-written declaration files declare, each with the first file declaring it. */
+function ambientNames(ambient: ReadonlyMap<string, string>): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const [path, text] of ambient) {
+    const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    const statements = ts.isExternalModule(source)
+      ? source.statements.flatMap((statement) =>
+          ts.isModuleDeclaration(statement) &&
+          (statement.flags & ts.NodeFlags.GlobalAugmentation) !== 0 &&
+          statement.body !== undefined &&
+          ts.isModuleBlock(statement.body)
+            ? [...statement.body.statements]
+            : [],
+        )
+      : source.statements;
+    for (const name of collectDeclarationNodes(statements).keys()) {
+      if (!names.has(name)) {
+        names.set(name, path);
+      }
+    }
+  }
+  return names;
+}
+
+function isTypeDeclaration(
+  node: ts.Node,
+): node is ts.TypeAliasDeclaration | ts.InterfaceDeclaration | ts.EnumDeclaration | ts.ClassDeclaration {
   return (
-    (ts.isTypeAliasDeclaration(statement) ||
-      ts.isInterfaceDeclaration(statement) ||
-      ts.isEnumDeclaration(statement) ||
-      ts.isClassDeclaration(statement)) &&
-    statement.name !== undefined &&
-    !hasModifier(statement, ts.SyntaxKind.ExportKeyword)
+    ts.isTypeAliasDeclaration(node) ||
+    ts.isInterfaceDeclaration(node) ||
+    ts.isEnumDeclaration(node) ||
+    ts.isClassDeclaration(node)
   );
 }
 
@@ -607,98 +705,127 @@ function jsDocSummary(node: ts.Node): string | undefined {
   return text === undefined || text === "" ? undefined : text;
 }
 
-function internalDeclarations(source: ts.SourceFile): Map<string, InternalDeclaration> {
-  const locals = new Map(
-    source.statements.filter(isLocalTypeDeclaration).map((statement) => [statement.name?.text ?? "", statement]),
-  );
-  const found = new Map<string, InternalDeclaration>();
-  for (const [name, statement] of locals) {
-    const references = new Set<string>();
-    const visit = (node: ts.Node): void => {
-      if (ts.isTypeReferenceNode(node) && ts.isIdentifier(node.typeName) && locals.has(node.typeName.text)) {
-        references.add(node.typeName.text);
-      }
-      ts.forEachChild(node, visit);
-    };
-    visit(statement);
-    references.delete(name);
-    const doc = jsDocSummary(statement);
-    const text = tidy(statement.getText(source), ts.isTypeAliasDeclaration(statement));
-    found.set(
-      name,
-      doc === undefined ? { references: [...references], text } : { doc, references: [...references], text },
-    );
-  }
-  return found;
+/** `composition/object.d.ts` → `src/composition/object.ts`. */
+function sourcePathOf(declarationPath: string): string {
+  return `src/${declarationPath.replace(/\.d\.([cm]?)ts$/, ".$1ts")}`;
 }
 
-/** `src/composition/object.ts` → `composition/object.d.ts`; `undefined` for a source with no emitted declaration. */
-function emittedDeclarationPath(declaredIn: string): string | undefined {
-  const match = /^src\/(.+)\.([cm]?)tsx?$/.exec(declaredIn);
-  return match === null || declaredIn.endsWith(".d.ts") || /\.d\.[cm]ts$/.test(declaredIn)
-    ? undefined
-    : `${match[1]}.d.${match[2]}ts`;
-}
+/** Where a named type leads: its declarations, a place no reader can find it, or nowhere to check. */
+type Resolution = { declarations: readonly ts.Node[] } | { missing: true; declaredIn?: string } | undefined;
 
 /**
- * Moves unresolved references that are unexported declarations into their entrypoint's
- * `internalTypes`, following the unexported types those declarations name in turn.
+ * Lists, under each entrypoint's `internalTypes`, the types its signatures name that no
+ * entrypoint exports, following the types those name in turn, and reports in
+ * `unresolved` a named type that cannot be listed.
  *
- * TypeDoc reflects only exports, so an unexported type a public declaration names is
- * found in the emitted `.d.ts`, which keeps it for the export that needs it. A
- * reference with no such declaration, such as a global type from a hand-written
- * `.d.ts`, stays in `unresolved`.
+ * Names are read from the emitted `.d.ts`, the text the page prints, and not from
+ * TypeDoc, which resolves some aliases, such as a conditional one, to what they stand
+ * for. A name its file neither declares nor imports is a global; it is unresolved only
+ * when one of the package's hand-written declaration files declares it, since that file
+ * is never emitted for a reader to find.
  * @param model Model produced by `buildReferenceModel`.
  * @param files Emitted declaration contents keyed relative to `src/`, as `emitDeclarations` returns them.
- * @returns A new model with `internalTypes` filled and `unresolved` narrowed to what is still missing.
+ * @param entryDtsBySubpath Each entrypoint's declaration file, keyed like `files`, by `exports` subpath.
+ * @param ambient The package's hand-written declaration files, keyed by package-relative path such as `src/env.d.ts`.
+ * @returns A new model with `internalTypes` and `unresolved` filled.
  */
-export function attachInternalTypes(model: ReferenceModel, files: ReadonlyMap<string, string>): ReferenceModel {
-  const parsed = new Map<string, Map<string, InternalDeclaration>>();
-  const declarationsIn = (path: string) => {
-    let found = parsed.get(path);
-    if (found === undefined) {
-      const text = files.get(path);
-      found =
-        text === undefined
-          ? new Map()
-          : internalDeclarations(ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS));
-      parsed.set(path, found);
+export function attachInternalTypes(
+  model: ReferenceModel,
+  files: ReadonlyMap<string, string>,
+  entryDtsBySubpath: ReadonlyMap<string, string>,
+  ambient: ReadonlyMap<string, string>,
+): ReferenceModel {
+  const resolver = buildDeclarationResolver(files);
+  const globals = ambientNames(ambient);
+  const declarationsOf = (subpath: string, name: string): readonly ts.Node[] => {
+    const entryDts = entryDtsBySubpath.get(subpath);
+    return (entryDts === undefined ? undefined : resolver.lookup(entryDts, name)) ?? [];
+  };
+  const documented = new Set(
+    model.entrypoints.flatMap((entrypoint) =>
+      entrypoint.symbols.flatMap((symbol) => declarationsOf(entrypoint.subpath, symbol.name)),
+    ),
+  );
+
+  const resolve = (path: string, type: NamedType): Resolution => {
+    if (type.module !== undefined) {
+      if (!type.module.startsWith(".")) {
+        return undefined;
+      }
+      const target = resolveDtsCandidates(path, type.module).find((candidate) => files.has(candidate));
+      const declarations = target === undefined ? undefined : resolver.lookup(target, type.name);
+      return declarations === undefined ? undefined : { declarations };
     }
-    return found;
+    // Follows the file's imports and re-exports too; a name it cannot place is a global.
+    const declarations = resolver.lookup(path, type.name);
+    if (declarations !== undefined) {
+      return { declarations };
+    }
+    const declaredIn = globals.get(type.name);
+    return declaredIn === undefined ? undefined : { declaredIn, missing: true };
   };
 
   const unresolved: UnresolvedTypeReference[] = [];
   const entrypoints = model.entrypoints.map((entrypoint): ReferenceEntrypoint => {
+    const { subpath } = entrypoint;
     const internal: ReferenceInternalType[] = [];
-    const queue = model.unresolved.filter((reference) => reference.subpath === entrypoint.subpath);
-    const visited = new Set<string>();
-    while (queue.length > 0) {
-      const reference = queue.shift() as UnresolvedTypeReference;
-      const path = reference.declaredIn === undefined ? undefined : emittedDeclarationPath(reference.declaredIn);
-      const declaration = path === undefined ? undefined : declarationsIn(path).get(reference.name);
-      if (declaration === undefined || reference.declaredIn === undefined || path === undefined) {
-        unresolved.push(reference);
-        continue;
-      }
-      const key = JSON.stringify([reference.declaredIn, reference.name]);
-      if (visited.has(key)) {
-        continue;
-      }
-      visited.add(key);
-      // The same helper copied into two files is one entry that names both.
-      const same = internal.find((type) => type.name === reference.name && type.signature === declaration.text);
-      if (same === undefined) {
-        internal.push({
-          declaredIn: [reference.declaredIn],
-          name: reference.name,
-          signature: declaration.text,
-          ...(declaration.doc === undefined ? {} : { doc: declaration.doc }),
-        });
-      } else if (!same.declaredIn.includes(reference.declaredIn)) {
-        same.declaredIn.push(reference.declaredIn);
-      }
-      for (const name of declaration.references) {
-        queue.push({ declaredIn: reference.declaredIn, name, subpath: reference.subpath, symbol: reference.name });
+    const listed = new Set<ts.Node>();
+    // Symbols follow page order, so findings do too; each name is reported once per symbol.
+    const queue = entrypoint.symbols.map((symbol) => ({
+      nodes: declarationsOf(subpath, symbol.name),
+      symbol: symbol.name,
+    }));
+    for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
+      const { symbol } = next;
+      const reported = new Set<string>();
+      const report = (name: string, declaredIn: string | undefined): void => {
+        if (!reported.has(name)) {
+          reported.add(name);
+          unresolved.push(declaredIn === undefined ? { name, subpath, symbol } : { declaredIn, name, subpath, symbol });
+        }
+      };
+      for (const node of next.nodes) {
+        const path = node.getSourceFile().fileName;
+        for (const type of namedTypes(node)) {
+          const found = resolve(path, type);
+          if (found === undefined) {
+            continue;
+          }
+          if ("missing" in found) {
+            report(type.name, found.declaredIn);
+            continue;
+          }
+          if (found.declarations.some((declaration) => documented.has(declaration))) {
+            continue;
+          }
+          const types = found.declarations.filter(isTypeDeclaration);
+          const [first] = types;
+          if (first === undefined) {
+            report(type.name, sourcePathOf(found.declarations[0]?.getSourceFile().fileName ?? path));
+            continue;
+          }
+          if (listed.has(first)) {
+            continue;
+          }
+          listed.add(first);
+          const name = first.name?.text ?? type.name;
+          const declaredIn = sourcePathOf(first.getSourceFile().fileName);
+          // The reader cannot import it either way, so a module's `export` is left off.
+          const signature = types
+            .map((declaration) =>
+              tidy(declaration.getText().replace(/^export (?:default )?/, ""), ts.isTypeAliasDeclaration(declaration)),
+            )
+            .join("\n");
+          // The same helper copied into two files is one entry that names both.
+          const same = internal.find((entry) => entry.name === name && entry.signature === signature);
+          if (same === undefined) {
+            const doc = jsDocSummary(first);
+            internal.push({ declaredIn: [declaredIn], name, signature, ...(doc === undefined ? {} : { doc }) });
+          } else if (!same.declaredIn.includes(declaredIn)) {
+            same.declaredIn.push(declaredIn);
+          }
+          queue.push({ nodes: types, symbol: name });
+        }
       }
     }
     internal.sort((left, right) => left.name.localeCompare(right.name));
