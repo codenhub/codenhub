@@ -12,7 +12,7 @@ import type {
 } from "../core/types";
 import { HOSTLESS_SCHEMES, toHostlessUrl } from "./hostless-url";
 import { toCanonicalIpv6 } from "./ip";
-import { assertParts, notFormat, partIssue, partsFormat, readQuery, type Part, type Reading } from "./parts";
+import { assertParts, notFormat, partIssue, partsFormat, readEntries, type Part, type Reading } from "./parts";
 import { HOST_MAX_LENGTH, HOST_TEXT_MAX_LENGTH, isIdnHost, isPublicHost, readUrl } from "./patterns";
 
 /**
@@ -322,7 +322,7 @@ export function url(...rest: unknown[]): AnyValidator {
       parts.push(["path", path, parsed.pathname]);
     }
     if (query !== undefined) {
-      const { value, issues } = readQuery(parsed.searchParams, repeated);
+      const { value, issues } = readEntries(parsed.searchParams, repeated);
       if (issues.length > 0) {
         return { issues: [partIssue("url", "query", issues)] };
       }

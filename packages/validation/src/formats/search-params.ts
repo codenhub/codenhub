@@ -14,7 +14,7 @@ import type {
   Rest,
   ValidationResult,
 } from "../core/types";
-import { readQuery } from "./parts";
+import { readEntries } from "./parts";
 
 /** Options for {@link searchParams}. */
 export interface SearchParamsOptions extends MessageOptions {
@@ -72,7 +72,7 @@ export function searchParams(validator: AnyValidator, ...rest: unknown[]): AnyVa
       if (query === undefined) {
         return reject([typeIssue("query string", input)], place);
       }
-      const { value, issues } = readQuery(new URLSearchParams(query), repeated);
+      const { value, issues } = readEntries(new URLSearchParams(query), repeated);
       if (issues.length > 0) {
         return reject(issues, place);
       }

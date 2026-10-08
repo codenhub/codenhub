@@ -33,17 +33,17 @@ export function assertParts(parts: Readonly<Record<string, unknown>>): void {
 }
 
 /**
- * The search parameters as an object: each key's value, or with `repeated` every value of every key as
- * an array. Without `repeated`, a key given twice is reported at its path, one issue per key, since a
+ * Entries as an object, the parameters of a query or the fields of a form: each key's value, or with
+ * `repeated` every value of every key as an array. Without `repeated`, a key given twice is reported at its path, one issue per key, since a
  * validator that saw one of its values while a server read the other would pass a value nobody checked.
  * The sender repeats as many keys as it likes, so they are listed up to the limit of a collection.
  * The parameters are read once, so the time it takes grows with their number and no faster.
  */
-export function readQuery(
-  params: URLSearchParams,
+export function readEntries(
+  params: Iterable<readonly [string, unknown]>,
   repeated: boolean,
 ): { value: Record<string, unknown>; issues: ValidationIssue[] } {
-  const byKey = new Map<string, string[]>();
+  const byKey = new Map<string, unknown[]>();
   for (const [key, item] of params) {
     const all = byKey.get(key);
     if (all === undefined) {
