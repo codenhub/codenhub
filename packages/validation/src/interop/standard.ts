@@ -13,7 +13,7 @@ import type { StandardSchemaV1 } from "./standard-schema";
  * @remarks
  * The result is a validator that behaves exactly as the one you gave, plus the `~standard` property
  * the specification asks for. The one you gave is not modified. The specification requires a message
- * on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass,
+ * on every issue, so this is where the text is built, as `formatIssue` builds it, from the `messages` you pass,
  * the built-in English when you pass none. A program that calls `standard` bundles the English even when
  * it passes a map of its own. `~standard.validate` returns its result directly for a synchronous validator and a
  * `Promise` for an asynchronous one, even one that returns another kind of thenable, since callers

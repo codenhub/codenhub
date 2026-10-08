@@ -147,6 +147,11 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
     budget: 2610,
   },
   {
+    name: "flatten with your own wording",
+    source: `import { flatten } from "DIST"; export const group = (failure: Parameters<typeof flatten>[0]) => flatten(failure, { too_small: "Too short" });`,
+    budget: 2700,
+  },
+  {
     name: "formatIssue with the English wording",
     source: `import { englishMessages, formatIssue } from "DIST"; export const describe = (issue: Parameters<typeof formatIssue>[0]) => formatIssue(issue, englishMessages);`,
     budget: 2600,
