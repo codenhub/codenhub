@@ -27,14 +27,14 @@ pnpm add @codenhub/validation
 A validator is a function. Call it with any value and read the result:
 
 ```ts
-import { email, englishMessages, formatIssue } from "@codenhub/validation";
+import { email, formatIssue } from "@codenhub/validation";
 
 const result = email()(input);
 
 if (result.ok) {
   result.value; // string
 } else {
-  formatIssue(result.error.issues[0], englishMessages); // "Invalid email address"
+  formatIssue(result.error.issues[0]); // "Invalid email address"
 }
 ```
 
@@ -54,7 +54,7 @@ type Signup = Infer<typeof signup>; // { name: string; email: string; age?: numb
 const result = signup(requestBody);
 ```
 
-Invalid input never throws, with one exception noted below. Every problem a validator reports is in `result.error.issues`, each with a `code`, a `path` to the offending value and `params` describing the failure. Turn an issue into text with `formatIssue`, or group them by field for a form with `flatten`, passing `englishMessages` or a map of your own.
+Invalid input never throws, with one exception noted below. Every problem a validator reports is in `result.error.issues`, each with a `code`, a `path` to the offending value and `params` describing the failure. Turn an issue into text with `formatIssue`, or group them by field for a form with `flatten`, in English unless you pass a map of your own.
 
 Every validator takes options, then checks, which are rules for the rarer cases, and a `message` option for a sentence of its own:
 
@@ -103,7 +103,7 @@ Runtime code uses only standard JavaScript and the standard `URL` global, and no
 ## Notes
 
 - A validator returns `{ ok: true, value }` or `{ ok: false, error }`. Bad input is never thrown, except by code the input carries, below; a bad option, such as `string({ min: -1 })`, throws when the validator is created.
-- Issues never contain an input value, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, from a message map you pass: `englishMessages` for the built-in English or `portugueseMessages` for Portuguese, each a separate import so a program bundles only the wording it uses, or your own to reword or localize. Keys are another matter: a path leads through the input's own keys, and a strict `object` names each key it does not recognize.
+- Issues never contain an input value, and messages name types (`Expected number, received string`) instead of echoing values. Text for an issue is built only when you ask for it with `formatIssue`, `flatten` or `standard`, in English unless you pass another message map: `portugueseMessages` for Portuguese, or your own to reword or localize. A program that never asks, or checks its options with `assert` and wording of its own, does not bundle the English. Keys are another matter: a path leads through the input's own keys, and a strict `object` names each key it does not recognize.
 - Rules never rewrite the value unless you ask: `trim`, `case` and `clamp` are the options that do. Formats with several spellings are the exception, and produce one: `email()` and `url()` produce what the URL parser reads, such as `https://example.com/admin` for `https://Example.com/public/../admin`, so a check made later on the value sees what a request or a mail server will, `domain()` produces lowercase ASCII with internationalized labels in punycode, and `ip()`, `cidr()`, `hostname()`, `uuid()`, `ulid()`, `phone()`, `mac()` and `creditCard()` produce a canonical spelling.
 - Validation is synchronous until a rule returns a promise. The types then say the result must be awaited, and the compiler keeps you from reading it as if it were ready.
 - `email()` and `url()` accept public host names only: not `localhost`, IP addresses, or special-use names such as `db.internal`, `printer.local` and `nas.home`. Whether the top-level domain exists is not checked. A validator for the host replaces that rule: `url({ host: hostname() })` accepts any hostname and `url({ host: union([domain(), ip()]) })` any public domain or IP address, of any range. Neither resolves the name, so a public name can still point at a private address.
@@ -161,7 +161,7 @@ Because a validator is only a function, you can write your own with no helper at
 A result is one of two plain objects, so you branch on `ok`:
 
 ```ts
-import { email, englishMessages, formatIssue } from "@codenhub/validation";
+import { email, formatIssue } from "@codenhub/validation";
 
 const result = email()(input);
 
@@ -169,7 +169,7 @@ if (result.ok) {
   save(result.value); // typed as string
 } else {
   for (const issue of result.error.issues) {
-    console.log(issue.path, formatIssue(issue, englishMessages));
+    console.log(issue.path, formatIssue(issue));
   }
 }
 ```
@@ -397,7 +397,7 @@ Read the ratios and not the figures: this is one schema on one machine.
 ## When to choose another
 
 - **valibot**, when size is what matters most, or when you need the widest set of ready-made checks. It is the smallest of the four by a wide margin and faster.
-- **zod**, when other tools must accept your schema. It is what most form libraries, API frameworks and SDKs for language models take first. Many of those take any [Standard Schema](docs/standard-schema.md), which `standard(validator)` gives them, and those that need a JSON Schema can have one from [`toJsonSchema`](docs/json-schema.md), but a tool that asks for a zod schema by name needs zod.
+- **zod**, when other tools must accept your schema. It is what most form libraries, API frameworks and SDKs for language models take first. Many of those take any [Standard Schema](docs/standard-schema.md), which `standard(validator)` gives them, and those that need a JSON Schema can have one from [`toJsonSchema`](docs/json-schema.md), but a tool that asks for a zod schema by name needs zod. A codebase that stays on zod or valibot can still use `url()` or `email()` for one field, through a transform of a few lines that [Integrations](docs/integrations.md#inside-a-zod-or-valibot-schema) shows.
 - **zod or valibot**, when validating valid data in a hot path, such as every row of a large file, and a pattern is a good enough test of an email or a URL.
 - **yup**, when a codebase already uses it. The measurements give no other reason.
 
@@ -727,23 +727,23 @@ The validator reference lists the exact code and `params` each validator reports
 
 ## Turning an issue into text
 
-Validators do not build message text when they fail. That keeps them small, and it means text is a choice you make where you show it. `formatIssue` builds it from a message map, and `englishMessages` is the built-in English one. Both word the issues validators return; an issue received from elsewhere, such as JSON from a server you do not control, is input like any other, and a malformed one may throw, so validate it before wording it:
+Validators do not build message text when they fail. That keeps them small, and it means text is a choice you make where you show it. `formatIssue` builds it from a message map, `englishMessages` unless you pass another. Both word the issues validators return; an issue received from elsewhere, such as JSON from a server you do not control, is input like any other, and a malformed one may throw, so validate it before wording it:
 
 ```ts
-import { englishMessages, formatIssue, number } from "@codenhub/validation";
+import { formatIssue, number } from "@codenhub/validation";
 
 const result = number({ min: 18 })(15);
 if (!result.ok) {
-  formatIssue(result.error.issues[0], englishMessages); // "Must be at least 18"
+  formatIssue(result.error.issues[0]); // "Must be at least 18"
 }
 ```
 
-The English wording is a separate value you import, and `formatIssue` does not carry it. A program that words its own issues, or never shows one, does not bundle it, which is about 1.7 kB gzipped. The map is required, so forgetting it is a compile error, and a `TypeError` in JavaScript, rather than a form that says "Invalid value" for everything. A program whose issues all carry their own `message` passes `{}`.
+The English wording is `englishMessages`, a value of its own, about 1.7 kB gzipped. A program that calls `formatIssue` or `flatten` bundles it, even when it passes another map, since it is their default; one that never shows an issue, or checks its options with `assert` and wording of its own, does not. A program whose issues all carry their own `message` passes `{}`, and a map that is not an object, such as `null`, is a `TypeError`.
 
 The text comes from the first of these that exists:
 
 1. The issue's own `message`, which a validator's [`message` option](docs/validators.md#wording-one-validator) or a check's message sets.
-2. An entry for its `code` in the message map you pass as the second argument.
+2. An entry for its `code` in the message map, the second argument, `englishMessages` when you pass none.
 3. The entry `default` of that map, which words a code the map has no entry for.
 4. The generic "Invalid value".
 
@@ -886,17 +886,17 @@ Use `assert` for configuration and other arguments. For a form, a request or any
 `flatten` groups the messages of a failed result for display: issues at the root go to `formErrors`, and the rest are keyed by their formatted path in `fieldErrors`.
 
 ```ts
-import { englishMessages, flatten } from "@codenhub/validation";
+import { flatten } from "@codenhub/validation";
 
 const result = signup(input);
 if (!result.ok) {
-  const { formErrors, fieldErrors } = flatten(result.error, englishMessages);
+  const { formErrors, fieldErrors } = flatten(result.error);
   fieldErrors["email"]; // ["Invalid email address"]
   fieldErrors["addresses[0].street"]; // ["Must be at least 3 characters"]
 }
 ```
 
-It takes the same message map as `formatIssue`, which it requires too. Field keys use the notation of `formatPath`. `fieldErrors` has no prototype, so a field named `constructor` or `toString` cannot be mistaken for an inherited member and `fieldErrors["toString"]` is `undefined` when there is no such field. The price is that it has no methods: ask with `"name" in fieldErrors` or `Object.hasOwn(fieldErrors, "name")`, not `fieldErrors.hasOwnProperty("name")`.
+It takes the same message map as `formatIssue`, `englishMessages` unless another is given. Field keys use the notation of `formatPath`. `fieldErrors` has no prototype, so a field named `constructor` or `toString` cannot be mistaken for an inherited member and `fieldErrors["toString"]` is `undefined` when there is no such field. The price is that it has no methods: ask with `"name" in fieldErrors` or `Object.hasOwn(fieldErrors, "name")`, not `fieldErrors.hasOwnProperty("name")`.
 
 ## Reading the result
 
@@ -906,7 +906,7 @@ A failed result is plain data, so it can be logged, sent to a client or stored, 
 
 # Integrations
 
-A validator goes where a library asks for a schema in one of three ways: as a [Standard Schema](docs/standard-schema.md), which most form libraries and frameworks accept; as a [JSON Schema](docs/json-schema.md), which tools of language models and OpenAPI documents are written in; or called directly, as any function is. Each example below was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
+A validator goes where a library asks for a schema in one of three ways: as a [Standard Schema](docs/standard-schema.md), which most form libraries and frameworks accept; as a [JSON Schema](docs/json-schema.md), which tools of language models and OpenAPI documents are written in; or called directly, as any function is, which is also how one field of a [zod or valibot schema](#inside-a-zod-or-valibot-schema) can use it. Each example below was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
 
 ## Forms
 
@@ -1033,7 +1033,7 @@ Checked with @modelcontextprotocol/sdk 1.32.1. Its `McpServer.registerTool` take
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from "@modelcontextprotocol/sdk/types.js";
 
-import { englishMessages, formatIssue, meta, number, object, optional, string, toJsonSchema } from "@codenhub/validation";
+import { formatIssue, meta, number, object, optional, string, toJsonSchema } from "@codenhub/validation";
 
 const forecastInput = object({
   city: meta(string({ min: 1, max: 100 }), { description: "The city, such as Lisbon" }),
@@ -1058,7 +1058,7 @@ server.setRequestHandler(CallToolRequestSchema, (request) => {
   }
   const result = forecastInput(request.params.arguments);
   if (!result.ok) {
-    const text = result.error.issues.map((issue) => formatIssue(issue, englishMessages)).join("\n");
+    const text = result.error.issues.map((issue) => formatIssue(issue)).join("\n");
     return { isError: true, content: [{ type: "text", text }] };
   }
   const { city, days = 1 } = result.value;
@@ -1092,6 +1092,79 @@ export const document = {
   components: { schemas: { Signup: toJsonSchema(signup) } },
 };
 ```
+
+## Inside a zod or valibot schema
+
+A codebase on zod or valibot can use a validator of this package for one field, such as `url()` for a link the server will fetch or `email()` for an address it will store, without moving its other schemas. Neither library takes a Standard Schema as part of its own schemas, so the validator runs in a transform: what it produces is the field's value, and each issue it reports becomes an issue of the other library, worded by `formatIssue`. Only a synchronous validator fits this way.
+
+The issue then follows the other library's rules: valibot's issues hold the input they were given, so what [Issues and messages](docs/errors.md) says about issues never holding a value of the input is true of the validator's result here, not of the issue valibot reports.
+
+### zod
+
+Checked with zod 4.6.5. Each issue keeps its path below the field, so one from an `object` lands on its property.
+
+```ts
+import { z } from "zod";
+
+import { email, formatIssue, url, type Validator } from "@codenhub/validation";
+
+const ours =
+  <T>(validator: Validator<T>) =>
+  (value: unknown, ctx: z.RefinementCtx): T => {
+    const result = validator(value);
+    if (result.ok) {
+      return result.value;
+    }
+    for (const issue of result.error.issues) {
+      ctx.addIssue({ code: "custom", message: formatIssue(issue), path: [...issue.path] });
+    }
+    return z.NEVER;
+  };
+
+const webhook = z.object({
+  callback: z.string().transform(ours(url())),
+  owner: z.string().transform(ours(email())),
+});
+
+webhook.safeParse({ callback: "https://Example.com/hooks/../events", owner: "Ada@EXAMPLE.com" });
+// { success: true, data: { callback: "https://example.com/events", owner: "Ada@example.com" } }
+webhook.safeParse({ callback: "http://169.254.169.254/latest", owner: "ada@localhost" });
+// issues: "Invalid URL" at ["callback"], "Invalid email address" at ["owner"]
+```
+
+### valibot
+
+Checked with valibot 1.5.0. The transform takes its input type from the validator, so it follows a schema whose output is what the validator accepts, such as `v.string()` for `url()`. Every issue lands on the field itself.
+
+```ts
+import * as v from "valibot";
+
+import { email, formatIssue, url, type Validator } from "@codenhub/validation";
+
+const ours = <T, TInput>(validator: Validator<T, TInput>) =>
+  v.rawTransform<TInput, T>(({ dataset, addIssue, NEVER }) => {
+    const result = validator(dataset.value);
+    if (result.ok) {
+      return result.value;
+    }
+    for (const issue of result.error.issues) {
+      addIssue({ message: formatIssue(issue) });
+    }
+    return NEVER;
+  });
+
+const webhook = v.object({
+  callback: v.pipe(v.string(), ours(url())),
+  owner: v.pipe(v.string(), ours(email())),
+});
+
+v.safeParse(webhook, { callback: "https://Example.com/hooks/../events", owner: "Ada@EXAMPLE.com" });
+// { success: true, output: { callback: "https://example.com/events", owner: "Ada@example.com" }, ... }
+v.safeParse(webhook, { callback: "http://169.254.169.254/latest", owner: "ada@localhost" });
+// issues: "Invalid URL" at callback, "Invalid email address" at owner
+```
+
+The adapter is a few lines in your code and not an export of this package, so this package's API does not follow the context each library gives a transform, which zod changed between its versions 3 and 4.
 
 <!-- Source: docs/json-schema.md -->
 
@@ -2149,7 +2222,7 @@ Give `tags` a `max`, as `const bounded = object({ name: string({ max: 100 }), em
 
 ### `formatIssue`, `flatten`, `formatPath` and the message maps
 
-`formatIssue(issue, messages)` turns an issue into text, `flatten(failure, messages)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then the entry for its code in a message map you pass, then the map's `default` entry, then "Invalid value". `englishMessages` is the built-in English map, a separate value so that a program that words its own issues does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](docs/errors.md) explains all of them. `portugueseMessages` is the same map in Portuguese, as written in Brazil; [Issues and messages](docs/errors.md#built-in-languages) covers both.
+`formatIssue(issue, messages?)` turns an issue into text, `flatten(failure, messages?)` groups the text of a failure by field for a form, and `formatPath(path)` writes a path as `user.addresses[0].street`. The text comes from the issue's own `message`, then the entry for its code in the message map, `englishMessages` unless you pass another, then the map's `default` entry, then "Invalid value". `englishMessages` is a value of its own, so a program that never calls `formatIssue`, `flatten` or `standard` does not bundle it. The wording of each code is also an export of its own, such as `invalidTypeMessage`, for a map of the few codes a program reports. [Issues and messages](docs/errors.md) explains all of them. `portugueseMessages` is the same map in Portuguese, as written in Brazil; [Issues and messages](docs/errors.md#built-in-languages) covers both.
 
 ### `assert`
 
@@ -2212,11 +2285,12 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 - `portugueseMessages`, the built-in wording in Portuguese as written in Brazil, used wherever `englishMessages` is: "Deve ser no mínimo 18", "Endereço de e-mail inválido". It is a separate value, so a program bundles only the languages it imports.
 - The entry `default` of a message map, which words an issue whose code has no entry of its own, such as the code of a custom check, where `formatIssue` said "Invalid value" in English whatever the language of the map. `portugueseMessages` has one, "Valor inválido"; a map of your own may give text or a function of the issue.
 - The types a consumer may need to name for the above: `StandardJSONSchemaV1`, `Conversions`, `Encoded`, `AuditFinding`, `Meta`, `Extended`, `Description`, `JsonSchema`, `JsonSchemaOptions`, `Picked`, `Omitted`, `AllRequired`, `AllOptional`, `Reshaped`, `InferShapeInput`, `InferTupleInput`, `InferTaggedInput`, `InferRecordInput`, `Branded` and `ReadonlyOutput`.
-- [Integrations](docs/integrations.md), a page with an example for each of react-hook-form, TanStack Form, tRPC, Hono, the AI SDK, the Model Context Protocol and OpenAPI, each run against the version it names.
+- [Integrations](docs/integrations.md), a page with an example for each of react-hook-form, TanStack Form, tRPC, Hono, the AI SDK, the Model Context Protocol and OpenAPI, each run against the version it names, and a transform that runs a validator, such as `url()`, as one field of a zod or valibot schema.
 - [Compared with valibot, zod and yup](docs/comparison.md), a page that says where the package differs, what was measured, and when to choose one of the others.
 
 ## Changed
 
+- `formatIssue(issue)` and `flatten(failure)` word issues in English when given no message map, where 0.3.0 threw a `TypeError`, so the first call of a form needs no import of `englishMessages`. `undefined` there gives the English too, and any other value that is not a map, such as `null` or a list, is still a `TypeError`. A program that calls either now bundles the English, about 1.7 kB gzipped, even when it passes a map of its own, since it is their default. `assert` is unchanged: without a map it still says "Invalid value", and bundles no English.
 - `standard(validator)` words issues in English when given no message map, where 0.3.0 threw a `TypeError`. `undefined` there gives the English too. A map, such as `portugueseMessages`, is still accepted as the second argument, and any other value there, such as `null`, text or a list, is still a `TypeError`. A program that calls `standard` now bundles the English even when it passes a map of its own.
 - **Breaking.** `standard(validator, messages)` reports the validator's input type to the library that takes it, where 0.3.0 reported `unknown`. A form library that types a field from a Standard Schema now types one for `coerceNumber()` as `string | number` and one for `optional(string(), "")` as `string | undefined`, so code that relied on the field being `unknown` may need the narrower type.
 - `Validator` and `AsyncValidator` are interfaces with a call signature, where they were function types, so that they can carry the input type. A function of the right shape is still a validator, and nothing a caller writes changes.

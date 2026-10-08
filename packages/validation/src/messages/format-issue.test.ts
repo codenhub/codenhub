@@ -79,12 +79,17 @@ describe("without the English wording", () => {
     expect(formatWith(found as ValidationIssue, {})).toBe("Invalid value");
     expect(flatten({ issues: [found as ValidationIssue] }, {}).formErrors).toEqual(["Invalid value"]);
   });
+});
 
-  it("should refuse a missing map instead of wording every issue Invalid value", () => {
+describe("without a map", () => {
+  it("should word with the English when no map is given, and refuse what is not a map", () => {
     const [found] = issuesOf(number({ min: 18 })(15));
-    const error = new TypeError("messages must be a message map, such as englishMessages, received undefined");
-    expect(() => formatWith(found as ValidationIssue, undefined as never)).toThrow(error);
-    expect(() => flatten({ issues: [found as ValidationIssue] }, undefined as never)).toThrow(error);
+    expect(formatWith(found as ValidationIssue)).toBe("Must be at least 18");
+    expect(formatWith(found as ValidationIssue, undefined)).toBe("Must be at least 18");
+    expect(flatten({ issues: [found as ValidationIssue] }).formErrors).toEqual(["Must be at least 18"]);
+    const error = new TypeError("messages must be a message map, such as englishMessages, received null");
+    expect(() => formatWith(found as ValidationIssue, null as never)).toThrow(error);
+    expect(() => flatten({ issues: [found as ValidationIssue] }, null as never)).toThrow(error);
     expect(() => formatWith(found as ValidationIssue, [] as never)).toThrow(TypeError);
   });
 });

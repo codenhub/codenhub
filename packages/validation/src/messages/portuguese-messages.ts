@@ -1,5 +1,5 @@
 import type { ValidationIssue } from "../core/types";
-import type { Messages } from "./format-issue";
+import type { Messages } from "./word";
 import { entryOf, formatValue, listOf, meantIssue, momentOf, param, quote } from "./wording";
 
 /** What each format is called when it is invalid, a whole sentence since the adjective agrees with the noun. */

@@ -3,7 +3,7 @@ import { describe, described } from "../core/describe";
 import { assertFunction } from "../core/result";
 import type { AnyValidator, Infer, InferInput, ValidationResult } from "../core/types";
 import { englishMessages } from "../messages/english-messages";
-import { assertMessages, formatIssue, type Messages } from "../messages/format-issue";
+import { assertMessages, wordIssue, type Messages } from "../messages/word";
 import type { StandardSchemaV1 } from "./standard-schema";
 
 /**
@@ -13,7 +13,7 @@ import type { StandardSchemaV1 } from "./standard-schema";
  * @remarks
  * The result is a validator that behaves exactly as the one you gave, plus the `~standard` property
  * the specification asks for. The one you gave is not modified. The specification requires a message
- * on every issue, so this is where the text is built, with `formatIssue` and the `messages` you pass,
+ * on every issue, so this is where the text is built, as `formatIssue` builds it, from the `messages` you pass,
  * the built-in English when you pass none. A program that calls `standard` bundles the English even when
  * it passes a map of its own. `~standard.validate` returns its result directly for a synchronous validator and a
  * `Promise` for an asynchronous one, even one that returns another kind of thenable, since callers
@@ -48,7 +48,7 @@ export function standard<TValidator extends AnyValidator>(
   const toStandard = (result: ValidationResult<Output>): StandardSchemaV1.Result<Output> =>
     result.ok
       ? { value: result.value }
-      : { issues: result.error.issues.map((issue) => ({ message: formatIssue(issue, messages), path: issue.path })) };
+      : { issues: result.error.issues.map((issue) => ({ message: wordIssue(issue, messages), path: issue.path })) };
   const props: StandardSchemaV1.Props<unknown, Output> = {
     version: 1,
     vendor: "codenhub",

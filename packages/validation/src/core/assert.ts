@@ -1,4 +1,4 @@
-import { assertMessages, formatIssue, formatPath, type Messages } from "../messages/format-issue";
+import { assertMessages, formatPath, wordIssue, type Messages } from "../messages/word";
 import { isThenable } from "./async";
 import { isPlainObject } from "./objects";
 import { assertOption, describeType, ROOT_PATH } from "./result";
@@ -85,7 +85,7 @@ export function assert<T>(validator: Validator<T>, input: unknown, options?: Ass
   }
   // A path a validator written by hand left out is the value's own, as everywhere else.
   const where = formatPath(first.path ?? ROOT_PATH);
-  const problem = `${where === "" ? "" : `${where}: `}${formatIssue(first, messages)}`;
+  const problem = `${where === "" ? "" : `${where}: `}${wordIssue(first, messages)}`;
   throw new TypeError(subject === undefined || subject === "" ? problem : `${subject} ${problem}`, {
     cause: (outcome as ValidationErr).error,
   });
