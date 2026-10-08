@@ -97,21 +97,21 @@ Rules:
 
 **MANDATORY. Never skip this step.**
 
-Run:
+Each cycle, run the targeted test and the tests beside it, in the same file or module. Confirm the new test passes and those stay green. Broader suites wait for the end: their output repeats every cycle and stays in context.
 
-- the targeted test
-- nearby related tests
+Before finishing, run:
+
 - tests in changed modules or packages
 - tests that cover touched public interfaces and integration boundaries
-- repo-required smoke or pre-merge suites before finishing
+- repo-required smoke or pre-merge suites
 
 If baseline failures exist before coding (flaky or not), run the exact verification commands before coding and capture failing test IDs plus error signatures as baseline evidence.
 
-If uncertain, run the broader suite.
+If uncertain whether the change reaches beyond its module, run the broader suite before finishing.
 
-Confirm:
+Confirm before finishing:
 
-- new test passes
+- new tests pass
 - existing tests remain green, or only baseline failures with matching test IDs and error signatures remain
 - no new warnings or runtime errors
 
