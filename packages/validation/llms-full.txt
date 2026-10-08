@@ -392,7 +392,7 @@ The same schema in each library, `{ name: string of at least 2, email, age: opti
 Read the ratios and not the figures: this is one schema on one machine.
 
 - **Size.** A program ships the validators it imports and no others, so a lone `boolean` is 1.24 kB. valibot is smaller, about a quarter of the size for this object. zod/mini is the same size and zod four times larger.
-- **Speed on valid input is the weakest figure here**, six to nine times behind valibot and zod for this schema. Most of it is `email()`: the URL parser takes most of a microsecond, where the others test a pattern. The rest is `object`: one of three plain strings validates about 4 million times a second here and about 12 million in valibot.
+- **Speed on valid input is the weakest figure here**, six to nine times behind valibot and zod for this schema. Most of it is `email()`, which reads the domain as the URL parser does, where the others test a pattern. Since these figures were taken, it no longer asks the parser for an ASCII domain such as `example.com`, which it reads the same way by lowercasing it: on Node.js 24.14.1 that took `email()` from 0.76 to 1.65 million validations a second and this schema from 0.58 to 1.08. The rest is `object`: one of three plain strings validates about 4 million times a second here and about 12 million in valibot.
 
 ## When to choose another
 
@@ -2290,6 +2290,7 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 
 ## Changed
 
+- `email()`, `domain()` and the `mailto` addresses of `url()` read an ASCII domain such as `example.com` without the URL parser, whose reading of one is the text in lowercase, so `email()` validates about twice as many addresses a second. What each accepts and returns is unchanged, and a test compares the two readings over generated hosts.
 - `formatIssue(issue)` and `flatten(failure)` word issues in English when given no message map, where 0.3.0 threw a `TypeError`, so the first call of a form needs no import of `englishMessages`. `undefined` there gives the English too, and any other value that is not a map, such as `null` or a list, is still a `TypeError`. A program that calls either now bundles the English, about 1.7 kB gzipped, even when it passes a map of its own, since it is their default. `assert` is unchanged: without a map it still says "Invalid value", and bundles no English.
 - `standard(validator)` words issues in English when given no message map, where 0.3.0 threw a `TypeError`. `undefined` there gives the English too. A map, such as `portugueseMessages`, is still accepted as the second argument, and any other value there, such as `null`, text or a list, is still a `TypeError`. A program that calls `standard` now bundles the English even when it passes a map of its own.
 - **Breaking.** `standard(validator, messages)` reports the validator's input type to the library that takes it, where 0.3.0 reported `unknown`. A form library that types a field from a Standard Schema now types one for `coerceNumber()` as `string | number` and one for `optional(string(), "")` as `string | undefined`, so code that relied on the field being `unknown` may need the narrower type.
