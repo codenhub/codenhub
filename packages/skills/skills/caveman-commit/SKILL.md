@@ -25,6 +25,11 @@ Write commit messages terse and exact. Conventional Commits format. No fluff. Wh
 - Bullets `-` not `*`
 - Reference issues/PRs at end: `Closes #42`, `Refs #17`
 
+**Trailers:**
+
+- Keep every trailer the project or workflow uses, such as `Skipped:`, `Co-authored-by:`, or `Refs:`, even when the subject alone would do. Tools read them from the log
+- Put them in the final paragraph, after a blank line
+
 **What NEVER goes in:**
 
 - "This commit does X", "I", "we", "now", "currently" — the diff says what

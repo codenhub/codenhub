@@ -57,7 +57,32 @@ const references = (markdown: string) => [
   ...[...markdown.matchAll(/`((?:references|scripts|assets)\/[^`\s]+)`/g)].map((m) => m[1]),
 ];
 
+/**
+ * Whether `text` names the skill `id`: in a code span, followed by "skill", or bare when the ID is hyphenated. A bare
+ * one-word ID such as `audit` is ordinary prose, so it only counts in the first two forms.
+ */
+const namesSkill = (text: string, id: string) => {
+  const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const forms = [`\`${escaped}\``, `(?<![\\w-])${escaped} skill\\b`];
+  if (id.includes("-")) {
+    forms.push(`(?<![\\w-])${escaped}(?![\\w-])`);
+  }
+  return new RegExp(forms.join("|"), "i").test(text);
+};
+
 describe("skill catalog", () => {
+  it.each([
+    ["Use the frontend-design skill.", "frontend-design", true],
+    ["Route it to `audit`.", "audit", true],
+    ["Use the audit skill when available.", "audit", true],
+    ["See subagent-specialist for that.", "subagent-specialist", true],
+    ["When the work is an audit or review, split it.", "audit", false],
+    ["A front-end design system.", "frontend-design", false],
+    ["Install writing-skills-extra.", "writing-skills", false],
+  ])("should tell whether %j names %s", (text, id, expected) => {
+    expect(namesSkill(text, id)).toBe(expected);
+  });
+
   it("should hold bundled skills", () => {
     expect(skills.length).toBeGreaterThan(0);
   });
@@ -168,6 +193,17 @@ describe("skill catalog", () => {
           return content.split("\n").length > 100 && !/^## Contents$/m.test(content);
         });
       expect(long).toEqual([]);
+    });
+
+    // The user may not have another skill installed, and an agent sent looking for one wastes the turn.
+    it("should name no other bundled skill", () => {
+      const others = skills.filter((other) => other.id !== skill.id).map((other) => other.id);
+      const named = files
+        .filter((file) => file.endsWith(".md"))
+        .flatMap((file) =>
+          others.filter((id) => namesSkill(read(path.join(skill.path, file)), id)).map((id) => `${file}: ${id}`),
+        );
+      expect(named).toEqual([]);
     });
 
     it("should describe itself to Codex in agents/openai.yaml", () => {

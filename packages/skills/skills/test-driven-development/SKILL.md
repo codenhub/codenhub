@@ -22,13 +22,9 @@ Apply this workflow for:
 - behavior changes
 - refactors that can affect behavior
 
-Exceptions need the user's explicit approval for that exact change in this conversation. Never approve one yourself; urgency is not approval.
+Edits no tool reads, such as comments, whitespace, key order, or descriptive text, need no test and no approval; say in the report that the change was one. Anything a runtime, build, or deploy reads, such as flags, permissions, routes, dependency pins, or environment keys, is behavior and needs a test. When unsure whether a tool reads the change, run full TDD.
 
-- throwaway prototypes
-- generated code
-- edits no tool reads: comments, whitespace, key order, or descriptive text
-
-Anything a runtime, build, or deploy reads, such as flags, permissions, routes, dependency pins, or environment keys, is behavior and needs a test. When a change looks like an exception, ask once. Without a yes, or when unsure whether tooling reads it, run full TDD.
+Throwaway prototypes and generated code need the user's explicit approval for that exact change in this conversation. Ask once, before writing it; without a yes, run full TDD. Never approve one yourself; urgency is not approval.
 
 ## Removing Code
 
@@ -97,21 +93,21 @@ Rules:
 
 **MANDATORY. Never skip this step.**
 
-Run:
+Each cycle, run the targeted test and the tests beside it, in the same file or module. Confirm the new test passes and those stay green. Broader suites wait for the end: their output repeats every cycle and stays in context.
 
-- the targeted test
-- nearby related tests
+Before finishing, run:
+
 - tests in changed modules or packages
 - tests that cover touched public interfaces and integration boundaries
-- repo-required smoke or pre-merge suites before finishing
+- repo-required smoke or pre-merge suites
 
 If baseline failures exist before coding (flaky or not), run the exact verification commands before coding and capture failing test IDs plus error signatures as baseline evidence.
 
-If uncertain, run the broader suite.
+If uncertain whether the change reaches beyond its module, run the broader suite before finishing.
 
-Confirm:
+Confirm before finishing:
 
-- new test passes
+- new tests pass
 - existing tests remain green, or only baseline failures with matching test IDs and error signatures remain
 - no new warnings or runtime errors
 

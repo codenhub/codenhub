@@ -79,6 +79,8 @@ Never ignore a subagent that says it is stuck. If it reported `BLOCKED`, the set
 
 ### 4. Run Spec Compliance Review First
 
+Match the reviewers to the risk. For a mechanical, fully specified task that touches one or two files and has tests covering it, review the diff yourself: spec compliance first, then the code quality points in step 5. Every other task gets both reviewer subagents; each starts without context, so two reviewers on a trivial task cost more than the task did.
+
 - Verify what was requested against the actual code.
 - Check for missing requirements.
 - Check for over-building and extra features.
@@ -154,7 +156,7 @@ If the domains turn out not to be independent, stop treating them as parallel wo
 
 ## Delegated Audits and Reviews
 
-When the work is an audit or review the user asked for, split it by area, not by question, and use the `audit` skill when it is available:
+When the work is an audit or review the user asked for, split it by area, not by question:
 
 - Give every worker its area and the same evidence standard and classification, verbatim.
 - Before reporting, merge duplicates and resolve every contradiction between workers: re-check the case and report one answer, or one question when it cannot be settled.

@@ -47,6 +47,7 @@ Bundled skills follow the [Agent Skills specification](https://agentskills.io/sp
 - A skill holds only `SKILL.md`, `NOTICE`, `LICENSE`, `agents/`, `references/`, `scripts/`, and `assets/`.
 - Files that `SKILL.md` references exist and use forward slashes, and every file in `references/` is referenced from `SKILL.md`.
 - Reference files do not reference other files in the skill, and those over 100 lines open with a `## Contents` section.
+- A skill's Markdown files do not name another bundled skill, since the user may not have it installed.
 - `agents/openai.yaml` defines `display_name`, `short_description`, and `default_prompt`.
 
 The rest of the authoring guidance, such as how a description is phrased or whether a change was evaluated, needs judgment and is covered in review. Drafts are checked for valid metadata only.

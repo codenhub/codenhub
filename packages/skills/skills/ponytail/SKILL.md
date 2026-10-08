@@ -70,8 +70,8 @@ Example: "Add a cache for these API responses."
 - Anything explicitly requested. When the user insists on the full version, build it without re-arguing.
 - Understanding the problem. The ladder shortens the solution, never the reading; skipping comprehension to ship a small diff ships a confident wrong fix.
 - Calibration for physical systems. Clocks drift and sensors read off; leave the tuning knob.
-- One check for non-trivial logic. A branch, loop, parser, or money or security path leaves one runnable check behind: the smallest test or assertion that fails if the logic breaks. No frameworks, fixtures, or suites unless asked. Trivial one-liners need none.
+- Tests. When the project or another loaded instruction sets a testing workflow, follow it. Otherwise, non-trivial logic leaves one runnable check behind: a branch, loop, parser, or money or security path gets the smallest test or assertion that fails if the logic breaks.
 
 ## Boundaries
 
-Governs what you build, not how you write prose; pair with the `caveman` skill for terse replies. For reviewing existing code for over-engineering, use the `ponytail-review` skill.
+Governs what you build, not how you write prose, and not reviews of existing code.
