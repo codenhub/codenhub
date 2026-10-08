@@ -6,7 +6,7 @@ Validation for data you do not control: a request body, a query string, a form, 
 - **What a failing input costs is bounded.** A long list of bad items stops at 1,000 issues, and input nested too deep is one issue, never a stack overflow.
 - **Issues never hold a value of the input**, so logging a failed validation cannot log a password. They do name its keys, in `path`, as [The issue](docs/errors.md#the-issue) says.
 
-Each validator is a function you import on its own, so a program ships only what it uses: a lone `boolean()` is 1.8 kB gzipped, and an object of a string, an email and a number 6.6 kB. No dependencies.
+Each validator is a function you import on its own, so a program ships only what it uses: a lone `boolean()` is 1.8 kB gzipped, and an object of a string, an email and a number 6.5 kB. No dependencies.
 
 > **Experimental:** pre-1.0. The API of 0.4.0 is meant to hold for every 0.4.x release; a change that breaks callers, if one proves necessary, ships as the next minor and is listed in the [changelog](docs/changelog/index.md), which also has the migrations from earlier versions.
 

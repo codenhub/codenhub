@@ -30,107 +30,113 @@ interface Scenario {
 }
 
 const scenarios: Scenario[] = [
-  { name: "boolean", source: `import { boolean } from "DIST"; export const check = boolean();`, budget: 2020 },
+  { name: "boolean", source: `import { boolean } from "DIST"; export const check = boolean();`, budget: 2030 },
   {
     name: "number",
     source: `import { number } from "DIST"; export const check = number({ int: true, min: 0 });`,
-    budget: 2780,
+    budget: 2800,
   },
   {
     name: "string",
     source: `import { string } from "DIST"; export const check = string({ min: 2, trim: true });`,
-    budget: 2480,
+    budget: 2490,
   },
-  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 4230 },
+  { name: "email", source: `import { email } from "DIST"; export const check = email();`, budget: 4250 },
   {
     name: "object of three fields",
     source: `import { email, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });`,
-    budget: 7290,
+    budget: 7130,
   },
   {
     name: "object of three fields with messages",
     source: `import { email, englishMessages, formatIssue, number, object, optional, string } from "DIST";
 export const check = object({ name: string({ min: 2 }), email: email(), age: optional(number({ int: true })) });
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
-    budget: 9430,
+    budget: 9270,
   },
-  { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 2260 },
-  { name: "url", source: `import { url } from "DIST"; export const check = url();`, budget: 6350 },
-  { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 2690 },
+  {
+    name: "object with checkFields",
+    source: `import { checkFields, object, string } from "DIST";
+export const check = object({ password: string(), confirm: string() }, checkFields(["password", "confirm"], (data) => data.password === data.confirm));`,
+    budget: 4670,
+  },
+  { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 2270 },
+  { name: "url", source: `import { url } from "DIST"; export const check = url();`, budget: 6360 },
+  { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 2700 },
   {
     name: "datetime",
     source: `import { datetime } from "DIST"; export const check = datetime({ offset: true });`,
-    budget: 2460,
+    budget: 2470,
   },
   {
     name: "date",
     source: `import { date } from "DIST"; export const check = date({ min: new Date(0) });`,
-    budget: 2320,
+    budget: 2330,
   },
   {
     name: "oneOf",
     source: `import { oneOf } from "DIST"; export const check = oneOf(["admin", "user"]);`,
-    budget: 2160,
+    budget: 2180,
   },
   {
     name: "array",
     source: `import { array, string } from "DIST"; export const check = array(string(), { max: 5 });`,
-    budget: 3850,
+    budget: 3860,
   },
   {
     name: "set",
     source: `import { number, set } from "DIST"; export const check = set(number());`,
-    budget: 4260,
+    budget: 4270,
   },
   {
     name: "map",
     source: `import { map, number, string } from "DIST"; export const check = map(string(), number());`,
-    budget: 4750,
+    budget: 4760,
   },
   {
     name: "tuple",
     source: `import { number, tuple } from "DIST"; export const check = tuple([number(), number()]);`,
-    budget: 4220,
+    budget: 4240,
   },
   {
     name: "record",
     source: `import { number, record, string } from "DIST"; export const check = record(string(), number());`,
-    budget: 4930,
+    budget: 4940,
   },
   {
     name: "union",
     source: `import { literal, union } from "DIST"; export const check = union([literal("a"), literal("b")]);`,
-    budget: 2890,
+    budget: 2900,
   },
   {
     name: "tagged",
     source: `import { object, string, tagged } from "DIST";
 export const check = tagged("type", { a: object({ a: string() }), b: object({ b: string() }) });`,
-    budget: 4630,
+    budget: 4460,
   },
-  { name: "json", source: `import { json } from "DIST"; export const check = json();`, budget: 2500 },
+  { name: "json", source: `import { json } from "DIST"; export const check = json();`, budget: 2510 },
   {
     name: "coerceNumber",
     source: `import { coerceNumber } from "DIST"; export const check = coerceNumber({ int: true });`,
-    budget: 3010,
+    budget: 3030,
   },
   {
     name: "coerceString",
     source: `import { coerceString } from "DIST"; export const check = coerceString();`,
-    budget: 2620,
+    budget: 2630,
   },
   {
     name: "coerceBoolean",
     source: `import { coerceBoolean } from "DIST"; export const check = coerceBoolean();`,
-    budget: 2240,
+    budget: 2250,
   },
   {
     name: "coerceBigint",
     source: `import { coerceBigint } from "DIST"; export const check = coerceBigint();`,
-    budget: 2530,
+    budget: 2550,
   },
-  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 2900 },
+  { name: "coerceDate", source: `import { coerceDate } from "DIST"; export const check = coerceDate();`, budget: 2910 },
   {
     name: "standard",
     source: `import { englishMessages, number, standard } from "DIST"; export const check = standard(number(), englishMessages);`,
@@ -139,7 +145,7 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
   {
     name: "standard with an object and no map",
     source: `import { object, standard, string } from "DIST"; export const check = standard(object({ name: string() }));`,
-    budget: 6410,
+    budget: 6260,
   },
   {
     name: "formatIssue with your own wording",
@@ -164,73 +170,73 @@ export const check = tagged("type", { a: object({ a: string() }), b: object({ b:
   {
     name: "brand and readonly",
     source: `import { brand, readonly, string } from "DIST"; export const check = readonly(brand(string(), "Name"));`,
-    budget: 2970,
+    budget: 2980,
   },
   {
     name: "assert with the wording of two codes",
     source: `import { assert, invalidTypeMessage, string, tooSmallMessage } from "DIST"; const messages = { invalid_type: invalidTypeMessage, too_small: tooSmallMessage }; export const read = (input: unknown) => assert(string({ min: 1 }), input, { messages });`,
-    budget: 3770,
+    budget: 3780,
   },
   {
     name: "objectLike",
     source: `import { boolean, objectLike, string } from "DIST"; export const check = objectLike({ a: string(), b: boolean() });`,
-    budget: 3760,
+    budget: 3580,
   },
   {
     name: "toJsonSchema",
     source: `import { object, string, toJsonSchema } from "DIST"; export const schema = toJsonSchema(object({ name: string() }));`,
-    budget: 6830,
+    budget: 6720,
   },
   {
     name: "pick",
     source: `import { object, pick, string } from "DIST"; export const check = pick(object({ name: string(), id: string() }), ["name"]);`,
-    budget: 4590,
+    budget: 4460,
   },
   {
     name: "extend",
     source: `import { extend, object, string } from "DIST"; export const check = extend(object({ name: string() }), { id: string() });`,
-    budget: 4440,
+    budget: 4310,
   },
   {
     name: "toJsonSchema with meta",
     source: `import { meta, object, string, toJsonSchema } from "DIST"; export const schema = toJsonSchema(object({ name: meta(string(), { description: "Name" }) }));`,
-    budget: 7300,
+    budget: 7180,
   },
   {
     name: "audit",
     source: `import { array, audit, object, string } from "DIST"; export const findings = audit(object({ tags: array(string()) }));`,
-    budget: 5720,
+    budget: 5580,
   },
   {
     name: "codec",
     source: `import { codec, date, datetime } from "DIST"; export const check = codec(datetime(), date(), { decode: (text) => new Date(text), encode: (value) => value.toISOString() });`,
-    budget: 3500,
+    budget: 3510,
   },
   {
     name: "encode with an object and a codec",
     source: `import { codec, date, datetime, encode, object } from "DIST"; const at = codec(datetime(), date(), { decode: (text) => new Date(text), encode: (value) => value.toISOString() }); export const written = encode(object({ at }), { at: new Date(0) });`,
-    budget: 10430,
+    budget: 10300,
   },
   {
     name: "standardJsonSchema with an object",
     source: `import { object, standardJsonSchema, string } from "DIST"; export const check = standardJsonSchema(object({ name: string() }));`,
-    budget: 9100,
+    budget: 8970,
   },
-  { name: "file", source: `import { file } from "DIST"; export const check = file({ maxSize: 1000 });`, budget: 2690 },
+  { name: "file", source: `import { file } from "DIST"; export const check = file({ maxSize: 1000 });`, budget: 2700 },
   {
     name: "file with contentType",
     source: `import { contentType, file } from "DIST"; export const check = file({ maxSize: 1000 }, contentType(["image/png"]));`,
-    budget: 3130,
+    budget: 3140,
   },
   {
     name: "formData with an object",
     source: `import { file, formData, object, string } from "DIST"; export const check = formData(object({ name: string(), avatar: file() }));`,
-    budget: 5070,
+    budget: 4900,
   },
   {
     name: "everything",
     source: `export * from "DIST";`,
-    budget: 30120,
+    budget: 30210,
   },
 ];
 

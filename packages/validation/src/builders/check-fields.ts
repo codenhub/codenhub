@@ -1,4 +1,6 @@
 import { described } from "../core/describe";
+import { fieldFailure } from "../core/field-checks";
+import { withFieldFailure } from "../core/field-hook";
 import { assertFunction, assertList, type IssueInput } from "../core/result";
 import type { AsyncCheck, Check, Message } from "../core/types";
 import { check } from "./check";
@@ -76,5 +78,5 @@ export function checkFields(
   );
   // Described, which is how `object` knows the properties it waits for. It has no `params`, so to a reader of
   // the schema it is a rule that cannot be read, as a check made by `check` is.
-  return described(whole as AsyncCheck<object>, { kind: "check", fields });
+  return withFieldFailure(described(whole as AsyncCheck<object>, { kind: "check", fields }), fieldFailure);
 }

@@ -4,25 +4,23 @@
  * fails, as soon as the ones they name have passed, so a rule across two fields of a form is reported
  * with the other fields' issues and not after them.
  */
-import { chain, type Maybe } from "../core/async";
-import { finish } from "../core/checks";
-import { describe } from "../core/describe";
-import { append, placeAll, type Place } from "../core/nesting";
-import { failWith } from "../core/result";
-import type { AsyncCheck, Message, ValidationErr, ValidationIssue, ValidationResult } from "../core/types";
+import { chain, type Maybe } from "./async";
+import { finish } from "./checks";
+import { describe } from "./describe";
+import type { FieldFailureOf } from "./field-hook";
+import { append, placeAll, type Place } from "./nesting";
+import { failWith } from "./result";
+import type { AsyncCheck, Message, ValidationErr, ValidationIssue, ValidationResult } from "./types";
 
 /** A check and the positions, in the object's shape, of the properties it waits for. */
-export type FieldCheck = readonly [check: AsyncCheck<Record<string, unknown>>, indexes: readonly number[]];
+type FieldCheck = readonly [check: AsyncCheck<Record<string, unknown>>, indexes: readonly number[]];
 
 /**
  * The checks among `checks` that name the properties they need, with where each property is in `keys`.
  * One that names a property the shape lacks is a mistake in the schema, such as a misspelling, which would
  * otherwise never run.
  */
-export function fieldChecksOf(
-  checks: readonly AsyncCheck<Record<string, unknown>>[],
-  keys: readonly string[],
-): FieldCheck[] {
+function fieldChecksOf(checks: readonly AsyncCheck<Record<string, unknown>>[], keys: readonly string[]): FieldCheck[] {
   const found: FieldCheck[] = [];
   for (const each of checks) {
     const fields = describe(each as AsyncCheck<never>)?.["fields"] as readonly string[] | undefined;
@@ -42,7 +40,7 @@ export function fieldChecksOf(
  * Fails an object some of whose properties failed, with their `issues` and then those of every field
  * check whose own properties all passed, run on `output`, which holds the properties that did.
  */
-export function failWithFields(
+function failWithFields(
   issues: ValidationIssue[],
   fieldChecks: readonly FieldCheck[],
   settled: readonly ValidationResult<unknown>[],
@@ -65,3 +63,13 @@ export function failWithFields(
     return failWith(issues);
   });
 }
+
+/**
+ * The runner of an object's field checks, which `checkFields` registers with each check it makes. It reads
+ * the checks when the object is made, so one that names a property the shape lacks throws then.
+ */
+export const fieldFailure: FieldFailureOf = (checks, keys) => {
+  const fieldChecks = fieldChecksOf(checks, keys);
+  return (issues, settled, output, message, place) =>
+    failWithFields(issues, fieldChecks, settled, output, message, place);
+};
