@@ -4786,6 +4786,26 @@ The property names a type declares, without its index signatures: `{ [key: strin
 
 Not exported; declared in `src/composition/tagged.ts`.
 
+### EmailParts
+
+```ts
+type EmailParts<TOptions> = Extract<TOptions[keyof TOptions & ("domain" | "local")], AnyValidator>;
+```
+
+The part validators an options object names.
+
+Not exported; declared in `src/formats/email.ts`.
+
+### ExtendedInput
+
+```ts
+type ExtendedInput<T, TShape extends Shape> = Simplify<Omit<T, keyof TShape> & InferShapeInput<TShape>>;
+```
+
+The input type with the properties of `TShape` added, replacing any of the same name.
+
+Not exported; declared in `src/composition/extend.ts`.
+
 ### Fallback
 
 ```ts
@@ -4811,6 +4831,34 @@ interface FileLike {
 The members of a `File` that are the same in every runtime, which is what `file` produces for a program compiled without the types of the DOM or of Node.js.
 
 Not exported; declared in `src/primitives/file.ts`.
+
+### GlobalFile
+
+```ts
+type GlobalFile = typeof globalThis extends {
+    File: {
+        prototype: infer TFile;
+    };
+} ? TFile : FileLike;
+```
+
+The runtime's own `File`, read from `globalThis` so that a public signature names no global, which a program compiled without the types of the DOM or of Node.js could not resolve; `FileLike` for one.
+
+Not exported; declared in `src/primitives/file.ts`.
+
+### GlobalFormData
+
+```ts
+type GlobalFormData = typeof globalThis extends {
+    FormData: {
+        prototype: infer TFormData;
+    };
+} ? TFormData : Iterable<[string, string | GlobalFile]>;
+```
+
+The runtime's own `FormData`, read from `globalThis` as `GlobalFile` is, or the entries it holds for a program compiled without the types of the DOM or of Node.js.
+
+Not exported; declared in `src/composition/form-data.ts`.
 
 ### InferItemInputs
 
@@ -4914,6 +4962,16 @@ type Transformed<R, TInput> = 0 extends 1 & R ? Schema<R, TInput> : [unknown] ex
 What a synchronous validator becomes once `convert` runs on its value: still synchronous when `convert` never returns a promise, and asynchronous, producing what the promise settles to, when it may return one, such as a function typed `number | Promise<number>`. A function typed as returning `unknown` may return one too, so it makes the validator asynchronous. One typed as returning `any`, such as `JSON.parse`, has opted out of type checking, and is taken at its word as synchronous: typing it asynchronous would make the most common conversion need an `await` it never needs.
 
 Not exported; declared in `src/composition/transform.ts`.
+
+### UrlParts
+
+```ts
+type UrlParts<TOptions> = Extract<TOptions[keyof TOptions & ("credentials" | "host" | "port" | "path" | "query")], AnyValidator>;
+```
+
+The part validators an options object names.
+
+Not exported; declared in `src/formats/url.ts`.
 
 ### ValuesOf
 

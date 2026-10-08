@@ -342,6 +342,91 @@ describe("analyzeReference", () => {
     );
   });
 
+  // codenhub/codenhub#251: TypeDoc resolves a conditional alias, so its tree never names it,
+  // while the signature from the `.d.ts` does.
+  it("lists a module-exported type the signature names, though TypeDoc resolves it", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-conditional", {
+      "file.ts": [
+        "/** What every runtime's file has. */",
+        "export interface FileLike {",
+        "  readonly name: string;",
+        "}",
+        "",
+        "/** The runtime's file. */",
+        "export type GlobalFile = typeof globalThis extends { File: { prototype: infer TFile } } ? TFile : FileLike;",
+        "",
+        "/**",
+        " * Makes a file.",
+        " * @returns The file.",
+        " */",
+        "export function file(): GlobalFile {",
+        '  return { name: "" } as GlobalFile;',
+        "}",
+        "",
+      ].join("\n"),
+      "index.ts": 'export { file } from "./file";\n',
+    });
+
+    const { model } = await analyzeReference(workspacePackage, { prose: true });
+
+    expect(model.unresolved).toEqual([]);
+    expect(model.entrypoints[0]?.internalTypes.map(({ declaredIn, name }) => ({ declaredIn, name }))).toEqual([
+      { declaredIn: ["src/file.ts"], name: "FileLike" },
+      { declaredIn: ["src/file.ts"], name: "GlobalFile" },
+    ]);
+  });
+
+  it("lists a type an inferred `import(…)` type names, and leaves globals alone", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-import-type", {
+      "hidden.ts": [
+        "/** What `made` holds. */",
+        "export interface Hidden {",
+        "  readonly done: Promise<void>;",
+        "}",
+        "",
+        "export function make(): Hidden {",
+        "  return { done: Promise.resolve() };",
+        "}",
+        "",
+      ].join("\n"),
+      "index.ts": [
+        'import { make } from "./hidden";',
+        "",
+        "/** A made value. */",
+        "export const made = make();",
+        "",
+      ].join("\n"),
+    });
+
+    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+
+    expect(files[0]?.contents).toContain("export declare const made: Hidden;");
+    expect(model.unresolved).toEqual([]);
+    expect(model.entrypoints[0]?.internalTypes.map((type) => type.name)).toEqual(["Hidden"]);
+  });
+
+  it("reports a type a hand-written module declares in `declare global`", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-declare-global", {
+      "env.d.ts": ["export {};", "", "declare global {", "  type Ambient = { readonly inner: string };", "}", ""].join(
+        "\n",
+      ),
+      "index.ts": [
+        "/**",
+        " * Makes an ambient value.",
+        " * @returns The value.",
+        " */",
+        "export function make(): Ambient {",
+        '  return { inner: "" };',
+        "}",
+        "",
+      ].join("\n"),
+    });
+
+    const { model } = await analyzeReference(workspacePackage, { prose: true });
+
+    expect(model.unresolved).toEqual([{ declaredIn: "src/env.d.ts", name: "Ambient", subpath: ".", symbol: "make" }]);
+  });
+
   it("reports a same-package type that the reference cannot find anywhere", { timeout: 30_000 }, async () => {
     const workspacePackage = await createReferenceFixture("fixture-unresolved", {
       // A global type from a hand-written declaration file is never emitted, so there

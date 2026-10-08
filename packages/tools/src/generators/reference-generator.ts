@@ -4,7 +4,12 @@ import { format, resolveConfig } from "prettier";
 import { Application, normalizePath, TSConfigReader } from "typedoc";
 
 import { parseReferenceConfig, type ReferenceConfig } from "../documentation/reference-config.ts";
-import { emitDeclarations, resolveEntrypoints, type EntrypointPlan } from "../documentation/reference-declarations.ts";
+import {
+  emitDeclarations,
+  readAmbientDeclarations,
+  resolveEntrypoints,
+  type EntrypointPlan,
+} from "../documentation/reference-declarations.ts";
 import { renderReferencePage, symbolSlug } from "../documentation/reference-markdown.ts";
 import { buildReferenceModel, walkSymbols, type ReferenceModel } from "../documentation/reference-model.ts";
 import {
@@ -142,6 +147,8 @@ export async function analyzeReference(
   const model = attachInternalTypes(
     withSignatures(buildReferenceModel(await convertProject(pkgDir, plans), subpathByModule), plans, declarations),
     declarations,
+    new Map(plans.map((plan) => [plan.subpath, plan.entryDts])),
+    readAmbientDeclarations(pkgDir),
   );
 
   const allSubpaths = plans.map((plan) => plan.subpath);

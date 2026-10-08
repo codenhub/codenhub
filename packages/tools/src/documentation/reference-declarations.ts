@@ -77,6 +77,30 @@ export function resolveEntrypoints(exportsMap: unknown, config: ReferenceConfig)
   });
 }
 
+function readTsconfig(pkgDir: string): ts.ParsedCommandLine {
+  const configFile = ts.readConfigFile(`${pkgDir}/tsconfig.json`, ts.sys.readFile);
+  if (configFile.error !== undefined) {
+    throw new Error(ts.flattenDiagnosticMessageText(configFile.error.messageText, "\n"));
+  }
+  return ts.parseJsonConfigFileContent(configFile.config, ts.sys, pkgDir);
+}
+
+/**
+ * Reads the hand-written declaration files the package's tsconfig includes from `src/`.
+ * @param pkgDir Absolute package directory, using POSIX separators.
+ * @returns Their contents keyed by package-relative path, such as `src/env.d.ts`.
+ */
+export function readAmbientDeclarations(pkgDir: string): Map<string, string> {
+  const ambient = new Map<string, string>();
+  for (const fileName of readTsconfig(pkgDir).fileNames) {
+    const posixName = fileName.split("\\").join("/");
+    if (posixName.startsWith(`${pkgDir}/src/`) && /\.d\.[cm]?ts$/.test(posixName)) {
+      ambient.set(posixName.slice(pkgDir.length + 1), ts.sys.readFile(fileName) ?? "");
+    }
+  }
+  return ambient;
+}
+
 /**
  * Emits entrypoint declarations in memory, retaining documentation comments.
  * @param pkgDir Absolute package directory, using POSIX separators.
@@ -84,11 +108,7 @@ export function resolveEntrypoints(exportsMap: unknown, config: ReferenceConfig)
  * @returns Declaration contents keyed relative to src; nothing is written to disk.
  */
 export function emitDeclarations(pkgDir: string, plans: readonly EntrypointPlan[]): Map<string, string> {
-  const configFile = ts.readConfigFile(`${pkgDir}/tsconfig.json`, ts.sys.readFile);
-  if (configFile.error !== undefined) {
-    throw new Error(ts.flattenDiagnosticMessageText(configFile.error.messageText, "\n"));
-  }
-  const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, pkgDir);
+  const parsed = readTsconfig(pkgDir);
   const program = ts.createProgram({
     options: {
       ...parsed.options,

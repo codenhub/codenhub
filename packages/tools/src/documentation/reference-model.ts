@@ -138,8 +138,8 @@ export interface ReferenceSymbol extends ReferenceProse {
 }
 
 /**
- * An unexported type that a documented declaration names. It has no import path, so
- * it is listed for reading only, with its declaration text from the emitted `.d.ts`.
+ * A type that a documented declaration names but no entrypoint exports. It has no import
+ * path, so it is listed for reading only, with its declaration text from the emitted `.d.ts`.
  */
 export interface ReferenceInternalType {
   /** The type's name in its declaring file. */
@@ -170,7 +170,7 @@ export interface ReferenceEntrypoint {
   since?: string;
   /** Symbols ordered by kind group, then alphabetically within a group. */
   symbols: ReferenceSymbol[];
-  /** Unexported types this entrypoint's declarations name, alphabetically; attached after the model is built. */
+  /** Types this entrypoint's declarations name that no entrypoint exports, alphabetically; attached after the model is built. */
   internalTypes: ReferenceInternalType[];
 }
 
@@ -190,7 +190,7 @@ export interface UnresolvedTypeReference {
   symbol: string;
   /** The type's name as written in the declaration. */
   name: string;
-  /** Package-relative source file that declares the type, when TypeDoc recorded it. */
+  /** Package-relative source file that declares the type, when the package declares it. */
   declaredIn?: string;
 }
 
@@ -214,7 +214,7 @@ export interface ReferenceModel {
   unsupported: UnsupportedExport[];
   /**
    * Same-package types named by documented declarations but documented nowhere, in page
-   * order. Those later found as unexported declarations move to `internalTypes`.
+   * order. Empty until `attachInternalTypes` reads the emitted declarations.
    */
   unresolved: UnresolvedTypeReference[];
 }
@@ -652,82 +652,6 @@ function indexReflections(project: Reflection): (id: number) => Reflection | und
   return (id) => byId.get(id);
 }
 
-// Keys whose references point at where a member came from, not at a type the
-// declaration names; following them would report a base type's members twice.
-const PROVENANCE_KEYS = new Set(["inheritedFrom", "overwrites", "implementationOf", "sources", "comment"]);
-
-/** Names a declaration binds for its own use: type parameters, mapped-type keys, `infer` bindings. */
-function boundTypeNames(node: unknown, names = new Set<string>()): Set<string> {
-  if (Array.isArray(node)) {
-    for (const item of node) {
-      boundTypeNames(item, names);
-    }
-    return names;
-  }
-  if (!isRecord(node)) {
-    return names;
-  }
-  if (node.type === "mapped" && typeof node.parameter === "string") {
-    names.add(node.parameter);
-  }
-  if (node.type === "inferred" && typeof node.name === "string") {
-    names.add(node.name);
-  }
-  if (Array.isArray(node.typeParameters)) {
-    for (const parameter of node.typeParameters as unknown[]) {
-      if (isRecord(parameter) && typeof parameter.name === "string") {
-        names.add(parameter.name);
-      }
-    }
-  }
-  for (const [key, value] of Object.entries(node)) {
-    if (!PROVENANCE_KEYS.has(key)) {
-      boundTypeNames(value, names);
-    }
-  }
-  return names;
-}
-
-/**
- * Same-package type references in a declaration that no reflection documents.
- *
- * TypeDoc points a reference at a numeric reflection id when the target is part of
- * the documented project, and at a symbol id naming its package otherwise. A symbol
- * id in this package means the declaration names a type a reader cannot look up.
- */
-function unresolvedReferences(declaration: Reflection, packageName: string): { name: string; declaredIn?: string }[] {
-  const bound = boundTypeNames(declaration);
-  const found = new Map<string, string | undefined>();
-  const visit = (node: unknown): void => {
-    if (Array.isArray(node)) {
-      node.forEach(visit);
-      return;
-    }
-    if (!isRecord(node)) {
-      return;
-    }
-    if (
-      node.type === "reference" &&
-      typeof node.name === "string" &&
-      typeof node.target !== "number" &&
-      node.package === packageName &&
-      node.refersToTypeParameter !== true &&
-      !bound.has(node.name) &&
-      !found.has(node.name)
-    ) {
-      const target = isRecord(node.target) ? node.target : {};
-      found.set(node.name, typeof target.packagePath === "string" ? target.packagePath : undefined);
-    }
-    for (const [key, value] of Object.entries(node)) {
-      if (!PROVENANCE_KEYS.has(key)) {
-        visit(value);
-      }
-    }
-  };
-  visit(declaration);
-  return [...found].map(([name, declaredIn]) => (declaredIn === undefined ? { name } : { declaredIn, name }));
-}
-
 /**
  * Dot-qualified names of children whose declaration kind has no page group, including
  * those inside a namespace, whose supported children render as namespace members.
@@ -786,7 +710,6 @@ export function buildReferenceModel(project: unknown, subpathByModule: Record<st
   const modules = (root.children ?? []).filter(isModule);
   const entrypoints: ReferenceEntrypoint[] = [];
   const unsupported: UnsupportedExport[] = [];
-  const unresolved: UnresolvedTypeReference[] = [];
 
   for (const [module, subpath] of Object.entries(subpathByModule)) {
     const reflection = modules.find((candidate) => candidate.name === module);
@@ -803,23 +726,9 @@ export function buildReferenceModel(project: unknown, subpathByModule: Record<st
       subpath,
       symbols,
     });
-
-    // Symbols follow page order, so findings do too; each name is reported once per symbol.
-    const groups = groupChildren(children, resolve);
-    for (const symbol of symbols) {
-      const names = new Set<string>();
-      for (const { declaration } of groups.get(symbol.name) ?? []) {
-        for (const reference of unresolvedReferences(declaration, packageName)) {
-          if (!names.has(reference.name)) {
-            names.add(reference.name);
-            unresolved.push({ ...reference, subpath, symbol: symbol.name });
-          }
-        }
-      }
-    }
   }
 
-  return { entrypoints, packageName, unresolved, unsupported };
+  return { entrypoints, packageName, unresolved: [], unsupported };
 }
 
 /**
