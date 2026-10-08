@@ -1,10 +1,11 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
 import { described } from "../core/describe";
+import { fieldFailureOf } from "../core/field-hook";
 import { cap, MAX_ISSUES } from "../core/limit";
 import { append, childOf, composed, fastOf, MISS, type Child, type Fast } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
-import { assertFunction, issue } from "../core/result";
+import { assertFunction, failWith, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -17,7 +18,6 @@ import type {
   ValidationIssue,
   ValidationResult,
 } from "../core/types";
-import { failWithFields, fieldChecksOf } from "./field-checks";
 
 /** Maps property names to the validators of their values. */
 export type Shape = Record<string, AnyValidator>;
@@ -122,7 +122,7 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
   });
   const known = new Set(keys);
   const [options, reject, accept, checks] = tail<ObjectOptions, Record<string, unknown>>(rest, "unknownKeys");
-  const fieldChecks = fieldChecksOf(checks, keys);
+  const failFields = fieldFailureOf(checks, keys);
   const unknownKeys = options.unknownKeys ?? "strip";
   if (unknownKeys !== "strip" && unknownKeys !== "strict" && unknownKeys !== "passthrough") {
     throw new TypeError(`unknownKeys must be "strip", "strict" or "passthrough", received "${String(unknownKeys)}"`);
@@ -208,7 +208,9 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
         }
       }
       if (issues.length > 0) {
-        return failWithFields(issues, fieldChecks, settled, output, options.message, place);
+        return failFields === undefined
+          ? failWith(issues)
+          : failFields(issues, settled, output, options.message, place);
       }
       for (const [key, value] of extra ?? []) {
         setOwn(output, key, value);

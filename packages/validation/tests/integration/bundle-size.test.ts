@@ -55,6 +55,12 @@ export const check = object({ name: string({ min: 2 }), email: email(), age: opt
 export const describe = (input: unknown) => { const result = check(input); return result.ok ? [] : result.error.issues.map((issue) => formatIssue(issue, englishMessages)); };`,
     budget: 8980,
   },
+  {
+    name: "object with checkFields",
+    source: `import { checkFields, object, string } from "DIST";
+export const check = object({ password: string(), confirm: string() }, checkFields(["password", "confirm"], (data) => data.password === data.confirm));`,
+    budget: 4190,
+  },
   { name: "uuid", source: `import { uuid } from "DIST"; export const check = uuid();`, budget: 1730 },
   { name: "url", source: `import { url } from "DIST"; export const check = url();`, budget: 5800 },
   { name: "ip", source: `import { ip } from "DIST"; export const check = ip();`, budget: 2160 },
