@@ -28,10 +28,11 @@
 - Start with filenames, headings, and focused searches; read the sections needed to understand the change and its dependencies. Expand inspection when evidence leaves a question unresolved.
 - Reuse information already inspected in the session. Re-read material when it changed or when a specific uncertainty requires it.
 - Prefer canonical sources. Generated compilations and references are alternate views, not additional contracts to read alongside their inputs.
-- Bound searches and tool output by scope and size. Large files and logs are easier to inspect in relevant sections than in whole-file dumps; line counts alone do not bound long paragraphs.
-- Batch independent inspections, keeping each result focused. Fewer tool calls help only when they avoid unnecessary output and repeated work.
+- Find code with focused searches (`grep -n`, `rg`) and read the line ranges they point to. Read a whole file only when the change needs all of it, and do not dump several files or a directory in one command (`cat a.ts b.ts`, `for f in …; do cat "$f"; done`).
+- Batch independent inspections as parallel tool calls, each kept focused, not as one command whose output is the sum of all of them.
 - Narrow commands during development and reserve broad verification for the completed change. Retain the checks the contributor workflow requires.
-- Use summaries first and inspect complete diagnostic logs as needed. Keep machine-readable and interactive output usable.
+- Read test, build, and CI output as a summary first: filter to failures or the tail, and treat a background task's output file the same way. Open the full log only when the summary leaves a failure unexplained. Keep machine-readable and interactive output usable.
+- At a natural boundary, such as an audit finished before fixes start, record what the next phase needs in the repository or the pull request, and suggest continuing in a new session. Every turn resends the whole context.
 
 ## Collaboration
 
