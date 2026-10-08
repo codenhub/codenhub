@@ -594,44 +594,74 @@ function leftmostName(name: ts.EntityName | ts.Expression): string | undefined {
   return ts.isIdentifier(current) ? current.text : undefined;
 }
 
+/** `infer` names a conditional type's `extends` clause binds, leaving out a nested conditional's own. */
+function inferNames(extendsType: ts.TypeNode): string[] {
+  const names: string[] = [];
+  const visit = (current: ts.Node): void => {
+    if (ts.isInferTypeNode(current)) {
+      names.push(current.typeParameter.name.text);
+    }
+    if (ts.isConditionalTypeNode(current)) {
+      [current.checkType, current.trueType, current.falseType].forEach(visit);
+      return;
+    }
+    ts.forEachChild(current, visit);
+  };
+  visit(extendsType);
+  return names;
+}
+
+/** Names a node binds for its children: type parameters, a mapped-type key, or a namespace's own members. */
+function boundNames(node: ts.Node): string[] {
+  if (ts.isMappedTypeNode(node)) {
+    return [node.typeParameter.name.text];
+  }
+  if (ts.isModuleBlock(node)) {
+    return [...collectDeclarationNodes(node.statements).keys()];
+  }
+  const { typeParameters } = node as { typeParameters?: readonly ts.TypeParameterDeclaration[] };
+  return (typeParameters ?? []).map((parameter) => parameter.name.text);
+}
+
 /**
- * Types a declaration names as its `.d.ts` text prints them, leaving out the names it
- * binds for its own use: type parameters, mapped-type keys, `infer` bindings, and a
- * namespace's own members.
+ * Types a declaration names as its `.d.ts` text prints them, leaving out a name where
+ * something binds it for its own use: a type parameter, a mapped-type key, an `infer`
+ * binding in its conditional's true branch, or a namespace's own member.
  */
 function namedTypes(node: ts.Node): NamedType[] {
-  const bound = new Set<string>();
   const named: NamedType[] = [];
-  const add = (name: string | undefined, module?: string): void => {
-    if (name !== undefined) {
+  const add = (scope: ReadonlySet<string>, name: string | undefined, module?: string): void => {
+    if (name !== undefined && (module !== undefined || !scope.has(name))) {
       named.push(module === undefined ? { name } : { module, name });
     }
   };
-  const visit = (current: ts.Node): void => {
-    if (ts.isTypeParameterDeclaration(current)) {
-      bound.add(current.name.text);
-    } else if (ts.isModuleBlock(current)) {
-      for (const name of collectDeclarationNodes(current.statements).keys()) {
-        bound.add(name);
-      }
-    } else if (ts.isTypeReferenceNode(current)) {
-      add(leftmostName(current.typeName));
+  const visit = (current: ts.Node, outer: ReadonlySet<string>): void => {
+    const bound = boundNames(current);
+    const scope = bound.length === 0 ? outer : new Set([...outer, ...bound]);
+    if (ts.isTypeReferenceNode(current)) {
+      add(scope, leftmostName(current.typeName));
     } else if (ts.isExpressionWithTypeArguments(current)) {
-      add(leftmostName(current.expression));
+      add(scope, leftmostName(current.expression));
     } else if (ts.isTypeQueryNode(current)) {
-      add(leftmostName(current.exprName));
+      add(scope, leftmostName(current.exprName));
     } else if (
       ts.isImportTypeNode(current) &&
       current.qualifier !== undefined &&
       ts.isLiteralTypeNode(current.argument) &&
       ts.isStringLiteral(current.argument.literal)
     ) {
-      add(leftmostName(current.qualifier), current.argument.literal.text);
+      add(scope, leftmostName(current.qualifier), current.argument.literal.text);
+    } else if (ts.isConditionalTypeNode(current)) {
+      visit(current.checkType, scope);
+      visit(current.extendsType, scope);
+      visit(current.trueType, new Set([...scope, ...inferNames(current.extendsType)]));
+      visit(current.falseType, scope);
+      return;
     }
-    ts.forEachChild(current, visit);
+    ts.forEachChild(current, (child) => visit(child, scope));
   };
-  visit(node);
-  return named.filter((type) => type.module !== undefined || !bound.has(type.name));
+  visit(node, new Set());
+  return named;
 }
 
 /** Global names that a package's hand-written declaration files declare, each with the first file declaring it. */
