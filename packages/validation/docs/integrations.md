@@ -1,11 +1,11 @@
 ---
 title: Integrations
-description: Use a validator with form libraries, RPC and HTTP frameworks, the tools of a language model, and OpenAPI, with an example for each that was run against the library it names.
+description: Use a validator with form libraries, RPC and HTTP frameworks, the tools of a language model, OpenAPI, and inside a zod or valibot schema, with an example for each that was run against the library it names.
 ---
 
 # Integrations
 
-A validator goes where a library asks for a schema in one of three ways: as a [Standard Schema](standard-schema.md), which most form libraries and frameworks accept; as a [JSON Schema](json-schema.md), which tools of language models and OpenAPI documents are written in; or called directly, as any function is. Each example below was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
+A validator goes where a library asks for a schema in one of three ways: as a [Standard Schema](standard-schema.md), which most form libraries and frameworks accept; as a [JSON Schema](json-schema.md), which tools of language models and OpenAPI documents are written in; or called directly, as any function is, which is also how one field of a [zod or valibot schema](#inside-a-zod-or-valibot-schema) can use it. Each example below was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
 
 ## Forms
 
@@ -191,3 +191,76 @@ export const document = {
   components: { schemas: { Signup: toJsonSchema(signup) } },
 };
 ```
+
+## Inside a zod or valibot schema
+
+A codebase on zod or valibot can use a validator of this package for one field, such as `url()` for a link the server will fetch or `email()` for an address it will store, without moving its other schemas. Neither library takes a Standard Schema as part of its own schemas, so the validator runs in a transform: what it produces is the field's value, and each issue it reports becomes an issue of the other library, worded by `formatIssue`. Only a synchronous validator fits this way.
+
+The issue then follows the other library's rules: valibot's issues hold the input they were given, so what [Issues and messages](errors.md) says about issues never holding a value of the input is true of the validator's result here, not of the issue valibot reports.
+
+### zod
+
+Checked with zod 4.6.5. Each issue keeps its path below the field, so one from an `object` lands on its property.
+
+```ts
+import { z } from "zod";
+
+import { email, formatIssue, url, type Validator } from "@codenhub/validation";
+
+const ours =
+  <T>(validator: Validator<T>) =>
+  (value: unknown, ctx: z.RefinementCtx): T => {
+    const result = validator(value);
+    if (result.ok) {
+      return result.value;
+    }
+    for (const issue of result.error.issues) {
+      ctx.addIssue({ code: "custom", message: formatIssue(issue), path: [...issue.path] });
+    }
+    return z.NEVER;
+  };
+
+const webhook = z.object({
+  callback: z.string().transform(ours(url())),
+  owner: z.string().transform(ours(email())),
+});
+
+webhook.safeParse({ callback: "https://Example.com/hooks/../events", owner: "Ada@EXAMPLE.com" });
+// { success: true, data: { callback: "https://example.com/events", owner: "Ada@example.com" } }
+webhook.safeParse({ callback: "http://169.254.169.254/latest", owner: "ada@localhost" });
+// issues: "Invalid URL" at ["callback"], "Invalid email address" at ["owner"]
+```
+
+### valibot
+
+Checked with valibot 1.5.0. The transform takes its input type from the validator, so it follows a schema whose output is what the validator accepts, such as `v.string()` for `url()`. Every issue lands on the field itself.
+
+```ts
+import * as v from "valibot";
+
+import { email, formatIssue, url, type Validator } from "@codenhub/validation";
+
+const ours = <T, TInput>(validator: Validator<T, TInput>) =>
+  v.rawTransform<TInput, T>(({ dataset, addIssue, NEVER }) => {
+    const result = validator(dataset.value);
+    if (result.ok) {
+      return result.value;
+    }
+    for (const issue of result.error.issues) {
+      addIssue({ message: formatIssue(issue) });
+    }
+    return NEVER;
+  });
+
+const webhook = v.object({
+  callback: v.pipe(v.string(), ours(url())),
+  owner: v.pipe(v.string(), ours(email())),
+});
+
+v.safeParse(webhook, { callback: "https://Example.com/hooks/../events", owner: "Ada@EXAMPLE.com" });
+// { success: true, output: { callback: "https://example.com/events", owner: "Ada@example.com" }, ... }
+v.safeParse(webhook, { callback: "http://169.254.169.254/latest", owner: "ada@localhost" });
+// issues: "Invalid URL" at callback, "Invalid email address" at owner
+```
+
+The adapter is a few lines in your code and not an export of this package, so this package's API does not follow the context each library gives a transform, which zod changed between its versions 3 and 4.
