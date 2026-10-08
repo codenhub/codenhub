@@ -8,7 +8,7 @@ import { assertFunction, failWith, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
-  AsyncValidator,
+  AsyncSchema,
   Composed,
   Infer,
   InferInput,
@@ -237,7 +237,7 @@ export function intersection<TLeft extends AnyValidator, TRight extends AnyValid
   left: TLeft,
   right: TRight,
   ...rest: AsyncRest<Infer<TLeft> & Infer<TRight>, MessageOptions>
-): AsyncValidator<Infer<TLeft> & Infer<TRight>, InferInput<TLeft> & InferInput<TRight>>;
+): AsyncSchema<Infer<TLeft> & Infer<TRight>, InferInput<TLeft> & InferInput<TRight>>;
 export function intersection(left: AnyValidator, right: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("left", left);
   assertFunction("right", right);

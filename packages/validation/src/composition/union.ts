@@ -6,7 +6,7 @@ import { assertFunction, assertList, isResult, issue, nested, notResult } from "
 import type {
   AnyValidator,
   AsyncRest,
-  AsyncValidator,
+  AsyncSchema,
   Composed,
   Infer,
   InferInput,
@@ -49,7 +49,7 @@ export function union<const TOptions extends readonly [AnyValidator, ...AnyValid
 export function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(
   options: TOptions,
   ...rest: AsyncRest<Infer<TOptions[number]>, MessageOptions>
-): AsyncValidator<Infer<TOptions[number]>, InferInput<TOptions[number]>>;
+): AsyncSchema<Infer<TOptions[number]>, InferInput<TOptions[number]>>;
 export function union(options: readonly AnyValidator[], ...rest: unknown[]): AnyValidator {
   assertList("options", options);
   // Copied, so changing the list after the validator is made changes nothing.

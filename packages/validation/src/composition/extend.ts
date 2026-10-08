@@ -1,13 +1,4 @@
-import type {
-  AnyValidator,
-  AsyncRest,
-  AsyncValidator,
-  Composed,
-  Infer,
-  InferInput,
-  Rest,
-  Validator,
-} from "../core/types";
+import type { AnyValidator, AsyncRest, AsyncSchema, Composed, Infer, InferInput, Rest, Validator } from "../core/types";
 import type { InferShape, InferShapeInput, ObjectOptions, Shape } from "./object";
 import { extending } from "./reshape";
 
@@ -58,12 +49,12 @@ export function extend<TValidator extends AnyValidator<object>, TShape extends S
   ...rest: Rest<Extended<Infer<TValidator>, TShape>, ObjectOptions>
 ): TValidator extends Validator<unknown>
   ? Composed<TShape[keyof TShape], Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>
-  : AsyncValidator<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
+  : AsyncSchema<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
 export function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(
   validator: TValidator,
   shape: TShape,
   ...rest: AsyncRest<Extended<Infer<TValidator>, TShape>, ObjectOptions>
-): AsyncValidator<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
+): AsyncSchema<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
 export function extend(validator: AnyValidator, shape: Shape, ...rest: unknown[]): AnyValidator {
   return extending(validator, shape, rest);
 }

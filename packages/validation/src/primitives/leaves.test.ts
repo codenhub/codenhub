@@ -30,22 +30,22 @@ const noop = (): void => undefined;
 
 /** Each leaf, a value it accepts and one it rejects. */
 const leaves: [name: string, factory: Leaf, good: unknown, bad: unknown][] = [
-  ["string", string as Leaf, "a", 1],
-  ["number", number as Leaf, 1, "1"],
-  ["bigint", bigint as Leaf, 1n, 1],
-  ["boolean", boolean as Leaf, true, 1],
-  ["date", date as Leaf, new Date(0), "x"],
-  ["symbol", symbol as Leaf, id, "id"],
-  ["unknown", unknown as Leaf, "anything", undefined],
-  ["func", func as Leaf, noop, "noop"],
-  ["literal", ((...rest: never[]) => literal("a", ...rest)) as Leaf, "a", "b"],
-  ["oneOf", ((...rest: never[]) => oneOf(["a", "b"], ...rest)) as Leaf, "b", "c"],
-  ["instanceOf", ((...rest: never[]) => instanceOf(Widget, ...rest)) as Leaf, new Widget(), {}],
-  ["coerceString", coerceString as Leaf, 1, {}],
-  ["coerceNumber", coerceNumber as Leaf, "1", "x"],
-  ["coerceBigint", coerceBigint as Leaf, "1", "x"],
-  ["coerceBoolean", coerceBoolean as Leaf, "yes", "maybe"],
-  ["coerceDate", coerceDate as Leaf, "2024-01-01", "x"],
+  ["string", string as unknown as Leaf, "a", 1],
+  ["number", number as unknown as Leaf, 1, "1"],
+  ["bigint", bigint as unknown as Leaf, 1n, 1],
+  ["boolean", boolean as unknown as Leaf, true, 1],
+  ["date", date as unknown as Leaf, new Date(0), "x"],
+  ["symbol", symbol as unknown as Leaf, id, "id"],
+  ["unknown", unknown as unknown as Leaf, "anything", undefined],
+  ["func", func as unknown as Leaf, noop, "noop"],
+  ["literal", ((...rest: never[]) => literal("a", ...rest)) as unknown as Leaf, "a", "b"],
+  ["oneOf", ((...rest: never[]) => oneOf(["a", "b"], ...rest)) as unknown as Leaf, "b", "c"],
+  ["instanceOf", ((...rest: never[]) => instanceOf(Widget, ...rest)) as unknown as Leaf, new Widget(), {}],
+  ["coerceString", coerceString as unknown as Leaf, 1, {}],
+  ["coerceNumber", coerceNumber as unknown as Leaf, "1", "x"],
+  ["coerceBigint", coerceBigint as unknown as Leaf, "1", "x"],
+  ["coerceBoolean", coerceBoolean as unknown as Leaf, "yes", "maybe"],
+  ["coerceDate", coerceDate as unknown as Leaf, "2024-01-01", "x"],
 ];
 
 describe.each(leaves)("%s", (_name, factory, good) => {

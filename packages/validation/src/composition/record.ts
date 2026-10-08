@@ -8,7 +8,7 @@ import { assertFunction, describeType, failWith, issue, nested, repeatedKey } fr
 import type {
   AnyValidator,
   AsyncRest,
-  AsyncValidator,
+  AsyncSchema,
   Composed,
   Infer,
   InferInput,
@@ -90,7 +90,7 @@ export function record<TKey extends AnyValidator<string>, TValue extends AnyVali
   key: TKey,
   value: TValue,
   ...rest: AsyncRest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>
-): AsyncValidator<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, InferRecordInput<TKey, TValue>>;
+): AsyncSchema<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, InferRecordInput<TKey, TValue>>;
 export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("key", key);
   assertFunction("value", value);

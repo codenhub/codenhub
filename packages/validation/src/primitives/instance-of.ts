@@ -2,7 +2,7 @@ import { leaf, split } from "../core/checks";
 import { described } from "../core/describe";
 import { isInstance } from "../core/objects";
 import { assertFunction } from "../core/result";
-import type { AnyValidator, AsyncRest, AsyncValidator, MessageOptions, Rest, Validator } from "../core/types";
+import type { AnyValidator, AsyncRest, AsyncSchema, MessageOptions, Rest, Schema } from "../core/types";
 
 /** A class a value can be checked against, including abstract ones. */
 export type Constructor<T = unknown> = abstract new (...args: never[]) => T;
@@ -26,8 +26,8 @@ export type Constructor<T = unknown> = abstract new (...args: never[]) => T;
  * @throws {TypeError} When `target` is not a function `instanceof` can test against, such as an arrow function,
  * or its `Symbol.hasInstance` is neither a function nor absent, which would make `instanceof` throw for every value.
  */
-export function instanceOf<T>(target: Constructor<T>, ...rest: Rest<T, MessageOptions>): Validator<T, T>;
-export function instanceOf<T>(target: Constructor<T>, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T, T>;
+export function instanceOf<T>(target: Constructor<T>, ...rest: Rest<T, MessageOptions>): Schema<T, T>;
+export function instanceOf<T>(target: Constructor<T>, ...rest: AsyncRest<T, MessageOptions>): AsyncSchema<T, T>;
 export function instanceOf(target: Constructor, ...rest: unknown[]): AnyValidator {
   assertFunction("target", target);
   // `instanceof` treats a `Symbol.hasInstance` of null or undefined as absent and tests the prototype, and

@@ -1,5 +1,5 @@
 import { assertShape } from "../core/objects";
-import type { AnyValidator, AsyncRest, AsyncValidator, Composed, Infer, Rest, InferInput } from "../core/types";
+import type { AnyValidator, AsyncRest, AsyncSchema, Composed, Infer, InferInput, Rest } from "../core/types";
 import type { ObjectOptions, Shape } from "./object";
 import { optional } from "./optional";
 import { mapping, type Reshaped } from "./reshape";
@@ -45,7 +45,7 @@ export function partial<TValidator extends AnyValidator<object>>(
 export function partial<TValidator extends AnyValidator<object>>(
   validator: TValidator,
   ...rest: AsyncRest<AllOptional<Infer<TValidator>>, ObjectOptions>
-): AsyncValidator<AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
+): AsyncSchema<AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
 export function partial(shape: Shape | AnyValidator, ...rest: unknown[]): Shape | AnyValidator {
   if (typeof shape === "function") {
     return mapping("partial", shape, optional, rest);

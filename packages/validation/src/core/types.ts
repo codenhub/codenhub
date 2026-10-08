@@ -1,3 +1,5 @@
+import type { StandardSchemaV1 } from "../interop/standard-schema";
+
 /** Object key or array index leading to a value inside validated data. */
 export type ValidationPathSegment = string | number;
 
@@ -104,6 +106,28 @@ export interface AsyncValidator<T, TInput = unknown> {
 }
 
 /**
+ * A {@link Validator} a factory of this package made, which is also a Standard Schema as it is: a library
+ * that takes one, such as a form library or a router, takes it without a `standard` call, and words its
+ * issues in short English. `standard(validator, messages)` gives the full wording or another language.
+ *
+ * Accepted wherever a {@link Validator} is. A validator written by hand is a {@link Validator} and not a
+ * Schema, since it has no `~standard` of its own.
+ *
+ * @typeParam T - The type of the value on success.
+ * @typeParam TInput - The type of input that can pass.
+ */
+export interface Schema<T, TInput = unknown> extends Validator<T, TInput>, StandardSchemaV1<TInput, T> {}
+
+/**
+ * An {@link AsyncValidator} a factory of this package made, which is also a Standard Schema as it is, as a
+ * {@link Schema} is. Its `~standard` validates asynchronously when the validator waits.
+ *
+ * @typeParam T - The type of the value on success.
+ * @typeParam TInput - The type of input that can pass.
+ */
+export interface AsyncSchema<T, TInput = unknown> extends AsyncValidator<T, TInput>, StandardSchemaV1<TInput, T> {}
+
+/**
  * Any validator, synchronous or asynchronous.
  *
  * @typeParam T - The type of the value on success.
@@ -190,23 +214,23 @@ export type InferInput<TValidator extends AnyValidator> = TValidator extends {
 export type Composed<TChildren extends AnyValidator, TOutput, TInput = unknown> = [TChildren] extends [
   Validator<unknown>,
 ]
-  ? Validator<TOutput, TInput>
-  : AsyncValidator<TOutput, TInput>;
+  ? Schema<TOutput, TInput>
+  : AsyncSchema<TOutput, TInput>;
 
 /**
  * The factory of a validator of `T` with options `TOptions`: options first and optional, then any
- * checks. It makes a {@link Validator} while every check is a {@link Check}, and an
- * {@link AsyncValidator} as soon as one is an {@link AsyncCheck}.
+ * checks. It makes a {@link Schema} while every check is a {@link Check}, and an
+ * {@link AsyncSchema} as soon as one is an {@link AsyncCheck}.
  *
  * @typeParam T - The type the validators it makes produce.
  * @typeParam TOptions - Its options.
  * @typeParam TInput - The type of input that can pass, which is `T` unless the validator converts its input.
  */
 export interface Factory<T, TOptions, TInput = T> {
-  (...checks: Check<T>[]): Validator<T, TInput>;
-  (options: TOptions, ...checks: Check<T>[]): Validator<T, TInput>;
-  (...checks: AsyncCheck<T>[]): AsyncValidator<T, TInput>;
-  (options: TOptions, ...checks: AsyncCheck<T>[]): AsyncValidator<T, TInput>;
+  (...checks: Check<T>[]): Schema<T, TInput>;
+  (options: TOptions, ...checks: Check<T>[]): Schema<T, TInput>;
+  (...checks: AsyncCheck<T>[]): AsyncSchema<T, TInput>;
+  (options: TOptions, ...checks: AsyncCheck<T>[]): AsyncSchema<T, TInput>;
 }
 
 /**

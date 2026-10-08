@@ -5,23 +5,43 @@ description: Use a validator wherever a library accepts a Standard Schema, such 
 
 # Standard Schema
 
-[Standard Schema](https://standardschema.dev/) is a small shared interface that lets libraries accept a validator without depending on the one that made it. Form libraries, API frameworks and routers that support it take any conforming validator, from any library, directly. `standard` makes a validator conforming.
+[Standard Schema](https://standardschema.dev/) is a small shared interface that lets libraries accept a validator without depending on the one that made it. Form libraries, API frameworks and routers that support it take any conforming validator, from any library, directly. Every validator a factory of this package makes is one as it is:
 
 ```ts
-import { email, number, object, standard } from "@codenhub/validation";
+import { email, number, object } from "@codenhub/validation";
 
-const signup = standard(object({ email: email(), age: number({ int: true }) }));
+const signup = object({ email: email(), age: number({ int: true }) });
 
 signup["~standard"].validate({ email: "nope", age: 1.5 });
 // {
 //   issues: [
-//     { message: "Invalid email address", path: ["email"] },
+//     { message: "Invalid email", path: ["email"] },
 //     { message: "Must be an integer", path: ["age"] },
 //   ],
 // }
 ```
 
-Pass `signup` to the library that asks for a Standard Schema, and it will call `~standard.validate` itself. You do not call it yourself unless you are writing that library.
+Pass `signup` to the library that asks for a Standard Schema, and it will call `~standard.validate` itself. You do not call it yourself unless you are writing that library. Its type is [`Schema`](#the-types), which says so to TypeScript.
+
+## Short English, or `standard`
+
+The specification requires a message on every issue, and a validator's own `~standard` words each in short English: the issue's own `message`, set with the `message` option or by a check, or one sentence for its code, such as "Must be at least 2 characters" or "Invalid email". It is kept short because every program that makes a validator carries it, about 0.4 kB gzipped.
+
+`standard(validator, messages?)` gives the same validator with a `~standard` of its own that words issues as [`formatIssue`](errors.md#turning-an-issue-into-text) does. Use it for:
+
+- **The full English**, such as "Invalid email address" and "Must contain at most 3 items", which is the default.
+- **Another language**, with `portugueseMessages` or a map of your own.
+- **A validator you wrote by hand**, which has no `~standard` of its own, since this package did not make it.
+
+```ts
+import { email, number, object, portugueseMessages, standard } from "@codenhub/validation";
+
+const signup = standard(object({ email: email(), age: number({ int: true }) }), portugueseMessages);
+```
+
+## The types
+
+A factory returns a `Schema<T, TInput>`, or an `AsyncSchema<T, TInput>` when one of its rules waits: a `Validator` or `AsyncValidator` that is also a `StandardSchemaV1<TInput, T>`. It is accepted wherever a `Validator` is, so code that takes a validator, such as `assert` or a function of your own, takes it as before. A validator you write by hand is typed `Validator`, which asks for no `~standard`, and `brand` of one stays a `Validator`, since `brand` returns the validator it is given.
 
 ## What `standard` returns
 
@@ -31,9 +51,9 @@ A validator that behaves exactly as the one you gave, with the `~standard` prope
 
 The package exports the `StandardSchemaV1` type so you can accept one in your own code.
 
-## Messages
+## Messages of `standard`
 
-The specification requires a message on every issue, so `standard` builds one, from the message map given as its second argument: the built-in English when you give none, `portugueseMessages` for Portuguese, or a map of your own. A program that calls `standard` bundles the English, about 1.7 kB gzipped, even when it passes another map; calling it is what brings the English in, so a program that words its issues with a map of its own and never calls `standard` does not bundle it. A second argument left out or given as `undefined` is the English; any other that is not a map, such as `null`, text or a list, is a `TypeError` when `standard` is called. Messages then come from [`formatIssue`](errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
+`standard` builds each message from the message map given as its second argument: the built-in English when you give none, `portugueseMessages` for Portuguese, or a map of your own. A program that calls `standard` bundles the English, about 1.7 kB gzipped, even when it passes another map; calling it is what brings the English in, so a program that words its issues with a map of its own and never calls `standard` does not bundle it. A second argument left out or given as `undefined` is the English; any other that is not a map, such as `null`, text or a list, is a `TypeError` when `standard` is called. Messages then come from [`formatIssue`](errors.md#turning-an-issue-into-text): an issue's own `message`, then an entry for its `code` in the map, then the map's `default` entry, then "Invalid value".
 
 ```ts
 import { englishMessages, number, standard } from "@codenhub/validation";

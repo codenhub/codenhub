@@ -1,5 +1,5 @@
 import { member } from "../core/checks";
-import type { AnyValidator, AsyncRest, AsyncValidator, MessageOptions, Rest, Validator } from "../core/types";
+import type { AnyValidator, AsyncRest, AsyncSchema, MessageOptions, Rest, Schema } from "../core/types";
 
 /** A value a validator can require exactly: any primitive, including `null` and `undefined`. */
 export type LiteralValue = string | number | boolean | bigint | symbol | null | undefined;
@@ -26,11 +26,11 @@ export type LiteralValue = string | number | boolean | bigint | symbol | null | 
  * @throws {TypeError} When `value` is an object or a function, which equals only itself.
  * @throws {RangeError} When `value` is `NaN`, which no value equals, so the literal would accept nothing.
  */
-export function literal<const T extends LiteralValue>(value: T, ...rest: Rest<T, MessageOptions>): Validator<T, T>;
+export function literal<const T extends LiteralValue>(value: T, ...rest: Rest<T, MessageOptions>): Schema<T, T>;
 export function literal<const T extends LiteralValue>(
   value: T,
   ...rest: AsyncRest<T, MessageOptions>
-): AsyncValidator<T, T>;
+): AsyncSchema<T, T>;
 export function literal(value: LiteralValue, ...rest: unknown[]): AnyValidator {
   // An object or a function equals only itself, so the literal would reject every value parsed from input.
   if (Object(value) === value) {

@@ -6,13 +6,13 @@
 import { describe } from "../core/describe";
 import { assertShape } from "../core/objects";
 import { assertList } from "../core/result";
-import type { AnyValidator, AsyncValidator, Validator } from "../core/types";
+import type { AnyValidator, AsyncSchema, Schema, Validator } from "../core/types";
 import { nullable } from "./nullable";
 import { object, type ObjectOptions, type Shape } from "./object";
 
 /** A validator of `T` that is synchronous when the validator it was made from is. */
 export type Reshaped<TValidator extends AnyValidator, T, TInput = unknown> =
-  TValidator extends Validator<unknown> ? Validator<T, TInput> : AsyncValidator<T, TInput>;
+  TValidator extends Validator<unknown> ? Schema<T, TInput> : AsyncSchema<T, TInput>;
 
 type Simplify<T> = { [K in keyof T]: T[K] } & {};
 

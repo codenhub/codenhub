@@ -1,5 +1,5 @@
 import { member } from "../core/checks";
-import type { AnyValidator, AsyncRest, AsyncValidator, MessageOptions, Rest, Validator } from "../core/types";
+import type { AnyValidator, AsyncRest, AsyncSchema, MessageOptions, Rest, Schema } from "../core/types";
 import type { LiteralValue } from "./literal";
 
 /** An object made by a TypeScript `enum`, or written like one. */
@@ -45,11 +45,11 @@ const isReverseMapping = (enumObject: EnumLike, key: string): boolean => {
 export function oneOf<const T extends readonly LiteralValue[] | EnumLike>(
   values: T,
   ...rest: Rest<ValuesOf<T>, MessageOptions>
-): Validator<ValuesOf<T>, ValuesOf<T>>;
+): Schema<ValuesOf<T>, ValuesOf<T>>;
 export function oneOf<const T extends readonly LiteralValue[] | EnumLike>(
   values: T,
   ...rest: AsyncRest<ValuesOf<T>, MessageOptions>
-): AsyncValidator<ValuesOf<T>, ValuesOf<T>>;
+): AsyncSchema<ValuesOf<T>, ValuesOf<T>>;
 export function oneOf(values: readonly LiteralValue[] | EnumLike, ...rest: unknown[]): AnyValidator {
   // Text would be read as a list of its characters. `Object(value) === value` holds for objects alone.
   // A `Set` or any other object of a class would be read as an enum with no members.

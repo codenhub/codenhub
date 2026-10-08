@@ -74,7 +74,7 @@ The validator reference lists the exact code and `params` each validator reports
 
 ## Turning an issue into text
 
-Validators do not build message text when they fail. That keeps them small, and it means text is a choice you make where you show it. `formatIssue` builds it from a message map, `englishMessages` unless you pass another. Both word the issues validators return; an issue received from elsewhere, such as JSON from a server you do not control, is input like any other, and a malformed one may throw, so validate it before wording it:
+Validators do not build message text when they fail, so text is a choice you make where you show it. The one exception is a validator's own [Standard Schema](standard-schema.md), which a library that takes one calls, and which words each issue in short English. `formatIssue` builds it from a message map, `englishMessages` unless you pass another. Both word the issues validators return; an issue received from elsewhere, such as JSON from a server you do not control, is input like any other, and a malformed one may throw, so validate it before wording it:
 
 ```ts
 import { formatIssue, number } from "@codenhub/validation";
@@ -85,7 +85,7 @@ if (!result.ok) {
 }
 ```
 
-The English wording is `englishMessages`, a value of its own, about 1.7 kB gzipped. A program that calls `formatIssue` or `flatten` bundles it, even when it passes another map, since it is their default; one that never shows an issue, or checks its options with `assert` and wording of its own, does not. A program whose issues all carry their own `message` passes `{}`, and a map that is not an object, such as `null`, is a `TypeError`.
+The English wording is `englishMessages`, a value of its own, about 1.7 kB gzipped. A program that calls `formatIssue` or `flatten` bundles it, even when it passes another map, since it is their default; one that never shows an issue, or checks its options with `assert` and wording of its own, does not. Every validator carries the short English of its own Standard Schema, about 0.4 kB, which is not this map. A program whose issues all carry their own `message` passes `{}`, and a map that is not an object, such as `null`, is a `TypeError`.
 
 The text comes from the first of these that exists:
 

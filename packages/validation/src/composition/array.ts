@@ -7,7 +7,7 @@ import { assertFunction, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
-  AsyncValidator,
+  AsyncSchema,
   Composed,
   Infer,
   InferInput,
@@ -54,7 +54,7 @@ export function array<TItem extends AnyValidator>(
 export function array<TItem extends AnyValidator>(
   item: TItem,
   ...rest: AsyncRest<Infer<TItem>[], ArrayOptions>
-): AsyncValidator<Infer<TItem>[], InferInput<TItem>[]>;
+): AsyncSchema<Infer<TItem>[], InferInput<TItem>[]>;
 export function array(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("item", item);
   const [options, reject, accept, checks] = tail<ArrayOptions, unknown[]>(rest, "min max length");

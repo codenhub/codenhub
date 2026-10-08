@@ -14,7 +14,7 @@ group: Reference
 
 ```ts
 export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: Rest<Infer<TItem>[], ArrayOptions>): Composed<TItem, Infer<TItem>[], InferInput<TItem>[]>;
-export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Infer<TItem>[], ArrayOptions>): AsyncValidator<Infer<TItem>[], InferInput<TItem>[]>;
+export declare function array<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Infer<TItem>[], ArrayOptions>): AsyncSchema<Infer<TItem>[], InferInput<TItem>[]>;
 ```
 
 Creates a validator for arrays whose every item passes `item`.
@@ -115,7 +115,7 @@ expect(audit(bounded)).toEqual([]);
 ### brand
 
 ```ts
-export declare function brand<TValidator extends AnyValidator, const TName extends string>(validator: TValidator, name: TName): Composed<TValidator, Branded<Infer<TValidator>, TName>, InferInput<TValidator>>;
+export declare function brand<TValidator extends AnyValidator, const TName extends string>(validator: TValidator, name: TName): Marked<TValidator, Branded<Infer<TValidator>, TName>>;
 ```
 
 Marks what a validator produces with a name, in the types alone, so only a value that went through the validator is accepted where the marked type is asked for.
@@ -134,7 +134,7 @@ Nothing changes at run time. The validator is returned as it is, so it validates
 - `TValidator` — The validator whose output is marked.
 - `TName` — The name of the mark.
 
-**Returns** — The same validator, typed as producing the marked type.
+**Returns** — The same validator, typed as producing the marked type. It is a `Schema` when the validator given is one, and a plain validator when it was written by hand.
 
 **Throws** — When `validator` is not a function or `name` is not text.
 
@@ -328,10 +328,10 @@ describe(shape.name)?.options; // { min: 2 }
 ### email
 
 ```ts
-export declare function email(...checks: Check<string>[]): Validator<string, string>;
+export declare function email(...checks: Check<string>[]): Schema<string, string>;
 export declare function email<const TOptions extends EmailOptions>(options: TOptions, ...checks: Check<string>[]): Composed<EmailParts<TOptions>, string, string>;
-export declare function email(...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
-export declare function email(options: EmailOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
+export declare function email(...checks: AsyncCheck<string>[]): AsyncSchema<string, string>;
+export declare function email(options: EmailOptions, ...checks: AsyncCheck<string>[]): AsyncSchema<string, string>;
 ```
 
 Creates a validator for email addresses with a public domain name, which may be internationalized.
@@ -418,8 +418,8 @@ string(endsWith(".pdf", "Upload a PDF"));
 ### extend
 
 ```ts
-export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(validator: TValidator, shape: TShape, ...rest: Rest<Extended<Infer<TValidator>, TShape>, ObjectOptions>): TValidator extends Validator<unknown> ? Composed<TShape[keyof TShape], Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>> : AsyncValidator<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
-export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(validator: TValidator, shape: TShape, ...rest: AsyncRest<Extended<Infer<TValidator>, TShape>, ObjectOptions>): AsyncValidator<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
+export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(validator: TValidator, shape: TShape, ...rest: Rest<Extended<Infer<TValidator>, TShape>, ObjectOptions>): TValidator extends Validator<unknown> ? Composed<TShape[keyof TShape], Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>> : AsyncSchema<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
+export declare function extend<TValidator extends AnyValidator<object>, TShape extends Shape>(validator: TValidator, shape: TShape, ...rest: AsyncRest<Extended<Infer<TValidator>, TShape>, ObjectOptions>): AsyncSchema<Extended<Infer<TValidator>, TShape>, ExtendedInput<InferInput<TValidator>, TShape>>;
 ```
 
 Creates an object validator with the properties of another and those given, as spreading the shape of one into another does for an object made from shapes.
@@ -597,7 +597,7 @@ formatPath(["a.b"]); // '["a.b"]'
 
 ```ts
 export declare function formData<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, FormDataOptions>): Composed<TValidator, Infer<TValidator>, GlobalFormData>;
-export declare function formData<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, FormDataOptions>): AsyncValidator<Infer<TValidator>, GlobalFormData>;
+export declare function formData<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, FormDataOptions>): AsyncSchema<Infer<TValidator>, GlobalFormData>;
 ```
 
 Creates a validator that reads a `FormData` into an object of its fields, each a string or a `File`, or with `repeated` every value of every key as an array, and validates that object. The value is what the validator produces.
@@ -633,8 +633,8 @@ const upload = formData(object({ photos: array(file({ maxSize: 5_000_000 }), { m
 ### func
 
 ```ts
-export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(...rest: Rest<T, MessageOptions>): Validator<T, T>;
-export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T, T>;
+export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(...rest: Rest<T, MessageOptions>): Schema<T, T>;
+export declare function func<T extends AnyFunction = (...args: unknown[]) => unknown>(...rest: AsyncRest<T, MessageOptions>): AsyncSchema<T, T>;
 ```
 
 Creates a validator for functions, such as a callback in a configuration object. Classes, arrow, async and generator functions are all functions, and a function from another realm is one too.
@@ -715,8 +715,8 @@ string(includes("@"));
 ### instanceOf
 
 ```ts
-export declare function instanceOf<T>(target: Constructor<T>, ...rest: Rest<T, MessageOptions>): Validator<T, T>;
-export declare function instanceOf<T>(target: Constructor<T>, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T, T>;
+export declare function instanceOf<T>(target: Constructor<T>, ...rest: Rest<T, MessageOptions>): Schema<T, T>;
+export declare function instanceOf<T>(target: Constructor<T>, ...rest: AsyncRest<T, MessageOptions>): AsyncSchema<T, T>;
 ```
 
 Creates a validator that accepts instances of a class, checked with `instanceof`. An instance from another realm, such as an iframe, is not recognized, and neither is a value `instanceof` throws for, such as a revoked proxy.
@@ -746,7 +746,7 @@ upload("a.txt"); // { ok: false, ... }, params { expected: "instance of File", r
 
 ```ts
 export declare function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(left: TLeft, right: TRight, ...rest: Rest<Infer<TLeft> & Infer<TRight>, MessageOptions>): Composed<TLeft | TRight, Infer<TLeft> & Infer<TRight>, InferInput<TLeft> & InferInput<TRight>>;
-export declare function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(left: TLeft, right: TRight, ...rest: AsyncRest<Infer<TLeft> & Infer<TRight>, MessageOptions>): AsyncValidator<Infer<TLeft> & Infer<TRight>, InferInput<TLeft> & InferInput<TRight>>;
+export declare function intersection<TLeft extends AnyValidator, TRight extends AnyValidator>(left: TLeft, right: TRight, ...rest: AsyncRest<Infer<TLeft> & Infer<TRight>, MessageOptions>): AsyncSchema<Infer<TLeft> & Infer<TRight>, InferInput<TLeft> & InferInput<TRight>>;
 ```
 
 Creates a validator that accepts a value only when it passes both validators, and produces the two results merged.
@@ -807,10 +807,10 @@ if (is(email(), value)) {
 ### json
 
 ```ts
-export declare function json(): Validator<unknown, string>;
-export declare function json(options: MessageOptions): Validator<unknown, string>;
+export declare function json(): Schema<unknown, string>;
+export declare function json(options: MessageOptions): Schema<unknown, string>;
 export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, MessageOptions>): Composed<TValidator, Infer<TValidator>, string>;
-export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, MessageOptions>): AsyncValidator<Infer<TValidator>, string>;
+export declare function json<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, MessageOptions>): AsyncSchema<Infer<TValidator>, string>;
 ```
 
 Creates a validator for text that holds JSON: it parses the text, then optionally validates what was parsed.
@@ -841,7 +841,7 @@ settings("{oops"); // { ok: false, ... }, code "invalid_format"
 
 ```ts
 export declare function lazy<TValidator extends AnyValidator>(getter: () => TValidator, ...rest: Rest<Infer<TValidator>, LazyOptions>): Composed<TValidator, Infer<TValidator>, InferInput<TValidator>>;
-export declare function lazy<TValidator extends AnyValidator>(getter: () => TValidator, ...rest: AsyncRest<Infer<TValidator>, LazyOptions>): AsyncValidator<Infer<TValidator>, InferInput<TValidator>>;
+export declare function lazy<TValidator extends AnyValidator>(getter: () => TValidator, ...rest: AsyncRest<Infer<TValidator>, LazyOptions>): AsyncSchema<Infer<TValidator>, InferInput<TValidator>>;
 ```
 
 Creates a validator that looks up another validator the first time it runs, so a validator can refer to itself for recursive data such as a tree or a comment thread.
@@ -885,8 +885,8 @@ const category: Validator<Category> = object({
 ### literal
 
 ```ts
-export declare function literal<const T extends LiteralValue>(value: T, ...rest: Rest<T, MessageOptions>): Validator<T, T>;
-export declare function literal<const T extends LiteralValue>(value: T, ...rest: AsyncRest<T, MessageOptions>): AsyncValidator<T, T>;
+export declare function literal<const T extends LiteralValue>(value: T, ...rest: Rest<T, MessageOptions>): Schema<T, T>;
+export declare function literal<const T extends LiteralValue>(value: T, ...rest: AsyncRest<T, MessageOptions>): AsyncSchema<T, T>;
 ```
 
 Creates a validator that accepts exactly one value, compared with `===`. The type is the value itself, so `literal("admin")` produces `"admin"` and not `string`, and the value produced is the one declared, so `literal(0)` produces `0` for `-0`, which `===` matches. It is also how `null` and `undefined` are validated: `literal(null)`.
@@ -941,7 +941,7 @@ string(lowercase("Must be lowercase"));
 
 ```ts
 export declare function map<TKey extends AnyValidator, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: Rest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>): Composed<TKey | TValue, Map<Infer<TKey>, Infer<TValue>>, Map<InferInput<TKey>, InferInput<TValue>>>;
-export declare function map<TKey extends AnyValidator, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncValidator<Map<Infer<TKey>, Infer<TValue>>, Map<InferInput<TKey>, InferInput<TValue>>>;
+export declare function map<TKey extends AnyValidator, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncSchema<Map<Infer<TKey>, Infer<TValue>>, Map<InferInput<TKey>, InferInput<TValue>>>;
 ```
 
 Creates a validator for `Map`s whose every key passes `key` and every value passes `value`.
@@ -1135,7 +1135,7 @@ nickname(undefined); // { ok: true, value: undefined }
 
 ```ts
 export declare function object<TShape extends Shape>(shape: TShape, ...rest: Rest<InferShape<TShape>, ObjectOptions>): Composed<TShape[keyof TShape], InferShape<TShape>, InferShapeInput<TShape>>;
-export declare function object<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferShape<TShape>, ObjectOptions>): AsyncValidator<InferShape<TShape>, InferShapeInput<TShape>>;
+export declare function object<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferShape<TShape>, ObjectOptions>): AsyncSchema<InferShape<TShape>, InferShapeInput<TShape>>;
 ```
 
 Creates a validator for plain objects with the given properties.
@@ -1172,7 +1172,7 @@ const signup = object(
 
 ```ts
 export declare function objectLike<TShape extends Shape>(shape: TShape, ...rest: Rest<InferShape<TShape>, MessageOptions>): Composed<TShape[keyof TShape], InferShape<TShape>, InferShapeInput<TShape>>;
-export declare function objectLike<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferShape<TShape>, MessageOptions>): AsyncValidator<InferShape<TShape>, InferShapeInput<TShape>>;
+export declare function objectLike<TShape extends Shape>(shape: TShape, ...rest: AsyncRest<InferShape<TShape>, MessageOptions>): AsyncSchema<InferShape<TShape>, InferShapeInput<TShape>>;
 ```
 
 Creates a validator for any object that has the given properties, such as a class instance.
@@ -1206,7 +1206,7 @@ feedback({ message: "" }); // { ok: false, error: { issues: [{ code: "too_small"
 
 ```ts
 export declare function omit<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Omitted<Infer<TValidator>, TKey>, ObjectOptions>): Reshaped<TValidator, Omitted<Infer<TValidator>, TKey>, Omit<InferInput<TValidator>, TKey>>;
-export declare function omit<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Omitted<Infer<TValidator>, TKey>, ObjectOptions>): AsyncValidator<Omitted<Infer<TValidator>, TKey>, Omit<InferInput<TValidator>, TKey>>;
+export declare function omit<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Omitted<Infer<TValidator>, TKey>, ObjectOptions>): AsyncSchema<Omitted<Infer<TValidator>, TKey>, Omit<InferInput<TValidator>, TKey>>;
 ```
 
 Creates an object validator without the named properties of another.
@@ -1239,8 +1239,8 @@ type Profile = Infer<typeof profile>; // { id: string; name: string }
 ### oneOf
 
 ```ts
-export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike>(values: T, ...rest: Rest<ValuesOf<T>, MessageOptions>): Validator<ValuesOf<T>, ValuesOf<T>>;
-export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike>(values: T, ...rest: AsyncRest<ValuesOf<T>, MessageOptions>): AsyncValidator<ValuesOf<T>, ValuesOf<T>>;
+export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike>(values: T, ...rest: Rest<ValuesOf<T>, MessageOptions>): Schema<ValuesOf<T>, ValuesOf<T>>;
+export declare function oneOf<const T extends readonly LiteralValue[] | EnumLike>(values: T, ...rest: AsyncRest<ValuesOf<T>, MessageOptions>): AsyncSchema<ValuesOf<T>, ValuesOf<T>>;
 ```
 
 Creates a validator that accepts any one value of a list or of a TypeScript `enum`, compared with `===`. The type is the union of the values, so `oneOf(["admin", "user"])` produces `"admin" | "user"`, and the value produced is the one listed, so `oneOf([0])` produces `0` for `-0`, which `===` matches. The entries TypeScript adds to a numeric enum to map values back to names are not values and are ignored, in an object written like an enum too, so `{ a: 1, "1": "a" }` holds `1` alone.
@@ -1313,7 +1313,7 @@ const tags = optional(array(string()), () => []);
 ```ts
 export declare function partial<TShape extends Shape>(shape: TShape): PartialShape<TShape>;
 export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: Rest<AllOptional<Infer<TValidator>>, ObjectOptions>): Reshaped<TValidator, AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
-export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllOptional<Infer<TValidator>>, ObjectOptions>): AsyncValidator<AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
+export declare function partial<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllOptional<Infer<TValidator>>, ObjectOptions>): AsyncSchema<AllOptional<Infer<TValidator>>, AllOptional<InferInput<TValidator>>>;
 ```
 
 Makes every property optional, for a form or an update where any field may be left out. Given a shape, which is a plain object, it returns a new shape to pass to `object`. Given a validator `object` made, it returns a new object validator, with the same options unless options are given here.
@@ -1397,7 +1397,7 @@ string(pattern(/^[a-z]+$/, "Lowercase letters only"));
 
 ```ts
 export declare function pick<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: Rest<Picked<Infer<TValidator>, TKey>, ObjectOptions>): Reshaped<TValidator, Picked<Infer<TValidator>, TKey>, Pick<InferInput<TValidator>, TKey & keyof InferInput<TValidator>>>;
-export declare function pick<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Picked<Infer<TValidator>, TKey>, ObjectOptions>): AsyncValidator<Picked<Infer<TValidator>, TKey>, Pick<InferInput<TValidator>, TKey & keyof InferInput<TValidator>>>;
+export declare function pick<TValidator extends AnyValidator<object>, const TKey extends keyof Infer<TValidator>>(validator: TValidator, keys: readonly TKey[], ...rest: AsyncRest<Picked<Infer<TValidator>, TKey>, ObjectOptions>): AsyncSchema<Picked<Infer<TValidator>, TKey>, Pick<InferInput<TValidator>, TKey & keyof InferInput<TValidator>>>;
 ```
 
 Creates an object validator with only the named properties of another.
@@ -1502,7 +1502,7 @@ if (result.ok) {
 
 ```ts
 export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: Rest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): Composed<TKey | TValue, InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, InferRecordInput<TKey, TValue>>;
-export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncValidator<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, InferRecordInput<TKey, TValue>>;
+export declare function record<TKey extends AnyValidator<string>, TValue extends AnyValidator>(key: TKey, value: TValue, ...rest: AsyncRest<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, SizeOptions & MessageOptions>): AsyncSchema<InferRecord<Extract<Infer<TKey>, string>, Infer<TValue>>, InferRecordInput<TKey, TValue>>;
 ```
 
 Creates a validator for plain objects used as a dictionary: any number of keys, all following the same rules.
@@ -1539,7 +1539,7 @@ scores({ ada: "3" }); // { ok: false, ... }, code "invalid_type" at path ["ada"]
 
 ```ts
 export declare function required<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: Rest<AllRequired<Infer<TValidator>>, ObjectOptions>): Reshaped<TValidator, AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
-export declare function required<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllRequired<Infer<TValidator>>, ObjectOptions>): AsyncValidator<AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
+export declare function required<TValidator extends AnyValidator<object>>(validator: TValidator, ...rest: AsyncRest<AllRequired<Infer<TValidator>>, ObjectOptions>): AsyncSchema<AllRequired<Infer<TValidator>>, AllRequired<InferInput<TValidator>>>;
 ```
 
 Creates an object validator whose properties are all required, from one where some are optional.
@@ -1573,7 +1573,7 @@ published({ title: "Hello" }); // fails: body is missing
 
 ```ts
 export declare function searchParams<TValidator extends AnyValidator>(validator: TValidator, ...rest: Rest<Infer<TValidator>, SearchParamsOptions>): Composed<TValidator, Infer<TValidator>, string | Iterable<[string, string]>>;
-export declare function searchParams<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, SearchParamsOptions>): AsyncValidator<Infer<TValidator>, string | Iterable<[string, string]>>;
+export declare function searchParams<TValidator extends AnyValidator>(validator: TValidator, ...rest: AsyncRest<Infer<TValidator>, SearchParamsOptions>): AsyncSchema<Infer<TValidator>, string | Iterable<[string, string]>>;
 ```
 
 Creates a validator that reads a query string, or a `URLSearchParams`, into an object of its decoded parameters, and validates that object: each key's value as a string, or with `repeated` every value of every key as an array. The value is what the validator produces, so values can be converted as they are read.
@@ -1606,7 +1606,7 @@ searchParams(object({ tag: array(string()) }), { repeated: true })("tag=a&tag=b"
 
 ```ts
 export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: Rest<Set<Infer<TItem>>, SizeOptions & MessageOptions>): Composed<TItem, Set<Infer<TItem>>, Set<InferInput<TItem>>>;
-export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Set<Infer<TItem>>, SizeOptions & MessageOptions>): AsyncValidator<Set<Infer<TItem>>, Set<InferInput<TItem>>>;
+export declare function set<TItem extends AnyValidator>(item: TItem, ...rest: AsyncRest<Set<Infer<TItem>>, SizeOptions & MessageOptions>): AsyncSchema<Set<Infer<TItem>>, Set<InferInput<TItem>>>;
 ```
 
 Creates a validator for `Set`s whose every value passes `item`.
@@ -1732,7 +1732,7 @@ string(startsWith("https://"));
 
 ```ts
 export declare function tagged<const TKey extends string, const TVariants extends Variants>(key: TKey, variants: TVariants & CheckedVariants<TKey, TVariants>, ...rest: Rest<InferTagged<TKey, TVariants>, MessageOptions>): Composed<TVariants[keyof TVariants], InferTagged<TKey, TVariants>, InferTaggedInput<TKey, TVariants>>;
-export declare function tagged<const TKey extends string, const TVariants extends Variants>(key: TKey, variants: TVariants & CheckedVariants<TKey, TVariants>, ...rest: AsyncRest<InferTagged<TKey, TVariants>, MessageOptions>): AsyncValidator<InferTagged<TKey, TVariants>, InferTaggedInput<TKey, TVariants>>;
+export declare function tagged<const TKey extends string, const TVariants extends Variants>(key: TKey, variants: TVariants & CheckedVariants<TKey, TVariants>, ...rest: AsyncRest<InferTagged<TKey, TVariants>, MessageOptions>): AsyncSchema<InferTagged<TKey, TVariants>, InferTaggedInput<TKey, TVariants>>;
 ```
 
 Creates a validator for objects that share a tag property and differ in the rest, such as events with a `type`. The tag chooses the variant, so a failure reports that variant's own issues instead of a list of everything that did not match.
@@ -1809,9 +1809,9 @@ toJsonSchema(user);
 ### transform
 
 ```ts
-export declare function transform<T, R, TInput = unknown>(validator: AnyValidator<T, TInput>, convert: (value: T) => PromiseLike<R>): AsyncValidator<R, TInput>;
+export declare function transform<T, R, TInput = unknown>(validator: AnyValidator<T, TInput>, convert: (value: T) => PromiseLike<R>): AsyncSchema<R, TInput>;
 export declare function transform<T, R, TInput = unknown>(validator: Validator<T, TInput>, convert: (value: T) => R): Transformed<R, TInput>;
-export declare function transform<T, R, TInput = unknown>(validator: AnyValidator<T, TInput>, convert: (value: T) => R): AsyncValidator<Awaited<R>, TInput>;
+export declare function transform<T, R, TInput = unknown>(validator: AnyValidator<T, TInput>, convert: (value: T) => R): AsyncSchema<Awaited<R>, TInput>;
 ```
 
 Changes the value a validator produced into another value, such as text into a `Date`.
@@ -1845,7 +1845,7 @@ const user = transform(string(), async (id) => await loadUser(id));
 
 ```ts
 export declare function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]], TRest extends AnyValidator | undefined = undefined>(items: TItems, ...rest: Rest<InferTuple<TItems, TRest>, TupleOptions<TRest>>): Composed<TItems[number] | Exclude<TRest, undefined>, InferTuple<TItems, TRest>, InferTupleInput<TItems, TRest>>;
-export declare function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]], TRest extends AnyValidator | undefined = undefined>(items: TItems, ...rest: AsyncRest<InferTuple<TItems, TRest>, TupleOptions<TRest>>): AsyncValidator<InferTuple<TItems, TRest>, InferTupleInput<TItems, TRest>>;
+export declare function tuple<const TItems extends readonly [AnyValidator, ...AnyValidator[]], TRest extends AnyValidator | undefined = undefined>(items: TItems, ...rest: AsyncRest<InferTuple<TItems, TRest>, TupleOptions<TRest>>): AsyncSchema<InferTuple<TItems, TRest>, InferTupleInput<TItems, TRest>>;
 ```
 
 Creates a validator for arrays of fixed length whose items each have their own validator.
@@ -1884,7 +1884,7 @@ args(["sum", 1, 2, 3]); // { ok: true, ... }
 
 ```ts
 export declare function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(options: TOptions, ...rest: Rest<Infer<TOptions[number]>, MessageOptions>): Composed<TOptions[number], Infer<TOptions[number]>, InferInput<TOptions[number]>>;
-export declare function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(options: TOptions, ...rest: AsyncRest<Infer<TOptions[number]>, MessageOptions>): AsyncValidator<Infer<TOptions[number]>, InferInput<TOptions[number]>>;
+export declare function union<const TOptions extends readonly [AnyValidator, ...AnyValidator[]]>(options: TOptions, ...rest: AsyncRest<Infer<TOptions[number]>, MessageOptions>): AsyncSchema<Infer<TOptions[number]>, InferInput<TOptions[number]>>;
 ```
 
 Creates a validator that accepts a value passing any one of several validators.
@@ -1966,10 +1966,10 @@ string(uppercase("Must be uppercase"));
 ### url
 
 ```ts
-export declare function url(...checks: Check<string>[]): Validator<string, string>;
+export declare function url(...checks: Check<string>[]): Schema<string, string>;
 export declare function url<const TOptions extends UrlOptions>(options: TOptions, ...checks: Check<string>[]): Composed<UrlParts<TOptions>, string, string>;
-export declare function url(...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
-export declare function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncValidator<string, string>;
+export declare function url(...checks: AsyncCheck<string>[]): AsyncSchema<string, string>;
+export declare function url(options: UrlOptions, ...checks: AsyncCheck<string>[]): AsyncSchema<string, string>;
 ```
 
 Creates a validator for absolute URLs with an allowed protocol and a public domain name, and without embedded credentials unless a `credentials` validator accepts them. The value is the URL as the URL parser writes it, which is what a request made with it will use.
@@ -2040,6 +2040,22 @@ subject?: string | undefined;
 ```
 
 What was being validated, written before the problem as it is, such as `"[I18n]"` or `"Router options:"`. Without it the message starts at the path.
+
+### AsyncSchema
+
+```ts
+export interface AsyncSchema<T, TInput = unknown> extends AsyncValidator<T, TInput>, StandardSchemaV1<TInput, T>
+```
+
+An [AsyncValidator](#asyncvalidator) a factory of this package made, which is also a Standard Schema as it is, as a [Schema](#schema) is. Its `~standard` validates asynchronously when the validator waits.
+
+#### ~standard
+
+Inherited from [StandardSchemaV1](#standardschemav1).
+
+#### ~types
+
+Inherited from [AsyncValidator](#asyncvalidator).
 
 ### AsyncValidator
 
@@ -2352,7 +2368,7 @@ Inherited from [MessageOptions](#messageoptions).
 export interface Factory<T, TOptions, TInput = T>
 ```
 
-The factory of a validator of `T` with options `TOptions`: options first and optional, then any checks. It makes a [Validator](#validator) while every check is a [Check](#check), and an [AsyncValidator](#asyncvalidator) as soon as one is an [AsyncCheck](#asynccheck).
+The factory of a validator of `T` with options `TOptions`: options first and optional, then any checks. It makes a [Schema](#schema) while every check is a [Check](#check), and an [AsyncSchema](#asyncschema) as soon as one is an [AsyncCheck](#asynccheck).
 
 ### FileOptions
 
@@ -2745,6 +2761,24 @@ unknownKeys?: "strip" | "strict" | "passthrough" | undefined;
 ```
 
 What to do with input properties the shape does not list. `"strip"` drops them from the output, `"strict"` rejects each with an `unrecognized_key` issue, up to the 1,000 issues a collection reports, and `"passthrough"` copies them to the output unchecked.
+
+### Schema
+
+```ts
+export interface Schema<T, TInput = unknown> extends Validator<T, TInput>, StandardSchemaV1<TInput, T>
+```
+
+A [Validator](#validator) a factory of this package made, which is also a Standard Schema as it is: a library that takes one, such as a form library or a router, takes it without a `standard` call, and words its issues in short English. `standard(validator, messages)` gives the full wording or another language.
+
+Accepted wherever a [Validator](#validator) is. A validator written by hand is a [Validator](#validator) and not a Schema, since it has no `~standard` of its own.
+
+#### ~standard
+
+Inherited from [StandardSchemaV1](#standardschemav1).
+
+#### ~types
+
+Inherited from [Validator](#validator).
 
 ### SearchParamsOptions
 
@@ -3573,7 +3607,7 @@ Make one with `check`, or write the function yourself.
 ```ts
 export type Composed<TChildren extends AnyValidator, TOutput, TInput = unknown> = [TChildren] extends [
     Validator<unknown>
-] ? Validator<TOutput, TInput> : AsyncValidator<TOutput, TInput>;
+] ? Schema<TOutput, TInput> : AsyncSchema<TOutput, TInput>;
 ```
 
 The validator type a composer returns: synchronous when every child validator is, asynchronous as soon as one child is.
@@ -3855,7 +3889,7 @@ What `readonly` makes of the type a validator produces: its properties or items 
 ### Reshaped
 
 ```ts
-export type Reshaped<TValidator extends AnyValidator, T, TInput = unknown> = TValidator extends Validator<unknown> ? Validator<T, TInput> : AsyncValidator<T, TInput>;
+export type Reshaped<TValidator extends AnyValidator, T, TInput = unknown> = TValidator extends Validator<unknown> ? Schema<T, TInput> : AsyncSchema<T, TInput>;
 ```
 
 A validator of `T` that is synchronous when the validator it was made from is.
@@ -4798,6 +4832,16 @@ type InferItems<TItems extends readonly AnyValidator[]> = {
 
 Not exported; declared in `src/composition/tuple.ts`.
 
+### Marked
+
+```ts
+type Marked<TValidator extends AnyValidator, T> = [TValidator] extends [StandardSchemaV1] ? Composed<TValidator, T, InferInput<TValidator>> : [TValidator] extends [Validator<unknown>] ? Validator<T, InferInput<TValidator>> : AsyncValidator<T, InferInput<TValidator>>;
+```
+
+`TValidator` typed as producing `T`: a Schema when it is one, and a plain validator otherwise.
+
+Not exported; declared in `src/composition/brand.ts`.
+
 ### OptionalInputKeys
 
 ```ts
@@ -4864,7 +4908,7 @@ Not exported; declared in `src/composition/extend.ts`, `src/composition/object.t
 ### Transformed
 
 ```ts
-type Transformed<R, TInput> = 0 extends 1 & R ? Validator<R, TInput> : [unknown] extends [R] ? AsyncValidator<Awaited<R>, TInput> : [Extract<R, PromiseLike<unknown>>] extends [never] ? Validator<R, TInput> : AsyncValidator<Awaited<R>, TInput>;
+type Transformed<R, TInput> = 0 extends 1 & R ? Schema<R, TInput> : [unknown] extends [R] ? AsyncSchema<Awaited<R>, TInput> : [Extract<R, PromiseLike<unknown>>] extends [never] ? Schema<R, TInput> : AsyncSchema<Awaited<R>, TInput>;
 ```
 
 What a synchronous validator becomes once `convert` runs on its value: still synchronous when `convert` never returns a promise, and asynchronous, producing what the promise settles to, when it may return one, such as a function typed `number | Promise<number>`. A function typed as returning `unknown` may return one too, so it makes the validator asynchronous. One typed as returning `any`, such as `JSON.parse`, has opted out of type checking, and is taken at its word as synchronous: typing it asynchronous would make the most common conversion need an `await` it never needs.
