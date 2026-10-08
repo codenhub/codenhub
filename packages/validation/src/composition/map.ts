@@ -8,7 +8,7 @@ import { assertFunction, failWith, issue, nested, repeatedKey, typeIssue } from 
 import type {
   AnyValidator,
   AsyncRest,
-  AsyncValidator,
+  AsyncSchema,
   Composed,
   Infer,
   InferInput,
@@ -58,7 +58,7 @@ export function map<TKey extends AnyValidator, TValue extends AnyValidator>(
   key: TKey,
   value: TValue,
   ...rest: AsyncRest<Map<Infer<TKey>, Infer<TValue>>, SizeOptions & MessageOptions>
-): AsyncValidator<Map<Infer<TKey>, Infer<TValue>>, Map<InferInput<TKey>, InferInput<TValue>>>;
+): AsyncSchema<Map<Infer<TKey>, Infer<TValue>>, Map<InferInput<TKey>, InferInput<TValue>>>;
 export function map(key: AnyValidator, value: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("key", key);
   assertFunction("value", value);

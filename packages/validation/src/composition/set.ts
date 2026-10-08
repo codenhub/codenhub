@@ -8,7 +8,7 @@ import { assertFunction, repeatedItem, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
-  AsyncValidator,
+  AsyncSchema,
   Composed,
   Infer,
   InferInput,
@@ -54,7 +54,7 @@ export function set<TItem extends AnyValidator>(
 export function set<TItem extends AnyValidator>(
   item: TItem,
   ...rest: AsyncRest<Set<Infer<TItem>>, SizeOptions & MessageOptions>
-): AsyncValidator<Set<Infer<TItem>>, Set<InferInput<TItem>>>;
+): AsyncSchema<Set<Infer<TItem>>, Set<InferInput<TItem>>>;
 export function set(item: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("item", item);
   const [options, reject, accept, checks] = tail<SizeOptions & MessageOptions, Set<unknown>>(rest, SIZE_OPTIONS);

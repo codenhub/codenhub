@@ -1,8 +1,9 @@
 import { describe as group, expect, it } from "vitest";
 
 import * as api from "../index";
+import type { StandardSchemaV1 } from "../interop/standard-schema";
 import type { Description } from "./describe";
-import type { AnyValidator, Validator } from "./types";
+import type { AnyValidator, ValidationResult, Validator } from "./types";
 
 const {
   array,
@@ -26,6 +27,12 @@ const name = string({ min: 2 });
 const slug = format("slug-ish", (text) => /^[a-z-]+$/.test(text));
 const byHand: Validator<unknown> = (input) => ({ ok: true, value: input });
 const file = guard("File", (value): value is Date => value instanceof Date);
+
+/** What a validator's own Standard Schema gives for a result, whatever words its messages. */
+const asStandard = (result: ValidationResult<unknown>): unknown =>
+  result.ok
+    ? { value: result.value }
+    : { issues: result.error.issues.map(({ path }) => ({ message: expect.any(String), path })) };
 
 /** One validator of every factory the package exports, with the kind and the parts its description must give. */
 const validators: Record<string, [validator: unknown, kind: string, parts?: Record<string, unknown>]> = {
@@ -163,6 +170,22 @@ group("the description of a validator", () => {
 
   it.each(Object.entries(validators))("should give the kind and parts of %s", (_, [validator, kind, parts]) => {
     expect(describe(validator as AnyValidator)).toMatchObject({ kind, ...parts });
+  });
+
+  it.each(Object.entries(validators))(
+    "should make %s a Standard Schema of its own, that gives what it gives",
+    async (_, [validator]) => {
+      const own = (validator as StandardSchemaV1)["~standard"];
+      expect(own).toMatchObject({ version: 1, vendor: "codenhub" });
+      const inputs = [undefined, "", "ab", 1, {}, []];
+      const results = await Promise.all(inputs.map(async (input) => (validator as AnyValidator)(input)));
+      const given = await Promise.all(inputs.map(async (input) => own.validate(input)));
+      expect(given).toEqual(results.map(asStandard));
+    },
+  );
+
+  it.each(Object.entries(checks))("should leave the check %s without a Standard Schema", (_, [made]) => {
+    expect(Object.hasOwn(made as object, "~standard")).toBe(false);
   });
 
   it.each(Object.entries(checks))("should give the params of the check %s", (_, [made, params]) => {

@@ -52,7 +52,8 @@ describe("standardJsonSchema", () => {
     const exposed = standardJsonSchema(signup);
     expect(exposed({ email: "ada@example.com", age: 3 })).toEqual(signup({ email: "ada@example.com", age: 3 }));
     expect(describeValidator(exposed)).toBe(describeValidator(signup));
-    expect("~standard" in signup).toBe(false);
+    expect((signup as unknown as StandardSchemaV1)["~standard"]).not.toBe(exposed["~standard"]);
+    expect("jsonSchema" in (signup as unknown as StandardSchemaV1)["~standard"]).toBe(false);
   });
 
   it("should be typed as both specifications", () => {

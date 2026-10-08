@@ -7,7 +7,7 @@ import { assertFunction, assertOption, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
-  AsyncValidator,
+  AsyncSchema,
   Composed,
   Infer,
   MessageOptions,
@@ -76,7 +76,7 @@ export function formData<TValidator extends AnyValidator>(
 export function formData<TValidator extends AnyValidator>(
   validator: TValidator,
   ...rest: AsyncRest<Infer<TValidator>, FormDataOptions>
-): AsyncValidator<Infer<TValidator>, GlobalFormData>;
+): AsyncSchema<Infer<TValidator>, GlobalFormData>;
 export function formData(validator: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("validator", validator);
   const [options, reject, accept, checks] = tail<FormDataOptions, unknown>(rest, "repeated");

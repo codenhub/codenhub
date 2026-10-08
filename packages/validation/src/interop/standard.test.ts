@@ -49,10 +49,21 @@ describe("standard", () => {
     expect(wrapped({})).toEqual(inner({}));
   });
 
-  it("should not modify the validator it was given", () => {
-    const inner = number();
-    standard(inner, englishMessages);
-    expect("~standard" in inner).toBe(false);
+  it("should not modify the validator it was given, which keeps its own short wording", () => {
+    const inner = number({ int: true });
+    const own = inner["~standard" as keyof typeof inner];
+    const exposed = standard(inner, englishMessages);
+    expect(inner["~standard" as keyof typeof inner]).toBe(own);
+    expect(exposed["~standard"]).not.toBe(own);
+  });
+
+  it("should word an issue as its map does, where the validator's own Standard Schema words it briefly", () => {
+    const inner = email();
+    const own = (inner as unknown as StandardSchemaV1<unknown, string>)["~standard"];
+    expect(own.validate("x")).toEqual({ issues: [{ message: "Invalid email", path: [] }] });
+    expect(standard(inner)["~standard"].validate("x")).toEqual({
+      issues: [{ message: "Invalid email address", path: [] }],
+    });
   });
 
   it("should give each call its own wrapper, so the same validator can be exposed with different messages", () => {

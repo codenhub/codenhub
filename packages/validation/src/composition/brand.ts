@@ -1,5 +1,6 @@
 import { assertFunction, assertText } from "../core/result";
-import type { AnyValidator, Composed, Infer, InferInput } from "../core/types";
+import type { AnyValidator, AsyncValidator, Composed, Infer, InferInput, Validator } from "../core/types";
+import type { StandardSchemaV1 } from "../interop/standard-schema";
 
 /**
  * A type marked with a name, so a value of the plain type is not accepted where the marked one is asked
@@ -45,14 +46,23 @@ export type Branded<T, TName extends string> = T extends null | undefined
  * @typeParam TName - The name of the mark.
  * @param validator - The validator to mark the output of.
  * @param name - The name of the mark, such as `"UserId"`.
- * @returns The same validator, typed as producing the marked type.
+ * @returns The same validator, typed as producing the marked type. It is a `Schema` when the validator
+ * given is one, and a plain validator when it was written by hand.
  * @throws {TypeError} When `validator` is not a function or `name` is not text.
  */
 export function brand<TValidator extends AnyValidator, const TName extends string>(
   validator: TValidator,
   name: TName,
-): Composed<TValidator, Branded<Infer<TValidator>, TName>, InferInput<TValidator>> {
+): Marked<TValidator, Branded<Infer<TValidator>, TName>> {
   assertFunction("validator", validator);
   assertText("name", name);
-  return validator as Composed<TValidator, Branded<Infer<TValidator>, TName>, InferInput<TValidator>>;
+  // The validator itself is returned, so it is a Standard Schema only when the one given is.
+  return validator as unknown as Marked<TValidator, Branded<Infer<TValidator>, TName>>;
 }
+
+/** `TValidator` typed as producing `T`: a Schema when it is one, and a plain validator otherwise. */
+type Marked<TValidator extends AnyValidator, T> = [TValidator] extends [StandardSchemaV1]
+  ? Composed<TValidator, T, InferInput<TValidator>>
+  : [TValidator] extends [Validator<unknown>]
+    ? Validator<T, InferInput<TValidator>>
+    : AsyncValidator<T, InferInput<TValidator>>;

@@ -5,7 +5,7 @@ description: Use a validator with form libraries, RPC and HTTP frameworks, the t
 
 # Integrations
 
-A validator goes where a library asks for a schema in one of three ways: as a [Standard Schema](standard-schema.md), which most form libraries and frameworks accept; as a [JSON Schema](json-schema.md), which tools of language models and OpenAPI documents are written in; or called directly, as any function is, which is also how one field of a [zod or valibot schema](#inside-a-zod-or-valibot-schema) can use it. Each example below was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
+A validator goes where a library asks for a schema in one of three ways: as a [Standard Schema](standard-schema.md), which most form libraries and frameworks accept; as a [JSON Schema](json-schema.md), which tools of language models and OpenAPI documents are written in; or called directly, as any function is, which is also how one field of a [zod or valibot schema](#inside-a-zod-or-valibot-schema) can use it. Every validator is a Standard Schema as it is, worded in short English; the examples below pass it through `standard`, which words its issues in the full English and was what they were run with. Each example below was run against the version of the library it names, on 2026-10-07: it validated input that passes and input that fails, and gave what the text around it says.
 
 ## Forms
 

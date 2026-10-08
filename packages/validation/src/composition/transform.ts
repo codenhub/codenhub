@@ -2,7 +2,7 @@ import { chain, detached, type Maybe } from "../core/async";
 import { described } from "../core/describe";
 import { call, composed } from "../core/nesting";
 import { assertFunction, pass } from "../core/result";
-import type { AnyValidator, AsyncValidator, ValidationResult, Validator } from "../core/types";
+import type { AnyValidator, AsyncSchema, Schema, ValidationResult, Validator } from "../core/types";
 
 /**
  * What a synchronous validator becomes once `convert` runs on its value: still synchronous when
@@ -13,12 +13,12 @@ import type { AnyValidator, AsyncValidator, ValidationResult, Validator } from "
  * it asynchronous would make the most common conversion need an `await` it never needs.
  */
 type Transformed<R, TInput> = 0 extends 1 & R
-  ? Validator<R, TInput>
+  ? Schema<R, TInput>
   : [unknown] extends [R]
-    ? AsyncValidator<Awaited<R>, TInput>
+    ? AsyncSchema<Awaited<R>, TInput>
     : [Extract<R, PromiseLike<unknown>>] extends [never]
-      ? Validator<R, TInput>
-      : AsyncValidator<Awaited<R>, TInput>;
+      ? Schema<R, TInput>
+      : AsyncSchema<Awaited<R>, TInput>;
 
 /**
  * Changes the value a validator produced into another value, such as text into a `Date`.
@@ -47,7 +47,7 @@ type Transformed<R, TInput> = 0 extends 1 & R
 export function transform<T, R, TInput = unknown>(
   validator: AnyValidator<T, TInput>,
   convert: (value: T) => PromiseLike<R>,
-): AsyncValidator<R, TInput>;
+): AsyncSchema<R, TInput>;
 export function transform<T, R, TInput = unknown>(
   validator: Validator<T, TInput>,
   convert: (value: T) => R,
@@ -55,7 +55,7 @@ export function transform<T, R, TInput = unknown>(
 export function transform<T, R, TInput = unknown>(
   validator: AnyValidator<T, TInput>,
   convert: (value: T) => R,
-): AsyncValidator<Awaited<R>, TInput>;
+): AsyncSchema<Awaited<R>, TInput>;
 export function transform<T, R>(validator: AnyValidator<T>, convert: (value: T) => Maybe<R>): AnyValidator<R> {
   assertFunction("validator", validator);
   assertFunction("convert", convert);

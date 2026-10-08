@@ -6,7 +6,7 @@ import { assertFunction, assertOption, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
-  AsyncValidator,
+  AsyncSchema,
   Composed,
   Infer,
   InferInput,
@@ -191,7 +191,7 @@ export function lazy<TValidator extends AnyValidator>(
 export function lazy<TValidator extends AnyValidator>(
   getter: () => TValidator,
   ...rest: AsyncRest<Infer<TValidator>, LazyOptions>
-): AsyncValidator<Infer<TValidator>, InferInput<TValidator>>;
+): AsyncSchema<Infer<TValidator>, InferInput<TValidator>>;
 export function lazy(getter: () => AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("getter", getter);
   const [options, reject, accept, checks] = tail<LazyOptions, unknown>(rest, "maxDepth maxCalls");

@@ -8,7 +8,7 @@ import { assertFunction, issue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
-  AsyncValidator,
+  AsyncSchema,
   Composed,
   Infer,
   InferInput,
@@ -106,7 +106,7 @@ export function object<TShape extends Shape>(
 export function object<TShape extends Shape>(
   shape: TShape,
   ...rest: AsyncRest<InferShape<TShape>, ObjectOptions>
-): AsyncValidator<InferShape<TShape>, InferShapeInput<TShape>>;
+): AsyncSchema<InferShape<TShape>, InferShapeInput<TShape>>;
 export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
   assertShape(shape);
   // The shape is read once, so changing it after the validator is made changes nothing.

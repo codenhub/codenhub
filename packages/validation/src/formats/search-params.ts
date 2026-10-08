@@ -7,7 +7,7 @@ import { assertFunction, assertOption, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
-  AsyncValidator,
+  AsyncSchema,
   Composed,
   Infer,
   MessageOptions,
@@ -59,7 +59,7 @@ export function searchParams<TValidator extends AnyValidator>(
 export function searchParams<TValidator extends AnyValidator>(
   validator: TValidator,
   ...rest: AsyncRest<Infer<TValidator>, SearchParamsOptions>
-): AsyncValidator<Infer<TValidator>, string | Iterable<[string, string]>>;
+): AsyncSchema<Infer<TValidator>, string | Iterable<[string, string]>>;
 export function searchParams(validator: AnyValidator, ...rest: unknown[]): AnyValidator {
   assertFunction("validator", validator);
   const [options, reject, accept, checks] = tail<SearchParamsOptions, unknown>(rest, "repeated");

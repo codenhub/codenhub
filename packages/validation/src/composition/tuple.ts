@@ -7,7 +7,7 @@ import { assertFunction, assertList, assertOrder, assertSize, issue, typeIssue }
 import type {
   AnyValidator,
   AsyncRest,
-  AsyncValidator,
+  AsyncSchema,
   Composed,
   Infer,
   InferInput,
@@ -99,7 +99,7 @@ export function tuple<
 >(
   items: TItems,
   ...rest: AsyncRest<InferTuple<TItems, TRest>, TupleOptions<TRest>>
-): AsyncValidator<InferTuple<TItems, TRest>, InferTupleInput<TItems, TRest>>;
+): AsyncSchema<InferTuple<TItems, TRest>, InferTupleInput<TItems, TRest>>;
 export function tuple(items: readonly AnyValidator[], ...args: unknown[]): AnyValidator {
   const [options, reject, accept, checks] = tail<TupleOptions<AnyValidator | undefined>, unknown[]>(args, "rest max");
   const { rest, max } = options;

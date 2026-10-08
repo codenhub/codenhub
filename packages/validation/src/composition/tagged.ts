@@ -7,7 +7,7 @@ import { assertFunction, assertText, describeType, issue } from "../core/result"
 import type {
   AnyValidator,
   AsyncRest,
-  AsyncValidator,
+  AsyncSchema,
   Composed,
   Infer,
   InferInput,
@@ -117,7 +117,7 @@ export function tagged<const TKey extends string, const TVariants extends Varian
   key: TKey,
   variants: TVariants & CheckedVariants<TKey, TVariants>,
   ...rest: AsyncRest<InferTagged<TKey, TVariants>, MessageOptions>
-): AsyncValidator<InferTagged<TKey, TVariants>, InferTaggedInput<TKey, TVariants>>;
+): AsyncSchema<InferTagged<TKey, TVariants>, InferTaggedInput<TKey, TVariants>>;
 export function tagged(key: string, variants: Variants, ...rest: unknown[]): AnyValidator {
   assertText("tagged(key)", key);
   assertShape(variants, "variants");

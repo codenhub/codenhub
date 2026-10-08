@@ -1,6 +1,6 @@
 import { leaf, split } from "../core/checks";
 import { described } from "../core/describe";
-import type { AnyValidator, AsyncRest, AsyncValidator, MessageOptions, Rest, Validator } from "../core/types";
+import type { AnyValidator, AsyncRest, AsyncSchema, MessageOptions, Rest, Schema } from "../core/types";
 
 /** Any function, whatever it takes and returns. */
 export type AnyFunction = (...args: never[]) => unknown;
@@ -30,10 +30,10 @@ const isFunction = (input: unknown): boolean => typeof input === "function";
  */
 export function func<T extends AnyFunction = (...args: unknown[]) => unknown>(
   ...rest: Rest<T, MessageOptions>
-): Validator<T, T>;
+): Schema<T, T>;
 export function func<T extends AnyFunction = (...args: unknown[]) => unknown>(
   ...rest: AsyncRest<T, MessageOptions>
-): AsyncValidator<T, T>;
+): AsyncSchema<T, T>;
 export function func(...rest: unknown[]): AnyValidator {
   const [options, checks] = split<MessageOptions, AnyFunction>(rest);
   const { message } = options;

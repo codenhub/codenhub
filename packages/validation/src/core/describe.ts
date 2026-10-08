@@ -1,3 +1,4 @@
+import { ownStandard } from "../interop/own-standard";
 import type { AnyValidator, AsyncCheck } from "./types";
 
 /**
@@ -39,6 +40,10 @@ export const described = <TTarget extends object>(
     Object.freeze(record.checks);
   }
   (target as Record<string, unknown>)[DESCRIPTION] = Object.freeze(record);
+  // A validator is a Standard Schema as it is; a check is not one, since it is given a value already validated.
+  if (record.kind !== "check") {
+    (target as Record<string, unknown>)["~standard"] = ownStandard(target as (input: unknown) => unknown);
+  }
   return target;
 };
 

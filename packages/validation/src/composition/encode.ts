@@ -123,7 +123,7 @@ export function encode<TValidator extends AnyValidator>(
       return encoded;
     }
     const message = record.options?.["message"];
-    const rules = (unknown as Make)(...(message === undefined ? [] : [{ message }]), ...checks);
+    const rules = (unknown as unknown as Make)(...(message === undefined ? [] : [{ message }]), ...checks);
     return composed((given, place) =>
       chain(
         call(encoded, given, place),
@@ -189,34 +189,34 @@ export function encode<TValidator extends AnyValidator>(
         ) as AnyValidator;
       }
       case "object":
-        return over((object as Make)(shape(), options));
+        return over((object as unknown as Make)(shape(), options));
       case "objectLike":
-        return over((objectLike as Make)(shape(), options));
+        return over((objectLike as unknown as Make)(shape(), options));
       case "array":
-        return over((array as Make)(part("item", `${path}[]`), options));
+        return over((array as unknown as Make)(part("item", `${path}[]`), options));
       case "set":
-        return over((set as Make)(part("item", `${path}[]`), options));
+        return over((set as unknown as Make)(part("item", `${path}[]`), options));
       case "map":
-        return over((map as Make)(part("key", `${path}{}`), part("value", `${path}{}`), options));
+        return over((map as unknown as Make)(part("key", `${path}{}`), part("value", `${path}{}`), options));
       case "record":
-        return over((recordOf as Make)(part("key", `${path}{}`), part("value", `${path}{}`), options));
+        return over((recordOf as unknown as Make)(part("key", `${path}{}`), part("value", `${path}{}`), options));
       case "tuple": {
         const items = (record["items"] as AnyValidator[]).map((each, index) => encoderOf(each, `${path}[${index}]`));
         const rest = record["rest"] === undefined ? {} : { rest: part("rest", `${path}[]`) };
-        return over((tuple as Make)(items, { ...options, ...rest }));
+        return over((tuple as unknown as Make)(items, { ...options, ...rest }));
       }
       case "union":
-        return over((union as Make)(parts("members"), options));
+        return over((union as unknown as Make)(parts("members"), options));
       case "intersection":
-        return over((intersection as Make)(...parts("members"), options));
+        return over((intersection as unknown as Make)(...parts("members"), options));
       case "tagged": {
         const variants = Object.fromEntries(
           Object.entries(record["variants"] as Shape).map(([tag, variant]) => [tag, encoderOf(variant, path)]),
         );
-        return over((tagged as Make)(record["key"], variants, options));
+        return over((tagged as unknown as Make)(record["key"], variants, options));
       }
       case "optional": {
-        const kept = (optional as Make)(part("inner"));
+        const kept = (optional as unknown as Make)(part("inner"));
         const given = record["default"];
         // A default the inner part refuses was produced from `undefined` alone, so it is written back as that.
         // One a function makes cannot be compared, and is written back as the inner part writes it.
@@ -229,9 +229,9 @@ export function encode<TValidator extends AnyValidator>(
             ) as AnyValidator);
       }
       case "nullable":
-        return (nullable as Make)(part("inner"));
+        return (nullable as unknown as Make)(part("inner"));
       case "nullish":
-        return (nullish as Make)(part("inner"));
+        return (nullish as unknown as Make)(part("inner"));
       case "readonly":
       case "fallback":
       case "meta":
@@ -239,19 +239,19 @@ export function encode<TValidator extends AnyValidator>(
       case "pipe": {
         // Each step reads what the one before produced, so the steps are written back from the last.
         const steps = (record["steps"] as AnyValidator[]).map((step) => encoderOf(step, path)).toReversed();
-        return (pipe as Make)(...steps);
+        return (pipe as unknown as Make)(...steps);
       }
       case "lazy": {
         const getter = record["getter"] as () => AnyValidator;
         // The validator the getter returns is met again at every level, and has one encoder.
-        return over((lazy as Make)(() => encoderOf(getter(), path), options));
+        return over((lazy as unknown as Make)(() => encoderOf(getter(), path), options));
       }
       case "json": {
-        const inner = record["inner"] === undefined ? (unknown as Make)() : part("inner");
-        return readBack((transform as Make)(over(inner), (written: unknown) => JSON.stringify(written)));
+        const inner = record["inner"] === undefined ? (unknown as unknown as Make)() : part("inner");
+        return readBack((transform as unknown as Make)(over(inner), (written: unknown) => JSON.stringify(written)));
       }
       case "searchParams":
-        return readBack((transform as Make)(over(part("inner")), toQuery));
+        return readBack((transform as unknown as Make)(over(part("inner")), toQuery));
       case "transform":
         return refuse("a transform", path);
       default:

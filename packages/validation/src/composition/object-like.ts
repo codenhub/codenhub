@@ -7,7 +7,7 @@ import { assertFunction, failWith, issue, typeIssue } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
-  AsyncValidator,
+  AsyncSchema,
   Composed,
   MessageOptions,
   Rest,
@@ -53,7 +53,7 @@ export function objectLike<TShape extends Shape>(
 export function objectLike<TShape extends Shape>(
   shape: TShape,
   ...rest: AsyncRest<InferShape<TShape>, MessageOptions>
-): AsyncValidator<InferShape<TShape>, InferShapeInput<TShape>>;
+): AsyncSchema<InferShape<TShape>, InferShapeInput<TShape>>;
 export function objectLike(shape: Shape, ...rest: unknown[]): AnyValidator {
   assertShape(shape);
   // The shape is read once, so changing it after the validator is made changes nothing.
