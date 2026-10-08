@@ -1,6 +1,7 @@
 import { chain, collect, runEach, type Maybe } from "../core/async";
 import { report, tail } from "../core/checks";
 import { described } from "../core/describe";
+import { fieldFailureOf } from "../core/field-hook";
 import { append, childOf, composed, type Child } from "../core/nesting";
 import { assertShape, isArray, setOwn } from "../core/objects";
 import { assertFunction, failWith, issue, typeIssue } from "../core/result";
@@ -14,7 +15,6 @@ import type {
   ValidationIssue,
   ValidationResult,
 } from "../core/types";
-import { failWithFields, fieldChecksOf } from "./field-checks";
 import type { InferShape, InferShapeInput, Shape } from "./object";
 
 /**
@@ -68,7 +68,7 @@ export function objectLike(shape: Shape, ...rest: unknown[]): AnyValidator {
     return childOf(validator as AnyValidator);
   });
   const [options, reject, accept, checks] = tail<MessageOptions, Record<string, unknown>>(rest);
-  const fieldChecks = fieldChecksOf(checks, keys);
+  const failFields = fieldFailureOf(checks, keys);
 
   return described(
     composed((input, place): Maybe<ValidationResult<unknown>> => {
@@ -98,7 +98,9 @@ export function objectLike(shape: Shape, ...rest: unknown[]): AnyValidator {
           }
         });
         return issues.length > 0
-          ? failWithFields(issues, fieldChecks, settled, output, options.message, place)
+          ? failFields === undefined
+            ? failWith(issues)
+            : failFields(issues, settled, output, options.message, place)
           : accept(output, place);
       });
     }),
