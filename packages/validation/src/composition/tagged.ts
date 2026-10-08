@@ -1,7 +1,7 @@
 import { chain, type Maybe } from "../core/async";
 import { tail } from "../core/checks";
 import { described } from "../core/describe";
-import { call, composed } from "../core/nesting";
+import { call, composed, fastOf, MISS, type Fast } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
 import { assertFunction, assertText, describeType, issue } from "../core/result";
 import type {
@@ -131,6 +131,31 @@ export function tagged(key: string, variants: Variants, ...rest: unknown[]): Any
   table.forEach((variant, tag) => assertFunction(`variants.${tag}`, variant));
   const [options, reject, accept, checks] = tail<MessageOptions, object>(rest);
 
+  // Valid input is answered by the fast test of its variant, when every variant has one. A variant that
+  // produces anything but a plain object is a miss, so the full work throws for it.
+  const fasts = new Map([...table].map(([tag, variant]) => [tag, fastOf(variant)] as const));
+  const fast: Fast | undefined =
+    checks.length > 0 || [...fasts.values()].includes(undefined)
+      ? undefined
+      : (input) => {
+          if (!isPlainObject(input)) {
+            return MISS;
+          }
+          const tag = Object.hasOwn(input, key) ? input[key] : undefined;
+          const variant = typeof tag === "string" ? fasts.get(tag) : undefined;
+          if (variant === undefined) {
+            return MISS;
+          }
+          const others = {};
+          for (const name of Object.keys(input)) {
+            if (name !== key) {
+              setOwn(others, name, input[name]);
+            }
+          }
+          const value = variant(others);
+          return value === MISS || !isPlainObject(value) ? MISS : { [key]: tag, ...value, [key]: tag };
+        };
+
   return described(
     composed((input, place): Maybe<ValidationResult<unknown>> => {
       if (!isPlainObject(input)) {
@@ -158,7 +183,7 @@ export function tagged(key: string, variants: Variants, ...rest: unknown[]): Any
         // The tag is defined first, for its place in the output, and again last, so the variant cannot replace it.
         return accept({ [key]: tag, ...result.value, [key]: tag }, place);
       });
-    }),
+    }, fast),
     { kind: "tagged", options, checks, key, variants: Object.freeze(Object.fromEntries(table)) },
   );
 }
