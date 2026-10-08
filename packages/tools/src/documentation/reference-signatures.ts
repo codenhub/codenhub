@@ -706,7 +706,12 @@ function jsDocSummary(node: ts.Node): string | undefined {
 }
 
 /** `composition/object.d.ts` → `src/composition/object.ts`. */
-function sourcePathOf(declarationPath: string): string {
+/**
+ * The package-relative source file an emitted declaration file was compiled from.
+ * @param declarationPath The `.d.ts` path, as keyed in the emitted declarations.
+ * @returns The source path, such as `src/composition/object.ts`.
+ */
+export function sourcePathOf(declarationPath: string): string {
   return `src/${declarationPath.replace(/\.d\.([cm]?)ts$/, ".$1ts")}`;
 }
 
@@ -767,7 +772,8 @@ export function attachInternalTypes(
 
   const unresolved: UnresolvedTypeReference[] = [];
   const entrypoints = model.entrypoints.map((entrypoint): ReferenceEntrypoint => {
-    const { subpath } = entrypoint;
+    const { page, subpath } = entrypoint;
+    const at = page === undefined ? { subpath } : { page, subpath };
     const internal: ReferenceInternalType[] = [];
     const listed = new Set<ts.Node>();
     // Symbols follow page order, so findings do too; each name is reported once per symbol.
@@ -781,7 +787,7 @@ export function attachInternalTypes(
       const report = (name: string, declaredIn: string | undefined): void => {
         if (!reported.has(name)) {
           reported.add(name);
-          unresolved.push(declaredIn === undefined ? { name, subpath, symbol } : { declaredIn, name, subpath, symbol });
+          unresolved.push(declaredIn === undefined ? { ...at, name, symbol } : { ...at, declaredIn, name, symbol });
         }
       };
       for (const node of next.nodes) {

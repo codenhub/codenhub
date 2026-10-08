@@ -1,5 +1,5 @@
 ---
-title: /
+title: "@codenhub/error"
 description: Typed error normalization, result helpers, and the error registry.
 group: Reference
 ---

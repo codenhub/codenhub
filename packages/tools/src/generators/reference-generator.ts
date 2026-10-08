@@ -1,4 +1,4 @@
-import { posix } from "node:path";
+import { matchesGlob, posix } from "node:path";
 
 import { format, resolveConfig } from "prettier";
 import { Application, normalizePath, TSConfigReader } from "typedoc";
@@ -11,11 +11,18 @@ import {
   type EntrypointPlan,
 } from "../documentation/reference-declarations.ts";
 import { renderReferencePage, symbolSlug } from "../documentation/reference-markdown.ts";
-import { buildReferenceModel, walkSymbols, type ReferenceModel } from "../documentation/reference-model.ts";
+import {
+  buildReferenceModel,
+  walkSymbols,
+  type ReferenceEntrypoint,
+  type ReferenceModel,
+} from "../documentation/reference-model.ts";
 import {
   attachInternalTypes,
   attachSignatures,
+  buildDeclarationResolver,
   buildSignatureResolver,
+  sourcePathOf,
   type SignatureIndex,
 } from "../documentation/reference-signatures.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
@@ -40,25 +47,90 @@ export function referencePageRel(subpath: string, allSubpaths: readonly string[]
   return isFolder ? `${segments}/index.md` : `${segments}.md`;
 }
 
+/**
+ * The `docs/reference/`-relative path for a model entry's page, split pages included.
+ * @param entry The entrypoint's own page, or one of its split pages.
+ * @param entries Every page of the package, to tell a leaf page from a folder.
+ * @returns `<page>.md` beside the entrypoint's page for a split page; otherwise the entrypoint's page,
+ *   which is a folder `index.md` when the entrypoint has split pages or child entrypoints.
+ */
+export function referencePagePath(
+  entry: Pick<ReferenceEntrypoint, "page" | "subpath">,
+  entries: readonly Pick<ReferenceEntrypoint, "page" | "subpath">[],
+): string {
+  const folder = entry.subpath === "." ? "" : `${entry.subpath.slice(2)}/`;
+  if (entry.page !== undefined) {
+    return `${folder}${entry.page}.md`;
+  }
+  const isSplit = entries.some((other) => other.subpath === entry.subpath && other.page !== undefined);
+  return isSplit
+    ? `${folder}index.md`
+    : referencePageRel(
+        entry.subpath,
+        entries.map((other) => other.subpath),
+      );
+}
+
+/**
+ * Moves each entrypoint's symbols onto the split pages `config.pages` declares for it.
+ * A split page follows its entrypoint as an entry of its own, carrying `page`.
+ * `declaredIn` gives the package-relative source file that declares an entrypoint's symbol.
+ */
+function splitEntrypoints(
+  model: ReferenceModel,
+  pages: ReferenceConfig["pages"] = {},
+  declaredIn: (subpath: string, name: string) => string | undefined,
+): ReferenceModel {
+  for (const subpath of Object.keys(pages)) {
+    if (!model.entrypoints.some((entrypoint) => entrypoint.subpath === subpath)) {
+      throw new Error(`codenhub.docs.reference.pages["${subpath}"] is not a documented entrypoint.`);
+    }
+  }
+
+  const entrypoints = model.entrypoints.flatMap((entrypoint) => {
+    const split = Object.entries(pages[entrypoint.subpath]?.split ?? {});
+    const pageOf = (file: string | undefined): string | undefined =>
+      file === undefined
+        ? undefined
+        : split.find(([, page]) => page.source.some((glob) => matchesGlob(file, glob)))?.[0];
+    const bySplit = Map.groupBy(entrypoint.symbols, (symbol) => pageOf(declaredIn(entrypoint.subpath, symbol.name)));
+    return [
+      { ...entrypoint, symbols: bySplit.get(undefined) ?? [] },
+      ...split.map(([page]): ReferenceEntrypoint => {
+        const symbols = bySplit.get(page);
+        if (symbols === undefined) {
+          throw new Error(`Reference split page "${page}" of "${entrypoint.subpath}" matches no symbol.`);
+        }
+        return {
+          internalTypes: [],
+          module: entrypoint.module,
+          page,
+          subpath: entrypoint.subpath,
+          symbols,
+        };
+      }),
+    ];
+  });
+  return { ...model, entrypoints };
+}
+
 /** Builds a `{@link}` resolver: for a page, an href to another page's symbol, or `undefined`. */
-function linkResolverFor(model: ReferenceModel, allSubpaths: readonly string[]) {
+function linkResolverFor(pageRels: ReadonlyMap<ReferenceEntrypoint, string>) {
   const pageBySymbol = new Map<string, string>();
-  for (const entrypoint of model.entrypoints) {
+  for (const [entrypoint, pageRel] of pageRels) {
     for (const [qualifiedName] of walkSymbols(entrypoint.symbols)) {
       if (!pageBySymbol.has(qualifiedName)) {
-        pageBySymbol.set(qualifiedName, entrypoint.subpath);
+        pageBySymbol.set(qualifiedName, pageRel);
       }
     }
   }
 
-  return (fromSubpath: string) =>
+  return (fromRel: string) =>
     (name: string): string | undefined => {
-      const targetSubpath = pageBySymbol.get(name);
-      if (targetSubpath === undefined || targetSubpath === fromSubpath) {
+      const toRel = pageBySymbol.get(name);
+      if (toRel === undefined || toRel === fromRel) {
         return undefined;
       }
-      const fromRel = referencePageRel(fromSubpath, allSubpaths);
-      const toRel = referencePageRel(targetSubpath, allSubpaths);
       const relative = posix.relative(posix.dirname(fromRel), toRel);
       return `${relative}#${symbolSlug(name)}`;
     };
@@ -144,47 +216,70 @@ export async function analyzeReference(
 
   const subpathByModule = Object.fromEntries(plans.map((plan) => [plan.module, plan.subpath]));
   const declarations = emitDeclarations(pkgDir, plans);
+  const entryDtsBySubpath = new Map(plans.map((plan) => [plan.subpath, plan.entryDts]));
+  const resolver = buildDeclarationResolver(declarations);
   const model = attachInternalTypes(
-    withSignatures(buildReferenceModel(await convertProject(pkgDir, plans), subpathByModule), plans, declarations),
+    splitEntrypoints(
+      withSignatures(buildReferenceModel(await convertProject(pkgDir, plans), subpathByModule), plans, declarations),
+      config.pages,
+      // The emitted declarations place a symbol where TypeDoc's source paths cannot: those are
+      // relative to whatever directory the sources share, not to the package.
+      (subpath, name) => {
+        const [node] = resolver.lookup(entryDtsBySubpath.get(subpath) ?? "", name) ?? [];
+        return node === undefined ? undefined : sourcePathOf(node.getSourceFile().fileName);
+      },
+    ),
     declarations,
-    new Map(plans.map((plan) => [plan.subpath, plan.entryDts])),
+    entryDtsBySubpath,
     readAmbientDeclarations(pkgDir),
   );
 
-  const allSubpaths = plans.map((plan) => plan.subpath);
-  const pageRels = new Map(allSubpaths.map((subpath) => [subpath, referencePageRel(subpath, allSubpaths)]));
+  const pageRels = new Map(
+    model.entrypoints.map((entrypoint) => [entrypoint, referencePagePath(entrypoint, model.entrypoints)]),
+  );
   const collisions = [...pageRels.values()].filter((rel, index, all) => all.indexOf(rel) !== index);
   if (collisions.length > 0) {
-    throw new Error(`Reference entrypoints collide on page path: ${[...new Set(collisions)].join(", ")}.`);
+    throw new Error(`Reference pages collide on page path: ${[...new Set(collisions)].join(", ")}.`);
   }
 
-  const resolveLinkFor = linkResolverFor(model, allSubpaths);
+  const resolveLinkFor = linkResolverFor(pageRels);
   const sourceRoot = `${workspacePackage.location}/src`;
 
   const files = await Promise.all(
     model.entrypoints.map(async (entrypoint, index) => {
-      const pageRel = pageRels.get(entrypoint.subpath) ?? referencePageRel(entrypoint.subpath, allSubpaths);
-      const isIndex = entrypoint.subpath === ".";
-      // Sidebar label is the import subpath (`/`, `/registries/browser`); the H1 is
-      // the full specifier a consumer would `import` from.
-      const suffix = isIndex ? "" : entrypoint.subpath.slice(1);
+      const pageRel = pageRels.get(entrypoint) ?? referencePagePath(entrypoint, model.entrypoints);
+      const isIndex = pageRel === "index.md";
+      const pages = config.pages?.[entrypoint.subpath];
+      // A label is both the sidebar label and the H1. Without one, the sidebar label is
+      // the package name, then what a consumer appends to it (`/registries/browser`),
+      // and the H1 is the full specifier a consumer would `import` from.
+      const label =
+        entrypoint.page === undefined ? pages?.label : (pages?.split?.[entrypoint.page]?.label ?? entrypoint.page);
+      const suffix = entrypoint.subpath.slice(1);
+      const specifier = `${workspacePackage.name}${suffix}`;
       const filepath = `${pkgDir}/${REFERENCE_DIR}/${pageRel}`;
       const rendered = renderReferencePage(entrypoint, {
         description: entrypoint.description,
         group: isIndex ? REFERENCE_GROUP : undefined,
-        heading: `${workspacePackage.name}${suffix}`,
+        heading: label ?? specifier,
         order: isIndex ? undefined : index,
         prose: config.prose,
-        resolveLink: resolveLinkFor(entrypoint.subpath),
+        resolveLink: resolveLinkFor(pageRel),
         since: entrypoint.since,
         sourceRoot,
-        title: suffix === "" ? "/" : suffix,
+        title: label ?? (suffix === "" ? specifier : suffix),
       });
       // Run the same formatter `pnpm format` applies — resolveConfig folds in the
       // docs/reference/ override — so a generated page is never reported as needing
       // formatting and the drift check stays stable.
-      const contents = await format(rendered, { ...(await resolveConfig(filepath)), filepath });
-      return { contents, path: `${workspacePackage.location}/${REFERENCE_DIR}/${pageRel}` };
+      const contents = await format(rendered, {
+        ...(await resolveConfig(filepath)),
+        filepath,
+      });
+      return {
+        contents,
+        path: `${workspacePackage.location}/${REFERENCE_DIR}/${pageRel}`,
+      };
     }),
   );
 

@@ -69,7 +69,7 @@ export function buildNavigationTree(documents: readonly PublicDocument[]): NavNo
  * prefix from every sibling, so `@codenhub/error`'s `/registries/browser` reads
  * as `/browser` under a `/registries` group and the folder index becomes `/`.
  *
- * Reference titles are import subpaths the generator writes (`/`, `/registries`,
+ * Unlabelled subpath titles are import subpaths the generator writes (`/registries`,
  * `/registries/browser`); this only changes how the sidebar shows them, and a
  * folder with no index page is left as `orderDocumentSections` labels it.
  * @param documents Reference-section documents with the `reference/` prefix

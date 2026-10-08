@@ -156,6 +156,11 @@ export interface ReferenceInternalType {
 export interface ReferenceEntrypoint {
   /** `package.json` `exports` subpath key, such as `"."` or `"./registries/browser"`. */
   subpath: string;
+  /**
+   * Split page name, when this holds the symbols `codenhub.docs.reference.pages` moved
+   * off the entrypoint's own page. Absent for the entrypoint's own page.
+   */
+  page?: string;
   /** TypeDoc module name the symbols came from, such as `index` or `registries/browser`. */
   module: string;
   /**
@@ -186,6 +191,8 @@ export interface UnsupportedExport {
 export interface UnresolvedTypeReference {
   /** Entrypoint subpath the naming symbol is documented on. */
   subpath: string;
+  /** Split page the naming symbol is documented on, when it is not the entrypoint's own page. */
+  page?: string;
   /** Qualified name of the documented symbol whose declaration names the type. */
   symbol: string;
   /** The type's name as written in the declaration. */
@@ -198,6 +205,8 @@ export interface UnresolvedTypeReference {
 export interface EmptySection {
   /** Entrypoint subpath the section is on. */
   subpath: string;
+  /** Split page the section is on, when it is not the entrypoint's own page. */
+  page?: string;
   /** Dot-qualified section name, such as `Schema`, `Schema.Props`, or `Schema.Props.vendor`. */
   section: string;
   /** `no signature` when no declaration text was found; `no members` for a namespace that lists nothing. */
@@ -760,22 +769,23 @@ export function* walkSymbols(
 export function findEmptySections(model: ReferenceModel): EmptySection[] {
   const empty: EmptySection[] = [];
   for (const entrypoint of model.entrypoints) {
-    const { subpath } = entrypoint;
+    const { page, subpath } = entrypoint;
+    const at = page === undefined ? { subpath } : { page, subpath };
     for (const [section, symbol] of walkSymbols(entrypoint.symbols)) {
       if (symbol.signature === undefined) {
-        empty.push({ reason: "no signature", section, subpath });
+        empty.push({ ...at, reason: "no signature", section });
       } else if (symbol.overloads.some((overload) => overload.signature === undefined)) {
         // Overloads documented apart render their own blocks, so one that did not
         // line up with the `.d.ts` would render its prose under no signature.
-        empty.push({ reason: "no signature", section: `${section} (overloads)`, subpath });
+        empty.push({ ...at, reason: "no signature", section: `${section} (overloads)` });
       }
       for (const member of symbol.members) {
         if (member.inheritedFrom === undefined && member.signature === undefined) {
-          empty.push({ reason: "no signature", section: `${section}.${member.name}`, subpath });
+          empty.push({ ...at, reason: "no signature", section: `${section}.${member.name}` });
         }
       }
       if (symbol.kind === "namespace" && symbol.namespaceMembers.length === 0) {
-        empty.push({ reason: "no members", section, subpath });
+        empty.push({ ...at, reason: "no members", section });
       }
     }
   }

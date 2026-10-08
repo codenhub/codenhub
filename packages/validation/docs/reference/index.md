@@ -1,5 +1,5 @@
 ---
-title: /
+title: "@codenhub/validation"
 description: Validators for values and shapes, each a standalone function that returns a typed value or every issue found.
 group: Reference
 ---

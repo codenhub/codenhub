@@ -1,5 +1,5 @@
 ---
-title: /
+title: "@codenhub/theme"
 group: Reference
 ---
 

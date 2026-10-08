@@ -368,6 +368,29 @@ describe("findEmptySections", () => {
   });
 });
 
+describe("findEmptySections on a split page", () => {
+  it("names the split page the section is on", () => {
+    const model = {
+      entrypoints: [
+        {
+          internalTypes: [],
+          module: "index",
+          page: "shapes",
+          subpath: ".",
+          symbols: [symbolFixture({ kind: "function", name: "unsigned", signature: undefined })],
+        },
+      ],
+      packageName: "@codenhub/example",
+      unresolved: [],
+      unsupported: [],
+    };
+
+    expect(findEmptySections(model)).toEqual([
+      { page: "shapes", reason: "no signature", section: "unsigned", subpath: "." },
+    ]);
+  });
+});
+
 describe("buildReferenceModel unsupported exports", () => {
   it("reports an unsupported kind inside a namespace by its qualified name", () => {
     const model = buildReferenceModel(

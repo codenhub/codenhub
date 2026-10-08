@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { parseReferenceConfig } from "../documentation/reference-config.ts";
 import { findEmptySections } from "../documentation/reference-model.ts";
 import { hasContentDrift } from "../generators/generator.ts";
-import { analyzeReference, referencePageRel } from "../generators/reference-generator.ts";
+import { analyzeReference, referencePagePath } from "../generators/reference-generator.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
@@ -108,14 +108,14 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
     });
   }
 
-  const subpaths = analysis.model.entrypoints.map((entrypoint) => entrypoint.subpath);
-  const pageOf = (subpath: string) => `${REFERENCE_DIR}/${referencePageRel(subpath, subpaths)}`;
+  const pageOf = (entry: { page?: string; subpath: string }) =>
+    `${REFERENCE_DIR}/${referencePagePath(entry, analysis.model.entrypoints)}`;
 
   for (const reference of analysis.model.unresolved) {
     const origin = reference.declaredIn === undefined ? "" : ` (declared in ${reference.declaredIn})`;
     findings.push({
       code: "reference/unresolved-type",
-      location: pageOf(reference.subpath),
+      location: pageOf(reference),
       message: `The public signature of "${reference.symbol}" names "${reference.name}"${origin}, which no reference page documents.`,
       severity: "error",
     });
@@ -125,7 +125,7 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
     const detail = empty.reason === "no members" ? "a namespace with no members" : "no declaration signature";
     findings.push({
       code: "reference/empty-section",
-      location: pageOf(empty.subpath),
+      location: pageOf(empty),
       message: `Section "${empty.section}" renders ${detail}.`,
       severity: "error",
     });
