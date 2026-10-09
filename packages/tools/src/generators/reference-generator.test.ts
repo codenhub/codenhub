@@ -217,6 +217,54 @@ describe("analyzeReference pages", () => {
     },
   );
 
+  it(
+    "links a symbol several entrypoints export to the linking entrypoint's own page",
+    { timeout: 60_000 },
+    async () => {
+      const createFixture = async (): Promise<WorkspacePackage> => {
+        const workspacePackage = await createReferenceFixture("fixture-shared", {
+          "index.ts": 'export { circle } from "./shapes/circle";\n',
+          "extra.ts": [
+            'export { circle } from "./shapes/circle";',
+            "",
+            "/**",
+            " * Outlines a shape, such as {@link circle}.",
+            " * @param name - The shape name.",
+            " * @returns The outline.",
+            " */",
+            "export function outline(name: string): string {",
+            "  return name;",
+            "}",
+            "",
+          ].join("\n"),
+          "shapes/circle.ts": [
+            "/**",
+            " * Builds a circle.",
+            " * @param radius - The radius.",
+            " * @returns The area.",
+            " */",
+            "export function circle(radius: number): number {",
+            "  return radius;",
+            "}",
+            "",
+          ].join("\n"),
+        });
+        const exports = workspacePackage.manifest.exports as Record<string, unknown>;
+        exports["./extra"] = { types: "./dist/extra.d.ts" };
+        return workspacePackage;
+      };
+
+      const whole = await analyzeReference(await createFixture(), { prose: true });
+      expect(page(whole.files, "extra.md")).toContain("[circle](#circle)");
+
+      const split = await analyzeReference(await createFixture(), {
+        pages: { "./extra": { split: { shapes: { source: ["src/shapes/**"] } } } },
+        prose: true,
+      });
+      expect(page(split.files, "extra/index.md")).toContain("[circle](shapes.md#circle)");
+    },
+  );
+
   it("rejects a split page that receives no symbol", { timeout: 30_000 }, async () => {
     await expect(
       analyzeReference(await createSplitFixture(), {

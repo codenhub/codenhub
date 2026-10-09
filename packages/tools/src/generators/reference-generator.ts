@@ -116,18 +116,23 @@ function splitEntrypoints(
 
 /** Builds a `{@link}` resolver: for a page, an href to another page's symbol, or `undefined`. */
 function linkResolverFor(pageRels: ReadonlyMap<ReferenceEntrypoint, string>) {
-  const pageBySymbol = new Map<string, string>();
+  // A symbol several entrypoints export is documented under each, so a name has a page per subpath.
+  const pagesBySymbol = new Map<string, Map<string, string>>();
   for (const [entrypoint, pageRel] of pageRels) {
     for (const [qualifiedName] of walkSymbols(entrypoint.symbols)) {
-      if (!pageBySymbol.has(qualifiedName)) {
-        pageBySymbol.set(qualifiedName, pageRel);
+      const bySubpath = pagesBySymbol.get(qualifiedName) ?? new Map<string, string>();
+      pagesBySymbol.set(qualifiedName, bySubpath);
+      if (!bySubpath.has(entrypoint.subpath)) {
+        bySubpath.set(entrypoint.subpath, pageRel);
       }
     }
   }
 
-  return (fromRel: string) =>
+  return (fromSubpath: string, fromRel: string) =>
     (name: string): string | undefined => {
-      const toRel = pageBySymbol.get(name);
+      const bySubpath = pagesBySymbol.get(name);
+      // The linking entrypoint's own copy first, then the first entrypoint that documents the name.
+      const toRel = bySubpath?.get(fromSubpath) ?? bySubpath?.values().next().value;
       if (toRel === undefined || toRel === fromRel) {
         return undefined;
       }
@@ -264,7 +269,7 @@ export async function analyzeReference(
         heading: label ?? specifier,
         order: isIndex ? undefined : index,
         prose: config.prose,
-        resolveLink: resolveLinkFor(pageRel),
+        resolveLink: resolveLinkFor(entrypoint.subpath, pageRel),
         since: entrypoint.since,
         sourceRoot,
         title: label ?? (suffix === "" ? specifier : suffix),
