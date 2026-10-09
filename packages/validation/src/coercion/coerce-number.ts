@@ -18,8 +18,8 @@ const NONZERO_DIGIT_PATTERN = /[1-9]/;
  * `"NaN"` are rejected, and so is text holding a whole number beyond `Number.MAX_SAFE_INTEGER`, which
  * could not be read exactly (use `coerceBigint` for those), or a decimal too small for a double, such
  * as `"0." + "0".repeat(400) + "1"`, which would be read as `0`. A number is passed through as it is,
- * `-0` included, as `number` does. So are booleans, `null`, objects and
- * arrays: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with
+ * `-0` included, as `number` does. Booleans, `null`, objects and arrays are
+ * rejected: `Number(true)` is `1`, and silently reading a flag as a count is how bugs hide. A value that cannot be converted fails with
  * `invalid_type` and `coerced: true` in `params`.
  *
  * @example
