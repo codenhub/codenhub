@@ -5,7 +5,7 @@ import { fieldFailureOf } from "../core/field-hook";
 import { cap, MAX_ISSUES } from "../core/limit";
 import { append, childOf, composed, fastOf, MISS, type Child, type Fast } from "../core/nesting";
 import { assertShape, isPlainObject, objectIssue, setOwn } from "../core/objects";
-import { assertFunction, failWith, issue } from "../core/result";
+import { assertFunction, failWith, issue, RESERVED_KEY, reservedKey } from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -60,7 +60,9 @@ export interface ObjectOptions extends MessageOptions {
   /**
    * What to do with input properties the shape does not list. `"strip"` drops them from the output,
    * `"strict"` rejects each with an `unrecognized_key` issue, up to the 1,000 issues a collection reports, and `"passthrough"` copies them to the
-   * output unchecked.
+   * output unchecked, except `__proto__`, which it rejects with an `invalid_key` issue: copied, it would
+   * become the prototype of any copy of the output made by assignment. A shape that lists `__proto__`
+   * keeps it, as data.
    *
    * @defaultValue "strip"
    */
@@ -156,6 +158,9 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
           if (unknownKeys === "passthrough") {
             for (const key of Object.keys(input)) {
               if (!known.has(key)) {
+                if (key === RESERVED_KEY) {
+                  return MISS;
+                }
                 setOwn(output, key, input[key]);
               }
             }
@@ -194,6 +199,10 @@ export function object(shape: Shape, ...rest: unknown[]): AnyValidator {
             .filter((key) => !known.has(key))
             .map((key) => [key, input[key]] as const)
         : undefined;
+    if (extra?.some(([key]) => key === RESERVED_KEY)) {
+      // Copied, it would be the prototype of whatever the output is next assigned to.
+      append(issues, report([reservedKey(RESERVED_KEY)], place, options.message));
+    }
     const results = runEach(values.length, (index) =>
       (children[index] as Child)(values[index], place, keys[index] as string),
     );

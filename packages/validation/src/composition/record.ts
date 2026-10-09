@@ -4,7 +4,16 @@ import { described } from "../core/describe";
 import { cap, countIssues, runItems } from "../core/limit";
 import { append, childOf, composed, fastOf, MISS, type Fast } from "../core/nesting";
 import { isPlainObject, objectIssue, setOwn } from "../core/objects";
-import { assertFunction, describeType, failWith, issue, nested, repeatedKey } from "../core/result";
+import {
+  assertFunction,
+  describeType,
+  failWith,
+  issue,
+  nested,
+  repeatedKey,
+  RESERVED_KEY,
+  reservedKey,
+} from "../core/result";
 import type {
   AnyValidator,
   AsyncRest,
@@ -54,8 +63,10 @@ export type InferRecordInput<TKey extends AnyValidator, TValue extends AnyValida
  * throws while it is read propagates, as a callback's exception does. Every value is read when the
  * validator is called, before any key or value validator runs, so a change to the input made by a
  * callback or while an asynchronous key waits never reaches the output. The output is
- * a new object and the input is never modified. A key such as `__proto__` from parsed JSON is
- * kept as data and never writes to a prototype. A key that the `key` validator changes, such as by
+ * a new object and the input is never modified. A `__proto__` key, as parsed JSON can hold, is
+ * reported as `invalid_key` with `{ issues: [{ code: "invalid_value", params: { reserved: true } }] }`,
+ * whether the input has it or the `key` validator produces it: kept as data it would become the
+ * prototype of any copy made by assignment, such as `Object.assign({}, output)`. A key that the `key` validator changes, such as by
  * lowercasing, must stay distinct: a second entry that arrives at a key already taken is reported as
  * `invalid_key` with `{ issues: [{ code: "invalid_value", params: { unique: true } }] }` instead of
  * silently replacing the first. A wrong number of keys is reported at once, as `too_small` or
@@ -102,7 +113,7 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
   const child = childOf(value);
 
   // Valid input is answered without a result for each entry when the key and the value have a fast test.
-  // A key that is not text or is produced twice is a miss, so the full work throws or reports it.
+  // A key that is not text, is produced twice or is `__proto__` is a miss, so the full work throws or reports it.
   const fastKey = fastOf(key);
   const fastValue = fastOf(value);
   const fast: Fast | undefined =
@@ -119,7 +130,12 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
           const output: Record<string, unknown> = {};
           for (const name of names) {
             const produced = fastKey(name);
-            if (produced === MISS || typeof produced !== "string" || Object.hasOwn(output, produced)) {
+            if (
+              produced === MISS ||
+              typeof produced !== "string" ||
+              produced === RESERVED_KEY ||
+              Object.hasOwn(output, produced)
+            ) {
               return MISS;
             }
             const item = fastValue(input[name]);
@@ -178,7 +194,9 @@ export function record(key: AnyValidator, value: AnyValidator, ...rest: unknown[
               `A record's key validator must produce text, received ${describeType(keyResult.value)}`,
             );
           }
-          if (keyResult.ok && valueResult.ok) {
+          if (keyResult.ok && keyResult.value === RESERVED_KEY) {
+            issues.push(...report([reservedKey(name)], place, options.message));
+          } else if (keyResult.ok && valueResult.ok) {
             if (Object.hasOwn(output, keyResult.value as string)) {
               issues.push(...report([repeatedKey(name)], place, options.message));
             } else {

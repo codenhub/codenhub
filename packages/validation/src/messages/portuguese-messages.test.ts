@@ -115,6 +115,13 @@ describe("portugueseMessages", () => {
     expect(said(array(string(), unique())(["a", "a"]))).toEqual(["Deve ser único"]);
   });
 
+  it("should word a reserved key as one that must not be used, and what is inside it as reserved", () => {
+    const [reserved] = issuesOf(record(string(), number())(JSON.parse('{"__proto__":1}')));
+    expect(formatIssue(reserved as ValidationIssue, portugueseMessages)).toBe("Não pode ser usada como chave");
+    const [inside] = ((reserved as ValidationIssue).params ?? {})["issues"] as ValidationIssue[];
+    expect(formatIssue(inside as ValidationIssue, portugueseMessages)).toBe("É reservado");
+  });
+
   it("should word a value that is not the one expected, and a long list of them", () => {
     expect(said(literal("a")("b"))).toEqual(['Esperado "a"']);
     expect(said(oneOf(["a", 1])("b"))).toEqual(['Esperado um de "a", 1']);

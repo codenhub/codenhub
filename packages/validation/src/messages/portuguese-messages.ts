@@ -139,6 +139,9 @@ const describeValue = (issue: ValidationIssue): string => {
   if (issue.params?.unique === true) {
     return "Deve ser único";
   }
+  if (issue.params?.reserved === true) {
+    return "É reservado";
+  }
   if (issue.params?.unreadable === true) {
     return "Não pôde ser lido";
   }
@@ -185,6 +188,9 @@ const describeKey = (issue: ValidationIssue, messages: Messages): string => {
   const [found] = (issue.params?.issues ?? []) as readonly ValidationIssue[];
   if (found?.code === "invalid_value" && found.params?.unique === true) {
     return "Deve ser informado apenas uma vez";
+  }
+  if (found?.code === "invalid_value" && found.params?.reserved === true) {
+    return "Não pode ser usada como chave";
   }
   return found === undefined ? "Chave inválida" : `Chave inválida: ${quote(found, messages)}`;
 };

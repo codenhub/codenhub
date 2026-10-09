@@ -502,6 +502,13 @@ describe("formatIssue", () => {
     expect(formatIssue(repeated as ValidationIssue)).toBe("Must be given only once");
   });
 
+  it("should word a reserved key as one that must not be used, and what is inside it as reserved", () => {
+    const [reserved] = issuesOf(record(string(), number())(JSON.parse('{"__proto__":1}')));
+    expect(formatIssue(reserved as ValidationIssue)).toBe("Must not be used as a key");
+    const [inside] = ((reserved as ValidationIssue).params ?? {})["issues"] as ValidationIssue[];
+    expect(formatIssue(inside as ValidationIssue)).toBe("Is reserved");
+  });
+
   it("should word a query key given twice as such, inside the URL's own issue", () => {
     const [repeated] = issuesOf(url({ query: object({ a: string() }) })("http://example.com/?a=1&a=2"));
     expect(formatIssue(repeated as ValidationIssue)).toBe("Invalid URL query: a: Must be given only once");

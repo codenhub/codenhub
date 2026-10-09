@@ -91,11 +91,27 @@ describe("record", () => {
     expect(output.tue).toBeUndefined();
   });
 
-  it("should treat __proto__ from JSON as data, never as a prototype write", () => {
+  it("should refuse a __proto__ key, which a copy by assignment would read as a prototype", () => {
     const parsed = JSON.parse('{"__proto__": 1, "a": 2}') as unknown;
-    const output = valueOf(scores(parsed));
-    expect(Object.getPrototypeOf(output)).toBe(Object.prototype);
-    expect(Object.keys(output)).toEqual(["__proto__", "a"]);
+    expect(issuesOf(scores(parsed))).toEqual([
+      {
+        code: "invalid_key",
+        path: ["__proto__"],
+        params: { issues: [{ code: "invalid_value", path: [], params: { reserved: true } }] },
+      },
+    ]);
+  });
+
+  it("should report a __proto__ key beside the issue of its value", () => {
+    const parsed = JSON.parse('{"__proto__": "1", "a": 2}') as unknown;
+    expect(codesOf(scores(parsed))).toEqual(["invalid_type", "invalid_key"]);
+  });
+
+  it("should refuse a key its validator turns into __proto__, at the key the input has", () => {
+    const lowered = record(string({ case: "lower" }), number());
+    expect(issuesOf(lowered({ __PROTO__: 1 })).map((issue) => [issue.code, issue.path])).toEqual([
+      ["invalid_key", ["__PROTO__"]],
+    ]);
   });
 
   it("should reject an object with a custom prototype, so inherited values are never read", () => {
