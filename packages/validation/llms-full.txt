@@ -2258,7 +2258,7 @@ The types you write in everyday use are `Validator<T>` and `AsyncValidator<T>`, 
 
 # 0.4.0
 
-0.4.0 adds a schema another program can read, a type for what a validator accepts, and a rule across fields that a form sees at once. It also makes objects and collections about three times faster on valid input. Every call that 0.3.0 accepted is accepted, and returns what it returned, with one exception in wording: a message map that has an entry named `default` now words unknown codes with it. The one breaking change is in the types.
+0.4.0 adds a schema another program can read, a type for what a validator accepts, and a rule across fields that a form sees at once. It also makes objects and collections about three times faster on valid input. Every call that 0.3.0 accepted is accepted, and returns what it returned, with two exceptions: a message map that has an entry named `default` now words unknown codes with it, and `record` and a passthrough `object` reject a `__proto__` key, which is a breaking change. The other breaking change is in the types.
 
 ## Added
 
