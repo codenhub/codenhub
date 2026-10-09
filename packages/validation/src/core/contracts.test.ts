@@ -341,13 +341,14 @@ describe("a factory given where its validator belongs", () => {
 });
 
 describe("input large enough to be slow", () => {
-  it("should read a query of many distinct keys in time that grows with their number", () => {
+  it("should read a query of many distinct keys in time that grows with their number", { timeout: 30_000 }, () => {
     const query = Array.from({ length: 80_000 }, (_, index) => `k${index}=`).join("&");
     const start = performance.now();
     expect(searchParams(unknown())(query).ok).toBe(true);
     expect(url({ query: unknown() })(`https://example.com/?${query}`).ok).toBe(true);
-    // Each took about 20 seconds when every key scanned the whole query.
-    expect(performance.now() - start).toBeLessThan(2000);
+    // Each took about 20 seconds when every key scanned the whole query. The limit sits well under
+    // that and well over the 2.2 seconds a busy CI runner has taken for both.
+    expect(performance.now() - start).toBeLessThan(10_000);
   });
 
   // Every value was once tested for a date by calling `getTime` on it and catching what it threw, which
