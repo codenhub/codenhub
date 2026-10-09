@@ -72,6 +72,41 @@ const account = object(
 
 `checkFields` runs as soon as the fields it names pass, so a form shows it beside the other fields' problems. `check`, `format` and `guard` build rules, formats and validators of your own, which behave as the built-in ones do.
 
+## What hostile input gets
+
+Each line below is run against the built package by the test suite, with the result its comment states:
+
+```ts
+import { array, lazy, number, object, record, string, unknown, url, type Validator } from "@codenhub/validation";
+
+// A million bad items give 1,001 issues: a thousand of them, and one saying the list stopped there.
+const flood = array(number())(Array.from({ length: 1_000_000 }, () => "x"));
+String(flood.ok || flood.error.issues.length); // "1001"
+
+// Input nested 100,000 deep gives one issue, where recursion without a limit overflows the stack.
+interface Tree {
+  children: Tree[];
+}
+const tree: Validator<Tree> = object({ children: array(lazy(() => tree)) });
+let deep: Tree = { children: [] };
+for (let level = 0; level < 100_000; level += 1) {
+  deep = { children: [deep] };
+}
+tree(deep); // { ok: false, ... }, code "too_big"
+
+// An address a server must not fetch is not a URL here.
+url()("http://169.254.169.254/latest/meta-data"); // { ok: false, ... }
+url()("http://localhost:3000"); // { ok: false, ... }
+url()("javascript:alert(1)"); // { ok: false, ... }
+
+// A password that failed is not in what you log.
+const login = object({ password: string({ min: 12 }) })({ password: "hunter2" });
+String(JSON.stringify(login).includes("hunter2")); // "false"
+
+// A key that would become the prototype of a copy of the output is refused.
+record(string(), unknown())(JSON.parse('{"__proto__":{"admin":true}}')); // { ok: false, ... }, code "invalid_key"
+```
+
 ## Documentation
 
 - [Documentation overview](docs/index.md)
