@@ -38,11 +38,11 @@ export function symbolSlug(name: string): string {
 /** Inputs the caller supplies alongside the entrypoint to render its page. */
 export interface RenderReferencePageOptions {
   /**
-   * Frontmatter `title` and sidebar label: the entrypoint's import subpath, `/`
-   * for the `.` entrypoint. Decoupled from the H1 so the sidebar stays terse.
+   * Frontmatter `title` and sidebar label: the page's label, or else the package name
+   * for the `.` entrypoint and the import subpath for the rest, so the sidebar stays terse.
    */
   title: string;
-  /** Page H1: the full import specifier, such as `@codenhub/error/registries/browser`. */
+  /** Page H1: the page's label, or else the full import specifier, such as `@codenhub/error/registries/browser`. */
   heading: string;
   /** Repo-relative source root for the generated-file notice, such as `packages/error/src`. */
   sourceRoot: string;

@@ -1,5 +1,5 @@
 ---
-title: /
+title: "@codenhub/toaster"
 group: Reference
 ---
 

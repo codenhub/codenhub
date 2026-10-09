@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { resolveEntrypoints } from "../documentation/reference-declarations.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { createReferenceFixture } from "./reference-fixture.test-support.ts";
-import { analyzeReference, referencePageRel } from "./reference-generator.ts";
+import { analyzeReference, referencePagePath, referencePageRel } from "./reference-generator.ts";
 
 describe("resolveEntrypoints", () => {
   const exportsMap = {
@@ -15,7 +15,12 @@ describe("resolveEntrypoints", () => {
 
   it("maps every type-bearing subpath to its source, module, and declaration file", () => {
     expect(resolveEntrypoints(exportsMap, { prose: true })).toEqual([
-      { subpath: ".", sourceRel: "index.ts", module: "index", entryDts: "index.d.ts" },
+      {
+        subpath: ".",
+        sourceRel: "index.ts",
+        module: "index",
+        entryDts: "index.d.ts",
+      },
       {
         subpath: "./registries",
         sourceRel: "registries/index.ts",
@@ -32,19 +37,32 @@ describe("resolveEntrypoints", () => {
   });
 
   it("honors an explicit entrypoints list and its order", () => {
-    const plans = resolveEntrypoints(exportsMap, { prose: true, entrypoints: ["./registries/browser", "."] });
+    const plans = resolveEntrypoints(exportsMap, {
+      prose: true,
+      entrypoints: ["./registries/browser", "."],
+    });
     expect(plans.map((plan) => plan.subpath)).toEqual(["./registries/browser", "."]);
   });
 
   it("throws for a configured entrypoint that is not exported", () => {
-    expect(() => resolveEntrypoints(exportsMap, { prose: true, entrypoints: ["./missing"] })).toThrow(
-      /not in package exports/,
-    );
+    expect(() =>
+      resolveEntrypoints(exportsMap, {
+        prose: true,
+        entrypoints: ["./missing"],
+      }),
+    ).toThrow(/not in package exports/);
   });
 
   it("preserves ESM extensions for a .d.mts target", () => {
     const plans = resolveEntrypoints({ ".": { types: "./dist/index.d.mts" } }, { prose: true });
-    expect(plans).toEqual([{ subpath: ".", sourceRel: "index.mts", module: "index", entryDts: "index.d.mts" }]);
+    expect(plans).toEqual([
+      {
+        subpath: ".",
+        sourceRel: "index.mts",
+        module: "index",
+        entryDts: "index.d.mts",
+      },
+    ]);
   });
 });
 
@@ -62,6 +80,220 @@ describe("referencePageRel", () => {
   it("uses a leaf file for a subpath with no children", () => {
     expect(referencePageRel("./registries/browser", all)).toBe("registries/browser.md");
     expect(referencePageRel("./client", [".", "./client"])).toBe("client.md");
+  });
+});
+
+describe("referencePagePath", () => {
+  it("puts a split page beside the main entrypoint's page", () => {
+    const entries = [{ subpath: "." }, { page: "shapes", subpath: "." }];
+    expect(entries.map((entry) => referencePagePath(entry, entries))).toEqual(["index.md", "shapes.md"]);
+  });
+
+  it("turns a split subpath entrypoint into a folder", () => {
+    const entries = [{ subpath: "." }, { subpath: "./registries" }, { page: "local", subpath: "./registries" }];
+    expect(entries.map((entry) => referencePagePath(entry, entries))).toEqual([
+      "index.md",
+      "registries/index.md",
+      "registries/local.md",
+    ]);
+  });
+});
+
+function createSplitFixture(): Promise<WorkspacePackage> {
+  return createReferenceFixture("fixture-split", {
+    "index.ts": [
+      'export { circle } from "./shapes/circle";',
+      'export { square } from "./shapes/square";',
+      "",
+      "/**",
+      " * Describes a shape, such as {@link circle}.",
+      " * @param name - The shape name.",
+      " * @returns The description.",
+      " */",
+      "export function describe(name: string): string {",
+      "  return name;",
+      "}",
+      "",
+    ].join("\n"),
+    "shapes/circle.ts": [
+      "interface Radius {",
+      "  value: number;",
+      "}",
+      "",
+      "/**",
+      " * Builds a circle. See {@link describe}.",
+      " * @param radius - The radius.",
+      " * @returns The area.",
+      " */",
+      "export function circle(radius: Radius): number {",
+      "  return radius.value;",
+      "}",
+      "",
+    ].join("\n"),
+    "shapes/square.ts": [
+      "/**",
+      " * Builds a square.",
+      " * @param side - The side.",
+      " * @returns The area.",
+      " */",
+      "export function square(side: number): number {",
+      "  return side * side;",
+      "}",
+      "",
+    ].join("\n"),
+  });
+}
+
+describe("analyzeReference pages", () => {
+  const page = (files: { path: string; contents: string }[], name: string): string =>
+    files.find((file) => file.path.endsWith(`docs/reference/${name}`))?.contents ?? "";
+
+  it("titles the main entrypoint's page with the package name", { timeout: 30_000 }, async () => {
+    const { files } = await analyzeReference(await createSingleEntrypointFixture(), { prose: true });
+
+    expect(files[0]?.contents).toContain('title: "@codenhub/fixture-single-entry"');
+    expect(files[0]?.contents).toContain("# @codenhub/fixture-single-entry");
+  });
+
+  it("uses an entrypoint label as the page title and heading", { timeout: 30_000 }, async () => {
+    const { files } = await analyzeReference(await createSingleEntrypointFixture(), {
+      pages: { ".": { label: "Overview" } },
+      prose: true,
+    });
+
+    expect(files[0]?.contents).toContain("title: Overview");
+    expect(files[0]?.contents).toContain("# Overview");
+  });
+
+  it("moves symbols declared in matching sources onto a split page", { timeout: 30_000 }, async () => {
+    const { files } = await analyzeReference(await createSplitFixture(), {
+      pages: {
+        ".": {
+          split: { shapes: { label: "Shapes", source: ["src/shapes/**"] } },
+        },
+      },
+      prose: true,
+    });
+
+    expect(files.map((file) => file.path)).toEqual([
+      "fixture-split/docs/reference/index.md",
+      "fixture-split/docs/reference/shapes.md",
+    ]);
+    const index = page(files, "index.md");
+    const shapes = page(files, "shapes.md");
+    expect(index).toContain("### describe");
+    expect(index).not.toContain("### circle");
+    expect(index).not.toContain("## Internal types");
+    expect(index).toContain("[circle](shapes.md#circle)");
+    expect(shapes).toContain("title: Shapes");
+    expect(shapes).toContain("order: 1");
+    expect(shapes).toContain("# Shapes");
+    expect(shapes).toContain("### circle");
+    expect(shapes).toContain("### square");
+    expect(shapes).toContain("### Radius");
+    expect(shapes).toContain("[describe](index.md#describe)");
+  });
+
+  it(
+    "gives a symbol to the first split page that matches, and labels a page by its name",
+    { timeout: 30_000 },
+    async () => {
+      const { files } = await analyzeReference(await createSplitFixture(), {
+        pages: {
+          ".": {
+            split: {
+              round: { source: ["src/shapes/circle.ts"] },
+              shapes: { source: ["src/shapes/**"] },
+            },
+          },
+        },
+        prose: true,
+      });
+
+      expect(page(files, "round.md")).toContain("title: round");
+      expect(page(files, "round.md")).toContain("### circle");
+      expect(page(files, "shapes.md")).not.toContain("### circle");
+      expect(page(files, "shapes.md")).toContain("### square");
+    },
+  );
+
+  it(
+    "links a symbol several entrypoints export to the linking entrypoint's own page",
+    { timeout: 60_000 },
+    async () => {
+      const createFixture = async (): Promise<WorkspacePackage> => {
+        const workspacePackage = await createReferenceFixture("fixture-shared", {
+          "index.ts": 'export { circle } from "./shapes/circle";\n',
+          "extra.ts": [
+            'export { circle } from "./shapes/circle";',
+            "",
+            "/**",
+            " * Outlines a shape, such as {@link circle}.",
+            " * @param name - The shape name.",
+            " * @returns The outline.",
+            " */",
+            "export function outline(name: string): string {",
+            "  return name;",
+            "}",
+            "",
+          ].join("\n"),
+          "shapes/circle.ts": [
+            "/**",
+            " * Builds a circle.",
+            " * @param radius - The radius.",
+            " * @returns The area.",
+            " */",
+            "export function circle(radius: number): number {",
+            "  return radius;",
+            "}",
+            "",
+          ].join("\n"),
+        });
+        const exports = workspacePackage.manifest.exports as Record<string, unknown>;
+        exports["./extra"] = { types: "./dist/extra.d.ts" };
+        return workspacePackage;
+      };
+
+      const whole = await analyzeReference(await createFixture(), { prose: true });
+      expect(page(whole.files, "extra.md")).toContain("[circle](#circle)");
+
+      const split = await analyzeReference(await createFixture(), {
+        pages: { "./extra": { split: { shapes: { source: ["src/shapes/**"] } } } },
+        prose: true,
+      });
+      expect(page(split.files, "extra/index.md")).toContain("[circle](shapes.md#circle)");
+    },
+  );
+
+  it("rejects a split page that receives no symbol", { timeout: 30_000 }, async () => {
+    await expect(
+      analyzeReference(await createSplitFixture(), {
+        pages: { ".": { split: { text: { source: ["src/text/**"] } } } },
+        prose: true,
+      }),
+    ).rejects.toThrow(/split page "text" .* no symbol/);
+  });
+
+  it("rejects a split page whose path another entrypoint's page has", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createSplitFixture();
+    const exports = workspacePackage.manifest.exports as Record<string, unknown>;
+    exports["./shapes"] = { types: "./dist/shapes/circle.d.ts" };
+
+    await expect(
+      analyzeReference(workspacePackage, {
+        pages: { ".": { split: { shapes: { source: ["src/shapes/**"] } } } },
+        prose: true,
+      }),
+    ).rejects.toThrow(/collide on page path: shapes\.md/);
+  });
+
+  it("rejects pages for an entrypoint that is not documented", { timeout: 30_000 }, async () => {
+    await expect(
+      analyzeReference(await createSplitFixture(), {
+        pages: { "./missing": { label: "Missing" } },
+        prose: true,
+      }),
+    ).rejects.toThrow(/pages\["\.\/missing"\]/);
   });
 });
 
@@ -88,7 +320,9 @@ describe("analyzeReference", () => {
   it("documents a package with exactly one entrypoint", { timeout: 30_000 }, async () => {
     const workspacePackage = await createSingleEntrypointFixture();
 
-    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    const { model, files } = await analyzeReference(workspacePackage, {
+      prose: true,
+    });
 
     // Regression test: TypeDoc collapses a single entry point's exports onto the
     // project root instead of a `Module` reflection unless explicitly told not to,
@@ -126,7 +360,9 @@ describe("analyzeReference", () => {
       ].join("\n"),
     });
 
-    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    const { model, files } = await analyzeReference(workspacePackage, {
+      prose: true,
+    });
     const page = files[0]?.contents ?? "";
 
     expect(model.entrypoints[0]?.symbols.map((symbol) => symbol.name)).toEqual(["Schema"]);
@@ -171,7 +407,9 @@ describe("analyzeReference", () => {
       ].join("\n"),
     });
 
-    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    const { files } = await analyzeReference(workspacePackage, {
+      prose: true,
+    });
     const page = files[0]?.contents ?? "";
 
     expect(page).toContain("export declare function parse(): unknown;");
@@ -203,7 +441,9 @@ describe("analyzeReference", () => {
       ].join("\n"),
     });
 
-    const { files } = await analyzeReference(workspacePackage, { prose: true });
+    const { files } = await analyzeReference(workspacePackage, {
+      prose: true,
+    });
     const page = files[0]?.contents ?? "";
 
     expect(page).toContain(
@@ -263,7 +503,9 @@ describe("analyzeReference", () => {
       ].join("\n"),
     });
 
-    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    const { model, files } = await analyzeReference(workspacePackage, {
+      prose: true,
+    });
     const page = files[0]?.contents ?? "";
 
     expect(model.entrypoints[0]?.symbols[0]?.overloads).toEqual([]);
@@ -305,7 +547,9 @@ describe("analyzeReference", () => {
       ].join("\n"),
     });
 
-    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    const { model, files } = await analyzeReference(workspacePackage, {
+      prose: true,
+    });
     const page = files[0]?.contents ?? "";
 
     // Type parameters, mapped-type keys, and `infer` bindings are in scope, not
@@ -367,10 +611,17 @@ describe("analyzeReference", () => {
       "index.ts": 'export { file } from "./file";\n',
     });
 
-    const { model } = await analyzeReference(workspacePackage, { prose: true });
+    const { model } = await analyzeReference(workspacePackage, {
+      prose: true,
+    });
 
     expect(model.unresolved).toEqual([]);
-    expect(model.entrypoints[0]?.internalTypes.map(({ declaredIn, name }) => ({ declaredIn, name }))).toEqual([
+    expect(
+      model.entrypoints[0]?.internalTypes.map(({ declaredIn, name }) => ({
+        declaredIn,
+        name,
+      })),
+    ).toEqual([
       { declaredIn: ["src/file.ts"], name: "FileLike" },
       { declaredIn: ["src/file.ts"], name: "GlobalFile" },
     ]);
@@ -398,7 +649,9 @@ describe("analyzeReference", () => {
       ].join("\n"),
     });
 
-    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    const { model, files } = await analyzeReference(workspacePackage, {
+      prose: true,
+    });
 
     expect(files[0]?.contents).toContain("export declare const made: Hidden;");
     expect(model.unresolved).toEqual([]);
@@ -429,7 +682,9 @@ describe("analyzeReference", () => {
       ].join("\n"),
     });
 
-    const { model } = await analyzeReference(workspacePackage, { prose: true });
+    const { model } = await analyzeReference(workspacePackage, {
+      prose: true,
+    });
 
     expect(model.unresolved).toEqual([]);
     expect(model.entrypoints[0]?.internalTypes.map((type) => type.name)).toEqual(["Field", "Item", "Key"]);
@@ -452,9 +707,18 @@ describe("analyzeReference", () => {
       ].join("\n"),
     });
 
-    const { model } = await analyzeReference(workspacePackage, { prose: true });
+    const { model } = await analyzeReference(workspacePackage, {
+      prose: true,
+    });
 
-    expect(model.unresolved).toEqual([{ declaredIn: "src/env.d.ts", name: "Ambient", subpath: ".", symbol: "make" }]);
+    expect(model.unresolved).toEqual([
+      {
+        declaredIn: "src/env.d.ts",
+        name: "Ambient",
+        subpath: ".",
+        symbol: "make",
+      },
+    ]);
   });
 
   it("reports a same-package type that the reference cannot find anywhere", { timeout: 30_000 }, async () => {
@@ -474,10 +738,17 @@ describe("analyzeReference", () => {
       ].join("\n"),
     });
 
-    const { model, files } = await analyzeReference(workspacePackage, { prose: true });
+    const { model, files } = await analyzeReference(workspacePackage, {
+      prose: true,
+    });
 
     expect(model.unresolved).toEqual([
-      { declaredIn: "src/ambient.d.ts", name: "Ambient", subpath: ".", symbol: "make" },
+      {
+        declaredIn: "src/ambient.d.ts",
+        name: "Ambient",
+        subpath: ".",
+        symbol: "make",
+      },
     ]);
     expect(files[0]?.contents).not.toContain("## Internal types");
   });

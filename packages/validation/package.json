@@ -61,7 +61,62 @@
     "docs": {
       "label": "ValidationKit",
       "status": "experimental",
-      "reference": {}
+      "reference": {
+        "pages": {
+          ".": {
+            "split": {
+              "builders": {
+                "label": "Builders",
+                "source": [
+                  "src/builders/**"
+                ]
+              },
+              "checks": {
+                "label": "Checks",
+                "source": [
+                  "src/checks/**"
+                ]
+              },
+              "coercion": {
+                "label": "Coercion",
+                "source": [
+                  "src/coercion/**"
+                ]
+              },
+              "composition": {
+                "label": "Composition",
+                "source": [
+                  "src/composition/**"
+                ]
+              },
+              "formats": {
+                "label": "Formats",
+                "source": [
+                  "src/formats/**"
+                ]
+              },
+              "interop": {
+                "label": "Interop",
+                "source": [
+                  "src/interop/**"
+                ]
+              },
+              "messages": {
+                "label": "Messages",
+                "source": [
+                  "src/messages/**"
+                ]
+              },
+              "primitives": {
+                "label": "Primitives",
+                "source": [
+                  "src/primitives/**"
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

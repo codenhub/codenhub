@@ -338,19 +338,31 @@ describe("lazy", () => {
       ]);
     });
 
-    it("should find what it kept for an object without going through every place the object was reached at", () => {
-      // Ten objects shared by 80,000 rows, as rows that point at their category do. Kept by the last
-      // segment of the place alone, every row went through the places of the rows before it: 7.8 s.
-      const tag = object({ name: string() });
-      const rows = array(object({ id: number(), tag: lazy(() => tag, { maxCalls: 100_000 }) }));
-      const tags = Array.from({ length: 10 }, (_, index) => ({ name: `tag ${index}` }));
-      const input = Array.from({ length: 80_000 }, (_, id) => ({ id, tag: tags[id % tags.length] }));
-      const started = performance.now();
-      const result = rows(input);
-      const elapsed = performance.now() - started;
-      expect(result.ok).toBe(true);
-      expect(elapsed).toBeLessThan(2_000);
-    });
+    it(
+      "should find what it kept for an object without going through every place the object was reached at",
+      { timeout: 60_000 },
+      () => {
+        // Ten objects shared by the rows, as rows that point at their category do. Kept by the last
+        // segment of the place alone, every row went through the places of the rows before it, so twice
+        // the rows took four times as long: 7.8 s for 80,000. The two times are compared with each
+        // other and not with a limit, which a busy machine fails by its load.
+        const tag = object({ name: string() });
+        const rows = array(object({ id: number(), tag: lazy(() => tag, { maxCalls: 100_000 }) }));
+        const tags = Array.from({ length: 10 }, (_, index) => ({ name: `tag ${index}` }));
+        const fastest = (length: number): number => {
+          const input = Array.from({ length }, (_, id) => ({ id, tag: tags[id % tags.length] }));
+          let best = Infinity;
+          for (let run = 0; run < 3; run += 1) {
+            const started = performance.now();
+            expect(rows(input).ok).toBe(true);
+            best = Math.min(best, performance.now() - started);
+          }
+          return best;
+        };
+        const half = fastest(40_000);
+        expect(fastest(80_000)).toBeLessThan(3 * half);
+      },
+    );
 
     it("should tell a place from another with the same keys in another order, and an index from a key", () => {
       const point = lazy(() => object({ x: number() }));

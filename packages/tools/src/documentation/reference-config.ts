@@ -1,3 +1,19 @@
+/** A page that takes part of an entrypoint's symbols off the entrypoint's own page. */
+export interface ReferenceSplitPage {
+  /** The page's `title` and H1; the page name when absent. */
+  label?: string;
+  /** Package-relative globs; a symbol declared in a matching file goes on this page. */
+  source: string[];
+}
+
+/** How one documented entrypoint's pages are shaped. */
+export interface ReferenceEntrypointPages {
+  /** The entrypoint page's `title` and H1, in place of the import path. */
+  label?: string;
+  /** Split pages by page name, in the order symbols are matched against them. */
+  split?: Record<string, ReferenceSplitPage>;
+}
+
 /** Resolved `codenhub.docs.reference` options for an opted-in package. */
 export interface ReferenceConfig {
   /** `exports` subpath keys to document; when absent, every subpath with a type target is used. */
@@ -7,6 +23,8 @@ export interface ReferenceConfig {
    * public symbol whose declaration originates in a matched repo-relative glob.
    */
   exclude?: string[];
+  /** Page shaping by `exports` subpath key; an entrypoint not named here has one page with the default labels. */
+  pages?: Record<string, ReferenceEntrypointPages>;
   /** Whether to compile TSDoc prose. `false` renders the signature manifest only. Defaults to `true`. */
   prose: boolean;
 }
@@ -25,6 +43,56 @@ function stringArray(value: unknown, field: string, manifestPath: string): strin
     );
   }
   return value as string[];
+}
+
+const PAGE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function label(value: unknown, field: string, manifestPath: string): string | undefined {
+  if (value !== undefined && (typeof value !== "string" || value.trim() === "")) {
+    throw new Error(`Invalid codenhub.docs.reference.${field} in ${manifestPath}: expected a non-empty string.`);
+  }
+  return value;
+}
+
+function parsePages(value: unknown, manifestPath: string): Record<string, ReferenceEntrypointPages> | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  const invalid = (field: string, expected: string): Error =>
+    new Error(`Invalid codenhub.docs.reference.${field} in ${manifestPath}: expected ${expected}.`);
+  if (!isRecord(value)) {
+    throw invalid("pages", "an object keyed by exports subpath");
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([subpath, entry]) => {
+      const field = `pages["${subpath}"]`;
+      if ((subpath !== "." && !subpath.startsWith("./")) || !isRecord(entry)) {
+        throw invalid(field, 'an object under a "." or "./"-prefixed key');
+      }
+      if (entry.split !== undefined && !isRecord(entry.split)) {
+        throw invalid(`${field}.split`, "an object keyed by page name");
+      }
+      const split = Object.entries(entry.split ?? {}).map(([name, page]) => {
+        const pageField = `${field}.split["${name}"]`;
+        if (name === "index" || !PAGE_NAME.test(name) || !isRecord(page)) {
+          throw invalid(pageField, "an object under a kebab-case page name other than index");
+        }
+        const source = stringArray(page.source, `${pageField}.source`, manifestPath);
+        if (source === undefined || source.length === 0) {
+          throw invalid(`${pageField}.source`, "at least one glob");
+        }
+        return [name, { label: label(page.label, `${pageField}.label`, manifestPath), source }];
+      });
+      return [
+        subpath,
+        {
+          label: label(entry.label, `${field}.label`, manifestPath),
+          split: entry.split === undefined ? undefined : Object.fromEntries(split),
+        },
+      ];
+    }),
+  );
 }
 
 /**
@@ -69,6 +137,7 @@ export function parseReferenceConfig(manifest: unknown, manifestPath: string): R
   return {
     entrypoints,
     exclude: stringArray(value.exclude, "exclude", manifestPath),
+    pages: parsePages(value.pages, manifestPath),
     prose: value.prose ?? true,
   };
 }

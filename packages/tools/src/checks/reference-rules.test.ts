@@ -100,6 +100,53 @@ describe("reference rule run", () => {
     ]);
   });
 
+  it("locates a finding on the split page that documents the symbol", { timeout: 30_000 }, async () => {
+    const workspacePackage = await createReferenceFixture("fixture-rule-split", {
+      "ambient.d.ts": "type Ambient = { readonly inner: string };\n",
+      "index.ts": [
+        'export { make } from "./shapes/make";',
+        "",
+        "/**",
+        " * Names a thing.",
+        " * @returns The name.",
+        " */",
+        "export function name(): string {",
+        '  return "";',
+        "}",
+        "",
+      ].join("\n"),
+      "shapes/make.ts": [
+        "/**",
+        " * Makes an ambient value.",
+        " * @returns The value.",
+        " */",
+        "export function make(): Ambient {",
+        '  return { inner: "" };',
+        "}",
+        "",
+      ].join("\n"),
+    });
+    const pages = { ".": { split: { shapes: { source: ["src/shapes/**"] } } } };
+    (workspacePackage.manifest as { codenhub: { docs: { reference: unknown } } }).codenhub.docs.reference = { pages };
+    const { files } = await analyzeReference(workspacePackage, { pages, prose: true });
+    await Promise.all(
+      files.map(async (file) => {
+        const path = join(workspacePackage.directory, file.path.slice(workspacePackage.location.length + 1));
+        await mkdir(dirname(path), { recursive: true });
+        await writeFile(path, file.contents);
+      }),
+    );
+
+    expect(await rule.run({ package: workspacePackage, includePack: false })).toEqual([
+      {
+        code: "reference/unresolved-type",
+        location: "docs/reference/shapes.md",
+        message: expect.stringContaining('"make" names "Ambient"'),
+        severity: "error",
+      },
+    ]);
+  });
+
   it("fails on a section that renders nothing to read", { timeout: 30_000 }, async () => {
     const workspacePackage = await committedFixture("fixture-rule-empty", {
       "index.ts": ["/** Reserved for later. */", "export declare namespace Reserved {}", ""].join("\n"),

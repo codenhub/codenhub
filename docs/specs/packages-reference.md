@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-30
+last_updated: 2026-10-08
 scope: Generated API reference documentation for public workspace packages.
 ---
 
@@ -45,6 +45,11 @@ A package opts in through `codenhub.docs.reference` in its `package.json`, neste
   - `entrypoints`: array of `package.json` `exports` subpath keys to document, such as `"."` or `"./registries/browser"`. Defaults to every `exports` subpath that resolves to a `types` target. A key not present in `exports` is invalid. An explicitly empty array is invalid; omit the field to document every entrypoint.
   - `exclude`: RESERVED. An array of repository-relative globs is accepted and its shape validated, but the generator does not yet honour it. The intent is to omit a public symbol whose declaration originates in a matched source file — for surfaces exported for tooling reasons that are not a consumer contract; until it is implemented, prefer not exporting such symbols at all.
   - `prose`: boolean, default `true`. When `false`, pages carry the signature manifest only (see "Page content") and no prose is compiled from TSDoc. This is the low-risk subset intended to be safe to enable widely before per-package TSDoc quality is known.
+  - `pages`: object keyed by a documented `exports` subpath key, shaping that entrypoint's pages. A key that is not a documented entrypoint is invalid. Each value is an object whose fields are both OPTIONAL:
+    - `label`: non-empty string. The entrypoint page's `title` and its H1, in place of the defaults in "Frontmatter" and "Page content".
+    - `split`: object that moves part of the entrypoint's symbols onto pages of their own (see "Split pages"). Each key is a page name: one kebab-case segment, not `index`. Each value is an object with:
+      - `source`: REQUIRED non-empty array of globs, relative to the package directory, such as `"src/composition/**"`.
+      - `label`: OPTIONAL non-empty string. The split page's `title` and its H1. Defaults to the page name.
 - The literal **`false`** — the package explicitly opts out. Meaningful once the reference is default-on (see "Adoption"); until then, absence and `false` behave the same.
 - **Absent** — the package has no generated reference.
 
@@ -64,19 +69,52 @@ docs/
       supabase.md            # the "./registries/supabase" entrypoint
 ```
 
-- Each documented entrypoint maps to exactly one page. A leaf entrypoint becomes `<name>.md`; an entrypoint that also has child entrypoints becomes a folder with an `index.md`. The `.` entrypoint is always `docs/reference/index.md`.
+- Each documented entrypoint maps to exactly one page, unless `pages` splits it (see "Split pages"). A leaf entrypoint becomes `<name>.md`; an entrypoint that also has child entrypoints or split pages becomes a folder with an `index.md`. The `.` entrypoint is always `docs/reference/index.md`.
 - Page and folder names are the `exports` subpath segments verbatim. `"./registries/browser"` is `reference/registries/browser.md`. Every documented entrypoint's subpath segments MUST already be kebab-case, matching the filename rule in `docs/specs/packages-documentation.md`. The generator does not normalize a segment: rewriting `./fooBar` to `foo-bar` could silently collide with a real `./foo-bar` entrypoint. A documented entrypoint whose segment is not kebab-case, or whose page path would collide with another's, is a `reference/entrypoint` finding and stops generation for that package.
 - `docs/reference/index.md` is an ordinary public document, not a `curated: true` router. It documents the `.` entrypoint and, by being the area's `index.md`, is placed first by publishing tools per `docs/specs/packages-documentation.md`. Sibling order is controlled by a generated `order` value on each page.
 - The generated area is `docs/reference/` and only `docs/reference/`. A hand-authored `docs/reference.md`, or any file under `docs/reference/` the generator did not produce, is invalid; the generator owns the whole directory. Because `hub generate` writes but never deletes, a page left behind by a removed or renamed entrypoint MUST be deleted in the same change — `reference/unexpected-file` (see "Validation") fails the run until it is.
+
+### Split pages
+
+How many pages a package gets otherwise follows its `exports`, not how much it documents. `@codenhub/validation` has one entrypoint and 187 exported symbols, so its whole surface was one page of about 5,000 lines and 194 KB, more than six times the next largest. `pages.<subpath>.split` lets one entrypoint span several pages without changing the package's public API:
+
+```json
+{
+  "reference": {
+    "pages": {
+      ".": {
+        "split": {
+          "composition": { "source": ["src/composition/**"], "label": "Composition" },
+          "interop": { "source": ["src/interop/**"], "label": "JSON Schema and Standard Schema" }
+        }
+      }
+    }
+  }
+}
+```
+
+- A symbol goes to the first split page, in declaration order, with a `source` glob matching the file that declares it. A re-exported symbol is matched by the file its declaration lives in, not the file that re-exports it. A symbol no split page claims stays on the entrypoint's own page, so adding an export never requires a config change.
+- A split page is `<page name>.md` beside the entrypoint's page: `docs/reference/composition.md` for `.`, and `docs/reference/registries/local.md` for `./registries`, which becomes a folder.
+- A split page that receives no symbol, or whose path collides with another page's, is a `reference/entrypoint` finding and stops generation for that package.
+- A split page has the same content as an entrypoint page (see "Page content"), built from its own symbols: its own kind groups and its own **Internal types**.
+
+Alternatives weighed and rejected:
+
+- **One page per kind group.** Needs no configuration, but the kind is an implementation detail a reader cannot predict: in `@codenhub/validation`, `string` and `uuid` are variables while `array` and `email` are functions. It also separates `array` from `ArrayOptions`, and its Functions page alone would still be about 2,000 lines.
+- **One page per source directory.** Needs no configuration and follows the domain, but it makes the internal source layout a public URL: moving a file would break links and orphan a page.
+- **An explicit list of symbols per page.** Deliberate, but it puts every export name in `package.json` and requires an edit for each new export.
+- **A TSDoc tag on each symbol.** Sits with the symbol, but needs one edit per symbol, and a mistyped tag silently creates a page.
+- **More `exports` subpaths.** Changes the package's public API for a documentation layout.
+- **One long page, with the site collapsing its table of contents.** Keeps in-page search across the whole API, but does nothing for a reader of the file itself, on GitHub or in the installed package.
 
 ### Frontmatter
 
 Generated pages use the closed frontmatter schema from `docs/specs/packages-documentation.md`, including `since`, which that spec permits only on a generated reference page:
 
-- `title`: the entrypoint's import subpath, used as the sidebar label. For `.` it is `/`; for a subpath it is the subpath with its leading `.` removed, such as `/registries/browser`. This keeps every entry in one list on the same footing — a package's marketing label would stand out among path-style siblings — and mirrors what a consumer appends to the bare import. The H1 carries the full specifier (see "Page content").
-- `description`: OPTIONAL one-line summary of the entrypoint, compiled from the entry module's TSDoc summary — a file-level `@packageDocumentation` comment on the entry source, collapsed to a single line. Omitted when the entry module carries no such comment.
-- `since`: OPTIONAL version string recording the release the entrypoint first shipped in, emitted from a `@since` tag on the entry module's `@packageDocumentation` comment. It is an opaque label, not validated as semver. Omitted when the tag is absent.
-- `order`: generator-assigned, placing entrypoint pages in a stable order — `.` first, then remaining entrypoints by `exports` declaration order.
+- `title`: the sidebar label. For `.` it is the package name, such as `@codenhub/error`; for a subpath it is the subpath with its leading `.` removed, such as `/registries/browser`. Together they read as the bare import and what a consumer appends to it. A `pages` `label` replaces it, and a split page's `title` is its label. The `.` page was first titled `/`, to keep it on the same footing as its path-style siblings. That did not weigh that a consumer appends nothing to import `.`, so `/` mirrored no import, nor that this page is the reference area's entry page and the label search results show for every symbol on it, where `/` says nothing.
+- `description`: OPTIONAL one-line summary of the entrypoint, on the entrypoint's own page only, compiled from the entry module's TSDoc summary — a file-level `@packageDocumentation` comment on the entry source, collapsed to a single line. Omitted when the entry module carries no such comment.
+- `since`: OPTIONAL version string, on the entrypoint's own page only, recording the release the entrypoint first shipped in, emitted from a `@since` tag on the entry module's `@packageDocumentation` comment. It is an opaque label, not validated as semver. Omitted when the tag is absent.
+- `order`: generator-assigned, placing pages in a stable order — `.` first, then remaining entrypoints by `exports` declaration order, each entrypoint followed by its split pages in declaration order.
 - `group`: set to `Reference` on `docs/reference/index.md` only, to label the sidebar section. Not set on any other page.
 
 `description` and `since` are page metadata and are emitted whether or not `prose` is enabled.
@@ -93,7 +131,7 @@ Editing a generated page is pointless: the next `pnpm generate` overwrites it, a
 
 ## Page content
 
-A page's H1 is the entrypoint's full import specifier — the package name for `.`, the package name plus the subpath for the rest, such as `@codenhub/error/registries/browser` — so the page is unambiguous on its own even though the sidebar `title` is terse. A publishing site MAY render the page's `description` and `since` as a deck directly after this H1; `docs/specs/packages-documentation.md` carves that out from its no-metadata-in-the-body rule. Below the H1, each public symbol reachable from that entrypoint is a section:
+A page's H1 is the entrypoint's full import specifier — the package name for `.`, the package name plus the subpath for the rest, such as `@codenhub/error/registries/browser` — so the page is unambiguous on its own even though the sidebar `title` is terse. A page with a `pages` `label`, which every split page has, uses that label as its H1 instead, the same text as its `title`. Prefixing the label with the specifier was weighed and rejected: it makes every split page's heading long, and the site already names the package beside the page. A publishing site MAY render the page's `description` and `since` as a deck directly after this H1; `docs/specs/packages-documentation.md` carves that out from its no-metadata-in-the-body rule. Below the H1, each public symbol reachable from that entrypoint is a section:
 
 - Symbols are grouped by kind under H2 headings in this order: **Functions**, **Classes**, **Interfaces**, **Type aliases**, **Enumerations**, **Variables**, **Namespaces**, followed by **Internal types** (see below). A group with no members is omitted. An export whose kind is none of these is a `reference/unsupported-export` finding, not a silent omission.
 - Within a group, each symbol is an H3 named exactly as it is exported. A default export is named after its declaration; an anonymous default export is named `default`. `docs/guidelines/code.md` already steers library code to named exports, so this is expected to be rare. Members are alphabetical within their group.
@@ -104,7 +142,7 @@ A page's H1 is the entrypoint's full import specifier — the package name for `
   3. For a class or interface: its public members, each with its own signature block and, when `prose` is `true`, its TSDoc. A member inherited from another type in the package is not repeated in full here: when `prose` is `true`, it is listed by name with a link to the type that declares it, since its signature and prose stay on that type's own section; when `prose` is `false`, it is omitted from the page instead of appearing as a bare heading with no signature — the `extends`/heritage clause already in this type's own signature is how a reader finds it. A member inherited from a type outside the package's documented surface is dropped in both modes. An overloaded method lists each overload as a separate line of its signature block.
   4. For a namespace, or a symbol merged with one: each symbol the namespace declares, as a section one heading level deeper than the symbol's, headed by its dot-qualified name, such as `StandardSchemaV1.Props`, with the same content a top-level symbol has. Headings stop at H6.
 - A type that a documented declaration names but no entrypoint exports, directly or through another such type, has no import path, but a reader still needs it to read the signature. Names are read from the emitted `.d.ts`, the text the signature prints, so an alias TypeDoc resolves to what it stands for is still listed. Each page lists those types under **Internal types**: an H3 with the type's name, its declaration from the emitted `.d.ts`, its TSDoc summary when `prose` is `true`, and a line naming the source files that declare it. Identical declarations copied into several files are one entry. A package that wants such a type to be importable exports it instead, and it moves to its kind's group.
-- `{@link Symbol}` references resolve to a fragment on whichever page documents the target, including a namespace member by its dot-qualified name. The fragment is the generator-owned slug of the symbol's heading. A target on the current page links as `#slug`; a target on another of this package's reference pages links as the normalized relative path from the current page to that page, plus `#slug`, computed per page pair rather than assumed. A target outside this package's documented surface is rendered as inline code, not a link. The build makes no network requests and does not resolve links into other packages' references.
+- `{@link Symbol}` references resolve to a fragment on whichever page documents the target, including a namespace member by its dot-qualified name. The fragment is the generator-owned slug of the symbol's heading. A target on the current page links as `#slug`; a target on another of this package's reference pages links as the normalized relative path from the current page to that page, plus `#slug`, computed per page pair rather than assumed. A target several entrypoints document links to the page of the entrypoint the link is written under, and otherwise to the first entrypoint that documents it. A target outside this package's documented surface is rendered as inline code, not a link. The build makes no network requests and does not resolve links into other packages' references.
 - Re-exported symbols are documented on the entrypoint that exports them. A symbol exported from several entrypoints is documented on each, with the signature repeated; prose is repeated too, since these pages are read one at a time.
 
 When `prose` is `true` and a public symbol has no TSDoc, the page still lists it with its signature. Missing source documentation is an error reported by the independent `undocumented-export` check (see "Validation").
@@ -139,7 +177,7 @@ TypeDoc is a dependency rather than an in-house extractor because faithfully mod
 - `reference/missing` — `error` — opted in, but `docs/reference/` is absent.
 - `reference/drift` — `error` — a generated page differs from what the generator produces now. This is the compliance-report view of the `hub generate --dry-run` gate.
 - `reference/unexpected-file` — `error` — a file exists under `docs/reference/` that the generator did not produce. `hub generate` only writes, so a page orphaned by a removed or renamed entrypoint must be deleted by hand in the same change; this finding fails the run until it is.
-- `reference/entrypoint` — `error` — a documented entrypoint's subpath is not kebab-case, its page path collides with another's, or a configured `entrypoints` key does not resolve.
+- `reference/entrypoint` — `error` — a documented entrypoint's subpath is not kebab-case, a page path collides with another's, a configured `entrypoints` key does not resolve, `pages` is malformed or names an entrypoint that is not documented, or a split page receives no symbol.
 - `reference/unsupported-export` — `error` — a documented entrypoint exposes an export whose declaration kind the page model does not cover.
 - `reference/unresolved-type` — `error` — a documented declaration's emitted `.d.ts` names a type from this package that no page documents, either as a symbol or under **Internal types**. A global type from a hand-written `.d.ts` is one example: it has no emitted declaration to list.
 - `reference/empty-section` — `error` — a section would render nothing a reader can use: a symbol, overload, or declared member with no signature, or a namespace with no members. An inherited member is exempt, since it links to the type that declares it.

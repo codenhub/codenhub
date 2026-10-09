@@ -50,4 +50,24 @@ describe("parseReferenceConfig", () => {
   it("rejects a non-boolean prose", () => {
     expect(() => parseReferenceConfig({ codenhub: { docs: { reference: { prose: "no" } } } }, path)).toThrow(/prose/);
   });
+  it("reads pages with an entrypoint label and split pages", () => {
+    const pages = {
+      ".": { label: "Overview", split: { composition: { label: "Composition", source: ["src/composition/**"] } } },
+      "./sub": { split: { parts: { source: ["src/parts/*.ts"] } } },
+    };
+    expect(parseReferenceConfig({ codenhub: { docs: { reference: { pages } } } }, path)?.pages).toEqual(pages);
+  });
+
+  it.each([
+    ["a non-object pages", "yes"],
+    ["a key that is not an exports subpath", { sub: {} }],
+    ["an empty label", { ".": { label: " " } }],
+    ["a split page named index", { ".": { split: { index: { source: ["src/**"] } } } }],
+    ["a split page name that is not kebab-case", { ".": { split: { fooBar: { source: ["src/**"] } } } }],
+    ["a split page with no source", { ".": { split: { parts: {} } } }],
+    ["a split page with an empty source", { ".": { split: { parts: { source: [] } } } }],
+    ["a split page with an empty label", { ".": { split: { parts: { label: "", source: ["src/**"] } } } }],
+  ])("rejects %s", (_case, pages) => {
+    expect(() => parseReferenceConfig({ codenhub: { docs: { reference: { pages } } } }, path)).toThrow(/pages/);
+  });
 });
