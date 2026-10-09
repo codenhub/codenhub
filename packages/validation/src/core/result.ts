@@ -187,6 +187,20 @@ export const repeatedKey = (segment: ValidationPathSegment): ValidationIssue =>
   issue("invalid_key", { issues: [issue("invalid_value", { unique: true })] }, [segment]);
 
 /**
+ * The key an assignment reads as the prototype to give an object. As data of an output it is harmless
+ * until the output is copied by assignment, as `Object.assign` and a `for...in` loop do, which gives the
+ * copy the prototype the sender chose.
+ */
+export const RESERVED_KEY = "__proto__";
+
+/**
+ * The issue for an entry that would put {@link RESERVED_KEY} in an output nobody listed it for. Reported
+ * as a bad key, since dropping it would hide what the sender tried.
+ */
+export const reservedKey = (segment: ValidationPathSegment): ValidationIssue =>
+  issue("invalid_key", { issues: [issue("invalid_value", { reserved: true })] }, [segment]);
+
+/**
  * Names the kind of a value for messages without echoing the value: its `typeof`, or `null`, `array`,
  * `date`, `invalid date`, `nan` or `infinity`. It never names a class, and it reads no property of the
  * value, so no getter runs; a proxy trap that throws is caught, so naming a value never throws.

@@ -223,13 +223,15 @@ export const invalidFormatMessage: QuotingWording = describeFormat;
 export const invalidValueMessage: Wording = (issue) =>
   issue.params?.unique === true
     ? "Must be unique"
-    : issue.params?.unreadable === true
-      ? "Could not be read"
-      : issue.params?.encodedSeparator === true
-        ? "Must not hold an encoded / or \\"
-        : issue.params?.dotSegment === true
-          ? "Must not hold . or .. followed by ;"
-          : describeValue(issue);
+    : issue.params?.reserved === true
+      ? "Is reserved"
+      : issue.params?.unreadable === true
+        ? "Could not be read"
+        : issue.params?.encodedSeparator === true
+          ? "Must not hold an encoded / or \\"
+          : issue.params?.dotSegment === true
+            ? "Must not hold . or .. followed by ;"
+            : describeValue(issue);
 
 /**
  * Words an `invalid_key` issue in English, with what the key's validator found first.
@@ -247,6 +249,9 @@ export const invalidKeyMessage: QuotingWording = (issue, messages) => {
   const [found] = (issue.params?.issues ?? []) as readonly ValidationIssue[];
   if (found?.code === "invalid_value" && found.params?.unique === true) {
     return "Must be given only once";
+  }
+  if (found?.code === "invalid_value" && found.params?.reserved === true) {
+    return "Must not be used as a key";
   }
   return found === undefined ? "Invalid key" : `Invalid key: ${quote(found, messages)}`;
 };

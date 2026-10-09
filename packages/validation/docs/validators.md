@@ -295,11 +295,11 @@ user({ age: "x" }); // two issues: ["name"] and ["age"]
 
 The `unknownKeys` option decides what happens to input properties the shape does not list:
 
-| `unknownKeys`   | Effect                                                                                 |
-| --------------- | -------------------------------------------------------------------------------------- |
-| `"strip"`       | Drop them from the output. This is the default.                                        |
-| `"strict"`      | Reject each with an `unrecognized_key` issue at the key's path, and `params: { key }`. |
-| `"passthrough"` | Copy them to the output unchanged and unchecked.                                       |
+| `unknownKeys`   | Effect                                                                                  |
+| --------------- | --------------------------------------------------------------------------------------- |
+| `"strip"`       | Drop them from the output. This is the default.                                         |
+| `"strict"`      | Reject each with an `unrecognized_key` issue at the key's path, and `params: { key }`.  |
+| `"passthrough"` | Copy them to the output unchanged and unchecked, except `__proto__`, which is rejected. |
 
 Any other `unknownKeys` value, such as a misspelled `"Strict"`, throws a `TypeError` when the validator is created, instead of falling back to `"strip"`.
 
@@ -373,7 +373,7 @@ const call = tuple([string()], { rest: number(), max: 10 }); // [string, ...numb
 
 ### `record`
 
-`record(key, value, options?)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it is not mistaken for a problem with the value, and a bad key still has its value checked. A key that the key validator changes, such as by lowercasing, must stay distinct: `{ A: 1, a: 2 }` under `string({ case: "lower" })` reports the second as `invalid_key` whose `params.issues` holds one `invalid_value` issue with `{ unique: true }`, rather than dropping a value. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key from parsed JSON is kept as data and never writes to a prototype. It takes `min`, `max` and `length`, which count keys, so `record(string(), number(), { max: 100 })` rejects a dictionary of more than 100 keys before checking any of them.
+`record(key, value, options?)` accepts plain objects used as a dictionary: any number of keys, each passing `key`, each value passing `value`. An issue's path ends at the key it belongs to. A key that fails is reported as one `invalid_key` issue whose `params.issues` holds what the key validator found, so it is not mistaken for a problem with the value, and a bad key still has its value checked. A key that the key validator changes, such as by lowercasing, must stay distinct: `{ A: 1, a: 2 }` under `string({ case: "lower" })` reports the second as `invalid_key` whose `params.issues` holds one `invalid_value` issue with `{ unique: true }`, rather than dropping a value. The output type has every key when `key` produces `string`, and is partial when it produces a fixed set of strings, such as `oneOf(["mon", "tue"])`. A `__proto__` key, which parsed JSON can hold, is reported as `invalid_key` whose `params.issues` holds one `invalid_value` issue with `{ reserved: true }`, whether the input has it or the key validator produces it: kept, it would become the prototype of any copy of the output made by assignment, such as `Object.assign({}, output)`. It takes `min`, `max` and `length`, which count keys, so `record(string(), number(), { max: 100 })` rejects a dictionary of more than 100 keys before checking any of them.
 
 ### `set` and `map`
 

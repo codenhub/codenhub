@@ -150,8 +150,8 @@ describe("intersection", () => {
 
   it("should not let a __proto__ key write to a prototype while merging", () => {
     const parsed = JSON.parse('{"__proto__": {"admin": true}}') as unknown;
-    const loose = object({}, { unknownKeys: "passthrough" });
-    const output = valueOf(intersection(loose, loose)(parsed));
+    const listed = object({ ["__proto__"]: unknown() });
+    const output = valueOf(intersection(listed, listed)(parsed));
     expect(({} as { admin?: boolean }).admin).toBeUndefined();
     expect(Object.getPrototypeOf(output)).toBe(Object.prototype);
   });

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Validator } from "../core/types";
 import { number } from "../primitives/number";
 import { string } from "../primitives/string";
+import { unknown } from "../primitives/unknown";
 import { accepts, codesOf, isFree, isPending, issuesOf, valueOf } from "../test-utils";
 import { object } from "./object";
 import { record } from "./record";
@@ -103,10 +104,15 @@ describe("tagged", () => {
   });
 
   it("should not pass the input's own __proto__ key on as a prototype", () => {
-    const passthrough = tagged("type", { a: object({}, { unknownKeys: "passthrough" }) });
-    const value = valueOf(passthrough(JSON.parse('{"type":"a","__proto__":{"admin":true}}')));
+    const listed = tagged("type", { a: object({ ["__proto__"]: unknown() }) });
+    const value = valueOf(listed(JSON.parse('{"type":"a","__proto__":{"admin":true}}')));
     expect(Object.getPrototypeOf(value)).toBe(Object.prototype);
     expect((value as { admin?: boolean }).admin).toBeUndefined();
+  });
+
+  it("should report the __proto__ key a passthrough variant refuses", () => {
+    const passthrough = tagged("type", { a: object({}, { unknownKeys: "passthrough" }) });
+    expect(codesOf(passthrough(JSON.parse('{"type":"a","__proto__":{"admin":true}}')))).toEqual(["invalid_key"]);
   });
 
   it("should never put the input in an issue", () => {

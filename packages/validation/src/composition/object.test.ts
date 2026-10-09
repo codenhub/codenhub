@@ -116,13 +116,34 @@ describe("object", () => {
       expect(valueOf(passthrough(input))).toEqual(input);
     });
 
-    it("should treat __proto__ from JSON as data, never as a prototype write", () => {
+    it("should refuse an unlisted __proto__ key in passthrough mode, which a copy by assignment would read as a prototype", () => {
       const passthrough = object({ name: string() }, { unknownKeys: "passthrough" });
       const parsed = JSON.parse('{"name":"Ada","__proto__":{"admin":true}}') as unknown;
-      const output = valueOf(passthrough(parsed));
+      expect(issuesOf(passthrough(parsed))).toEqual([
+        {
+          code: "invalid_key",
+          path: ["__proto__"],
+          params: { issues: [{ code: "invalid_value", path: [], params: { reserved: true } }] },
+        },
+      ]);
+    });
+
+    it("should report an unlisted __proto__ key in passthrough mode beside the issues of the properties", () => {
+      const passthrough = object({ name: string() }, { unknownKeys: "passthrough" });
+      const parsed = JSON.parse('{"name":1,"__proto__":{"admin":true}}') as unknown;
+      expect(codesOf(passthrough(parsed))).toEqual(["invalid_key", "invalid_type"]);
+    });
+
+    it("should drop an unlisted __proto__ key in strip mode, as any other", () => {
+      const parsed = JSON.parse('{"name":"Ada","__proto__":{"admin":true}}') as unknown;
+      expect(Object.keys(valueOf(object({ name: string() })(parsed)))).toEqual(["name"]);
+    });
+
+    it("should keep a __proto__ key the shape lists as data, never as a prototype write", () => {
+      const listed = object({ ["__proto__"]: string() }, { unknownKeys: "passthrough" });
+      const output = valueOf(listed(JSON.parse('{"__proto__":"a"}')));
       expect(Object.getPrototypeOf(output)).toBe(Object.prototype);
-      expect((output as { admin?: boolean }).admin).toBeUndefined();
-      expect(Object.keys(output)).toEqual(["name", "__proto__"]);
+      expect(Object.keys(output)).toEqual(["__proto__"]);
     });
 
     it("should keep a key Object.prototype holds as a setter or read-only as data of the output", () => {
