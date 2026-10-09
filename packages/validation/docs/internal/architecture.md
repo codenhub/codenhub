@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-07
+last_updated: 2026-10-09
 scope: How the validation package is built and why, for whoever changes it next.
 ---
 
@@ -447,6 +447,10 @@ An `object` output type is built with `Simplify`, so hover text shows one object
 `tests/integration/consumer-types.test.ts` compiles `tests/integration/fixtures/consumer.ts` against `dist/index.d.ts` with `skipLibCheck: false`. The fixture uses `@ts-expect-error` for lines that must fail, so a declaration that becomes too permissive breaks the test as surely as one that becomes too strict. Unit tests import from source and cannot see what a consumer sees; this is the test that can. It needs `dist/`, which `hub test` builds first. `tests/integration/doc-examples.test.ts` holds the public docs to the same declarations: every TypeScript block of `README.md` and the pages directly under `docs/` is compiled as a module of its own, with the same settings, so an example that stops compiling fails the suite. A fragment that uses a name from the text around it, such as `input`, finds it in a short list of global declarations in the test, and a block that imports nothing is given an import of every export.
 
 The runtime code is checked against the runtimes it promises, not against Node.js alone. `tsconfig.json` is a solution file that `tsc -b` follows to two projects: `tsconfig.src.json` checks `src` with the ECMAScript library and `src/runtime-globals.d.ts` only, which declares the members of `URL`, `URLSearchParams`, `TextDecoder`, `atob`, `Blob`, `File` and `FormData` the code uses, so a global one runtime lacks, such as `Buffer` or `document`, fails to compile; `tsconfig.test.json` checks the tests and `src/test-utils.ts` with Node's types. The two share `src` without referencing each other, since a reference would want the shared files from the other project's output, which `noEmit` never writes. The build reads `tsconfig.src.json`, since `tsdown` refuses a config with references.
+
+### What the types cost a compiler
+
+Nothing had measured what a schema costs to type-check, only what it costs to bundle and to run. Measured on 2026-10-09 with TypeScript 7.0.2 on Node.js 24.14.1, `--extendedDiagnostics`, the median of three runs: a file of 100 and of 400 distinct schemas, each an `object` of ten properties holding a nested `object`, an `array`, a `tagged`, a `record` and an `optional`, with its `Infer` and `InferInput`, a `pick`, a `partial` and a function that reads the inferred value. Each further schema costs 2,069 type instantiations and 5.7 ms of checking, and 400 of them check in 2.1 s. The same shapes written for zod 4.6.5 cost 993 instantiations and 3.7 ms each, for zod/mini 1,247 and 4.1 ms, and for valibot 1.5.0 2,100 and 7.1 ms. The cost grows in a straight line with the number of schemas, so there is no shape among these that the checker struggles with, and nothing was changed for it. It is one machine and one shape of schema, and the ratios are what to read. A change to `Composed`, to the overloads of a composer or to `InferShape` is measured the same way before and after; the harness is not in the repository, since it installs the other libraries.
 
 ## Dependency model
 
