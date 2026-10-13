@@ -51,7 +51,7 @@ Root scripts map directly onto it:
 
 `hub browsers`, `hub assets`, `hub new`, `hub release`, `hub publish`, `hub preview:deploy`, and `hub labels` have no root script of their own. They are occasional commands rather than part of a change loop, and they read as what they are through `pnpm hub <command>`.
 
-A command name without its own definition runs the package script of that name, so package-specific scripts such as `dev` and `debug` work without registration. Package scripts also accept the package-first form, such as `hub styles dev`, when the first token identifies one package and the second names one of its scripts. `dev`, `debug`, and `preview` keep that package attached to the terminal, stream output as it arrives, and run without the default timeout.
+A command name without its own definition runs the package script of that name, so package-specific scripts such as `dev` and `debug` work without registration. A name that no workspace package defines fails rather than succeeding; see "How a package script is run". Package scripts also accept the package-first form, such as `hub styles dev`, when the first token identifies one package and the second names one of its scripts. `dev`, `debug`, and `preview` keep that package attached to the terminal, stream output as it arrives, and run without the default timeout.
 
 ## Targets
 
@@ -77,7 +77,15 @@ Only file paths are forwarded to the underlying tool, and only for commands that
 
 `--changed` narrows an explicit selection and replaces an empty one, so `hub test --changed` runs changed packages and `hub test error --changed` runs `error` only when it changed.
 
+A change to a workspace-wide file counts as a change to every package. The files are the root `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `package.json`, `tsconfig.json`, `.nvmrc`, `.npmrc`, `.oxlintrc.json`, `.oxfmtrc.json`, `.prettierrc.json`, `.prettierignore`, and anything under the root `assets/` directory; the list is the `WORKSPACE_WIDE_PATHS` constant in `packages/tools/src/workspace/select-packages.ts`. Only root files count, so `packages/error/package.json` changes `error` alone. An explicit selection still narrows the result, so `hub test error --changed` with a lockfile change runs `error`.
+
+These files change what every package installs, compiles, lints, or copies, so a change to one is a change to all: before they widened the selection, a pull request that only bumped a dependency selected nothing and passed unverified. The root `assets/` directory is on the list because the `assets` compliance check reads it, so removing a file there can break a package that did not change. Two alternatives were rejected. Widening only in `.github/workflows/ci.yml`, as it does for a change to CI itself, leaves the gap in the local `pnpm verify --changed` that `CONTRIBUTING.md` requires before a pull request. Widening on any file no package owns makes a root README edit verify the whole workspace.
+
+On Windows a workspace location matches a typed path regardless of case, because the file system does. `hub check Packages/error` runs `packages/error`. Other platforms compare case-sensitively.
+
 Every command narrows to one package, including `check` and `generate`. Two generated artifacts are workspace-wide and are therefore skipped by a narrowed `hub generate`: the root README package list is only rewritten when the selection covers the whole workspace. Run `pnpm generate` unfiltered before delivering a change that touched package metadata.
+
+`hub` reads the `packages` globs of `pnpm-workspace.yaml` without a YAML parser, so it understands the flat list pnpm uses for that key: quoted or bare globs, with trailing comments removed. A negated glob such as `"!**/test/**"` is rejected with an error that names it, not applied. Applying negations would reimplement pnpm's exclusion semantics for a workspace that uses none, so the untested copy could disagree with pnpm about which packages exist; ignoring them would make `hub` and pnpm disagree silently about the same file. The error is loud, and it is replaced by real support in the change that first needs a negation.
 
 ## Execution order
 
@@ -96,6 +104,8 @@ The expansion includes the `dev` and `debug` environments nested inside a select
 ## How a package script is run
 
 `hub` runs a package script by handing its body to the platform shell with the package's `node_modules/.bin` directories on `PATH`, which is what `pnpm run` would have set up. The shim is skipped for its cost: starting `pnpm` takes on the order of a second, and a workspace run pays that once per package per script, so it can outweigh several of the scripts it starts.
+
+A name with no dedicated command that no workspace package defines fails with exit code 1 and an error naming it. This is checked against the whole workspace, not the selection, so a script that only some packages define still runs for those packages, and a selection that lacks it only warns. The reason is that a typo in a CI step or a hook, such as `hub verfiy`, would otherwise report success having done nothing. Rejected: keeping the warning, since exit 0 is what CI reads as success; and failing whenever the selected packages lack the script, since a real script that only some packages define, such as `debug`, is ordinary.
 
 A script with a `pre` or `post` hook is still run through `pnpm run`, because the package manager owns those hooks and skipping it would silently drop a step. A script that invokes `pnpm` itself, such as one chaining `pnpm build:styles`, pays for that call as written; splitting such a chain into separate scripts is the way to avoid it.
 
@@ -329,7 +339,13 @@ Every label is written with `gh label create --force`, so a run is safe to repea
 
 ## Cleaning
 
-`hub clean` removes `dist`, `coverage`, `test-results`, `.astro`, and every `*.tsbuildinfo` from the selected packages, descending below each package root so playgrounds and nested workspaces are covered too. The compiler's records go with the output they describe: left behind, they would tell the next type-check that projects whose declarations have just been deleted are still up to date. It stops at each artifact it finds rather than descending into it, and it never touches `node_modules`: dependencies belong to the package manager, and removing them turns a seconds-long cleanup into a reinstall.
+`hub clean` removes `dist`, `coverage`, `test-results`, and `.astro` only when they are a direct child of a package root. The package roots of a selected package are its own directory and the directory of every workspace package nested below it, so `hub clean icons` also removes `packages/icons/demo/dist` when `demo` is a workspace package. It removes every `*.tsbuildinfo` at any depth below the selected package. The compiler's records go with the output they describe: left behind, they would tell the next type-check that projects whose declarations have just been deleted are still up to date. It stops at each artifact it finds rather than descending into it, and it never touches `node_modules`: dependencies belong to the package manager, and removing them turns a seconds-long cleanup into a reinstall.
+
+A directory with one of those names anywhere else is source and is kept, and the search continues inside it for `*.tsbuildinfo` records. A directory name is not evidence of a build artifact by itself: matched at any depth, a source folder such as `packages/error/src/coverage` was removed along with the real output. Every artifact the workspace's tools produce lands at a package root, so the name is checked there and nowhere else.
+
+Two alternatives were rejected. Skipping whatever git tracks still deletes a source folder that is new and not yet tracked. Keeping the deep search keeps the silent loss of source.
+
+The cost is that an artifact directory below a package root that is not itself a workspace package, such as a `dist` inside a non-package `playground`, is no longer removed.
 
 ## Compliance checks
 
