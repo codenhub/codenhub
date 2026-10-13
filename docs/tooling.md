@@ -85,6 +85,8 @@ On Windows a workspace location matches a typed path regardless of case, because
 
 Every command narrows to one package, including `check` and `generate`. Two generated artifacts are workspace-wide and are therefore skipped by a narrowed `hub generate`: the root README package list is only rewritten when the selection covers the whole workspace. Run `pnpm generate` unfiltered before delivering a change that touched package metadata.
 
+`hub` reads the `packages` globs of `pnpm-workspace.yaml` without a YAML parser, so it understands the flat list pnpm uses for that key: quoted or bare globs, with trailing comments removed. A negated glob such as `"!**/test/**"` is rejected with an error that names it, not applied. Applying negations would reimplement pnpm's exclusion semantics for a workspace that uses none, so the untested copy could disagree with pnpm about which packages exist; ignoring them would make `hub` and pnpm disagree silently about the same file. The error is loud, and it is replaced by real support in the change that first needs a negation.
+
 ## Execution order
 
 `hub` owns build ordering. `test`, `test:browser`, `test:browser:watch`, `test:coverage`, `test:watch`, `typecheck`, `status:pack`, and `preview:deploy` build their packages first, which is why package manifests MUST NOT chain `pnpm build &&` into those scripts. Chaining it again would double every build.
