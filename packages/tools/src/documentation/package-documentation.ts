@@ -165,7 +165,12 @@ export async function loadWorkspaceDocumentation(
   const manifestPaths = await findManifestPaths(packagesRoot);
   const packages = await Promise.all(
     manifestPaths.map(async (manifestPath) => {
-      const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as unknown;
+      let manifest: unknown;
+      try {
+        manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+      } catch (cause) {
+        throw new Error(`Invalid package manifest at ${manifestPath}: ${(cause as Error).message}`);
+      }
       const metadata = parsePackageMetadata(manifest, manifestPath);
       return metadata === null ? undefined : { rootPath: dirname(manifestPath), slug: metadata.slug };
     }),

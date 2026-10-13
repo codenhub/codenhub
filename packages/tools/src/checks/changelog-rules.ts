@@ -1,7 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { parseMarkdown } from "../documentation/document-policy.ts";
+import { UnsupportedFrontmatterError, parseMarkdown } from "../documentation/document-policy.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
@@ -59,7 +59,16 @@ async function readLinkedPages(packageRoot: string): Promise<string[] | undefine
 async function checkPageFrontmatter(packageRoot: string, page: string): Promise<Finding[]> {
   const location = `${CHANGELOG_DIR}/${page}`;
   const contents = await readFile(join(packageRoot, location), "utf8").catch(() => "");
-  const { frontmatter } = parseMarkdown(contents);
+  let frontmatter: Record<string, unknown>;
+  try {
+    ({ frontmatter } = parseMarkdown(contents, location));
+  } catch (cause) {
+    if (!(cause instanceof UnsupportedFrontmatterError)) {
+      throw cause;
+    }
+    // The documentation rule reports this page's frontmatter, because a changelog version page is a validation surface.
+    return [];
+  }
   return REQUIRED_FIELDS.filter((field) => {
     const value = frontmatter[field];
     return typeof value !== "string" || value.trim() === "" || PLACEHOLDER.test(value);

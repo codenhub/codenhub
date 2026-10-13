@@ -51,7 +51,7 @@ Root scripts map directly onto it:
 
 `hub browsers`, `hub assets`, `hub new`, `hub release`, `hub publish`, `hub preview:deploy`, and `hub labels` have no root script of their own. They are occasional commands rather than part of a change loop, and they read as what they are through `pnpm hub <command>`.
 
-A command name without its own definition runs the package script of that name, so package-specific scripts such as `dev` and `debug` work without registration. Package scripts also accept the package-first form, such as `hub styles dev`, when the first token identifies one package and the second names one of its scripts. `dev`, `debug`, and `preview` keep that package attached to the terminal, stream output as it arrives, and run without the default timeout.
+A command name without its own definition runs the package script of that name, so package-specific scripts such as `dev` and `debug` work without registration. A name that no workspace package defines fails rather than succeeding; see "How a package script is run". Package scripts also accept the package-first form, such as `hub styles dev`, when the first token identifies one package and the second names one of its scripts. `dev`, `debug`, and `preview` keep that package attached to the terminal, stream output as it arrives, and run without the default timeout.
 
 ## Targets
 
@@ -77,7 +77,15 @@ Only file paths are forwarded to the underlying tool, and only for commands that
 
 `--changed` narrows an explicit selection and replaces an empty one, so `hub test --changed` runs changed packages and `hub test error --changed` runs `error` only when it changed.
 
+A change to a workspace-wide file counts as a change to every package. The files are the root `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `package.json`, `tsconfig.json`, `.nvmrc`, `.npmrc`, `.oxlintrc.json`, `.oxfmtrc.json`, `.prettierrc.json`, `.prettierignore`, and anything under the root `assets/` directory; the list is the `WORKSPACE_WIDE_PATHS` constant in `packages/tools/src/workspace/select-packages.ts`. Only root files count, so `packages/error/package.json` changes `error` alone. An explicit selection still narrows the result, so `hub test error --changed` with a lockfile change runs `error`.
+
+These files change what every package installs, compiles, lints, or copies, so a change to one is a change to all: before they widened the selection, a pull request that only bumped a dependency selected nothing and passed unverified. The root `assets/` directory is on the list because the `assets` compliance check reads it, so removing a file there can break a package that did not change. Two alternatives were rejected. Widening only in `.github/workflows/ci.yml`, as it does for a change to CI itself, leaves the gap in the local `pnpm verify --changed` that `CONTRIBUTING.md` requires before a pull request. Widening on any file no package owns makes a root README edit verify the whole workspace.
+
+On Windows a workspace location matches a typed path regardless of case, because the file system does. `hub check Packages/error` runs `packages/error`. Other platforms compare case-sensitively.
+
 Every command narrows to one package, including `check` and `generate`. Two generated artifacts are workspace-wide and are therefore skipped by a narrowed `hub generate`: the root README package list is only rewritten when the selection covers the whole workspace. Run `pnpm generate` unfiltered before delivering a change that touched package metadata.
+
+`hub` reads the `packages` globs of `pnpm-workspace.yaml` without a YAML parser, so it understands the flat list pnpm uses for that key: quoted or bare globs, with trailing comments removed. A negated glob such as `"!**/test/**"` is rejected with an error that names it, not applied. Applying negations would reimplement pnpm's exclusion semantics for a workspace that uses none, so the untested copy could disagree with pnpm about which packages exist; ignoring them would make `hub` and pnpm disagree silently about the same file. The error is loud, and it is replaced by real support in the change that first needs a negation.
 
 ## Execution order
 
@@ -97,6 +105,8 @@ The expansion includes the `dev` and `debug` environments nested inside a select
 
 `hub` runs a package script by handing its body to the platform shell with the package's `node_modules/.bin` directories on `PATH`, which is what `pnpm run` would have set up. The shim is skipped for its cost: starting `pnpm` takes on the order of a second, and a workspace run pays that once per package per script, so it can outweigh several of the scripts it starts.
 
+A name with no dedicated command that no workspace package defines fails with exit code 1 and an error naming it. This is checked against the whole workspace, not the selection, so a script that only some packages define still runs for those packages, and a selection that lacks it only warns. The reason is that a typo in a CI step or a hook, such as `hub verfiy`, would otherwise report success having done nothing. Rejected: keeping the warning, since exit 0 is what CI reads as success; and failing whenever the selected packages lack the script, since a real script that only some packages define, such as `debug`, is ordinary.
+
 A script with a `pre` or `post` hook is still run through `pnpm run`, because the package manager owns those hooks and skipping it would silently drop a step. A script that invokes `pnpm` itself, such as one chaining `pnpm build:styles`, pays for that call as written; splitting such a chain into separate scripts is the way to avoid it.
 
 ## Type checking
@@ -109,7 +119,7 @@ This is why `docs/specs/packages-lifecycle.md` requires `composite` and `noEmit`
 
 A package whose `typecheck` script is anything else runs as its own script, in its own process, beside the batches. `apps/docs` is the one that does, because `astro sync` has to regenerate its types before the compiler sees them. Such a package takes a slot of its own and starts first, since nothing else in the run gets shorter by waiting for it.
 
-Diagnostics name the file they came from, so a batch that fails is reported against the packages the diagnostics belong to rather than against everything it covered. A failure with no file in it — a missing type library, say — is reported against every package in the batch, because nothing narrows it.
+Diagnostics name the file they came from, so a batch that fails is reported against the packages the diagnostics belong to rather than against everything it covered. The other packages in a failed batch are reported as skipped, not passed: the compiler stops at a project whose reference failed, and its output does not say which of the rest it checked. A failure with no file in it — a missing type library, say — is reported against every package in the batch, because nothing narrows it.
 
 ## Options
 
@@ -209,7 +219,7 @@ Two things the scaffold deliberately leaves out. It writes no `LICENSE`, because
 
 ## Verification
 
-`hub verify` runs `format`, `lint`, `build`, `typecheck`, `test`, `test:browser`, and `check` in that order and stops at the first failure. The order is by cost: the cheapest step that is most likely to fail on a fresh change runs first, browser tests follow the unit tests because a unit failure answers the same question far sooner, and a compliance report is only worth reading once the code it describes compiles and passes. Steps that never ran are reported as skipped rather than omitted, so the summary always accounts for all seven.
+`hub verify` runs `format`, `lint`, `build`, `typecheck`, `test`, `test:browser`, and `check` in that order and stops at the first failure. The order is by cost: the cheapest step that is most likely to fail on a fresh change runs first, browser tests follow the unit tests because a unit failure answers the same question far sooner, and a compliance report is only worth reading once the code it describes compiles and passes. Steps that never ran are reported as skipped rather than omitted, so the summary always accounts for all seven. A step that had nothing to run, because no selected package defines its script, is reported as skipped too: it passed nothing.
 
 `build` is a step of the run rather than a prerequisite of the three steps that need one. Left to each of them it builds the same packages three times, because no later step can tell that an earlier one already produced what it needs. Running it once and telling the rest the output is there is the same work done once. `--no-build` drops the step and leaves every other step to find its own build output, and `--skip=build` does the same.
 
@@ -276,6 +286,8 @@ It writes nothing, tags nothing, and publishes nothing. `hub publish` below is w
 
 A precondition that cannot be resolved, such as a tarball npm refused to build, is reported as unresolved rather than as ready. A blocker fails the run; an unresolved check does not, because "npm is unavailable" is not the same claim as "this package must not ship".
 
+The version check treats only npm's own "not found" answer (`E404` in the `--json` error on stdout) as an unpublished name, which is ready as the first release. Any other failed lookup, such as offline, a registry error, or a timeout, is reported as unresolved, because a failed lookup is not evidence that nothing is published. Before this rule, an offline run reported an already-published version as ready. Rejected: reporting a failed lookup as blocked, since a failed lookup does not show that the version is published, and blocking on it would fail every offline run; keeping every failure ready, which is the bug.
+
 `--skip-verify` reports readiness without the verification step, which is what you want while fixing one blocker at a time.
 
 ### Cutting a release
@@ -327,7 +339,13 @@ Every label is written with `gh label create --force`, so a run is safe to repea
 
 ## Cleaning
 
-`hub clean` removes `dist`, `coverage`, `test-results`, `.astro`, and every `*.tsbuildinfo` from the selected packages, descending below each package root so playgrounds and nested workspaces are covered too. The compiler's records go with the output they describe: left behind, they would tell the next type-check that projects whose declarations have just been deleted are still up to date. It stops at each artifact it finds rather than descending into it, and it never touches `node_modules`: dependencies belong to the package manager, and removing them turns a seconds-long cleanup into a reinstall.
+`hub clean` removes `dist`, `coverage`, `test-results`, and `.astro` only when they are a direct child of a package root. The package roots of a selected package are its own directory and the directory of every workspace package nested below it, so `hub clean icons` also removes `packages/icons/demo/dist` when `demo` is a workspace package. It removes every `*.tsbuildinfo` at any depth below the selected package. The compiler's records go with the output they describe: left behind, they would tell the next type-check that projects whose declarations have just been deleted are still up to date. It stops at each artifact it finds rather than descending into it, and it never touches `node_modules`: dependencies belong to the package manager, and removing them turns a seconds-long cleanup into a reinstall.
+
+A directory with one of those names anywhere else is source and is kept, and the search continues inside it for `*.tsbuildinfo` records. A directory name is not evidence of a build artifact by itself: matched at any depth, a source folder such as `packages/error/src/coverage` was removed along with the real output. Every artifact the workspace's tools produce lands at a package root, so the name is checked there and nowhere else.
+
+Two alternatives were rejected. Skipping whatever git tracks still deletes a source folder that is new and not yet tracked. Keeping the deep search keeps the silent loss of source.
+
+The cost is that an artifact directory below a package root that is not itself a workspace package, such as a `dist` inside a non-package `playground`, is no longer removed.
 
 ## Compliance checks
 
@@ -349,7 +367,9 @@ Findings carry a `<rule>/<detail>` code and a severity. Only `error` findings fa
 | `changelog`           | An opted-in changelog documents, dates, describes, and links the version the manifest declares.                         |
 | `assets`              | `codenhub.assets` entries resolve to real files under root `assets/`.                                                   |
 
-The `undocumented-export` rule reports `undocumented-export/missing-jsdoc` errors for top-level declarations exposed through `exports` subpaths with type targets. It applies to public packages and private packages with `codenhub.docs`, skips `./package.json`, expands typed wildcard subpaths, and follows re-export aliases to the original declaration before checking for JSDoc/TSDoc. It reads emitted declarations when available and otherwise emits declarations in memory with the TypeScript compiler API. It does not run TypeDoc. Run a build after source changes to keep on-disk declarations current; `hub verify` and PR CI already build before checking. Missing documentation fails the check. Unresolvable exports or declaration dependencies report `undocumented-export/unresolved-export` warnings, including generated targets that need a package build first. Class and interface members and documentation quality remain review responsibilities. Source documentation coverage belongs to this rule alone; the `reference` rule checks generated-page correctness.
+The `undocumented-export` rule reports `undocumented-export/missing-jsdoc` errors for top-level declarations exposed through `exports` subpaths with type targets. It applies to public packages and private packages with `codenhub.docs`, skips `./package.json`, expands typed wildcard subpaths, and follows re-export aliases to the original declaration before checking for JSDoc/TSDoc. It reads emitted declarations when available and otherwise emits declarations in memory with the TypeScript compiler API. It does not run TypeDoc. Run a build after source changes to keep on-disk declarations current; `hub verify` and PR CI already build before checking. Missing documentation fails the check. Unresolvable declaration dependencies, wildcards that match nothing, and generated targets that need a package build first report `undocumented-export/unresolved-export` warnings. The one exception is a typed export target whose file does not exist once `dist/` exists, which is an `error`: its message names a stale build as the usual cause and a rebuild as the first step to try. Class and interface members and documentation quality remain review responsibilities. Source documentation coverage belongs to this rule alone; the `reference` rule checks generated-page correctness.
+
+The `error` reverses the earlier decision that every unresolved export stays a warning. That decision did not weigh one case: after a build, a typed target that does not exist is never legitimate, since it is a typo or a file the build does not produce. CI builds before it checks, so a warning let a package whose `exports` point at nothing pass the gate. Keeping every unresolved export a warning is rejected on that evidence. Making every one an error was rejected too, because a bare `pnpm check` on a fresh clone builds nothing and would fail on every generated target. The cost is that, with a stale `dist/`, adding an export and running `pnpm check` without rebuilding is now an error where it was a warning. `hub verify` and CI build first, so only a bare local `check` is affected, and its message says what to run.
 
 Typed export targets include `.d.ts`, `.d.mts`, and `.d.cts`; missing CommonJS declarations can be emitted from `.cts` sources. A namespace re-export such as `export * as utilities from "./utilities.js"` is documented on that export declaration. Its members are not checked as top-level exports, and subsequent barrel aliases follow back to that namespace declaration.
 
@@ -376,7 +396,7 @@ A `readme` status notice is a blockquote above the first section heading, which 
 
 Tarball publication is checked only with `--pack`, which runs `npm pack --dry-run --ignore-scripts --json` per package. The documentation spec requires real npm output rather than an approximation of its inclusion rules, so the check is skipped rather than estimated when the flag is absent. Scripts are ignored because a read-only check must not build the package, and npm is subject to `--timeout` like any other child process.
 
-A finding is waived only by a `Checks bypassed` bullet in `docs/specs/packages-exceptions.md`. There is no in-code suppression: a waiver that is not documented does not exist. The reverse is reported too: a waiver that suppresses no finding is listed as dead, so a stale entry or a mistyped code or package name cannot sit in the register looking effective. A dead waiver is a warning and does not fail the run.
+A finding is waived only by a `Checks bypassed` bullet in `docs/specs/packages-exceptions.md`. There is no in-code suppression: a waiver that is not documented does not exist. The reverse is reported too: a waiver that suppresses no finding is listed as dead, so a stale entry or a mistyped code or package name cannot sit in the register looking effective. A dead waiver is a warning and does not fail the run. A `Checks bypassed` bullet under a level-2 heading that does not begin with a backticked package name is reported like an unknown package name, not applied to the package named by an earlier heading.
 
 ## Generated files
 

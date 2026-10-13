@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { buildLlmsFull, listLlmsFullSources } from "../documentation/llms-full.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
+import { createChangelogRules } from "./changelog-rules.ts";
 import { createDocumentationRules } from "./documentation-rules.ts";
 import type { CheckRule, Finding } from "./rule.ts";
 
@@ -180,5 +181,47 @@ describe("llms-full rule", () => {
     await writeFile(join(workspacePackage.directory, "llms-full.txt"), generated.replaceAll("\n", "\r\n"), "utf8");
 
     expect(await runRule("llms-full", workspacePackage)).toEqual([]);
+  });
+});
+
+describe("unsupported frontmatter across packages", () => {
+  it("reports each unreadable document in its own package without stopping the other package", async () => {
+    const bad = await createDocumentedPackage({
+      files: {
+        "docs/changelog/1.0.0.md": "---\ntitle: 1.0.0\ndescription: >-\n  Notes.\n---\n\n# 1.0.0\n",
+        "docs/changelog/index.md": "---\ntitle: Changelog\n---\n\n# Changelog\n\n- [1.0.0](1.0.0.md)\n",
+        "docs/guide.md": "---\ntitle: Guide # the guide\n---\n\n# Guide\n",
+      },
+      manifest: { name: "@codenhub/bad", version: "1.0.0" },
+      omit: ["llms-full.txt"],
+    });
+    const good = await createDocumentedPackage({
+      files: { "docs/guide.md": "---\ntitle: Guide\n---\n\n# Guide\n\n[Missing](missing.md)\n" },
+      manifest: { name: "@codenhub/good" },
+      omit: ["llms-full.txt"],
+    });
+    const packages = [bad, good];
+    const rules = [...createDocumentationRules(packages), ...createChangelogRules()];
+
+    const codesByPackage = await Promise.all(
+      packages.map(async (workspacePackage) => {
+        const findings = await Promise.all(
+          rules
+            .filter((rule) => rule.appliesTo(workspacePackage))
+            .map((rule) => rule.run({ includePack: false, package: workspacePackage })),
+        );
+        return findings.flat();
+      }),
+    );
+    const [badFindings, goodFindings] = codesByPackage as [Finding[], Finding[]];
+
+    expect(
+      badFindings
+        .filter(({ code }) => code === "documentation/invalid-frontmatter")
+        .map(({ location }) => location)
+        .sort(),
+    ).toEqual(["docs/changelog/1.0.0.md", "docs/guide.md"]);
+    expect(badFindings.filter(({ code }) => /^(changelog|llms-full)\//.test(code))).toEqual([]);
+    expect(goodFindings.map(({ code }) => code)).toContain("documentation/missing-target");
   });
 });

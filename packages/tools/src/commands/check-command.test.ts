@@ -208,6 +208,21 @@ describe("hub check", () => {
     expect(result.output).toContain("no workspace package has this name");
   });
 
+  it("reports a bypass under an unbackticked heading instead of waiving the previous package", async () => {
+    const register = [
+      createWaiver("@codenhub/error", ["metadata/license"]),
+      "",
+      "## Store package",
+      "",
+      "- **Checks bypassed:** `readme/status`.",
+    ].join("\n");
+    const result = await runCheck([createPackage("@codenhub/error")], register);
+
+    expect(result.output).not.toContain("readme/status");
+    expect(result.output).toContain("Store package");
+    expect(result.output).toContain("no workspace package has this name");
+  });
+
   it("keeps a dead waiver from failing the run", async () => {
     const result = await runCheck(
       [createPackage("@codenhub/error")],

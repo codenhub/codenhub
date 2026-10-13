@@ -25,6 +25,26 @@ describe("parseWorkspacePatterns", () => {
     expect(parseWorkspacePatterns("packages:\r\n  - packages/*\r\n")).toEqual(["packages/*"]);
   });
 
+  it("shouldStripTrailingCommentsFromListItems", () => {
+    const manifest = ["packages:", '  - "apps/*"  # apps', "  - packages/*   # libraries"].join("\n");
+
+    expect(parseWorkspacePatterns(manifest)).toEqual(["apps/*", "packages/*"]);
+  });
+
+  it("shouldKeepHashesThatAreNotPrecededByWhitespace", () => {
+    expect(parseWorkspacePatterns("packages:\n  - packages/*#x\n")).toEqual(["packages/*#x"]);
+  });
+
+  it("shouldKeepHashesInsideQuotedGlobs", () => {
+    expect(parseWorkspacePatterns('packages:\n  - "pkg # not a comment"\n')).toEqual(["pkg # not a comment"]);
+  });
+
+  it("shouldRejectNegatedGlobsInsteadOfIgnoringThem", () => {
+    const manifest = ["packages:", "  - packages/*", '  - "!**/test/**"'].join("\n");
+
+    expect(() => parseWorkspacePatterns(manifest)).toThrow(/negated glob "!\*\*\/test\/\*\*" is not supported/);
+  });
+
   it("shouldRejectAManifestWithoutAPackagesKey", () => {
     expect(() => parseWorkspacePatterns("catalog:\n  vitest: ^4.0.0")).toThrow(/missing a "packages:" key/);
   });

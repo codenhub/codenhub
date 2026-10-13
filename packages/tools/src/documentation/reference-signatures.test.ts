@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { ReferenceModel } from "./reference-model.ts";
-import { attachSignatures, buildSignatureResolver, extractSignatures } from "./reference-signatures.ts";
+import {
+  attachSignatures,
+  buildSignatureResolver,
+  extractSignatures,
+  resolveDtsCandidates,
+} from "./reference-signatures.ts";
 
 const dts = `
 export declare function createAppError(message: string): AppError;
@@ -164,9 +169,9 @@ describe("buildSignatureResolver", () => {
     expect(resolver.lookup("dist/index.d.ts", "Result")?.text).toBe("export type Result<T> = Ok<T> | Err;");
   });
 
-  it("maps a renamed re-export back to its original name in the target", () => {
+  it("shows a renamed re-export under its public name", () => {
     const registry = resolver.lookup("dist/index.d.ts", "ErrorRegistry");
-    expect(registry?.text).toBe("export declare class Registry<T>");
+    expect(registry?.text).toBe("export declare class ErrorRegistry<T>");
     expect([...(registry?.members ?? [])]).toEqual([["add", "add(value: T): void;"]]);
   });
 
@@ -180,7 +185,7 @@ describe("buildSignatureResolver local and imported aliases", () => {
     const resolver = buildSignatureResolver(
       new Map([["m.d.ts", `declare function Internal(): void;\nexport { Internal as Public };`]]),
     );
-    expect(resolver.lookup("m.d.ts", "Public")?.text).toBe("declare function Internal(): void;");
+    expect(resolver.lookup("m.d.ts", "Public")?.text).toBe("declare function Public(): void;");
   });
 
   it("resolves an imported binding that is then re-exported by name", () => {
@@ -190,7 +195,7 @@ describe("buildSignatureResolver local and imported aliases", () => {
         ["thing.d.ts", `export declare const Thing: number;`],
       ]),
     );
-    expect(resolver.lookup("index.d.ts", "Renamed")?.text).toBe("export declare const Thing: number;");
+    expect(resolver.lookup("index.d.ts", "Renamed")?.text).toBe("export declare const Renamed: number;");
   });
 
   it("reaches one file through both a star edge and a renamed edge", () => {
@@ -200,7 +205,7 @@ describe("buildSignatureResolver local and imported aliases", () => {
         ["m.d.ts", `export declare function Internal(): void;`],
       ]),
     );
-    expect(resolver.lookup("index.d.ts", "Public")?.text).toBe("export declare function Internal(): void;");
+    expect(resolver.lookup("index.d.ts", "Public")?.text).toBe("export declare function Public(): void;");
   });
 
   it("follows a `.d.mts` re-export target", () => {
@@ -211,5 +216,133 @@ describe("buildSignatureResolver local and imported aliases", () => {
       ]),
     );
     expect(resolver.lookup("index.d.mts", "helper")?.text).toBe("export declare function helper(): void;");
+  });
+});
+
+describe("buildSignatureResolver renamed exports", () => {
+  it("shows the public name for a renamed function re-export", () => {
+    const resolver = buildSignatureResolver(
+      new Map([
+        ["index.d.ts", `export { greet as hello } from "./greet.js";`],
+        ["greet.d.ts", `export declare function greet(name: string): string;`],
+      ]),
+    );
+    expect(resolver.lookup("index.d.ts", "hello")?.text).toBe("export declare function hello(name: string): string;");
+  });
+
+  it("shows the public name for a renamed function imported and re-exported locally", () => {
+    const resolver = buildSignatureResolver(
+      new Map([
+        ["index.d.ts", `import { greet } from "./greet.js";\nexport { greet as hello };`],
+        ["greet.d.ts", `export declare function greet(name: string): string;`],
+      ]),
+    );
+    expect(resolver.lookup("index.d.ts", "hello")?.text).toBe("export declare function hello(name: string): string;");
+  });
+
+  it("shows the public name for a renamed constant, class, interface, and type alias", () => {
+    const resolver = buildSignatureResolver(
+      new Map([
+        ["index.d.ts", `export { LIMIT as MAX, Impl as Api, Shape as Form, Pair as Couple } from "./decls.js";`],
+        [
+          "decls.d.ts",
+          [
+            "export declare const LIMIT: number;",
+            "export declare class Impl<T> extends Base {",
+            "  run(value: T): void;",
+            "}",
+            "export interface Shape {",
+            "  width: number;",
+            "}",
+            "export type Pair = [number, number];",
+          ].join("\n"),
+        ],
+      ]),
+    );
+    expect(resolver.lookup("index.d.ts", "MAX")?.text).toBe("export declare const MAX: number;");
+    expect(resolver.lookup("index.d.ts", "Api")?.text).toBe("export declare class Api<T> extends Base");
+    expect(resolver.lookup("index.d.ts", "Form")?.text).toBe("export interface Form");
+    expect(resolver.lookup("index.d.ts", "Couple")?.text).toBe("export type Couple = [number, number];");
+  });
+
+  it("renames only the declared name, not a parameter that shares the original name", () => {
+    const resolver = buildSignatureResolver(
+      new Map([
+        ["index.d.ts", `export { greet as hello } from "./greet.js";`],
+        ["greet.d.ts", `export declare function greet(greet: string): string;`],
+      ]),
+    );
+    expect(resolver.lookup("index.d.ts", "hello")?.text).toBe("export declare function hello(greet: string): string;");
+  });
+
+  it("renames a recursive type alias's self-references along with its declared name", () => {
+    const resolver = buildSignatureResolver(
+      new Map([
+        ["index.d.ts", `export { Tree as Node } from "./tree.js";`],
+        ["tree.d.ts", `export type Tree = { children: Tree[] };`],
+      ]),
+    );
+    expect(resolver.lookup("index.d.ts", "Node")?.text).toBe("export type Node = { children: Node[] };");
+  });
+
+  it("leaves a self-reference alone where a type parameter shadows the name", () => {
+    const resolver = buildSignatureResolver(
+      new Map([
+        ["index.d.ts", `export { Tree as Node } from "./tree.js";`],
+        ["tree.d.ts", `export type Tree = <Tree>(value: Tree) => Tree;`],
+      ]),
+    );
+    expect(resolver.lookup("index.d.ts", "Node")?.text).toBe("export type Node = <Tree>(value: Tree) => Tree;");
+  });
+
+  it("renames a class member's self-reference along with the class name", () => {
+    const resolver = buildSignatureResolver(
+      new Map([
+        ["index.d.ts", `export { Registry as Store } from "./registry.js";`],
+        ["registry.d.ts", `export declare class Registry {\n  clone(): Registry;\n}`],
+      ]),
+    );
+    expect([...(resolver.lookup("index.d.ts", "Store")?.members ?? [])]).toEqual([["clone", "clone(): Store;"]]);
+  });
+});
+
+describe("resolveDtsCandidates", () => {
+  it("resolves a TypeScript extension to the same candidates as its JavaScript extension", () => {
+    expect(resolveDtsCandidates("dist/index.d.ts", "./more.ts")).toEqual(
+      resolveDtsCandidates("dist/index.d.ts", "./more.js"),
+    );
+    expect(resolveDtsCandidates("dist/index.d.ts", "./more.mts")).toEqual(
+      resolveDtsCandidates("dist/index.d.ts", "./more.mjs"),
+    );
+    expect(resolveDtsCandidates("dist/index.d.ts", "./more.cts")).toEqual(
+      resolveDtsCandidates("dist/index.d.ts", "./more.cjs"),
+    );
+  });
+
+  it("keeps a .cts specifier to the CommonJS declaration only", () => {
+    expect(resolveDtsCandidates("dist/index.d.ts", "./more.cts")).toEqual(["dist/more.d.cts"]);
+  });
+
+  it("keeps the candidate order for an extensionless or .js specifier", () => {
+    expect(resolveDtsCandidates("dist/index.d.ts", "./more.js")).toEqual([
+      "dist/more.d.ts",
+      "dist/more.d.mts",
+      "dist/more.d.cts",
+      "dist/more/index.d.ts",
+      "dist/more/index.d.mts",
+      "dist/more/index.d.cts",
+    ]);
+  });
+});
+
+describe("buildSignatureResolver with a TypeScript extension specifier", () => {
+  it("follows `export * from` a `.ts` specifier to the declaring file", () => {
+    const resolver = buildSignatureResolver(
+      new Map([
+        ["index.d.ts", `export * from "./more.ts";`],
+        ["more.d.ts", `export declare function helper(): void;`],
+      ]),
+    );
+    expect(resolver.lookup("index.d.ts", "helper")?.text).toBe("export declare function helper(): void;");
   });
 });

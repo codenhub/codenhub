@@ -317,9 +317,9 @@ export function collectModuleGraph(source: ts.SourceFile): ModuleGraph {
  */
 export function resolveDtsCandidates(fromPath: string, specifier: string): string[] {
   const base = posix.normalize(
-    posix.join(posix.dirname(fromPath), specifier.replace(/\.d\.[cm]?ts$/, "").replace(/\.[cm]?js$/, "")),
+    posix.join(posix.dirname(fromPath), specifier.replace(/\.d\.[cm]?ts$/, "").replace(/\.[cm]?[jt]s$/, "")),
   );
-  if (/\.(?:cjs|d\.cts)$/.test(specifier)) {
+  if (/\.(?:cjs|cts|d\.cts)$/.test(specifier)) {
     return [`${base}.d.cts`];
   }
   return [
@@ -352,7 +352,93 @@ export interface SignatureResolver {
  * @returns A resolver whose `lookup` keys are those same paths.
  */
 export function buildSignatureResolver(files: ReadonlyMap<string, string>): SignatureResolver {
-  return buildModuleResolver(files, collectDeclarations);
+  return buildModuleResolver(files, collectDeclarations, renameSignature);
+}
+
+/**
+ * Gives a signature the name an export publishes it under, when a barrel renames it. Only the
+ * declared name changes, plus type references in the same text that name the declaration itself.
+ * @param signature Signature found under the declaration's own name.
+ * @param from The declaration's name.
+ * @param to The name the barrel publishes it under.
+ * @returns A copy with the name changed in every line of the signature.
+ */
+function renameSignature(signature: SymbolSignature, from: string, to: string): SymbolSignature {
+  const renamed: SymbolSignature = {
+    ...signature,
+    text: renameDeclaredName(signature.text, from, to, true),
+  };
+  if (signature.overloads !== undefined) {
+    renamed.overloads = signature.overloads.map((text) => renameDeclaredName(text, from, to, true));
+  }
+  if (signature.merged !== undefined) {
+    renamed.merged = signature.merged.map((text) => renameDeclaredName(text, from, to, true));
+  }
+  if (signature.members !== undefined) {
+    renamed.members = new Map(
+      [...signature.members].map(([name, text]) => [name, renameDeclaredName(text, from, to, false)]),
+    );
+  }
+  return renamed;
+}
+
+function leadingIdentifier(name: ts.EntityName): ts.Identifier {
+  return ts.isQualifiedName(name) ? leadingIdentifier(name.left) : name;
+}
+
+/**
+ * Renames `from` to `to` where the text declares it, and in type references to it. A type
+ * parameter or `infer` binding named `from` shadows the references inside its scope, so those stay.
+ * @param text One declaration's text, or a class member's text when `declaration` is `false`.
+ * @param declaration `true` when the text is a declaration whose own name is `from`.
+ * @returns The text with the name changed.
+ */
+function renameDeclaredName(text: string, from: string, to: string, declaration: boolean): string {
+  // A class member only parses inside a class body, so it is wrapped and unwrapped again.
+  const prefix = declaration ? "" : "declare class __Member {\n";
+  const suffix = declaration ? "" : "\n}";
+  const wrapped = `${prefix}${text}${suffix}`;
+  const source = ts.createSourceFile("signature.d.ts", wrapped, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const starts: number[] = [];
+
+  if (declaration) {
+    for (const statement of source.statements) {
+      const names = ts.isVariableStatement(statement)
+        ? statement.declarationList.declarations.map((declarator) => declarator.name)
+        : [(statement as { name?: ts.Node }).name];
+      for (const name of names) {
+        if (name !== undefined && ts.isIdentifier(name) && name.text === from) {
+          starts.push(name.getStart(source));
+        }
+      }
+    }
+  }
+
+  const visit = (node: ts.Node, outer: ReadonlySet<string>): void => {
+    const bound = boundNames(node);
+    const scope = bound.length === 0 ? outer : new Set([...outer, ...bound]);
+    if (ts.isTypeReferenceNode(node)) {
+      const head = leadingIdentifier(node.typeName);
+      if (head.text === from && !scope.has(from)) {
+        starts.push(head.getStart(source));
+      }
+    }
+    if (ts.isConditionalTypeNode(node)) {
+      visit(node.checkType, scope);
+      visit(node.extendsType, scope);
+      visit(node.trueType, new Set([...scope, ...inferNames(node.extendsType)]));
+      visit(node.falseType, scope);
+      return;
+    }
+    ts.forEachChild(node, (child) => visit(child, scope));
+  };
+  visit(source, new Set());
+
+  let renamed = wrapped;
+  for (const start of [...new Set(starts)].sort((a, b) => b - a)) {
+    renamed = renamed.slice(0, start) + to + renamed.slice(start + from.length);
+  }
+  return renamed.slice(prefix.length, renamed.length - suffix.length);
 }
 
 /** Original declaration nodes and exported names reachable through declaration barrels. */
@@ -406,7 +492,11 @@ function collectDeclarationNodes(statements: readonly ts.Statement[]): Map<strin
  * @returns Declaration lookup and public export enumeration using the signature resolver's barrel graph.
  */
 export function buildDeclarationResolver(files: ReadonlyMap<string, string>): DeclarationResolver {
-  return buildModuleResolver(files, (source) => collectDeclarationNodes(source.statements));
+  return buildModuleResolver(
+    files,
+    (source) => collectDeclarationNodes(source.statements),
+    (declarations) => declarations,
+  );
 }
 
 function collectExportNames(source: ts.SourceFile): Set<string> {
@@ -439,6 +529,7 @@ function collectExportNames(source: ts.SourceFile): Set<string> {
 function buildModuleResolver<T>(
   files: ReadonlyMap<string, string>,
   collect: (source: ts.SourceFile) => Map<string, T>,
+  rename: (value: T, from: string, to: string) => T,
 ) {
   const declarations = new Map<string, Map<string, T>>();
   const graphs = new Map<string, ModuleGraph>();
@@ -452,6 +543,12 @@ function buildModuleResolver<T>(
 
   const resolveEdgeTarget = (fromPath: string, specifier: string): string | undefined =>
     resolveDtsCandidates(fromPath, specifier).find((candidate) => files.has(candidate));
+
+  // A value found under another name keeps its declared name; show the public one. A `default` export is never renamed to.
+  const asPublic = (found: T | undefined, declaredName: string, publicName: string): T | undefined =>
+    found === undefined || declaredName === publicName || publicName === DEFAULT_EXPORT_NAME
+      ? found
+      : rename(found, declaredName, publicName);
 
   const lookup = (entryPath: string, name: string, seen: Set<string>): T | undefined => {
     // Key the guard on the pair: a renamed edge reaches the same file under a
@@ -473,7 +570,7 @@ function buildModuleResolver<T>(
     if (localBinding !== undefined && localBinding !== name) {
       const found = lookup(entryPath, localBinding, seen);
       if (found !== undefined) {
-        return found;
+        return asPublic(found, localBinding, name);
       }
     }
 
@@ -482,7 +579,7 @@ function buildModuleResolver<T>(
       const targetPath = resolveEdgeTarget(entryPath, imported.module);
       const found = targetPath === undefined ? undefined : lookup(targetPath, imported.original, seen);
       if (found !== undefined) {
-        return found;
+        return asPublic(found, imported.original, name);
       }
     }
 
@@ -508,7 +605,7 @@ function buildModuleResolver<T>(
       }
       const found = lookup(targetPath, targetName, seen);
       if (found !== undefined) {
-        return found;
+        return asPublic(found, targetName, name);
       }
     }
     return undefined;

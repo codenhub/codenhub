@@ -1,4 +1,4 @@
-import { glob, readFile } from "node:fs/promises";
+import { glob, readFile, stat } from "node:fs/promises";
 import { posix } from "node:path";
 
 import ts from "typescript";
@@ -140,6 +140,10 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
     return [];
   }
   const directory = workspacePackage.directory.replaceAll("\\", "/");
+  const built = await stat(`${directory}/dist`).then(
+    (info) => info.isDirectory(),
+    () => false,
+  );
   const { files, missing } = await readDeclarationGraph(directory, plans);
   const findings: Finding[] = [];
   if (missing.size > 0) {
@@ -154,11 +158,20 @@ async function run(workspacePackage: WorkspacePackage): Promise<Finding[]> {
   const resolver = buildDeclarationResolver(files);
   for (const plan of plans) {
     if (!files.has(plan.target)) {
+      // With build output present, a missing target file is never legitimate: a stale build
+      // or a typo, so it is an error. Before the first build it stays a warning.
       findings.push(
-        unresolved(
-          `Cannot resolve declarations for export "${plan.subpath}". Build the package and rerun the check.`,
-          plan.target,
-        ),
+        built && !plan.target.includes("*")
+          ? {
+              code: "undocumented-export/unresolved-export",
+              severity: "error",
+              message: `Export "${plan.subpath}" points at "${plan.target}", which does not exist. A stale build is the usual cause: rebuild the package and rerun the check before changing "exports".`,
+              location: plan.target,
+            }
+          : unresolved(
+              `Cannot resolve declarations for export "${plan.subpath}". Build the package and rerun the check.`,
+              plan.target,
+            ),
       );
       continue;
     }

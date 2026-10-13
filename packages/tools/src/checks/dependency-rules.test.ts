@@ -221,6 +221,32 @@ describe("dependency cycles", () => {
     expect(await runRuleForCodes(other, [workspacePackage])).toEqual(["dependencies/cycle"]);
   });
 
+  it("reports a cycle on a package reached only through another cycle, but not on one that depends on it", async () => {
+    const first = await createPackage("@fixture/first", {
+      workspaceDependencies: ["@fixture/second", "@fixture/third"],
+    });
+    const second = await createPackage("@fixture/second", { workspaceDependencies: ["@fixture/first"] });
+    const third = await createPackage("@fixture/third", { workspaceDependencies: ["@fixture/second"] });
+    const fourth = await createPackage("@fixture/fourth", { workspaceDependencies: ["@fixture/first"] });
+    // The whole workspace is one list, as in a real run, so the order a cycle is found in matters.
+    const workspace = [first, second, third, fourth];
+    const codesFor = async (target: WorkspacePackage): Promise<string[]> =>
+      (
+        await Promise.all(
+          createDependencyRules(workspace, createSources()).map(async (rule) =>
+            rule.run({ includePack: false, package: target }),
+          ),
+        )
+      )
+        .flat()
+        .map(({ code }) => code);
+
+    expect(await codesFor(first)).toEqual(["dependencies/cycle"]);
+    expect(await codesFor(second)).toEqual(["dependencies/cycle"]);
+    expect(await codesFor(third)).toEqual(["dependencies/cycle"]);
+    expect(await codesFor(fourth)).toEqual([]);
+  });
+
   it("accepts an acyclic chain", async () => {
     const workspacePackage = await createPackage("@fixture/example", { workspaceDependencies: ["@fixture/other"] });
     const other = await createPackage("@fixture/other");
@@ -292,6 +318,46 @@ describe("dependency usage", () => {
         severity: "warning",
       },
     ]);
+  });
+
+  it("does not count a longer package name that contains a dependency name as a use", async () => {
+    const workspacePackage = await createPackage(
+      "@fixture/example",
+      { devDependencies: { vite: "catalog:" } },
+      { "src/index.ts": `export const names = ["vitest", "vite-plugin-foo", "@scope/vite-tools"];` },
+    );
+
+    expect(await runRule(workspacePackage)).toEqual([
+      {
+        code: "dependencies/unused",
+        location: "package.json",
+        message: `"vite" is declared but named nowhere in the package.`,
+        severity: "warning",
+      },
+    ]);
+  });
+
+  it("counts a dependency named as a whole package name as used", async () => {
+    const workspacePackage = await createPackage(
+      "@fixture/example",
+      { devDependencies: { vite: "catalog:" }, scripts: { dev: "vite build" } },
+      {
+        "src/index.ts": `import { a } from "vite";\nexport const b = 'vite/client';`,
+        "README.md": `# vite\n`,
+      },
+    );
+
+    expect(await runRuleForCodes(workspacePackage)).toEqual([]);
+  });
+
+  it("matches a scoped name with a dot literally", async () => {
+    const workspacePackage = await createPackage(
+      "@fixture/example",
+      { devDependencies: { "@fixture/pkg.js": "1.0.0" } },
+      { "src/index.ts": `export const names = ["@fixture/pkgxjs"];` },
+    );
+
+    expect(await runRuleForCodes(workspacePackage)).toEqual(["dependencies/unused"]);
   });
 
   it("counts a dependency used through its binary as used", async () => {

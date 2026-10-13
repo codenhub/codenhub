@@ -104,6 +104,15 @@ describe("manifest rules", () => {
     ]);
   });
 
+  it("shouldRejectAnEmptyExportsObject", async () => {
+    const workspacePackage = createPackage({
+      directory: await createPackageDirectory(),
+      manifest: { ...COMPLIANT_MANIFEST, exports: {}, scripts: COMPLIANT_SCRIPTS },
+    });
+
+    expect((await runRules(workspacePackage)).map(({ code }) => code)).toEqual(["metadata/exports"]);
+  });
+
   it("shouldTreatRecommendedFieldsAsWarnings", async () => {
     const manifest = { ...COMPLIANT_MANIFEST, scripts: COMPLIANT_SCRIPTS, license: undefined };
     const findings = await runRules(createPackage({ directory: await createPackageDirectory(), manifest }));

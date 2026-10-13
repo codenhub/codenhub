@@ -296,7 +296,7 @@ export async function buildLlmsFull(rootPath: string, packageFiles: readonly str
       if (sourcePath === "README.md") {
         return { body: source, sourcePath };
       }
-      const { body, frontmatter } = parseMarkdown(source);
+      const { body, frontmatter } = parseMarkdown(source, sourcePath);
       return {
         body,
         curated: coercePublicDocumentCurated(frontmatter.curated),

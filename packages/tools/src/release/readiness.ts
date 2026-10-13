@@ -105,6 +105,20 @@ export function listEntryTargets(manifest: Readonly<Record<string, unknown>>): s
   return [...new Set(found)];
 }
 
+/**
+ * Whether `npm view --json` output is npm's own "not found" error.
+ * @param stdout Standard output of the failed `npm view` run.
+ * @returns True only when the output parses as JSON with the `E404` error code.
+ */
+function isNotFoundOutput(stdout: string): boolean {
+  try {
+    const parsed = JSON.parse(stdout) as { error?: { code?: unknown } } | null;
+    return parsed?.error?.code === "E404";
+  } catch {
+    return false;
+  }
+}
+
 async function checkVersion(workspacePackage: WorkspacePackage, run: ReleaseRunner): Promise<ReadinessCheck> {
   const local = workspacePackage.manifest.version;
   if (typeof local !== "string") {
@@ -112,9 +126,12 @@ async function checkVersion(workspacePackage: WorkspacePackage, run: ReleaseRunn
   }
   const result = await run("npm", ["view", workspacePackage.name, "version", "--json"], workspacePackage.directory);
   if (!result.isSuccess) {
-    // An unpublished name is the common reason `npm view` fails, and it is not a
-    // problem: the first release has nothing to be newer than.
-    return { detail: `${local} would be the first published version`, name: "version", status: "ready" };
+    // Only npm's own "not found" answer means the name is unpublished, and then
+    // the first release has nothing to be newer than. Any other failure, such as
+    // offline or a registry error, is no evidence that nothing is published.
+    return isNotFoundOutput(result.stdout)
+      ? { detail: `${local} would be the first published version`, name: "version", status: "ready" }
+      : { detail: "npm could not report the published version", name: "version", status: "unknown" };
   }
   const published = (JSON.parse(result.stdout || '""') as string) || "";
   if (published === "") {
