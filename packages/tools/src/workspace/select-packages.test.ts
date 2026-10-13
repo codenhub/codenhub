@@ -150,4 +150,37 @@ describe("selectPackages", () => {
   it("shouldSelectNothingWhenNoPackageChanged", async () => {
     expect((await select([], root, ["docs/readme.md"])).targets).toEqual([]);
   });
+
+  it("shouldSelectEveryPackageWhenALockfileChanged", async () => {
+    const selection = await select([], root, ["pnpm-lock.yaml"]);
+
+    expect(selection.targets.map(({ package: found }) => found.name)).toEqual([
+      "@fixture/alpha",
+      "@fixture/alpha-dev",
+      "@fixture/beta",
+      "@fixture/beta-dev",
+    ]);
+  });
+
+  it("shouldSelectEveryPackageWhenAFileUnderRootAssetsChanged", async () => {
+    const selection = await select([], root, ["assets/logo.svg"]);
+
+    expect(selection.targets).toHaveLength(4);
+  });
+
+  it("shouldSelectOnlyTheOwnerWhenAPackageManifestChanged", async () => {
+    const selection = await select([], root, ["packages/alpha/package.json"]);
+
+    expect(selection.targets.map(({ package: found }) => found.name)).toEqual(["@fixture/alpha"]);
+  });
+
+  it("shouldKeepAnExplicitSelectionWhenAWorkspaceWideFileChanged", async () => {
+    const selection = await select(["alpha"], root, ["pnpm-lock.yaml"]);
+
+    expect(selection.targets.map(({ package: found }) => found.name)).toEqual(["@fixture/alpha"]);
+  });
+
+  it("shouldSelectNothingWhenOnlyARootReadmeChanged", async () => {
+    expect((await select([], root, ["README.md"])).targets).toEqual([]);
+  });
 });

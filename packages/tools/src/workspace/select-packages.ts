@@ -6,6 +6,26 @@ import { createAliasIndex, lookupPackage, suggestAliases } from "./package-alias
 
 const GLOB_CHARACTERS = /[*?[\]{}]/;
 
+/**
+ * Repository-root files and directories that every package depends on, so a change
+ * to one counts as a change to every package. An entry ending in `/` covers every
+ * path beneath that directory. Only root-level files are listed: a `package.json`
+ * inside a package belongs to that package.
+ */
+const WORKSPACE_WIDE_PATHS: readonly string[] = [
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
+  "package.json",
+  "tsconfig.json",
+  ".nvmrc",
+  ".npmrc",
+  ".oxlintrc.json",
+  ".oxfmtrc.json",
+  ".prettierrc.json",
+  ".prettierignore",
+  "assets/",
+];
+
 /** One package selected for a run, with any narrowing paths it was given. */
 export interface PackageSelection {
   /** Selected package. */
@@ -247,14 +267,31 @@ export async function selectPackages(options: SelectPackagesOptions): Promise<Se
   return { isImplicit: false, targets: builder.build(), unownedPaths: builder.unownedPaths() };
 }
 
+function isWorkspaceWide(path: string): boolean {
+  return WORKSPACE_WIDE_PATHS.some((entry) => (entry.endsWith("/") ? path.startsWith(entry) : path === entry));
+}
+
+/**
+ * Names the packages a set of changed paths touches. A workspace-wide change touches every package.
+ * @param workspace Discovered workspace.
+ * @param changedPaths Repository-relative POSIX paths.
+ * @returns Names of the changed packages.
+ */
+function changedPackageNames(workspace: Workspace, changedPaths: readonly string[]): Set<string> {
+  if (changedPaths.some(isWorkspaceWide)) {
+    return new Set(workspace.packages.map(({ name }) => name));
+  }
+  return new Set(
+    changedPaths.map((path) => findOwningPackage(workspace.packages, path)?.name).filter((name) => name !== undefined),
+  );
+}
+
 function applyChangeFilter(
   workspace: Workspace,
   builder: SelectionBuilder,
   changedPaths: readonly string[],
 ): PackageSelection[] {
-  const changed = new Set(
-    changedPaths.map((path) => findOwningPackage(workspace.packages, path)?.name).filter((name) => name !== undefined),
-  );
+  const changed = changedPackageNames(workspace, changedPaths);
   if (builder.isEmpty()) {
     return workspace.packages
       .filter(({ name }) => changed.has(name))

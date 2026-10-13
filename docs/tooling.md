@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-06
+last_updated: 2026-10-13
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -76,6 +76,10 @@ Manifest names and workspace locations always outrank directory names. `icons` s
 Only file paths are forwarded to the underlying tool, and only for commands that accept them (`test`, `test:browser`, `test:browser:watch`, `test:coverage`, `test:watch`). Other commands treat a path as a way to name its package.
 
 `--changed` narrows an explicit selection and replaces an empty one, so `hub test --changed` runs changed packages and `hub test error --changed` runs `error` only when it changed.
+
+A change to a workspace-wide file counts as a change to every package. The files are the root `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `package.json`, `tsconfig.json`, `.nvmrc`, `.npmrc`, `.oxlintrc.json`, `.oxfmtrc.json`, `.prettierrc.json`, `.prettierignore`, and anything under the root `assets/` directory; the list is the `WORKSPACE_WIDE_PATHS` constant in `packages/tools/src/workspace/select-packages.ts`. Only root files count, so `packages/error/package.json` changes `error` alone. An explicit selection still narrows the result, so `hub test error --changed` with a lockfile change runs `error`.
+
+These files change what every package installs, compiles, lints, or copies, so a change to one is a change to all: before they widened the selection, a pull request that only bumped a dependency selected nothing and passed unverified. The root `assets/` directory is on the list because the `assets` compliance check reads it, so removing a file there can break a package that did not change. Two alternatives were rejected. Widening only in `.github/workflows/ci.yml`, as it does for a change to CI itself, leaves the gap in the local `pnpm verify --changed` that `CONTRIBUTING.md` requires before a pull request. Widening on any file no package owns makes a root README edit verify the whole workspace.
 
 Every command narrows to one package, including `check` and `generate`. Two generated artifacts are workspace-wide and are therefore skipped by a narrowed `hub generate`: the root README package list is only rewritten when the selection covers the whole workspace. Run `pnpm generate` unfiltered before delivering a change that touched package metadata.
 
