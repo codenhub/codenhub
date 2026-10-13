@@ -112,6 +112,12 @@ describe("documented exports rule", () => {
     expect(await runRule({ exports: { import: "./dist/index.js", types: "./dist/index.d.ts" }, files })).toEqual([]);
   });
 
+  it("reports the root import of an empty exports object", async () => {
+    const files = { "README.md": '# Example\n\n```ts\nimport { create } from "@codenhub/example";\n```\n' };
+
+    expect((await runRule({ exports: {}, files })).map(({ code }) => code)).toEqual(["exports/undocumented-import"]);
+  });
+
   it("reports a CSS import missing from exports", async () => {
     const files = { "README.md": '# Example\n\n```css\n@import "@codenhub/example/styles.css";\n```\n' };
 
