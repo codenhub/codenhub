@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-06
+last_updated: 2026-10-13
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -109,7 +109,7 @@ This is why `docs/specs/packages-lifecycle.md` requires `composite` and `noEmit`
 
 A package whose `typecheck` script is anything else runs as its own script, in its own process, beside the batches. `apps/docs` is the one that does, because `astro sync` has to regenerate its types before the compiler sees them. Such a package takes a slot of its own and starts first, since nothing else in the run gets shorter by waiting for it.
 
-Diagnostics name the file they came from, so a batch that fails is reported against the packages the diagnostics belong to rather than against everything it covered. A failure with no file in it — a missing type library, say — is reported against every package in the batch, because nothing narrows it.
+Diagnostics name the file they came from, so a batch that fails is reported against the packages the diagnostics belong to rather than against everything it covered. The other packages in a failed batch are reported as skipped, not passed: the compiler stops at a project whose reference failed, and its output does not say which of the rest it checked. A failure with no file in it — a missing type library, say — is reported against every package in the batch, because nothing narrows it.
 
 ## Options
 
