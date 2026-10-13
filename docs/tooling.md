@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-06
+last_updated: 2026-10-13
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -209,7 +209,7 @@ Two things the scaffold deliberately leaves out. It writes no `LICENSE`, because
 
 ## Verification
 
-`hub verify` runs `format`, `lint`, `build`, `typecheck`, `test`, `test:browser`, and `check` in that order and stops at the first failure. The order is by cost: the cheapest step that is most likely to fail on a fresh change runs first, browser tests follow the unit tests because a unit failure answers the same question far sooner, and a compliance report is only worth reading once the code it describes compiles and passes. Steps that never ran are reported as skipped rather than omitted, so the summary always accounts for all seven.
+`hub verify` runs `format`, `lint`, `build`, `typecheck`, `test`, `test:browser`, and `check` in that order and stops at the first failure. The order is by cost: the cheapest step that is most likely to fail on a fresh change runs first, browser tests follow the unit tests because a unit failure answers the same question far sooner, and a compliance report is only worth reading once the code it describes compiles and passes. Steps that never ran are reported as skipped rather than omitted, so the summary always accounts for all seven. A step that had nothing to run, because no selected package defines its script, is reported as skipped too: it passed nothing.
 
 `build` is a step of the run rather than a prerequisite of the three steps that need one. Left to each of them it builds the same packages three times, because no later step can tell that an earlier one already produced what it needs. Running it once and telling the rest the output is there is the same work done once. `--no-build` drops the step and leaves every other step to find its own build output, and `--skip=build` does the same.
 
