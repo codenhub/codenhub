@@ -317,9 +317,9 @@ export function collectModuleGraph(source: ts.SourceFile): ModuleGraph {
  */
 export function resolveDtsCandidates(fromPath: string, specifier: string): string[] {
   const base = posix.normalize(
-    posix.join(posix.dirname(fromPath), specifier.replace(/\.d\.[cm]?ts$/, "").replace(/\.[cm]?js$/, "")),
+    posix.join(posix.dirname(fromPath), specifier.replace(/\.d\.[cm]?ts$/, "").replace(/\.[cm]?[jt]s$/, "")),
   );
-  if (/\.(?:cjs|d\.cts)$/.test(specifier)) {
+  if (/\.(?:cjs|cts|d\.cts)$/.test(specifier)) {
     return [`${base}.d.cts`];
   }
   return [

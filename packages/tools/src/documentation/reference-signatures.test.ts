@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import type { ReferenceModel } from "./reference-model.ts";
-import { attachSignatures, buildSignatureResolver, extractSignatures } from "./reference-signatures.ts";
+import {
+  attachSignatures,
+  buildSignatureResolver,
+  extractSignatures,
+  resolveDtsCandidates,
+} from "./reference-signatures.ts";
 
 const dts = `
 export declare function createAppError(message: string): AppError;
@@ -211,5 +216,46 @@ describe("buildSignatureResolver local and imported aliases", () => {
       ]),
     );
     expect(resolver.lookup("index.d.mts", "helper")?.text).toBe("export declare function helper(): void;");
+  });
+});
+
+describe("resolveDtsCandidates", () => {
+  it("resolves a TypeScript extension to the same candidates as its JavaScript extension", () => {
+    expect(resolveDtsCandidates("dist/index.d.ts", "./more.ts")).toEqual(
+      resolveDtsCandidates("dist/index.d.ts", "./more.js"),
+    );
+    expect(resolveDtsCandidates("dist/index.d.ts", "./more.mts")).toEqual(
+      resolveDtsCandidates("dist/index.d.ts", "./more.mjs"),
+    );
+    expect(resolveDtsCandidates("dist/index.d.ts", "./more.cts")).toEqual(
+      resolveDtsCandidates("dist/index.d.ts", "./more.cjs"),
+    );
+  });
+
+  it("keeps a .cts specifier to the CommonJS declaration only", () => {
+    expect(resolveDtsCandidates("dist/index.d.ts", "./more.cts")).toEqual(["dist/more.d.cts"]);
+  });
+
+  it("keeps the candidate order for an extensionless or .js specifier", () => {
+    expect(resolveDtsCandidates("dist/index.d.ts", "./more.js")).toEqual([
+      "dist/more.d.ts",
+      "dist/more.d.mts",
+      "dist/more.d.cts",
+      "dist/more/index.d.ts",
+      "dist/more/index.d.mts",
+      "dist/more/index.d.cts",
+    ]);
+  });
+});
+
+describe("buildSignatureResolver with a TypeScript extension specifier", () => {
+  it("follows `export * from` a `.ts` specifier to the declaring file", () => {
+    const resolver = buildSignatureResolver(
+      new Map([
+        ["index.d.ts", `export * from "./more.ts";`],
+        ["more.d.ts", `export declare function helper(): void;`],
+      ]),
+    );
+    expect(resolver.lookup("index.d.ts", "helper")?.text).toBe("export declare function helper(): void;");
   });
 });
