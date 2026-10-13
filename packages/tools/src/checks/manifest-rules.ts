@@ -94,7 +94,7 @@ async function checkMetadata(workspacePackage: WorkspacePackage): Promise<Findin
   if (!Array.isArray(manifest.files) || manifest.files.length === 0) {
     fail("files", `"files" must list the publishable output.`);
   }
-  if (!isRecord(manifest.exports)) {
+  if (!isRecord(manifest.exports) || Object.keys(manifest.exports).length === 0) {
     fail("exports", `"exports" must declare the public entrypoints.`);
   }
   const publishConfig = manifest.publishConfig;

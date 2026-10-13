@@ -40,6 +40,10 @@ function isDeclaredSubpath(exportsField: unknown, subpath: string): boolean {
     return false;
   }
   const keys = Object.keys(exportsField);
+  // An empty object has no conditions either, so it declares nothing.
+  if (keys.length === 0) {
+    return false;
+  }
   // Sugar form: an object of conditions with no subpath keys declares only the
   // root entrypoint.
   if (!keys.some((key) => key === "." || key.startsWith("./"))) {
