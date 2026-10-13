@@ -21,26 +21,48 @@ const VERIFY_STEPS: readonly string[] = ["format", "lint", "build", "typecheck",
 /** The step whose output every later step would otherwise rebuild for itself. */
 const BUILD_STEP = "build";
 
+/** The steps that run a package script of the same name, so have nothing to run when no selected package defines it. */
+const SCRIPT_STEPS: readonly string[] = [BUILD_STEP, "typecheck", "test", "test:browser"];
+
 interface StepOutcome {
   name: string;
   exitCode: number;
   durationMs: number;
+  /** Whether the step had anything to run; a step that did not is reported as skipped. */
+  hasWork: boolean;
 }
 
 /** Resolves a step name to the command that runs it, injected by tests. */
 export type CommandResolver = (name: string) => CommandDefinition;
 
+/**
+ * Whether a step has anything to run for this selection. Formatting, linting, and
+ * compliance checks always do; a script step does only when a selected package
+ * defines the script, which is the same condition the script command checks.
+ */
+function hasWork(context: CommandContext, name: string): boolean {
+  return (
+    !SCRIPT_STEPS.includes(name) ||
+    context.selection.targets.some(({ package: workspacePackage }) => workspacePackage.scripts[name] !== undefined)
+  );
+}
+
 async function runSteps(
   context: CommandContext,
   resolveCommand: CommandResolver,
   steps: readonly string[],
+  skipsBuild: boolean,
 ): Promise<StepOutcome[]> {
   const outcomes: StepOutcome[] = [];
-  let hasBuilt = false;
+  let hasBuilt = skipsBuild;
   let hasFailed = false;
 
   await mapSeries(steps, async (name) => {
     if (hasFailed) {
+      return;
+    }
+    if (!hasWork(context, name)) {
+      outcomes.push({ durationMs: 0, exitCode: EXIT_SUCCESS, hasWork: false, name });
       return;
     }
     const startedAt = performance.now();
@@ -55,7 +77,7 @@ async function runSteps(
       options: hasBuilt ? { ...context.options, shouldBuild: false } : context.options,
       passthrough: [],
     });
-    outcomes.push({ durationMs: performance.now() - startedAt, exitCode, name });
+    outcomes.push({ durationMs: performance.now() - startedAt, exitCode, hasWork: true, name });
     hasFailed = exitCode !== EXIT_SUCCESS;
     hasBuilt ||= name === BUILD_STEP;
   });
@@ -64,6 +86,9 @@ async function runSteps(
 }
 
 function toSummaryRow(outcome: StepOutcome): SummaryRow {
+  if (!outcome.hasWork) {
+    return { detail: `no selected package defines "${outcome.name}"`, label: outcome.name, status: "skipped" };
+  }
   return {
     detail: formatDuration(outcome.durationMs),
     label: outcome.name,
@@ -96,7 +121,9 @@ export function createVerifyCommand(resolver?: CommandResolver): CommandDefiniti
       // the step itself would be the one build the flag was meant to prevent.
       const excludedSteps = context.options.shouldBuild ? requested : [...requested, BUILD_STEP];
       const steps = VERIFY_STEPS.filter((name) => !excludedSteps.includes(name));
-      const outcomes = await runSteps(context, resolveCommand, steps);
+      // Dropping the build step by `--skip` is the same as `--no-build`: the later
+      // steps find their output rather than build it, so they are told it is done.
+      const outcomes = await runSteps(context, resolveCommand, steps, excludedSteps.includes(BUILD_STEP));
       const unreached = steps.slice(outcomes.length).map<SummaryRow>((name) => ({
         detail: "not reached",
         label: name,
