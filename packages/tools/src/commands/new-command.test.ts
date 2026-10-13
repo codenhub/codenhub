@@ -130,6 +130,29 @@ describe("hub new", () => {
     expect(manifest.codenhub.docs.label).toBe("Sample Widget");
   });
 
+  it("uses a label the author gives", async () => {
+    const result = await runNew(["widget", "--label=Widget Kit", "--description=Widget helpers."]);
+    const manifest = JSON.parse(await readFile(join(result.root, "packages/widget/package.json"), "utf8"));
+
+    expect(manifest.codenhub.docs.label).toBe("Widget Kit");
+  });
+
+  it("refuses an empty label rather than writing one hub check rejects", async () => {
+    const result = await runNew(["widget", "--label=", "--description=Widget helpers."]);
+
+    expect(result.errors).toContain("--label needs a value");
+    expect(result.exitCode).toBe(1);
+    await expect(readdir(join(result.root, "packages/widget"))).rejects.toThrow(/ENOENT/);
+  });
+
+  it("refuses a whitespace-only label", async () => {
+    const result = await runNew(["widget", "--label=   ", "--description=Widget helpers."]);
+
+    expect(result.errors).toContain("--label needs a value");
+    expect(result.exitCode).toBe(1);
+    await expect(readdir(join(result.root, "packages/widget"))).rejects.toThrow(/ENOENT/);
+  });
+
   it("writes nothing during a dry run", async () => {
     const result = await runNew(["widget", "--description=Widget helpers.", "--dry-run"]);
 
