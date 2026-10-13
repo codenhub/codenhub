@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { UnsupportedFrontmatterError } from "../documentation/document-policy.ts";
 import { buildLlmsFull, listLlmsFullSources } from "../documentation/llms-full.ts";
 import { inspectPackageDocumentation } from "../documentation/package-documentation.ts";
 import { parsePackageMetadata } from "../documentation/package-metadata.ts";
@@ -93,10 +94,16 @@ async function checkDocumentation(
 }
 
 async function checkLlmsFull(workspacePackage: WorkspacePackage): Promise<Finding[]> {
-  const generated = await buildLlmsFull(
-    workspacePackage.directory,
-    await listLlmsFullSources(workspacePackage.directory),
-  );
+  let generated: string;
+  try {
+    generated = await buildLlmsFull(workspacePackage.directory, await listLlmsFullSources(workspacePackage.directory));
+  } catch (cause) {
+    if (!(cause instanceof UnsupportedFrontmatterError)) {
+      throw cause;
+    }
+    // The documentation rule reports the document whose frontmatter cannot be read, so no drift can be judged here.
+    return [];
+  }
   const authored = await readFile(join(workspacePackage.directory, LLMS_FULL), "utf8").catch(() => undefined);
   if (authored === undefined) {
     return [

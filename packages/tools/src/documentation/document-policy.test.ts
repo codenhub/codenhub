@@ -4,6 +4,7 @@ import {
   assertSingleH1,
   comparePublicDocumentPaths,
   comparePublicDocuments,
+  parseMarkdown,
   parsePublicDocumentFrontmatter,
 } from "./document-policy.ts";
 
@@ -230,5 +231,59 @@ describe("public document policy", () => {
       "about.md",
       "concepts.md",
     ]);
+  });
+});
+
+describe("parseMarkdown frontmatter", () => {
+  const SOURCE = "docs/guide.md";
+
+  it.each([">-", "|", ">", "|-", ">+"])("rejects a block scalar value written as %s", (indicator) => {
+    expect(() => parseMarkdown(`---\ndescription: ${indicator}\n  Some text.\n---\n# Guide`, SOURCE)).toThrow(
+      'Unsupported frontmatter field "description" in docs/guide.md',
+    );
+  });
+
+  it("rejects an unquoted value with a trailing comment", () => {
+    expect(() => parseMarkdown("---\ntitle: Errors # note\n---\n# Guide", SOURCE)).toThrow(
+      'Unsupported frontmatter field "title" in docs/guide.md',
+    );
+  });
+
+  it("keeps a hash that is not preceded by whitespace as part of an unquoted value", () => {
+    expect(parseMarkdown("---\ntitle: C#\n---\n# Guide", SOURCE).frontmatter).toEqual({ title: "C#" });
+    expect(parseMarkdown("---\ntitle: a#b\n---\n# Guide", SOURCE).frontmatter).toEqual({ title: "a#b" });
+  });
+
+  it("keeps a hash inside a quoted value", () => {
+    expect(parseMarkdown('---\ntitle: "Errors # note"\n---\n# Guide', SOURCE).frontmatter).toEqual({
+      title: "Errors # note",
+    });
+  });
+
+  it("rejects a quoted value followed by a trailing comment", () => {
+    expect(() => parseMarkdown('---\ntitle: "Errors" # note\n---\n# Guide', SOURCE)).toThrow(
+      'Unsupported frontmatter field "title" in docs/guide.md',
+    );
+  });
+
+  it("rejects a quoted value that does not close on the same line", () => {
+    expect(() => parseMarkdown('---\ntitle: "Errors and\n  results"\n---\n# Guide', SOURCE)).toThrow(
+      'Unsupported frontmatter field "title" in docs/guide.md',
+    );
+  });
+
+  it("unescapes a doubled single quote inside a single-quoted value", () => {
+    expect(parseMarkdown("---\ntitle: 'It''s'\n---\n# Guide", SOURCE).frontmatter).toEqual({ title: "It's" });
+  });
+
+  it("reads frontmatter behind a leading byte order mark and omits the mark from the body", () => {
+    expect(parseMarkdown("﻿---\ntitle: Example\n---\n\n# Example\n", SOURCE)).toEqual({
+      body: "\n# Example\n",
+      frontmatter: { title: "Example" },
+    });
+  });
+
+  it("omits a leading byte order mark from a document without frontmatter", () => {
+    expect(parseMarkdown("﻿# Example\n", SOURCE)).toEqual({ body: "# Example\n", frontmatter: {} });
   });
 });

@@ -338,29 +338,84 @@ export interface ParsedMarkdown {
   body: string;
 }
 
-function unquote(value: string): string {
-  const isQuoted =
-    value.length >= 2 &&
-    ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")));
-  return isQuoted ? value.slice(1, -1) : value;
+const BYTE_ORDER_MARK = "\uFEFF";
+
+/**
+ * Thrown when frontmatter uses YAML this reader does not support. The message
+ * names the field and the file. The body is still available, so a caller can
+ * report the frontmatter and keep checking the rest of the document.
+ */
+export class UnsupportedFrontmatterError extends Error {
+  /** Markdown body after the frontmatter block. */
+  readonly body: string;
+
+  /**
+   * @param message Explanation naming the field, the file, and what to write instead.
+   * @param body Markdown body after the frontmatter block.
+   */
+  constructor(message: string, body: string) {
+    super(message);
+    this.name = "UnsupportedFrontmatterError";
+    this.body = body;
+  }
+}
+
+/**
+ * Reads one scalar value, rejecting the YAML this reader does not support rather
+ * than keeping its syntax as if it were content.
+ * @param key Frontmatter field the value belongs to, named in the error.
+ * @param value Trimmed text after the colon, not empty.
+ * @param sourcePath Package-relative path of the document, named in the error.
+ * @param body Markdown body after the frontmatter block, carried by the error.
+ * @returns The value without its quotes, with `''` unescaped in single quotes.
+ * @throws {UnsupportedFrontmatterError} When the value is a block scalar, has a trailing comment, or a quote that does not close on its line.
+ */
+function readScalar(key: string, value: string, sourcePath: string, body: string): string {
+  const unsupported = (reason: string): Error =>
+    new UnsupportedFrontmatterError(`Unsupported frontmatter field "${key}" in ${sourcePath}: ${reason}`, body);
+  const quote = value.charAt(0);
+  if (quote === '"' || quote === "'") {
+    if (value.length < 2 || !value.endsWith(quote)) {
+      throw unsupported(
+        "a quoted value must close on the same line, and nothing may follow the closing quote. Write the value on one line and remove any comment after it.",
+      );
+    }
+    const inner = value.slice(1, -1);
+    return quote === "'" ? inner.replaceAll("''", "'") : inner;
+  }
+  if (/^[|>]/.test(value)) {
+    throw unsupported("YAML block scalars (|, >) are not supported. Write the value on one line.");
+  }
+  if (/(^|\s)#/.test(value)) {
+    throw unsupported(
+      "a trailing comment is not supported. Remove the comment, or put the whole value in quotes if the # is part of it.",
+    );
+  }
+  return value;
 }
 
 /**
  * Splits a Markdown document into frontmatter fields and its authored body.
  *
  * Only the flat scalar fields allowed by the public document schema are read, so
- * no YAML dependency is needed. A field whose value is not a scalar still records
- * its key, so schema validation rejects it as unknown or empty; the lines making
- * up such a value are skipped rather than guessed at.
- * @param source Raw Markdown file contents.
+ * no YAML dependency is needed. YAML outside that subset, such as block scalars,
+ * trailing comments, and quotes that do not close on their line, is rejected
+ * rather than misread. A field whose value is not a scalar still records its key,
+ * so schema validation rejects it as unknown or empty; the lines making up such a
+ * value are skipped rather than guessed at.
+ * @param source Raw Markdown file contents. A leading byte order mark is ignored.
+ * @param sourcePath Package-relative path of the document, named in errors.
  * @returns Frontmatter fields and the body that follows them.
+ * @throws When the frontmatter uses YAML this reader does not support.
  */
-export function parseMarkdown(source: string): ParsedMarkdown {
-  const match = FRONTMATTER_PATTERN.exec(source);
+export function parseMarkdown(source: string, sourcePath: string): ParsedMarkdown {
+  const text = source.startsWith(BYTE_ORDER_MARK) ? source.slice(BYTE_ORDER_MARK.length) : source;
+  const match = FRONTMATTER_PATTERN.exec(text);
   if (match?.groups === undefined) {
-    return { body: source, frontmatter: {} };
+    return { body: text, frontmatter: {} };
   }
 
+  const body = text.slice(match[0].length);
   const frontmatter: Record<string, unknown> = {};
   for (const line of (match.groups.body as string).split(/\r?\n/)) {
     if (line.trim() === "" || line.trimStart().startsWith("#")) {
@@ -370,9 +425,10 @@ export function parseMarkdown(source: string): ParsedMarkdown {
     if (field?.groups === undefined) {
       continue;
     }
+    const key = field.groups.key as string;
     const value = (field.groups.value as string).trim();
-    frontmatter[field.groups.key as string] = value === "" ? null : unquote(value);
+    frontmatter[key] = value === "" ? null : readScalar(key, value, sourcePath, body);
   }
 
-  return { body: source.slice(match[0].length), frontmatter };
+  return { body, frontmatter };
 }

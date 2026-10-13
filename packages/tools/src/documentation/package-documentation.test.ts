@@ -97,4 +97,15 @@ describe("package documentation loading", () => {
 
     await expect(loadWorkspaceDocumentation(packagesRoot, loadPackage)).rejects.toThrow("Invalid alpha\nInvalid beta");
   });
+
+  it("names the manifest path when a workspace package.json is malformed", async () => {
+    const packagesRoot = await mkdtemp(path.join(tmpdir(), "codenhub-workspace-docs-"));
+    const rootPath = path.join(packagesRoot, "broken");
+    await mkdir(rootPath);
+    await writeFile(path.join(rootPath, "package.json"), '{ "name": "@codenhub/broken",, }');
+
+    await expect(loadWorkspaceDocumentation(packagesRoot, vi.fn())).rejects.toThrow(
+      `Invalid package manifest at ${path.join(rootPath, "package.json")}: `,
+    );
+  });
 });

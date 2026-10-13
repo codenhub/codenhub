@@ -2,7 +2,12 @@ import GithubSlugger from "github-slugger";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 
-import { assertSingleH1, parseMarkdown, parsePublicDocumentFrontmatter } from "./document-policy.ts";
+import {
+  UnsupportedFrontmatterError,
+  assertSingleH1,
+  parseMarkdown,
+  parsePublicDocumentFrontmatter,
+} from "./document-policy.ts";
 import { getDocumentRoute } from "./package-metadata.ts";
 
 interface MarkdownNode {
@@ -95,6 +100,10 @@ const DOCS_README = "docs/README.md";
 // `llms-full.txt` is deliberately absent: it concatenates every document, so it
 // carries one H1 per source by design.
 const SINGLE_H1_SURFACES = new Set(["README.md", "llms.txt"]);
+// Frontmatter this reader cannot parse is reported as an issue of its document
+// rather than aborting the graph. The error stays out of `GraphDocument`, so the
+// exported shape does not change.
+const unsupportedFrontmatter = new WeakMap<GraphDocument, UnsupportedFrontmatterError>();
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
@@ -136,8 +145,22 @@ function getNodeText(node: MarkdownNode): string {
   return node.children?.map(getNodeText).join("") ?? "";
 }
 
+function readFrontmatter(
+  path: string,
+  source: string,
+): { body: string; frontmatter: Record<string, unknown>; unsupported?: UnsupportedFrontmatterError } {
+  try {
+    return parseMarkdown(source, path);
+  } catch (cause) {
+    if (!(cause instanceof UnsupportedFrontmatterError)) {
+      throw cause;
+    }
+    return { body: cause.body, frontmatter: {}, unsupported: cause };
+  }
+}
+
 function parseDocument(path: string, source: string): GraphDocument {
-  const { body, frontmatter } = parseMarkdown(source);
+  const { body, frontmatter, unsupported } = readFrontmatter(path, source);
   const tree = unified().use(remarkParse).parse(body) as MarkdownNode;
   const definitions = new Map<string, string>();
   const links: DocumentLink[] = [];
@@ -185,7 +208,11 @@ function parseDocument(path: string, source: string): GraphDocument {
   }
   resolveReferences(tree);
 
-  return { fragments, frontmatter, headings, links, path };
+  const document: GraphDocument = { fragments, frontmatter, headings, links, path };
+  if (unsupported !== undefined) {
+    unsupportedFrontmatter.set(document, unsupported);
+  }
+  return document;
 }
 
 /**
@@ -355,11 +382,15 @@ function addLinkIssues(
 }
 
 function addDocumentPolicyIssues(document: GraphDocument, issues: ValidationIssue[]): void {
+  const unsupported = unsupportedFrontmatter.get(document);
+  if (unsupported !== undefined) {
+    issues.push({ code: "invalid-frontmatter", message: unsupported.message, sourcePath: document.path });
+  }
   const isPublicDocument = document.path.startsWith(DOCS_PREFIX);
   if (!isPublicDocument && !SINGLE_H1_SURFACES.has(document.path)) {
     return;
   }
-  if (isPublicDocument) {
+  if (isPublicDocument && unsupported === undefined) {
     try {
       parsePublicDocumentFrontmatter(document.frontmatter, document.path);
     } catch (cause) {
