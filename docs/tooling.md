@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-06
+last_updated: 2026-10-13
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -275,6 +275,8 @@ pnpm hub release --skip-verify
 It writes nothing, tags nothing, and publishes nothing. `hub publish` below is what publishes; this is the command you run while deciding whether to.
 
 A precondition that cannot be resolved, such as a tarball npm refused to build, is reported as unresolved rather than as ready. A blocker fails the run; an unresolved check does not, because "npm is unavailable" is not the same claim as "this package must not ship".
+
+The version check treats only npm's own "not found" answer (`E404` in the `--json` error on stdout) as an unpublished name, which is ready as the first release. Any other failed lookup, such as offline, a registry error, or a timeout, is reported as unresolved, because a failed lookup is not evidence that nothing is published. Before this rule, an offline run reported an already-published version as ready. Rejected: reporting a failed lookup as blocked, since a failed lookup does not show that the version is published, and blocking on it would fail every offline run; keeping every failure ready, which is the bug.
 
 `--skip-verify` reports readiness without the verification step, which is what you want while fixing one blocker at a time.
 
