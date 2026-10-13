@@ -1,11 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { parseArguments } from "../cli/parse-arguments.ts";
+import { execute } from "../process/execute.ts";
+import type * as ProcessExecution from "../process/execute.ts";
 import { createReporter } from "../reporting/reporter.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import type { PackageSelection } from "../workspace/select-packages.ts";
 import type { CommandContext } from "./definition.ts";
 import { attributeDiagnostics, createTypecheckCommand, shardEvenly } from "./typecheck-command.ts";
+
+// A test replaces one batch's compiler outcome with canned output; other runs stay real.
+vi.mock("../process/execute.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof ProcessExecution>();
+  return { ...actual, execute: vi.fn(actual.execute) };
+});
 
 function createPackage(name: string, location: string, typecheck: string): WorkspacePackage {
   return {
@@ -199,5 +207,47 @@ describe("createTypecheckCommand", () => {
 
     expect(await createTypecheckCommand().run(context)).toBe(0);
     expect(lines.join("\n")).toContain('No selected package defines a "typecheck" script.');
+  });
+});
+
+describe("a batch whose compiler run fails", () => {
+  async function runBatch(output: string, isSuccess: boolean): Promise<{ lines: string[]; exitCode: number }> {
+    const lines: string[] = [];
+    const targets = [error, kbd].map((workspacePackage) => ({ package: workspacePackage, paths: [] }));
+    const context: CommandContext = {
+      options: parseArguments(["typecheck", "--no-build", "--parallel=1"]).options,
+      passthrough: [],
+      reporter: createReporter({
+        useColor: false,
+        write: (message) => lines.push(message),
+        writeError: (message) => lines.push(message),
+      }),
+      selection: { isImplicit: false, targets, unownedPaths: [] },
+      tokens: [],
+      workspace: { packages: targets.map(({ package: workspacePackage }) => workspacePackage), root: "/repo" },
+    };
+    vi.mocked(execute).mockResolvedValueOnce({ didTimeOut: false, durationMs: 1, isSuccess, output });
+
+    const exitCode = await createTypecheckCommand().run(context);
+    return { exitCode, lines };
+  }
+
+  it("shouldReportAPackageWithNoDiagnosticAsSkippedRatherThanPassed", async () => {
+    const { exitCode, lines } = await runBatch(
+      "packages/error/src/index.ts(3,1): error TS2304: Cannot find name 'x'.",
+      false,
+    );
+
+    expect(exitCode).toBe(1);
+    expect(lines.join("\n")).toMatch(/FAIL.*@codenhub\/error/);
+    expect(lines.join("\n")).toMatch(/SKIP.*@codenhub\/kbd.*not confirmed/);
+    expect(lines.join("\n")).not.toMatch(/PASS.*@codenhub\/kbd/);
+  });
+
+  it("shouldReportEveryPackageAsPassedWhenTheBatchSucceeds", async () => {
+    const { exitCode, lines } = await runBatch("", true);
+
+    expect(exitCode).toBe(0);
+    expect(lines.join("\n")).toContain("2 passed");
   });
 });

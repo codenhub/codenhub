@@ -55,9 +55,15 @@ function readRequest(context: CommandContext): Request | string {
   if (!PACKAGE_NAME.test(name)) {
     return `Invalid package name "${name}": use lowercase words separated by single hyphens.`;
   }
+  const label = readOption(context.passthrough, "label");
+  // `hub check` rejects an empty or blank label, so the scaffold refuses one
+  // rather than writing a package that fails its own checker.
+  if (label !== undefined && label.trim() === "") {
+    return "--label needs a value: pass --label=<text>.";
+  }
   return {
     description: readOption(context.passthrough, "description") ?? `TODO: describe ${name}.`,
-    label: readOption(context.passthrough, "label") ?? toLabel(name),
+    label: label ?? toLabel(name),
     name,
   };
 }
