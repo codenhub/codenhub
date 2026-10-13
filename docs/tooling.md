@@ -337,7 +337,13 @@ Every label is written with `gh label create --force`, so a run is safe to repea
 
 ## Cleaning
 
-`hub clean` removes `dist`, `coverage`, `test-results`, `.astro`, and every `*.tsbuildinfo` from the selected packages, descending below each package root so playgrounds and nested workspaces are covered too. The compiler's records go with the output they describe: left behind, they would tell the next type-check that projects whose declarations have just been deleted are still up to date. It stops at each artifact it finds rather than descending into it, and it never touches `node_modules`: dependencies belong to the package manager, and removing them turns a seconds-long cleanup into a reinstall.
+`hub clean` removes `dist`, `coverage`, `test-results`, and `.astro` only when they are a direct child of a package root. The package roots of a selected package are its own directory and the directory of every workspace package nested below it, so `hub clean icons` also removes `packages/icons/demo/dist` when `demo` is a workspace package. It removes every `*.tsbuildinfo` at any depth below the selected package. The compiler's records go with the output they describe: left behind, they would tell the next type-check that projects whose declarations have just been deleted are still up to date. It stops at each artifact it finds rather than descending into it, and it never touches `node_modules`: dependencies belong to the package manager, and removing them turns a seconds-long cleanup into a reinstall.
+
+A directory with one of those names anywhere else is source and is kept, and the search continues inside it for `*.tsbuildinfo` records. A directory name is not evidence of a build artifact by itself: matched at any depth, a source folder such as `packages/error/src/coverage` was removed along with the real output. Every artifact the workspace's tools produce lands at a package root, so the name is checked there and nowhere else.
+
+Two alternatives were rejected. Skipping whatever git tracks still deletes a source folder that is new and not yet tracked. Keeping the deep search keeps the silent loss of source.
+
+The cost is that an artifact directory below a package root that is not itself a workspace package, such as a `dist` inside a non-package `playground`, is no longer removed.
 
 ## Compliance checks
 
