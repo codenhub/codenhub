@@ -319,6 +319,46 @@ export type Identifier = string;
     ]);
   });
 
+  it("reports a missing typed export target as an error once the package has build output", async () => {
+    const pkg = await createPackage(
+      { "tsconfig.json": "{}", "dist/index.js": "export {};" },
+      { ".": { types: "./dist/missing.d.ts" } },
+    );
+    expect(await rule.run({ package: pkg, includePack: false })).toEqual([
+      expect.objectContaining({
+        code: "undocumented-export/unresolved-export",
+        severity: "error",
+        location: "dist/missing.d.ts",
+        message: expect.stringContaining("rebuild"),
+      }),
+    ]);
+  });
+
+  it("keeps a missing typed export target a warning before the first build", async () => {
+    const pkg = await createPackage({ "tsconfig.json": "{}" }, { ".": { types: "./dist/missing.d.ts" } });
+    expect(await rule.run({ package: pkg, includePack: false })).toEqual([
+      expect.objectContaining({
+        code: "undocumented-export/unresolved-export",
+        severity: "warning",
+        location: "dist/missing.d.ts",
+      }),
+    ]);
+  });
+
+  it("keeps a wildcard that matches nothing a warning even with build output", async () => {
+    const pkg = await createPackage(
+      { "tsconfig.json": "{}", "dist/index.js": "export {};" },
+      { "./data/*": { types: "./dist/data/*.d.ts" } },
+    );
+    expect(await rule.run({ package: pkg, includePack: false })).toEqual([
+      expect.objectContaining({
+        code: "undocumented-export/unresolved-export",
+        severity: "warning",
+        location: "dist/data/*.d.ts",
+      }),
+    ]);
+  });
+
   it("inspects a conditional root export without subpath keys", async () => {
     const pkg = await createPackage(
       { "dist/index.d.ts": "export declare const value: string;" },
