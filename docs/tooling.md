@@ -51,7 +51,7 @@ Root scripts map directly onto it:
 
 `hub browsers`, `hub assets`, `hub new`, `hub release`, `hub publish`, `hub preview:deploy`, and `hub labels` have no root script of their own. They are occasional commands rather than part of a change loop, and they read as what they are through `pnpm hub <command>`.
 
-A command name without its own definition runs the package script of that name, so package-specific scripts such as `dev` and `debug` work without registration. Package scripts also accept the package-first form, such as `hub styles dev`, when the first token identifies one package and the second names one of its scripts. `dev`, `debug`, and `preview` keep that package attached to the terminal, stream output as it arrives, and run without the default timeout.
+A command name without its own definition runs the package script of that name, so package-specific scripts such as `dev` and `debug` work without registration. A name that no workspace package defines fails rather than succeeding; see "How a package script is run". Package scripts also accept the package-first form, such as `hub styles dev`, when the first token identifies one package and the second names one of its scripts. `dev`, `debug`, and `preview` keep that package attached to the terminal, stream output as it arrives, and run without the default timeout.
 
 ## Targets
 
@@ -104,6 +104,8 @@ The expansion includes the `dev` and `debug` environments nested inside a select
 ## How a package script is run
 
 `hub` runs a package script by handing its body to the platform shell with the package's `node_modules/.bin` directories on `PATH`, which is what `pnpm run` would have set up. The shim is skipped for its cost: starting `pnpm` takes on the order of a second, and a workspace run pays that once per package per script, so it can outweigh several of the scripts it starts.
+
+A name with no dedicated command that no workspace package defines fails with exit code 1 and an error naming it. This is checked against the whole workspace, not the selection, so a script that only some packages define still runs for those packages, and a selection that lacks it only warns. The reason is that a typo in a CI step or a hook, such as `hub verfiy`, would otherwise report success having done nothing. Rejected: keeping the warning, since exit 0 is what CI reads as success; and failing whenever the selected packages lack the script, since a real script that only some packages define, such as `debug`, is ordinary.
 
 A script with a `pre` or `post` hook is still run through `pnpm run`, because the package manager owns those hooks and skipping it would silently drop a step. A script that invokes `pnpm` itself, such as one chaining `pnpm build:styles`, pays for that call as written; splitting such a chain into separate scripts is the way to avoid it.
 

@@ -4,7 +4,7 @@ import { createAssetsCommand } from "./assets-command.ts";
 import { createBrowsersCommand } from "./browsers-command.ts";
 import { createCheckCommand } from "./check-command.ts";
 import { createCleanCommand } from "./clean-command.ts";
-import type { CommandDefinition } from "./definition.ts";
+import { EXIT_FAILURE, type CommandDefinition } from "./definition.ts";
 import { createFormatCommand } from "./format-command.ts";
 import { createGenerateCommand } from "./generate-command.ts";
 import { createLabelsCommand } from "./labels-command.ts";
@@ -119,17 +119,30 @@ export function listCommands(): readonly CommandDefinition[] {
  *
  * Names without a dedicated definition fall back to running a package script of
  * the same name, so package-specific scripts such as `debug` work without being
- * registered.
+ * registered. A fallback name that no workspace package defines is an error,
+ * so a misspelled command does not report success having done nothing.
  * @param name Command or package script name.
  * @returns Command definition to run.
  */
 export function resolveCommand(name: string): CommandDefinition {
-  return (
-    COMMANDS.find((command) => command.name === name) ??
-    createScriptCommand({
-      isInteractive: INTERACTIVE_PACKAGE_SCRIPTS.has(name),
-      name,
-      summary: `Run the "${name}" package script.`,
-    })
-  );
+  const dedicated = COMMANDS.find((command) => command.name === name);
+  if (dedicated !== undefined) {
+    return dedicated;
+  }
+
+  const fallback = createScriptCommand({
+    isInteractive: INTERACTIVE_PACKAGE_SCRIPTS.has(name),
+    name,
+    summary: `Run the "${name}" package script.`,
+  });
+  return {
+    ...fallback,
+    run: async (context) => {
+      if (!context.workspace.packages.some((workspacePackage) => workspacePackage.scripts[name] !== undefined)) {
+        context.reporter.error(`Unknown command "${name}": no workspace package defines a "${name}" script.`);
+        return EXIT_FAILURE;
+      }
+      return fallback.run(context);
+    },
+  };
 }
