@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 
@@ -19,6 +19,10 @@ function createPackage(directory: string, manifest: Record<string, unknown>): Wo
     unscopedName: "example",
     workspaceDependencies: [],
   };
+}
+
+async function readJsonState(packageDirectory: string): Promise<unknown> {
+  return JSON.parse(await readFile(join(packageDirectory, ASSET_STATE_FILE), "utf8"));
 }
 
 async function createFixture(): Promise<{ packageDirectory: string; root: string }> {
@@ -142,6 +146,73 @@ describe("syncPackageAssets", () => {
     } finally {
       await rm(sentinelPath, { force: true });
     }
+  });
+
+  it("shouldRecordEveryCopyThatSucceededWhenAnotherCopyFails", async () => {
+    const { packageDirectory, root } = await createFixture();
+    await syncPackageAssets(
+      createPackage(packageDirectory, {
+        codenhub: { assets: [{ from: "favicon/favicon.ico", to: "public/favicon.ico" }] },
+        name: "@fixture/example",
+      }),
+      root,
+    );
+    // Read-only makes the rewrite of this placed file fail on Windows (EPERM) and POSIX (EACCES).
+    await chmod(join(packageDirectory, "public/favicon.ico"), 0o444);
+    const workspacePackage = createPackage(packageDirectory, {
+      codenhub: {
+        assets: [
+          { from: "favicon/favicon.ico", to: "public/favicon.ico" },
+          { from: "logo/logo-dark.svg", to: "public/logo.svg" },
+        ],
+      },
+      name: "@fixture/example",
+    });
+
+    await expect(syncPackageAssets(workspacePackage, root)).rejects.toMatchObject({
+      code: expect.stringMatching(/^(EPERM|EACCES)$/),
+    });
+    await expect(readFile(join(packageDirectory, "public/logo.svg"), "utf8")).resolves.toBe("logo-bytes");
+    await expect(readJsonState(packageDirectory)).resolves.toEqual({
+      placed: ["public/favicon.ico", "public/logo.svg"],
+    });
+
+    await chmod(join(packageDirectory, "public/favicon.ico"), 0o644);
+    await expect(syncPackageAssets(workspacePackage, root)).resolves.toEqual({
+      copied: ["public/favicon.ico", "public/logo.svg"],
+      removed: [],
+    });
+  });
+
+  it("shouldRecordARemovalThatSucceededWhenACopyFails", async () => {
+    const { packageDirectory, root } = await createFixture();
+    await syncPackageAssets(
+      createPackage(packageDirectory, {
+        codenhub: {
+          assets: [
+            { from: "favicon/favicon.ico", to: "public/favicon.ico" },
+            { from: "logo/logo-dark.svg", to: "public/logo.svg" },
+          ],
+        },
+        name: "@fixture/example",
+      }),
+      root,
+    );
+    await chmod(join(packageDirectory, "public/favicon.ico"), 0o444);
+
+    await expect(
+      syncPackageAssets(
+        createPackage(packageDirectory, {
+          codenhub: { assets: [{ from: "favicon/favicon.ico", to: "public/favicon.ico" }] },
+          name: "@fixture/example",
+        }),
+        root,
+      ),
+    ).rejects.toMatchObject({ code: expect.stringMatching(/^(EPERM|EACCES)$/) });
+
+    await expect(readJsonState(packageDirectory)).resolves.toEqual({ placed: ["public/favicon.ico"] });
+    await expect(readFile(join(packageDirectory, "public/logo.svg"), "utf8")).rejects.toThrow("ENOENT");
+    await chmod(join(packageDirectory, "public/favicon.ico"), 0o644);
   });
 
   it("shouldThrowWhenADeclaredSourceDoesNotExist", async () => {

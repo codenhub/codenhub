@@ -147,7 +147,7 @@ export async function syncPackageAssets(workspacePackage: WorkspacePackage, root
           `${workspacePackage.name} declares codenhub.assets destination "${entry.to}", but the asset sync did not place the existing path.`,
         );
       }
-      return { destination, source: resolvedSource };
+      return { destination, source: resolvedSource, to: entry.to };
     }),
   );
 
@@ -156,22 +156,43 @@ export async function syncPackageAssets(workspacePackage: WorkspacePackage, root
       assertNoSymbolicLink(workspacePackage.directory, join(workspacePackage.directory, destination)),
     ),
   );
-  await Promise.all(
+  // Every removal and copy settles before the state is written, so the state describes what is
+  // on disk even when one of them fails. The first failure is rethrown after that.
+  const removals = await Promise.allSettled(
     removed.map(async (destination) => rm(join(workspacePackage.directory, destination), { force: true })),
   );
-
-  await Promise.all(
+  const copies = await Promise.allSettled(
     preparedEntries.map(async ({ destination, source }) => {
       await mkdir(dirname(destination), { recursive: true });
       await copyFile(source, destination);
     }),
   );
 
+  // Still declared and previously placed stays recorded even when its rewrite failed: the file on
+  // disk is still the one the sync placed. A removal that failed keeps its file, so it stays recorded too.
+  const declaredSet = new Set(declared);
+  const placed = new Set(previouslyPlaced.filter((destination) => declaredSet.has(destination)));
+  preparedEntries.forEach(({ to }, index) => {
+    if (copies[index].status === "fulfilled") {
+      placed.add(to);
+    }
+  });
+  removed.forEach((destination, index) => {
+    if (removals[index].status === "rejected") {
+      placed.add(destination);
+    }
+  });
+
   const stateFile = join(workspacePackage.directory, ASSET_STATE_FILE);
-  if (declared.length === 0) {
+  if (placed.size === 0) {
     await rm(stateFile, { force: true });
   } else {
-    await writeFile(stateFile, `${JSON.stringify({ placed: declared.toSorted() }, null, 2)}\n`);
+    await writeFile(stateFile, `${JSON.stringify({ placed: [...placed].toSorted() }, null, 2)}\n`);
+  }
+
+  const failure = [...removals, ...copies].find((result) => result.status === "rejected");
+  if (failure !== undefined) {
+    throw failure.reason;
   }
 
   return { copied: declared, removed };
