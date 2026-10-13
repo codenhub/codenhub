@@ -90,40 +90,50 @@ export function withWorkspaceDependencies(
  * and let the compliance check name the problem.
  *
  * Each cycle is returned as its members in traversal order, and a rotation of a
- * cycle already found is not repeated.
+ * cycle already found is not repeated. Every package that takes part in a cycle
+ * is a member of at least one returned cycle.
  * @param packages Packages to inspect.
  * @returns Cycles as member names in dependency order, or an empty list.
  */
 export function findDependencyCycles(packages: readonly WorkspacePackage[]): string[][] {
   const byName = new Map(packages.map((workspacePackage) => [workspacePackage.name, workspacePackage]));
   const cycles = new Map<string, string[]>();
-  const visiting: string[] = [];
-  const visited = new Set<string>();
-
-  function visit(name: string): void {
-    const entryIndex = visiting.indexOf(name);
-    if (entryIndex !== -1) {
-      const cycle = visiting.slice(entryIndex);
-      cycles.set([...cycle].sort().join(" "), cycle);
-      return;
-    }
-    if (visited.has(name)) {
-      return;
-    }
-    visiting.push(name);
-    for (const dependencyName of byName.get(name)?.workspaceDependencies ?? []) {
-      if (byName.has(dependencyName)) {
-        visit(dependencyName);
-      }
-    }
-    visiting.pop();
-    visited.add(name);
-  }
-
+  // A depth-first walk marks a package done once and never looks through it again, so a cycle that
+  // reaches a finished package is missed. Searching from each package in turn finds a cycle through it.
   for (const { name } of packages) {
-    visit(name);
+    const cycle = findCycleThrough(name, byName);
+    if (cycle !== undefined && !cycles.has([...cycle].sort().join(" "))) {
+      cycles.set([...cycle].sort().join(" "), cycle);
+    }
   }
   return [...cycles.values()];
+}
+
+/**
+ * Finds one cycle that passes through a package, if any.
+ * @param start Package the cycle must contain.
+ * @param byName Packages by name.
+ * @returns The cycle from `start` back to `start`, or `undefined` when `start` is on no cycle.
+ */
+function findCycleThrough(start: string, byName: ReadonlyMap<string, WorkspacePackage>): string[] | undefined {
+  const parents = new Map<string, string>();
+  const queue = [start];
+  for (const name of queue) {
+    for (const dependencyName of byName.get(name)?.workspaceDependencies ?? []) {
+      if (dependencyName === start) {
+        const cycle: string[] = [];
+        for (let current: string | undefined = name; current !== undefined; current = parents.get(current)) {
+          cycle.unshift(current);
+        }
+        return cycle;
+      }
+      if (byName.has(dependencyName) && !parents.has(dependencyName)) {
+        parents.set(dependencyName, name);
+        queue.push(dependencyName);
+      }
+    }
+  }
+  return undefined;
 }
 
 /**

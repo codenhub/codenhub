@@ -43,6 +43,44 @@ describe("parseCheckExceptions", () => {
     expect(parseCheckExceptions(REGISTER).has("@codenhub/error")).toBe(false);
   });
 
+  it("shouldNotAttachABypassUnderAnUnbackticktedHeadingToThePreviousPackage", () => {
+    const exceptions = parseCheckExceptions(
+      [
+        "## `@codenhub/error`: registry presets",
+        "",
+        "- **Checks bypassed:** `metadata/license`.",
+        "",
+        "## @codenhub/store",
+        "",
+        "- **Checks bypassed:** `readme/status`.",
+      ].join("\n"),
+    );
+    expect(exceptions.get("@codenhub/error")).toEqual(new Set(["metadata/license"]));
+    expect(exceptions.get("@codenhub/store")).toEqual(new Set(["readme/status"]));
+  });
+
+  it("shouldKeyAnUnbackticktedHeadingByItsTrimmedText", () => {
+    expect(
+      parseCheckExceptions(["## Store package  ", "", "- **Checks bypassed:** `readme/status`."].join("\n")),
+    ).toEqual(new Map([["Store package", new Set(["readme/status"])]]));
+  });
+
+  it("shouldIgnoreBypassesUnderLevelOneAndLevelThreeHeadings", () => {
+    expect(
+      parseCheckExceptions(
+        [
+          "## `@codenhub/error`: presets",
+          "",
+          "# Notes",
+          "",
+          "### Sub-note",
+          "",
+          "- **Checks bypassed:** `metadata/license`.",
+        ].join("\n"),
+      ).get("@codenhub/error"),
+    ).toEqual(new Set(["metadata/license"]));
+  });
+
   it("shouldReturnNothingForARegisterWithoutBypasses", () => {
     expect(parseCheckExceptions("# Package exceptions\n\nNothing yet.\n").size).toBe(0);
   });

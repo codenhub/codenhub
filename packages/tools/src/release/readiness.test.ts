@@ -28,15 +28,30 @@ function createPackage(manifest: Record<string, unknown> = {}): WorkspacePackage
   };
 }
 
+/** What `npm view <name> version --json` prints on stdout when the registry has no such package. */
+const NOT_FOUND_OUTPUT = JSON.stringify({
+  error: { code: "E404", detail: "could not be found", summary: "Not Found" },
+});
+
 /** Answers `npm view` with a version and `git status` with a clean tree. */
 function createRunner(published?: string, changes = ""): ReleaseRunner {
   return vi.fn(async (command: string) => {
     if (command === "npm") {
       return published === undefined
-        ? { isSuccess: false, stdout: "" }
+        ? { isSuccess: false, stdout: NOT_FOUND_OUTPUT }
         : { isSuccess: true, stdout: JSON.stringify(published) };
     }
     return { isSuccess: true, stdout: changes };
+  });
+}
+
+/** Fails `npm view` with the given stdout, and answers `git status` with a clean tree. */
+function createFailingRunner(stdout: string): ReleaseRunner {
+  return vi.fn(async (command: string) => {
+    if (command === "npm") {
+      return { isSuccess: false, stdout };
+    }
+    return { isSuccess: true, stdout: "" };
   });
 }
 
@@ -101,6 +116,33 @@ describe("readPackageReadiness", () => {
 
     expect(check.status).toBe("ready");
     expect(check.detail).toContain("first published version");
+  });
+
+  it("reports a failed lookup that is not a 404 as unknown, not as a first release", async () => {
+    const check = await checkFor(createPackage(), { readPack: packed, run: createFailingRunner("") }, "version");
+
+    expect(check.status).toBe("unknown");
+    expect(check.detail).toContain("could not report the published version");
+  });
+
+  it("reports a failed lookup with non-JSON output as unknown", async () => {
+    const run = createFailingRunner("npm error network request to https://registry.npmjs.org failed");
+    const check = await checkFor(createPackage(), { readPack: packed, run }, "version");
+
+    expect(check.status).toBe("unknown");
+  });
+
+  it("reports a failed lookup with another error code as unknown", async () => {
+    const run = createFailingRunner(JSON.stringify({ error: { code: "ETIMEDOUT", summary: "timed out" } }));
+    const check = await checkFor(createPackage(), { readPack: packed, run }, "version");
+
+    expect(check.status).toBe("unknown");
+  });
+
+  it("reports a failure with malformed JSON as unknown rather than throwing", async () => {
+    const check = await checkFor(createPackage(), { readPack: packed, run: createFailingRunner("{") }, "version");
+
+    expect(check.status).toBe("unknown");
   });
 
   it("blocks a manifest with no version", async () => {
