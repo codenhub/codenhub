@@ -51,9 +51,10 @@ async function runSteps(
   context: CommandContext,
   resolveCommand: CommandResolver,
   steps: readonly string[],
+  skipsBuild: boolean,
 ): Promise<StepOutcome[]> {
   const outcomes: StepOutcome[] = [];
-  let hasBuilt = false;
+  let hasBuilt = skipsBuild;
   let hasFailed = false;
 
   await mapSeries(steps, async (name) => {
@@ -120,7 +121,9 @@ export function createVerifyCommand(resolver?: CommandResolver): CommandDefiniti
       // the step itself would be the one build the flag was meant to prevent.
       const excludedSteps = context.options.shouldBuild ? requested : [...requested, BUILD_STEP];
       const steps = VERIFY_STEPS.filter((name) => !excludedSteps.includes(name));
-      const outcomes = await runSteps(context, resolveCommand, steps);
+      // Dropping the build step by `--skip` is the same as `--no-build`: the later
+      // steps find their output rather than build it, so they are told it is done.
+      const outcomes = await runSteps(context, resolveCommand, steps, excludedSteps.includes(BUILD_STEP));
       const unreached = steps.slice(outcomes.length).map<SummaryRow>((name) => ({
         detail: "not reached",
         label: name,

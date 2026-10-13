@@ -153,7 +153,18 @@ describe("hub verify", () => {
     const result = await runVerify(undefined, ["--skip=build"]);
 
     expect(result.ran).not.toContain("build");
-    expect(result.builtBySelf.typecheck).toBe(true);
+    expect(result.output).toContain("SKIP  build");
+    expect(result.output).toContain("skipped by --skip");
+  });
+
+  it("tells the later steps not to build when --skip names build, as --no-build does", async () => {
+    const skipped = await runVerify(undefined, ["--skip=build"]);
+    const noBuild = await runVerify(undefined, ["--no-build"]);
+
+    expect(skipped.builtBySelf).toEqual(noBuild.builtBySelf);
+    expect(skipped.builtBySelf.typecheck).toBe(false);
+    expect(skipped.builtBySelf.test).toBe(false);
+    expect(skipped.builtBySelf["test:browser"]).toBe(false);
   });
 
   it("reports a script step no selected package defines as skipped, not passed", async () => {
