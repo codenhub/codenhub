@@ -283,11 +283,25 @@ export async function execute(spec: CommandSpec, options: ExecuteOptions): Promi
     });
     child.stderr?.setEncoding("utf8").on("data", (chunk: string) => chunks.push(chunk));
 
+    // Set once the script itself has exited. `close` can wait longer on a process
+    // the script left behind that still holds its output pipes.
+    let hasExited = false;
+    child.on("exit", () => {
+      hasExited = true;
+    });
+
     let didTimeOut = false;
     const timer =
       options.timeoutMs === undefined
         ? undefined
         : setTimeout(() => {
+            if (hasExited) {
+              // The script finished, so there is no tree to kill: the leftover
+              // process is out of reach. Releasing our ends of the pipes lets `close` fire.
+              child.stdout?.destroy();
+              child.stderr?.destroy();
+              return;
+            }
             didTimeOut = true;
             if (child.pid !== undefined) {
               killProcessTree(child.pid, (signal) => child.kill(signal));
