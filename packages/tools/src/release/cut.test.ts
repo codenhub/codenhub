@@ -48,6 +48,12 @@ describe("resolveNextVersion", () => {
     expect(() => resolveNextVersion("0.3.0", "0.3.0")).toThrow("does not come after");
     expect(() => resolveNextVersion("0.3.0", "0.2.0")).toThrow("does not come after");
   });
+
+  it("refuses an explicit request that is not a semantic version", () => {
+    for (const requested of ["garbage", "", "1.2", "1.2.3.4", "v1.2.3", "01.2.3", "1.2.3-", "1.2.x"]) {
+      expect(() => resolveNextVersion("0.3.0", requested)).toThrow("expected major, minor, patch, or a version");
+    }
+  });
 });
 
 describe("replaceManifestVersion", () => {

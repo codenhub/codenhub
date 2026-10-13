@@ -9,6 +9,11 @@ const INDEX = `${CHANGELOG_DIR}/index.md`;
 const MANIFEST = "package.json";
 const VERSION_FIELD = /(?<prefix>"version"\s*:\s*")(?<version>[^"]*)(?<suffix>")/u;
 const LINK_LINE = /^-\s+\[(?<label>[^\]]+)\]\((?<target>[^)]+)\)\s*$/u;
+// The semver.org grammar, except that a numeric pre-release identifier may carry
+// a leading zero. `compareVersions` orders anything, so this is what keeps a
+// typo out of the manifest.
+const SEMANTIC_VERSION =
+  /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
 
 /** How a version may be raised. */
 export type VersionBump = "major" | "minor" | "patch";
@@ -57,6 +62,9 @@ export function applyBump(current: string, bump: VersionBump): string {
  * @throws When the request is unusable or would not move the version forward.
  */
 export function resolveNextVersion(current: string, requested: string): string {
+  if (!isVersionBump(requested) && !SEMANTIC_VERSION.test(requested)) {
+    throw new Error(`Cannot cut "${requested}": expected major, minor, patch, or a version such as 1.2.3.`);
+  }
   const next = isVersionBump(requested) ? applyBump(current, requested) : requested;
   if (compareVersions(next, current) <= 0) {
     throw new Error(`${next} does not come after the current ${current}.`);
