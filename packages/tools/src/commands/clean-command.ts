@@ -1,10 +1,16 @@
 import { readdir, rm } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 
 import type { SummaryRow } from "../reporting/reporter.ts";
+import type { WorkspacePackage } from "../workspace/discover.ts";
 import { EXIT_SUCCESS, type CommandContext, type CommandDefinition } from "./definition.ts";
 
-/** Directory names produced by builds, tests, and coverage runs. */
+/**
+ * Directory names produced by builds, tests, and coverage runs.
+ *
+ * A name only matches as a direct child of a package root: elsewhere it is an
+ * ordinary source folder, such as `src/coverage`.
+ */
 const ARTIFACT_DIRECTORIES = new Set([".astro", "coverage", "dist", "test-results"]);
 
 /**
@@ -21,14 +27,16 @@ const SKIPPED_DIRECTORIES = new Set([".git", "node_modules"]);
 /**
  * Finds every build artifact under one directory.
  *
- * The search descends rather than only looking at the package root because
- * playgrounds and nested workspaces leave artifacts of their own, and it stops at
- * each artifact directory it finds so a `dist` containing a `coverage` is
- * reported once.
+ * The search descends through the whole tree, because playgrounds and nested
+ * workspaces leave `*.tsbuildinfo` records of their own. An artifact directory
+ * name matches only when its parent is one of `packageRoots`, so a source folder
+ * such as `src/coverage` is searched but never removed. A matched directory is
+ * not descended into, so a `dist` containing a `coverage` is reported once.
  * @param directory Absolute directory to search.
+ * @param packageRoots Absolute package root directories, where artifact directories live.
  * @returns Absolute artifact paths, directories and files alike.
  */
-export async function findArtifactDirectories(directory: string): Promise<string[]> {
+export async function findArtifactDirectories(directory: string, packageRoots: ReadonlySet<string>): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true }).catch(() => []);
   const found = await Promise.all(
     entries.map(async (entry): Promise<string[]> => {
@@ -39,10 +47,34 @@ export async function findArtifactDirectories(directory: string): Promise<string
       if (!entry.isDirectory() || entry.isSymbolicLink() || SKIPPED_DIRECTORIES.has(entry.name)) {
         return [];
       }
-      return ARTIFACT_DIRECTORIES.has(entry.name) ? [entryPath] : findArtifactDirectories(entryPath);
+      if (ARTIFACT_DIRECTORIES.has(entry.name) && packageRoots.has(directory)) {
+        return [entryPath];
+      }
+      return findArtifactDirectories(entryPath, packageRoots);
     }),
   );
   return found.flat();
+}
+
+/**
+ * Lists the package roots that count for one selected package.
+ *
+ * These are its own directory and the directory of every workspace package nested
+ * below it, since a nested workspace is a package in its own right.
+ * @param selected Package the user selected.
+ * @param packages Every workspace package.
+ * @returns Absolute package root directories.
+ */
+function packageRootsWithin(selected: WorkspacePackage, packages: readonly WorkspacePackage[]): Set<string> {
+  const nested = packages
+    .map((workspacePackage) => workspacePackage.directory)
+    .filter((directory) => isNestedWithin(selected.directory, directory));
+  return new Set([selected.directory, ...nested]);
+}
+
+function isNestedWithin(parent: string, child: string): boolean {
+  const path = relative(parent, child);
+  return path !== "" && !isAbsolute(path) && path.split(sep)[0] !== "..";
 }
 
 function toPosix(value: string): string {
@@ -52,7 +84,10 @@ function toPosix(value: string): string {
 async function collectArtifacts(context: CommandContext): Promise<string[]> {
   const found = await Promise.all(
     context.selection.targets.map(async ({ package: workspacePackage }) =>
-      findArtifactDirectories(workspacePackage.directory),
+      findArtifactDirectories(
+        workspacePackage.directory,
+        packageRootsWithin(workspacePackage, context.workspace.packages),
+      ),
     ),
   );
   // Nested workspace packages are reachable from their parent as well as from

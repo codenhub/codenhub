@@ -84,13 +84,36 @@ export function parseWorkspacePatterns(manifest: string): string[] {
     if (entry === undefined) {
       break;
     }
-    patterns.push(unquote(entry));
+    const pattern = unquote(stripTrailingComment(entry));
+    if (pattern.startsWith("!")) {
+      throw new Error(
+        `Invalid ${WORKSPACE_MANIFEST}: negated glob "${pattern}" is not supported; list the packages to include instead.`,
+      );
+    }
+    patterns.push(pattern);
   }
 
   if (patterns.length === 0) {
     throw new Error(`Invalid ${WORKSPACE_MANIFEST}: "packages:" declares no globs.`);
   }
   return patterns;
+}
+
+/**
+ * Removes a YAML comment from the end of a list item.
+ *
+ * A `#` starts a comment only after whitespace, and never inside a quoted
+ * string, so `"pkg # kept"` and `packages/*#x` are returned unchanged.
+ * @param entry List item text with its leading `- ` removed.
+ * @returns The item without its trailing comment.
+ */
+function stripTrailingComment(entry: string): string {
+  const quote = entry.charAt(0);
+  if (quote === '"' || quote === "'") {
+    const closingIndex = entry.indexOf(quote, 1);
+    return closingIndex === -1 ? entry : entry.slice(0, closingIndex + 1);
+  }
+  return entry.replace(/\s+#.*$/u, "");
 }
 
 /**
