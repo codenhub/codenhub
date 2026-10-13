@@ -91,7 +91,12 @@ function toStatus(
   }
   // A run that failed without naming a file failed as a whole, so every package
   // it covered is reported rather than none of them.
-  return failed.size === 0 || failed.has(workspacePackage.name) ? "failed" : "passed";
+  if (failed.size === 0 || failed.has(workspacePackage.name)) {
+    return "failed";
+  }
+  // The compiler may not have reached a package its diagnostics do not name, and
+  // its output does not say which packages it checked, so it is not reported as passed.
+  return "skipped";
 }
 
 function buildUnits(context: CommandContext, packages: readonly WorkspacePackage[], root: string): TypecheckUnit[] {
@@ -167,10 +172,11 @@ async function runUnits(
     }
     const failed = outcome.isSuccess ? new Set<string>() : attributeDiagnostics(output, unit.packages);
     for (const workspacePackage of unit.packages) {
+      const status = toStatus(outcome, workspacePackage, failed);
       rows.set(workspacePackage.name, {
-        detail: formatDuration(outcome.durationMs),
+        detail: status === "skipped" ? "not confirmed: the batch failed" : formatDuration(outcome.durationMs),
         label: workspacePackage.name,
-        status: toStatus(outcome, workspacePackage, failed),
+        status,
       });
     }
   });
