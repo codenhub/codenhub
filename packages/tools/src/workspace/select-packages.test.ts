@@ -37,6 +37,17 @@ afterAll(async () => {
   await rm(root, { force: true, recursive: true });
 });
 
+/** Runs a check with `process.platform` replaced, so platform-specific behavior is tested on any host. */
+function withPlatform(platform: NodeJS.Platform, check: () => void): void {
+  const original = Object.getOwnPropertyDescriptor(process, "platform") as PropertyDescriptor;
+  Object.defineProperty(process, "platform", { value: platform });
+  try {
+    check();
+  } finally {
+    Object.defineProperty(process, "platform", original);
+  }
+}
+
 function select(tokens: string[], cwd = root, changedPaths?: string[]) {
   return selectPackages({ changedPaths, cwd, tokens, workspace });
 }
@@ -67,6 +78,18 @@ describe("findOwningPackage", () => {
 
   it("shouldReturnNothingForPathsOutsideEveryPackage", () => {
     expect(findOwningPackage(workspace.packages, "docs/readme.md")).toBeUndefined();
+  });
+
+  it("shouldMatchLocationsIgnoringCaseOnWindows", () => {
+    withPlatform("win32", () => {
+      expect(findOwningPackage(workspace.packages, "Packages/alpha/src/index.test.ts")?.name).toBe("@fixture/alpha");
+    });
+  });
+
+  it("shouldMatchLocationsCaseSensitivelyOffWindows", () => {
+    withPlatform("linux", () => {
+      expect(findOwningPackage(workspace.packages, "Packages/alpha/src/index.test.ts")).toBeUndefined();
+    });
   });
 });
 

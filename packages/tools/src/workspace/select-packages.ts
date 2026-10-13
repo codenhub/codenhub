@@ -67,14 +67,17 @@ function toPosix(value: string): string {
  * Finds the package that owns a repository-relative path.
  *
  * The longest matching location wins so nested workspaces such as
- * `packages/icons/dev` are preferred over their parent package.
+ * `packages/icons/dev` are preferred over their parent package. On Windows the
+ * comparison ignores case, because the file system does.
  * @param packages Discovered workspace packages.
  * @param path Repository-relative POSIX path.
  * @returns Owning package, or `undefined` when the path sits outside every package.
  */
 export function findOwningPackage(packages: readonly WorkspacePackage[], path: string): WorkspacePackage | undefined {
+  const fold = (value: string): string => (process.platform === "win32" ? value.toLowerCase() : value);
+  const target = fold(path);
   return packages
-    .filter(({ location }) => path === location || path.startsWith(`${location}/`))
+    .filter(({ location }) => target === fold(location) || target.startsWith(`${fold(location)}/`))
     .toSorted((first, second) => second.location.length - first.location.length)[0];
 }
 
