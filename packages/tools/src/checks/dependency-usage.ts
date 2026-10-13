@@ -125,11 +125,13 @@ export function toPackageName(specifier: string): string | undefined {
 }
 
 const BUILT_FILE = /\.(?:[cm]?js|d\.[cm]?ts)$/;
-const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g;
-const LINE_COMMENT = /^[^\S\n]*\/\/.*$/gm;
+// Strings are matched first so that a comment marker inside one, such as the `/*` in a glob, is kept.
+// The alternation is read left to right, so a quote inside a comment never opens a string.
+const STRING_OR_COMMENT =
+  /("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^`\\])*`)|\/\*[\s\S]*?\*\/|^[^\S\n]*\/\/.*$/gm;
 
 /**
- * Removes block comments and comment-only lines.
+ * Removes block comments and comment-only lines, leaving string literals as they are.
  *
  * A build keeps doc comments, and a doc comment often shows an import in an example. Reading it as an
  * import would report a package the built code never loads.
@@ -137,7 +139,7 @@ const LINE_COMMENT = /^[^\S\n]*\/\/.*$/gm;
  * @returns The source without its comments.
  */
 export function stripComments(source: string): string {
-  return source.replaceAll(BLOCK_COMMENT, "").replaceAll(LINE_COMMENT, "");
+  return source.replaceAll(STRING_OR_COMMENT, (_match: string, literal: string | undefined) => literal ?? "");
 }
 
 /**
@@ -357,7 +359,7 @@ export async function readDependencyUsage(
     if (!CODE_EXTENSIONS.has(extensionOf(file)) || TEST_FILE.test(file)) {
       continue;
     }
-    for (const specifier of readSpecifiers(sources[index] as string)) {
+    for (const specifier of readSpecifiers(stripComments(sources[index] as string))) {
       const name = toPackageName(specifier);
       if (name !== undefined && name !== workspacePackage.name) {
         authored.add(name);

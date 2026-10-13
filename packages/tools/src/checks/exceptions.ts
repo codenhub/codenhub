@@ -2,12 +2,27 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const REGISTER_PATH = "docs/specs/packages-exceptions.md";
-const SECTION_HEADING = /^##\s+`(?<name>[^`]+)`/;
+const SECTION_HEADING = /^##(?=\s|$)(?<text>.*)$/;
+const PACKAGE_NAME = /^`(?<name>[^`]+)`/;
 const BYPASS_BULLET = /^-\s+\*\*Checks bypassed:\*\*\s*(?<codes>.+)$/;
 const CODE = /`(?<code>[^`]+)`/g;
 
 /** Check codes waived per package by the exception register. */
 export type CheckExceptions = ReadonlyMap<string, ReadonlySet<string>>;
+
+/**
+ * Names the package a level-2 heading is about.
+ *
+ * A heading that starts with a backticked name, such as `` `@codenhub/error`: presets ``,
+ * names that package. Any other heading is keyed by its trimmed text, so `hub check` reports
+ * its bypass as an unknown package unless that text is itself a workspace package name.
+ * @param text Heading text after `##`.
+ * @returns Package name, or the trimmed heading text.
+ */
+function sectionName(text: string): string {
+  const trimmed = text.trim();
+  return PACKAGE_NAME.exec(trimmed)?.groups?.name ?? trimmed;
+}
 
 /**
  * Reads the machine-readable bypass declarations from the exception register.
@@ -24,7 +39,7 @@ export function parseCheckExceptions(markdown: string): CheckExceptions {
   for (const line of markdown.split(/\r?\n/)) {
     const heading = SECTION_HEADING.exec(line);
     if (heading?.groups !== undefined) {
-      current = heading.groups.name;
+      current = sectionName(heading.groups.text as string);
       continue;
     }
     const bullet = BYPASS_BULLET.exec(line.trim());
