@@ -300,23 +300,34 @@ function escapeRegExp(value: string): string {
 }
 
 /**
+ * Matches a name only where it stands alone, so `vite` does not match inside `vitest` or `vite-plugin`.
+ * @param name Package or binary name.
+ * @returns Pattern that finds the name as a whole word.
+ */
+function wholeNamePattern(name: string): RegExp {
+  return new RegExp(`(?<![\\w-])${escapeRegExp(name)}(?![\\w-])`);
+}
+
+/**
  * Decides whether a declared dependency is mentioned anywhere in a package.
  *
  * The test is deliberately permissive, because the cost of the two mistakes is
  * not symmetric: reporting a dependency that is quietly needed sends someone
  * chasing a removal that breaks a build, while missing an unused one leaves the
- * manifest as it already is. A name in a comment therefore counts as a use.
+ * manifest as it already is. A name in a comment therefore counts as a use, and
+ * so does a binary a script runs. The name itself must stand alone, though: a
+ * longer package name that contains it is a different package.
  * @param workspacePackage Package being inspected.
  * @param name Declared dependency name.
  * @param text Concatenated package text.
  * @returns `true` when nothing in the package refers to the dependency.
  */
 async function isUnmentioned(workspacePackage: WorkspacePackage, name: string, text: string): Promise<boolean> {
-  if (text.includes(name)) {
+  if (wholeNamePattern(name).test(text)) {
     return false;
   }
   const binaries = await readBinaryNames(workspacePackage, name);
-  return !binaries.some((binary) => new RegExp(`(?<![\\w-])${escapeRegExp(binary)}(?![\\w-])`).test(text));
+  return !binaries.some((binary) => wholeNamePattern(binary).test(text));
 }
 
 async function checkUsage(workspacePackage: WorkspacePackage, context: DependencyContext): Promise<Finding[]> {

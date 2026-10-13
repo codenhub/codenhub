@@ -120,6 +120,29 @@ describe("findDependencyCycles", () => {
       ["third", "fourth"],
     ]);
   });
+
+  it("shouldReportAPackageThatIsOnlyOnACycleReachedThroughAnotherCycle", () => {
+    const packages = [
+      createPackage("first", ["second", "third"]),
+      createPackage("second", ["first"]),
+      createPackage("third", ["second"]),
+    ];
+
+    expect(findDependencyCycles(packages)).toEqual([
+      ["first", "second"],
+      ["third", "second", "first"],
+    ]);
+  });
+
+  it("shouldNotReportAPackageThatOnlyDependsOnACycle", () => {
+    const packages = [
+      createPackage("first", ["second"]),
+      createPackage("second", ["first"]),
+      createPackage("fourth", ["first"]),
+    ];
+
+    expect(findDependencyCycles(packages)).toEqual([["first", "second"]]);
+  });
 });
 
 describe("groupByDependencyLevel", () => {
