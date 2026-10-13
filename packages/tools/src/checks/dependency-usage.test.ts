@@ -9,6 +9,7 @@ import {
   readBinaryNames,
   readDependencyUsage,
   readSpecifiers,
+  stripComments,
   stripTypeOnlyStatements,
   toPackageName,
 } from "./dependency-usage.ts";
@@ -130,6 +131,23 @@ describe("readDependencyUsage", () => {
     expect([...(await readDependencyUsage(workspacePackage)).authored]).toEqual(["real"]);
   });
 
+  it("does not count an import written in a comment as authored", async () => {
+    const workspacePackage = await createPackageFixture({
+      "src/index.ts": [
+        `/**`,
+        ` * @example`,
+        ` * import { z } from "zod";`,
+        ` */`,
+        `// import { line } from "line-comment";`,
+        `/* import { block } from "block-comment"; */`,
+        `import { a } from "real";`,
+        `export const url = "https://example.com";`,
+      ].join("\n"),
+    });
+
+    expect([...(await readDependencyUsage(workspacePackage)).authored]).toEqual(["real"]);
+  });
+
   it("credits a nested workspace package with its own imports rather than its parent", async () => {
     const workspacePackage = await createPackageFixture({
       "debug/package.json": `{ "name": "@fixture/example-debug" }`,
@@ -236,5 +254,26 @@ describe("stripTypeOnlyStatements", () => {
     const source = [`export type Mode = "fast" | "slow";`, `import { run } from "value-pkg";`].join("\n");
 
     expect(readSpecifiers(stripTypeOnlyStatements(source))).toEqual(["value-pkg"]);
+  });
+});
+
+describe("stripComments", () => {
+  it("removes block comments and comment-only lines", () => {
+    const source = [`/* import a from "block"; */`, `// import b from "line";`, `import { c } from "real";`].join("\n");
+
+    expect(readSpecifiers(stripComments(source))).toEqual(["real"]);
+  });
+
+  it("does not let a comment marker inside a string hide the code after it", () => {
+    const source = [`const glob = "src/*";`, `import { m } from "after-glob";`, `/** doc */`].join("\n");
+
+    expect(readSpecifiers(stripComments(source))).toEqual(["after-glob"]);
+  });
+
+  it("keeps a URL inside a string literal, and the import after it", () => {
+    const source = [`const url = "https://example.com/path";`, `import { d } from "after-url";`].join("\n");
+
+    expect(readSpecifiers(stripComments(source))).toEqual(["after-url"]);
+    expect(stripComments(source)).toContain(`"https://example.com/path"`);
   });
 });
