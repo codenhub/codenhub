@@ -35,7 +35,12 @@ function createPackage(root: string, location: string): WorkspacePackage {
   };
 }
 
-async function runClean(root: string, packages: readonly WorkspacePackage[], argv: readonly string[]): Promise<string> {
+async function runClean(
+  root: string,
+  packages: readonly WorkspacePackage[],
+  argv: readonly string[],
+  selected: readonly WorkspacePackage[] = packages,
+): Promise<string> {
   const lines: string[] = [];
   const context: CommandContext = {
     options: parseArguments(["clean", ...argv]).options,
@@ -43,7 +48,7 @@ async function runClean(root: string, packages: readonly WorkspacePackage[], arg
     reporter: createReporter({ useColor: false, write: (line) => lines.push(line), writeError: () => {} }),
     selection: {
       isImplicit: true,
-      targets: packages.map((workspacePackage) => ({ package: workspacePackage, paths: [] })),
+      targets: selected.map((workspacePackage) => ({ package: workspacePackage, paths: [] })),
       unownedPaths: [],
     },
     tokens: [],
@@ -54,22 +59,40 @@ async function runClean(root: string, packages: readonly WorkspacePackage[], arg
   return lines.join("\n");
 }
 
+function relativePaths(root: string, paths: readonly string[]): string[] {
+  return paths.map((path) => path.slice(root.length + 1).replaceAll("\\", "/")).sort();
+}
+
 describe("findArtifactDirectories", () => {
-  it("finds artifacts nested below the package root", async () => {
-    const root = await createWorkspaceFixture(["packages/toast/dist", "packages/toast/playground/dist"]);
+  it("finds an artifact at the package root", async () => {
+    const root = await createWorkspaceFixture(["packages/toast/dist"]);
 
-    const found = await findArtifactDirectories(join(root, "packages/toast"));
+    const found = await findArtifactDirectories(join(root, "packages/toast"), new Set([join(root, "packages/toast")]));
 
-    expect(found.map((path) => path.slice(root.length + 1).replaceAll("\\", "/")).sort()).toEqual([
-      "packages/toast/dist",
-      "packages/toast/playground/dist",
-    ]);
+    expect(relativePaths(root, found)).toEqual(["packages/toast/dist"]);
+  });
+
+  it("keeps an artifact-named source folder that is not at a package root", async () => {
+    const root = await createWorkspaceFixture(["packages/error/src/coverage"]);
+
+    const found = await findArtifactDirectories(join(root, "packages/error"), new Set([join(root, "packages/error")]));
+
+    expect(found).toEqual([]);
+  });
+
+  it("still finds a build record deep in a source folder that is not a package root", async () => {
+    const root = await createWorkspaceFixture(["packages/error/src/coverage"]);
+    await writeFile(join(root, "packages/error/src/coverage/tsconfig.tsbuildinfo"), "");
+
+    const found = await findArtifactDirectories(join(root, "packages/error"), new Set([join(root, "packages/error")]));
+
+    expect(relativePaths(root, found)).toEqual(["packages/error/src/coverage/tsconfig.tsbuildinfo"]);
   });
 
   it("stops at an artifact rather than descending into it", async () => {
     const root = await createWorkspaceFixture(["packages/error/dist/coverage"]);
 
-    const found = await findArtifactDirectories(join(root, "packages/error"));
+    const found = await findArtifactDirectories(join(root, "packages/error"), new Set([join(root, "packages/error")]));
 
     expect(found).toHaveLength(1);
     expect(found[0]?.endsWith("dist")).toBe(true);
@@ -79,17 +102,17 @@ describe("findArtifactDirectories", () => {
     const root = await createWorkspaceFixture(["packages/error/src"]);
     await writeFile(join(root, "packages/error/tsconfig.tsbuildinfo"), "");
 
-    const found = await findArtifactDirectories(join(root, "packages/error"));
+    const found = await findArtifactDirectories(join(root, "packages/error"), new Set([join(root, "packages/error")]));
 
-    expect(found.map((path) => path.slice(root.length + 1).replaceAll("\\", "/"))).toEqual([
-      "packages/error/tsconfig.tsbuildinfo",
-    ]);
+    expect(relativePaths(root, found)).toEqual(["packages/error/tsconfig.tsbuildinfo"]);
   });
 
   it("never reports dependencies", async () => {
     const root = await createWorkspaceFixture(["packages/error/node_modules/left-pad/dist"]);
 
-    await expect(findArtifactDirectories(join(root, "packages/error"))).resolves.toEqual([]);
+    await expect(
+      findArtifactDirectories(join(root, "packages/error"), new Set([join(root, "packages/error")])),
+    ).resolves.toEqual([]);
   });
 });
 
@@ -118,6 +141,21 @@ describe("hub clean", () => {
     const output = await runClean(root, packages, ["--dry-run"]);
 
     expect(output).toContain("Would remove 2 artifact(s)");
+  });
+
+  it("removes the artifacts of a nested workspace package when its parent is selected", async () => {
+    const root = await createWorkspaceFixture(["packages/icons/dist", "packages/icons/demo/dist"]);
+    const packages = [createPackage(root, "packages/icons"), createPackage(root, "packages/icons/demo")];
+
+    const output = await runClean(root, packages, ["--dry-run"], packages.slice(0, 1));
+
+    expect(output).toContain("packages/icons/demo/dist");
+  });
+
+  it("leaves an artifact directory that is not at a package root", async () => {
+    const root = await createWorkspaceFixture(["packages/error/playground/dist"]);
+
+    await expect(runClean(root, [createPackage(root, "packages/error")], [])).resolves.toContain("Nothing to clean.");
   });
 
   it("reports nothing to clean on a fresh tree", async () => {
