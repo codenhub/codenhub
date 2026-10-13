@@ -98,6 +98,41 @@ describe("execute", () => {
     expect(outcome.durationMs).toBeLessThan(15_000);
   });
 
+  it("shouldReportTheScriptsResultWhenAProcessItLeftBehindHoldsItsOutput", { timeout: 20_000 }, async () => {
+    // The detached grandchild inherits the output pipes and outlives the script,
+    // so the pipes stay open after the script itself has exited successfully.
+    const outcome = await execute(
+      {
+        args: [
+          "-e",
+          "const { spawn } = require('node:child_process'); " +
+            "spawn(process.execPath, ['-e', \"setTimeout(() => {}, 4000); console.log('grandchild line');\"], " +
+            "{ stdio: 'inherit', detached: true }).unref(); console.log('root line');",
+        ],
+        command: process.execPath,
+        cwd: process.cwd(),
+      },
+      { stdio: "pipe", timeoutMs: 1500 },
+    );
+
+    expect(outcome.didTimeOut).toBe(false);
+    expect(outcome.exitCode).toBe(0);
+    expect(outcome.isSuccess).toBe(true);
+    expect(outcome.output).toContain("root line");
+    expect(outcome.durationMs).toBeLessThan(3000);
+  });
+
+  it("shouldReturnAFastScriptsOutputWellBeforeItsLimit", async () => {
+    const outcome = await execute(
+      { args: ["-e", "console.log('quick line')"], command: process.execPath, cwd: process.cwd() },
+      { stdio: "pipe", timeoutMs: 10_000 },
+    );
+
+    expect(outcome.isSuccess).toBe(true);
+    expect(outcome.output).toContain("quick line");
+    expect(outcome.durationMs).toBeLessThan(5000);
+  });
+
   it("shouldPreservePercentDelimitedArguments", async () => {
     const outcome = await execute(
       {
