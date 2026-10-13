@@ -302,4 +302,36 @@ describe("document policy", () => {
   it("does not require frontmatter outside the docs directory", () => {
     expect(getIssueCodes(BASE_FILES)).toEqual([]);
   });
+
+  it("reports unsupported frontmatter once for its document and still reads the body", () => {
+    const files = {
+      ...BASE_FILES,
+      "docs/guide.md": "---\ndescription: >-\n  Some text.\n---\n\n# Guide\n\n## Setup\n\n[Index](index.md)\n",
+    };
+    const graph = createDocumentGraph(files);
+    const guide = graph.documents.find((document) => document.path === "docs/guide.md");
+    expect(guide?.headings).toHaveLength(2);
+    expect(guide?.links.map(({ target }) => target)).toEqual(["index.md"]);
+
+    const issues = validateDocumentGraph(graph, {
+      npmFiles: new Set(Object.keys(files)),
+      siteFiles: new Set(Object.keys(files)),
+    }).filter(({ sourcePath }) => sourcePath === "docs/guide.md");
+    expect(issues).toEqual([
+      {
+        code: "invalid-frontmatter",
+        message: expect.stringContaining('Unsupported frontmatter field "description" in docs/guide.md'),
+        sourcePath: "docs/guide.md",
+      },
+    ]);
+  });
+
+  it("reports unsupported frontmatter on a surface outside the docs directory too", () => {
+    expect(
+      getIssueCodes({
+        ...BASE_FILES,
+        "README.md": "---\ntitle: Example # note\n---\n\n# Example\n\n[Docs](docs/index.md)",
+      }),
+    ).toEqual(["invalid-frontmatter"]);
+  });
 });

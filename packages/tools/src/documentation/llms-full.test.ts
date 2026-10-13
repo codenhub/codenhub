@@ -1,7 +1,12 @@
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { parseMarkdown } from "./document-policy.ts";
 import {
+  buildLlmsFull,
   curateLlmsFullDocuments,
   orderLlmsFullDocuments,
   orderLlmsFullSources,
@@ -11,20 +16,35 @@ import {
 
 describe("parseMarkdown", () => {
   it("shouldSplitFrontmatterFromTheAuthoredBody", () => {
-    expect(parseMarkdown("---\ntitle: Example\ndescription: A page.\n---\n\n# Example\n")).toEqual({
+    expect(parseMarkdown("---\ntitle: Example\ndescription: A page.\n---\n\n# Example\n", "docs/a.md")).toEqual({
       body: "\n# Example\n",
       frontmatter: { description: "A page.", title: "Example" },
     });
   });
 
   it("shouldUnquoteScalarValues", () => {
-    expect(parseMarkdown('---\ntitle: "Example: subtitle"\n---\n# Example').frontmatter).toEqual({
+    expect(parseMarkdown('---\ntitle: "Example: subtitle"\n---\n# Example', "docs/a.md").frontmatter).toEqual({
       title: "Example: subtitle",
     });
   });
 
   it("shouldKeepDocumentsWithoutFrontmatterIntact", () => {
-    expect(parseMarkdown("# Example\n\n---\n")).toEqual({ body: "# Example\n\n---\n", frontmatter: {} });
+    expect(parseMarkdown("# Example\n\n---\n", "docs/a.md")).toEqual({
+      body: "# Example\n\n---\n",
+      frontmatter: {},
+    });
+  });
+});
+
+describe("buildLlmsFull frontmatter errors", () => {
+  it("names the source file when a document uses frontmatter the reader does not support", async () => {
+    const rootPath = await mkdtemp(path.join(tmpdir(), "codenhub-llms-full-"));
+    await mkdir(path.join(rootPath, "docs"), { recursive: true });
+    await writeFile(path.join(rootPath, "docs", "guide.md"), "---\ntitle: Errors # note\n---\n\n# Guide\n");
+
+    await expect(buildLlmsFull(rootPath, ["docs/guide.md"])).rejects.toThrow(
+      'Unsupported frontmatter field "title" in docs/guide.md',
+    );
   });
 });
 
