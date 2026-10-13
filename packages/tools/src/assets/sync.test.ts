@@ -1,4 +1,5 @@
-import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmod, mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 
@@ -6,6 +7,15 @@ import { describe, expect, it } from "vitest";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { ASSET_STATE_FILE, declaresAssets, syncPackageAssets } from "./sync.ts";
+
+/** True on file systems where `PROBE.txt` finds `probe.txt` (Windows, macOS by default). */
+const caseInsensitiveFileSystem = (() => {
+  const probeDirectory = mkdtempSync(join(tmpdir(), "codenhub-assets-case-probe-"));
+  writeFileSync(join(probeDirectory, "probe.txt"), "");
+  const insensitive = existsSync(join(probeDirectory, "PROBE.txt"));
+  rmSync(probeDirectory, { force: true, recursive: true });
+  return insensitive;
+})();
 
 function createPackage(directory: string, manifest: Record<string, unknown>): WorkspacePackage {
   return {
@@ -282,5 +292,56 @@ describe("syncPackageAssets", () => {
 
     await expect(syncPackageAssets(firstManifest, root)).rejects.toThrow(/symbolic link/);
     await expect(readFile(join(outsideDirectory, "favicon.ico"), "utf8")).rejects.toThrow("ENOENT");
+  });
+
+  it("shouldAdoptItsOwnFileWhenOnlyTheLetterCaseOfItsDestinationChanges", async () => {
+    const { packageDirectory, root } = await createFixture();
+    await syncPackageAssets(
+      createPackage(packageDirectory, {
+        codenhub: { assets: [{ from: "logo/logo-dark.svg", to: "public/logo.svg" }] },
+        name: "@fixture/example",
+      }),
+      root,
+    );
+
+    const result = await syncPackageAssets(
+      createPackage(packageDirectory, {
+        codenhub: { assets: [{ from: "logo/logo-dark.svg", to: "public/Logo.svg" }] },
+        name: "@fixture/example",
+      }),
+      root,
+    );
+
+    expect(result).toEqual({ copied: ["public/Logo.svg"], removed: ["public/logo.svg"] });
+    // The exact on-disk name: the new casing must survive, so the old name
+    // must be removed before the new one is copied.
+    await expect(readdir(join(packageDirectory, "public"))).resolves.toEqual(["Logo.svg"]);
+    await expect(readFile(join(packageDirectory, "public/Logo.svg"), "utf8")).resolves.toBe("logo-bytes");
+    await expect(readJsonState(packageDirectory)).resolves.toEqual({ placed: ["public/Logo.svg"] });
+  });
+
+  it.skipIf(caseInsensitiveFileSystem)("shouldStillRefuseACaseVariantThatIsNotThePlacedFile", async () => {
+    const { packageDirectory, root } = await createFixture();
+    await syncPackageAssets(
+      createPackage(packageDirectory, {
+        codenhub: { assets: [{ from: "logo/logo-dark.svg", to: "public/logo.svg" }] },
+        name: "@fixture/example",
+      }),
+      root,
+    );
+    // On a case-sensitive file system this is a different file from the placed one.
+    await writeFile(join(packageDirectory, "public", "Logo.svg"), "hand-authored");
+
+    await expect(
+      syncPackageAssets(
+        createPackage(packageDirectory, {
+          codenhub: { assets: [{ from: "logo/logo-dark.svg", to: "public/Logo.svg" }] },
+          name: "@fixture/example",
+        }),
+        root,
+      ),
+    ).rejects.toThrow(/did not place/);
+    await expect(readFile(join(packageDirectory, "public", "Logo.svg"), "utf8")).resolves.toBe("hand-authored");
+    await expect(readFile(join(packageDirectory, "public", "logo.svg"), "utf8")).resolves.toBe("logo-bytes");
   });
 });

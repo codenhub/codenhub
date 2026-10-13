@@ -1,5 +1,5 @@
-import { copyFile, lstat, mkdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, sep } from "node:path";
+import { copyFile, lstat, mkdir, readdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { isValidRelativeAssetPath, parseAssetEntries } from "./manifest.ts";
@@ -79,6 +79,32 @@ async function readPlaced(packageDirectory: string): Promise<string[]> {
 }
 
 /**
+ * Reports whether an existing destination is the file the sync placed under another letter case.
+ *
+ * On a case-insensitive file system `public/Logo.svg` and a placed `public/logo.svg` are one file,
+ * so the name on disk decides: the file is the sync's own only when its exact on-disk name is the
+ * placed name. A `Logo.svg` that really exists beside a placed `logo.svg` is refused. Directory
+ * segments must match exactly, since a directory's letter case is not changed by copying into it.
+ * @param destination Absolute path the manifest declares.
+ * @param to The declared destination, relative to the package directory.
+ * @param placed Destinations recorded by the previous run.
+ * @returns `true` when the existing file is a placed destination under a different letter case.
+ */
+async function isPlacedUnderOtherCase(destination: string, to: string, placed: string[]): Promise<boolean> {
+  const name = basename(destination);
+  const names = await readdir(dirname(destination));
+  const onDiskName = names.includes(name)
+    ? name
+    : names.find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+  return (
+    onDiskName !== undefined &&
+    placed.some(
+      (destinationPlaced) => dirname(destinationPlaced) === dirname(to) && basename(destinationPlaced) === onDiskName,
+    )
+  );
+}
+
+/**
  * Reports whether a package declares any `codenhub.assets` entry.
  * @param workspacePackage Package to inspect.
  * @returns `true` when the manifest declares at least one entry.
@@ -142,7 +168,11 @@ export async function syncPackageAssets(workspacePackage: WorkspacePackage, root
 
       const destination = join(workspacePackage.directory, entry.to);
       await assertNoSymbolicLink(workspacePackage.directory, destination);
-      if (!previouslyPlacedSet.has(entry.to) && (await pathExists(destination))) {
+      if (
+        !previouslyPlacedSet.has(entry.to) &&
+        (await pathExists(destination)) &&
+        !(await isPlacedUnderOtherCase(destination, entry.to, previouslyPlaced))
+      ) {
         throw new Error(
           `${workspacePackage.name} declares codenhub.assets destination "${entry.to}", but the asset sync did not place the existing path.`,
         );
