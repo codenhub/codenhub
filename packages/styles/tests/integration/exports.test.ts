@@ -750,27 +750,33 @@ const UNDECLARED_DOCUMENTED_TOKENS = new Set([
   "--breakpoint-xs",
 ]);
 
+/* Each table with a floor under its row count, a few rows below today's, so a
+   renamed heading or a row format the pattern stops matching fails here rather
+   than shrinking what the test checks. */
+const DOCUMENTED_TOKEN_TABLES = { "## Color tokens": 40, "## Foundation tokens": 25 };
+
 const documentedThemeTokens = async () => {
   const theming = await readFile(path.resolve(packageRoot, "docs/usage/theming.md"), "utf8");
-  const sections = ["## Color tokens", "## Foundation tokens"].map((heading) => {
+
+  return Object.entries(DOCUMENTED_TOKEN_TABLES).map(([heading, floor]) => {
     const start = theming.indexOf(heading);
     const end = theming.indexOf("\n## ", start + heading.length);
+    const section = start === -1 ? "" : theming.slice(start, end === -1 ? undefined : end);
 
-    return theming.slice(start, end === -1 ? undefined : end);
+    return { heading, floor, tokens: [...section.matchAll(/^\| `(--[a-z0-9-]+)`/gm)].map((match) => match[1]!) };
   });
-
-  return [
-    ...new Set(
-      sections.flatMap((section) => [...section.matchAll(/^\| `(--[a-z0-9-]+)`/gm)].map((match) => match[1]!)),
-    ),
-  ].filter((token) => !UNDECLARED_DOCUMENTED_TOKENS.has(token));
 };
 
 test("compiled entrypoints declare every documented colour and foundation token", async () => {
-  const tokens = await documentedThemeTokens();
+  const tables = await documentedThemeTokens();
 
-  // One token from each table, so a renamed heading cannot drop a section unseen.
-  expect(tokens).toEqual(expect.arrayContaining(["--color-background", "--font-default"]));
+  for (const { heading, floor, tokens } of tables) {
+    expect(tokens.length, `${heading} should list at least ${floor} tokens`).toBeGreaterThanOrEqual(floor);
+  }
+
+  const tokens = [...new Set(tables.flatMap((table) => table.tokens))].filter(
+    (token) => !UNDECLARED_DOCUMENTED_TOKENS.has(token),
+  );
 
   for (const target of ["dist/index.css", "dist/theme.css", "dist/components.css", "dist/native.css"]) {
     // oxlint-disable-next-line no-await-in-loop -- one file at a time keeps the failure naming its file.
