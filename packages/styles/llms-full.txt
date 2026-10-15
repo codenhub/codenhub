@@ -49,7 +49,7 @@ For the Tailwind CSS v4 entrypoint, theme selection, the intent/presentation axe
 
 ## Notes
 
-This package has no JavaScript behavior. It ships no compatibility aliases: a removed class or token is documented in the [changelog](./docs/changelog/index.md), not kept under a second name.
+This package has no JavaScript behavior. It ships no compatibility aliases: a removed class or token is documented in the [changelog](./docs/changelog/index.md), not kept under a second name. Below 1.0 a minor release may break and a patch release never does; see [Versioning](./docs/index.md#versioning).
 
 ## License
 
@@ -88,6 +88,17 @@ Known costs of the design, stated so they can be weighed before adopting it:
 - **The complete stylesheets are large before compression.** Minified, `@codenhub/styles` is about 189 KB, `/native` about 260 KB, and `/components` about 150 KB; served compressed they are about 16 KB, 19 KB, and 12 KB with gzip. The focused files are far smaller: `/theme` is about 10 KB (2 KB gzipped), and one aesthetic is 4 to 21 KB (1 to 2 KB gzipped). The repetition that compression removes is the composition every component carries. Import the narrowest entrypoint that covers a page; see [Setup → Import paths](docs/setup.md#import-paths).
 - **`--color-foreground` is a surface tone, not a text colour.** It is the plate a step off the page that a quiet card or panel rests on. The text colour is `--color-text`.
 - **The success, warning, destructive, and info hover tones are fixed values.** `--color-success-hover` and its three siblings are precomputed rather than mixed from their base colour, because mixing them live crashed WebKit. Overriding `--color-success` alone leaves its hover on the old hue, so retheme the whole family; see [Theming → Color tokens](docs/usage/theming.md#color-tokens).
+
+## Versioning
+
+The package is below 1.0 and follows the [semantic versioning rule for 0.x releases](https://semver.org/#spec-item-4): the public surface may still change between minor versions.
+
+- A minor release, such as 0.7.0 to 0.8.0, may break. It can rename or remove a class or token, or change a default. Every break is listed under **Changed** or **Removed** on that version's [changelog](docs/changelog/index.md) page, with what to use instead.
+- A patch release, such as 0.7.0 to 0.7.1, never breaks.
+
+npm's default range for a new dependency, `^0.7.0`, already accepts patches only: below 1.0, a caret range does not cross into the next minor version. Read the changelog before raising it. When you link a file from a CDN instead, put the exact version in the URL; see [Without a bundler](docs/integrating/without-a-bundler.md).
+
+Breaks are not softened with aliases because the model is still settling, and an old name kept beside each new one would grow the class and token surface every release. A break listed in the changelog costs one find-and-replace when you upgrade.
 
 ## Next steps
 
@@ -2149,6 +2160,7 @@ A button can be a liquid glass pane, the solo classes compose with presentation,
 - **Liquid glass buttons.** A `.btn` carrying `.glass-liquid` itself, in a glass scope, takes the blur, lens, and rim of a liquid pane, with a lens sized for a control. The fill is still the presentation's: `.solid` is an opaque plate under the rim, `.ghost` and `.soft` are clear panes. A liquid region alone still leaves its controls solid. See [Aesthetics → Liquid buttons](docs/usage/aesthetics.md#liquid-buttons).
 - **Solo classes compose with presentation, intent, and elevation.** Fill and edge come from the element or a container, intent and elevation from the element's own class, so `.pixel-solo.edgeless` drops its ring, `.glass-solo.solid.success` is an opaque green pane, and `.neobrutalism-solo.flat` has no slab. With none of those classes a solo element paints what it did. See [Aesthetics → Solo classes](docs/usage/aesthetics.md#solo-classes).
 - **`--font-mono` is a documented token.** It sets the font of the `kbd`, `code`, and `pre` helpers and of `<kbd>`, `<code>`, and `<pre>` under `/native`, and joins the other font tokens in [Theming → Fonts](docs/usage/theming.md#fonts), which also shows how to load a web font.
+- **A stated versioning policy.** Below 1.0 a minor release may break and a patch release never does; see [Versioning](docs/index.md#versioning).
 
 ## Changed
 

@@ -35,6 +35,17 @@ Known costs of the design, stated so they can be weighed before adopting it:
 - **`--color-foreground` is a surface tone, not a text colour.** It is the plate a step off the page that a quiet card or panel rests on. The text colour is `--color-text`.
 - **The success, warning, destructive, and info hover tones are fixed values.** `--color-success-hover` and its three siblings are precomputed rather than mixed from their base colour, because mixing them live crashed WebKit. Overriding `--color-success` alone leaves its hover on the old hue, so retheme the whole family; see [Theming → Color tokens](./usage/theming.md#color-tokens).
 
+## Versioning
+
+The package is below 1.0 and follows the [semantic versioning rule for 0.x releases](https://semver.org/#spec-item-4): the public surface may still change between minor versions.
+
+- A minor release, such as 0.7.0 to 0.8.0, may break. It can rename or remove a class or token, or change a default. Every break is listed under **Changed** or **Removed** on that version's [changelog](./changelog/index.md) page, with what to use instead.
+- A patch release, such as 0.7.0 to 0.7.1, never breaks.
+
+npm's default range for a new dependency, `^0.7.0`, already accepts patches only: below 1.0, a caret range does not cross into the next minor version. Read the changelog before raising it. When you link a file from a CDN instead, put the exact version in the URL; see [Without a bundler](./integrating/without-a-bundler.md).
+
+Breaks are not softened with aliases because the model is still settling, and an old name kept beside each new one would grow the class and token surface every release. A break listed in the changelog costs one find-and-replace when you upgrade.
+
 ## Next steps
 
 - [Setup](./setup.md): Install the package, choose an entrypoint, and render a first component.
