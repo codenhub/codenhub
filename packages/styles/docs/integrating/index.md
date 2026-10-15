@@ -20,13 +20,14 @@ Importing from one place matters for two reasons. Some frameworks only _allow_ g
 
 ## Which guide to follow
 
-| Stack                                    | Guide                            |
-| ---------------------------------------- | -------------------------------- |
-| A Tailwind CSS v4 project on any bundler | [Tailwind CSS v4](./tailwind.md) |
-| Next.js / React                          | [Next.js](./nextjs.md)           |
-| Vue                                      | [Vue](./vue.md)                  |
-| Svelte / SvelteKit                       | [Svelte](./svelte.md)            |
-| Astro                                    | [Astro](./astro.md)              |
+| Stack                                                        | Guide                                       |
+| ------------------------------------------------------------ | ------------------------------------------- |
+| A Tailwind CSS v4 project on any bundler                     | [Tailwind CSS v4](./tailwind.md)            |
+| Next.js / React                                              | [Next.js](./nextjs.md)                      |
+| Vue                                                          | [Vue](./vue.md)                             |
+| Svelte / SvelteKit                                           | [Svelte](./svelte.md)                       |
+| Astro                                                        | [Astro](./astro.md)                         |
+| Plain HTML, Rails, Django, or any app with no CSS build step | [Without a bundler](./without-a-bundler.md) |
 
 A project with no framework — a plain Vite, webpack, or Parcel build — needs nothing beyond [Setup → Quick start](../setup.md#quick-start): import the compiled stylesheet from the project's existing global CSS entry.
 
@@ -38,4 +39,4 @@ After the import, render one styled element and confirm it picked up the package
 <button class="btn primary">Continue</button>
 ```
 
-A rounded, filled button in the primary color means the stylesheet loaded. Unstyled browser-default text most often means the import specifier didn't resolve — check the [import paths table](../setup.md#import-paths) for the exact one your entrypoint needs, and confirm your build tooling resolves package CSS imports at all, see [Setup → Requirements](../setup.md#requirements).
+A rounded, filled button in the primary color means the stylesheet loaded. Unstyled browser-default text most often means the import specifier didn't resolve — check the [import paths table](../setup.md#import-paths) for the exact one your entrypoint needs, and confirm your build tooling resolves package CSS imports at all, see [Setup → Requirements](../setup.md#requirements). With no build tool, link the file by its path instead; see [Without a bundler](./without-a-bundler.md).

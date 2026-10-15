@@ -51,5 +51,5 @@ Breaks are not softened with aliases because the model is still settling, and an
 - [Setup](./setup.md): Install the package, choose an entrypoint, and render a first component.
 - [Concepts](./concepts.md): The three-axis model, the token system, and how theme selection works — read this before the usage guides.
 - [Usage](./usage/index.md): Guides for composing axes, theming, customizing, aesthetics, and each component family.
-- [Integrating](./integrating/index.md): Wiring the stylesheet into Next.js, Vue, Svelte, Astro, or a Tailwind CSS v4 build.
+- [Integrating](./integrating/index.md): Wiring the stylesheet into Next.js, Vue, Svelte, Astro, a Tailwind CSS v4 build, or a page with no bundler.
 - [Accessibility](./accessibility.md): CSS accessibility hooks and what remains an application responsibility.
