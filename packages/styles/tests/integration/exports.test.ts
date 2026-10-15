@@ -769,7 +769,8 @@ const documentedThemeTokens = async () => {
 test("compiled entrypoints declare every documented colour and foundation token", async () => {
   const tokens = await documentedThemeTokens();
 
-  expect(tokens.length).toBeGreaterThan(40);
+  // One token from each table, so a renamed heading cannot drop a section unseen.
+  expect(tokens).toEqual(expect.arrayContaining(["--color-background", "--font-default"]));
 
   for (const target of ["dist/index.css", "dist/theme.css", "dist/components.css", "dist/native.css"]) {
     // oxlint-disable-next-line no-await-in-loop -- one file at a time keeps the failure naming its file.
