@@ -98,7 +98,7 @@ The package is below 1.0 and follows the [semantic versioning rule for 0.x relea
 
 npm's default range for a new dependency, `^0.7.0`, already accepts patches only: below 1.0, a caret range does not cross into the next minor version. Read the changelog before raising it. When you link a file from a CDN instead, put the exact version in the URL; see [Without a bundler](docs/integrating/without-a-bundler.md).
 
-Breaks are not softened with aliases because the model is still settling, and an old name kept beside each new one would grow the class and token surface every release. A break listed in the changelog costs one find-and-replace when you upgrade.
+Breaks are not softened with aliases because the model is still settling, and an old name kept beside each new one would grow the class and token surface every release. A rename or removal listed in the changelog usually costs one find-and-replace when you upgrade; a changed default may need your own CSS retuned.
 
 ## Next steps
 
@@ -584,7 +584,7 @@ Set them directly to define an intent this package does not ship. **State every 
 <button class="btn brand">Custom intent</button> <span class="badge brand soft">Works everywhere</span>
 ```
 
-> **Intent does not cascade.** Components reset these slots to the neutral values, the text palette, at their own root, so a `.success` container never recolors a nested destructive button. Put the intent class on the element that shows the intent.
+> **Intent does not cascade.** Components reset these slots to their neutral values at their own root, so a `.success` container never recolors a nested destructive button. Put the intent class on the element that shows the intent.
 
 ## Foundation tokens
 
@@ -666,7 +666,7 @@ A self-hosted font is declared with `@font-face` and named the same way:
 }
 ```
 
-Load weights 400 to 700. Components set `font-weight` from 500 to 700, and a browser that lacks a weight fakes it by thickening the regular one, which smears a pixel or handwriting face. Always end the stack with a generic family, such as `sans-serif` or `monospace`, so text still renders while the font loads or if it fails to.
+Load weights 400 to 700, and 800 for `--font-rounded`: components set `font-weight` from 400 to 700, and `.chunky-tile` sets its labels in 800. A browser that lacks a weight fakes it by thickening the regular one, which smears a pixel or handwriting face. Always end the stack with a generic family, such as `sans-serif` or `monospace`, so text still renders while the font loads or if it fails to.
 
 Next: [Customizing](docs/usage/customizing.md) covers presentation and material tokens — how much of an intent shows, and what a component is made of.
 
@@ -2038,9 +2038,9 @@ Apply `.dark` or `.light` on `<html>` to force a theme instead of following the 
 
 The compiled stylesheets are finished CSS: each one is a single file with no `@import` and no reference to another file, and every image it draws is embedded as a `data:` URL. A page can load one with a plain `<link>` tag, from any server, with no build step.
 
-What needs a build tool is the import _name_. `@import "@codenhub/styles"` names a package, and finding the file behind that name — `node_modules/@codenhub/styles/dist/index.css` — is done by Node-aware tooling such as Vite, webpack, or the Tailwind CLI, which read the package's `exports` map. A browser does not: it resolves `@import` and `href` against the page's own URL, so a bare package name becomes a request for a file that does not exist. Without a bundler, link the file by its path instead.
+What needs a build tool is the import _name_. `@import "@codenhub/styles"` names a package, and finding the file behind that name — `node_modules/@codenhub/styles/dist/index.css` — is done by Node-aware tooling such as Vite, webpack, or the Tailwind CLI, which read the package's `exports` map. A browser does not: it resolves an `@import` URL against the stylesheet that contains it and a `<link href>` against the page, so a bare package name becomes a request for a path that does not exist. Without a bundler, link the file by its path instead.
 
-The `/tw` entrypoints are Tailwind source and always need a Tailwind build; this page covers the compiled ones only.
+The `/tw` entrypoints are Tailwind source and need a Tailwind build. `/tw/aesthetics` is the exception, plain CSS with nothing for Tailwind to process, but without a bundler link the compiled `dist/aesthetics/` files instead, as below. This page covers the compiled entrypoints only.
 
 ## Which file to link
 

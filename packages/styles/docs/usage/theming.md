@@ -112,7 +112,7 @@ Set them directly to define an intent this package does not ship. **State every 
 <button class="btn brand">Custom intent</button> <span class="badge brand soft">Works everywhere</span>
 ```
 
-> **Intent does not cascade.** Components reset these slots to the neutral values, the text palette, at their own root, so a `.success` container never recolors a nested destructive button. Put the intent class on the element that shows the intent.
+> **Intent does not cascade.** Components reset these slots to their neutral values at their own root, so a `.success` container never recolors a nested destructive button. Put the intent class on the element that shows the intent.
 
 ## Foundation tokens
 
@@ -194,6 +194,6 @@ A self-hosted font is declared with `@font-face` and named the same way:
 }
 ```
 
-Load weights 400 to 700. Components set `font-weight` from 500 to 700, and a browser that lacks a weight fakes it by thickening the regular one, which smears a pixel or handwriting face. Always end the stack with a generic family, such as `sans-serif` or `monospace`, so text still renders while the font loads or if it fails to.
+Load weights 400 to 700, and 800 for `--font-rounded`: components set `font-weight` from 400 to 700, and `.chunky-tile` sets its labels in 800. A browser that lacks a weight fakes it by thickening the regular one, which smears a pixel or handwriting face. Always end the stack with a generic family, such as `sans-serif` or `monospace`, so text still renders while the font loads or if it fails to.
 
 Next: [Customizing](./customizing.md) covers presentation and material tokens — how much of an intent shows, and what a component is made of.

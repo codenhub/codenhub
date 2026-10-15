@@ -44,7 +44,7 @@ The package is below 1.0 and follows the [semantic versioning rule for 0.x relea
 
 npm's default range for a new dependency, `^0.7.0`, already accepts patches only: below 1.0, a caret range does not cross into the next minor version. Read the changelog before raising it. When you link a file from a CDN instead, put the exact version in the URL; see [Without a bundler](./integrating/without-a-bundler.md).
 
-Breaks are not softened with aliases because the model is still settling, and an old name kept beside each new one would grow the class and token surface every release. A break listed in the changelog costs one find-and-replace when you upgrade.
+Breaks are not softened with aliases because the model is still settling, and an old name kept beside each new one would grow the class and token surface every release. A rename or removal listed in the changelog usually costs one find-and-replace when you upgrade; a changed default may need your own CSS retuned.
 
 ## Next steps
 
