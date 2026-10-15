@@ -583,7 +583,7 @@ The four `--elevation-*` values below are raw shadows for elements you style you
 
 | Token                      | Purpose                                                                                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--font-default`           | Default app font family.                                                                                                                    |
+| `--font-default`           | Default app font family, `"Segoe UI", system-ui, sans-serif`. See [Fonts](#fonts).                                                          |
 | `--container-narrow`       | Narrow content width.                                                                                                                       |
 | `--container-max`          | Default content width.                                                                                                                      |
 | `--container-wide`         | Wide content width.                                                                                                                         |
@@ -610,6 +610,52 @@ The four `--elevation-*` values below are raw shadows for elements you style you
 | `--motion-ease`            | Default easing curve.                                                                                                                       |
 | `--z-popover`              | Popover/tooltip z-index.                                                                                                                    |
 | `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint (`xs:`), `30rem`. `/tw` only: compiled entrypoints do not declare it.                            |
+
+## Fonts
+
+The package ships no font files and makes no network requests. Every font token names fonts already installed on the reader's device until you supply your own.
+
+| Token            | Read by                                                                                          | Without your value                                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--font-default` | The reset, on `html` and `body`. Buttons and form controls inherit it.                           | `"Segoe UI", system-ui, sans-serif`                                                                                                             |
+| `--font-mono`    | The `kbd`, `code`, and `pre` content helpers, and `<kbd>`, `<code>`, and `<pre>` under `/native` | `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`. Under `/tw`, your Tailwind theme's value. |
+| `--font-pixel`   | [`.pixel`](docs/usage/aesthetics.md#pixel) and `.pixel-solo`                                              | Not declared. Falls back to a monospace stack.                                                                                                  |
+| `--font-rounded` | [`.chunky-tile`](docs/usage/aesthetics.md#chunky-tile) and `.chunky-tile-solo`                            | Not declared. Falls back to `--font-default`, then a sans-serif stack.                                                                          |
+| `--font-cyber`   | [`.cyber`](docs/usage/aesthetics.md#cyber) and `.cyber-solo`                                              | Not declared. Falls back to a monospace stack.                                                                                                  |
+| `--font-sketch`  | [`.sketch`](docs/usage/aesthetics.md#sketch) and `.sketch-solo`                                           | Not declared. Falls back to the platform `cursive` family.                                                                                      |
+
+`--font-default` reaches the page only through the reset, which `@codenhub/styles`, `/native`, `/tw`, `/tw/native`, and `/tw/reset` include. With `/theme` or `/components` alone, set `font-family` on `body` yourself. The aesthetic tokens are read by the aesthetic's own class, so they work with any entrypoint.
+
+To use a web font, load it the way you load any font, then name it in the token. Set the token on `:root` for the whole page, or on any element for that subtree:
+
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" />
+```
+
+```css
+:root {
+  --font-default: "Inter", system-ui, sans-serif;
+}
+```
+
+A self-hosted font is declared with `@font-face` and named the same way:
+
+```css
+@font-face {
+  font-family: "Pixelify Sans";
+  src: url("/fonts/pixelify-sans.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+:root {
+  --font-pixel: "Pixelify Sans", monospace;
+}
+```
+
+Load weights 400 to 700. Components set `font-weight` from 500 to 700, and a browser that lacks a weight fakes it by thickening the regular one, which smears a pixel or handwriting face. Always end the stack with a generic family, such as `sans-serif` or `monospace`, so text still renders while the font loads or if it fails to.
 
 Next: [Customizing](docs/usage/customizing.md) covers presentation and material tokens — how much of an intent shows, and what a component is made of.
 
@@ -2102,6 +2148,7 @@ A button can be a liquid glass pane, the solo classes compose with presentation,
 
 - **Liquid glass buttons.** A `.btn` carrying `.glass-liquid` itself, in a glass scope, takes the blur, lens, and rim of a liquid pane, with a lens sized for a control. The fill is still the presentation's: `.solid` is an opaque plate under the rim, `.ghost` and `.soft` are clear panes. A liquid region alone still leaves its controls solid. See [Aesthetics → Liquid buttons](docs/usage/aesthetics.md#liquid-buttons).
 - **Solo classes compose with presentation, intent, and elevation.** Fill and edge come from the element or a container, intent and elevation from the element's own class, so `.pixel-solo.edgeless` drops its ring, `.glass-solo.solid.success` is an opaque green pane, and `.neobrutalism-solo.flat` has no slab. With none of those classes a solo element paints what it did. See [Aesthetics → Solo classes](docs/usage/aesthetics.md#solo-classes).
+- **`--font-mono` is a documented token.** It sets the font of the `kbd`, `code`, and `pre` helpers and of `<kbd>`, `<code>`, and `<pre>` under `/native`, and joins the other font tokens in [Theming → Fonts](docs/usage/theming.md#fonts), which also shows how to load a web font.
 
 ## Changed
 

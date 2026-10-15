@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-29
+last_updated: 2026-10-15
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -720,6 +720,7 @@ Rounded slabs seated on a darker shade of themselves, pressed flat on click.
 - Hover holds still and the press moves: a seated slab has one gesture and it belongs to the press.
 - Labels are heavier and slightly tracked, through `--ui-label-weight` and `--ui-label-tracking`, which `.btn` and `.badge` read, so a consumer's `font-*` utility still beats them. Casing is left to the application.
 - A `.p-xs` button sits on half the lift and a `.sm` one on three quarters: `box` scales depth down with the size step, so the aesthetic names no component.
+- Reads `--font-rounded` and falls back to `--font-default`, then a sans-serif stack, so a consumer who themed the page font gets it here too. The package ships no font binary.
 
 ### `.cyber`
 
