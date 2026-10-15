@@ -193,7 +193,7 @@ The same knobs tune each aesthetic's [solo class](./aesthetics.md#solo-classes),
 
 ## Generated palette
 
-`@codenhub/styles/palette` is a generated, self-contained stylesheet of every `intent x presentation` cell's composed colors, baked to flat `--palette-*` custom properties -- the same values `box.css` composes live, computed once at build time rather than re-derived. It exists for a consumer that cannot take `@codenhub/styles` as a build-time dependency (an optional peer, for example) but still wants to look consistent with it, not as a replacement for the components themselves when Tailwind is available.
+`@codenhub/styles/palette` is a generated, self-contained stylesheet of every `intent x presentation` cell's composed colors, baked to flat `--palette-*` custom properties -- the same values the components compose live, computed once at build time rather than re-derived. It exists for a consumer that cannot take `@codenhub/styles` as a build-time dependency (an optional peer, for example) but still wants to look consistent with it, not as a replacement for the components themselves when Tailwind is available.
 
 ```css
 @import "@codenhub/styles/palette";

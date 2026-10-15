@@ -112,7 +112,7 @@ Set them directly to define an intent this package does not ship. **State every 
 <button class="btn brand">Custom intent</button> <span class="badge brand soft">Works everywhere</span>
 ```
 
-> **Intent does not cascade.** Components reset these slots to the text palette at their own root, so a `.success` container never recolors a nested destructive button. Put the intent class on the element that shows the intent.
+> **Intent does not cascade.** Components reset these slots to the neutral values, the text palette, at their own root, so a `.success` container never recolors a nested destructive button. Put the intent class on the element that shows the intent.
 
 ## Foundation tokens
 
