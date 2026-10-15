@@ -609,7 +609,7 @@ The four `--elevation-*` values below are raw shadows for elements you style you
 | `--motion-duration-slow`   | Progress value changes, and the base of the skeleton and progress shimmer cycle (`400ms`).                                                  |
 | `--motion-ease`            | Default easing curve.                                                                                                                       |
 | `--z-popover`              | Popover/tooltip z-index.                                                                                                                    |
-| `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint.                                                                                                 |
+| `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint (`xs:`), `30rem`. `/tw` only: compiled entrypoints do not declare it.                            |
 
 Next: [Customizing](docs/usage/customizing.md) covers presentation and material tokens — how much of an intent shows, and what a component is made of.
 
@@ -2119,6 +2119,7 @@ A button can be a liquid glass pane, the solo classes compose with presentation,
 - **A `.disabled` text field holds still under the pointer.** The class spelling of disabled still darkened an `.ipt`'s line on hover, unlike `disabled`, `aria-disabled`, and `data-disabled`.
 - **`.sketch-rounded` beside `.sketch-solo` stays on the solo element.** Its radius tokens inherited into the element's contents, so a `.btn` inside a rounded sketch toast drew a sketch outline on a page with no sketch in scope.
 - **A checked native radio looks like a checked `.radio` in forced colours.** Under `/native` it drew a Highlight ring and dot on Canvas, where `.radio` draws a Highlight disc with a HighlightText dot, so `<input type="radio" class="radio">` changed look with the entrypoint. Both draw the disc now.
+- **`/theme` declares every documented colour and foundation token**, except `--focus-ring-offset`, which is computed on the focused element, and the `/tw`-only `--breakpoint-xs`. The compiled entry left out `--color-background`, `--color-foreground`, `--color-text-secondary`, and `--font-default`, because nothing in it read them, so `var(--color-background)` in your own CSS over `/theme` alone resolved to nothing.
 
 <!-- Source: docs/changelog/0.6.0.md -->
 

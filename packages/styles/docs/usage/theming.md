@@ -148,6 +148,6 @@ The four `--elevation-*` values below are raw shadows for elements you style you
 | `--motion-duration-slow`   | Progress value changes, and the base of the skeleton and progress shimmer cycle (`400ms`).                                                  |
 | `--motion-ease`            | Default easing curve.                                                                                                                       |
 | `--z-popover`              | Popover/tooltip z-index.                                                                                                                    |
-| `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint.                                                                                                 |
+| `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint (`xs:`), `30rem`. `/tw` only: compiled entrypoints do not declare it.                            |
 
 Next: [Customizing](./customizing.md) covers presentation and material tokens — how much of an intent shows, and what a component is made of.

@@ -738,6 +738,58 @@ test("compiled entrypoints declare every colour they read", async () => {
   }
 });
 
+/* Tailwind drops a `@theme` value that nothing in the entry reads, so a token
+   the docs promise can be missing from an entry whose own rules never use it --
+   `/theme` has no reset or components to read `--color-background`. The colour
+   check above sees only what an entry reads; this one holds every compiled
+   entry carrying the theme to the tokens `docs/usage/theming.md` publishes. */
+const UNDECLARED_DOCUMENTED_TOKENS = new Set([
+  // Computed on the focused element, never declared -- see `theme.css`.
+  "--focus-ring-offset",
+  // A Tailwind breakpoint: it exists only in a `/tw` consumer's build.
+  "--breakpoint-xs",
+]);
+
+/* Each table with a floor under its row count, a few rows below today's, so a
+   renamed heading or a row format the pattern stops matching fails here rather
+   than shrinking what the test checks. */
+const DOCUMENTED_TOKEN_TABLES = { "## Color tokens": 40, "## Foundation tokens": 25 };
+
+const documentedThemeTokens = async () => {
+  const theming = await readFile(path.resolve(packageRoot, "docs/usage/theming.md"), "utf8");
+
+  return Object.entries(DOCUMENTED_TOKEN_TABLES).map(([heading, floor]) => {
+    const start = theming.indexOf(heading);
+    const end = theming.indexOf("\n## ", start + heading.length);
+    const section = start === -1 ? "" : theming.slice(start, end === -1 ? undefined : end);
+
+    return { heading, floor, tokens: [...section.matchAll(/^\| `(--[a-z0-9-]+)`/gm)].map((match) => match[1]!) };
+  });
+};
+
+test("compiled entrypoints declare every documented colour and foundation token", async () => {
+  const tables = await documentedThemeTokens();
+
+  for (const { heading, floor, tokens } of tables) {
+    expect(tokens.length, `${heading} should list at least ${floor} tokens`).toBeGreaterThanOrEqual(floor);
+  }
+
+  const tokens = [...new Set(tables.flatMap((table) => table.tokens))].filter(
+    (token) => !UNDECLARED_DOCUMENTED_TOKENS.has(token),
+  );
+
+  for (const target of ["dist/index.css", "dist/theme.css", "dist/components.css", "dist/native.css"]) {
+    // oxlint-disable-next-line no-await-in-loop -- one file at a time keeps the failure naming its file.
+    const output = await readFile(path.resolve(packageRoot, target), "utf8");
+    const declared = new Set(output.match(/--[a-z0-9-]+(?=\s*:)/g) ?? []);
+
+    expect(
+      tokens.filter((token) => !declared.has(token)),
+      `${target} should declare every documented token`,
+    ).toEqual([]);
+  }
+});
+
 /* `/tw/button`'s documented pairing, with the loader last: a file loaded after
    the theme that referenced Tailwind used to undeclare the palette ramp. */
 test("a focused entry keeps its colours when the loader loads after it", async () => {
