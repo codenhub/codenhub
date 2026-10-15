@@ -35,8 +35,15 @@
    selectors below therefore set `color-scheme` and nothing else. Verified
    across Chromium, Firefox, and WebKit, including resolution through
    `color-mix()` and through Tailwind's `@theme`, which emits theme values as
-   unregistered custom properties rather than `@property` registrations. */
-@theme {
+   unregistered custom properties rather than `@property` registrations.
+
+   `static`, because every token here is documented as public. Tailwind keeps a
+   plain `@theme` value only where it sees the entry read it, and `/theme`
+   carries no reset or component to read `--color-background`,
+   `--color-foreground`, `--color-text-secondary`, or `--font-default`, so it
+   shipped without them. `exports.test.ts` holds every compiled entry to the
+   tokens `docs/usage/theming.md` lists. */
+@theme static {
   --font-default: "Segoe UI", system-ui, sans-serif;
 
   --color-primary: light-dark(var(--color-neutral-950), var(--color-neutral-50));
@@ -54,6 +61,9 @@
      `.card.soft.edged`'s own fill and reads as no boundary. Dark's neutral-700
      already separates (27 units). */
   --color-border: light-dark(var(--color-neutral-400), var(--color-neutral-700));
+  /* Nothing in the package draws a border that darkens on hover; it is a
+     public override point for a consumer's own. */
+  --color-border-hover: light-dark(var(--color-neutral-600), var(--color-neutral-500));
 
   /* A text control's line is the only thing identifying it: the box is
      transparent at rest, so nothing else marks where typing goes.
@@ -134,22 +144,13 @@
   --color-info-hover: light-dark(#4b36e9, #5e4ff9);
   --color-info-subtle: light-dark(var(--color-indigo-100), var(--color-indigo-900));
   --color-info-strong: light-dark(var(--color-indigo-800), var(--color-indigo-300));
-
-  --breakpoint-xs: 30rem;
 }
 
-/* Tailwind only keeps a `@theme` variable in the compiled output when it
-   detects that variable being used somewhere in this package's own source --
-   everything above earns its keep that way, through `intent.css` or a
-   component reading it. `--color-border-hover` is different: `docs/usage/
-   theming.md` documents it as a public override point like every other row
-   in that table, but nothing in this package draws a border that darkens on
-   hover, so nothing here ever references it, and Tailwind quietly dropped it
-   from every compiled stylesheet. `static` forces it to compile regardless,
-   so the token a consumer's docs promise is the token their `var()` actually
-   resolves. */
-@theme static {
-  --color-border-hover: light-dark(var(--color-neutral-600), var(--color-neutral-500));
+/* Not `static`: a breakpoint is a variant for a `/tw` consumer's own build and
+   means nothing as a custom property, since a media query cannot read `var()`.
+   Tailwind keeps the variable only where an `xs:` utility uses it. */
+@theme {
+  --breakpoint-xs: 30rem;
 }
 
 /* The foundation tokens and the colour-scheme selectors, in `theme` so every

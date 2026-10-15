@@ -738,6 +738,51 @@ test("compiled entrypoints declare every colour they read", async () => {
   }
 });
 
+/* Tailwind drops a `@theme` value that nothing in the entry reads, so a token
+   the docs promise can be missing from an entry whose own rules never use it --
+   `/theme` has no reset or components to read `--color-background`. The colour
+   check above sees only what an entry reads; this one holds every compiled
+   entry carrying the theme to the tokens `docs/usage/theming.md` publishes. */
+const UNDECLARED_DOCUMENTED_TOKENS = new Set([
+  // Computed on the focused element, never declared -- see `theme.css`.
+  "--focus-ring-offset",
+  // A Tailwind breakpoint: it exists only in a `/tw` consumer's build.
+  "--breakpoint-xs",
+]);
+
+const documentedThemeTokens = async () => {
+  const theming = await readFile(path.resolve(packageRoot, "docs/usage/theming.md"), "utf8");
+  const sections = ["## Color tokens", "## Foundation tokens"].map((heading) => {
+    const start = theming.indexOf(heading);
+    const end = theming.indexOf("\n## ", start + heading.length);
+
+    return theming.slice(start, end === -1 ? undefined : end);
+  });
+
+  return [
+    ...new Set(
+      sections.flatMap((section) => [...section.matchAll(/^\| `(--[a-z0-9-]+)`/gm)].map((match) => match[1]!)),
+    ),
+  ].filter((token) => !UNDECLARED_DOCUMENTED_TOKENS.has(token));
+};
+
+test("compiled entrypoints declare every documented colour and foundation token", async () => {
+  const tokens = await documentedThemeTokens();
+
+  expect(tokens.length).toBeGreaterThan(40);
+
+  for (const target of ["dist/index.css", "dist/theme.css", "dist/components.css", "dist/native.css"]) {
+    // oxlint-disable-next-line no-await-in-loop -- one file at a time keeps the failure naming its file.
+    const output = await readFile(path.resolve(packageRoot, target), "utf8");
+    const declared = new Set(output.match(/--[a-z0-9-]+(?=\s*:)/g) ?? []);
+
+    expect(
+      tokens.filter((token) => !declared.has(token)),
+      `${target} should declare every documented token`,
+    ).toEqual([]);
+  }
+});
+
 /* `/tw/button`'s documented pairing, with the loader last: a file loaded after
    the theme that referenced Tailwind used to undeclare the palette ramp. */
 test("a focused entry keeps its colours when the loader loads after it", async () => {
