@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-30
+last_updated: 2026-10-16
 scope: Naming and branding decisions across Coden, CodenHub, and their packages.
 ---
 
@@ -76,6 +76,7 @@ This table resolves the _displayed_ name only. Whether the npm package name and 
 | `error`      | Neutral, kit    | `ErrorKit`        |                                                                                                                        |
 | `i18n`       | Neutral, plain  | `i18n`            | Already distinctive as a numeronym; industry convention keeps it lowercase.                                            |
 | `icons`      | Neutral, kit    | `IconKit`         |                                                                                                                        |
+| `jwt`        | Neutral, kit    | `JwtKit`          | Fused like `IconKit`; the npm name `@codenhub/jwt` is a working title and may change before publishing.                |
 | `kbd`        | Neutral, plain  | `Kbd`             | Not a dictionary word; already distinctive unfused.                                                                    |
 | `router`     | Neutral, plain  | `Router`          |                                                                                                                        |
 | `skills`     | Branded         | `Coden Skills`    |                                                                                                                        |

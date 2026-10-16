@@ -1,0 +1,67 @@
+{
+  "name": "@codenhub/jwt",
+  "version": "0.0.1",
+  "private": false,
+  "description": "JWS signing and verification, JWK import and export, and key sets on Web Crypto, for untrusted tokens.",
+  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/jwt",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/jwt"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "llms.txt",
+    "llms-full.txt"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts --tsconfig tsconfig.src.json --format esm --dts --clean --no-fixed-extension",
+    "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/jwt version dist-tags time --json && npm dist-tag ls @codenhub/jwt && npm access get status @codenhub/jwt",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
+    "test": "vitest run",
+    "test:browser": "playwright test",
+    "test:browser:watch": "playwright test --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "jose": "catalog:",
+    "miniflare": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "codenhub": {
+    "docs": {
+      "label": "JwtKit",
+      "status": "experimental"
+    }
+  }
+}

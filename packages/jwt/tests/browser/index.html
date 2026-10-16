@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>jwt browser tests</title>
+  </head>
+  <body>
+    <script type="module">
+      import * as jwt from "/dist/index.js";
+      import { runScenario, scenarios } from "/tests/scenarios.ts";
+
+      window.scenarioNames = Object.keys(scenarios);
+      window.runScenario = (name) => runScenario(jwt, name);
+      document.documentElement.dataset.ready = "true";
+    </script>
+  </body>
+</html>

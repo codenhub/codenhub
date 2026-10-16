@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "lib": ["DOM", "ES2024"],
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "types": [],
+    "skipLibCheck": true,
+    "tsBuildInfoFile": "./tsconfig.src.tsbuildinfo"
+  },
+  "extends": "../../tsconfig.json",
+  "include": ["src/**/*"],
+  "exclude": ["src/**/*.test.ts", "src/keys/test-fixtures.ts", "src/verify/test-support.ts"]
+}

@@ -1,0 +1,847 @@
+<!-- Source: README.md -->
+
+# @codenhub/jwt
+
+JwtKit signs and verifies JSON Web Tokens with Web Crypto, imports and exports JSON Web Keys, and picks verification keys from a local set or from an issuer's JWKS URL. It is written for the side that receives tokens it did not issue:
+
+- **The algorithm comes from the key, never from the token.** Every key is bound to one algorithm when it is generated or imported, and `none` is not an algorithm here in any casing.
+- **Claims are never read from an unverified token.** There is no `decode`; only the header can be read before verification, to choose a key.
+- **Bad input is cheap and never throws.** A token's length is capped before it is decoded, JSON is parsed strictly and to a bounded depth, and a remote JWKS is fetched with a timeout, a size cap and a cooldown.
+- **Issues never hold a value of the input**, so logging a failed verification cannot log a token or a key.
+
+ES256, EdDSA, Ed25519, RS256, PS256 and HS256 are supported, with no dependencies.
+
+> **Experimental:** 0.0.1, before its first minor release. Function names, option names, issue codes and their `params` may still change before 0.1.0; the security behavior above will not be weakened.
+
+## Installation
+
+```sh
+pnpm add @codenhub/jwt
+```
+
+## Usage
+
+Verify tokens from an issuer that publishes its keys, such as an OpenID Connect provider:
+
+```ts
+import { createRemoteKeySet, createVerifier } from "@codenhub/jwt";
+
+const verify = createVerifier({
+  keys: createRemoteKeySet({ url: "https://issuer.example/.well-known/jwks.json" }),
+  issuer: "https://issuer.example",
+  audience: "api",
+  requiredClaims: ["sub", "exp"],
+});
+
+const result = await verify(token);
+
+if (result.ok) {
+  console.log(result.value.payload.sub); // verified, and present since it is required
+} else {
+  result.error.issues; // e.g. [{ code: "expired", path: ["payload", "exp"] }]
+}
+```
+
+Create the verifier once and call it for every token. It accepts any value and never throws for a token; an invalid option throws a `TypeError` when the verifier is created.
+
+Sign tokens with a key you generate or import:
+
+```ts
+import { createKeySet, createVerifier, generateKeyPair, sign } from "@codenhub/jwt";
+
+const { privateKey, publicKey } = await generateKeyPair({ alg: "ES256", kid: "2026-10" });
+
+const token = await sign({
+  payload: { sub: "user-1", exp: Math.floor(Date.now() / 1000) + 300 },
+  key: privateKey,
+});
+
+const result = await createVerifier({ keys: createKeySet([publicKey]) })(token);
+```
+
+Times in claims are seconds since the Unix epoch. `sign` adds no claim of its own, and a token without `exp` never expires unless you require it.
+
+## What hostile input gets
+
+Each line runs against the built package with the result its comment states:
+
+```ts
+import { createKeySet, createRemoteKeySet, createVerifier, generateKeyPair, generateSecretKey, sign } from "@codenhub/jwt";
+
+const { privateKey, publicKey } = await generateKeyPair({ alg: "RS256" });
+const verify = createVerifier({ keys: createKeySet([publicKey]) });
+const part = (json: string) => btoa(json).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+
+// `alg: none`, in any casing, is not an algorithm.
+await verify(`${part('{"alg":"none"}')}.${part('{"sub":"admin"}')}.AAAA`); // code "unsupported_alg"
+
+// An HMAC token is never checked with an RSA public key as its secret.
+await verify(await sign({ payload: { sub: "admin" }, key: await generateSecretKey({ alg: "HS256" }) })); // code "no_matching_key"
+
+// A header that names a member twice is refused, where JSON.parse would keep the last one.
+await verify(`${part('{"alg":"RS256","alg":"none"}')}.${part("{}")}.AAAA`); // code "duplicate_key"
+
+// A 10 MB token is refused before any of it is decoded.
+await verify("a".repeat(10_000_000)); // code "too_large", params { limit: "length", maximum: 8192 }
+
+// Claims are not read from a token whose signature fails, and the failure holds none of them.
+const [header, , signature] = (await sign({ payload: { sub: "user-1" }, key: privateKey })).split(".");
+const forged = await verify(`${header}.${part('{"sub":"admin"}')}.${signature}`); // code "bad_signature"
+JSON.stringify(forged).includes("admin"); // false
+
+// A thousand tokens with invented `kid`s cost the issuer one JWKS request, not a thousand.
+let fetches = 0;
+const remote = createRemoteKeySet({
+  url: "https://issuer.example/jwks.json",
+  fetch: async () => {
+    fetches += 1;
+    return Response.json({ keys: [] });
+  },
+});
+const viaRemote = createVerifier({ keys: remote });
+for (let index = 0; index < 1000; index += 1) {
+  await viaRemote(`${part(`{"alg":"RS256","kid":"invented-${index}"}`)}.${part("{}")}.AAAA`); // code "unknown_kid"
+}
+fetches; // 1
+```
+
+## Documentation
+
+- [Documentation overview](docs/index.md)
+- [Verifying tokens](docs/verifying.md)
+- [Signing tokens](docs/signing.md)
+- [Keys](docs/keys.md)
+- [Key sets](docs/key-sets.md)
+- [Issues](docs/errors.md)
+
+## Requirements
+
+- Node.js 24 or newer, or another runtime with Web Crypto, `TextEncoder` and `TextDecoder`, plus `fetch`, `AbortController` and `setTimeout` for remote key sets. No Node.js API is used, so browsers, Deno, Bun and Cloudflare Workers work too.
+- `EdDSA` and `Ed25519` need Web Crypto's Ed25519 support: Node.js 24, Chrome 137, Firefox 129 or Safari 17.
+- ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`.
+
+## Notes
+
+- **Only compact JWS.** No encrypted tokens (JWE), no JWS JSON serialization, no unencoded payloads (`b64`), and no `crit` header extensions; tokens using them are rejected.
+- **Claim checks are generic.** Issuer, audience, `typ`, times, maximum age and required claims are checked here. Protocol rules such as OpenID Connect's `nonce`, `azp` or `at_hash` are left to the code above.
+- **Clock tolerance defaults to 0 seconds**, and is capped at 300. Set `clockTolerance` when the issuer's clock may differ from yours.
+
+## License
+
+Licensed under Apache-2.0.
+
+<!-- Source: docs/index.md -->
+
+# Sign and verify JSON Web Tokens
+
+`@codenhub/jwt` (JwtKit) creates and checks JSON Web Tokens with the platform's Web Crypto API. It signs a set of claims into a token, verifies a token someone sent you, and manages the keys both of those need: generating them, importing them from JSON Web Keys (JWKs), exporting them, and picking the right one from a set, including a set an identity provider publishes at a URL.
+
+It is written for the side of the exchange that receives tokens it did not make. A token arriving in an `Authorization` header is attacker-controlled text until a signature check says otherwise, so the package treats every token, every JWK and every key-set response as hostile input.
+
+## A token in one paragraph
+
+A JSON Web Token (JWT, RFC 7519) signed as a compact JWS, the only kind this package handles, is three base64url-encoded parts joined by dots: `<header>.<payload>.<signature>`. The **header** is a JSON object saying how the token was signed, most importantly `alg`, the algorithm, and often `kid`, the identifier of the key. The **payload** is a JSON object of **claims**: statements such as who issued the token (`iss`), who it is about (`sub`), who it is for (`aud`) and when it expires (`exp`). The **signature** covers the first two parts, so a token whose header or payload was changed no longer verifies. This three-part form is the JWS compact serialization (RFC 7515); it is the only one this package reads and writes.
+
+Base64url is an encoding, not encryption: anyone holding a token can read its payload. A signature proves who made the token and that it was not changed, nothing more.
+
+## Installation
+
+```sh
+pnpm add @codenhub/jwt
+```
+
+The package is ESM only and has no runtime dependencies. Everything is imported by name from `@codenhub/jwt`; the only other export is `@codenhub/jwt/package.json`, for tools that read the version.
+
+## Quick start
+
+Generate a key pair, sign a token with the private key, and verify it with the public key:
+
+```ts
+import { createKeySet, createVerifier, generateKeyPair, sign } from "@codenhub/jwt";
+
+const { privateKey, publicKey } = await generateKeyPair({ alg: "ES256", kid: "2026-10" });
+
+const token = await sign({
+  payload: {
+    iss: "https://issuer.example",
+    aud: "api",
+    sub: "user-1",
+    exp: Math.floor(Date.now() / 1000) + 300,
+  },
+  key: privateKey,
+  header: { typ: "JWT" },
+});
+
+const verify = createVerifier({
+  keys: createKeySet([publicKey]),
+  issuer: "https://issuer.example",
+  audience: "api",
+});
+
+const result = await verify(token);
+```
+
+Claims that hold a time, `exp`, `nbf` and `iat`, are seconds since the Unix epoch, as RFC 7519 defines them, which is why the example divides `Date.now()` by 1000. `sign` adds no claim of its own: the payload is signed exactly as given.
+
+`createVerifier` is called once, when your module loads, and checks every option then; the function it returns is called once per token.
+
+## Reading the result
+
+Operations on input you do not control return a result instead of throwing. A result is one of two frozen plain objects, so you branch on `ok`:
+
+```ts
+const result = await verify(token);
+
+if (result.ok) {
+  const { header, payload, key } = result.value;
+  console.log(payload.sub, header.kid, key.alg);
+} else {
+  for (const issue of result.error.issues) {
+    console.log(issue.code, issue.path);
+  }
+}
+```
+
+`result.value.payload` is only ever a payload whose signature verified and whose claims passed every check you configured. `result.error.issues` is never empty. Each issue has a stable `code`, and where useful a `path` such as `["payload", "exp"]` and `params` such as `{ maximum: 8192 }`. An issue this package creates never holds a value taken from the token or key, so logging a failure cannot log a token. Two kinds of issue come from your own code instead: a `claims` schema's path can name payload properties, and a custom key set's issues are passed through as it returned them. [Issues](docs/errors.md) lists every code.
+
+The shape is the same as `@codenhub/validation`'s result, so code that handles one handles the other.
+
+The package throws a `TypeError` only for a mistake in your own code: an invalid option, a key object this package did not create, or a payload passed to `sign` that JSON cannot represent. Those throw as early as possible, when a verifier or key set is created rather than when a token arrives. A `claims` schema is your code too: if it throws or rejects, the verifier's promise rejects with its error.
+
+## Keys are bound to one algorithm
+
+Every key this package creates is bound to exactly one algorithm at the moment it is generated or imported, and a token can only be verified with a key whose algorithm equals the token's `alg` header. The token never chooses how it is checked.
+
+That closes the best-known class of JWT attacks. In the "`alg: none`" attack a forged token claims it needs no signature; here `none` is not a supported algorithm in any casing. In the algorithm-confusion attack a token signed with HMAC (`HS256`) using an RSA public key as the secret is verified by a library that let the header pick HMAC; here a public key is bound to `RS256` or another asymmetric algorithm and is never used as an HMAC secret, and HMAC secrets are a separate kind of key altogether.
+
+| Algorithm | Signature                             | Key                         |
+| --------- | ------------------------------------- | --------------------------- |
+| `ES256`   | ECDSA on P-256 with SHA-256           | `EC` JWK, curve `P-256`     |
+| `EdDSA`   | Ed25519                               | `OKP` JWK, curve `Ed25519`  |
+| `Ed25519` | Ed25519                               | `OKP` JWK, curve `Ed25519`  |
+| `RS256`   | RSASSA-PKCS1-v1_5 with SHA-256        | `RSA` JWK, 2048 to 8192 bit |
+| `PS256`   | RSASSA-PSS with SHA-256, 32-byte salt | `RSA` JWK, 2048 to 8192 bit |
+| `HS256`   | HMAC with SHA-256                     | secret of at least 32 bytes |
+
+`EdDSA` and `Ed25519` produce identical signatures. RFC 9864 replaces the older, curve-agnostic `EdDSA` identifier with `Ed25519`, and issuers still use both, so both are supported, but a key is bound to one of them: a key bound to `Ed25519` does not verify a token whose header says `EdDSA`.
+
+[Keys](docs/keys.md) covers key kinds, importing, generating and exporting.
+
+## What runs before your claims are read
+
+A verifier runs its checks in a fixed order and stops at the first structural, key or signature failure:
+
+1. The token is a string no longer than `maxLength` characters (8192 by default), checked before anything is decoded.
+2. It has exactly three non-empty segments of strict base64url, and its header is a JSON object without repeated member names, with a supported `alg` and no `crit` member.
+3. The key set selects one key for the header.
+4. The key's algorithm equals the header's `alg`, and the signature verifies.
+5. Only then is the payload decoded, and every configured claim check runs. Claim failures are reported together, not one at a time. A `claims` schema runs last, only when every built-in claim check passed.
+
+There is no function that decodes a payload without verifying it. When you need to look at a token before verifying it, for example to route it by `kid`, `readHeader` returns the header alone. [Verifying tokens](docs/verifying.md) covers every check and option.
+
+## Requirements
+
+- Node.js 24 or newer, or another runtime with Web Crypto (`globalThis.crypto.subtle`), `TextEncoder`, `TextDecoder`, and, for remote key sets, `fetch`, `AbortController` and `setTimeout`. The package uses no Node.js API, so it also runs in browsers, Deno, Bun and Cloudflare Workers.
+- `EdDSA` and `Ed25519` need Web Crypto's Ed25519 support, which Node.js 24, Chrome 137, Firefox 129 and Safari 17 have. The other algorithms work wherever Web Crypto does.
+- ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`.
+
+## Next steps
+
+- [Verifying tokens](docs/verifying.md): every verifier option, the order checks run in, times and clock skew, audiences, `typ`, custom claim schemas, and `readHeader`.
+- [Signing tokens](docs/signing.md): what `sign` writes into the header, what payloads it accepts, and why it adds no claims.
+- [Keys](docs/keys.md): public, private and secret keys, importing JWKs and raw secrets, generating keys, and exporting them.
+- [Key sets](docs/key-sets.md): how a key is selected, local sets, importing a JWKS, and fetching an issuer's JWKS with caching, cooldown and stale keys.
+- [Issues](docs/errors.md): the result shape, every issue code and its `params`, and what throws instead.
+
+<!-- Source: docs/verifying.md -->
+
+# Verifying tokens
+
+`createVerifier` takes the rules a token must meet and returns a function that checks one token against them. Create the verifier once, when your module loads, and call it for every token:
+
+```ts
+import { createRemoteKeySet, createVerifier } from "@codenhub/jwt";
+
+const verify = createVerifier({
+  keys: createRemoteKeySet({ url: "https://issuer.example/.well-known/jwks.json" }),
+  issuer: "https://issuer.example",
+  audience: "api",
+  requiredClaims: ["sub", "exp"],
+});
+
+export async function authenticate(authorization: string | null) {
+  const token = authorization?.startsWith("Bearer ") ? authorization.slice("Bearer ".length) : undefined;
+  const result = await verify(token);
+  return result.ok ? result.value.payload.sub : undefined;
+}
+```
+
+The verifier accepts any value, including `undefined` or a number, and reports a value that is not a token as `malformed` rather than throwing. It never throws for a token, whatever the token holds; the one exception is a [`claims` schema](#checking-your-own-claims) of your own that throws or rejects.
+
+## Options
+
+Every option is checked when `createVerifier` runs, and an invalid one throws a `TypeError` naming the option and its constraint. Durations are in seconds.
+
+| Option           | Default    | What it does                                                                                                       |
+| ---------------- | ---------- | ------------------------------------------------------------------------------------------------------------------ |
+| `keys`           | required   | The [key set](docs/key-sets.md) that selects the verification key for each token.                                       |
+| `issuer`         | none       | A string or a non-empty array of strings. When set, `iss` is required and must equal one of them exactly.          |
+| `audience`       | none       | A string or a non-empty array of strings. When set, `aud` is required and must contain at least one of them.       |
+| `type`           | none       | The required `typ` header, such as `JWT` or `at+jwt`. When set, `typ` is required.                                 |
+| `clockTolerance` | `0`        | Seconds of clock skew allowed on `exp`, `nbf`, `iat` and `maxAge`. An integer from 0 through 300.                  |
+| `maxAge`         | none       | Most seconds since `iat`. When set, `iat` is required. A positive integer.                                         |
+| `maxLength`      | `8192`     | Longest token accepted, in characters, checked before anything is decoded. An integer from 1 through 65536.        |
+| `requiredClaims` | `[]`       | Claims that must be present, whatever their value.                                                                 |
+| `claims`         | none       | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                  |
+| `now`            | `Date.now` | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. |
+
+Without `issuer`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks only the signature, the types of the registered claims (`iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, `iat`) and the times the token itself states. A token without `exp` never expires: if your tokens must expire, list `exp` in `requiredClaims`.
+
+## The order checks run in
+
+1. **Length.** A value that is not a string is `malformed`. A string longer than `maxLength` is `too_large` with `{ limit: "length", maximum }`, before any decoding.
+2. **Structure.** The token must have exactly three segments, each non-empty and in strict base64url: only `A`–`Z`, `a`–`z`, `0`–`9`, `-` and `_`, no `=` padding, and no stray bits in the last character. A segment that breaks this is `malformed` at path `["header"]`, `["payload"]` or `["signature"]`.
+3. **Header.** The header must decode to valid UTF-8 JSON that is an object (else `malformed`), nested at most 32 levels deep (else `too_large` with `{ limit: "depth", maximum: 32 }`), with no member name repeated at any depth (else `duplicate_key`, where `JSON.parse` would silently keep the last one); these issues have the path `["header"]`. Its `alg` must be one of the [supported algorithms](docs/index.md#keys-are-bound-to-one-algorithm), compared exactly, so `none`, `None` and `es256` are all `unsupported_alg`. A `crit` member is `unsupported_crit`, since this package implements no header extension, and a `b64` member is `malformed`, since unencoded payloads (RFC 7797) are not supported. `kid`, `typ` and `cty`, when present, must be strings.
+4. **Key selection.** The key set picks one key for the header, or fails with `unknown_kid`, `no_matching_key`, `ambiguous_key`, `alg_mismatch` or `key_fetch_failed`. [Key sets](docs/key-sets.md#how-a-key-is-selected) describes the rules. Header members such as `jwk`, `jku`, `x5u` and `x5c`, which name a key or a place to fetch one, are ignored: a token never supplies its own key.
+5. **Algorithm.** The selected key's `alg` must equal the header's `alg`, or the result is `alg_mismatch`.
+6. **Signature.** A signature of the wrong length for the key, or one that does not verify, is `bad_signature`.
+7. **Payload.** Only now is the payload decoded, under the same rules as the header, at path `["payload"]`.
+8. **Claims.** Every claim check below runs, and every failure is reported together.
+9. **Your schema.** If `claims` is set and every check above passed, it runs last.
+
+Steps 1 to 7 stop at the first failure, so their result holds one issue. A token whose signature does not verify never has its payload read.
+
+## Claim checks
+
+### Claim types
+
+The registered claims must have the types RFC 7519 gives them when present: `iss`, `sub` and `jti` strings; `aud` a string or an array of strings; `exp`, `nbf` and `iat` finite numbers. A claim of the wrong type is one `invalid_claim` issue at its path, such as `["payload", "exp"]`, and the checks below skip it rather than report it a second time.
+
+### Times
+
+The verifier reads the current time as `now() / 1000`, a fractional number of seconds, and compares it with the time claims:
+
+| Claim    | Fails when                                | Issue              |
+| -------- | ----------------------------------------- | ------------------ |
+| `exp`    | now ≥ `exp` + `clockTolerance`            | `expired`          |
+| `nbf`    | now + `clockTolerance` < `nbf`            | `not_yet_valid`    |
+| `iat`    | `iat` > now + `clockTolerance`            | `issued_in_future` |
+| `maxAge` | now − `iat` > `maxAge` + `clockTolerance` | `too_old`          |
+
+A token is expired at the very second its `exp` names, as RFC 7519 §4.1.4 requires. With `maxAge` set and no `iat`, the result is `missing_claim` with `{ claim: "iat" }`; `too_old` carries `{ maxAge }`.
+
+`clockTolerance` exists because the issuer's clock and yours never agree exactly. It defaults to 0, so skew is something you opt into. A tolerance of 30 to 60 seconds is common for tokens from another server; the cap of 300 seconds keeps a typo from turning a five-minute token into a much longer one.
+
+### Issuer
+
+With `issuer` set, `iss` must equal one of the given values exactly, character for character: `https://issuer.example` and `https://issuer.example/` are different issuers. A missing `iss` is `missing_claim` with `{ claim: "iss" }`, and a different one is `wrong_issuer`.
+
+### Audience
+
+`aud` names who a token is for. It may be one string or an array of strings. With `audience` set, the token passes when any value in its `aud` equals any value in `audience`:
+
+| `audience`           | Token `aud`      | Result           |
+| -------------------- | ---------------- | ---------------- |
+| `"api"`              | `"api"`          | passes           |
+| `"api"`              | `["web", "api"]` | passes           |
+| `["api", "billing"]` | `"billing"`      | passes           |
+| `"api"`              | `["web"]`        | `wrong_audience` |
+| `"api"`              | `[]`             | `wrong_audience` |
+| `"api"`              | absent           | `missing_claim`  |
+
+A token with several audiences is accepted by each of them. Whether that is acceptable is a policy of the protocol on top: OpenID Connect, for example, adds the `azp` claim for it, which this package does not interpret.
+
+### Token type
+
+Some tokens look alike but mean different things, such as an ID token and an access token from the same issuer. The `typ` header tells them apart, and `type` requires a specific one, so a token of one kind cannot be replayed as another. The comparison follows RFC 7515 §4.1.9: it ignores case, and ignores an `application/` prefix on either side, so `type: "at+jwt"` accepts `at+jwt`, `AT+JWT` and `application/at+jwt`. A missing or different `typ` is `wrong_type` at `["header", "typ"]`.
+
+### Required claims
+
+`requiredClaims` lists claims that must be present, whatever their value. Each missing one is `missing_claim` with `{ claim }` and path `["payload", claim]`. A claim already reported missing by `issuer`, `audience` or `maxAge` is not reported twice.
+
+## Checking your own claims
+
+`claims` takes any [Standard Schema](https://standardschema.dev/), the interface shared by validation libraries such as `@codenhub/validation`, Zod and Valibot. It runs on the payload after every other check passed, and types the verified payload:
+
+```ts
+import { createKeySet, createVerifier, type PublicKey } from "@codenhub/jwt";
+import { object, standard, string } from "@codenhub/validation";
+
+declare const publicKey: PublicKey;
+
+const verify = createVerifier({
+  keys: createKeySet([publicKey]),
+  issuer: "https://issuer.example",
+  claims: standard(object({ sub: string({ min: 1 }), scope: string() })),
+});
+
+const result = await verify(token);
+if (result.ok) {
+  result.value.payload.scope; // string
+}
+```
+
+The schema checks; it does not transform. The payload you get back is the token's own frozen payload, with every claim it carried, even ones the schema does not list, and never a value the schema produced. That is why the payload is typed by what the schema accepts, its input type.
+
+Each issue the schema reports becomes one `invalid_claims` issue whose path is `["payload", ...]` followed by the schema's path. The schema's messages are dropped, since a message such as "expected a number, received 'hunter2'" can quote the token. A schema that throws or rejects is not caught: the verifier's promise rejects with that error.
+
+## Reading the header before verifying
+
+`readHeader` returns a token's header without verifying anything, for when you must choose what to do with a token before you can verify it, such as which verifier or tenant a `kid` belongs to:
+
+```ts
+import { readHeader } from "@codenhub/jwt";
+
+const header = readHeader(token);
+if (header.ok && header.value.kid?.startsWith("tenant-a:")) {
+  // hand the token to tenant A's verifier
+}
+```
+
+It checks the token exactly as a verifier does up to the header, steps 1 to 3 above, and takes the same `maxLength` option. It does not decode the payload, and nothing in this package does before a signature verifies: there is no way to read claims from an unverified token. Treat the header as untrusted too; it only becomes meaningful once a verifier accepts the token.
+
+<!-- Source: docs/signing.md -->
+
+# Signing tokens
+
+`sign` turns a payload into a compact token with a private or secret key:
+
+```ts
+import { generateKeyPair, sign } from "@codenhub/jwt";
+
+const { privateKey } = await generateKeyPair({ alg: "ES256", kid: "2026-10" });
+const now = Math.floor(Date.now() / 1000);
+
+const token = await sign({
+  payload: { iss: "https://issuer.example", sub: "user-1", aud: "api", iat: now, exp: now + 300 },
+  key: privateKey,
+  header: { typ: "JWT" },
+});
+// "eyJhbGciOiJFUzI1NiIsImtpZCI6IjIwMjYtMTAiLCJ0eXAiOiJKV1QifQ.eyJpc3Mi…"
+```
+
+The payload, key and header are your own data, not input from outside, so a mistake in them is a bug: `sign` rejects its promise with a `TypeError` naming what is wrong, rather than returning a result.
+
+## The payload is signed as given
+
+`sign` adds no claim. It does not set `iat`, `exp` or `jti`, and does not check that `exp` is in the future. Every claim the token should carry is one you write, which keeps what a token says visible at the call that signs it. Write times as whole seconds since the Unix epoch, `Math.floor(Date.now() / 1000)`, since that is what verifiers, this one included, read them as.
+
+The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN` and `Infinity`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant.
+
+The registered claims are checked for the types RFC 7519 gives them: `exp`, `nbf` and `iat` must be finite numbers, `iss`, `sub` and `jti` strings, and `aud` a string or an array of strings. A token this package signs therefore never fails a verifier's `invalid_claim` check.
+
+`sign` does not limit a token's length, but verifiers do: a token longer than the verifier's `maxLength`, 8192 characters by default, fails with `too_large`. A payload of a few kilobytes reaches that, so raise `maxLength` on the verifier, up to 65536, when your tokens are large.
+
+## The header
+
+The header's `alg` always comes from the key. You may repeat it in `header.alg`, but a different value throws: a key signs under its own algorithm only.
+
+`kid` defaults to the key's `kid`. Set `header.kid` to write another one; the key's `kid` is only a default. `kid`, `typ` and `cty` must be strings.
+
+Other header parameters are written as given, with the same JSON rules as the payload, except these, which throw:
+
+| Parameter                  | Why it is refused                                                                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `crit`                     | It asks the verifier to understand an extension. This package implements none, and its own verifier rejects every token with `crit`.                       |
+| `b64`                      | Unencoded payloads (RFC 7797) are not supported.                                                                                                           |
+| `jwk`, `jku`, `x5u`, `x5c` | They tell the verifier where to find the key. A verifier that trusts them lets the token choose its own key, so this package neither emits nor reads them. |
+
+The header is written in a fixed order: `alg`, then `kid`, `typ` and `cty` when present, then the other parameters in the order you gave them.
+
+## Which key signs
+
+`key` must be a `PrivateKey` or a `SecretKey` created by this package; [Keys](docs/keys.md) shows how to generate or import one. A `PublicKey`, or a look-alike object with the same fields, throws.
+
+To sign with a key you keep elsewhere, import it once at startup and reuse the key object:
+
+```ts
+import { importPrivateKey, sign } from "@codenhub/jwt";
+
+const imported = await importPrivateKey(JSON.parse(process.env.SIGNING_JWK ?? "null"), { alg: "ES256" });
+if (!imported.ok) {
+  throw new Error(`SIGNING_JWK is not a usable ES256 private key: ${imported.error.issues[0].code}`);
+}
+const signingKey = imported.value;
+
+export const issue = (sub: string) => sign({ payload: { sub, exp: Math.floor(Date.now() / 1000) + 300 }, key: signingKey });
+```
+
+<!-- Source: docs/keys.md -->
+
+# Keys
+
+A key in this package is a small frozen object such as `{ kind: "public", alg: "ES256", kid: "2026-10" }`. The key material itself is held inside the package, out of reach: it is not a property of the object, it does not appear in `JSON.stringify(key)`, and it never appears in an issue. Only key objects this package created are accepted anywhere a key is expected; a copy or a look-alike with the same fields throws a `TypeError`.
+
+## Three kinds of key
+
+| `kind`      | Type         | Algorithms                                    | Does               |
+| ----------- | ------------ | --------------------------------------------- | ------------------ |
+| `"public"`  | `PublicKey`  | `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256` | verifies           |
+| `"private"` | `PrivateKey` | `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256` | signs              |
+| `"secret"`  | `SecretKey`  | `HS256`                                       | signs and verifies |
+
+Asymmetric algorithms use a key pair: the private key signs, and the public key, which you can share freely, verifies. `HS256` uses one shared secret for both, so everyone who can verify a token can also forge one; use it only between parties that already trust each other with the secret.
+
+A secret key is never interchangeable with a public key. A key set holding public keys never selects a secret for an asymmetric token, and the reverse, because selection requires the key's `alg` to equal the token's.
+
+Every key has an `alg`, the one algorithm it is bound to, and may have a `kid`, the identifier tokens use to name it. Private and secret keys also have `extractable`, which says whether their material may be exported again.
+
+## Generating keys
+
+```ts
+import { generateKeyPair, generateSecretKey } from "@codenhub/jwt";
+
+const { privateKey, publicKey } = await generateKeyPair({ alg: "ES256", kid: "2026-10" });
+const rsa = await generateKeyPair({ alg: "RS256", kid: "rsa-1", modulusLength: 3072 });
+const secret = await generateSecretKey({ alg: "HS256", kid: "internal" });
+```
+
+Both keys of a pair carry the same `alg` and `kid`. `modulusLength` is 2048, 3072 or 4096 bits, for `RS256` and `PS256` only, and defaults to 2048. A generated secret is 32 random bytes.
+
+Generated private and secret keys are not extractable unless you pass `extractable: true`. Keep that default for keys that live only as long as the process; set it when you need to store the key, as shown under [Exporting keys](#exporting-keys).
+
+If you are choosing an algorithm for tokens you issue, `ES256` and `Ed25519` give small keys and signatures and are fast. `RS256` is the one every JWT library supports. `EdDSA` exists for issuers that already publish it.
+
+## Importing a public key
+
+A JSON Web Key (JWK, RFC 7517) is a JSON object describing a key. Identity providers publish their public keys as JWKs. Import one with the algorithm you expect it to be used with:
+
+```ts
+import { importPublicKey } from "@codenhub/jwt";
+
+const result = await importPublicKey(
+  {
+    kty: "EC",
+    crv: "P-256",
+    kid: "2026-10",
+    x: "f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+    y: "x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
+  },
+  { alg: "ES256" },
+);
+
+if (result.ok) {
+  const publicKey = result.value; // { kind: "public", alg: "ES256", kid: "2026-10" }
+}
+```
+
+You always name the algorithm. A JWK's own `alg` member is optional in RFC 7517, and an attacker who controls a JWK controls it, so it is only checked against the algorithm you named, never used to pick one. To import every key of a JWKS document, use [`importKeySet`](docs/key-sets.md#importing-a-jwks) instead, which works out each key's algorithms for you.
+
+The JWK is untrusted input, so the import never throws for it, whatever it is: a failure is a result with one issue, and the issue never holds a value of the JWK. The checks, in order:
+
+| Issue                    | When                                                                                                                                                                                     |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invalid_key`            | The JWK is not a plain object, or `kty`, `crv`, `alg`, `use`, `key_ops` or `kid` has the wrong type.                                                                                     |
+| `unsupported_key`        | `kty` or `crv` does not fit the algorithm: `ES256` takes `EC` on `P-256`; `EdDSA` and `Ed25519` take `OKP` on `Ed25519`; `RS256` and `PS256` take `RSA`; `HS256` takes `oct`.            |
+| `alg_mismatch`           | The JWK has an `alg` member naming another algorithm.                                                                                                                                    |
+| `wrong_use`              | `use` is present and is not `sig`, or `key_ops` is present and lacks `verify` (`sign` for a private key; either for a secret).                                                           |
+| `unexpected_private_key` | A public import holds a private member: `d`, `p`, `q`, `dp`, `dq`, `qi`, `oth` or `k`. A private JWK is refused rather than quietly stripped.                                            |
+| `weak_key`               | An RSA modulus under 2048 bits, with `{ minimum: 2048 }`, or a secret under 32 bytes, with `{ minimum: 32 }`.                                                                            |
+| `unsupported_key`        | An RSA modulus over 8192 bits, with `{ maximum: 8192 }`, which bounds the cost of a verification.                                                                                        |
+| `invalid_key`            | Key material is missing, is not canonical base64url, has the wrong length (EC and Ed25519 coordinates are 32 bytes), or Web Crypto rejects it, such as a point that is not on the curve. |
+
+Issue paths name the JWK member at fault, such as `["kty"]` or `["n"]`.
+
+## Importing a private key
+
+`importPrivateKey` takes the same arguments and runs the same checks, except that the private members are required: `d` for `EC` and `OKP` keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for `RSA` keys. Multi-prime RSA keys, with `oth`, are `unsupported_key`. Pass `extractable: true` if the key must be exportable again.
+
+```ts
+import { importPrivateKey } from "@codenhub/jwt";
+
+const result = await importPrivateKey(jwk, { alg: "PS256", extractable: false });
+```
+
+## Importing a secret
+
+`importSecretKey` takes either the secret's raw bytes or an `oct` JWK:
+
+```ts
+import { importSecretKey } from "@codenhub/jwt";
+
+const fromBytes = await importSecretKey(new TextEncoder().encode(process.env.JWT_SECRET ?? ""), {
+  alg: "HS256",
+  kid: "internal",
+});
+if (!fromBytes.ok) throw new Error(`JWT_SECRET is unusable: ${fromBytes.error.issues[0].code}`);
+const internalKey = fromBytes.value;
+
+const fromJwk = await importSecretKey({ kty: "oct", k: "GawgguFyGrWKav7AX4VKUg_XNIYiNtwWfhSJZK2uIEA" }, { alg: "HS256" });
+if (!fromJwk.ok) throw new Error(`JWK is unusable: ${fromJwk.error.issues[0].code}`);
+console.log(fromJwk.value.alg); // "HS256"
+```
+
+The `k` in that example is a published test vector, not a secret to reuse.
+
+The secret must be at least 32 bytes, or the result is `weak_key` with `{ minimum: 32 }`: HMAC with SHA-256 is only as strong as its key, and a short or human-chosen secret can be guessed offline from a single token. Generate secrets with `generateSecretKey` or another source of random bytes, not by hand.
+
+`kid` sets the identifier for raw bytes. For a JWK, the JWK's own `kid` is used and the option is ignored.
+
+## Exporting keys
+
+Export functions are separate and named for what they reveal, so code that exports private material says so:
+
+```ts
+import { exportPrivateJwk, exportPublicJwk, generateKeyPair } from "@codenhub/jwt";
+
+const { privateKey, publicKey } = await generateKeyPair({ alg: "Ed25519", kid: "2026-10", extractable: true });
+
+const publicJwk = await exportPublicJwk(publicKey);
+// { kty: "OKP", alg: "Ed25519", use: "sig", kid: "2026-10", crv: "Ed25519", x: "…" }
+
+const privateJwk = await exportPrivateJwk(privateKey); // store it as you would a password
+```
+
+- `exportPublicJwk` exports any public key, imported or generated, with its public members only. Publish its output in your JWKS as `{ keys: [publicJwk] }`.
+- `exportPrivateJwk` exports a private key's public and private members, and `exportSecretJwk` a secret as an `oct` JWK. Both throw a `TypeError` for a key created without `extractable: true`.
+
+Every exported JWK is frozen, names `kty`, `alg` and `use: "sig"`, includes `kid` when the key has one, lists its members in a stable order, and carries no `ext` or `key_ops`. Re-importing it with the same `alg` gives an equivalent key.
+
+<!-- Source: docs/key-sets.md -->
+
+# Key sets
+
+A verifier does not take a key; it takes a **key set**, an object that picks the one key for each token. Issuers rotate keys: they publish a new key, sign new tokens with it, and keep the old one published until every token it signed has expired. A key set holds all of them and selects the right one by the token's header.
+
+| Function             | Use it when                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------------------- |
+| `createKeySet`       | You hold the keys yourself: you issue the tokens, or you configured an issuer's keys by hand. |
+| `importKeySet`       | You have a JWKS document in hand, such as one read from a file or a configuration service.    |
+| `createRemoteKeySet` | An issuer publishes its keys at a URL, such as the `jwks_uri` of an OpenID Connect provider.  |
+
+## How a key is selected
+
+Every key set, the three above and your own if it uses the same rules, selects one key and never tries keys in turn. Trying each key until one verifies would let a token pass against a key it never named, and would multiply the cost of every forged token by the size of the set.
+
+- **The header has a `kid`.** Only keys with that `kid` are candidates. None is `unknown_kid`. Among them, exactly one must have the header's `alg`: none is `alg_mismatch`, and several is `ambiguous_key`.
+- **The header has no `kid`.** Exactly one key in the whole set must have the header's `alg`. None is `no_matching_key`, and several is `ambiguous_key`.
+
+So a set may hold one key per algorithm without `kid`s, but once it holds two keys of one algorithm, tokens must name their key. A secret key only ever matches `HS256` tokens and a public key only its own algorithm, since both follow from the `alg` comparison.
+
+## A local key set
+
+```ts
+import { createKeySet, createVerifier, type PublicKey } from "@codenhub/jwt";
+
+declare const currentKey: PublicKey; // kid "2026-10"
+declare const previousKey: PublicKey; // kid "2026-07"
+
+const verify = createVerifier({
+  keys: createKeySet([currentKey, previousKey]),
+  issuer: "https://issuer.example",
+});
+```
+
+`createKeySet` takes public and secret keys this package created, and copies the list, so changing your array later does not change the set. It throws a `TypeError` for an empty list, a private key, an object this package did not create, or two keys with the same `kid` and `alg`, including two keys without a `kid` and with the same `alg`, which selection could never tell apart.
+
+## Importing a JWKS
+
+A JWKS (JSON Web Key Set) is a JSON object whose `keys` member is an array of JWKs. `importKeySet` imports the public keys of one:
+
+```ts
+import { importKeySet } from "@codenhub/jwt";
+
+const result = await importKeySet(JSON.parse(jwksText), { algorithms: ["RS256"] });
+if (result.ok) {
+  const keys = result.value;
+}
+```
+
+A JWKS is untrusted input, so the import never throws for it. It fails only when the document is not a JWKS at all: `malformed` when it is not an object or its `keys` is not an array (path `["keys"]`), and `too_large` with `{ limit: "keys", maximum: 100 }` when it lists more than 100 keys.
+
+Individual keys that cannot be used are skipped, not fatal, because an issuer's JWKS routinely holds keys meant for something else, such as encryption. Skipped are: `oct` keys (a JWKS is public, so a secret never comes from one), keys with `use` other than `sig`, keys with private members, weak, oversized or malformed keys, and keys whose `alg` is not in `algorithms`. A JWKS with no usable key gives an empty set, whose `select` always fails.
+
+Each usable key becomes one key per algorithm it is bound to:
+
+- A JWK with an `alg` member is bound to that algorithm, if `algorithms` allows it.
+- A JWK without `alg` is bound to every allowed algorithm its `kty` and `crv` fit. An `RSA` key becomes an `RS256` key and a `PS256` key; an `OKP` `Ed25519` key becomes an `EdDSA` key and an `Ed25519` key. The token's `alg` then picks between them, which is safe because both are the same family of signature on the same key.
+
+`algorithms` defaults to every asymmetric algorithm. Narrow it to what your issuer actually uses, so a key the issuer meant only for `RS256` is never used to check a `PS256` token.
+
+Two usable keys with the same `kid` and `alg` do not fail the import; selecting them fails with `ambiguous_key` rather than picking one.
+
+## A remote key set
+
+`createRemoteKeySet` fetches an issuer's JWKS from a URL, imports it as `importKeySet` does, and caches it:
+
+```ts
+import { createRemoteKeySet, createVerifier } from "@codenhub/jwt";
+
+const keys = createRemoteKeySet({
+  url: "https://issuer.example/.well-known/jwks.json",
+  algorithms: ["RS256"],
+});
+
+const verify = createVerifier({ keys, issuer: "https://issuer.example", audience: "api" });
+```
+
+Nothing is fetched until the first token needs a key. Create the key set once and share it between requests, so they share its cache.
+
+### Options
+
+Durations are in seconds. Every option is checked when the key set is created, and an invalid one throws a `TypeError`.
+
+| Option             | Default                        | What it does                                                                                                                                          |
+| ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`              | required                       | An absolute `https:` URL, as a string or a `URL`. Other schemes, and URLs with a user name or password, throw.                                        |
+| `fetch`            | `globalThis.fetch`             | The `fetch` to call, for runtimes or tests that supply their own. The global is looked up at each fetch.                                              |
+| `algorithms`       | every asymmetric algorithm     | As for [`importKeySet`](#importing-a-jwks).                                                                                                           |
+| `cacheTtl`         | `600`                          | How long a fetched JWKS is used before it is fetched again. An integer of at least 1.                                                                 |
+| `cooldown`         | `30`, or `cacheTtl` if smaller | Least time between the starts of two fetches caused by a failure or an unknown `kid`. An integer from 0 through `cacheTtl`.                           |
+| `maxStale`         | `3600`                         | How long after `cacheTtl` ran out the last JWKS is still used while fetching a new one fails. An integer of at least 0; 0 never uses an expired JWKS. |
+| `timeout`          | `5`                            | How long one fetch, body included, may take. Greater than 0 and at most 60; fractions are allowed.                                                    |
+| `maxResponseBytes` | `65536`                        | Largest response body accepted, in bytes. An integer from 1 through 1048576.                                                                          |
+| `now`              | `Date.now`                     | The current time in milliseconds, for tests.                                                                                                          |
+
+### Caching and rotation
+
+- **Expiry.** A fetched JWKS is used for `cacheTtl` seconds, counted from when the fetch finished. The first token after that fetches it again.
+- **One fetch at a time.** While a fetch is running, every token that needs keys waits for it, unless the cache is fresh and holds its key; concurrent requests never start a second fetch.
+- **Unknown `kid`.** When an issuer rotates in a new key, the first token signed with it names a `kid` your cached JWKS does not hold. The key set then fetches the JWKS once more and selects again from the result. A header without a `kid` never causes a refetch.
+- **Cooldown.** A refetch for an unknown `kid`, and a retry after a failed fetch, only starts once `cooldown` seconds have passed since the last fetch started. Inside that window an unknown `kid` fails with `unknown_kid` at once. Anyone can send you tokens with invented `kid`s; with the cooldown, a flood of them costs the issuer at most one request per window, however many tokens arrive.
+- **Stale keys.** When a fetch fails after `cacheTtl` ran out, the last JWKS that was fetched is still used for up to `maxStale` more seconds, so a short outage at the issuer does not take your service down with it. Using it does not extend it: each token after the cooldown tries to fetch again, and past `maxStale` the key set fails with `key_fetch_failed`. Lower `maxStale` if a revoked key must stop working sooner, at the cost of failing sooner when the issuer is unreachable.
+
+### When fetching fails
+
+A fetch is a `GET` with `accept: application/json`. It does not follow redirects and accepts only status 200. The body is read up to `maxResponseBytes` and abandoned as soon as it grows past that, and the whole fetch, body included, is abandoned after `timeout`. The body must be a strict JSON object, parsed with the same rules as a token's header, and then a JWKS.
+
+A failure the stale keys cannot cover is `key_fetch_failed`, whose `params.reason` says what happened:
+
+| `reason`           | Cause                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| `timeout`          | The fetch took longer than `timeout`.                                                       |
+| `network`          | `fetch` rejected, for example because the host could not be reached.                        |
+| `status`           | The response status was not 200, redirects included. `params.status` holds the status code. |
+| `too_large`        | The `Content-Length` header or the body exceeded `maxResponseBytes`.                        |
+| `invalid_response` | The body was not a strict JSON object, was not a JWKS, or listed more than 100 keys.        |
+
+The issue holds nothing from the response. `select` never throws and never rejects, whatever the server sends.
+
+## Your own key set
+
+`KeySet` is an interface with one method, `select(header)`, which returns a promise of a result holding a key. You can implement it, for example to choose an issuer's key set by a prefix in the `kid`:
+
+```ts
+import { createRemoteKeySet, type KeySet } from "@codenhub/jwt";
+
+const tenants = new Map<string, KeySet>([
+  ["a", createRemoteKeySet({ url: "https://a.issuer.example/jwks.json" })],
+  ["b", createRemoteKeySet({ url: "https://b.issuer.example/jwks.json" })],
+]);
+
+const keys: KeySet = {
+  select: async (header) => {
+    const tenant = tenants.get(header.kid?.split(":")[0] ?? "");
+    return tenant === undefined ? { ok: false, error: { issues: [{ code: "unknown_kid", path: ["header", "kid"] }] } } : tenant.select(header);
+  },
+};
+```
+
+A verifier treats a custom key set as code that may be wrong. If `select` throws, rejects, or returns anything other than a result holding a public or secret key this package created, the verifier fails with `key_fetch_failed` and `{ reason: "key_set_error" }` instead of throwing or using what it returned. A failed result is passed through as returned, so keep its issues free of token values as this package's own are.
+
+<!-- Source: docs/errors.md -->
+
+# Issues
+
+Everything that reads input you do not control, a token, a JWK, a JWKS or a key-set response, returns a result instead of throwing. This page describes what a failed result holds and lists every code.
+
+## The failed result
+
+```ts
+// What a verifier returned for an expired token with the wrong audience
+const result = {
+  ok: false,
+  error: {
+    issues: [
+      { code: "expired", path: ["payload", "exp"] },
+      { code: "wrong_audience", path: ["payload", "aud"] },
+    ],
+  },
+};
+```
+
+`error.issues` is never empty, and its type says so, so `result.error.issues[0]` is an issue and not `undefined`. Issues are listed in the order the checks ran. Structural, key-selection and signature failures stop at the first one, so a result for them holds one issue; claim checks report every failing claim; a key import reports the first problem it finds.
+
+The whole result is deeply frozen.
+
+## The issue
+
+| Field    | Meaning                                                                                                                                                                                                    |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `code`   | The stable category of the failure. Branch on it.                                                                                                                                                          |
+| `path`   | Where the failure is, when it concerns one place: `["header", "kid"]`, `["payload", "exp"]`, a JWK member such as `["n"]`, or a segment such as `["signature"]`. Omitted when it concerns the whole input. |
+| `params` | Facts from your own configuration or this package's limits, such as `{ maximum: 8192 }` or `{ claim: "sub" }`. Omitted when there are none.                                                                |
+
+An issue this package creates never holds a value taken from the input: no token segment, claim value, header value, or key material, and no message from Web Crypto, a schema or a server, since any of those can quote the input. It names which check failed and never what the token said, so a failure can be logged, returned to a client or sent to an error tracker without leaking a token. `path` names claims and header members, which are names this package or your configuration chose, never values. `params.status` of `key_fetch_failed` is the HTTP status code the JWKS server answered with, a number and never content.
+
+Two kinds of issue come from your code, and hold only what it puts in them: an `invalid_claims` path is your schema's path, so a schema over a record can name a payload's own property names there, and a custom key set's failure issues are returned as it gave them. Keep both free of input values if you log them.
+
+There are no messages: a code is the whole answer. Map codes to text yourself if a person needs to read them, and prefer not to tell a client more than "invalid token" when the client may be an attacker.
+
+## Codes
+
+### Token structure
+
+| Code               | Path                                | Params                            | Meaning                                                                                                                                                                                   |
+| ------------------ | ----------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `malformed`        | none, a segment, or a header member |                                   | Not a string, not three segments, a segment that is empty or not strict base64url, or JSON that is invalid or not an object. Also a non-text `kid`, `typ` or `cty`, and any `b64` header. |
+| `too_large`        | none                                | `{ limit: "length", maximum }`    | The token is longer than `maxLength`.                                                                                                                                                     |
+| `too_large`        | `["header"]` or `["payload"]`       | `{ limit: "depth", maximum: 32 }` | The JSON nests deeper than 32 levels.                                                                                                                                                     |
+| `duplicate_key`    | `["header"]` or `["payload"]`       |                                   | A JSON object repeats a member name, at any depth.                                                                                                                                        |
+| `unsupported_alg`  | `["header", "alg"]`                 |                                   | `alg` is missing or not one of the supported algorithms, compared exactly. `none` in any casing is here.                                                                                  |
+| `unsupported_crit` | `["header", "crit"]`                |                                   | The header has a `crit` member. No header extension is supported.                                                                                                                         |
+
+### Key selection and signature
+
+| Code               | Path                | Params                                  | Meaning                                                                                                                                                                                              |
+| ------------------ | ------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `unknown_kid`      | `["header", "kid"]` |                                         | No key in the set has the header's `kid`. A remote set refetches first, outside its cooldown.                                                                                                        |
+| `no_matching_key`  | none                |                                         | The header has no `kid`, and no key in the set has its `alg`.                                                                                                                                        |
+| `ambiguous_key`    | none                |                                         | More than one key fits the header. Keys are never tried in turn.                                                                                                                                     |
+| `alg_mismatch`     | `["header", "alg"]` |                                         | Keys with the header's `kid` exist, but none is bound to its `alg`.                                                                                                                                  |
+| `bad_signature`    | none                |                                         | The signature has the wrong length for the key, or does not verify.                                                                                                                                  |
+| `key_fetch_failed` | none                | `{ reason }`, and `status` for `status` | A remote key set could not get its JWKS: `reason` is `timeout`, `network`, `status`, `too_large` or `invalid_response`. `key_set_error` means a custom key set threw or returned something unusable. |
+
+### Claims
+
+| Code               | Path                         | Params       | Meaning                                                                              |
+| ------------------ | ---------------------------- | ------------ | ------------------------------------------------------------------------------------ |
+| `invalid_claim`    | `["payload", claim]`         |              | A registered claim has the wrong type, such as an `exp` that is not a finite number. |
+| `expired`          | `["payload", "exp"]`         |              | Now is at or past `exp` plus the clock tolerance.                                    |
+| `not_yet_valid`    | `["payload", "nbf"]`         |              | Now plus the clock tolerance is before `nbf`.                                        |
+| `issued_in_future` | `["payload", "iat"]`         |              | `iat` is later than now plus the clock tolerance.                                    |
+| `too_old`          | `["payload", "iat"]`         | `{ maxAge }` | More than `maxAge` plus the clock tolerance has passed since `iat`.                  |
+| `wrong_issuer`     | `["payload", "iss"]`         |              | `iss` is none of the accepted issuers.                                               |
+| `wrong_audience`   | `["payload", "aud"]`         |              | `aud` contains none of the accepted audiences.                                       |
+| `wrong_type`       | `["header", "typ"]`          |              | The `typ` header is missing or is not the required type.                             |
+| `missing_claim`    | `["payload", claim]`         | `{ claim }`  | A claim required by `requiredClaims`, `issuer`, `audience` or `maxAge` is absent.    |
+| `invalid_claims`   | `["payload", ...schemaPath]` |              | Your `claims` schema reported an issue there. The path segments are the schema's.    |
+
+[Verifying tokens](docs/verifying.md#claim-checks) describes each check.
+
+### Key import
+
+| Code                     | Path                       | Params                                 | Meaning                                                                                                       |
+| ------------------------ | -------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `invalid_key`            | a JWK member, or none      |                                        | The JWK is not an object, a member has the wrong type or encoding, or Web Crypto rejected the material.       |
+| `unsupported_key`        | a JWK member               | `{ maximum: 8192 }` for an RSA modulus | The key type or curve does not fit the algorithm, the RSA modulus is too long, or the key is multi-prime RSA. |
+| `weak_key`               | a JWK member, or none      | `{ minimum }`                          | An RSA modulus under 2048 bits, or a secret under 32 bytes.                                                   |
+| `unexpected_private_key` | a JWK member               |                                        | A public import holds a private member.                                                                       |
+| `wrong_use`              | `["use"]` or `["key_ops"]` |                                        | `use` is not `sig`, or `key_ops` does not allow the operation the key is imported for.                        |
+| `alg_mismatch`           | `["alg"]`                  |                                        | The JWK's `alg` names another algorithm than the one you asked for.                                           |
+| `malformed`              | none, or `["keys"]`        |                                        | From `importKeySet`: the JWKS is not an object (no path), or its `keys` is not an array (`["keys"]`).         |
+| `too_large`              | none                       | `{ limit: "keys", maximum: 100 }`      | From `importKeySet`: the JWKS lists more than 100 keys.                                                       |
+
+`importKeySet` and `createRemoteKeySet` skip JWKs that fail these checks instead of reporting them. [Keys](docs/keys.md#importing-a-public-key) describes each check.
+
+## What throws instead
+
+A `TypeError` means a mistake in the calling code, not in the input, and is thrown as early as possible:
+
+- **Options.** Every option of `createVerifier`, `createRemoteKeySet`, `importKeySet`, `readHeader` and the key functions is checked when the function is called, and an invalid one throws, naming the option and its constraint. Create verifiers and key sets at startup and a misconfiguration fails the deploy, not the first request.
+- **Key objects.** Passing an object this package did not create where a key is expected, a key of the wrong kind (such as a public key to `sign`), or exporting a key created without `extractable: true`.
+- **What you sign.** A payload or header `sign` cannot write exactly as JSON, or one that breaks the rules in [Signing tokens](docs/signing.md).
+
+A `TypeError` message names the option or member and the rule it broke, never its value.
+
+Two things propagate rather than becoming a result: an exception thrown by your own `claims` schema, and a failure of Web Crypto itself while signing or generating a key, which means the runtime lacks the algorithm.
