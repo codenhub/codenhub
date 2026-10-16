@@ -101,7 +101,7 @@ interface CachedKeys {
  *
  * - **TTL.** A fetched JWKS is used for `cacheTtl` seconds, then the next `select` fetches it again.
  * - **One fetch at a time.** Every `select` that needs keys while a fetch is running waits for that
- *   fetch; concurrent callers never start a second one.
+ *   fetch, unless the cache is fresh and holds the key; concurrent callers never start a second one.
  * - **Unknown `kid`.** When a token's `kid` is not in the cached JWKS, the JWKS is fetched again once,
  *   and the selection is repeated on the result. A failing refetch gives `key_fetch_failed`. A header
  *   without a `kid` never causes a refetch.

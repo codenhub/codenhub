@@ -143,8 +143,8 @@ Scope section 4 asked selection to filter by `use` and `key_ops` too. That filte
 
 A `select` call:
 
-1. If a fetch is running, waits for it. Otherwise, if there is no cache or it has expired, fetches, unless the cooldown since the last fetch start has not passed.
-2. Takes the usable keys: the cache while `now ≤ expiresAt + maxStale`, otherwise the last failure.
+1. If a fetch is running, answers from the cache when it is fresh and the selection is not `unknown_kid`, and otherwise waits for the fetch. Otherwise, if there is no cache or it has expired, fetches, unless the cooldown since the last fetch start has not passed.
+2. Takes the usable keys: the cache while `now < expiresAt + maxStale`, otherwise the last failure.
 3. Selects. If the result is `unknown_kid`, this call has not fetched yet, and the cooldown has passed, it refetches once (sharing any fetch in flight) and selects again from the fresh keys.
 
 So each `select` starts at most one fetch, concurrent callers never start a second, and fetches caused by failures or unknown `kid`s are at least `cooldown` apart. A header without `kid` never refetches: `no_matching_key` cannot be fixed by a rotation the issuer announces through `kid`s, and refetching on it would let any token without a `kid` force fetches.
