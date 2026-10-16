@@ -1,5 +1,5 @@
 ---
-status: APPROVED
+status: DRAFT
 last_updated: 2026-10-16
 scope: What `@codenhub/oidc` 0.1 covers, the invariants it keeps, and the decisions taken while building it.
 ---
@@ -7,6 +7,8 @@ scope: What `@codenhub/oidc` 0.1 covers, the invariants it keeps, and the decisi
 # `@codenhub/oidc`: package scope
 
 > **How to read this document.** This started as the outcome of a brainstorming session, not a final spec. Section 4 lists the **invariants**: security and design commitments that hold unless there's a strong, explained reason to break them. Sections 1 to 3, 5 and 7 are the agreed scope of 0.1. The API sketch in section 6 was a **proposal**; the shipped API answers it differently in places, and section 8 records how. Section 8 also records the decisions taken while building the package, marked by who settled them. If you find a better API shape, better behavior, or a better-established practice, propose it and explain why, as `docs/guidelines/documentation.md` asks for reversing a decision. The goal is the best possible package, not faithfulness to this document.
+>
+> The document is a draft until the maintainer reviews the decisions section 8 lists as pending; the invariants and decisions 1 to 4 are approved.
 >
 > The display name is `OidcKit`. How the package is built, and why, is in [architecture.md](architecture.md). What remains before 0.1 is in [roadmap.md](roadmap.md).
 
@@ -37,12 +39,11 @@ The package covers both sides on purpose. It isn't "a package built for one proj
 
 - Types for discovery metadata (OpenID Connect Discovery, RFC 8414), for authorization/token/error responses, and for standard claims.
 - OAuth/OIDC error codes (RFC 6749 §4.1.2.1 and §5.2, OIDC Core §3.1.2.6) as typed values.
-- PKCE (RFC 7636), `S256` only.
-- `at_hash` computation, either here or in `jwt`.
+- PKCE (RFC 7636), `S256` only, and `at_hash` computation. Both ship as internal shared modules rather than root exports (decision 6).
 
 ### Client (`@codenhub/oidc/client`)
 
-- **Discovery**: fetch and validate `/.well-known/openid-configuration`. The `issuer` must match exactly. Results are cached, and the client can also be configured without discovery.
+- **Discovery**: fetch and validate `/.well-known/openid-configuration`. The `issuer` must match exactly. Results are cached, and the client can also be configured without discovery. As shipped, `discover` fetches on every call, and the app caches by keeping the metadata or the client (decision 5).
 - **Authorization request**: build the URL with `state`, `nonce`, and PKCE `S256`. Return a serializable "pending" object that the app stores. The client itself holds no state.
 - **Callback**: check `state` and handle error responses. Validate the `iss` parameter (RFC 9207) when the provider advertises it. Exchange the code.
 - **ID token validation**:
@@ -64,7 +65,7 @@ The package covers both sides on purpose. It isn't "a package built for one proj
 - **Grants**: `authorization_code` and `refresh_token`.
 - **Client authentication verification** for the same methods the client supports.
 - **Request handling**:
-  - `prompt`: `none` must return `login_required` / `consent_required`; `login` and `consent` must force those steps.
+  - `prompt`: `none` must return `login_required` / `consent_required`; `login` and `consent` must force those steps. As shipped, the app performs these steps, since sessions and consent are its own (decision 3): it answers `prompt=none` with a denial, and the provider checks the outcome it reports, such as an `authTime` no older than the request under `prompt=login` (decision 16).
   - `max_age`, with `auth_time` in the ID token.
   - Scopes mapped to claims.
 - **`iss` in the authorization response** (RFC 9207), advertised in discovery.
@@ -107,12 +108,12 @@ These are left out to keep the surface small, not because they're bad:
 ## 4. Invariants
 
 1. **PKCE `S256` is required for every client**, confidential ones included. A missing or `plain` challenge is rejected.
-2. **`redirect_uri` matches exactly.** It's a byte-for-byte comparison against a registered value, with no normalization, wildcards, or prefix matching. Loopback redirects with variable ports (RFC 8252) are allowed only if explicitly enabled per client. That's an open question for 0.1.
+2. **`redirect_uri` matches exactly.** It's a byte-for-byte comparison against a registered value, with no normalization, wildcards, or prefix matching. Loopback redirects with variable ports (RFC 8252) would be allowed only if explicitly enabled per client. Decision 3 defers them, so 0.0.1 matches exactly in every case.
 3. **No open redirects.** The provider only redirects to a redirect URI it has verified for that client. The types make the difference between "send this error back to the client" and "render an error yourself" impossible to miss.
 4. **Authorization codes:**
    - single-use
    - short-lived, with a bounded default (around 60s or less)
-   - bound to the client, `redirect_uri`, PKCE challenge, `nonce`, scopes, and the authenticated session
+   - bound to the client, `redirect_uri`, PKCE challenge, `nonce`, scopes, and the authenticated session. As shipped, the code carries the subject, `auth_time`, `amr` and `acr` the app reports; tying the interaction to the browser's session is the app's job, by keeping the interaction identifier in that session.
    - consumed atomically
 5. **Exact issuer matching** everywhere: discovery, ID tokens, and the RFC 9207 `iss` parameter.
 6. **No token type confusion.** An ID token is never accepted as an access token or the reverse; use `typ`/`aud` distinctions through `jwt`. A refresh token is never accepted anywhere else.
@@ -144,9 +145,11 @@ The store is where most real-world bugs live. Its contract should be precise and
 The provider needs, at minimum:
 
 - **Clients**: look up by `client_id`. This returns registered redirect URIs, allowed scopes, the authentication method, and either a secret verifier or a JWKS.
-- **Authorization codes**: `save` with a TTL, and `consume`. `consume` **must be atomic get-and-delete**. Document what that rules out: plain Cloudflare KV is not atomic, so it needs D1 or Durable Objects.
+- **Authorization codes**: `save` with a TTL, and `consume`. `consume` **must be atomic**. Decision 10 makes it an atomic mark-as-used rather than a get-and-delete, so a replay can be recognized. Document what that rules out: plain Cloudflare KV is not atomic, so it needs D1 or Durable Objects.
 - **Refresh tokens**: `save`, `rotate` (atomic), `revokeFamily`.
 - **Grants or sessions**, if needed, for code-replay revocation and refresh-family tracking.
+
+As shipped, `OidcStore` (`src/provider/types.ts`) answers this list: refresh tokens are consumed like codes, by an atomic mark-as-used, and rotation saves a new token; a family is a grant, revoked with `revokeGrant`, which must also hide tokens of that grant saved after it (decision 10). The TSDoc on `OidcStore` is the contract.
 
 Tokens and codes should be stored hashed, so a leaked database doesn't leak usable tokens. Decide whether the provider hashes before calling the store; it probably should.
 
@@ -273,7 +276,7 @@ Decisions bind work while they stand; reversing one follows "Recording decisions
 ### Approved by the maintainer (2026-10-16)
 
 1. **The interaction handle is an opaque identifier, kept server-side through the store.** `beginAuthorization` saves the validated request with `saveInteraction` and returns a random 256-bit `id`; `completeAuthorization` consumes it atomically, so an interaction completes at most once. The store key is the identifier's SHA-256 digest, like every other secret value. Rejected: a signed JWT handle kept by the app in a cookie or form, which needs a signing key, can be replayed until it expires unless the app tracks it, and grows with the request.
-2. **Access tokens are opaque in 0.0.1.** A random 256-bit value, stored hashed; revoking a token or a family is a store delete. RFC 9068 JWT access tokens are a later option (roadmap). Rejected for now: shipping `at+jwt` alongside, which adds surface and tests to 0.0.1 and gives tokens that cannot be revoked before they expire.
+2. **Access tokens are opaque in 0.0.1.** A random 256-bit value, stored hashed; revoking a family is a store revocation (`revokeGrant`, which must also hide tokens of that grant saved after it, decision 10). RFC 9068 JWT access tokens are a later option (roadmap). Rejected for now: shipping `at+jwt` alongside, which adds surface and tests to 0.0.1 and gives tokens that cannot be revoked before they expire.
 3. **Consent belongs to the app, and `redirect_uri` matching is exact only.** The app decides whether to show consent and passes the granted scopes to `completeAuthorization`; the store has no consent table. Loopback redirects with variable ports (RFC 8252 §7.3) are deferred. Rejected for now: a provider-side consent store, which adds a table and a policy the SSO app must own anyway.
 4. **0.0.1 targets the "0.0.1 is done when" criteria of section 7.** Interop against panva's `oidc-provider` and `openid-client`, the OpenID conformance runs, and token revocation (RFC 7009) are on the [roadmap](roadmap.md).
 
@@ -294,4 +297,4 @@ Decisions bind work while they stand; reversing one follows "Recording decisions
 17. **Store failures propagate.** A store that throws or rejects makes `handle`, `beginAuthorization` or `completeAuthorization` reject. Answering `invalid_grant` for a database outage would hide it and log users out. The `claims` callback is treated the same way.
 18. **The client's clock tolerance defaults to 0 seconds**, following `@codenhub/jwt` decision 6; an app whose clock may drift from the provider's sets `clockTolerance`.
 19. **`@codenhub/jwt` is a peer dependency.** Its keys are recognized only by the copy that created them, so the app and this package must share one copy. It is installed from its release through the catalog, as `docs/specs/packages-lifecycle.md` asks.
-20. **A code or refresh token is consumed before anything else about the request is checked.** The store offers only atomic consumption, so a refresh request that asks for a scope outside the family's grant, or a token presented by another client, burns the token: the first answers `invalid_scope`, and the legitimate client's next use of the token is a replay that revokes the family. A well-behaved client never sends either. Checks that do not need the record run first: a refresh `scope` naming a scope the provider or the client does not have is refused before the token is consumed. Rejected: a non-consuming lookup before consumption, which adds a store method and a read-then-write window the atomic path closes; it is listed on the [roadmap](roadmap.md) if real clients need it.
+20. **A code or refresh token is consumed before any check that needs its record.** The store offers only atomic consumption, so a refresh request that asks for a scope outside the family's grant, or a token presented by another client, burns the token: the first answers `invalid_scope`, and the legitimate client's next use of the token is a replay that revokes the family. A well-behaved client never sends either. Checks that need only the request run first: the shape of the `code_verifier`, and a refresh `scope` naming a scope the provider or the client does not have, are refused before the value is consumed. Checks against the record (expiry, client, `redirect_uri`, the verifier against the challenge, the scope against the family) run after, so they burn it. Rejected: a non-consuming lookup before consumption, which adds a store method and a read-then-write window the atomic path closes; it is listed on the [roadmap](roadmap.md) if real clients need it.

@@ -16,7 +16,7 @@ import type { OidcStore } from "@codenhub/oidc/provider";
 
 ## Keys and records
 
-Every key the provider passes to the store for a code, a token or an interaction is a SHA-256 digest of the value, encoded as base64url. The provider computes the digest before it calls the store, so the store never holds a value that could be used. A leaked store therefore holds nothing a client or user can present.
+Every key the provider passes to the store for a code, a token or an interaction is a SHA-256 digest of the value, encoded as base64url. The provider computes the digest before it calls the store, so the store never holds a value that could be used. A leaked store therefore holds no code, token or interaction a client or user can present. Client records are different: a `client_secret_jwt` client's record holds its HMAC secret, which can forge that client's assertions, so client authentication keys need the protection any credential store gets.
 
 The one key that is not a digest is the client identifier, which `findClient` receives as the client sent it.
 
