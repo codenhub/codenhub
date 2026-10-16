@@ -80,7 +80,7 @@ The one place it does not track the token theme: nesting an explicit selector in
 
 ## Import paths
 
-Compiled entrypoints are ready-to-import CSS and require only tooling that can resolve package CSS imports. `/tw` entrypoints publish copied, uncompiled source from `dist/tw`; a Tailwind v4 build must still process their `@theme`, `@utility`, `@apply`, and related directives. Focused source component entrypoints include theme tokens so their classes can work independently.
+Compiled entrypoints are ready-to-import CSS and require only tooling that can resolve package CSS imports, or a `<link>` to the file itself; see [Integrating → Without a bundler](./integrating/without-a-bundler.md). `/tw` entrypoints publish copied, uncompiled source from `dist/tw`; a Tailwind v4 build must still process their `@theme`, `@utility`, `@apply`, and related directives. Focused source component entrypoints include theme tokens so their classes can work independently.
 
 | Import path                      | Composition and effects                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -129,7 +129,7 @@ What that means in practice:
 
 ## Requirements
 
-- Consumer tooling must resolve package CSS imports.
+- An `@import` of a package name needs tooling that resolves package CSS imports, such as Vite, webpack, or the Tailwind CLI. Without one, link the compiled file by its path or from a CDN; see [Integrating → Without a bundler](./integrating/without-a-bundler.md).
 - Every shipped stylesheet can be pasted into an HTML `<style>` element, for critical-CSS inlining or a server-rendered head: none contains the `</style` sequence that would end the element early.
 - Chrome 123, Safari 17.5, or Firefox 128 and newer. Color tokens are declared with `light-dark()` and selected by `color-scheme` (Firefox 120), `.input-group` propagates a nested control's invalid and disabled state with `:has()` (Firefox 121), and the elevation multiplier is registered non-inheriting with `@property` (Firefox 128; without it an elevation class would reach the unclassed elements inside it).
 - Tailwind CSS 4.3.2 or newer, below 5, is required only for `/tw` source entrypoints.

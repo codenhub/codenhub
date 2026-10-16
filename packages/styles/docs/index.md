@@ -31,14 +31,25 @@ The package ships as ready-to-import compiled CSS, or as Tailwind CSS v4 source 
 Known costs of the design, stated so they can be weighed before adopting it:
 
 - **Class names are short and unprefixed.** `.primary`, `.success`, `.dark`, `.light`, `.label`, `.field`, `.hint`, `.section`, `.stack`, `.flat`, and `.ghost` are global names, so another stylesheet on the same page that uses them collides with this one. The package sits in cascade layers, so your own unlayered CSS wins a collision, but a third-party library's styles for the same name still meet the package's.
-- **The complete stylesheets are large before compression.** Minified, `@codenhub/styles` is about 189 KB, `/native` about 260 KB, and `/components` about 150 KB; served compressed they are about 16 KB, 19 KB, and 12 KB with gzip. The repetition that compression removes is the composition every component carries. Import the narrowest entrypoint that covers a page; see [Setup → Import paths](./setup.md#import-paths).
+- **The complete stylesheets are large before compression.** Minified, `@codenhub/styles` is about 189 KB, `/native` about 260 KB, and `/components` about 150 KB; served compressed they are about 16 KB, 19 KB, and 12 KB with gzip. The focused files are far smaller: `/theme` is about 10 KB (2 KB gzipped), and one aesthetic is 4 to 21 KB (1 to 2 KB gzipped). The repetition that compression removes is the composition every component carries. Import the narrowest entrypoint that covers a page; see [Setup → Import paths](./setup.md#import-paths).
 - **`--color-foreground` is a surface tone, not a text colour.** It is the plate a step off the page that a quiet card or panel rests on. The text colour is `--color-text`.
 - **The success, warning, destructive, and info hover tones are fixed values.** `--color-success-hover` and its three siblings are precomputed rather than mixed from their base colour, because mixing them live crashed WebKit. Overriding `--color-success` alone leaves its hover on the old hue, so retheme the whole family; see [Theming → Color tokens](./usage/theming.md#color-tokens).
+
+## Versioning
+
+The package is below 1.0 and follows the [semantic versioning rule for 0.x releases](https://semver.org/#spec-item-4): the public surface may still change between minor versions.
+
+- A minor release, such as 0.7.0 to 0.8.0, may break. It can rename or remove a class or token, or change a default. Every break is listed under **Changed** or **Removed** on that version's [changelog](./changelog/index.md) page, with what to use instead.
+- A patch release, such as 0.7.0 to 0.7.1, never breaks.
+
+npm's default range for a new dependency, `^0.7.0`, already accepts patches only: below 1.0, a caret range does not cross into the next minor version. Read the changelog before raising it. When you link a file from a CDN instead, put the exact version in the URL; see [Without a bundler](./integrating/without-a-bundler.md).
+
+Breaks are not softened with aliases because the model is still settling, and an old name kept beside each new one would grow the class and token surface every release. A rename or removal listed in the changelog usually costs one find-and-replace when you upgrade; a changed default may need your own CSS retuned.
 
 ## Next steps
 
 - [Setup](./setup.md): Install the package, choose an entrypoint, and render a first component.
 - [Concepts](./concepts.md): The three-axis model, the token system, and how theme selection works — read this before the usage guides.
 - [Usage](./usage/index.md): Guides for composing axes, theming, customizing, aesthetics, and each component family.
-- [Integrating](./integrating/index.md): Wiring the stylesheet into Next.js, Vue, Svelte, Astro, or a Tailwind CSS v4 build.
+- [Integrating](./integrating/index.md): Wiring the stylesheet into Next.js, Vue, Svelte, Astro, a Tailwind CSS v4 build, or a page with no bundler.
 - [Accessibility](./accessibility.md): CSS accessibility hooks and what remains an application responsibility.

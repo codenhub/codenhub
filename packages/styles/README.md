@@ -47,7 +47,7 @@ For the Tailwind CSS v4 entrypoint, theme selection, the intent/presentation axe
 
 ## Notes
 
-This package has no JavaScript behavior. It ships no compatibility aliases: a removed class or token is documented in the [changelog](./docs/changelog/index.md), not kept under a second name.
+This package has no JavaScript behavior. It ships no compatibility aliases: a removed class or token is documented in the [changelog](./docs/changelog/index.md), not kept under a second name. Below 1.0 a minor release may break and a patch release never does; see [Versioning](./docs/index.md#versioning).
 
 ## License
 

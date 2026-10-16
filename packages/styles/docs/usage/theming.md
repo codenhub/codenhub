@@ -112,7 +112,7 @@ Set them directly to define an intent this package does not ship. **State every 
 <button class="btn brand">Custom intent</button> <span class="badge brand soft">Works everywhere</span>
 ```
 
-> **Intent does not cascade.** Components reset these slots to the text palette at their own root, so a `.success` container never recolors a nested destructive button. Put the intent class on the element that shows the intent.
+> **Intent does not cascade.** Components reset these slots to their neutral values at their own root, so a `.success` container never recolors a nested destructive button. Put the intent class on the element that shows the intent.
 
 ## Foundation tokens
 
@@ -122,7 +122,7 @@ The four `--elevation-*` values below are raw shadows for elements you style you
 
 | Token                      | Purpose                                                                                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--font-default`           | Default app font family.                                                                                                                    |
+| `--font-default`           | Default app font family, `"Segoe UI", system-ui, sans-serif`. See [Fonts](#fonts).                                                          |
 | `--container-narrow`       | Narrow content width.                                                                                                                       |
 | `--container-max`          | Default content width.                                                                                                                      |
 | `--container-wide`         | Wide content width.                                                                                                                         |
@@ -149,5 +149,51 @@ The four `--elevation-*` values below are raw shadows for elements you style you
 | `--motion-ease`            | Default easing curve.                                                                                                                       |
 | `--z-popover`              | Popover/tooltip z-index.                                                                                                                    |
 | `--breakpoint-xs`          | Extra-small Tailwind responsive breakpoint (`xs:`), `30rem`. `/tw` only: compiled entrypoints do not declare it.                            |
+
+## Fonts
+
+The package ships no font files and makes no network requests. Every font token names fonts already installed on the reader's device until you supply your own.
+
+| Token            | Read by                                                                                          | Without your value                                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--font-default` | The reset, on `html` and `body`. Buttons and form controls inherit it.                           | `"Segoe UI", system-ui, sans-serif`                                                                                                             |
+| `--font-mono`    | The `kbd`, `code`, and `pre` content helpers, and `<kbd>`, `<code>`, and `<pre>` under `/native` | `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`. Under `/tw`, your Tailwind theme's value. |
+| `--font-pixel`   | [`.pixel`](./aesthetics.md#pixel) and `.pixel-solo`                                              | Not declared. Falls back to a monospace stack.                                                                                                  |
+| `--font-rounded` | [`.chunky-tile`](./aesthetics.md#chunky-tile) and `.chunky-tile-solo`                            | Not declared. Falls back to `--font-default`, then a sans-serif stack.                                                                          |
+| `--font-cyber`   | [`.cyber`](./aesthetics.md#cyber) and `.cyber-solo`                                              | Not declared. Falls back to a monospace stack.                                                                                                  |
+| `--font-sketch`  | [`.sketch`](./aesthetics.md#sketch) and `.sketch-solo`                                           | Not declared. Falls back to the platform `cursive` family.                                                                                      |
+
+`--font-default` reaches the page only through the reset, which `@codenhub/styles`, `/native`, `/tw`, `/tw/native`, and `/tw/reset` include. With `/theme` or `/components` alone, set `font-family` on `body` yourself. The aesthetic tokens are read by the aesthetic's own class, so they work with any entrypoint.
+
+To use a web font, load it the way you load any font, then name it in the token. Set the token on `:root` for the whole page, or on any element for that subtree:
+
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&display=swap" />
+```
+
+```css
+:root {
+  --font-default: "Inter", system-ui, sans-serif;
+}
+```
+
+A self-hosted font is declared with `@font-face` and named the same way:
+
+```css
+@font-face {
+  font-family: "Pixelify Sans";
+  src: url("/fonts/pixelify-sans.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+:root {
+  --font-pixel: "Pixelify Sans", monospace;
+}
+```
+
+Load weights 400 to 700, and 800 for `--font-rounded`: components set `font-weight` from 400 to 700, and `.chunky-tile` sets its labels in 800. A browser that lacks a weight fakes it by thickening the regular one, which smears a pixel or handwriting face. Always end the stack with a generic family, such as `sans-serif` or `monospace`, so text still renders while the font loads or if it fails to.
 
 Next: [Customizing](./customizing.md) covers presentation and material tokens — how much of an intent shows, and what a component is made of.

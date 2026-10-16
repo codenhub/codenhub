@@ -22,11 +22,12 @@ is the surface documented in public docs and demonstrated by the playground.
   - [Feedback](./docs/usage/feedback.md)
   - [Tooltips](./docs/usage/tooltips.md)
   - [Content and layout](./docs/usage/content-and-layout.md): Layout helpers, content chips/tables, surfaces, and typography utilities.
-- [Integrating](./docs/integrating/index.md): Wiring the stylesheet into Next.js, Vue, Svelte, Astro, or a Tailwind CSS v4 build.
+- [Integrating](./docs/integrating/index.md): Wiring the stylesheet into Next.js, Vue, Svelte, Astro, a Tailwind CSS v4 build, or a page with no bundler.
   - [Tailwind CSS v4](./docs/integrating/tailwind.md)
   - [Next.js](./docs/integrating/nextjs.md)
   - [Vue](./docs/integrating/vue.md)
   - [Svelte](./docs/integrating/svelte.md)
   - [Astro](./docs/integrating/astro.md)
+  - [Without a bundler](./docs/integrating/without-a-bundler.md): Linking compiled files from plain HTML, Rails, Django, or a CDN.
 - [Accessibility](./docs/accessibility.md): CSS accessibility behavior and consumer responsibilities.
 - [Changelog](./docs/changelog/index.md): Release history, including breaking changes.
