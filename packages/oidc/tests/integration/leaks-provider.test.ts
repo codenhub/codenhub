@@ -192,7 +192,9 @@ beforeAll(async () => {
   await observe("jwks", "other", await answer(setup.provider, new Request(JWKS_URL)));
 
   // The success path, with the redirect observed directly.
-  const begun = await setup.provider.beginAuthorization(new Request(authorizationUrl()));
+  const begun = await setup.provider.beginAuthorization(
+    new Request(authorizationUrl({ scope: "openid profile offline_access" })),
+  );
   if (!begun.ok) {
     throw new Error("the valid request was refused");
   }
@@ -217,13 +219,17 @@ beforeAll(async () => {
     await redeem(setup, codeForm(first, PUBLIC_CLIENT)),
   );
   const tokens = tokensOf(exchanged);
+  // Without a refresh token the rotation below would observe an error, not a rotation.
+  if (tokens.refresh_token === undefined) {
+    throw new Error("the main flow issued no refresh token");
+  }
   rememberTokens("first", tokens);
 
   await observe("userinfo", "other", await answer(setup.provider, userinfoRequest(tokens.access_token)));
   const rotated = await observe(
     "refresh rotation",
     "token-success",
-    await redeem(setup, refreshForm(tokens.refresh_token ?? "", PUBLIC_CLIENT)),
+    await redeem(setup, refreshForm(tokens.refresh_token, PUBLIC_CLIENT)),
   );
   rememberTokens("rotated", tokensOf(rotated));
 
@@ -359,7 +365,7 @@ beforeAll(async () => {
   await observe(
     "refresh token as access token",
     "other",
-    await answer(setup.provider, userinfoRequest(tokens.refresh_token ?? "")),
+    await answer(setup.provider, userinfoRequest(tokens.refresh_token)),
   );
 
   // Expiry last, because it moves the clock past the lifetimes of everything above.

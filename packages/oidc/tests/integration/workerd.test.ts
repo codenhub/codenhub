@@ -60,8 +60,8 @@ beforeAll(async () => {
           type: "ESModule" as const,
           path: `dist/${file}`,
           contents: readFileSync(new URL(file, dist), "utf8").replaceAll(
-            'from "@codenhub/jwt"',
-            'from "../codenhub-jwt.js"',
+            /(from|import)\s*(["'])@codenhub\/jwt\2/g,
+            '$1 "../codenhub-jwt.js"',
           ),
         })),
     ],
