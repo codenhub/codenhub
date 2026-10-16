@@ -1,0 +1,5 @@
+# packages/jwt
+
+## Traps
+
+- **Linux WebKit fails some Ed25519 key generations.** `crypto.subtle.generateKey({ name: "Ed25519" })` rejects with `OperationError` whenever the new key's `d` or `x` starts with a zero byte, about 1 call in 128, so `generateKeyPair` with `EdDSA` or `Ed25519` fails at random on that engine and a browser test that generates such a key flakes. Keys like that import, sign, verify and export correctly. Held under Playwright 1.61.1 (webkit-2311) in the `v1.61.1-noble` image: 451 of 60,000 generations failed, every one with that error and none with another ([probe run 38956681761](https://github.com/codenhub/codenhub/actions/runs/38956681761)). The cause is WebKit's libgcrypt backend, fixed upstream in WebKit 323215@main ([bug 307095](https://bugs.webkit.org/show_bug.cgi?id=307095)). Prefer `generatePair` in `tests/scenarios.ts`, which retries that one error on Linux WebKit, and the leading-zero JWK scenarios beside it to cover the import path. Remove the retry and this trap once Playwright ships a WebKit with that fix and a run without the retry generates a few thousand Ed25519 keys cleanly.
