@@ -20,7 +20,7 @@ This records what stands between the implemented 0.0.1 and a 0.1.0 that `@codenh
 
 ## Planned
 
-- **A changelog from 0.1.0**, opened by `hub release --cut` with the release, per `docs/specs/packages-changelog.md`. There is no page for 0.0.1, the first release, published before the package had consumers.
+- **A changelog from 0.1.0**, opened by `hub release --cut` with the release, per `docs/specs/packages-changelog.md`. There is no page for 0.0.1, the first release, which precedes any consumer.
 - **The generated API reference** (`codenhub.docs.reference`), once the TSDoc has been reviewed for consumer wording, so the reference and the hand-authored docs say the same thing.
 
 ## Later / Possible

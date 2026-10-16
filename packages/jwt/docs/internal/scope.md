@@ -72,7 +72,7 @@ These are the commitments that should hold.
 1. **The algorithm comes from the key, never from the token.** A key is bound to exactly one algorithm when it's imported or generated. If the token header's `alg` doesn't match the key's algorithm, verification fails. This closes off `alg: none` and the RS/HS confusion attack class.
 2. **`none` is never supported**, in any form.
 3. **No unverified payload access.** There is no `decode()` that returns claims. The only unverified read is the header, for key selection.
-4. **Untrusted input never throws.** Verification and import of untrusted data return results. Programmer errors, such as invalid options or signing with a verify-only key, throw `TypeError`, ideally when the verifier or key is created rather than when it's used.
+4. **Untrusted input never throws.** Verification and import of untrusted data return results. Programmer errors, such as invalid options or signing with a verify-only key, throw `TypeError`, ideally when the verifier or key is created rather than when it's used. Exceptions from the caller's own code, such as a `claims` schema that throws or rejects, propagate rather than becoming results (decision 10).
 5. **Bounded cost.** Token length is capped before any decoding happens. JSON depth and size are bounded. Remote JWKS responses are size-capped and time-bounded. Failing input must be cheap.
 6. **Issues never contain input values.** No token content, claim values, or key material appears in issues, error messages, or logs. Issues can name _which_ check failed (`wrong_audience`); they don't echo what the token said.
 7. **Strict parsing.**

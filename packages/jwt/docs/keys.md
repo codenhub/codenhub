@@ -10,8 +10,8 @@ A key in this package is a small frozen object such as `{ kind: "public", alg: "
 
 "This package" means one copy of it. A key is recognized only by the copy of `@codenhub/jwt` that created it, so a program that loads two copies, such as two versions installed side by side, gets keys that the other copy refuses:
 
-- `createKeySet`, `sign` and the export functions throw the `TypeError` meant for look-alikes ("Expected a key created by @codenhub/jwt …, not a look-alike object"), although the key is real.
-- A verifier given a key set created by the other copy, or a [custom key set](key-sets.md#your-own-key-set) that returns a key from it, fails every token with `key_fetch_failed` and `{ reason: "key_set_error" }`.
+- `createKeySet` throws the `TypeError` meant for look-alikes ("Expected a key created by @codenhub/jwt …, not a look-alike object"), although the key is real, and `sign` and the export functions reject with it.
+- When a verifier's key set, whether one created by the other copy or a [custom key set](key-sets.md#your-own-key-set), selects a key from the other copy, the token fails with `key_fetch_failed` and `{ reason: "key_set_error" }`. Tokens that fail before or during selection keep their own issues.
 
 To avoid it, make sure the program resolves one copy: deduplicate the install (for example with `npm dedupe` or `pnpm dedupe`, and `npm ls @codenhub/jwt` to check). A library built on this package should declare it as a `peerDependency`, not a `dependency`, so it uses the application's copy instead of bringing its own.
 
