@@ -106,6 +106,17 @@ describe("authenticate", () => {
     },
   );
 
+  it("writes the plus sign of standard base64 for credentials that produce one", async () => {
+    // `~` is unreserved, so it stays raw and its byte yields `+` in base64; `?` is escaped, so no `/` can appear.
+    const headers = await authenticate(
+      resolve({ method: "client_secret_basic", secret: "~~??" }),
+      new URLSearchParams(),
+    );
+
+    expect(headers.authorization).toBe(`Basic ${Buffer.from("app:~~%3F%3F").toString("base64")}`);
+    expect(headers.authorization).toBe("Basic YXBwOn5+JTNGJTNG");
+  });
+
   it("sends the client id and secret in the body for client_secret_post", async () => {
     const form = new URLSearchParams();
 

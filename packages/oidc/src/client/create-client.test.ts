@@ -7,7 +7,7 @@ import {
   generateSecretKey,
   sign,
 } from "@codenhub/jwt";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createProvider, generateClientSecret, hashClientSecret, type ClientAuthentication } from "../provider";
 import { computeTokenHash } from "../shared/token-hash";
@@ -65,8 +65,8 @@ interface FakeOp {
   grant(grant?: Grant): string;
   /** Claims of the ID token a refresh returns. Unset, the refresh returns no ID token. */
   refreshClaims: Readonly<Record<string, unknown>> | undefined;
-  /** The userinfo response. */
-  userinfoReply: () => Response;
+  /** The userinfo response. It receives the request, so a test can check what the client sent. */
+  userinfoReply: (request: Request) => Response;
 }
 
 let keys: KeyPair;
@@ -174,7 +174,7 @@ function createFakeOp(): FakeOp {
         return tokenEndpoint(request);
       }
       if (request.method === "GET" && pathname === "/userinfo") {
-        return op.userinfoReply();
+        return op.userinfoReply(request);
       }
       return new Response(null, { status: 404 });
     }) as typeof fetch,
@@ -226,10 +226,12 @@ const issuesOf = (result: OidcResult<unknown>): readonly OidcIssue[] => {
 describe("createClient", () => {
   it("returns a frozen client, and makes no request while it is created", () => {
     const op = createFakeOp();
-    const rp = clientFor(op);
+    const fetchSpy = vi.fn(op.fetch);
+    const rp = createClient(baseOptions(fetchSpy));
 
     expect(Object.isFrozen(rp)).toBe(true);
     expect(rp.metadata.issuer).toBe(ISSUER);
+    expect(fetchSpy).toHaveBeenCalledTimes(0);
   });
 
   it("refuses a missing or invalid option at creation, naming it", () => {
@@ -671,15 +673,46 @@ describe("refresh", () => {
 
     await expect(rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope: [] })).rejects.toThrow(TypeError);
   });
+
+  it("throws a TypeError for a sparse scope list", async () => {
+    const rp = clientFor(createFakeOp());
+    // oxlint-disable-next-line no-sparse-arrays -- the hole is what this test is about
+    const scope = ["openid", , "profile"] as unknown as readonly string[];
+
+    await expect(rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope })).rejects.toThrow(TypeError);
+  });
+
+  it("sends each requested scope once, in first-seen order", async () => {
+    const op = createFakeOp();
+    const sent: URLSearchParams[] = [];
+    const fetchSpy = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        sent.push(new URLSearchParams(String(init.body)));
+      }
+      return op.fetch(input, init);
+    });
+    const rp = createClient(baseOptions(fetchSpy));
+
+    await rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope: ["openid", "profile", "openid", "email"] });
+
+    expect(sent[0]?.get("scope")).toBe("openid profile email");
+  });
 });
 
 describe("userinfo", () => {
   it("returns the claims when the subject matches", async () => {
-    const rp = clientFor(createFakeOp());
+    const op = createFakeOp();
+    let authorization: string | null = null;
+    op.userinfoReply = (request) => {
+      authorization = request.headers.get("authorization");
+      return json({ sub: "user-1", name: "User user-1" });
+    };
+    const rp = clientFor(op);
 
     const result = await rp.userinfo({ accessToken: "at-1", subject: "user-1" });
 
     expect(result).toEqual({ ok: true, value: { sub: "user-1", name: "User user-1" } });
+    expect(authorization).toBe("Bearer at-1");
   });
 
   it("refuses claims about another subject", async () => {

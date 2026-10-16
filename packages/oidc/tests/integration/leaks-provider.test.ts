@@ -136,6 +136,7 @@ function remember(issued: IssuedCode): void {
 /** Remembers the tokens of a token response, so every channel is checked for them. */
 function rememberTokens(label: string, tokens: TokenBody): void {
   seen.tokens[`${label} access token`] = tokens.access_token;
+  seen.tokens[`${label} ID token`] = tokens.id_token;
   if (tokens.refresh_token !== undefined) {
     seen.tokens[`${label} refresh token`] = tokens.refresh_token;
   }
@@ -185,6 +186,7 @@ beforeAll(async () => {
   storeCalls = recorder.calls;
   setup = await setUpProvider({ wrapStore: recorder.wrap });
   seen.never["client secret"] = setup.secret;
+  seen.never["wrong client secret"] = WRONG_SECRET;
   seen.never["code verifier"] = VERIFIER;
 
   // Public documents.

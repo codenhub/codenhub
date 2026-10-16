@@ -78,9 +78,41 @@ describe("resolveClientOptions", () => {
 
   it("reads the clock through Date.now at each call by default", () => {
     const resolved = resolveClientOptions(validOptions());
-    vi.spyOn(Date, "now").mockReturnValue(42);
+    const now = vi.spyOn(Date, "now");
+    now.mockReturnValueOnce(42).mockReturnValueOnce(43);
 
     expect(resolved.now()).toBe(42);
+    expect(resolved.now()).toBe(43);
+    expect(now).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not run a getter on metadata.issuer", () => {
+    const getter = vi.fn(() => ISSUER);
+    const metadata = validMetadata();
+    Object.defineProperty(metadata, "issuer", { get: getter, enumerable: true });
+
+    expect(() => resolveClientOptions(withOptions({ metadata }))).toThrow("metadata.issuer");
+    expect(getter).not.toHaveBeenCalled();
+  });
+
+  it("throws TypeError for a clientId with a lone surrogate", () => {
+    expect(() => resolveClientOptions(withOptions({ clientId: "client\uD800" }))).toThrow(TypeError);
+  });
+
+  it("throws TypeError for a redirectUri with a lone surrogate", () => {
+    expect(() => resolveClientOptions(withOptions({ redirectUri: "https://app.example.com/\uDC00" }))).toThrow(
+      TypeError,
+    );
+  });
+
+  it("throws TypeError for an auth secret with a lone surrogate", () => {
+    expect(() =>
+      resolveClientOptions(withOptions({ auth: { method: "client_secret_basic", secret: "shh\uD800" } })),
+    ).toThrow("auth.secret");
+  });
+
+  it("accepts a clientId with well-formed non-ASCII characters", () => {
+    expect(resolveClientOptions(withOptions({ clientId: "cliente-ação-😀" })).clientId).toBe("cliente-ação-😀");
   });
 
   it("keeps the clock it was given", () => {

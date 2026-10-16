@@ -35,4 +35,9 @@ describe("hashClientSecret and verifyClientSecret", () => {
   it("throws TypeError for an empty secret", async () => {
     await expect(hashClientSecret("")).rejects.toThrow(TypeError);
   });
+
+  it("hashes to the base64url SHA-256 digest of the secret", async () => {
+    // Checked against node:crypto, not trusted from memory: sha256("abc") in base64url.
+    expect(await hashClientSecret("abc")).toBe("ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0");
+  });
 });

@@ -69,6 +69,13 @@ describe("requestTokens", () => {
       TOKEN_URL,
       { method: "POST", redirect: "manual", headers: { "content-type": "application/x-www-form-urlencoded" } },
     ]);
+    const sent = new URLSearchParams(String(stub.mock.calls[0]?.[1]?.body));
+    expect([...sent]).toEqual([
+      ["grant_type", "authorization_code"],
+      ["code", "code-1"],
+      ["redirect_uri", "https://app.example/callback"],
+      ["client_id", "app"],
+    ]);
   });
 
   it("sends the credentials the auth method chose", async () => {
@@ -136,6 +143,29 @@ describe("requestTokens", () => {
     const issues = issuesOf(await requestTokens(options(stubFetch(() => jsonResponse(body))), grantForm()));
 
     expect(issues).toEqual([{ code: "invalid_token_response", path: ["response", "access_token"] }]);
+  });
+
+  it.each([["tab\there"], ["snow☃man"], ["line\nbreak"], ["\u007f"]])(
+    "reports an access token with a non-printable or non-ASCII character %j as an invalid token response",
+    async (accessToken) => {
+      const issues = issuesOf(
+        await requestTokens(
+          options(stubFetch(() => jsonResponse(validBody({ access_token: accessToken })))),
+          grantForm(),
+        ),
+      );
+
+      expect(issues).toEqual([{ code: "invalid_token_response", path: ["response", "access_token"] }]);
+    },
+  );
+
+  it("accepts an access token of printable ASCII, including spaces and symbols", async () => {
+    const result = await requestTokens(
+      options(stubFetch(() => jsonResponse(validBody({ access_token: "a b~!#$%&'()*+,-./:;<=>?@[]^_`{|}" })))),
+      grantForm(),
+    );
+
+    expect(result).toMatchObject({ ok: true, value: { accessToken: "a b~!#$%&'()*+,-./:;<=>?@[]^_`{|}" } });
   });
 
   it("reports a token type other than bearer as an invalid token response", async () => {

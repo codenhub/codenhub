@@ -455,3 +455,62 @@ describe("store contract under unusual keys", () => {
     await expect(store.consumeCode("constructor")).resolves.toBeUndefined();
   });
 });
+
+describe("saving a key that already exists", () => {
+  it("should reject saveInteraction with an Error when the key exists", async () => {
+    const { store } = makeClockedStore();
+    await store.saveInteraction("key-1", makeInteraction());
+
+    await expect(store.saveInteraction("key-1", makeInteraction())).rejects.toThrow(Error);
+  });
+
+  it("should reject saveCode with an Error when the key exists", async () => {
+    const { store } = makeClockedStore();
+    await store.saveCode("code-1", makeCode());
+
+    await expect(store.saveCode("code-1", makeCode())).rejects.toThrow(Error);
+  });
+
+  it("should reject saveAccessToken with an Error when the key exists", async () => {
+    const { store } = makeClockedStore();
+    await store.saveAccessToken("at-1", makeAccessToken());
+
+    await expect(store.saveAccessToken("at-1", makeAccessToken())).rejects.toThrow(Error);
+  });
+
+  it("should reject saveRefreshToken with an Error when the key exists", async () => {
+    const { store } = makeClockedStore();
+    await store.saveRefreshToken("rt-1", makeRefreshToken());
+
+    await expect(store.saveRefreshToken("rt-1", makeRefreshToken())).rejects.toThrow(Error);
+  });
+
+  it("should keep a spent code replayed when a save under its key is rejected", async () => {
+    const { store } = makeClockedStore();
+    await store.saveCode("code-1", makeCode());
+    await store.consumeCode("code-1");
+
+    await expect(store.saveCode("code-1", makeCode())).rejects.toThrow(Error);
+
+    expect((await store.consumeCode("code-1"))?.status).toBe("replayed");
+  });
+
+  it("should keep a spent refresh token replayed when a save under its key is rejected", async () => {
+    const { store } = makeClockedStore();
+    await store.saveRefreshToken("rt-1", makeRefreshToken());
+    await store.consumeRefreshToken("rt-1");
+
+    await expect(store.saveRefreshToken("rt-1", makeRefreshToken())).rejects.toThrow(Error);
+
+    expect((await store.consumeRefreshToken("rt-1"))?.status).toBe("replayed");
+  });
+
+  it("should allow a save under a key whose code expired and was purged", async () => {
+    const clock = { nowMs: CLOCK_START_MS };
+    const store = createMemoryStore({ now: () => clock.nowMs });
+    await store.saveCode("code-1", makeCode({ expiresAt: 1_001 }));
+    clock.nowMs = 1_001_000;
+
+    await expect(store.saveCode("code-1", makeCode())).resolves.toBeUndefined();
+  });
+});

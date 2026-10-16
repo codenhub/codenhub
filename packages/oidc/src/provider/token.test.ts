@@ -285,6 +285,9 @@ describe("handleToken: authorization_code grant", () => {
     const response = await handleToken(options, tokenRequest(codeBody(code, { code_verifier: "w".repeat(43) })));
 
     expect(await errorOf(response)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_grant" }) });
+    // The code is consumed before its verifier is checked, so the correct verifier no longer redeems it.
+    const retry = await handleToken(options, tokenRequest(codeBody(code)));
+    expect(await errorOf(retry)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_grant" }) });
   });
 
   it("rejects a redirect_uri that differs by a trailing slash with invalid_grant", async () => {
@@ -413,6 +416,7 @@ describe("handleToken: refresh_token grant", () => {
     const newest = await handleToken(options, tokenRequest(refreshBody(rotated.refresh_token ?? "")));
     expect(newest.status).toBe(400);
     expect(await store.findAccessToken(await digestKey(rotated.access_token))).toBeUndefined();
+    expect(await store.findAccessToken(await digestKey(issued.access_token))).toBeUndefined();
   });
 
   it("narrows the scope of the access token when asked", async () => {
@@ -459,14 +463,20 @@ describe("handleToken: refresh_token grant", () => {
 
   it("rejects a scope the family does not hold with invalid_scope", async () => {
     const { options, store } = await setup();
-    const issued = await redeemCode(options, store);
+    // The family is narrower than the client's registration, so `profile` passes the client check and only
+    // the subset check against the family refuses it. A scope the client lacks is refused before consumption.
+    const code = await saveCode(store, { scopes: ["openid", "offline_access"] });
+    const issued = (await (await handleToken(options, tokenRequest(codeBody(code)))).json()) as TokenBody;
 
     const response = await handleToken(
       options,
-      tokenRequest(refreshBody(issued.refresh_token ?? "", { scope: "openid email" })),
+      tokenRequest(refreshBody(issued.refresh_token ?? "", { scope: "openid profile" })),
     );
 
     expect(await errorOf(response)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_scope" }) });
+    // The token is consumed before the scope subset is checked (scope.md decision 20), so the original fails now.
+    const retry = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
+    expect(await errorOf(retry)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_grant" }) });
   });
 
   it("does not extend the family's expiry when a token is rotated", async () => {
@@ -474,9 +484,10 @@ describe("handleToken: refresh_token grant", () => {
     const issued = await redeemCode(options, store);
     const ttl = options.ttl.refreshToken;
     setClock(NOW_MS + (ttl - 60) * 1000);
-    const rotated = (await (
-      await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")))
-    ).json()) as TokenBody;
+    const rotation = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
+    expect(rotation.status).toBe(200);
+    const rotated = (await rotation.json()) as TokenBody;
+    expect(rotated.refresh_token).toEqual(expect.any(String));
 
     setClock(NOW_MS + ttl * 1000);
     const response = await handleToken(options, tokenRequest(refreshBody(rotated.refresh_token ?? "")));

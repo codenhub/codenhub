@@ -45,6 +45,18 @@ describe("createProvider", () => {
 
     expect(() => createProvider(options)).toThrow(TypeError);
   });
+
+  it("shouldThrowTypeErrorWhenTtlIsExplicitlyNull", async () => {
+    const options = await optionsWith({ ttl: { code: null } as unknown as ProviderOptions["ttl"] });
+
+    expect(() => createProvider(options)).toThrow(TypeError);
+  });
+
+  it("shouldThrowTypeErrorWhenAnEndpointIsExplicitlyNull", async () => {
+    const options = await optionsWith({ endpoints: { token: null } as unknown as ProviderOptions["endpoints"] });
+
+    expect(() => createProvider(options)).toThrow(TypeError);
+  });
 });
 
 describe("provider.handle", () => {
@@ -75,6 +87,7 @@ describe("provider.handle", () => {
     const response = await provider.handle(new Request(DISCOVERY, { method: "OPTIONS" }));
 
     expect(response?.status).toBe(204);
+    expect(response?.headers.get("access-control-allow-methods")).toBe("GET");
   });
 
   it("shouldReturnNullForAnUnknownPath", async () => {
@@ -104,13 +117,15 @@ describe("provider.handle", () => {
   });
 
   it("shouldAnswerJwksWithOneKeyPerSigningKey", async () => {
-    const provider = createProvider(await optionsWith());
+    const provider = createProvider(
+      await optionsWith({ signingKeys: [await keyPair("2026-10"), await keyPair("2026-11")] }),
+    );
 
     const response = await provider.handle(new Request(JWKS));
     const body = (await response?.json()) as { keys: { kid?: string }[] };
 
     expect(response?.status).toBe(200);
-    expect(body.keys.map((key) => key.kid)).toEqual(["2026-10"]);
+    expect(body.keys.map((key) => key.kid)).toEqual(["2026-10", "2026-11"]);
   });
 
   it("shouldRouteTokenRequestsToTheTokenHandler", async () => {
@@ -138,6 +153,20 @@ describe("provider.handle", () => {
 
     expect(response?.status).toBe(200);
     expect(await response?.json()).toMatchObject({ token_endpoint: "https://op.example/tenant/token" });
+  });
+
+  it("shouldHandleTokenJwksAndUserinfoUnderTheIssuerPath", async () => {
+    const provider = createProvider(await optionsWith({ issuer: "https://op.example/tenant" }));
+
+    const token = await provider.handle(new Request("https://op.example/tenant/token", { method: "POST" }));
+    const jwks = await provider.handle(new Request("https://op.example/tenant/jwks"));
+    const userinfo = await provider.handle(new Request("https://op.example/tenant/userinfo"));
+
+    expect(token).not.toBeNull();
+    expect(token?.status).toBeGreaterThanOrEqual(400);
+    expect(token?.status).toBeLessThan(500);
+    expect(jwks?.status).toBe(200);
+    expect(userinfo?.status).toBe(401);
   });
 
   it("shouldReturnNullForTheDiscoveryPathOutsideTheIssuerPath", async () => {

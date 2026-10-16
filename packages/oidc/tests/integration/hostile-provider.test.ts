@@ -364,9 +364,10 @@ describe("token endpoint: refresh token grant", () => {
   it("revokes the access tokens of the family when a refresh token is reused", async () => {
     const { tokens } = await issueTokens(setup);
     const refresh = refreshTokenOf(tokens);
-    const rotated = (await (await redeem(setup, refreshForm(refresh, PUBLIC_CLIENT))).json()) as {
-      access_token: string;
-    };
+    const rotation = await redeem(setup, refreshForm(refresh, PUBLIC_CLIENT));
+    expect(rotation.status).toBe(200);
+    const rotated = (await rotation.json()) as { access_token: string };
+    expect(rotated.access_token).toEqual(expect.any(String));
     await redeem(setup, refreshForm(refresh, PUBLIC_CLIENT));
     const statuses = [tokens.access_token, rotated.access_token].map(async (token) => {
       return (await answer(setup.provider, userinfoRequest(token))).status;

@@ -310,6 +310,10 @@ describe("leaks: successful outcomes", () => {
     });
     const claims = await started.client.userinfo({ accessToken: tokens.accessToken, subject: "user-1" });
 
+    // Each outcome must be a success, or the text check below would pass on a failure that holds no secrets.
+    expect(signed.ok).toBe(true);
+    expect(refreshed.ok).toBe(true);
+    expect(claims.ok).toBe(true);
     // The sign-in must have recorded the tokens it returned, or the check below proves nothing.
     expect(secrets.map(([label]) => label)).toEqual(
       expect.arrayContaining([

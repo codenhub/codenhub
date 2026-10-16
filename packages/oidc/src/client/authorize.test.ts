@@ -39,6 +39,16 @@ const s256 = (verifier: string): string => createHash("sha256").update(verifier)
 const attempt = (request: unknown): Promise<unknown> =>
   buildAuthorization(resolvedOptions(), request as AuthorizeOptions);
 
+/** The error a refused request throws, or `undefined` when it is accepted. */
+const refusalOf = async (request: unknown): Promise<unknown> => {
+  try {
+    await attempt(request);
+    return undefined;
+  } catch (caught: unknown) {
+    return caught;
+  }
+};
+
 describe("buildAuthorization", () => {
   it("sends exactly the required parameters with openid as the default scope", async () => {
     const { url, pending } = await buildAuthorization(resolvedOptions());
@@ -174,56 +184,147 @@ describe("buildAuthorization", () => {
   });
 
   it("throws TypeError when scope is not an array", async () => {
-    await expect(attempt({ scope: "openid" })).rejects.toThrow("scope");
+    const error = await refusalOf({ scope: "openid" });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("scope");
   });
 
   it("throws TypeError when scope is empty", async () => {
-    await expect(attempt({ scope: [] })).rejects.toThrow("scope");
+    const error = await refusalOf({ scope: [] });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("scope");
+  });
+
+  it("throws TypeError when scope is sparse", async () => {
+    const scope: string[] = ["openid"];
+    scope[2] = "profile";
+    const error = await refusalOf({ scope });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("scope");
   });
 
   it.each(["open id", 'open"id', "open\\id", "openidé"])("throws TypeError for scope token %j", async (token) => {
-    await expect(attempt({ scope: ["openid", token] })).rejects.toThrow("scope");
+    const error = await refusalOf({ scope: ["openid", token] });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("scope");
   });
 
   it("throws TypeError when scope lacks openid", async () => {
-    await expect(attempt({ scope: ["profile"] })).rejects.toThrow("openid");
+    const error = await refusalOf({ scope: ["profile"] });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("openid");
   });
 
   it("throws TypeError when prompt holds an unknown value", async () => {
-    await expect(attempt({ prompt: ["sometimes"] })).rejects.toThrow("prompt");
+    const error = await refusalOf({ prompt: ["sometimes"] });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("prompt");
+  });
+
+  it("throws TypeError when prompt is sparse", async () => {
+    const prompt: string[] = ["login"];
+    prompt[2] = "consent";
+    const error = await refusalOf({ prompt });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("prompt");
   });
 
   it("throws TypeError when prompt repeats a value", async () => {
-    await expect(attempt({ prompt: ["login", "login"] })).rejects.toThrow("prompt");
+    const error = await refusalOf({ prompt: ["login", "login"] });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("prompt");
   });
 
   it("throws TypeError when prompt combines none with another value", async () => {
-    await expect(attempt({ prompt: ["none", "login"] })).rejects.toThrow("none");
+    const error = await refusalOf({ prompt: ["none", "login"] });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("none");
   });
 
   it("throws TypeError when maxAge is negative", async () => {
-    await expect(attempt({ maxAge: -1 })).rejects.toThrow("maxAge");
+    const error = await refusalOf({ maxAge: -1 });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("maxAge");
   });
 
   it("throws TypeError when maxAge is not an integer", async () => {
-    await expect(attempt({ maxAge: 1.5 })).rejects.toThrow("maxAge");
+    const error = await refusalOf({ maxAge: 1.5 });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("maxAge");
+  });
+
+  it("throws TypeError when maxAge exceeds nine digits", async () => {
+    const error = await refusalOf({ maxAge: 1000000000 });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("maxAge");
+  });
+
+  it("accepts the largest maxAge the provider reads", async () => {
+    const { url } = await buildAuthorization(resolvedOptions(), { maxAge: 999999999 });
+
+    expect(new URL(url).searchParams.get("max_age")).toBe("999999999");
   });
 
   it("throws TypeError when loginHint is not a string", async () => {
-    await expect(attempt({ loginHint: 42 })).rejects.toThrow("loginHint");
+    const error = await refusalOf({ loginHint: 42 });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("loginHint");
+  });
+
+  it("throws TypeError when loginHint is longer than the provider accepts", async () => {
+    const error = await refusalOf({ loginHint: "a".repeat(4097) });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("loginHint");
   });
 
   it("throws TypeError when uiLocales is not an array", async () => {
-    await expect(attempt({ uiLocales: "en" })).rejects.toThrow("uiLocales");
+    const error = await refusalOf({ uiLocales: "en" });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("uiLocales");
+  });
+
+  it("throws TypeError when uiLocales is sparse", async () => {
+    const uiLocales: string[] = ["en"];
+    uiLocales[2] = "pt-BR";
+    const error = await refusalOf({ uiLocales });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("uiLocales");
+  });
+
+  it("throws TypeError when the joined uiLocales is longer than the provider accepts", async () => {
+    const error = await refusalOf({ uiLocales: Array.from({ length: 2000 }, () => "en-US") });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("uiLocales");
   });
 
   it.each([["pt BR"], [""], [" en"]])("throws TypeError for ui locale %j", async (locale) => {
-    await expect(attempt({ uiLocales: [locale] })).rejects.toThrow("uiLocales");
+    const error = await refusalOf({ uiLocales: [locale] });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("uiLocales");
+  });
+
+  it("uses the prompt copied before computeCodeChallenge, not a later mutation of the caller's array", async () => {
+    const prompt: ("login" | "consent")[] = ["login"];
+    const pending = buildAuthorization(resolvedOptions(), { prompt });
+    prompt.push("consent");
+    const { url } = await pending;
+
+    expect(new URL(url).searchParams.get("prompt")).toBe("login");
+  });
+
+  it("uses the ui locales copied before computeCodeChallenge, not a later mutation of the caller's array", async () => {
+    const uiLocales = ["pt-BR"];
+    const pending = buildAuthorization(resolvedOptions(), { uiLocales });
+    uiLocales[0] = "xx-XX";
+    const { url } = await pending;
+
+    expect(new URL(url).searchParams.get("ui_locales")).toBe("pt-BR");
   });
 
   it("names the option but never its value in the TypeError message", async () => {
     const error = await attempt({ loginHint: { email: "ada@example.com" } }).catch((caught: unknown) => caught);
 
+    expect(error).toBeInstanceOf(TypeError);
     expect((error as Error).message).toContain("loginHint");
     expect((error as Error).message).not.toContain("ada@example.com");
   });

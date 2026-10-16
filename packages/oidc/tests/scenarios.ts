@@ -29,18 +29,25 @@ function check(condition: boolean, what: string): void {
   }
 }
 
+type AuthMethod = "none" | "client_secret_basic" | "client_secret_post" | "client_secret_jwt" | "private_key_jwt";
+
 /** A provider and a `fetch` that answers the client's requests from it, with no network. */
-async function setUp(modules: Modules, auth: "none" | "client_secret_basic" | "private_key_jwt") {
+async function setUp(modules: Modules, auth: AuthMethod) {
   const { jwt, provider, testing } = modules;
   const signingKey = await jwt.generateKeyPair({ alg: "ES256", kid: "op-1" });
   const secret = provider.generateClientSecret();
   const clientKey = await jwt.generateKeyPair({ alg: "ES256", kid: "rp-1" });
+  const hmacKey = await jwt.generateSecretKey({ alg: "HS256" });
   const registered =
     auth === "none"
       ? ({ method: "none" } as const)
       : auth === "client_secret_basic"
         ? ({ method: "client_secret_basic", secretHash: await provider.hashClientSecret(secret) } as const)
-        : ({ method: "private_key_jwt", keys: jwt.createKeySet([clientKey.publicKey]) } as const);
+        : auth === "client_secret_post"
+          ? ({ method: "client_secret_post", secretHash: await provider.hashClientSecret(secret) } as const)
+          : auth === "client_secret_jwt"
+            ? ({ method: "client_secret_jwt", key: hmacKey } as const)
+            : ({ method: "private_key_jwt", keys: jwt.createKeySet([clientKey.publicKey]) } as const);
   const store = testing.createMemoryStore({
     clients: [
       {
@@ -64,12 +71,16 @@ async function setUp(modules: Modules, auth: "none" | "client_secret_basic" | "p
       ? ({ method: "none" } as const)
       : auth === "client_secret_basic"
         ? ({ method: "client_secret_basic", secret } as const)
-        : ({ method: "private_key_jwt", key: clientKey.privateKey } as const);
+        : auth === "client_secret_post"
+          ? ({ method: "client_secret_post", secret } as const)
+          : auth === "client_secret_jwt"
+            ? ({ method: "client_secret_jwt", key: hmacKey } as const)
+            : ({ method: "private_key_jwt", key: clientKey.privateKey } as const);
   return { op, fetchFromProvider, clientAuth };
 }
 
 /** Runs a sign-in through the provider's authorization step, as the app's login page would. */
-async function signIn(modules: Modules, auth: "none" | "client_secret_basic" | "private_key_jwt") {
+async function signIn(modules: Modules, auth: AuthMethod) {
   const { op, fetchFromProvider, clientAuth } = await setUp(modules, auth);
   const discovered = await modules.client.discover(ISSUER, { fetch: fetchFromProvider });
   check(discovered.ok, "discovery failed");
@@ -113,7 +124,7 @@ async function signIn(modules: Modules, auth: "none" | "client_secret_basic" | "
 }
 
 const signInWith =
-  (auth: "none" | "client_secret_basic" | "private_key_jwt"): Scenario =>
+  (auth: AuthMethod): Scenario =>
   async (modules) => {
     const { signedIn } = await signIn(modules, auth);
     check(signedIn.claims.sub === "user-1", "wrong sub");
@@ -126,6 +137,8 @@ const signInWith =
 export const scenarios: Readonly<Record<string, Scenario>> = {
   "signs in a public client": signInWith("none"),
   "signs in with client_secret_basic": signInWith("client_secret_basic"),
+  "signs in with client_secret_post": signInWith("client_secret_post"),
+  "signs in with client_secret_jwt": signInWith("client_secret_jwt"),
   "signs in with private_key_jwt": signInWith("private_key_jwt"),
 
   "fetches userinfo for the granted scopes": async (modules) => {

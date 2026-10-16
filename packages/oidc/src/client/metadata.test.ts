@@ -55,9 +55,61 @@ describe("checkMetadata", () => {
 
   it("copies arrays so the caller's arrays are not frozen", () => {
     const document = validDocument();
-    checkMetadata(document, ISSUER);
+    const copy = valueOf(checkMetadata(document, ISSUER));
 
+    expect(Object.isFrozen(copy.response_types_supported)).toBe(true);
+    expect(copy.response_types_supported).not.toBe(document.response_types_supported);
     expect(Object.isFrozen(document.response_types_supported)).toBe(false);
+  });
+
+  it("copies a nested object in an unlisted member so the caller's object is not frozen", () => {
+    const document = { ...validDocument(), vendor: { nested: { list: [1, 2] } } };
+    const copy = valueOf(checkMetadata(document, ISSUER));
+
+    expect(copy.vendor).toEqual({ nested: { list: [1, 2] } });
+    expect(copy.vendor).not.toBe(document.vendor);
+    expect(Object.isFrozen(copy.vendor)).toBe(true);
+    expect(Object.isFrozen(document.vendor)).toBe(false);
+    expect(Object.isFrozen(document.vendor.nested.list)).toBe(false);
+  });
+
+  it("copies a nested array inside a listed member so the caller's array is not frozen", () => {
+    const document = { ...validDocument(), scopes_supported: ["openid", "profile"] };
+    const copy = valueOf(checkMetadata(document, ISSUER));
+
+    expect(copy.scopes_supported).not.toBe(document.scopes_supported);
+    expect(Object.isFrozen(document.scopes_supported)).toBe(false);
+  });
+
+  it("refuses a getter nested inside an unlisted member without running it", () => {
+    const document = validDocument();
+    const getter = vi.fn(() => "value");
+    document.vendor = Object.defineProperty({}, "hidden", { get: getter, enumerable: true });
+
+    const issues = issuesOf(checkMetadata(document, ISSUER));
+
+    expect(getter).not.toHaveBeenCalled();
+    expect(issues).toEqual([{ code: "invalid_metadata", path: ["metadata"] }]);
+  });
+
+  it("refuses a getter nested inside a listed member without running it", () => {
+    const document = validDocument();
+    const getter = vi.fn(() => "code");
+    document.response_types_supported = Object.defineProperty([], 0, { get: getter, enumerable: true });
+
+    const issues = issuesOf(checkMetadata(document, ISSUER));
+
+    expect(getter).not.toHaveBeenCalled();
+    expect(issues).toEqual([{ code: "invalid_metadata", path: ["metadata"] }]);
+  });
+
+  it("refuses a cyclic member without a stack overflow", () => {
+    const document = validDocument();
+    const cycle: Record<string, unknown> = {};
+    cycle.self = cycle;
+    document.vendor = cycle;
+
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([{ code: "invalid_metadata", path: ["metadata"] }]);
   });
 
   it("keeps a member the package does not use", () => {
@@ -116,7 +168,9 @@ describe("checkMetadata", () => {
   it("rejects an optional userinfo endpoint that is not https", () => {
     const document = { ...validDocument(), userinfo_endpoint: "http://login.example.com/userinfo" };
 
-    expect(issuesOf(checkMetadata(document, ISSUER))[0]?.path).toEqual(["metadata", "userinfo_endpoint"]);
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([
+      { code: "invalid_metadata", path: ["metadata", "userinfo_endpoint"] },
+    ]);
   });
 
   it("rejects code_challenge_methods_supported without S256", () => {
@@ -138,19 +192,25 @@ describe("checkMetadata", () => {
   it("rejects a response_types_supported that lacks code", () => {
     const document = { ...validDocument(), response_types_supported: ["id_token"] };
 
-    expect(issuesOf(checkMetadata(document, ISSUER))[0]?.path).toEqual(["metadata", "response_types_supported"]);
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([
+      { code: "invalid_metadata", path: ["metadata", "response_types_supported"] },
+    ]);
   });
 
   it("rejects an optional boolean member that is not a boolean", () => {
     const document = { ...validDocument(), claims_parameter_supported: "yes" };
 
-    expect(issuesOf(checkMetadata(document, ISSUER))[0]?.path).toEqual(["metadata", "claims_parameter_supported"]);
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([
+      { code: "invalid_metadata", path: ["metadata", "claims_parameter_supported"] },
+    ]);
   });
 
   it("rejects an optional string array that holds a non-string", () => {
     const document = { ...validDocument(), scopes_supported: ["openid", 1] };
 
-    expect(issuesOf(checkMetadata(document, ISSUER))[0]?.path).toEqual(["metadata", "scopes_supported"]);
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([
+      { code: "invalid_metadata", path: ["metadata", "scopes_supported"] },
+    ]);
   });
 
   it("collects every issue in one result", () => {

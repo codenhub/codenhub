@@ -47,10 +47,12 @@ describe("discover", () => {
   });
 
   it("removes a trailing slash from the issuer before adding the path", async () => {
-    const stub = stubFetch(() => jsonResponse(validDocument()));
+    const issuer = `${ISSUER}/`;
+    const stub = stubFetch(() => jsonResponse(validDocument(issuer)));
 
-    await discover(`${ISSUER}/`, { fetch: stub });
+    const result = await discover(issuer, { fetch: stub });
 
+    expect(result.ok).toBe(true);
     expect(requestedUrl(stub)).toBe(`${ISSUER}${DISCOVERY_PATH}`);
   });
 
