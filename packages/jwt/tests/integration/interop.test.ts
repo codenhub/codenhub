@@ -109,7 +109,7 @@ describe.each(ASYMMETRIC)("jose interop for %s", (alg) => {
 
     const result = await verifierFor(keySet)(token);
 
-    expect(result.ok && result.value.payload).toEqual(PAYLOAD);
+    expect(valueOf(result).payload).toEqual(PAYLOAD);
   });
 
   it("should produce a JWKS jose's local key set verifies with", async () => {

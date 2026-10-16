@@ -401,6 +401,15 @@ describe("importSecretKey", () => {
     expect(Object.isFrozen(valueOf(result))).toBe(true);
   });
 
+  it("should copy raw bytes without running a subclass's iterator", async () => {
+    class Hostile extends Uint8Array {
+      override [Symbol.iterator](): ArrayIterator<number> {
+        throw new Error("boom");
+      }
+    }
+    expect((await importSecretKey(new Hostile(32).fill(1), { alg: "HS256" })).ok).toBe(true);
+  });
+
   it("should report weak_key with minimum 32 for 31 raw bytes", async () => {
     expect(issuesOf(await importSecretKey(new Uint8Array(31), { alg: "HS256" }))).toEqual([
       { code: "weak_key", params: { minimum: 32 } },

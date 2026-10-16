@@ -80,6 +80,9 @@ describe("createRemoteKeySet options", () => {
     ["cooldown over cacheTtl", { cacheTtl: 10, cooldown: 11 }],
     ["maxStale -1", { maxStale: -1 }],
     ["maxStale as a string", { maxStale: "60" }],
+    ["maxStale null", { maxStale: null }],
+    ["cacheTtl null", { cacheTtl: null }],
+    ["timeout null", { timeout: null }],
     ["timeout 0", { timeout: 0 }],
     ["timeout 61", { timeout: 61 }],
     ["timeout NaN", { timeout: Number.NaN }],
@@ -93,8 +96,17 @@ describe("createRemoteKeySet options", () => {
     expect(() => createSet(options as Partial<RemoteKeySetOptions>)).toThrow(TypeError);
   });
 
-  it("should default cooldown to cacheTtl when cacheTtl is under 30 seconds", () => {
-    expect(() => createSet({ cacheTtl: 10 })).not.toThrow();
+  it("should default cooldown to cacheTtl when cacheTtl is under 30 seconds", async () => {
+    const clock = createClock();
+    const fetch = fetchSequence(() => new Response(null, { status: 503 }));
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 10 });
+    await keys.select(EC_HEADER);
+    clock.set(9);
+    await keys.select(EC_HEADER);
+    const callsBeforeCooldown = fetch.mock.calls.length;
+    clock.set(10);
+    await keys.select(EC_HEADER);
+    expect([callsBeforeCooldown, fetch.mock.calls.length]).toEqual([1, 2]);
   });
 
   it("should return a frozen key set", () => {

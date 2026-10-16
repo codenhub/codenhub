@@ -111,19 +111,19 @@ export function createVerifier<TSchema extends StandardSchemaV1 | undefined = un
  * included, becomes a `key_set_error` failure rather than an exception or an unchecked key.
  */
 async function selectKey(keys: KeySet, header: JwtHeader): Promise<JwtResult<VerificationKey>> {
-  let result: unknown;
   try {
-    result = await keys.select(header);
+    const result: unknown = await keys.select(header);
+    if (typeof result !== "object" || result === null) {
+      return KEY_SET_ERROR;
+    }
+    // Read inside the `try` as well: a getter or Proxy trap on the result can throw too.
+    const { ok: isOk, value, error } = result as { ok?: unknown; value?: unknown; error?: { issues?: unknown } };
+    if (isOk === true) {
+      return isRegisteredKey(value) && value.kind !== "private" ? ok(value) : KEY_SET_ERROR;
+    }
+    const issues = isOk === false ? error?.issues : undefined;
+    return Array.isArray(issues) && issues.length > 0 ? fail(...(issues as [JwtIssue, ...JwtIssue[]])) : KEY_SET_ERROR;
   } catch {
     return KEY_SET_ERROR;
   }
-  if (typeof result !== "object" || result === null) {
-    return KEY_SET_ERROR;
-  }
-  const { ok: isOk, value, error } = result as { ok?: unknown; value?: unknown; error?: { issues?: unknown } };
-  if (isOk === true) {
-    return isRegisteredKey(value) && value.kind !== "private" ? ok(value) : KEY_SET_ERROR;
-  }
-  const issues = isOk === false ? error?.issues : undefined;
-  return Array.isArray(issues) && issues.length > 0 ? fail(...(issues as [JwtIssue, ...JwtIssue[]])) : KEY_SET_ERROR;
 }

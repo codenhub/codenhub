@@ -168,8 +168,10 @@ function serializePayload(payload: unknown): string {
   return JSON.stringify(payload);
 }
 
+// `Array.prototype.every` is called directly, so an array's own `every` cannot vouch for its entries.
 const isAudience = (value: unknown): boolean =>
-  typeof value === "string" || (Array.isArray(value) && value.every((entry) => typeof entry === "string"));
+  typeof value === "string" ||
+  (Array.isArray(value) && Array.prototype.every.call(value, (entry) => typeof entry === "string"));
 
 /**
  * Throws unless `object` holds only values `JSON.stringify` writes exactly and the strict parser reads
@@ -194,6 +196,10 @@ function assertJsonObject(object: Record<string, unknown>, label: string): void 
 
 /** Lists the member values of a JSON container, throwing for anything else. */
 function childrenOf(container: unknown, label: string): readonly unknown[] {
+  // `JSON.stringify` runs an own `toJSON`, enumerable or not, so it would write a value never checked here.
+  if (typeof container === "object" && container !== null && Object.hasOwn(container, "toJSON")) {
+    throw new TypeError(`sign: ${label} must not hold toJSON methods.`);
+  }
   if (Array.isArray(container)) {
     return Array.from({ length: container.length }, (_, index) => ownDataValue(container, String(index), label));
   }

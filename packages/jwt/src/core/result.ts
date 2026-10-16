@@ -41,8 +41,8 @@ export function deepFreeze<T>(value: T): T {
   return value;
 }
 
-/** Wraps a value into a successful, deep-frozen result. */
+/** Wraps a value into a successful, deep-frozen result. The value is frozen in place, not copied. */
 export const ok = <T>(value: T): JwtOk<T> => deepFreeze({ ok: true, value });
 
-/** Builds a failed, deep-frozen result from one or more issues, kept in order. */
+/** Builds a failed, deep-frozen result from one or more issues, kept in order and frozen in place. */
 export const fail = (...issues: [JwtIssue, ...JwtIssue[]]): JwtErr => deepFreeze({ ok: false, error: { issues } });

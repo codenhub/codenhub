@@ -396,7 +396,8 @@ interface IntegerOption {
 }
 
 function readInteger(source: Record<string, unknown>, option: IntegerOption): number {
-  const value = source[option.name] ?? option.fallback;
+  const given = source[option.name];
+  const value = given === undefined ? option.fallback : given;
   const maximum = option.maximum ?? Number.MAX_SAFE_INTEGER;
   if (!Number.isSafeInteger(value) || (value as number) < option.minimum || (value as number) > maximum) {
     const range = option.maximum === undefined ? `at least ${option.minimum}` : `${option.minimum} through ${maximum}`;
@@ -406,7 +407,7 @@ function readInteger(source: Record<string, unknown>, option: IntegerOption): nu
 }
 
 function readTimeout(value: unknown): number {
-  const timeout = value ?? DEFAULT_TIMEOUT;
+  const timeout = value === undefined ? DEFAULT_TIMEOUT : value;
   if (typeof timeout !== "number" || !(timeout > 0) || timeout > MAX_TIMEOUT) {
     throw new TypeError(
       `createRemoteKeySet: options.timeout must be a number greater than 0 and at most ${MAX_TIMEOUT}.`,

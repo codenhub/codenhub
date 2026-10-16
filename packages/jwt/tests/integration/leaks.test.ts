@@ -25,7 +25,18 @@ import { base64Url, forge, segmentOf } from "./support";
 // Every input below carries this marker in each field an attacker controls. No result, issue, or error
 // message may contain it, nor its base64url forms, which a careless issue could echo as a segment.
 const MARKER = "LEAKMARKERq7Zx";
-const MARKERS = [MARKER, segmentOf(MARKER), segmentOf(` ${MARKER}`), segmentOf(`  ${MARKER}`)];
+
+/**
+ * The characters of the marker's base64url form that depend only on the marker, at each of the three byte
+ * alignments it can take inside a longer encoded string, such as a header or payload segment.
+ */
+const encodedMarkers = (): string[] =>
+  [0, 1, 2].map((offset) => {
+    const encoded = segmentOf(`${" ".repeat(offset)}${MARKER}`);
+    return encoded.slice(Math.ceil((offset * 4) / 3), Math.floor(((offset + MARKER.length) * 4) / 3));
+  });
+
+const MARKERS = [MARKER, ...encodedMarkers()];
 
 const leaked = (text: string): string[] => MARKERS.filter((marker) => text.includes(marker));
 

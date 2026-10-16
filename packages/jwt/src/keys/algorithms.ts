@@ -1,4 +1,4 @@
-import { JWS_ALGORITHMS } from "../core";
+import { deepFreeze, JWS_ALGORITHMS } from "../core";
 import type { AsymmetricAlgorithm, JwsAlgorithm } from "../core/types";
 
 /** JWK `kty` values this package understands. */
@@ -21,8 +21,11 @@ const SHA_256 = "SHA-256";
 const PS256_SALT_LENGTH = 32;
 const ED25519: AlgorithmParams = { kty: "OKP", crv: "Ed25519", importParams: "Ed25519", signParams: "Ed25519" };
 
-/** Web Crypto parameters for every supported JWS algorithm, shared by import, signing and verification. */
-export const ALGORITHM_PARAMS: Readonly<Record<JwsAlgorithm, AlgorithmParams>> = Object.freeze({
+/**
+ * Web Crypto parameters for every supported JWS algorithm, shared by import, signing and verification.
+ * Frozen deeply, since `EdDSA` and `Ed25519` share one row.
+ */
+export const ALGORITHM_PARAMS: Readonly<Record<JwsAlgorithm, AlgorithmParams>> = deepFreeze({
   ES256: {
     kty: "EC",
     crv: "P-256",

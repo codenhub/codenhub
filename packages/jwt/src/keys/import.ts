@@ -150,12 +150,14 @@ export async function importSecretKey(
   if (!(input instanceof Uint8Array)) {
     return importJwk(input, { alg, role: "secret", isExtractable }, buildKey);
   }
-  if (input.length < MIN_HMAC_KEY_BYTES) {
+  // Copied from the typed array's own bytes: a subclass's iterator or `length` getter is never run.
+  const bytes = new Uint8Array(input);
+  if (bytes.length < MIN_HMAC_KEY_BYTES) {
     return fail({ code: "weak_key", params: { minimum: MIN_HMAC_KEY_BYTES } });
   }
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
-    Uint8Array.from(input),
+    bytes,
     ALGORITHM_PARAMS.HS256.importParams,
     isExtractable,
     USAGES.secret,

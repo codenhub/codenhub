@@ -7,6 +7,9 @@ import { createVerifier } from "./create-verifier";
 const keys: KeySet = { select: async () => fail({ code: "no_matching_key" }) };
 const schema = { "~standard": { version: 1, vendor: "test", validate: () => ({ value: {} }) } };
 
+/** An array of length 1 holding no element: a hole that `every` skips. */
+const sparseArray = (): unknown[] => Object.assign([], { length: 1 });
+
 /** One test case per invalid value of an option, with the TypeError message it must produce. */
 const casesOf = (name: string, constraint: string, values: readonly unknown[]): [string, unknown, string][] =>
   values.map((value) => [name, value, `createVerifier: options.${name} ${constraint}`]);
@@ -36,7 +39,7 @@ describe("createVerifier options", () => {
   );
 
   it.each([
-    ...casesOf("type", "must be a non-empty string.", ["", 1]),
+    ...casesOf("type", "must be a non-empty string other than application/.", ["", 1, "application/", "APPLICATION/"]),
     ...casesOf("clockTolerance", "must be an integer number of seconds from 0 through 300.", [
       -1,
       301,
@@ -46,12 +49,13 @@ describe("createVerifier options", () => {
     ]),
     ...casesOf("maxAge", "must be a positive integer number of seconds.", [0, -1, 1.5, "60", Number.POSITIVE_INFINITY]),
     ...casesOf("maxLength", "must be an integer from 1 through 65536.", [0, 65_537, 100.5, "100"]),
-    ...casesOf("requiredClaims", "must be an array of non-empty strings.", ["sub", [""], ["sub", 1]]),
-    ...casesOf("claims", "must be a Standard Schema (version 1, with a validate function).", [
+    ...casesOf("requiredClaims", "must be an array of non-empty strings.", ["sub", [""], ["sub", 1], sparseArray()]),
+    ...casesOf("claims", "must be a Standard Schema (version 1, with a vendor and a validate function).", [
       {},
       { "~standard": null },
-      { "~standard": { version: 2, validate: () => ({ value: {} }) } },
-      { "~standard": { version: 1, validate: "x" } },
+      { "~standard": { version: 2, vendor: "test", validate: () => ({ value: {} }) } },
+      { "~standard": { version: 1, vendor: "test", validate: "x" } },
+      { "~standard": { version: 1, validate: () => ({ value: {} }) } },
       "schema",
     ]),
     ...casesOf("now", "must be a function returning milliseconds.", [1_800_000_000_000]),
@@ -76,7 +80,16 @@ describe("createVerifier options", () => {
     ).toBe("function");
   });
 
-  it("should accept a clockTolerance of 0 and a maxLength of 1", () => {
-    expect(typeof createVerifier({ keys, clockTolerance: 0, maxLength: 1 })).toBe("function");
+  it("should apply a maxLength of 1: a 1-character token is parsed, a 2-character one is too_large", async () => {
+    const verify = createVerifier({ keys, clockTolerance: 0, maxLength: 1 });
+    const codeOf = async (token: string) => {
+      const result = await verify(token);
+      return result.ok ? "ok" : result.error.issues[0].code;
+    };
+    expect([await codeOf("a"), await codeOf("ab")]).toEqual(["malformed", "too_large"]);
+  });
+
+  it("should throw when issuer is a sparse array", () => {
+    expect(() => createVerifier({ keys, issuer: sparseArray() as string[] })).toThrow(TypeError);
   });
 });

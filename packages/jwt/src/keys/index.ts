@@ -3,6 +3,7 @@ export {
   ASYMMETRIC_ALGORITHMS,
   compatibleAlgorithms,
   isAsymmetricAlgorithm,
+  ownDataValue,
   type AlgorithmParams,
 } from "./algorithms";
 export { exportPrivateJwk, exportPublicJwk, exportSecretJwk } from "./export";

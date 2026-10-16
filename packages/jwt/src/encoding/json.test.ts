@@ -177,7 +177,7 @@ describe("parseJsonObject", () => {
     });
 
     it("should reject names that are equal once their escapes are decoded", () => {
-      expect(parse(String.raw`{"a":1,"a":2}`)).toEqual(DUPLICATE_KEY);
+      expect(parse(String.raw`{"\u0061":1,"a":2}`)).toEqual(DUPLICATE_KEY);
     });
 
     it("should reject a repeated __proto__", () => {

@@ -18,10 +18,11 @@ export function requireAsymmetricAlg(options: Record<string, unknown>, functionN
 }
 
 export function requireSymmetricAlg(options: Record<string, unknown>, functionName: string): SymmetricAlgorithm {
-  if (options.alg !== "HS256") {
+  const { alg } = options;
+  if (alg !== "HS256") {
     throw new TypeError(`${functionName}: options.alg must be HS256.`);
   }
-  return options.alg;
+  return alg;
 }
 
 export function readExtractable(options: Record<string, unknown>, functionName: string): boolean {

@@ -50,8 +50,8 @@ export function resolveOptions(options: VerifierOptions<StandardSchemaV1 | undef
   if (typeof keys !== "object" || keys === null || typeof keys.select !== "function") {
     throwInvalid("options.keys must be a key set (an object with a select function).");
   }
-  if (type !== undefined && !isNonEmptyString(type)) {
-    throwInvalid("options.type must be a non-empty string.");
+  if (type !== undefined && !(isNonEmptyString(type) && normalizeType(type) !== "")) {
+    throwInvalid("options.type must be a non-empty string other than application/.");
   }
   if (clockTolerance !== undefined && !isIntegerInRange(clockTolerance, 0, MAX_CLOCK_TOLERANCE)) {
     throwInvalid(`options.clockTolerance must be an integer number of seconds from 0 through ${MAX_CLOCK_TOLERANCE}.`);
@@ -88,21 +88,27 @@ function readStringList(value: unknown, name: string): readonly string[] | undef
     return undefined;
   }
   const list: unknown = typeof value === "string" ? [value] : value;
-  if (!Array.isArray(list) || list.length === 0 || !list.every(isNonEmptyString)) {
+  const copy = Array.isArray(list) ? denseCopy(list) : undefined;
+  if (copy === undefined || copy.length === 0 || !copy.every(isNonEmptyString)) {
     throwInvalid(`options.${name} must be a non-empty string or a non-empty array of non-empty strings.`);
   }
-  return Object.freeze([...(list as string[])]);
+  return Object.freeze(copy as string[]);
 }
 
 function readRequiredClaims(value: unknown): readonly string[] {
   if (value === undefined) {
     return [];
   }
-  if (!Array.isArray(value) || !value.every(isNonEmptyString)) {
+  const copy = Array.isArray(value) ? denseCopy(value) : undefined;
+  if (copy === undefined || !copy.every(isNonEmptyString)) {
     throwInvalid("options.requiredClaims must be an array of non-empty strings.");
   }
-  return Object.freeze([...(value as string[])]);
+  return Object.freeze(copy as string[]);
 }
+
+/** Copies an array by index, so a hole becomes `undefined` and fails the element check instead of being skipped. */
+const denseCopy = (array: readonly unknown[]): unknown[] =>
+  Array.from({ length: array.length }, (_, index) => array[index]);
 
 function readSchema(value: unknown): StandardSchemaV1 | undefined {
   if (value === undefined) {
@@ -117,9 +123,10 @@ function readSchema(value: unknown): StandardSchemaV1 | undefined {
     typeof props !== "object" ||
     props === null ||
     (props as Record<string, unknown>).version !== 1 ||
+    typeof (props as Record<string, unknown>).vendor !== "string" ||
     typeof (props as Record<string, unknown>).validate !== "function"
   ) {
-    throwInvalid("options.claims must be a Standard Schema (version 1, with a validate function).");
+    throwInvalid("options.claims must be a Standard Schema (version 1, with a vendor and a validate function).");
   }
   return value as StandardSchemaV1;
 }

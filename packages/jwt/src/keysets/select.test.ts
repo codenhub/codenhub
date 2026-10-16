@@ -5,6 +5,7 @@ import { generateKeyPair, generateSecretKey } from "../keys";
 import { selectKey } from "./select";
 
 let ecA: PublicKey;
+let ecATwin: PublicKey;
 let ecB: PublicKey;
 let edA: PublicKey;
 let ecNoKid: PublicKey;
@@ -12,7 +13,8 @@ let ecNoKidOther: PublicKey;
 let secretA: SecretKey;
 
 beforeAll(async () => {
-  [ecA, ecB, edA, ecNoKid, ecNoKidOther, secretA] = await Promise.all([
+  [ecA, ecATwin, ecB, edA, ecNoKid, ecNoKidOther, secretA] = await Promise.all([
+    generateKeyPair({ alg: "ES256", kid: "a" }).then((pair) => pair.publicKey),
     generateKeyPair({ alg: "ES256", kid: "a" }).then((pair) => pair.publicKey),
     generateKeyPair({ alg: "ES256", kid: "b" }).then((pair) => pair.publicKey),
     generateKeyPair({ alg: "EdDSA", kid: "a" }).then((pair) => pair.publicKey),
@@ -51,10 +53,19 @@ describe("selectKey with a kid", () => {
   });
 
   it("should report ambiguous_key when two keys share the kid and alg", () => {
-    expect(selectKey([ecA, ecA], header({ alg: "ES256", kid: "a" }))).toEqual({
+    expect(selectKey([ecA, ecATwin], header({ alg: "ES256", kid: "a" }))).toEqual({
       ok: false,
       error: { issues: [{ code: "ambiguous_key" }] },
     });
+  });
+
+  it("should report no_matching_key when reading the header throws", () => {
+    const hostile = new Proxy({} as JwtHeader, {
+      get: () => {
+        throw new Error("boom");
+      },
+    });
+    expect(selectKey([ecA], hostile)).toEqual({ ok: false, error: { issues: [{ code: "no_matching_key" }] } });
   });
 
   it("should select the secret key for an HS256 header when a public key shares its kid", () => {

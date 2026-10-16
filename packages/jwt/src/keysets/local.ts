@@ -6,6 +6,7 @@ import {
   getKeyEntry,
   importPublicKey,
   isAsymmetricAlgorithm,
+  ownDataValue,
 } from "../keys";
 import { selectKey } from "./select";
 
@@ -46,8 +47,10 @@ export function createKeySet(keys: readonly VerificationKey[]): KeySet {
   if (!Array.isArray(keys) || keys.length === 0) {
     throw new TypeError("createKeySet: keys must be a non-empty array.");
   }
+  // Copied once, by index, so the set holds exactly the keys checked below.
+  const snapshot: readonly unknown[] = Array.from({ length: keys.length }, (_, index) => keys[index]);
   const seen = new Set<string>();
-  for (const key of keys as readonly unknown[]) {
+  for (const key of snapshot) {
     getKeyEntry(key);
     const { kind, kid, alg } = key as VerificationKey | { kind: "private"; kid?: string; alg: string };
     if (kind === "private") {
@@ -59,7 +62,7 @@ export function createKeySet(keys: readonly VerificationKey[]): KeySet {
     }
     seen.add(identity);
   }
-  return keySetOf(Object.freeze([...keys]));
+  return keySetOf(Object.freeze(snapshot as VerificationKey[]));
 }
 
 /**
@@ -152,14 +155,16 @@ function readEntries(jwks: unknown): JwtResult<readonly unknown[]> {
     if (typeof jwks !== "object" || jwks === null || Array.isArray(jwks)) {
       return MALFORMED_JWKS;
     }
-    const keys = ownValue(jwks, "keys");
+    const keys = ownDataValue(jwks, "keys");
     if (!Array.isArray(keys)) {
       return MALFORMED_KEYS;
     }
-    if (keys.length > MAX_JWKS_KEYS) {
+    const length = keys.length;
+    if (length > MAX_JWKS_KEYS) {
       return TOO_MANY_KEYS;
     }
-    return Object.freeze({ ok: true as const, value: Array.from(keys as unknown[]) });
+    // Copied by index: an array's own iterator could yield more entries than its checked length.
+    return Object.freeze({ ok: true as const, value: Array.from({ length }, (_, index): unknown => keys[index]) });
   } catch {
     // A hostile Proxy or getter can throw from any read; such a JWKS is not one this package understands.
     return MALFORMED_JWKS;
@@ -172,7 +177,7 @@ function bindableAlgorithms(jwk: unknown, algorithms: ReadonlySet<AsymmetricAlgo
     if (typeof jwk !== "object" || jwk === null) {
       return [];
     }
-    const alg = ownValue(jwk, "alg");
+    const alg = ownDataValue(jwk, "alg");
     if (alg !== undefined) {
       return isAsymmetricAlgorithm(alg) && algorithms.has(alg) ? [alg] : [];
     }
@@ -182,10 +187,4 @@ function bindableAlgorithms(jwk: unknown, algorithms: ReadonlySet<AsymmetricAlgo
   } catch {
     return [];
   }
-}
-
-/** Reads an own data property without running getters. */
-function ownValue(target: object, name: string): unknown {
-  const descriptor = Object.getOwnPropertyDescriptor(target, name);
-  return descriptor !== undefined && "value" in descriptor ? descriptor.value : undefined;
 }

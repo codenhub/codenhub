@@ -157,7 +157,7 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
  * runtime that lacks an algorithm reports the exact error it threw.
  */
 export async function runScenario(module: Jwt, name: string): Promise<string> {
-  const scenario = scenarios[name];
+  const scenario = Object.hasOwn(scenarios, name) ? scenarios[name] : undefined;
   if (scenario === undefined) {
     return `no scenario named ${name}`;
   }

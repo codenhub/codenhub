@@ -47,9 +47,10 @@ export function checkClaims(header: JwtHeader, payload: JwtPayload, options: Res
   if (options.type !== undefined && (header.typ === undefined || normalizeType(header.typ) !== options.type)) {
     issues.push({ code: "wrong_type", path: ["header", "typ"] });
   }
+  const reported = new Set(issues.flatMap((issue) => (issue.code === "missing_claim" ? [issue.params?.claim] : [])));
   for (const claim of options.requiredClaims) {
-    const isReported = issues.some((issue) => issue.code === "missing_claim" && issue.params?.claim === claim);
-    if (!claims.present(claim) && !isReported) {
+    if (!claims.present(claim) && !reported.has(claim)) {
+      reported.add(claim);
       issues.push(missing(claim));
     }
   }

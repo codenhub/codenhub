@@ -228,9 +228,19 @@ describe("sign TypeError", () => {
     ["a number", 1],
     ["an array holding a number", ["a", 1]],
     ["null", null],
+    ["an array whose own every vouches for a number", Object.assign([1], { every: () => true })],
   ])("should throw when aud is %s", async (_, aud) => {
     await expect(sign({ payload: { aud } as never, key: secretKey })).rejects.toThrow(
       "sign: input.payload.aud must be a string or an array of strings.",
+    );
+  });
+
+  it.each([
+    ["an array", () => Object.defineProperty(["a"], "toJSON", { value: () => ["b"] })],
+    ["an object, non-enumerable", () => Object.defineProperty({ a: 1 }, "toJSON", { value: () => ({ b: 2 }) })],
+  ])("should throw when the payload holds %s with an own toJSON", async (_, make) => {
+    await expect(sign({ payload: { claim: make() }, key: secretKey })).rejects.toThrow(
+      "sign: input.payload must not hold toJSON methods.",
     );
   });
 });

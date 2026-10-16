@@ -246,6 +246,14 @@ describe("createVerifier key set", () => {
     ["returns undefined", async () => undefined],
     ["returns a failure without issues", async () => ({ ok: false, error: { issues: [] } })],
     [
+      "returns a result whose ok getter throws",
+      async () => ({
+        get ok() {
+          throw new Error("boom");
+        },
+      }),
+    ],
+    [
       "returns a look-alike key",
       async () => ({ ok: true, value: { kind: "secret", alg: "HS256", extractable: false } }),
     ],

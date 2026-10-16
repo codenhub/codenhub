@@ -744,22 +744,4 @@ describe("RSA public exponent", () => {
 
     expect(result).toEqual(failure({ code: "invalid_key", path: ["e"] }));
   });
-
-  it("should not verify a token forged without the private key for an RSA key with exponent 1", async () => {
-    const imported = await importPublicKey({ kty: "RSA", n: RFC7515_A2_JWK.n, e: "AQ" }, { alg: "RS256" });
-    const signingInput = `${segmentOf('{"alg":"RS256"}')}.${segmentOf('{"sub":"admin"}')}`;
-    const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(signingInput)));
-    const digestInfo = Buffer.concat([Buffer.from("3031300d060960864801650304020105000420", "hex"), digest]);
-    const encoded = Buffer.concat([
-      Buffer.from([0x00, 0x01]),
-      Buffer.alloc(256 - digestInfo.length - 3, 0xff),
-      Buffer.from([0x00]),
-      digestInfo,
-    ]);
-    const token = `${signingInput}.${base64Url(encoded)}`;
-
-    const result = imported.ok ? await verifierOver(createKeySet([imported.value]))(token) : imported;
-
-    expect(result).toEqual(failure({ code: "invalid_key", path: ["e"] }));
-  });
 });

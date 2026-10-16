@@ -11,5 +11,5 @@
   },
   "extends": "../../tsconfig.json",
   "include": ["src/**/*"],
-  "exclude": ["src/**/*.test.ts", "src/test-utils.ts"]
+  "exclude": ["src/**/*.test.ts", "src/keys/test-fixtures.ts", "src/verify/test-support.ts"]
 }

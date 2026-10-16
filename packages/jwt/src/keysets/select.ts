@@ -18,7 +18,14 @@ export function selectKey(keys: readonly VerificationKey[], header: JwtHeader): 
   if (typeof header !== "object" || header === null) {
     return NO_MATCHING_KEY;
   }
-  const { alg, kid } = header;
+  let alg: unknown;
+  let kid: unknown;
+  try {
+    ({ alg, kid } = header);
+  } catch {
+    // A getter or Proxy trap on a caller's header can throw; no key matches such a header.
+    return NO_MATCHING_KEY;
+  }
   if (kid !== undefined) {
     const candidates = keys.filter((key) => key.kid === kid);
     if (candidates.length === 0) {
