@@ -1,0 +1,81 @@
+{
+  "name": "@codenhub/oidc",
+  "version": "0.0.1",
+  "private": false,
+  "description": "OpenID Connect for both sides: a relying-party client and an OpenID Provider on the Fetch API, built on @codenhub/jwt.",
+  "homepage": "https://github.com/codenhub/codenhub/tree/main/packages/oidc",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codenhub/codenhub.git",
+    "directory": "packages/oidc"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "llms.txt",
+    "llms-full.txt"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js",
+      "default": "./dist/client.js"
+    },
+    "./provider": {
+      "types": "./dist/provider.d.ts",
+      "import": "./dist/provider.js",
+      "default": "./dist/provider.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "default": "./dist/testing.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts src/client.ts src/provider.ts src/testing.ts --tsconfig tsconfig.src.json --format esm --dts --clean --no-fixed-extension",
+    "prepublishOnly": "pnpm build && pnpm typecheck",
+    "status:npm": "npm view @codenhub/oidc version dist-tags time --json && npm dist-tag ls @codenhub/oidc && npm access get status @codenhub/oidc",
+    "status:pack": "npm pack --dry-run --ignore-scripts",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "@codenhub/jwt": "catalog:",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "miniflare": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@codenhub/jwt": "^0.0.1"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "codenhub": {
+    "docs": {
+      "label": "OidcKit",
+      "status": "experimental"
+    }
+  }
+}
