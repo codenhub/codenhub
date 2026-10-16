@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AsymmetricAlgorithm } from "../core/types";
 import { decodeBase64Url, encodeBase64Url } from "../encoding";
+import { exportSecretJwk } from "./export";
 import { importPrivateKey, importPublicKey, importSecretKey } from "./import";
 import { getKeyEntry } from "./registry";
 import {
@@ -407,7 +408,25 @@ describe("importSecretKey", () => {
         throw new Error("boom");
       }
     }
-    expect((await importSecretKey(new Hostile(32).fill(1), { alg: "HS256" })).ok).toBe(true);
+    const result = await importSecretKey(new Hostile(32).fill(1), { alg: "HS256", extractable: true });
+    expect(result.ok).toBe(true);
+    expect(encodeBase64Url(new Uint8Array(32).fill(1))).toBe((await exportSecretJwk(valueOf(result))).k);
+  });
+
+  it("should report invalid_key without throwing for a detached Uint8Array", async () => {
+    const u = new Uint8Array(32).fill(1);
+    structuredClone(u.buffer, { transfer: [u.buffer] });
+    const result = await importSecretKey(u, { alg: "HS256" });
+    expect(result.ok).toBe(false);
+    expect(issuesOf(result)).toEqual([{ code: "invalid_key" }]);
+  });
+
+  it("should report invalid_key without throwing for a revoked Proxy", async () => {
+    const { proxy, revoke } = Proxy.revocable({}, {});
+    revoke();
+    const result = await importSecretKey(proxy, { alg: "HS256" });
+    expect(result.ok).toBe(false);
+    expect(issuesOf(result)).toEqual([{ code: "invalid_key" }]);
   });
 
   it("should report weak_key with minimum 32 for 31 raw bytes", async () => {

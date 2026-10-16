@@ -173,7 +173,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
 
   /** The keys to select from now, or why there are none. */
   const usableKeys = (): JwtResult<readonly VerificationKey[]> => {
-    if (cached !== undefined && config.now() <= cached.expiresAt + config.maxStaleMs) {
+    if (cached !== undefined && config.now() < cached.expiresAt + config.maxStaleMs) {
       return ok(cached.keys);
     }
     return lastFailure ?? fetchFailure("network");
@@ -182,6 +182,13 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
   const select = async (header: JwtHeader): Promise<JwtResult<VerificationKey>> => {
     let hasFetched = false;
     if (inFlight !== undefined) {
+      // A fresh cache that holds the key needs no wait for the fetch that is running.
+      if (cached !== undefined && config.now() < cached.expiresAt) {
+        const selected = selectKey(cached.keys, header);
+        if (!isUnknownKid(selected)) {
+          return selected;
+        }
+      }
       await inFlight;
       hasFetched = true;
     } else if (cached === undefined || config.now() >= cached.expiresAt) {

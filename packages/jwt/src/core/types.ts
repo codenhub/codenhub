@@ -46,8 +46,9 @@ export type JwtIssueCode =
  *
  * An issue this package creates never holds a value taken from the input: no token segment, claim value,
  * header value, or key material. It names which check failed and, where useful, the limit or the claim the
- * check used. An `invalid_claims` path is the caller's schema path, and a custom key set's issues are
- * passed through, so those hold only what the caller's code puts in them.
+ * check used. An `invalid_claims` path is whatever the caller's schema reports, which for a record-style
+ * schema can include claim names from the token. A custom key set's issues are passed through, so those
+ * hold only what the caller's code puts in them.
  */
 export interface JwtIssue {
   /** Stable failure category. */

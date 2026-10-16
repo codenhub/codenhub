@@ -147,11 +147,19 @@ export async function importSecretKey(
     ...kidMember(kid),
     extractable: isExtractable,
   });
-  if (!(input instanceof Uint8Array)) {
+  let bytes: Uint8Array<ArrayBuffer> | undefined;
+  try {
+    // Copied from the typed array's own bytes: a subclass's iterator or `length` getter is never run.
+    if (input instanceof Uint8Array) {
+      bytes = new Uint8Array(input);
+    }
+  } catch {
+    // A revoked Proxy throws on `instanceof`; a detached buffer throws on the copy.
+    return fail({ code: "invalid_key" });
+  }
+  if (bytes === undefined) {
     return importJwk(input, { alg, role: "secret", isExtractable }, buildKey);
   }
-  // Copied from the typed array's own bytes: a subclass's iterator or `length` getter is never run.
-  const bytes = new Uint8Array(input);
   if (bytes.length < MIN_HMAC_KEY_BYTES) {
     return fail({ code: "weak_key", params: { minimum: MIN_HMAC_KEY_BYTES } });
   }

@@ -89,6 +89,26 @@ describe("createVerifier options", () => {
     expect([await codeOf("a"), await codeOf("ab")]).toEqual(["malformed", "too_large"]);
   });
 
+  it("should apply the default maxLength of 8192 at its boundary, before parsing", async () => {
+    const verify = createVerifier({ keys });
+    const codeOf = async (token: string) => {
+      const result = await verify(token);
+      return result.ok ? "ok" : result.error.issues[0].code;
+    };
+    expect(await codeOf("a".repeat(8192))).not.toBe("too_large");
+    expect(await codeOf("a".repeat(8193))).toBe("too_large");
+  });
+
+  it("should apply the maxLength ceiling of 65536 at its boundary, before parsing", async () => {
+    const verify = createVerifier({ keys, maxLength: 65_536 });
+    const codeOf = async (token: string) => {
+      const result = await verify(token);
+      return result.ok ? "ok" : result.error.issues[0].code;
+    };
+    expect(await codeOf("a".repeat(65_536))).not.toBe("too_large");
+    expect(await codeOf("a".repeat(65_537))).toBe("too_large");
+  });
+
   it("should throw when issuer is a sparse array", () => {
     expect(() => createVerifier({ keys, issuer: sparseArray() as string[] })).toThrow(TypeError);
   });

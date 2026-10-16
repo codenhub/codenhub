@@ -243,6 +243,29 @@ describe("createRemoteKeySet unknown kid", () => {
     clock.set(30);
     expect(await keys.select(ED_HEADER)).toEqual(failure({ reason: "status", status: 503 }));
   });
+
+  it("should select a known kid from a fresh cache without waiting for a refetch for an unknown kid", async () => {
+    const clock = createClock();
+    let finishRefetch: (response: Response) => void = () => undefined;
+    const fetch = fetchSequence(
+      () => jwksResponse(EC_JWK),
+      () =>
+        new Promise<Response>((resolve) => {
+          finishRefetch = resolve;
+        }),
+    );
+    const keys = createSet({ fetch, now: clock.now, cooldown: 30 });
+    await keys.select(EC_HEADER);
+    clock.set(30);
+    const unknown = keys.select(ED_HEADER);
+    const outcome = await Promise.race([
+      keys.select(EC_HEADER).then(describeSelection),
+      new Promise<string>((resolve) => setTimeout(() => resolve("still waiting"), 0)),
+    ]);
+    expect(outcome).toEqual({ alg: "ES256", kid: "ec" });
+    finishRefetch(jwksResponse(EC_JWK, ED_JWK));
+    expect(describeSelection(await unknown)).toEqual({ alg: "EdDSA", kid: "ed" });
+  });
 });
 
 describe("createRemoteKeySet failures", () => {
@@ -372,7 +395,7 @@ describe("createRemoteKeySet stale keys", () => {
     const clock = createClock();
     const keys = createSet({ fetch: flapping(), now: clock.now, cacheTtl: 600, maxStale: 3600 });
     await keys.select(EC_HEADER);
-    clock.set(600 + 3600);
+    clock.set(600 + 3599);
     expect(describeSelection(await keys.select(EC_HEADER))).toEqual({ alg: "ES256", kid: "ec" });
   });
 
@@ -380,7 +403,7 @@ describe("createRemoteKeySet stale keys", () => {
     const clock = createClock();
     const keys = createSet({ fetch: flapping(), now: clock.now, cacheTtl: 600, maxStale: 3600 });
     await keys.select(EC_HEADER);
-    clock.set(600 + 3601);
+    clock.set(600 + 3600);
     expect(await keys.select(EC_HEADER)).toEqual(failure({ reason: "status", status: 503 }));
   });
 
@@ -389,6 +412,14 @@ describe("createRemoteKeySet stale keys", () => {
     const keys = createSet({ fetch: flapping(), now: clock.now, cacheTtl: 600, maxStale: 0 });
     await keys.select(EC_HEADER);
     clock.set(601);
+    expect(await keys.select(EC_HEADER)).toEqual(failure({ reason: "status", status: 503 }));
+  });
+
+  it("should never serve an expired JWKS at the instant it expires when maxStale is 0", async () => {
+    const clock = createClock();
+    const keys = createSet({ fetch: flapping(), now: clock.now, cacheTtl: 600, maxStale: 0 });
+    await keys.select(EC_HEADER);
+    clock.set(600);
     expect(await keys.select(EC_HEADER)).toEqual(failure({ reason: "status", status: 503 }));
   });
 

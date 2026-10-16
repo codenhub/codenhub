@@ -92,8 +92,8 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 | `unexpected_private_key` | a JWK member               |                                        | A public import holds a private member.                                                                       |
 | `wrong_use`              | `["use"]` or `["key_ops"]` |                                        | `use` is not `sig`, or `key_ops` does not allow the operation the key is imported for.                        |
 | `alg_mismatch`           | `["alg"]`                  |                                        | The JWK's `alg` names another algorithm than the one you asked for.                                           |
-
-| `malformed` | none, or `["keys"]` | | From `importKeySet`: the JWKS is not an object (no path), or its `keys` is not an array (`["keys"]`). | | `too_large` | none | `{ limit: "keys", maximum: 100 }` | From `importKeySet`: the JWKS lists more than 100 keys. |
+| `malformed`              | none, or `["keys"]`        |                                        | From `importKeySet`: the JWKS is not an object (no path), or its `keys` is not an array (`["keys"]`).         |
+| `too_large`              | none                       | `{ limit: "keys", maximum: 100 }`      | From `importKeySet`: the JWKS lists more than 100 keys.                                                       |
 
 `importKeySet` and `createRemoteKeySet` skip JWKs that fail these checks instead of reporting them. [Keys](keys.md#importing-a-public-key) describes each check.
 

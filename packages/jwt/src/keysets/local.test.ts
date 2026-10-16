@@ -202,13 +202,12 @@ describe("importKeySet", () => {
   it("should copy keys by index, never running the array's own iterator", async () => {
     const keys = [EC_P256_PUBLIC_JWK];
     Object.defineProperty(keys, Symbol.iterator, {
-      value: function* () {
-        for (;;) {
-          yield EC_P256_PUBLIC_JWK;
-        }
+      value: () => {
+        throw new Error("the array's iterator must not run");
       },
     });
-    expect((await importKeySet({ keys })).ok).toBe(true);
+    const result = await importKeySet({ keys });
+    expect(result.ok && (await result.value.select({ alg: "ES256" })).ok).toBe(true);
   });
 
   it("should accept exactly 100 keys", async () => {
