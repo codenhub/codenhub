@@ -27,7 +27,9 @@ function check(condition: boolean, what: string, actual: unknown): void {
 
 /** Verifies `token` with `key` and checks it carries the payload and algorithm it was signed with. */
 async function expectVerified(module: Jwt, token: string, key: jwt.VerificationKey, alg: Algorithm): Promise<void> {
-  const result = await module.createVerifier({ keys: module.createKeySet([key]) })(token);
+  const result = await module.createVerifier({
+    keys: module.createKeySet([key]),
+  })(token);
   check(result.ok, "verification failed", result);
   if (result.ok) {
     check(result.value.header.alg === alg, "wrong alg", result.value.header);
@@ -43,9 +45,39 @@ async function expectRefused(
   code: jwt.JwtIssueCode,
   path?: readonly string[],
 ): Promise<void> {
-  const result = await module.createVerifier({ keys: module.createKeySet([key]) })(token);
-  const expected = { ok: false, error: { issues: [path === undefined ? { code } : { code, path }] } };
+  const result = await module.createVerifier({
+    keys: module.createKeySet([key]),
+  })(token);
+  const expected = {
+    ok: false,
+    error: { issues: [path === undefined ? { code } : { code, path }] },
+  };
   check(JSON.stringify(result) === JSON.stringify(expected), `expected ${JSON.stringify(expected)}`, result);
+}
+
+/**
+ * Generates a key pair, retrying Ed25519 generation that Linux WebKit's libgcrypt backend fails with
+ * `OperationError` when the new key's `d` or `x` starts with a zero byte (about 1 call in 128). The
+ * trap in packages/jwt/AGENTS.md has the evidence and says when this can go.
+ */
+async function generatePair(module: Jwt, alg: (typeof ASYMMETRIC)[number], extractable = false): Promise<jwt.KeyPair> {
+  const retries = (alg === "EdDSA" || alg === "Ed25519") && isLinuxWebKit() ? 3 : 0;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      // Each attempt runs only after the previous one failed.
+      // oxlint-disable-next-line no-await-in-loop
+      return await module.generateKeyPair({ alg, extractable });
+    } catch (error) {
+      if (attempt >= retries || !(error instanceof Error) || error.name !== "OperationError") {
+        throw error;
+      }
+    }
+  }
+}
+
+function isLinuxWebKit(): boolean {
+  const agent = globalThis.navigator?.userAgent ?? "";
+  return agent.includes("Linux") && agent.includes("AppleWebKit") && !agent.includes("Chrome");
 }
 
 /** A signing key and the key that verifies it, for any algorithm. */
@@ -58,7 +90,7 @@ async function keysFor(
     const secret = await module.generateSecretKey({ alg, extractable });
     return { signing: secret, verifying: secret };
   }
-  const pair = await module.generateKeyPair({ alg, extractable });
+  const pair = await generatePair(module, alg, extractable);
   return { signing: pair.privateKey, verifying: pair.publicKey };
 }
 
@@ -80,7 +112,10 @@ const jwkRoundtrips = Object.fromEntries(
     `${alg} JWK export and import`,
     async (module) => {
       if (alg === "HS256") {
-        const secret = await module.generateSecretKey({ alg, extractable: true });
+        const secret = await module.generateSecretKey({
+          alg,
+          extractable: true,
+        });
         const imported = await module.importSecretKey(await module.exportSecretJwk(secret), { alg });
         check(imported.ok, "secret import failed", imported);
         if (imported.ok) {
@@ -88,7 +123,7 @@ const jwkRoundtrips = Object.fromEntries(
         }
         return;
       }
-      const pair = await module.generateKeyPair({ alg, extractable: true });
+      const pair = await generatePair(module, alg, true);
       const privateKey = await module.importPrivateKey(await module.exportPrivateJwk(pair.privateKey), { alg });
       const publicKey = await module.importPublicKey(await module.exportPublicJwk(pair.publicKey), { alg });
       check(privateKey.ok, "private import failed", privateKey);
@@ -112,6 +147,48 @@ const jwkRoundtrips = Object.fromEntries(
   ]),
 );
 
+/*
+ * Ed25519 keys whose `d` or `x` starts with a zero byte, the keys Linux WebKit's libgcrypt backend cannot
+ * generate (packages/jwt/AGENTS.md). Imported from a JWK they must still sign and verify. Test keys only.
+ */
+const LEADING_ZERO_JWKS = {
+  d: {
+    kty: "OKP",
+    crv: "Ed25519",
+    x: "IXrb5y4gcDKi6QL8it18SajsJcRPrscBDPxUlgEcpPI",
+    d: "ABtcYTg6wRtEwtEbyoZNuObWNwSBReWBtnldrQ8NxdE",
+  },
+  x: {
+    kty: "OKP",
+    crv: "Ed25519",
+    x: "ACBNPndAhP1WgHLj62LeKUTiL-HspGlJ2pC3n1yimEY",
+    d: "Ti8tZYiLQsQCeGliDH8skQZa5PwP5eFtYY8JrDUoLmY",
+  },
+} as const;
+
+const leadingZeroImports = Object.fromEntries(
+  Object.entries(LEADING_ZERO_JWKS).map(([member, jwk]): [string, Scenario] => [
+    `Ed25519 JWK with a leading zero byte in ${member} imports, signs and verifies`,
+    async (module) => {
+      const publicJwk = { kty: jwk.kty, crv: jwk.crv, x: jwk.x };
+      const privateKey = await module.importPrivateKey(jwk, { alg: "Ed25519" });
+      const publicKey = await module.importPublicKey(publicJwk, {
+        alg: "Ed25519",
+      });
+      check(privateKey.ok, "private import failed", privateKey);
+      check(publicKey.ok, "public import failed", publicKey);
+      if (privateKey.ok && publicKey.ok) {
+        await expectVerified(
+          module,
+          await module.sign({ payload: PAYLOAD, key: privateKey.value }),
+          publicKey.value,
+          "Ed25519",
+        );
+      }
+    },
+  ]),
+);
+
 const tamperedSignatures = Object.fromEntries(
   ALGORITHMS.map((alg): [string, Scenario] => [
     `${alg} tampered signature is refused`,
@@ -129,6 +206,7 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
   ...roundtrips,
   ...jwkRoundtrips,
   ...tamperedSignatures,
+  ...leadingZeroImports,
   "alg none is refused": async (module) => {
     const { verifying } = await keysFor(module, "HS256");
     const token = `${encodeSegment('{"alg":"none"}')}.${encodeSegment('{"sub":"admin"}')}.AAAA`;

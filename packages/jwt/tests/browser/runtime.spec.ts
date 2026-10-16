@@ -40,15 +40,18 @@ test("the page offers every scenario", async ({ page }) => {
 
 /**
  * What a scenario gives on an engine that lacks what it needs. Playwright's WebKit build for Windows
- * (WebKit 26.5 with Playwright 1.61, on Windows 11) has no Ed25519 in Web Crypto: generating or importing
- * such a key throws. The answer is asserted rather than skipped, so the test fails once the build gains
- * Ed25519 and this entry can go. Safari on macOS and the Linux build CI runs are expected to pass.
+ * (WebKit 26.5 with Playwright 1.61, on Windows 11) has no Ed25519 in Web Crypto: generating such a key
+ * throws, and importing one gives `invalid_key`. The answer is asserted rather than skipped, so the test
+ * fails once the build gains Ed25519 and this entry can go. Safari on macOS and the Linux build CI runs
+ * are expected to pass.
  */
 function expectedOutcome(name: string, browserName: string): string {
-  if (browserName === "webkit" && process.platform === "win32" && /^(EdDSA|Ed25519) /.test(name)) {
-    return "NotSupportedError: The operation is not supported.";
+  if (browserName !== "webkit" || process.platform !== "win32" || !/^(EdDSA|Ed25519) /.test(name)) {
+    return "ok";
   }
-  return "ok";
+  return name.includes("leading zero byte")
+    ? 'Error: private import failed: {"ok":false,"error":{"issues":[{"code":"invalid_key"}]}}'
+    : "NotSupportedError: The operation is not supported.";
 }
 
 for (const name of Object.keys(scenarios)) {
