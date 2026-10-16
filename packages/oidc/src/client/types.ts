@@ -187,6 +187,11 @@ export interface Client {
    * is present, store it in place of the old one. When it is absent, keep the old refresh token, which stays
    * valid (RFC 6749 §6).
    *
+   * When the response carries an ID token that fails validation, the result is a failure and the new tokens
+   * are not returned: a response with an ID token that cannot be trusted is not trusted at all. The provider
+   * has already spent the refresh token that was sent, so the session cannot be refreshed again; sign the
+   * user in again.
+   *
    * @returns The new tokens, or every issue found. Never throws for any response.
    * @throws {TypeError} When `options` is invalid, such as an empty `refreshToken` or a scope list that is not
    * a non-empty array of scope tokens. The message names the option and never its value.

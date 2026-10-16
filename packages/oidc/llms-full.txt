@@ -369,6 +369,8 @@ The provider rotates refresh tokens. Each exchange spends the one you sent and r
 
 A refresh response need not carry an ID token. When it does, `claims` is the validated ID token's claims, checked against `subject` and the access token as described above, but without a nonce, because a refresh has none. When it carries none, `claims` is absent.
 
+When the new ID token fails validation, `refresh` returns a failure with the ID token's issues and no tokens, even though the provider issued new ones. A response whose ID token cannot be trusted is not trusted at all, so its access and refresh tokens are dropped with it. The refresh token you sent is already spent at the provider, so it cannot be used again: treat this failure as the end of the session and sign the user in again.
+
 ## Fetching userinfo
 
 `client.userinfo(options)` asks the provider's userinfo endpoint for the claims the granted scopes release. It returns a promise of a result whose value is the claims object, frozen.
