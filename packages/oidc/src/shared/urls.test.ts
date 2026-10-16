@@ -1,0 +1,75 @@
+import { describe, expect, it } from "vitest";
+
+import { isHttpsUrl, isRedirectUri } from "./urls";
+
+describe("isHttpsUrl", () => {
+  it("shouldAcceptAbsoluteHttpsUrl", () => {
+    expect(isHttpsUrl("https://provider.test/authorize")).toBe(true);
+  });
+
+  it("shouldRejectHttpUrl", () => {
+    expect(isHttpsUrl("http://provider.test/authorize")).toBe(false);
+  });
+
+  it("shouldRejectUrlWithUsernameAndPassword", () => {
+    expect(isHttpsUrl("https://user:pw@x")).toBe(false);
+  });
+
+  it("shouldRejectUrlWithUsernameOnly", () => {
+    expect(isHttpsUrl("https://user@x")).toBe(false);
+  });
+
+  it("shouldRejectUrlWithFragment", () => {
+    expect(isHttpsUrl("https://x/cb#token")).toBe(false);
+  });
+
+  it("shouldRejectUrlWithEmptyFragment", () => {
+    expect(isHttpsUrl("https://x/#")).toBe(false);
+  });
+
+  it("shouldRejectRelativeUrl", () => {
+    expect(isHttpsUrl("/authorize")).toBe(false);
+  });
+
+  it("shouldRejectNonStrings", () => {
+    expect(isHttpsUrl(new URL("https://x/"))).toBe(false);
+    expect(isHttpsUrl(undefined)).toBe(false);
+  });
+});
+
+describe("isRedirectUri", () => {
+  it("shouldAcceptHttpsRedirectUri", () => {
+    expect(isRedirectUri("https://app.test/callback")).toBe(true);
+  });
+
+  it("shouldAcceptCustomSchemeForNativeApps", () => {
+    expect(isRedirectUri("com.example.app:/oauth2redirect")).toBe(true);
+  });
+
+  it("shouldAcceptHttpLoopbackRedirectUri", () => {
+    expect(isRedirectUri("http://127.0.0.1:8080/callback")).toBe(true);
+  });
+
+  it.each(["javascript:alert(1)", "data:text/html,hi", "vbscript:msgbox", "file:///etc/passwd"])(
+    "shouldRejectDangerousScheme_%s",
+    (value) => {
+      expect(isRedirectUri(value)).toBe(false);
+    },
+  );
+
+  it("shouldRejectUriWithFragment", () => {
+    expect(isRedirectUri("https://app.test/cb#")).toBe(false);
+  });
+
+  it("shouldRejectUriWithCredentials", () => {
+    expect(isRedirectUri("https://user:pw@app.test/cb")).toBe(false);
+  });
+
+  it("shouldRejectRelativeUri", () => {
+    expect(isRedirectUri("/callback")).toBe(false);
+  });
+
+  it("shouldRejectNonStrings", () => {
+    expect(isRedirectUri(42)).toBe(false);
+  });
+});
