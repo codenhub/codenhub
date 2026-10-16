@@ -20,6 +20,7 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 - `packages/icons`: Icon registry, CSS mask generator, and scanner module for Codenhub icon system.
 - `packages/jwt`: JWS signing and verification, JWK import and export, and key sets on Web Crypto, for untrusted tokens.
 - `packages/kbd`: Page-wide and target-scoped keyboard shortcut event binding registry.
+- `packages/oidc`: OpenID Connect for both sides: a relying-party client and an OpenID Provider on the Fetch API, built on @codenhub/jwt.
 - `packages/router`: Small browser router for TypeScript apps.
 - `packages/skills`: Curated collection of AI agent skills with a built-in installer.
 - `packages/store`: Typed localStorage-backed state stores for browser TypeScript apps.
