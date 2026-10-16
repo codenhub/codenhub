@@ -124,6 +124,7 @@ export async function importPrivateKey(jwk: unknown, options: ImportPrivateKeyOp
  * @remarks
  * The secret must be at least 32 bytes. For a JWK, `alg`, `use` and `key_ops` (which must include
  * `sign` or `verify`) are checked as in {@link importPublicKey}, and the JWK's own `kid` is used.
+ * `key_ops` does not restrict the key: a secret imported with `key_ops: ["verify"]` can still sign.
  *
  * @param input - The secret's bytes, or an `oct` JWK. Any value is accepted.
  * @param options - The algorithm, the `kid` for raw bytes, and whether the secret may be exported again.

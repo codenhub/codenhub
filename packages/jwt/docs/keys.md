@@ -118,6 +118,8 @@ The `k` in that example is a published test vector, not a secret to reuse.
 
 The secret must be at least 32 bytes, or the result is `weak_key` with `{ minimum: 32 }`: HMAC with SHA-256 is only as strong as its key, and a short or human-chosen secret can be guessed offline from a single token. Generate secrets with `generateSecretKey` or another source of random bytes, not by hand.
 
+A JWK's `key_ops` is checked but does not restrict the secret key: one imported with `key_ops: ["verify"]` can still sign. Whoever holds an HMAC secret can compute the same signature with any other library, so a verify-only secret would protect nothing.
+
 `kid` sets the identifier for raw bytes. For a JWK, the JWK's own `kid` is used and the option is ignored.
 
 ## Exporting keys

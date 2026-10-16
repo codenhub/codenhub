@@ -6,7 +6,7 @@ scope: How `@codenhub/jwt` is built and why, for whoever changes it next.
 
 # JwtKit architecture
 
-This records how `@codenhub/jwt` keeps the invariants of [scope.md](scope.md) section 3, and the reasoning behind choices that are not obvious from the code. Public behavior is in the package docs; this is for changing the package without breaking what it relies on. Decisions and the judgment calls still awaiting the maintainer are listed in [scope.md](scope.md) section 7, and what remains before 0.1 in [roadmap.md](roadmap.md). Where this document explains a pending judgment call, it describes the code, not a settled decision.
+This records how `@codenhub/jwt` keeps the invariants of [scope.md](scope.md) section 3, and the reasoning behind choices that are not obvious from the code. Public behavior is in the package docs; this is for changing the package without breaking what it relies on. Decisions are listed in [scope.md](scope.md) section 7, and what remains before 0.1 in [roadmap.md](roadmap.md).
 
 ## What the package defends against
 
@@ -95,13 +95,13 @@ Rejected: `JSON.parse` with a reviver. A reviver sees the object after duplicate
 `createVerifier` resolves and freezes its options once (`verify/options.ts`), throwing `TypeError` for any invalid one, and returns a closure. For each token:
 
 1. `parseCompact`: the length cap, structure and header, as above. Cheapest checks first, so a hostile token costs a comparison of its length before anything is allocated.
-2. `keys.select(header)`, wrapped: a key set that throws, rejects, or returns anything other than a well-formed result with a registered public or secret key yields `key_fetch_failed` with `{ reason: "key_set_error" }` (pending item 6). A failed result is passed through, and its issue list is re-frozen.
+2. `keys.select(header)`, wrapped: a key set that throws, rejects, or returns anything other than a well-formed result with a registered public or secret key yields `key_fetch_failed` with `{ reason: "key_set_error" }` (decision 16). A failed result is passed through, and its issue list is re-frozen.
 3. The selected key's `alg` must equal the header's (`alg_mismatch`). This repeats what the built-in key sets already guarantee, because a custom one may not.
 4. The signature's length must equal the key's expected length (`bad_signature`), which spares Web Crypto inputs it would reject anyway and differs across runtimes in how it rejects them.
 5. `crypto.subtle.verify`. `false` is `bad_signature`.
 6. `parsePayload`: only now is the payload decoded and parsed (invariant 3).
 7. `checkClaims`: registered claim types, then `exp`, `nbf`, `iat`, `maxAge`, issuer, audience, `typ`, required claims. Every failure is collected, so a caller sees all of them at once. A claim of the wrong type is reported once as `invalid_claim` and skipped by the later checks, which would otherwise report it again under another code.
-8. The Standard Schema, only when every check above passed, so the schema never runs on a payload with an expired or foreign token. Its issues keep only their paths (pending item 1).
+8. The Standard Schema, only when every check above passed, so the schema never runs on a payload with an expired or foreign token. Its issues keep only their paths (decision 11).
 
 Steps 1 to 6 stop at the first failure because each depends on the one before: there is no key to report on without a header, and no claim to report on without a verified signature.
 
@@ -128,7 +128,7 @@ Scope section 4 asked selection to filter by `use` and `key_ops` too. That filte
 
 ## JWKS import
 
-`keysets/local.ts` reads a JWKS without running caller code: own data properties only, and a `Proxy` or getter that throws makes the JWKS `malformed`. More than 100 keys is `too_large`, checked before any key is imported, so an oversized JWKS cannot make import cost unbounded. Each entry is bound to its `alg` when it has one and the algorithm is allowed, or otherwise to every allowed algorithm its `kty`/`crv` fit, then imported with `importPublicKey`; failed imports are dropped (pending item 2). `oct` entries are never bound, because `algorithms` only accepts asymmetric algorithms.
+`keysets/local.ts` reads a JWKS without running caller code: own data properties only, and a `Proxy` or getter that throws makes the JWKS `malformed`. More than 100 keys is `too_large`, checked before any key is imported, so an oversized JWKS cannot make import cost unbounded. Each entry is bound to its `alg` when it has one and the algorithm is allowed, or otherwise to every allowed algorithm its `kty`/`crv` fit, then imported with `importPublicKey`; failed imports are dropped (decision 12). `oct` entries are never bound, because `algorithms` only accepts asymmetric algorithms.
 
 ## Remote key set
 
@@ -176,7 +176,7 @@ The TTL counts from when a fetch completes. Stale keys are served under the boun
 
 ## Error model
 
-- **Untrusted input returns a result.** Tokens, JWKs, JWKS documents and responses, and headers given to `select`. The result type is package-local (`JwtResult`), shaped like `@codenhub/validation`'s, with no runtime dependency on either `@codenhub/error` or `@codenhub/validation` (pending item 11).
+- **Untrusted input returns a result.** Tokens, JWKs, JWKS documents and responses, and headers given to `select`. The result type is package-local (`JwtResult`), shaped like `@codenhub/validation`'s, with no runtime dependency on either `@codenhub/error` or `@codenhub/validation` (decision 21).
 - **Programmer error throws `TypeError`, as early as possible.** Options are checked when a verifier or key set is created, so a misconfiguration fails at startup. `sign`'s input is the caller's own data, so it throws too.
 - **Issues carry no input.** `params` only ever hold values from the caller's configuration or the package's limits (`maximum`, `minimum`, `claim`, `maxAge`, `limit`, `reason`, `status`). `TypeError` messages name the option or member, never its value. Web Crypto's own error messages are never forwarded, since they can describe the rejected material.
 - **Results are deep-frozen** by `ok` and `fail`, which walk with their own stack and do not run getters.
