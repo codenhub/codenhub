@@ -34,7 +34,7 @@ export function checkClientRecord(record: unknown, clientId: string): ClientReco
     !record.redirectUris.every(isRedirectUri)
   ) {
     return invalid(
-      "must list at least one redirect URI, each absolute, without fragment, whitespace or credentials, and not javascript:, data:, vbscript: or file:",
+      "must list at least one redirect URI, each absolute, of visible ASCII, without fragment or credentials, and not javascript:, data:, vbscript: or file:",
     );
   }
   if (!isStringArray(record.scopes) || !record.scopes.includes("openid")) {

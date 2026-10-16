@@ -108,8 +108,11 @@ function readClientId(clientId: unknown): string {
 }
 
 function readRedirectUri(redirectUri: unknown): string {
-  if (!isRedirectUri(redirectUri) || !redirectUri.isWellFormed()) {
-    throw new TypeError(`${PREFIX} redirectUri must be an absolute URI without fragment or credentials`);
+  // `isRedirectUri` accepts visible ASCII only, which also refuses a lone surrogate.
+  if (!isRedirectUri(redirectUri)) {
+    throw new TypeError(
+      `${PREFIX} redirectUri must be an absolute URI of visible ASCII, without fragment or credentials, and not javascript:, data:, vbscript: or file:`,
+    );
   }
   return redirectUri;
 }
