@@ -68,7 +68,7 @@ import { createKeySet, createRemoteKeySet, createVerifier, generateKeyPair, gene
 
 const { privateKey, publicKey } = await generateKeyPair({ alg: "RS256" });
 const verify = createVerifier({ keys: createKeySet([publicKey]) });
-const part = (json: string) => Buffer.from(json).toString("base64url");
+const part = (json: string) => btoa(json).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 
 // `alg: none`, in any casing, is not an algorithm.
 await verify(`${part('{"alg":"none"}')}.${part('{"sub":"admin"}')}.AAAA`); // code "unsupported_alg"

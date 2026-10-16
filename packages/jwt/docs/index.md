@@ -11,7 +11,7 @@ It is written for the side of the exchange that receives tokens it did not make.
 
 ## A token in one paragraph
 
-A JSON Web Token (JWT, RFC 7519) is three base64url-encoded parts joined by dots: `<header>.<payload>.<signature>`. The **header** is a JSON object saying how the token was signed, most importantly `alg`, the algorithm, and often `kid`, the identifier of the key. The **payload** is a JSON object of **claims**: statements such as who issued the token (`iss`), who it is about (`sub`), who it is for (`aud`) and when it expires (`exp`). The **signature** covers the first two parts, so a token whose header or payload was changed no longer verifies. This three-part form is the JWS compact serialization (RFC 7515); it is the only one this package reads and writes.
+A JSON Web Token (JWT, RFC 7519) signed as a compact JWS, the only kind this package handles, is three base64url-encoded parts joined by dots: `<header>.<payload>.<signature>`. The **header** is a JSON object saying how the token was signed, most importantly `alg`, the algorithm, and often `kid`, the identifier of the key. The **payload** is a JSON object of **claims**: statements such as who issued the token (`iss`), who it is about (`sub`), who it is for (`aud`) and when it expires (`exp`). The **signature** covers the first two parts, so a token whose header or payload was changed no longer verifies. This three-part form is the JWS compact serialization (RFC 7515); it is the only one this package reads and writes.
 
 Base64url is an encoding, not encryption: anyone holding a token can read its payload. A signature proves who made the token and that it was not changed, nothing more.
 
@@ -73,11 +73,11 @@ if (result.ok) {
 }
 ```
 
-`result.value.payload` is only ever a payload whose signature verified and whose claims passed every check you configured. `result.error.issues` is never empty. Each issue has a stable `code`, and where useful a `path` such as `["payload", "exp"]` and `params` such as `{ maximum: 8192 }`. An issue never holds a value taken from the token or key, so logging a failure cannot log a token. [Issues](errors.md) lists every code.
+`result.value.payload` is only ever a payload whose signature verified and whose claims passed every check you configured. `result.error.issues` is never empty. Each issue has a stable `code`, and where useful a `path` such as `["payload", "exp"]` and `params` such as `{ maximum: 8192 }`. An issue this package creates never holds a value taken from the token or key, so logging a failure cannot log a token. Two kinds of issue come from your own code instead: a `claims` schema's path can name payload properties, and a custom key set's issues are passed through as it returned them. [Issues](errors.md) lists every code.
 
 The shape is the same as `@codenhub/validation`'s result, so code that handles one handles the other.
 
-The package throws a `TypeError` only for a mistake in your own code: an invalid option, a key object this package did not create, or a payload passed to `sign` that JSON cannot represent. Those throw as early as possible, when a verifier or key set is created rather than when a token arrives.
+The package throws a `TypeError` only for a mistake in your own code: an invalid option, a key object this package did not create, or a payload passed to `sign` that JSON cannot represent. Those throw as early as possible, when a verifier or key set is created rather than when a token arrives. A `claims` schema is your code too: if it throws or rejects, the verifier's promise rejects with its error.
 
 ## Keys are bound to one algorithm
 
@@ -106,7 +106,7 @@ A verifier runs its checks in a fixed order and stops at the first structural, k
 2. It has exactly three non-empty segments of strict base64url, and its header is a JSON object without repeated member names, with a supported `alg` and no `crit` member.
 3. The key set selects one key for the header.
 4. The key's algorithm equals the header's `alg`, and the signature verifies.
-5. Only then is the payload decoded, and every configured claim check runs. Claim failures are reported together, not one at a time.
+5. Only then is the payload decoded, and every configured claim check runs. Claim failures are reported together, not one at a time. A `claims` schema runs last, only when every built-in claim check passed.
 
 There is no function that decodes a payload without verifying it. When you need to look at a token before verifying it, for example to route it by `kid`, `readHeader` returns the header alone. [Verifying tokens](verifying.md) covers every check and option.
 

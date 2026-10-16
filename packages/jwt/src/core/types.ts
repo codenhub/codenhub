@@ -7,7 +7,7 @@ export type JwtPathSegment = string | number;
  * Stable category of a failure that callers can branch on without parsing messages.
  *
  * Token codes come from {@link Verifier} and {@link readHeader}; key codes from the `import*`
- * functions and key sets; `key_fetch_failed` from a remote key set.
+ * functions and key sets; `key_fetch_failed` from any key set that fails, remote or custom.
  */
 export type JwtIssueCode =
   // Token structure
@@ -44,8 +44,10 @@ export type JwtIssueCode =
 /**
  * A single reason a token or key was rejected.
  *
- * An issue never holds a value taken from the input: no token segment, claim value, header value, or
- * key material. It names which check failed and, where useful, the limit or the claim the check used.
+ * An issue this package creates never holds a value taken from the input: no token segment, claim value,
+ * header value, or key material. It names which check failed and, where useful, the limit or the claim the
+ * check used. An `invalid_claims` path is the caller's schema path, and a custom key set's issues are
+ * passed through, so those hold only what the caller's code puts in them.
  */
 export interface JwtIssue {
   /** Stable failure category. */
@@ -276,6 +278,7 @@ export type VerifiedPayload<TSchema extends StandardSchemaV1 | undefined> = TSch
 
 /**
  * A configured verifier. Call it with any value; it never throws for a token, whatever its content.
+ * Only a `claims` schema that throws or rejects makes its promise reject.
  *
  * @returns The verified token, or every issue found. Structural, key, and signature failures stop at
  * the first issue; claim checks report every failing claim.

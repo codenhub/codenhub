@@ -99,8 +99,11 @@ const fromBytes = await importSecretKey(new TextEncoder().encode(process.env.JWT
   alg: "HS256",
   kid: "internal",
 });
+if (!fromBytes.ok) throw new Error(`JWT_SECRET is unusable: ${fromBytes.error.issues[0].code}`);
+const internalKey = fromBytes.value;
 
 const fromJwk = await importSecretKey({ kty: "oct", k: "GawgguFyGrWKav7AX4VKUg_XNIYiNtwWfhSJZK2uIEA" }, { alg: "HS256" });
+if (fromJwk.ok) console.log(fromJwk.value.alg); // "HS256"
 ```
 
 The secret must be at least 32 bytes, or the result is `weak_key` with `{ minimum: 32 }`: HMAC with SHA-256 is only as strong as its key, and a short or human-chosen secret can be guessed offline from a single token. Generate secrets with `generateSecretKey` or another source of random bytes, not by hand.

@@ -25,7 +25,7 @@ export async function authenticate(authorization: string | null) {
 }
 ```
 
-The verifier accepts any value, including `undefined` or a number, and reports a value that is not a token as `malformed` rather than throwing. It never throws for a token, whatever the token holds.
+The verifier accepts any value, including `undefined` or a number, and reports a value that is not a token as `malformed` rather than throwing. It never throws for a token, whatever the token holds; the one exception is a [`claims` schema](#checking-your-own-claims) of your own that throws or rejects.
 
 ## Options
 
@@ -44,7 +44,7 @@ Every option is checked when `createVerifier` runs, and an invalid one throws a 
 | `claims`         | none       | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                  |
 | `now`            | `Date.now` | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. |
 
-Without `issuer`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks only the signature and the times the token itself states. A token without `exp` never expires: if your tokens must expire, list `exp` in `requiredClaims`.
+Without `issuer`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks only the signature, the types of the registered claims (`iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, `iat`) and the times the token itself states. A token without `exp` never expires: if your tokens must expire, list `exp` in `requiredClaims`.
 
 ## The order checks run in
 

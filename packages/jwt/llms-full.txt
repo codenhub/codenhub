@@ -70,7 +70,7 @@ import { createKeySet, createRemoteKeySet, createVerifier, generateKeyPair, gene
 
 const { privateKey, publicKey } = await generateKeyPair({ alg: "RS256" });
 const verify = createVerifier({ keys: createKeySet([publicKey]) });
-const part = (json: string) => Buffer.from(json).toString("base64url");
+const part = (json: string) => btoa(json).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 
 // `alg: none`, in any casing, is not an algorithm.
 await verify(`${part('{"alg":"none"}')}.${part('{"sub":"admin"}')}.AAAA`); // code "unsupported_alg"
@@ -140,7 +140,7 @@ It is written for the side of the exchange that receives tokens it did not make.
 
 ## A token in one paragraph
 
-A JSON Web Token (JWT, RFC 7519) is three base64url-encoded parts joined by dots: `<header>.<payload>.<signature>`. The **header** is a JSON object saying how the token was signed, most importantly `alg`, the algorithm, and often `kid`, the identifier of the key. The **payload** is a JSON object of **claims**: statements such as who issued the token (`iss`), who it is about (`sub`), who it is for (`aud`) and when it expires (`exp`). The **signature** covers the first two parts, so a token whose header or payload was changed no longer verifies. This three-part form is the JWS compact serialization (RFC 7515); it is the only one this package reads and writes.
+A JSON Web Token (JWT, RFC 7519) signed as a compact JWS, the only kind this package handles, is three base64url-encoded parts joined by dots: `<header>.<payload>.<signature>`. The **header** is a JSON object saying how the token was signed, most importantly `alg`, the algorithm, and often `kid`, the identifier of the key. The **payload** is a JSON object of **claims**: statements such as who issued the token (`iss`), who it is about (`sub`), who it is for (`aud`) and when it expires (`exp`). The **signature** covers the first two parts, so a token whose header or payload was changed no longer verifies. This three-part form is the JWS compact serialization (RFC 7515); it is the only one this package reads and writes.
 
 Base64url is an encoding, not encryption: anyone holding a token can read its payload. A signature proves who made the token and that it was not changed, nothing more.
 
@@ -202,11 +202,11 @@ if (result.ok) {
 }
 ```
 
-`result.value.payload` is only ever a payload whose signature verified and whose claims passed every check you configured. `result.error.issues` is never empty. Each issue has a stable `code`, and where useful a `path` such as `["payload", "exp"]` and `params` such as `{ maximum: 8192 }`. An issue never holds a value taken from the token or key, so logging a failure cannot log a token. [Issues](docs/errors.md) lists every code.
+`result.value.payload` is only ever a payload whose signature verified and whose claims passed every check you configured. `result.error.issues` is never empty. Each issue has a stable `code`, and where useful a `path` such as `["payload", "exp"]` and `params` such as `{ maximum: 8192 }`. An issue this package creates never holds a value taken from the token or key, so logging a failure cannot log a token. Two kinds of issue come from your own code instead: a `claims` schema's path can name payload properties, and a custom key set's issues are passed through as it returned them. [Issues](docs/errors.md) lists every code.
 
 The shape is the same as `@codenhub/validation`'s result, so code that handles one handles the other.
 
-The package throws a `TypeError` only for a mistake in your own code: an invalid option, a key object this package did not create, or a payload passed to `sign` that JSON cannot represent. Those throw as early as possible, when a verifier or key set is created rather than when a token arrives.
+The package throws a `TypeError` only for a mistake in your own code: an invalid option, a key object this package did not create, or a payload passed to `sign` that JSON cannot represent. Those throw as early as possible, when a verifier or key set is created rather than when a token arrives. A `claims` schema is your code too: if it throws or rejects, the verifier's promise rejects with its error.
 
 ## Keys are bound to one algorithm
 
@@ -235,7 +235,7 @@ A verifier runs its checks in a fixed order and stops at the first structural, k
 2. It has exactly three non-empty segments of strict base64url, and its header is a JSON object without repeated member names, with a supported `alg` and no `crit` member.
 3. The key set selects one key for the header.
 4. The key's algorithm equals the header's `alg`, and the signature verifies.
-5. Only then is the payload decoded, and every configured claim check runs. Claim failures are reported together, not one at a time.
+5. Only then is the payload decoded, and every configured claim check runs. Claim failures are reported together, not one at a time. A `claims` schema runs last, only when every built-in claim check passed.
 
 There is no function that decodes a payload without verifying it. When you need to look at a token before verifying it, for example to route it by `kid`, `readHeader` returns the header alone. [Verifying tokens](docs/verifying.md) covers every check and option.
 
@@ -276,7 +276,7 @@ export async function authenticate(authorization: string | null) {
 }
 ```
 
-The verifier accepts any value, including `undefined` or a number, and reports a value that is not a token as `malformed` rather than throwing. It never throws for a token, whatever the token holds.
+The verifier accepts any value, including `undefined` or a number, and reports a value that is not a token as `malformed` rather than throwing. It never throws for a token, whatever the token holds; the one exception is a [`claims` schema](#checking-your-own-claims) of your own that throws or rejects.
 
 ## Options
 
@@ -295,7 +295,7 @@ Every option is checked when `createVerifier` runs, and an invalid one throws a 
 | `claims`         | none       | A [Standard Schema](#checking-your-own-claims) run on the payload after every other check passed.                  |
 | `now`            | `Date.now` | The current time in **milliseconds** since the Unix epoch, as `Date.now` returns it. Pass your own clock in tests. |
 
-Without `issuer`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks only the signature and the times the token itself states. A token without `exp` never expires: if your tokens must expire, list `exp` in `requiredClaims`.
+Without `issuer`, `audience`, `type`, `maxAge` and `requiredClaims`, a verifier checks only the signature, the types of the registered claims (`iss`, `sub`, `aud`, `jti`, `exp`, `nbf`, `iat`) and the times the token itself states. A token without `exp` never expires: if your tokens must expire, list `exp` in `requiredClaims`.
 
 ## The order checks run in
 
@@ -430,6 +430,8 @@ The payload must be a plain object whose values JSON represents exactly: strings
 
 The registered claims are checked for the types RFC 7519 gives them: `exp`, `nbf` and `iat` must be finite numbers, `iss`, `sub` and `jti` strings, and `aud` a string or an array of strings. A token this package signs therefore never fails a verifier's `invalid_claim` check.
 
+`sign` does not limit a token's length, but verifiers do: a token longer than the verifier's `maxLength`, 8192 characters by default, fails with `too_large`. A payload of a few kilobytes reaches that, so raise `maxLength` on the verifier, up to 65536, when your tokens are large.
+
 ## The header
 
 The header's `alg` always comes from the key. You may repeat it in `header.alg`, but a different value throws: a key signs under its own algorithm only.
@@ -561,8 +563,11 @@ const fromBytes = await importSecretKey(new TextEncoder().encode(process.env.JWT
   alg: "HS256",
   kid: "internal",
 });
+if (!fromBytes.ok) throw new Error(`JWT_SECRET is unusable: ${fromBytes.error.issues[0].code}`);
+const internalKey = fromBytes.value;
 
 const fromJwk = await importSecretKey({ kty: "oct", k: "GawgguFyGrWKav7AX4VKUg_XNIYiNtwWfhSJZK2uIEA" }, { alg: "HS256" });
+if (fromJwk.ok) console.log(fromJwk.value.alg); // "HS256"
 ```
 
 The secret must be at least 32 bytes, or the result is `weak_key` with `{ minimum: 32 }`: HMAC with SHA-256 is only as strong as its key, and a short or human-chosen secret can be guessed offline from a single token. Generate secrets with `generateSecretKey` or another source of random bytes, not by hand.
@@ -764,7 +769,9 @@ The whole result is deeply frozen.
 | `path`   | Where the failure is, when it concerns one place: `["header", "kid"]`, `["payload", "exp"]`, a JWK member such as `["n"]`, or a segment such as `["signature"]`. Omitted when it concerns the whole input. |
 | `params` | Facts from your own configuration or this package's limits, such as `{ maximum: 8192 }` or `{ claim: "sub" }`. Omitted when there are none.                                                                |
 
-An issue never holds a value taken from the input: no token segment, claim value, header value, or key material, and no message from Web Crypto, a schema or a server, since any of those can quote the input. It names which check failed and never what the token said, so a failure can be logged, returned to a client or sent to an error tracker without leaking a token. `path` names claims and header members, which are names this package or your configuration chose, never values.
+An issue this package creates never holds a value taken from the input: no token segment, claim value, header value, or key material, and no message from Web Crypto, a schema or a server, since any of those can quote the input. It names which check failed and never what the token said, so a failure can be logged, returned to a client or sent to an error tracker without leaking a token. `path` names claims and header members, which are names this package or your configuration chose, never values. `params.status` of `key_fetch_failed` is the HTTP status code the JWKS server answered with, a number and never content.
+
+Two kinds of issue come from your code, and hold only what it puts in them: an `invalid_claims` path is your schema's path, so a schema over a record can name a payload's own property names there, and a custom key set's failure issues are returned as it gave them. Keep both free of input values if you log them.
 
 There are no messages: a code is the whole answer. Map codes to text yourself if a person needs to read them, and prefer not to tell a client more than "invalid token" when the client may be an attacker.
 
@@ -805,7 +812,7 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 | `wrong_audience`   | `["payload", "aud"]`         |              | `aud` contains none of the accepted audiences.                                       |
 | `wrong_type`       | `["header", "typ"]`          |              | The `typ` header is missing or is not the required type.                             |
 | `missing_claim`    | `["payload", claim]`         | `{ claim }`  | A claim required by `requiredClaims`, `issuer`, `audience` or `maxAge` is absent.    |
-| `invalid_claims`   | `["payload", ...schemaPath]` |              | Your `claims` schema reported an issue there.                                        |
+| `invalid_claims`   | `["payload", ...schemaPath]` |              | Your `claims` schema reported an issue there. The path segments are the schema's.    |
 
 [Verifying tokens](docs/verifying.md#claim-checks) describes each check.
 
@@ -819,6 +826,8 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 | `unexpected_private_key` | a JWK member               |                                        | A public import holds a private member.                                                                       |
 | `wrong_use`              | `["use"]` or `["key_ops"]` |                                        | `use` is not `sig`, or `key_ops` does not allow the operation the key is imported for.                        |
 | `alg_mismatch`           | `["alg"]`                  |                                        | The JWK's `alg` names another algorithm than the one you asked for.                                           |
+
+| `malformed` | none, or `["keys"]` | | From `importKeySet`: the JWKS is not an object (no path), or its `keys` is not an array (`["keys"]`). | | `too_large` | none | `{ limit: "keys", maximum: 100 }` | From `importKeySet`: the JWKS lists more than 100 keys. |
 
 `importKeySet` and `createRemoteKeySet` skip JWKs that fail these checks instead of reporting them. [Keys](docs/keys.md#importing-a-public-key) describes each check.
 

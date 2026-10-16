@@ -35,7 +35,9 @@ The whole result is deeply frozen.
 | `path`   | Where the failure is, when it concerns one place: `["header", "kid"]`, `["payload", "exp"]`, a JWK member such as `["n"]`, or a segment such as `["signature"]`. Omitted when it concerns the whole input. |
 | `params` | Facts from your own configuration or this package's limits, such as `{ maximum: 8192 }` or `{ claim: "sub" }`. Omitted when there are none.                                                                |
 
-An issue never holds a value taken from the input: no token segment, claim value, header value, or key material, and no message from Web Crypto, a schema or a server, since any of those can quote the input. It names which check failed and never what the token said, so a failure can be logged, returned to a client or sent to an error tracker without leaking a token. `path` names claims and header members, which are names this package or your configuration chose, never values.
+An issue this package creates never holds a value taken from the input: no token segment, claim value, header value, or key material, and no message from Web Crypto, a schema or a server, since any of those can quote the input. It names which check failed and never what the token said, so a failure can be logged, returned to a client or sent to an error tracker without leaking a token. `path` names claims and header members, which are names this package or your configuration chose, never values. `params.status` of `key_fetch_failed` is the HTTP status code the JWKS server answered with, a number and never content.
+
+Two kinds of issue come from your code, and hold only what it puts in them: an `invalid_claims` path is your schema's path, so a schema over a record can name a payload's own property names there, and a custom key set's failure issues are returned as it gave them. Keep both free of input values if you log them.
 
 There are no messages: a code is the whole answer. Map codes to text yourself if a person needs to read them, and prefer not to tell a client more than "invalid token" when the client may be an attacker.
 
@@ -76,7 +78,7 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 | `wrong_audience`   | `["payload", "aud"]`         |              | `aud` contains none of the accepted audiences.                                       |
 | `wrong_type`       | `["header", "typ"]`          |              | The `typ` header is missing or is not the required type.                             |
 | `missing_claim`    | `["payload", claim]`         | `{ claim }`  | A claim required by `requiredClaims`, `issuer`, `audience` or `maxAge` is absent.    |
-| `invalid_claims`   | `["payload", ...schemaPath]` |              | Your `claims` schema reported an issue there.                                        |
+| `invalid_claims`   | `["payload", ...schemaPath]` |              | Your `claims` schema reported an issue there. The path segments are the schema's.    |
 
 [Verifying tokens](verifying.md#claim-checks) describes each check.
 
@@ -90,6 +92,8 @@ There are no messages: a code is the whole answer. Map codes to text yourself if
 | `unexpected_private_key` | a JWK member               |                                        | A public import holds a private member.                                                                       |
 | `wrong_use`              | `["use"]` or `["key_ops"]` |                                        | `use` is not `sig`, or `key_ops` does not allow the operation the key is imported for.                        |
 | `alg_mismatch`           | `["alg"]`                  |                                        | The JWK's `alg` names another algorithm than the one you asked for.                                           |
+
+| `malformed` | none, or `["keys"]` | | From `importKeySet`: the JWKS is not an object (no path), or its `keys` is not an array (`["keys"]`). | | `too_large` | none | `{ limit: "keys", maximum: 100 }` | From `importKeySet`: the JWKS lists more than 100 keys. |
 
 `importKeySet` and `createRemoteKeySet` skip JWKs that fail these checks instead of reporting them. [Keys](keys.md#importing-a-public-key) describes each check.
 

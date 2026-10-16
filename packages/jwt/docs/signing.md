@@ -32,6 +32,8 @@ The payload must be a plain object whose values JSON represents exactly: strings
 
 The registered claims are checked for the types RFC 7519 gives them: `exp`, `nbf` and `iat` must be finite numbers, `iss`, `sub` and `jti` strings, and `aud` a string or an array of strings. A token this package signs therefore never fails a verifier's `invalid_claim` check.
 
+`sign` does not limit a token's length, but verifiers do: a token longer than the verifier's `maxLength`, 8192 characters by default, fails with `too_large`. A payload of a few kilobytes reaches that, so raise `maxLength` on the verifier, up to 65536, when your tokens are large.
+
 ## The header
 
 The header's `alg` always comes from the key. You may repeat it in `header.alg`, but a different value throws: a key signs under its own algorithm only.
