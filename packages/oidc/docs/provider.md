@@ -36,20 +36,20 @@ export async function createSsoProvider() {
 }
 ```
 
-| Option        | Meaning                                                                                                                                              | Default                     |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| `issuer`      | The issuer identifier: an `https` URL with no query, fragment or credentials. It is used byte for byte in `iss`, and a trailing slash is kept there. | Required                    |
-| `signingKeys` | Key pairs from `generateKeyPair`, or from `importPrivateKey` and `importPublicKey`. See [Signing keys](#signing-keys).                               | Required                    |
-| `store`       | Where clients, codes, tokens and interactions are kept. An object with every method of `OidcStore`. See [Store](store.md).                           | Required                    |
-| `claims`      | Returns the claims about a user for the scopes granted. See [Claims](#claims).                                                                       | Required                    |
-| `scopes`      | Extra scopes and the claims each releases, merged over the standard scopes. See [Scopes](#scopes).                                                   | Standard scopes only        |
-| `ttl`         | Token and interaction lifetimes in seconds. See [Lifetimes](#lifetimes).                                                                             | See [Lifetimes](#lifetimes) |
-| `endpoints`   | The URLs of the authorization, token, userinfo and JWKS endpoints. See [Endpoints](#endpoints).                                                      | Paths under the issuer      |
-| `now`         | The current time in milliseconds since the Unix epoch. For tests.                                                                                    | `Date.now`                  |
+| Option        | Meaning                                                                                                                                                                | Default                     |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `issuer`      | The issuer identifier: an `https` URL of visible ASCII, with no query, fragment or credentials. It is used byte for byte in `iss`, and a trailing slash is kept there. | Required                    |
+| `signingKeys` | Key pairs from `generateKeyPair`, or from `importPrivateKey` and `importPublicKey`. See [Signing keys](#signing-keys).                                                 | Required                    |
+| `store`       | Where clients, codes, tokens and interactions are kept. An object with every method of `OidcStore`. See [Store](store.md).                                             | Required                    |
+| `claims`      | Returns the claims about a user for the scopes granted. See [Claims](#claims).                                                                                         | Required                    |
+| `scopes`      | Extra scopes and the claims each releases, merged over the standard scopes. See [Scopes](#scopes).                                                                     | Standard scopes only        |
+| `ttl`         | Token and interaction lifetimes in seconds. See [Lifetimes](#lifetimes).                                                                                               | See [Lifetimes](#lifetimes) |
+| `endpoints`   | The URLs of the authorization, token, userinfo and JWKS endpoints. See [Endpoints](#endpoints).                                                                        | Paths under the issuer      |
+| `now`         | The current time in milliseconds since the Unix epoch. For tests.                                                                                                      | `Date.now`                  |
 
 `createProvider` throws `TypeError` when:
 
-- The issuer is not an `https` URL with no query, fragment or credentials.
+- The issuer is not an `https` URL of visible ASCII with no query, fragment or credentials.
 - `signingKeys` is empty, is not an array of `{ privateKey, publicKey }` pairs, pairs a private and a public key of different algorithms, gives a pair's two keys different `kid`s, or repeats a `kid`.
 - `store` is not an object, or one of its methods is not a function. The message names the first missing method, such as `store.findClient`.
 - `claims` is not a function, or `now` is given and is not a function.
@@ -117,7 +117,7 @@ The four endpoints the provider answers default to paths under the issuer. The d
 | `userinfo`      | `{issuer}/userinfo`  |
 | `jwks`          | `{issuer}/jwks`      |
 
-Each value is an absolute `https` URL with no fragment or credentials, on any origin. The five URLs, including discovery, must each have their own origin and path, because `handle` tells endpoints apart by origin and path. The query string is ignored when a request is routed.
+Each value is an absolute `https` URL of visible ASCII (no spaces, control or non-ASCII characters; use punycode hosts and percent-encoding), with no fragment or credentials, on any origin. The five URLs, including discovery, must each have their own origin and path, because `handle` tells endpoints apart by origin and path. The query string is ignored when a request is routed.
 
 ### The published metadata
 

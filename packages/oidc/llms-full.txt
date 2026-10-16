@@ -242,22 +242,22 @@ const client = createClient({
 });
 ```
 
-| Option           | Meaning                                                                                                                                                                                                        | Default            |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `metadata`       | The provider's metadata, from `discover` or written by hand. Checked as strictly as a fetched document.                                                                                                        | Required           |
-| `clientId`       | The client identifier the provider registered. A non-empty string.                                                                                                                                             | Required           |
-| `redirectUri`    | The redirect URI registered for this client. Sent with every authorization request and token request. An absolute URI with no fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. | Required           |
-| `auth`           | How the client authenticates to the token endpoint. See [Client authentication](#client-authentication).                                                                                                       | Required           |
-| `fetch`          | The `fetch` for the token, userinfo and JWKS requests. Looked up on each call when you omit it.                                                                                                                | `globalThis.fetch` |
-| `timeout`        | Seconds to wait for each response, including its body, before failing. An integer from 1 through 60.                                                                                                           | `5`                |
-| `clockTolerance` | Seconds of clock skew allowed on the ID token's `exp`, `iat` and `auth_time`. An integer from 0 through 300.                                                                                                   | `0`                |
-| `now`            | The current time in milliseconds since the Unix epoch. For tests.                                                                                                                                              | `Date.now`         |
+| Option           | Meaning                                                                                                                                                                                                                                                                                                                | Default            |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| `metadata`       | The provider's metadata, from `discover` or written by hand. Checked as strictly as a fetched document.                                                                                                                                                                                                                | Required           |
+| `clientId`       | The client identifier the provider registered. A non-empty string.                                                                                                                                                                                                                                                     | Required           |
+| `redirectUri`    | The redirect URI registered for this client. Sent with every authorization request and token request. An absolute URI of visible ASCII (no spaces, control or non-ASCII characters; use punycode hosts and percent-encoding), with no fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. | Required           |
+| `auth`           | How the client authenticates to the token endpoint. See [Client authentication](#client-authentication).                                                                                                                                                                                                               | Required           |
+| `fetch`          | The `fetch` for the token, userinfo and JWKS requests. Looked up on each call when you omit it.                                                                                                                                                                                                                        | `globalThis.fetch` |
+| `timeout`        | Seconds to wait for each response, including its body, before failing. An integer from 1 through 60.                                                                                                                                                                                                                   | `5`                |
+| `clockTolerance` | Seconds of clock skew allowed on the ID token's `exp`, `iat` and `auth_time`. An integer from 0 through 300.                                                                                                                                                                                                           | `0`                |
+| `now`            | The current time in milliseconds since the Unix epoch. For tests.                                                                                                                                                                                                                                                      | `Date.now`         |
 
 The client accepts an ID token only when its signature verifies with one of the provider's keys, and only with an asymmetric algorithm the provider advertises in `id_token_signing_alg_values_supported` that this package supports: `ES256`, `EdDSA`, `Ed25519`, `RS256` or `PS256`. An ID token signed with `HS256` or `none` is never accepted. The keys come from the provider's `jwks_uri`, which the client fetches on first use and caches.
 
 `createClient` throws `TypeError` when:
 
-- The issuer in `metadata` is not an `https` URL with no query, fragment or credentials, or the metadata is not valid. The message names the first invalid member.
+- The issuer in `metadata` is not an own data property holding an `https` URL of visible ASCII with no query, fragment or credentials, or the metadata is not valid. The message names the first invalid member.
 - `auth.method` is not one of the five methods, or it is not in `metadata.token_endpoint_auth_methods_supported` when the provider lists those.
 - `auth.key` is not a key of the kind the method needs, or `auth.secret` is empty.
 - An option is missing or out of range.
@@ -446,20 +446,20 @@ export async function createSsoProvider() {
 }
 ```
 
-| Option        | Meaning                                                                                                                                              | Default                     |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
-| `issuer`      | The issuer identifier: an `https` URL with no query, fragment or credentials. It is used byte for byte in `iss`, and a trailing slash is kept there. | Required                    |
-| `signingKeys` | Key pairs from `generateKeyPair`, or from `importPrivateKey` and `importPublicKey`. See [Signing keys](#signing-keys).                               | Required                    |
-| `store`       | Where clients, codes, tokens and interactions are kept. An object with every method of `OidcStore`. See [Store](docs/store.md).                           | Required                    |
-| `claims`      | Returns the claims about a user for the scopes granted. See [Claims](#claims).                                                                       | Required                    |
-| `scopes`      | Extra scopes and the claims each releases, merged over the standard scopes. See [Scopes](#scopes).                                                   | Standard scopes only        |
-| `ttl`         | Token and interaction lifetimes in seconds. See [Lifetimes](#lifetimes).                                                                             | See [Lifetimes](#lifetimes) |
-| `endpoints`   | The URLs of the authorization, token, userinfo and JWKS endpoints. See [Endpoints](#endpoints).                                                      | Paths under the issuer      |
-| `now`         | The current time in milliseconds since the Unix epoch. For tests.                                                                                    | `Date.now`                  |
+| Option        | Meaning                                                                                                                                                                | Default                     |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| `issuer`      | The issuer identifier: an `https` URL of visible ASCII, with no query, fragment or credentials. It is used byte for byte in `iss`, and a trailing slash is kept there. | Required                    |
+| `signingKeys` | Key pairs from `generateKeyPair`, or from `importPrivateKey` and `importPublicKey`. See [Signing keys](#signing-keys).                                                 | Required                    |
+| `store`       | Where clients, codes, tokens and interactions are kept. An object with every method of `OidcStore`. See [Store](docs/store.md).                                             | Required                    |
+| `claims`      | Returns the claims about a user for the scopes granted. See [Claims](#claims).                                                                                         | Required                    |
+| `scopes`      | Extra scopes and the claims each releases, merged over the standard scopes. See [Scopes](#scopes).                                                                     | Standard scopes only        |
+| `ttl`         | Token and interaction lifetimes in seconds. See [Lifetimes](#lifetimes).                                                                                               | See [Lifetimes](#lifetimes) |
+| `endpoints`   | The URLs of the authorization, token, userinfo and JWKS endpoints. See [Endpoints](#endpoints).                                                                        | Paths under the issuer      |
+| `now`         | The current time in milliseconds since the Unix epoch. For tests.                                                                                                      | `Date.now`                  |
 
 `createProvider` throws `TypeError` when:
 
-- The issuer is not an `https` URL with no query, fragment or credentials.
+- The issuer is not an `https` URL of visible ASCII with no query, fragment or credentials.
 - `signingKeys` is empty, is not an array of `{ privateKey, publicKey }` pairs, pairs a private and a public key of different algorithms, gives a pair's two keys different `kid`s, or repeats a `kid`.
 - `store` is not an object, or one of its methods is not a function. The message names the first missing method, such as `store.findClient`.
 - `claims` is not a function, or `now` is given and is not a function.
@@ -527,7 +527,7 @@ The four endpoints the provider answers default to paths under the issuer. The d
 | `userinfo`      | `{issuer}/userinfo`  |
 | `jwks`          | `{issuer}/jwks`      |
 
-Each value is an absolute `https` URL with no fragment or credentials, on any origin. The five URLs, including discovery, must each have their own origin and path, because `handle` tells endpoints apart by origin and path. The query string is ignored when a request is routed.
+Each value is an absolute `https` URL of visible ASCII (no spaces, control or non-ASCII characters; use punycode hosts and percent-encoding), with no fragment or credentials, on any origin. The five URLs, including discovery, must each have their own origin and path, because `handle` tells endpoints apart by origin and path. The query string is ignored when a request is routed.
 
 ### The published metadata
 
