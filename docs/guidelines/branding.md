@@ -76,7 +76,7 @@ This table resolves the _displayed_ name only. Whether the npm package name and 
 | `error`      | Neutral, kit    | `ErrorKit`        |                                                                                                                        |
 | `i18n`       | Neutral, plain  | `i18n`            | Already distinctive as a numeronym; industry convention keeps it lowercase.                                            |
 | `icons`      | Neutral, kit    | `IconKit`         |                                                                                                                        |
-| `jwt`        | Neutral, kit    | `JwtKit`          | Fused like `IconKit`; the npm name `@codenhub/jwt` is a working title and may change before publishing.                |
+| `jwt`        | Neutral, kit    | `JwtKit`          | Fused like `IconKit`.                                                                                                  |
 | `kbd`        | Neutral, plain  | `Kbd`             | Not a dictionary word; already distinctive unfused.                                                                    |
 | `router`     | Neutral, plain  | `Router`          |                                                                                                                        |
 | `skills`     | Branded         | `Coden Skills`    |                                                                                                                        |

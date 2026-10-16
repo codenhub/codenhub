@@ -176,7 +176,7 @@ The TTL counts from when a fetch completes. Stale keys are served under the boun
 
 ## Error model
 
-- **Untrusted input returns a result.** Tokens, JWKs, JWKS documents and responses, and headers given to `select`. The result type is package-local (`JwtResult`), shaped like `@codenhub/validation`'s, with no runtime dependency on either `@codenhub/error` or `@codenhub/validation` (pending item 12).
+- **Untrusted input returns a result.** Tokens, JWKs, JWKS documents and responses, and headers given to `select`. The result type is package-local (`JwtResult`), shaped like `@codenhub/validation`'s, with no runtime dependency on either `@codenhub/error` or `@codenhub/validation` (pending item 11).
 - **Programmer error throws `TypeError`, as early as possible.** Options are checked when a verifier or key set is created, so a misconfiguration fails at startup. `sign`'s input is the caller's own data, so it throws too.
 - **Issues carry no input.** `params` only ever hold values from the caller's configuration or the package's limits (`maximum`, `minimum`, `claim`, `maxAge`, `limit`, `reason`, `status`). `TypeError` messages name the option or member, never its value. Web Crypto's own error messages are never forwarded, since they can describe the rejected material.
 - **Results are deep-frozen** by `ok` and `fail`, which walk with their own stack and do not run getters.
