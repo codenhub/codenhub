@@ -112,7 +112,9 @@ function readEndpoints(issuer: string, endpoints: unknown): ResolvedEndpoints {
   }
   const base = issuer.endsWith("/") ? issuer.slice(0, -1) : issuer;
   const read = (name: "authorization" | "token" | "userinfo" | "jwks", path: string): string => {
-    const value = endpoints?.[name] ?? `${base}${path}`;
+    // Only `undefined` takes the default: an explicit `null` is a mistake to report, not a request for the default.
+    const given = isRecord(endpoints) ? endpoints[name] : undefined;
+    const value = given === undefined ? `${base}${path}` : given;
     if (!isHttpsUrl(value)) {
       return fail(`endpoints.${name}`, "must be an https URL without fragment or credentials");
     }
@@ -201,7 +203,9 @@ function readTtl(ttl: unknown): ResolvedTtl {
   }
   const resolved: Record<string, number> = {};
   for (const [name, rule] of Object.entries(TTL_RULES) as [keyof ResolvedTtl, TtlRule][]) {
-    const value = ttl?.[name] ?? rule.fallback;
+    // Only `undefined` takes the fallback, so an explicit `null` is rejected below like any other non-integer.
+    const given = isRecord(ttl) ? ttl[name] : undefined;
+    const value = given === undefined ? rule.fallback : given;
     if (!Number.isInteger(value) || (value as number) < rule.minimum || (value as number) > rule.maximum) {
       fail(`ttl.${name}`, `must be an integer from ${rule.minimum} through ${rule.maximum}`);
     }

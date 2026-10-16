@@ -4,7 +4,10 @@ import { deepFreeze } from "../shared/result";
 import type { ProviderMetadata } from "../shared/types";
 import type { ResolvedOptions } from "./options";
 
-/** Claims every ID token carries, which are not released by any scope (OpenID Connect Core §2). */
+/**
+ * Claims an ID token MAY carry, none released by any scope (OpenID Connect Core §2). `sub`, `iss`, `aud`,
+ * `exp` and `iat` are always present; `auth_time`, `nonce`, `acr`, `amr` and `at_hash` are conditional.
+ */
 const ID_TOKEN_CLAIMS: readonly string[] = [
   "sub",
   "iss",

@@ -65,7 +65,7 @@ describe("timingSafeEqual", () => {
   });
 
   it("shouldCompareUtf8BytesNotCharacters", () => {
-    // "é" is one character but two UTF-8 bytes, so "é" and "ab" differ in length.
+    // "é" and "ab" are both two UTF-8 bytes, so this compares equal-length byte sequences that differ.
     expect(timingSafeEqual("é", "ab")).toBe(false);
     expect(timingSafeEqual("é", "é")).toBe(true);
   });

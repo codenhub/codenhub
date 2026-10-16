@@ -16,6 +16,8 @@ export type ParseParametersResult =
  */
 export function parseParameters(text: string): ParseParametersResult {
   const entries: [string, string][] = [];
+  // `URLSearchParams` parses all of `text` before this loop can stop it, so callers must bound the text
+  // length first; the URL length and body size caps do. The pair cap bounds what is kept, not what is parsed.
   for (const entry of new URLSearchParams(text)) {
     if (entries.length === MAX_PARAMETERS) {
       return { ok: false, reason: "too_many" };

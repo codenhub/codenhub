@@ -90,6 +90,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     saveInteraction: (key, record) =>
       run(() => {
         purgeExpired();
+        rejectIfPresent(interactions, key);
         interactions.set(key, { record, used: false });
       }),
 
@@ -107,6 +108,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     saveCode: (key, record) =>
       run(() => {
         purgeExpired();
+        rejectIfPresent(codes, key);
         codes.set(key, { record, used: false });
       }),
 
@@ -119,6 +121,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     saveAccessToken: (key, record) =>
       run(() => {
         purgeExpired();
+        rejectIfPresent(accessTokens, key);
         accessTokens.set(key, { record, used: false });
       }),
 
@@ -134,6 +137,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     saveRefreshToken: (key, record) =>
       run(() => {
         purgeExpired();
+        rejectIfPresent(refreshTokens, key);
         refreshTokens.set(key, { record, used: false });
       }),
 
@@ -154,6 +158,16 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
         removeGrantEntries(refreshTokens, grantId);
       }),
   };
+}
+
+/**
+ * Refuses to overwrite a key. Overwriting would reset `used` to false, which makes a spent code or refresh
+ * token consumable again. The message omits the key, because a key is often a secret token.
+ */
+function rejectIfPresent<TRecord>(entries: Map<string, Entry<TRecord>>, key: string): void {
+  if (entries.has(key)) {
+    throw new Error("OidcStore: a key cannot be saved twice");
+  }
 }
 
 /**

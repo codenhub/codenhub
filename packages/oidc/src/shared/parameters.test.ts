@@ -44,7 +44,9 @@ describe("parseParameters", () => {
 
   it("shouldAcceptExactlyMaxParameters", () => {
     const text = Array.from({ length: MAX_PARAMETERS }, (_, index) => `p${index}=v`).join("&");
-    expect(parseParameters(text)).toMatchObject({ ok: true });
+    const result = parseParameters(text);
+    expect(result).toMatchObject({ ok: true });
+    expect(result.ok && result.parameters.size).toBe(MAX_PARAMETERS);
   });
 
   it("shouldRejectValueLongerThanMaxParameterLength", () => {

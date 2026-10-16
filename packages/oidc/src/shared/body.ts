@@ -37,13 +37,22 @@ const isDeclaredLengthOver = (request: Request, maxBytes: number): boolean => {
   return declared !== null && DECIMAL_INTEGER_PATTERN.test(declared) && Number(declared) > maxBytes;
 };
 
+/** Waits for a promise whose outcome no longer matters, so its rejection is not reported as unhandled. */
+export async function ignoreRejection(promise: Promise<unknown>): Promise<void> {
+  try {
+    await promise;
+  } catch {
+    // Deliberately ignored: the request already has its outcome.
+  }
+}
+
 /**
  * Collects a stream into one buffer, or returns `undefined` after cancelling it once it passes `maxBytes`.
  *
  * Cancellation can itself reject on a stream that is already errored, and that rejection is ignored
  * because the caller's answer is already "too large".
  */
-const readStreamUpTo = async (
+export const readStreamUpTo = async (
   stream: ReadableStream<Uint8Array>,
   maxBytes: number,
 ): Promise<Uint8Array | undefined> => {
@@ -58,8 +67,8 @@ const readStreamUpTo = async (
     }
     total += next.value.byteLength;
     if (total > maxBytes) {
-      // oxlint-disable-next-line no-await-in-loop -- runs once, on the last iteration, before returning
-      await reader.cancel().catch(() => undefined);
+      // Not awaited: the caller's answer is already "too large", so the cancel only has to settle quietly.
+      void ignoreRejection(reader.cancel());
       return undefined;
     }
     chunks.push(next.value);

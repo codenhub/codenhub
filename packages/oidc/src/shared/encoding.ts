@@ -9,7 +9,7 @@ const encoder = new TextEncoder();
 
 /** Encodes bytes as unpadded base64url (RFC 4648 §5). */
 export function encodeBase64Url(bytes: Uint8Array): string {
-  // Bit-by-bit instead of `btoa`, which is not available in every runtime this package supports.
+  // Bit-by-bit instead of `btoa`: the source-API policy bans `atob`/`btoa` (docs/internal/architecture.md, Runtime constraints).
   let output = "";
   let buffer = 0;
   let bits = 0;

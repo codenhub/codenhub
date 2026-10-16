@@ -70,3 +70,15 @@ describe("isCodeChallenge", () => {
     expect(isCodeChallenge(null)).toBe(false);
   });
 });
+
+describe("isCodeChallenge final character", () => {
+  it("shouldAcceptAFinalCharacterWhoseLowTwoBitsAreZero", () => {
+    expect(isCodeChallenge(`${"a".repeat(42)}A`)).toBe(true);
+    expect(isCodeChallenge(`${"a".repeat(42)}8`)).toBe(true);
+  });
+
+  it("shouldRejectAFinalCharacterWhoseLowTwoBitsAreNotZero", () => {
+    expect(isCodeChallenge(`${"a".repeat(42)}B`)).toBe(false);
+    expect(isCodeChallenge(`${"a".repeat(42)}-`)).toBe(false);
+  });
+});

@@ -73,3 +73,22 @@ describe("isRedirectUri", () => {
     expect(isRedirectUri(42)).toBe(false);
   });
 });
+
+describe("whitespace and control characters", () => {
+  it.each([
+    " https://x/cb",
+    "https://x/cb ",
+    "https://x/\tcb",
+    "https://x/c\nb",
+    "https://x/c\x00b",
+    "https://x/c\x7Fb",
+  ])("shouldRejectHttpsUrlWithControlOrSpace_%j", (value) => {
+    expect(isHttpsUrl(value)).toBe(false);
+    expect(isRedirectUri(value)).toBe(false);
+  });
+
+  it("shouldAcceptHttpsUrlWithoutControlOrSpace", () => {
+    expect(isHttpsUrl("https://x/cb")).toBe(true);
+    expect(isRedirectUri("https://app.test/callback")).toBe(true);
+  });
+});

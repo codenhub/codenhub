@@ -75,6 +75,8 @@ function claimNamesFor(options: ResolvedOptions, scopes: readonly string[]): rea
 /**
  * Keeps only the claims the scopes release, read as data so a getter on the callback's result never runs,
  * then sets `sub` last so no claim can replace the subject the token was issued to.
+ *
+ * @throws {TypeError} When the `claims` callback resolves to something that is not an object.
  */
 function releasedClaims(
   released: Readonly<Record<string, unknown>>,

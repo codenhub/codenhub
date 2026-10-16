@@ -215,6 +215,11 @@ export interface ProviderOptions {
   /**
    * Key pairs from `generateKeyPair` or `importPrivateKey`/`importPublicKey`, each with a unique `kid`.
    * The first signs ID tokens; every public key is published, so a retiring key stays verifiable.
+   *
+   * Each pair's private and public keys must be the two halves of one key pair. Only their algorithm and
+   * `kid` are checked, so a mismatched pair issues ID tokens nobody can verify. The keys must come from the
+   * same `@codenhub/jwt` copy as this package's peer dependency: a key from another copy makes the JWKS
+   * endpoint and token issuance reject.
    */
   readonly signingKeys: readonly KeyPair[];
   /** Where clients, codes, tokens, and interactions are kept. */
@@ -302,7 +307,8 @@ export interface Provider {
    * Answers the discovery, JWKS, token, and userinfo endpoints.
    *
    * @returns The response, or `null` when the request is for none of those URLs. Never throws for any
-   * request; rejects only when the store or the `claims` callback does.
+   * request; rejects only when the store or the `claims` callback does, or with a `TypeError` when the
+   * `claims` callback resolves to something that is not an object.
    */
   handle(request: Request): Promise<Response | null>;
   /**
@@ -318,7 +324,9 @@ export interface Provider {
    * @returns The response, or `interaction_not_found` when the interaction does not exist, was already
    * completed, or expired.
    * @throws {TypeError} When `outcome` is invalid: scopes outside the request or without `openid`, an
-   * `authTime` before the interaction under `prompt=login`, or older than the requested `max_age`.
+   * `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or older than the
+   * requested `max_age`. The interaction is consumed before these checks, so after a `TypeError` a retry
+   * gets `interaction_not_found` and the user must start over.
    */
   completeAuthorization(
     interactionId: string,

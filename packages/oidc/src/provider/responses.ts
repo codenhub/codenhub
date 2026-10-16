@@ -26,11 +26,12 @@ export function jsonResponse(
 ): Response {
   return new Response(JSON.stringify(body), {
     status: init.status ?? 200,
+    // Caller headers come first so the helper's content type, CORS and caching headers always win.
     headers: {
+      ...init.headers,
       "content-type": "application/json",
       ...CORS_HEADERS,
       ...(init.caching === "no-store" ? NO_STORE_HEADERS : { "cache-control": "public, max-age=300" }),
-      ...init.headers,
     },
   });
 }

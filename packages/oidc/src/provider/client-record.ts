@@ -33,7 +33,9 @@ export function checkClientRecord(record: unknown, clientId: string): ClientReco
     record.redirectUris.length === 0 ||
     !record.redirectUris.every(isRedirectUri)
   ) {
-    return invalid("must list at least one redirect URI, each absolute, without fragment or credentials");
+    return invalid(
+      "must list at least one redirect URI, each absolute, without fragment, whitespace or credentials, and not javascript:, data:, vbscript: or file:",
+    );
   }
   if (!isStringArray(record.scopes) || !record.scopes.includes("openid")) {
     return invalid("must list scopes including openid");
@@ -44,9 +46,9 @@ export function checkClientRecord(record: unknown, clientId: string): ClientReco
   }
   if (
     (auth.method === "client_secret_basic" || auth.method === "client_secret_post") &&
-    typeof auth.secretHash !== "string"
+    (typeof auth.secretHash !== "string" || auth.secretHash === "")
   ) {
-    return invalid("must carry auth.secretHash for a client secret method");
+    return invalid("must carry a non-empty auth.secretHash for a client secret method");
   }
   if (auth.method === "client_secret_jwt" && !isRecord(auth.key)) {
     return invalid("must carry auth.key for client_secret_jwt");
