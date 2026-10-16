@@ -507,7 +507,7 @@ Both keys of a pair carry the same `alg` and `kid`. `modulusLength` is 2048, 307
 
 Generated private and secret keys are not extractable unless you pass `extractable: true`. Keep that default for keys that live only as long as the process; set it when you need to store the key, as shown under [Exporting keys](#exporting-keys).
 
-On Linux builds of WebKit, such as WebKitGTK and WPE browsers and Playwright's Linux WebKit, generating an `EdDSA` or `Ed25519` pair rejects with Web Crypto's `OperationError` in about 1 call in 128, because of a WebKit bug fixed upstream that releases may not include yet. Calling `generateKeyPair` again works. Importing, signing, verifying and exporting Ed25519 keys are not affected.
+On Linux builds of WebKit, such as WebKitGTK and WPE browsers and Playwright's Linux WebKit, generating an `EdDSA` or `Ed25519` pair rejects with Web Crypto's `OperationError` in about 1 call in 128, because of a WebKit bug fixed upstream that releases may not include yet. Each call fails independently, so retry `generateKeyPair` on `OperationError` a bounded number of times: three failures in a row happen about once in two million calls. Importing, signing, verifying and exporting Ed25519 keys are not affected.
 
 If you are choosing an algorithm for tokens you issue, `ES256` and `Ed25519` give small keys and signatures and are fast. `RS256` is the one every JWT library supports. `EdDSA` exists for issuers that already publish it.
 
