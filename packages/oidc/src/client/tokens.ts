@@ -16,6 +16,12 @@ const member = (body: Readonly<Record<string, unknown>>, name: string): unknown 
 
 const isNonEmptyString = (value: unknown): value is string => typeof value === "string" && value !== "";
 
+/**
+ * RFC 6749 Appendix A.12: an access token is printable ASCII (VSCHAR, `%x20-7E`). `at_hash` is computed over its
+ * ASCII octets, so any other character would make a valid ID token fail to match it.
+ */
+const isAccessToken = (value: unknown): value is string => isNonEmptyString(value) && /^[\x20-\x7E]+$/.test(value);
+
 const isNonNegativeNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value) && value >= 0;
 
@@ -29,7 +35,7 @@ const invalidMember = (name: string): OidcIssue => ({ code: "invalid_token_respo
 function tokenResponseIssues(body: Readonly<Record<string, unknown>>): OidcIssue[] {
   const issues: OidcIssue[] = [];
   const accessToken = member(body, "access_token");
-  if (!isNonEmptyString(accessToken)) {
+  if (!isAccessToken(accessToken)) {
     issues.push(invalidMember("access_token"));
   }
   const tokenType = member(body, "token_type");

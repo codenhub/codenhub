@@ -1,3 +1,4 @@
+import { ignoreRejection, readStreamUpTo } from "../shared/body";
 import { MAX_RESPONSE_BYTES } from "../shared/limits";
 import { fail, ok } from "../shared/result";
 import type { OAuthErrorCode, OidcResult } from "../shared/types";
@@ -129,7 +130,10 @@ async function send(request: JsonRequest, signal: AbortSignal): Promise<OidcResu
     discardBody(response);
     return requestFailure(endpoint, "too_large");
   }
-  const bytes = await readCappedBody(response, MAX_RESPONSE_BYTES);
+  const bytes =
+    response.body === null
+      ? await readWholeBody(response, MAX_RESPONSE_BYTES)
+      : await readStreamUpTo(response.body, MAX_RESPONSE_BYTES);
   if (bytes === undefined) {
     return requestFailure(endpoint, "too_large");
   }
@@ -149,36 +153,10 @@ function parseObject(bytes: Uint8Array): Record<string, unknown> | undefined {
   }
 }
 
-/** Reads the body, stopping as soon as it grows past `maxBytes`, in which case it returns `undefined`. */
-async function readCappedBody(response: Response, maxBytes: number): Promise<Uint8Array | undefined> {
-  if (response.body === null) {
-    const whole = new Uint8Array(await response.arrayBuffer());
-    return whole.byteLength > maxBytes ? undefined : whole;
-  }
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  for (;;) {
-    // Chunks arrive in order, one at a time; there is nothing to run in parallel.
-    // oxlint-disable-next-line no-await-in-loop
-    const { done, value } = await reader.read();
-    if (done) {
-      break;
-    }
-    length += value.byteLength;
-    if (length > maxBytes) {
-      void ignoreRejection(reader.cancel());
-      return undefined;
-    }
-    chunks.push(value);
-  }
-  const body = new Uint8Array(length);
-  let offset = 0;
-  for (const chunk of chunks) {
-    body.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return body;
+/** A body with no stream has no chunk to stop at, so its whole buffer is checked against the limit at once. */
+async function readWholeBody(response: Response, maxBytes: number): Promise<Uint8Array | undefined> {
+  const whole = new Uint8Array(await response.arrayBuffer());
+  return whole.byteLength > maxBytes ? undefined : whole;
 }
 
 /** Releases a body that will not be read, so the connection can be reused. */
@@ -189,14 +167,5 @@ function discardBody(response: Response): void {
     }
   } catch {
     // A body that cannot be cancelled, such as a locked one, is left to the garbage collector.
-  }
-}
-
-/** Waits for a promise whose outcome no longer matters, so its rejection is not reported as unhandled. */
-async function ignoreRejection(promise: Promise<unknown>): Promise<void> {
-  try {
-    await promise;
-  } catch {
-    // Deliberately ignored: the request already has its outcome.
   }
 }

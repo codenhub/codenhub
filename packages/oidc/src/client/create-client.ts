@@ -167,14 +167,20 @@ function readRefreshOptions(options: unknown): {
   if (!isObject(options)) {
     throw new TypeError("refresh: options must be an object");
   }
-  const { scope } = options;
-  if (scope !== undefined && (!Array.isArray(scope) || scope.length === 0 || !scope.every(isScopeToken))) {
+  // Copied by index, so a sparse array is refused rather than serialized with an empty scope.
+  const scope =
+    options.scope === undefined ? undefined : Array.from(options.scope as ArrayLike<unknown>, (entry) => entry);
+  if (
+    scope !== undefined &&
+    (!Array.isArray(options.scope) || scope.length === 0 || !scope.every((entry) => isScopeToken(entry)))
+  ) {
     throw new TypeError("refresh: scope must be a non-empty array of scope tokens");
   }
   return {
     refreshToken: readRequiredString(options, "refreshToken", "refresh"),
     subject: readRequiredString(options, "subject", "refresh"),
-    scope: scope as readonly string[] | undefined,
+    // Duplicates are dropped in first-seen order, as the authorization request does, so the provider sees each scope once.
+    scope: scope === undefined ? undefined : [...new Set(scope as readonly string[])],
   };
 }
 

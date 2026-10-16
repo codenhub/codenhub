@@ -105,6 +105,75 @@ function checkIssuer(document: object, issuer: string): OidcIssue[] {
   return matches ? [] : [{ code: "issuer_mismatch", path: [METADATA_ROOT, ISSUER_MEMBER] }];
 }
 
+/** Marks a value that cannot be copied: a getter anywhere inside it, or a cycle, which no JSON document has. */
+const UNCOPYABLE = Symbol("uncopyable");
+
+/**
+ * Copies the own data members of `source` named by `keys`, recursively. A getter below any of them, or a cycle,
+ * returns `UNCOPYABLE` without running a getter.
+ */
+function copyMembers(
+  source: object,
+  keys: readonly string[],
+  ancestors: Set<object>,
+): [string, unknown][] | typeof UNCOPYABLE {
+  const entries: [string, unknown][] = [];
+  for (const key of keys) {
+    const read = readMember(source, key);
+    if (read.state === "absent") {
+      continue;
+    }
+    if (read.state === "accessor") {
+      return UNCOPYABLE;
+    }
+    const copy = copyValue(read.value, ancestors);
+    if (copy === UNCOPYABLE) {
+      return UNCOPYABLE;
+    }
+    entries.push([key, copy]);
+  }
+  return entries;
+}
+
+/**
+ * Copies a value by its own data members, so the copy shares no object with the caller's. Arrays keep their
+ * length and holes. Freezing the copy therefore never freezes an object the caller still holds.
+ */
+function copyValue(value: unknown, ancestors: Set<object>): unknown {
+  if (typeof value !== "object" || value === null) {
+    return value;
+  }
+  if (ancestors.has(value)) {
+    return UNCOPYABLE;
+  }
+  ancestors.add(value);
+  let copy: unknown;
+  if (Array.isArray(value)) {
+    const indices = Array.from({ length: value.length }, (_, index) => String(index));
+    const entries = copyMembers(value, indices, ancestors);
+    if (entries === UNCOPYABLE) {
+      copy = UNCOPYABLE;
+    } else {
+      const items: unknown[] = [];
+      items.length = value.length;
+      for (const [key, item] of entries) {
+        items[Number(key)] = item;
+      }
+      copy = items;
+    }
+  } else {
+    const keys = Reflect.ownKeys(value).filter((key): key is string => typeof key === "string");
+    const entries = copyMembers(value, keys, ancestors);
+    copy = entries === UNCOPYABLE ? UNCOPYABLE : Object.fromEntries(entries);
+  }
+  ancestors.delete(value);
+  return copy;
+}
+
+/**
+ * Checks one listed member against its rule. The rule reads a copy, so a getter inside an array or object is
+ * found before the rule can run it.
+ */
 function checkRule(document: object, rule: MemberRule): OidcIssue[] {
   const read = readMember(document, rule.name);
   const path = [METADATA_ROOT, rule.name];
@@ -118,31 +187,34 @@ function checkRule(document: object, rule: MemberRule): OidcIssue[] {
   if (read.value === undefined && !rule.required) {
     return [];
   }
-  return rule.accepts(read.value) ? [] : [invalid(path)];
+  const copy = copyValue(read.value, new Set());
+  if (copy === UNCOPYABLE) {
+    return [invalid([METADATA_ROOT])];
+  }
+  return rule.accepts(copy) ? [] : [invalid(path)];
 }
 
-/** An accessor on a member this package does not read is still refused, so no getter is ever run. */
+/**
+ * A member this package does not read is kept in the copy, so it must still be copyable: an accessor, or a
+ * getter anywhere inside it, is refused, and no getter is ever run.
+ */
 function checkUnlistedMembers(document: object): OidcIssue[] {
-  return Reflect.ownKeys(document).flatMap((key) =>
-    typeof key === "string" && !KNOWN_MEMBERS.has(key) && readMember(document, key).state === "accessor"
-      ? [invalid([METADATA_ROOT])]
-      : [],
-  );
-}
-
-/** Copies own data members. Arrays are copied too, so freezing the result does not freeze the caller's arrays. */
-function copyDataMembers(document: object): ProviderMetadata {
-  const entries = Reflect.ownKeys(document).flatMap((key): [string, unknown][] => {
-    if (typeof key !== "string") {
+  return Reflect.ownKeys(document).flatMap((key) => {
+    if (typeof key !== "string" || KNOWN_MEMBERS.has(key)) {
       return [];
     }
     const read = readMember(document, key);
-    if (read.state !== "data") {
-      return [];
-    }
-    return [[key, Array.isArray(read.value) ? [...read.value] : read.value]];
+    const refused =
+      read.state === "accessor" || (read.state === "data" && copyValue(read.value, new Set()) === UNCOPYABLE);
+    return refused ? [invalid([METADATA_ROOT])] : [];
   });
-  return Object.fromEntries(entries) as ProviderMetadata;
+}
+
+/** Copies every own data member of the document. Called only after the checks pass, so nothing is refused here. */
+function copyDocument(document: object): ProviderMetadata | typeof UNCOPYABLE {
+  const keys = Reflect.ownKeys(document).filter((key): key is string => typeof key === "string");
+  const entries = copyMembers(document, keys, new Set([document]));
+  return entries === UNCOPYABLE ? UNCOPYABLE : (Object.fromEntries(entries) as ProviderMetadata);
 }
 
 /**
@@ -166,5 +238,9 @@ export function checkMetadata(value: unknown, issuer: string): OidcResult<Provid
     ...checkUnlistedMembers(value),
   ];
   const [first, ...rest] = issues;
-  return first === undefined ? ok(copyDataMembers(value)) : fail(first, ...rest);
+  if (first !== undefined) {
+    return fail(first, ...rest);
+  }
+  const copy = copyDocument(value);
+  return copy === UNCOPYABLE ? fail(invalid([METADATA_ROOT])) : ok(copy);
 }

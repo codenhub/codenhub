@@ -144,6 +144,10 @@ export interface Refreshed {
 
 /** What to refresh. */
 export interface RefreshOptions {
+  /**
+   * The refresh token to exchange. A refresh response may omit `refresh_token`; then the old one stays valid
+   * and the app keeps using it (RFC 6749 §6), so only a new `tokens.refreshToken` replaces it.
+   */
   readonly refreshToken: string;
   /** The `sub` of the original ID token. When the provider sends a new ID token, its `sub` must equal it. */
   readonly subject: string;
@@ -179,15 +183,21 @@ export interface Client {
    */
   callback(url: string | URL, pending: PendingAuthorization): Promise<OidcResult<SignIn>>;
   /**
-   * Exchanges a refresh token for new tokens. The provider rotates refresh tokens, so store the new one.
+   * Exchanges a refresh token for new tokens. The provider may rotate refresh tokens: when `tokens.refreshToken`
+   * is present, store it in place of the old one. When it is absent, keep the old refresh token, which stays
+   * valid (RFC 6749 §6).
    *
    * @returns The new tokens, or every issue found. Never throws for any response.
+   * @throws {TypeError} When `options` is invalid, such as an empty `refreshToken` or a scope list that is not
+   * a non-empty array of scope tokens. The message names the option and never its value.
    */
   refresh(options: RefreshOptions): Promise<OidcResult<Refreshed>>;
   /**
    * Fetches the user's claims from the userinfo endpoint.
    *
-   * @returns The claims, or every issue found. Never throws for any response.
+   * @returns The claims, or every issue found. Never throws for any response; it rejects only for the caller
+   * errors listed below.
+   * @throws {TypeError} When the provider metadata has no userinfo_endpoint, or an option is invalid.
    */
   userinfo(options: UserinfoOptions): Promise<OidcResult<UserinfoClaims>>;
 }

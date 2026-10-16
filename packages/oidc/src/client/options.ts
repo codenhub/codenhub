@@ -64,9 +64,21 @@ export const readTimeoutSeconds = (value: unknown, label: string): number =>
 
 const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
 
+/**
+ * The issuer as an own data value. Read from the descriptor so a getter is never run; an accessor or a
+ * missing or non-string issuer reads as `""`, which the https check refuses.
+ */
+function readIssuer(metadata: unknown): string {
+  if (!isObject(metadata) || !Object.hasOwn(metadata, "issuer")) {
+    return "";
+  }
+  const value = Object.getOwnPropertyDescriptor(metadata, "issuer")?.value;
+  return typeof value === "string" ? value : "";
+}
+
 /** Checks the metadata with the same rules as a fetched document, and names the first member that fails. */
 function readMetadata(metadata: ProviderMetadata): ProviderMetadata {
-  const issuer = isObject(metadata) && typeof metadata.issuer === "string" ? metadata.issuer : "";
+  const issuer = readIssuer(metadata);
   // A hand-written document is held to the issuer rules `discover` applies to its argument.
   if (!isHttpsUrl(issuer) || issuer.includes("?")) {
     throw new TypeError(`${PREFIX} metadata.issuer must be an https URL without query, fragment, or credentials`);
@@ -80,23 +92,29 @@ function readMetadata(metadata: ProviderMetadata): ProviderMetadata {
   throw new TypeError(`${PREFIX} ${place} is not valid provider metadata`);
 }
 
+/**
+ * A string that is well-formed Unicode. `encodeURIComponent` throws `URIError` on a lone surrogate, and that
+ * would surface later, outside any result, so it is refused here at creation.
+ */
+const isWellFormedString = (value: unknown): value is string => typeof value === "string" && value.isWellFormed();
+
 function readClientId(clientId: unknown): string {
-  if (typeof clientId !== "string" || clientId === "") {
-    throw new TypeError(`${PREFIX} clientId must be a non-empty string`);
+  if (!isWellFormedString(clientId) || clientId === "") {
+    throw new TypeError(`${PREFIX} clientId must be a non-empty string of well-formed Unicode`);
   }
   return clientId;
 }
 
 function readRedirectUri(redirectUri: unknown): string {
-  if (!isRedirectUri(redirectUri)) {
+  if (!isRedirectUri(redirectUri) || !redirectUri.isWellFormed()) {
     throw new TypeError(`${PREFIX} redirectUri must be an absolute URI without fragment or credentials`);
   }
   return redirectUri;
 }
 
 function readSecret(secret: unknown): string {
-  if (typeof secret !== "string" || secret === "") {
-    throw new TypeError(`${PREFIX} auth.secret must be a non-empty string`);
+  if (!isWellFormedString(secret) || secret === "") {
+    throw new TypeError(`${PREFIX} auth.secret must be a non-empty string of well-formed Unicode`);
   }
   return secret;
 }
