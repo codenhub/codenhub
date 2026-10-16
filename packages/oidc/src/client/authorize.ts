@@ -71,7 +71,7 @@ function readScope(scope: readonly string[] | undefined): readonly string[] {
   }
   const copy = denseCopy(scope);
   if (copy === undefined || copy.length === 0 || !copy.every(isScopeToken)) {
-    throw new TypeError("authorize: scope must be a non-empty array of scope tokens");
+    throw new TypeError("authorize: scope must be a non-empty array of at most 100 scope tokens");
   }
   if (!copy.includes(REQUIRED_SCOPE)) {
     throw new TypeError("authorize: scope must include openid");
@@ -89,7 +89,9 @@ function readPrompt(prompt: readonly Prompt[] | undefined): readonly Prompt[] {
   }
   const copy = denseCopy(prompt);
   if (copy === undefined || !copy.every(isPrompt)) {
-    throw new TypeError("authorize: prompt must be an array of none, login, consent, or select_account");
+    throw new TypeError(
+      "authorize: prompt must be an array of none, login, consent, or select_account, of at most 100 entries",
+    );
   }
   if (new Set(copy).size !== copy.length) {
     throw new TypeError("authorize: prompt must not repeat a value");
@@ -123,7 +125,7 @@ function readUiLocales(uiLocales: readonly string[] | undefined): readonly strin
   }
   const copy = denseCopy(uiLocales);
   if (copy === undefined || !copy.every(isLanguageTag)) {
-    throw new TypeError("authorize: uiLocales must be an array of non-empty language tags without spaces");
+    throw new TypeError("authorize: uiLocales must be an array of at most 100 non-empty language tags without spaces");
   }
   const joined = (copy as string[]).join(" ");
   if (joined.length > MAX_PARAMETER_LENGTH) {

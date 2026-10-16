@@ -674,6 +674,25 @@ describe("refresh", () => {
     await expect(rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope: [] })).rejects.toThrow(TypeError);
   });
 
+  it("throws a TypeError for a null scope", async () => {
+    const rp = clientFor(createFakeOp());
+
+    await expect(
+      rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope: null as unknown as readonly string[] }),
+    ).rejects.toThrow(
+      expect.objectContaining({ name: "TypeError", message: expect.stringContaining("refresh: scope") }),
+    );
+  });
+
+  it("throws a TypeError for a scope list of more than 100 entries", async () => {
+    const rp = clientFor(createFakeOp());
+    const scope = Array.from({ length: 101 }, (_, index) => `s${index}`);
+
+    await expect(rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope })).rejects.toThrow(
+      expect.objectContaining({ name: "TypeError", message: expect.stringContaining("at most 100") }),
+    );
+  });
+
   it("throws a TypeError for a sparse scope list", async () => {
     const rp = clientFor(createFakeOp());
     // oxlint-disable-next-line no-sparse-arrays -- the hole is what this test is about

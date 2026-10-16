@@ -170,7 +170,7 @@ function readRefreshOptions(options: unknown): {
   // Copied by index, so a sparse or oversized array is refused rather than serialized.
   const scope = options.scope === undefined ? undefined : denseCopy(options.scope);
   if (options.scope !== undefined && (scope === undefined || scope.length === 0 || !scope.every(isScopeToken))) {
-    throw new TypeError("refresh: scope must be a non-empty array of scope tokens");
+    throw new TypeError("refresh: scope must be a non-empty array of at most 100 scope tokens");
   }
   return {
     refreshToken: readRequiredString(options, "refreshToken", "refresh"),

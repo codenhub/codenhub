@@ -93,11 +93,11 @@ const { url, pending } = await client.authorize({
 
 | Option      | Meaning                                                                                                                                                                      | Default      |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `scope`     | Scopes to request, as a non-empty array of scope tokens. It must include `openid`. Duplicates are removed.                                                                   | `["openid"]` |
+| `scope`     | Scopes to request, as a non-empty array of at most 100 scope tokens. It must include `openid`. Duplicates are removed.                                                       | `["openid"]` |
 | `prompt`    | Whether the provider must, or must not, show its pages: `none`, `login`, `consent` or `select_account`. `none` must stand alone, and a value may not repeat.                 | None sent    |
 | `maxAge`    | The most seconds that may pass since the user last authenticated, as a non-negative integer. When set, the ID token must carry `auth_time`, and the callback checks its age. | None sent    |
 | `loginHint` | A hint about the account to sign in with, such as an email address. A string.                                                                                                | None sent    |
-| `uiLocales` | Preferred languages for the provider's pages, as BCP 47 tags, each without spaces.                                                                                           | None sent    |
+| `uiLocales` | Preferred languages for the provider's pages, as at most 100 BCP 47 tags, each without spaces.                                                                               | None sent    |
 
 The URL is the provider's authorization endpoint with the request's parameters added to any query it already has: `response_type=code`, `client_id`, `redirect_uri`, `scope`, `state`, `nonce`, `code_challenge` with `code_challenge_method=S256`, and whichever optional parameters you set. The `state`, `nonce` and PKCE verifier are random values from `crypto.getRandomValues`, generated for each call.
 
@@ -176,11 +176,11 @@ if (refreshed.ok) {
 }
 ```
 
-| Option         | Meaning                                                                                                                                                  |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `refreshToken` | The refresh token to exchange. A non-empty string.                                                                                                       |
-| `subject`      | The `sub` of the original ID token. When the provider sends a new ID token, its `sub` must equal this, or the result is `subject_mismatch`.              |
-| `scope`        | A narrower set of scopes to request, as a non-empty array of scope tokens. It must be within the original grant; a wider set is refused by the provider. |
+| Option         | Meaning                                                                                                                                                              |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `refreshToken` | The refresh token to exchange. A non-empty string.                                                                                                                   |
+| `subject`      | The `sub` of the original ID token. When the provider sends a new ID token, its `sub` must equal this, or the result is `subject_mismatch`.                          |
+| `scope`        | A narrower set of scopes to request, as a non-empty array of at most 100 scope tokens. It must be within the original grant; a wider set is refused by the provider. |
 
 The provider rotates refresh tokens. Each exchange spends the one you sent and returns a new one in `tokens.refreshToken`, so **store the new refresh token and discard the old one**. Presenting a spent refresh token again is treated as theft: the provider refuses it with `provider_error` and `invalid_grant`, and it revokes every token issued from that sign-in. [The token endpoint](provider.md#refresh-tokens) describes the rotation in detail.
 
