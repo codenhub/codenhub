@@ -34,12 +34,21 @@ const isPrompt = (value: unknown): value is Prompt => typeof value === "string" 
 const isLanguageTag = (value: unknown): boolean => typeof value === "string" && LANGUAGE_TAG.test(value);
 
 /**
- * Copies an array by index, or returns `undefined` when it is not an array or has a hole. `every` skips holes,
- * so a sparse array would pass a check on its present items and then send `undefined` as a value. The copy also
- * keeps a caller who mutates the array during an `await` from changing what was checked.
+ * The longest list an option may hold. A request carries at most a few scopes, prompts or locales; the bound
+ * keeps an array with a huge `length` from making the copy below run for a long time.
  */
-function denseCopy(list: unknown): unknown[] | undefined {
-  if (!Array.isArray(list)) {
+const MAX_LIST_LENGTH = 100;
+
+/**
+ * Copies an array by index, or returns `undefined` when it is not an array, is longer than
+ * {@link MAX_LIST_LENGTH}, or has a hole. `every` skips holes, so a sparse array would pass a check on its present
+ * items and then send `undefined` as a value. The copy also keeps a caller who mutates the array during an
+ * `await` from changing what was checked.
+ *
+ * @internal
+ */
+export function denseCopy(list: unknown): unknown[] | undefined {
+  if (!Array.isArray(list) || list.length > MAX_LIST_LENGTH) {
     return undefined;
   }
   const copy: unknown[] = [];

@@ -108,7 +108,7 @@ describe("resolveClientOptions", () => {
   it("throws TypeError for an auth secret with a lone surrogate", () => {
     expect(() =>
       resolveClientOptions(withOptions({ auth: { method: "client_secret_basic", secret: "shh\uD800" } })),
-    ).toThrow("auth.secret");
+    ).toThrow(expect.objectContaining({ name: "TypeError", message: expect.stringContaining("auth.secret") }));
   });
 
   it("accepts a clientId with well-formed non-ASCII characters", () => {

@@ -71,6 +71,44 @@ describe("checkMetadata", () => {
     expect(Object.isFrozen(copy.vendor)).toBe(true);
     expect(Object.isFrozen(document.vendor)).toBe(false);
     expect(Object.isFrozen(document.vendor.nested.list)).toBe(false);
+    const nested = (copy.vendor as { nested: { list: number[] } }).nested;
+    expect(Object.isFrozen(nested)).toBe(true);
+    expect(Object.isFrozen(nested.list)).toBe(true);
+  });
+
+  it("refuses a member nested deeper than the copy allows, without overflowing the stack", () => {
+    let deep: unknown = "leaf";
+    for (let level = 0; level < 100_000; level += 1) {
+      deep = [deep];
+    }
+
+    expect(issuesOf(checkMetadata({ ...validDocument(), vendor: deep }, ISSUER))).toEqual([
+      { code: "invalid_metadata", path: ["metadata"] },
+    ]);
+  });
+
+  it("refuses a string array with a hole", () => {
+    // oxlint-disable-next-line no-sparse-arrays -- the hole is what this test is about
+    const document = { ...validDocument(), scopes_supported: ["openid", , "email"] };
+
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([{ code: "invalid_metadata", path: ["metadata"] }]);
+  });
+
+  it("refuses an array carrying a named member", () => {
+    const scopes = Object.assign(["openid"], { extra: "x" });
+
+    expect(issuesOf(checkMetadata({ ...validDocument(), scopes_supported: scopes }, ISSUER))).toEqual([
+      { code: "invalid_metadata", path: ["metadata"] },
+    ]);
+  });
+
+  it("keeps a __proto__ member as an own property", () => {
+    const document = JSON.parse(`{"vendor":{"__proto__":{"polluted":true}}}`) as Record<string, unknown>;
+    const copy = valueOf(checkMetadata({ ...validDocument(), ...document }, ISSUER));
+    const vendor = copy.vendor as Record<string, unknown>;
+
+    expect(Object.hasOwn(vendor, "__proto__")).toBe(true);
+    expect(Object.getPrototypeOf(vendor)).toBe(Object.prototype);
   });
 
   it("copies a nested array inside a listed member so the caller's array is not frozen", () => {

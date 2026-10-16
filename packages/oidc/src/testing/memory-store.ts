@@ -40,7 +40,8 @@ const MILLISECONDS_PER_SECOND = 1000;
  * are judged against.
  *
  * @param options - Clients to register, and the clock used to purge expired entries.
- * @returns A store whose methods resolve, never reject for a string key.
+ * @returns A store whose methods resolve for any string key, except that each `save*` method rejects when
+ * its key already exists, so a spent code or refresh token can never be made consumable again.
  */
 export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore {
   const now = options.now ?? (() => Date.now());

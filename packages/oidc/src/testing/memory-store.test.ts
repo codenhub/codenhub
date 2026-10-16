@@ -511,6 +511,8 @@ describe("saving a key that already exists", () => {
     await store.saveCode("code-1", makeCode({ expiresAt: 1_001 }));
     clock.nowMs = 1_001_000;
 
-    await expect(store.saveCode("code-1", makeCode())).resolves.toBeUndefined();
+    const replacement = makeCode();
+    await expect(store.saveCode("code-1", replacement)).resolves.toBeUndefined();
+    await expect(store.consumeCode("code-1")).resolves.toEqual({ status: "consumed", record: replacement });
   });
 });

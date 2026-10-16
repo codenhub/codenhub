@@ -189,6 +189,12 @@ describe("buildAuthorization", () => {
     expect((error as Error).message).toContain("scope");
   });
 
+  it("throws TypeError when scope holds more entries than any request needs", async () => {
+    const error = await refusalOf({ scope: ["openid", ...Array.from({ length: 100 }, (_, index) => `s${index}`)] });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("scope");
+  });
+
   it("throws TypeError when scope is empty", async () => {
     const error = await refusalOf({ scope: [] });
     expect(error).toBeInstanceOf(TypeError);

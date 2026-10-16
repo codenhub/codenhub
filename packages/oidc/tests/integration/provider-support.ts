@@ -204,7 +204,7 @@ export async function answer(provider: Provider, request: Request): Promise<Resp
 /** The HTTP Basic `authorization` header for the given client credentials. */
 export function basicHeader({ clientId, secret }: Basic): string {
   // RFC 6749 §2.3.1: id and secret are form-encoded before base64. URLSearchParams does exactly that, and
-  // encodes characters such as `!` and `*` that a bare encodeURIComponent would leave alone.
+  // encodes characters such as `!`, `'`, `(` and `)` that a bare encodeURIComponent would leave alone.
   const formEncode = (value: string): string => new URLSearchParams({ value }).toString().slice("value=".length);
   return `Basic ${Buffer.from(`${formEncode(clientId)}:${formEncode(secret)}`).toString("base64")}`;
 }

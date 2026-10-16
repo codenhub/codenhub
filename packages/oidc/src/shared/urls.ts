@@ -1,15 +1,24 @@
 /** Schemes a redirect URI must never use, because a browser would run them rather than navigate. */
 const FORBIDDEN_REDIRECT_PROTOCOLS: ReadonlySet<string> = new Set(["javascript:", "data:", "vbscript:", "file:"]);
 
+const FIRST_VISIBLE_ASCII = 0x21;
+const LAST_VISIBLE_ASCII = 0x7e;
+
 /**
- * Whether a string holds a control character or space. The URL parser strips some of these and drops tabs
- * and newlines anywhere, so a string holding them would differ from the URL it serializes to.
+ * Whether a string holds anything but visible ASCII. The URL parser strips spaces and controls, drops tabs and
+ * newlines anywhere, and maps non-ASCII host characters through IDNA (`example。com` becomes
+ * `example.com`), so such a string would differ from the URL it serializes to. Internationalized URLs are
+ * written in their ASCII form: punycode hosts and percent-encoded paths.
  */
-const hasControlOrSpace = (value: string): boolean =>
-  [...value].some((char) => {
-    const code = char.charCodeAt(0);
-    return code <= 0x20 || code === 0x7f;
-  });
+function hasNonVisibleAscii(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code < FIRST_VISIBLE_ASCII || code > LAST_VISIBLE_ASCII) {
+      return true;
+    }
+  }
+  return false;
+}
 
 /**
  * Tests whether a value is an absolute `https:` URL with no credentials and no fragment.
@@ -18,7 +27,7 @@ const hasControlOrSpace = (value: string): boolean =>
  * an empty fragment and the caller should still see it as present.
  */
 export function isHttpsUrl(value: unknown): value is string {
-  if (typeof value !== "string" || value.includes("#") || hasControlOrSpace(value) || !URL.canParse(value)) {
+  if (typeof value !== "string" || value.includes("#") || hasNonVisibleAscii(value) || !URL.canParse(value)) {
     return false;
   }
   const url = new URL(value);
@@ -31,7 +40,7 @@ export function isHttpsUrl(value: unknown): value is string {
  * Any scheme is accepted except those a browser would execute, since native apps register custom schemes.
  */
 export function isRedirectUri(value: unknown): value is string {
-  if (typeof value !== "string" || value.includes("#") || hasControlOrSpace(value) || !URL.canParse(value)) {
+  if (typeof value !== "string" || value.includes("#") || hasNonVisibleAscii(value) || !URL.canParse(value)) {
     return false;
   }
   const url = new URL(value);

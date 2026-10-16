@@ -3,7 +3,7 @@ import { MAX_URL_LENGTH } from "../shared/limits";
 import { parseParameters } from "../shared/parameters";
 import { fail, ok } from "../shared/result";
 import type { OidcIssue, OidcResult, UserinfoClaims } from "../shared/types";
-import { buildAuthorization } from "./authorize";
+import { buildAuthorization, denseCopy } from "./authorize";
 import { readErrorCode, requestFailure, requestJson } from "./http";
 import { createIdTokenValidator, type IdTokenValidator } from "./id-token";
 import { type ResolvedClientOptions, resolveClientOptions } from "./options";
@@ -167,13 +167,9 @@ function readRefreshOptions(options: unknown): {
   if (!isObject(options)) {
     throw new TypeError("refresh: options must be an object");
   }
-  // Copied by index, so a sparse array is refused rather than serialized with an empty scope.
-  const scope =
-    options.scope === undefined ? undefined : Array.from(options.scope as ArrayLike<unknown>, (entry) => entry);
-  if (
-    scope !== undefined &&
-    (!Array.isArray(options.scope) || scope.length === 0 || !scope.every((entry) => isScopeToken(entry)))
-  ) {
+  // Copied by index, so a sparse or oversized array is refused rather than serialized.
+  const scope = options.scope === undefined ? undefined : denseCopy(options.scope);
+  if (options.scope !== undefined && (scope === undefined || scope.length === 0 || !scope.every(isScopeToken))) {
     throw new TypeError("refresh: scope must be a non-empty array of scope tokens");
   }
   return {

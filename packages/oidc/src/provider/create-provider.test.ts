@@ -162,9 +162,9 @@ describe("provider.handle", () => {
     const jwks = await provider.handle(new Request("https://op.example/tenant/jwks"));
     const userinfo = await provider.handle(new Request("https://op.example/tenant/userinfo"));
 
-    expect(token).not.toBeNull();
-    expect(token?.status).toBeGreaterThanOrEqual(400);
-    expect(token?.status).toBeLessThan(500);
+    // A POST without a form body reaches the token endpoint and is refused there as `invalid_request`.
+    expect(token?.status).toBe(400);
+    expect(await token?.json()).toEqual({ error: "invalid_request" });
     expect(jwks?.status).toBe(200);
     expect(userinfo?.status).toBe(401);
   });

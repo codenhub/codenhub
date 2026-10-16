@@ -105,69 +105,75 @@ function checkIssuer(document: object, issuer: string): OidcIssue[] {
   return matches ? [] : [{ code: "issuer_mismatch", path: [METADATA_ROOT, ISSUER_MEMBER] }];
 }
 
-/** Marks a value that cannot be copied: a getter anywhere inside it, or a cycle, which no JSON document has. */
+/**
+ * Marks a value that cannot be copied: a getter anywhere inside it, an object reached twice (which includes a
+ * cycle), an array with holes or named members, or nesting deeper than {@link MAX_COPY_DEPTH}. No JSON document
+ * has any of these.
+ */
 const UNCOPYABLE = Symbol("uncopyable");
 
-/**
- * Copies the own data members of `source` named by `keys`, recursively. A getter below any of them, or a cycle,
- * returns `UNCOPYABLE` without running a getter.
- */
-function copyMembers(
-  source: object,
-  keys: readonly string[],
-  ancestors: Set<object>,
-): [string, unknown][] | typeof UNCOPYABLE {
-  const entries: [string, unknown][] = [];
-  for (const key of keys) {
-    const read = readMember(source, key);
-    if (read.state === "absent") {
-      continue;
-    }
-    if (read.state === "accessor") {
-      return UNCOPYABLE;
-    }
-    const copy = copyValue(read.value, ancestors);
-    if (copy === UNCOPYABLE) {
-      return UNCOPYABLE;
-    }
-    entries.push([key, copy]);
+/** Matches the depth `@codenhub/jwt` allows in a JSON object; discovery documents are far shallower. */
+const MAX_COPY_DEPTH = 32;
+
+type Container = Record<string, unknown> | unknown[];
+
+/** The keys to copy, or `undefined` for an array that is not dense or carries named members. */
+function memberKeys(source: object): readonly string[] | undefined {
+  const keys = Reflect.ownKeys(source).filter((key): key is string => typeof key === "string");
+  if (!Array.isArray(source)) {
+    return keys;
   }
-  return entries;
+  // Own keys list integer indices first, in ascending order, so a dense array lists exactly 0 to length - 1.
+  const indices = keys.filter((key) => key !== "length");
+  const isDense = indices.length === source.length && indices.every((key, index) => key === String(index));
+  return isDense ? indices : undefined;
+}
+
+/** Sets a member as an own data property, so a key such as `__proto__` never changes the prototype. */
+function setMember(target: Container, key: string, value: unknown): void {
+  Object.defineProperty(target, key, { value, enumerable: true, writable: true, configurable: true });
 }
 
 /**
- * Copies a value by its own data members, so the copy shares no object with the caller's. Arrays keep their
- * length and holes. Freezing the copy therefore never freezes an object the caller still holds.
+ * Copies a value by its own data members, so the copy shares no object with the caller's and freezing it never
+ * freezes an object the caller still holds. The walk keeps its own stack, so a deep value cannot overflow the
+ * call stack, and it never runs a getter.
  */
-function copyValue(value: unknown, ancestors: Set<object>): unknown {
+function copyValue(value: unknown): unknown {
   if (typeof value !== "object" || value === null) {
     return value;
   }
-  if (ancestors.has(value)) {
-    return UNCOPYABLE;
-  }
-  ancestors.add(value);
-  let copy: unknown;
-  if (Array.isArray(value)) {
-    const indices = Array.from({ length: value.length }, (_, index) => String(index));
-    const entries = copyMembers(value, indices, ancestors);
-    if (entries === UNCOPYABLE) {
-      copy = UNCOPYABLE;
-    } else {
-      const items: unknown[] = [];
-      items.length = value.length;
-      for (const [key, item] of entries) {
-        items[Number(key)] = item;
-      }
-      copy = items;
+  const root: Container = Array.isArray(value) ? [] : {};
+  const seen = new Set<object>([value]);
+  const pending: { readonly source: object; readonly target: Container; readonly depth: number }[] = [
+    { source: value, target: root, depth: 1 },
+  ];
+  while (pending.length > 0) {
+    const { source, target, depth } = pending.pop() as (typeof pending)[number];
+    const keys = memberKeys(source);
+    if (keys === undefined) {
+      return UNCOPYABLE;
     }
-  } else {
-    const keys = Reflect.ownKeys(value).filter((key): key is string => typeof key === "string");
-    const entries = copyMembers(value, keys, ancestors);
-    copy = entries === UNCOPYABLE ? UNCOPYABLE : Object.fromEntries(entries);
+    for (const key of keys) {
+      const read = readMember(source, key);
+      if (read.state !== "data") {
+        return UNCOPYABLE;
+      }
+      const child = read.value;
+      if (typeof child !== "object" || child === null) {
+        setMember(target, key, child);
+        continue;
+      }
+      if (seen.has(child) || depth >= MAX_COPY_DEPTH) {
+        return UNCOPYABLE;
+      }
+      seen.add(child);
+      const childTarget: Container = Array.isArray(child) ? [] : {};
+      setMember(target, key, childTarget);
+      pending.push({ source: child, target: childTarget, depth: depth + 1 });
+    }
   }
-  ancestors.delete(value);
-  return copy;
+  return root;
 }
 
 /**
@@ -187,7 +193,7 @@ function checkRule(document: object, rule: MemberRule): OidcIssue[] {
   if (read.value === undefined && !rule.required) {
     return [];
   }
-  const copy = copyValue(read.value, new Set());
+  const copy = copyValue(read.value);
   if (copy === UNCOPYABLE) {
     return [invalid([METADATA_ROOT])];
   }
@@ -204,17 +210,15 @@ function checkUnlistedMembers(document: object): OidcIssue[] {
       return [];
     }
     const read = readMember(document, key);
-    const refused =
-      read.state === "accessor" || (read.state === "data" && copyValue(read.value, new Set()) === UNCOPYABLE);
+    const refused = read.state === "accessor" || (read.state === "data" && copyValue(read.value) === UNCOPYABLE);
     return refused ? [invalid([METADATA_ROOT])] : [];
   });
 }
 
 /** Copies every own data member of the document. Called only after the checks pass, so nothing is refused here. */
 function copyDocument(document: object): ProviderMetadata | typeof UNCOPYABLE {
-  const keys = Reflect.ownKeys(document).filter((key): key is string => typeof key === "string");
-  const entries = copyMembers(document, keys, new Set([document]));
-  return entries === UNCOPYABLE ? UNCOPYABLE : (Object.fromEntries(entries) as ProviderMetadata);
+  const copy = copyValue(document);
+  return copy === UNCOPYABLE ? UNCOPYABLE : (copy as ProviderMetadata);
 }
 
 /**

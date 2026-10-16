@@ -81,7 +81,9 @@ function readMetadata(metadata: ProviderMetadata): ProviderMetadata {
   const issuer = readIssuer(metadata);
   // A hand-written document is held to the issuer rules `discover` applies to its argument.
   if (!isHttpsUrl(issuer) || issuer.includes("?")) {
-    throw new TypeError(`${PREFIX} metadata.issuer must be an https URL without query, fragment, or credentials`);
+    throw new TypeError(
+      `${PREFIX} metadata.issuer must be an own data property holding an https URL without query, fragment, or credentials`,
+    );
   }
   const result = checkMetadata(metadata, issuer);
   if (result.ok) {

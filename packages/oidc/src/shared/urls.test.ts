@@ -3,6 +3,17 @@ import { describe, expect, it } from "vitest";
 import { isHttpsUrl, isRedirectUri } from "./urls";
 
 describe("isHttpsUrl", () => {
+  it.each(["https://example。com/cb", "https://​example.com/cb", "https://op.example/café"])(
+    "refuses non-ASCII characters, which the URL parser would rewrite: %s",
+    (value) => {
+      expect(isHttpsUrl(value)).toBe(false);
+    },
+  );
+
+  it("accepts a punycode host", () => {
+    expect(isHttpsUrl("https://xn--caf-dma.example/cb")).toBe(true);
+  });
+
   it("shouldAcceptAbsoluteHttpsUrl", () => {
     expect(isHttpsUrl("https://provider.test/authorize")).toBe(true);
   });
@@ -38,6 +49,10 @@ describe("isHttpsUrl", () => {
 });
 
 describe("isRedirectUri", () => {
+  it("refuses a non-ASCII host character the parser would map to a dot", () => {
+    expect(isRedirectUri("https://app。example/cb")).toBe(false);
+  });
+
   it("shouldAcceptHttpsRedirectUri", () => {
     expect(isRedirectUri("https://app.test/callback")).toBe(true);
   });
