@@ -443,6 +443,20 @@ describe("handleToken: refresh_token grant", () => {
     expect(widened.scope).toBe("openid profile offline_access");
   });
 
+  it("keeps the refresh token usable after a scope the provider does not know", async () => {
+    const { options, store } = await setup();
+    const issued = await redeemCode(options, store);
+
+    const refused = await handleToken(
+      options,
+      tokenRequest(refreshBody(issued.refresh_token ?? "", { scope: "openid unknown" })),
+    );
+    const retried = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
+
+    expect(await errorOf(refused)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_scope" }) });
+    expect(retried.status).toBe(200);
+  });
+
   it("rejects a scope the family does not hold with invalid_scope", async () => {
     const { options, store } = await setup();
     const issued = await redeemCode(options, store);

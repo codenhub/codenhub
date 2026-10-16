@@ -182,6 +182,12 @@ async function refreshTokens(
   if (refreshToken === undefined) {
     return tokenErrorResponse("invalid_request");
   }
+  // Checked before consumption, so a malformed or unknown scope does not burn the client's token. Only the
+  // subset check below needs the record, and the store offers no read that does not consume.
+  const requested = readRequestedScopes(parameters.get("scope"), options, client);
+  if (requested === "invalid") {
+    return tokenErrorResponse("invalid_scope");
+  }
   const consumption = await options.store.consumeRefreshToken(await digestKey(refreshToken));
   if (consumption === undefined) {
     return tokenErrorResponse("invalid_grant");
@@ -194,8 +200,8 @@ async function refreshTokens(
   if (record.expiresAt <= options.now() || record.clientId !== client.clientId) {
     return tokenErrorResponse("invalid_grant");
   }
-  const scopes = narrowScopes(parameters.get("scope"), record.scopes);
-  if (scopes === undefined) {
+  const scopes = requested ?? record.scopes;
+  if (!scopes.every((scope) => record.scopes.includes(scope))) {
     return tokenErrorResponse("invalid_scope");
   }
   const now = options.now();
@@ -213,18 +219,21 @@ async function refreshTokens(
 }
 
 /**
- * Returns the scopes a refresh may ask for: the requested subset, or all of the family's scopes when none is
- * requested. `undefined` when the request is empty or asks for a scope the family does not hold.
+ * Reads a refresh request's `scope`: `undefined` when absent, `invalid` when empty, malformed, unknown to the
+ * provider, or not allowed for the client.
  */
-function narrowScopes(requested: string | undefined, granted: readonly string[]): readonly string[] | undefined {
+function readRequestedScopes(
+  requested: string | undefined,
+  options: ResolvedOptions,
+  client: ClientRecord,
+): readonly string[] | undefined | "invalid" {
   if (requested === undefined) {
-    return granted;
-  }
-  const asked = requested.split(" ").filter((scope) => scope !== "");
-  if (asked.length === 0 || !asked.every((scope) => granted.includes(scope))) {
     return undefined;
   }
-  return asked;
+  const asked = requested.split(" ");
+  const isKnown = (scope: string): boolean =>
+    scope !== "" && options.scopeClaims.has(scope) && client.scopes.includes(scope);
+  return asked.every(isKnown) ? [...new Set(asked)] : "invalid";
 }
 
 /** Saves a new access token for a grant and returns the token value; only its digest is stored. */
