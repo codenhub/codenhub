@@ -341,6 +341,37 @@ describe("ID token", () => {
   });
 });
 
+describe("JWKS", () => {
+  it("refuses a JWKS over 65536 bytes with invalid_id_token key_fetch_failed", async () => {
+    const started = await startSignIn();
+    harness.setTamper(onlyAt(JWKS_URL, () => jsonResponse({ keys: [], padding: "x".repeat(70_000) })));
+    expect(await started.client.callback(started.location, started.pending)).toEqual(
+      failedWith([
+        {
+          code: "invalid_id_token",
+          path: ["id_token"],
+          params: { jwtCode: "key_fetch_failed", reason: "too_large" },
+        },
+      ]),
+    );
+  });
+
+  it("refuses a JWKS that never arrives within the timeout with invalid_id_token key_fetch_failed", async () => {
+    const started = await startSignIn();
+    harness.setTamper(onlyAt(JWKS_URL, () => new Promise<Response>(() => {})));
+    const result = await clientWith(harness, { timeout: 1 }).callback(started.location, started.pending);
+    expect(result).toEqual(
+      failedWith([
+        {
+          code: "invalid_id_token",
+          path: ["id_token"],
+          params: { jwtCode: "key_fetch_failed", reason: "timeout" },
+        },
+      ]),
+    );
+  });
+});
+
 describe("token endpoint", () => {
   it("fails a token response that never arrives within the timeout with request_failed timeout", async () => {
     const started = await startSignIn();
@@ -420,5 +451,24 @@ describe("userinfo", () => {
     expect(await harness.client.userinfo({ accessToken: "never-issued", subject: "user-1" })).toEqual(
       requestFailed({ endpoint: "userinfo", reason: "status", status: 401 }),
     );
+  });
+
+  it("fails a userinfo body over 65536 bytes with request_failed too_large", async () => {
+    const tokens = await signedIn();
+    const huge = () => jsonResponse({ sub: "user-1", padding: "z".repeat(70_000) });
+    harness.setTamper(onlyAt(USERINFO_URL, huge));
+    expect(await harness.client.userinfo({ accessToken: tokens.tokens.accessToken, subject: "user-1" })).toEqual(
+      requestFailed({ endpoint: "userinfo", reason: "too_large" }),
+    );
+  });
+
+  it("fails a userinfo response that never arrives within the timeout with request_failed timeout", async () => {
+    const tokens = await signedIn();
+    harness.setTamper(onlyAt(USERINFO_URL, () => new Promise<Response>(() => {})));
+    const result = await clientWith(harness, { timeout: 1 }).userinfo({
+      accessToken: tokens.tokens.accessToken,
+      subject: "user-1",
+    });
+    expect(result).toEqual(requestFailed({ endpoint: "userinfo", reason: "timeout" }));
   });
 });

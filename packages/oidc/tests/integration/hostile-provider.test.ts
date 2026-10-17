@@ -89,6 +89,27 @@ describe("authorization request: PKCE", () => {
       redirect: redirectedWith("invalid_request"),
     });
   });
+
+  it("refuses a confidential client without code_challenge by redirecting invalid_request", async () => {
+    expect(
+      await refusal(setup.provider, authorizationUrl({ client_id: CONFIDENTIAL_CLIENT, code_challenge: null })),
+    ).toEqual({
+      issues: [{ code: "invalid_request", path: ["code_challenge"] }],
+      redirect: redirectedWith("invalid_request"),
+    });
+  });
+
+  it("refuses a confidential client with code_challenge_method=plain by redirecting invalid_request", async () => {
+    expect(
+      await refusal(
+        setup.provider,
+        authorizationUrl({ client_id: CONFIDENTIAL_CLIENT, code_challenge_method: "plain" }),
+      ),
+    ).toEqual({
+      issues: [{ code: "invalid_request", path: ["code_challenge_method"] }],
+      redirect: redirectedWith("invalid_request"),
+    });
+  });
 });
 
 describe("authorization request: client and redirect URI", () => {
@@ -108,6 +129,11 @@ describe("authorization request: client and redirect URI", () => {
     ["a different port", "https://app.example:8443/cb"],
     ["http instead of https", "http://app.example/cb"],
     ["an empty value", ""],
+    ["a path case change", "https://app.example/CB"],
+    ["a path suffix", "https://app.example/cb/x"],
+    ["an explicit default port", "https://app.example:443/cb"],
+    ["userinfo", "https://u@app.example/cb"],
+    ["an empty query", "https://app.example/cb?"],
   ])("refuses a redirect_uri with %s without a redirect", async (_label, redirectUri) => {
     expect(await refusal(setup.provider, authorizationUrl({ redirect_uri: redirectUri }))).toEqual({
       issues: [{ code: "invalid_redirect_uri" }],
@@ -211,6 +237,14 @@ describe("authorization request: a valid request", () => {
 describe("token endpoint: request shape", () => {
   it("answers GET with 405 and the methods it allows", async () => {
     const response = await answer(setup.provider, new Request(TOKEN_URL));
+    expect({ status: response.status, allow: response.headers.get("allow") }).toEqual({
+      status: 405,
+      allow: "POST, OPTIONS",
+    });
+  });
+
+  it("answers PUT with 405 and the methods it allows", async () => {
+    const response = await answer(setup.provider, new Request(TOKEN_URL, { method: "PUT" }));
     expect({ status: response.status, allow: response.headers.get("allow") }).toEqual({
       status: 405,
       allow: "POST, OPTIONS",
@@ -329,6 +363,28 @@ describe("token endpoint: authorization code grant", () => {
     expect(await outcome(response)).toEqual({ status: 400, body: INVALID_GRANT });
   });
 
+  it.each([
+    ["a path case change", "https://app.example/CB"],
+    ["a different port", "https://app.example:8443/cb"],
+    ["http instead of https", "http://app.example/cb"],
+  ])("refuses a redeem with a redirect_uri that has %s with invalid_grant", async (_label, redirectUri) => {
+    const issued = await issueCode(setup);
+    const response = await redeem(setup, codeForm(issued, PUBLIC_CLIENT, { redirect_uri: redirectUri }));
+    expect(await outcome(response)).toEqual({ status: 400, body: INVALID_GRANT });
+  });
+
+  it("refuses an ID token presented as a code with invalid_grant", async () => {
+    const { tokens } = await issueTokens(setup);
+    const response = await redeem(setup, {
+      grant_type: "authorization_code",
+      code: tokens.id_token,
+      redirect_uri: REDIRECT_URI,
+      code_verifier: VERIFIER,
+      client_id: PUBLIC_CLIENT,
+    });
+    expect(await outcome(response)).toEqual({ status: 400, body: INVALID_GRANT });
+  });
+
   it("lets exactly one of two concurrent redemptions of a code succeed", async () => {
     const issued = await issueCode(setup);
     const form = codeForm(issued, PUBLIC_CLIENT);
@@ -397,6 +453,12 @@ describe("token endpoint: refresh token grant", () => {
   it("refuses an access token presented as a refresh token with invalid_grant", async () => {
     const { tokens } = await issueTokens(setup);
     const response = await redeem(setup, refreshForm(tokens.access_token, PUBLIC_CLIENT));
+    expect(await outcome(response)).toEqual({ status: 400, body: INVALID_GRANT });
+  });
+
+  it("refuses an ID token presented as a refresh token with invalid_grant", async () => {
+    const { tokens } = await issueTokens(setup);
+    const response = await redeem(setup, refreshForm(tokens.id_token, PUBLIC_CLIENT));
     expect(await outcome(response)).toEqual({ status: 400, body: INVALID_GRANT });
   });
 });
@@ -477,6 +539,16 @@ describe("userinfo endpoint", () => {
       challenge: 'Bearer error="invalid_token"',
       body: "",
     });
+  });
+
+  it("refuses an unknown access token with a Bearer invalid_token challenge and no-store", async () => {
+    const response = await answer(setup.provider, userinfoRequest("never-issued"));
+    expect(await challenged(response)).toEqual({
+      status: 401,
+      challenge: 'Bearer error="invalid_token"',
+      body: "",
+    });
+    expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
   it("refuses an expired access token with a Bearer invalid_token challenge", async () => {

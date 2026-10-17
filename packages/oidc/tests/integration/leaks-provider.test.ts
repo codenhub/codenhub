@@ -119,6 +119,7 @@ const seen = {
   issues: [] as { label: string; text: string }[],
   thrown: [] as { label: string; name: string; message: string }[],
   store: [] as string[],
+  diagnostics: [] as string[],
   never: {} as Values,
   codes: {} as Values,
   tokens: {} as Values,
@@ -184,7 +185,12 @@ let storeCalls: string[];
 beforeAll(async () => {
   const recorder = recordingStore();
   storeCalls = recorder.calls;
-  setup = await setUpProvider({ wrapStore: recorder.wrap });
+  setup = await setUpProvider({
+    wrapStore: recorder.wrap,
+    onDiagnostic: (diagnostic) => {
+      seen.diagnostics.push(JSON.stringify(diagnostic));
+    },
+  });
   seen.never["client secret"] = setup.secret;
   seen.never["wrong client secret"] = WRONG_SECRET;
   seen.never["code verifier"] = VERIFIER;
@@ -426,6 +432,16 @@ describe("the store", () => {
     expect(seen.store.length).toBeGreaterThan(0);
     const leaks = seen.store.flatMap((call, index) =>
       findLeaks(call, markers()).map((name) => `call ${index} carries ${name}`),
+    );
+    expect(leaks).toEqual([]);
+  });
+});
+
+describe("diagnostics", () => {
+  it("carries no value in any diagnostic", () => {
+    expect(seen.diagnostics.length).toBeGreaterThan(0);
+    const leaks = seen.diagnostics.flatMap((diagnostic, index) =>
+      findLeaks(diagnostic, markers()).map((name) => `diagnostic ${index} carries ${name}`),
     );
     expect(leaks).toEqual([]);
   });

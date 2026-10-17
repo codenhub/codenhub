@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
 import { createHash, randomBytes } from "node:crypto";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { digestKey, encodeBase64Url, randomToken, sha256, timingSafeEqual } from "./encoding";
 
@@ -30,6 +30,16 @@ describe("randomToken", () => {
 
   it("shouldReturnDifferentValuesOnEachCall", () => {
     expect(randomToken()).not.toBe(randomToken());
+  });
+
+  it("shouldDrawExactly32BytesFromGetRandomValues", () => {
+    const spy = vi.spyOn(globalThis.crypto, "getRandomValues");
+    try {
+      randomToken();
+      expect(spy.mock.calls.map(([array]) => (array as Uint8Array).length)).toEqual([32]);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 
