@@ -356,7 +356,12 @@ function readMaxAge({ parameters, target }: RequestContext): Checked<number | un
 
 function readUiLocales(parameters: ParameterMap): readonly string[] | undefined {
   const requested = parameters.get("ui_locales");
-  return requested === undefined ? undefined : requested.split(" ");
+  if (requested === undefined) {
+    return undefined;
+  }
+  // A hint: empty entries from repeated or trailing spaces are dropped, and no entries means absent.
+  const locales = requested.split(" ").filter((locale) => locale !== "");
+  return locales.length === 0 ? undefined : locales;
 }
 
 /** Saves the validated request under the digest of a new interaction id, and returns the id to the app. */

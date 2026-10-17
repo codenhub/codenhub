@@ -50,6 +50,10 @@ async function answerWithAccessToken(options: ResolvedOptions, request: Request)
   if (record === undefined || record.expiresAt <= options.now()) {
     return bearerErrorResponse("invalid_token");
   }
+  // OpenID Connect Core §5.3: the endpoint serves only tokens obtained with `openid`.
+  if (!record.scopes.includes("openid")) {
+    return bearerErrorResponse("insufficient_scope");
+  }
 
   const claimNames = claimNamesFor(options, record.scopes);
   const released = await options.claims({

@@ -19,6 +19,16 @@ const BUFFER_MASK = 0xffff;
 /** RFC 6749 §5.2: a `401` for Basic credentials must say how to authenticate. */
 const BASIC_CHALLENGE: Readonly<Record<string, string>> = { "www-authenticate": 'Basic realm="token"' };
 
+/** Clock tolerance for client assertions, in seconds: client clocks drift, and a minute covers ordinary skew. */
+const ASSERTION_CLOCK_TOLERANCE_SECONDS = 60;
+
+/**
+ * Longest lifetime an assertion may claim, in seconds, measured from the provider's now plus the clock tolerance.
+ * RFC 7523 §3 lets the server refuse an unreasonably distant `exp`; replay within the lifetime is accepted by
+ * design (scope.md decision 15), so this bounds that window.
+ */
+const MAX_ASSERTION_LIFETIME_SECONDS = 300;
+
 /** Outcome of {@link authenticateClient}: the authenticated client, or the response to send. */
 export type ClientAuthResult =
   | { readonly ok: true; readonly client: ClientRecord }
@@ -107,13 +117,17 @@ function extractCredentials(request: Request, parameters: ReadonlyMap<string, st
   return clientId === undefined ? invalidRequest() : { ok: true, presented: { method: "none", clientId } };
 }
 
-/** Reads a Basic `authorization` header (RFC 6749 §2.3.1). Any other scheme or malformed credentials are `invalid_client`. */
+/**
+ * Reads a Basic `authorization` header (RFC 6749 §2.3.1). Any other scheme, an empty header, or malformed Basic
+ * credentials are `invalid_client` with the Basic challenge, since the client attempted header authentication
+ * (RFC 6749 §5.2).
+ */
 function extractBasic(authorization: string, parameters: ReadonlyMap<string, string>): Extracted {
   const invalidClient: Extracted = { ok: false, response: tokenErrorResponse("invalid_client", BASIC_CHALLENGE) };
   // The scheme is case-insensitive and followed by exactly one space; anything else is another scheme.
   const match = /^basic (.*)$/i.exec(authorization);
   if (match === null) {
-    return { ok: false, response: tokenErrorResponse("invalid_client") };
+    return invalidClient;
   }
   const bytes = decodeBase64(match[1] ?? "");
   const text = bytes === undefined ? undefined : decodeUtf8(bytes);
@@ -172,7 +186,8 @@ async function proves(options: ResolvedOptions, client: ClientRecord, presented:
 
 /**
  * Verifies a client assertion (RFC 7523 §3): signed by the client's key, issued by and about the client,
- * addressed to this provider or its token endpoint, unexpired, and with a `jti`.
+ * addressed to this provider or its token endpoint, unexpired, with a `jti`, and with a lifetime no longer than
+ * {@link MAX_ASSERTION_LIFETIME_SECONDS}.
  */
 async function verifyAssertion(
   options: ResolvedOptions,
@@ -181,16 +196,22 @@ async function verifyAssertion(
   keys: KeySet,
 ): Promise<boolean> {
   // The verifier is built per request because it is cheap, and it reads the clock from the same source as the rest.
-  // `jti` is required but not replay-checked: the store has no table for it yet.
+  // `jti` is required as RFC 7523 §3 and OpenID Connect Core §9 ask. Replay within the capped lifetime is accepted
+  // by design (scope.md decision 15).
   const verify = createVerifier({
     keys,
     issuer: clientId,
     audience: [options.issuer, options.endpoints.token],
     requiredClaims: ["sub", "exp", "jti"],
+    clockTolerance: ASSERTION_CLOCK_TOLERANCE_SECONDS,
     now: () => options.now() * 1000,
   });
   const result = await verify(assertion);
-  return result.ok && result.value.payload.sub === clientId;
+  if (!result.ok || result.value.payload.sub !== clientId) {
+    return false;
+  }
+  const exp = result.value.payload.exp ?? Number.POSITIVE_INFINITY;
+  return exp <= options.now() + MAX_ASSERTION_LIFETIME_SECONDS + ASSERTION_CLOCK_TOLERANCE_SECONDS;
 }
 
 /** Decodes strict standard base64 (RFC 4648 §4) with mandatory padding. Anything else is `undefined`. */

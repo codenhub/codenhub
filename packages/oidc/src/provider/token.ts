@@ -220,7 +220,8 @@ async function refreshTokens(
 
 /**
  * Reads a refresh request's `scope`: `undefined` when absent, `invalid` when empty, malformed, unknown to the
- * provider, or not allowed for the client.
+ * provider, not allowed for the client, or without `openid`. Every token this provider issues is an OpenID
+ * Connect token, so a refresh may narrow the scope but never drop `openid`.
  */
 function readRequestedScopes(
   requested: string | undefined,
@@ -233,7 +234,7 @@ function readRequestedScopes(
   const asked = requested.split(" ");
   const isKnown = (scope: string): boolean =>
     scope !== "" && options.scopeClaims.has(scope) && client.scopes.includes(scope);
-  return asked.every(isKnown) ? [...new Set(asked)] : "invalid";
+  return asked.every(isKnown) && asked.includes("openid") ? [...new Set(asked)] : "invalid";
 }
 
 /** Saves a new access token for a grant and returns the token value; only its digest is stored. */

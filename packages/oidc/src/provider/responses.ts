@@ -49,8 +49,8 @@ export function tokenErrorResponse(error: OAuthErrorCode, headers?: Readonly<Rec
  * A bearer token challenge from the userinfo endpoint (RFC 6750 §3). Without `error`, it is the answer to
  * a request that carried no token at all, which §3.1 says gets no error code.
  */
-export function bearerErrorResponse(error?: "invalid_request" | "invalid_token"): Response {
-  const status = error === "invalid_request" ? 400 : 401;
+export function bearerErrorResponse(error?: "invalid_request" | "invalid_token" | "insufficient_scope"): Response {
+  const status = error === "invalid_request" ? 400 : error === "insufficient_scope" ? 403 : 401;
   const challenge = error === undefined ? "Bearer" : `Bearer error="${error}"`;
   return new Response(null, {
     status,
@@ -84,11 +84,18 @@ export function redirectResponse(
   redirectUri: string,
   parameters: Readonly<Record<string, string | undefined>>,
 ): Response {
-  const location = new URL(redirectUri);
+  const query = new URLSearchParams();
   for (const [name, value] of Object.entries(parameters)) {
     if (value !== undefined) {
-      location.searchParams.append(name, value);
+      query.append(name, value);
     }
   }
-  return new Response(null, { status: 302, headers: { location: location.href, "cache-control": "no-store" } });
+  const search = query.toString();
+  // A redirect URI never has a fragment (isRedirectUri rejects `#`), so the new parameters go at the end. The
+  // registered URI is kept as it is: re-serializing it with URL would rewrite its query.
+  const location =
+    search === ""
+      ? redirectUri
+      : `${redirectUri}${redirectUri.includes("?") ? (redirectUri.endsWith("?") || redirectUri.endsWith("&") ? "" : "&") : "?"}${search}`;
+  return new Response(null, { status: 302, headers: { location, "cache-control": "no-store" } });
 }
