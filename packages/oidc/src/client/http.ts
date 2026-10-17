@@ -53,6 +53,7 @@ const OAUTH_ERROR_CODES: ReadonlySet<string> = new Set<OAuthErrorCode>([
   "invalid_grant",
   "unsupported_grant_type",
   "invalid_token",
+  "unsupported_token_type",
   "insufficient_scope",
   "interaction_required",
   "login_required",
@@ -81,7 +82,8 @@ export const requestFailure = (endpoint: Endpoint, reason: RequestFailureReason,
  * followed: a provider endpoint that redirects is misconfigured or compromised, and following it would
  * send credentials to whoever controls the target.
  *
- * @returns The status and the parsed object, whatever the status, when the response is JSON; otherwise
+ * @returns The status and the parsed object, whatever the status, when the response is JSON. With
+ * `ignoreOkBody`, a `200` is accepted whatever its body, and its status and `{}` are returned. Otherwise
  * `request_failed` with a `reason`. Never throws.
  */
 export async function requestJson(request: JsonRequest): Promise<OidcResult<JsonResponse>> {

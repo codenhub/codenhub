@@ -6,7 +6,7 @@ export type OidcPathSegment = string | number;
 
 /**
  * OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and
- * §5.2, RFC 6750 §3.1, and OpenID Connect Core §3.1.2.6.
+ * §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, and OpenID Connect Core §3.1.2.6.
  */
 export type OAuthErrorCode =
   | "invalid_request"
@@ -20,6 +20,7 @@ export type OAuthErrorCode =
   | "invalid_grant"
   | "unsupported_grant_type"
   | "invalid_token"
+  | "unsupported_token_type"
   | "insufficient_scope"
   | "interaction_required"
   | "login_required"
@@ -89,7 +90,8 @@ export interface OidcIssue {
    * fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason`
    * on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an
    * {@link OAuthErrorCode} or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and
-   * that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders.
+   * that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on
+   * `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
    */
   readonly params?: Readonly<Record<string, string | number | boolean>>;
 }

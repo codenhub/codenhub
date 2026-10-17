@@ -1,4 +1,4 @@
-import type { ProviderDiagnostic, ProviderDiagnosticReason } from "./types";
+import type { ProviderDiagnostic, ProviderDiagnosticReason, ProviderOptions } from "./types";
 
 /** Why a refusal was sent, attached to the response that carries it. */
 interface Refusal {
@@ -32,16 +32,16 @@ export function refuse(response: Response, reason: ProviderDiagnosticReason, cli
  * @param onDiagnostic - The app's callback, when it set one.
  * @param endpoint - The endpoint that answered.
  * @param response - Its response.
- * @returns `response`, unchanged.
+ * @returns `response`, unchanged, once the callback has settled. A rejected callback rejects this promise.
  */
-export function reportRefusal(
-  onDiagnostic: ((diagnostic: ProviderDiagnostic) => void) | undefined,
+export async function reportRefusal(
+  onDiagnostic: ProviderOptions["onDiagnostic"],
   endpoint: ProviderDiagnostic["endpoint"],
   response: Response,
-): Response {
+): Promise<Response> {
   const refusal = refusals.get(response);
   if (onDiagnostic !== undefined && refusal !== undefined) {
-    onDiagnostic(Object.freeze({ endpoint, status: response.status, ...refusal }));
+    await onDiagnostic(Object.freeze({ endpoint, status: response.status, ...refusal }));
   }
   return response;
 }

@@ -25,7 +25,11 @@ describe("onDiagnostic", () => {
 
   beforeEach(async () => {
     seen = [];
-    setup = await setUpProvider({ onDiagnostic: (diagnostic) => seen.push(diagnostic) });
+    setup = await setUpProvider({
+      onDiagnostic: (diagnostic) => {
+        seen.push(diagnostic);
+      },
+    });
   });
 
   it("reports nothing for a request that succeeds", async () => {
@@ -113,6 +117,16 @@ describe("onDiagnostic", () => {
     for (const value of [issued.code.code, issued.code.verifier, issued.tokens.access_token, "s3cret-value"]) {
       expect(text).not.toContain(value);
     }
+  });
+
+  it("makes handle reject with the error of an async callback that rejects", async () => {
+    const failing = await setUpProvider({
+      onDiagnostic: async () => {
+        throw new Error("async logger down");
+      },
+    });
+
+    await expect(failing.provider.handle(userinfoRequest("unknown-token"))).rejects.toThrow("async logger down");
   });
 
   it("makes handle reject when it throws, and is refused at creation when it is not a function", async () => {

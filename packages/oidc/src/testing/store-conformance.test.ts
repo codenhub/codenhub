@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type { AccessTokenRecord, CodeRecord, OidcStore, RefreshTokenRecord } from "../provider/types";
+import type {
+  AccessTokenRecord,
+  CodeRecord,
+  InteractionRecord,
+  OidcStore,
+  RefreshTokenRecord,
+} from "../provider/types";
 import { createMemoryStore } from "./memory-store";
 import { storeConformanceCases } from "./store-conformance";
 
@@ -52,6 +58,68 @@ function expectNoKeyInMessage(error: Error, seen: readonly string[]): void {
 }
 
 describe("storeConformanceCases rejects broken stores", () => {
+  it("fails the concurrent consumeInteraction case when the read and the delete straddle an await", async () => {
+    const interactions = new Map<string, InteractionRecord>();
+    const createBroken = (): OidcStore => ({
+      ...createMemoryStore(),
+      saveInteraction: async (key, record) => {
+        interactions.set(key, structuredClone(record));
+      },
+      consumeInteraction: async (key) => {
+        const record = interactions.get(key);
+        await Promise.resolve();
+        interactions.delete(key);
+        return record;
+      },
+    });
+
+    const seen: string[] = [];
+    const error = await failureOf(
+      "20 concurrent consumeInteraction calls on one key yield exactly one record and 19 undefined",
+      () => recordArguments(createBroken(), seen),
+    );
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toContain("consumeInteraction must be atomic");
+    expectNoKeyInMessage(error, seen);
+  });
+
+  it("fails the revoked-after-consumed case when used is checked before the revocation set", async () => {
+    const refreshTokens = new Map<string, { record: RefreshTokenRecord; used: boolean }>();
+    const revoked = new Set<string>();
+    const createBroken = (): OidcStore => ({
+      ...createMemoryStore(),
+      saveRefreshToken: async (key, record) => {
+        refreshTokens.set(key, { record: structuredClone(record), used: false });
+      },
+      consumeRefreshToken: async (key) => {
+        const entry = refreshTokens.get(key);
+        if (entry === undefined) {
+          return undefined;
+        }
+        if (entry.used) {
+          return { status: "replayed", grantId: entry.record.grantId };
+        }
+        if (revoked.has(entry.record.grantId)) {
+          return undefined;
+        }
+        entry.used = true;
+        return { status: "consumed", record: structuredClone(entry.record) };
+      },
+      revokeGrant: async (grantId) => {
+        revoked.add(grantId);
+      },
+    });
+
+    const seen: string[] = [];
+    const error = await failureOf(
+      "revokeGrant makes a refresh token that was already consumed return undefined, not replayed",
+      () => recordArguments(createBroken(), seen),
+    );
+    expect(error).toBeInstanceOf(Error);
+    expect(error.message).toContain("undefined, not replayed");
+    expectNoKeyInMessage(error, seen);
+  });
+
   it("fails consumeCode and the concurrent consume case when no call reports replayed", async () => {
     const codes = new Map<string, CodeRecord>();
     const createBroken = (): OidcStore => ({

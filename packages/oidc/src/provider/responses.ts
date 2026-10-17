@@ -97,10 +97,12 @@ export function redirectResponse(
   }
   const search = query.toString();
   // A redirect URI never has a fragment (isRedirectUri rejects `#`), so the new parameters go at the end. The
-  // registered URI is kept as it is: re-serializing it with URL would rewrite its query.
-  const location =
-    search === ""
-      ? redirectUri
-      : `${redirectUri}${redirectUri.includes("?") ? (redirectUri.endsWith("?") || redirectUri.endsWith("&") ? "" : "&") : "?"}${search}`;
+  // registered URI is kept as it is: re-serializing it with URL would rewrite its query. The separator is `?`
+  // when there is no query yet, nothing when the only `?` is the last character or the query ends with `&`,
+  // and `&` otherwise. A URI ending in `??` has a query of `?`, so it takes `&`.
+  const questionMark = redirectUri.indexOf("?");
+  const separator =
+    questionMark < 0 ? "?" : questionMark === redirectUri.length - 1 || redirectUri.endsWith("&") ? "" : "&";
+  const location = search === "" ? redirectUri : `${redirectUri}${separator}${search}`;
   return new Response(null, { status: 302, headers: { location, "cache-control": "no-store" } });
 }

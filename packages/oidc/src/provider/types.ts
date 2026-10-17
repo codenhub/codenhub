@@ -21,7 +21,12 @@ export type ClientAuthentication =
 /** A registered client, as the store returns it. A malformed record throws `TypeError` when used. */
 export interface ClientRecord {
   readonly clientId: string;
-  /** Redirect URIs, each compared to the requested one byte for byte. Each must be an absolute URL without a fragment. */
+  /**
+   * Redirect URIs, each compared to the requested one byte for byte. The list must be non-empty, and the provider
+   * checks each entry when it reads the record and throws `TypeError` if one fails: it must be a non-empty
+   * string, an absolute URL, made of visible ASCII only (no space, control character or backslash), without a
+   * fragment (`#`) or credentials, and with a scheme other than `javascript:`, `data:`, `vbscript:` or `file:`.
+   */
   readonly redirectUris: readonly string[];
   /** Scopes this client may request. Must include `openid`. */
   readonly scopes: readonly string[];
@@ -105,8 +110,10 @@ export type Consumption<TRecord> =
  * an in-memory reference, and `storeConformanceCases` there checks an adapter against this contract.
  *
  * Every key the provider passes for a code, token, or interaction is a SHA-256 digest of the value, never
- * the value itself, so a leaked store holds nothing usable. Interaction, code and token records are plain
- * JSON; a client record may hold `@codenhub/jwt` keys, which the app rebuilds from what it persists. Methods may throw or
+ * the value itself, so a leaked store holds no usable code, token or interaction. A client record is different:
+ * it may hold a `client_secret_jwt` HMAC key, which the provider needs in full, so a client record's credentials
+ * still need protection. Interaction, code and token records are plain JSON; a client record may hold
+ * `@codenhub/jwt` keys, which the app rebuilds from what it persists. Methods may throw or
  * reject on infrastructure failure; the provider lets that propagate rather than answering as if the
  * value were invalid.
  *
@@ -322,9 +329,12 @@ export interface ProviderOptions {
   /**
    * Called with the reason each time the token, userinfo, or revocation endpoint refuses a request, after the
    * response is built and before `handle` resolves. The client only ever sees the OAuth error code, so this
-   * is how an operator tells an expired code from a wrong verifier. It is called synchronously; like the store
-   * and the `claims` callback, an exception it throws makes `handle` reject. Authorization failures are not
-   * reported here, since `beginAuthorization` and `completeAuthorization` already return their issues.
+   * is how an operator tells an expired code from a wrong verifier. Like the store and the `claims` callback,
+   * an exception it throws makes `handle` reject. Authorization failures are not reported here, since
+   * `beginAuthorization` and `completeAuthorization` already return their issues.
+   *
+   * A returned promise is awaited before the response is returned, so an async callback that rejects makes
+   * `handle` reject with its error, as a synchronous throw does.
    */
   readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
 }
@@ -336,7 +346,11 @@ export interface AuthorizationInteraction {
   readonly clientId: string;
   readonly redirectUri: string;
   readonly scopes: readonly string[];
-  /** `login` means authenticate again; `consent` means ask again; `none` means show nothing. */
+  /**
+   * `login` means authenticate again; `consent` means ask again; `none` means show nothing. The app performs the
+   * login or consent step itself; the provider checks the outcome the app reports to
+   * {@link Provider.completeAuthorization}, such as the `authTime` under `prompt=login`.
+   */
   readonly prompt: readonly Prompt[];
   /** Maximum seconds since the user last authenticated. */
   readonly maxAge?: number;

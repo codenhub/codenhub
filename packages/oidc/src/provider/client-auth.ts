@@ -26,7 +26,7 @@ const ASSERTION_CLOCK_TOLERANCE_SECONDS = 60;
 /**
  * Longest lifetime an assertion may claim, in seconds, measured from the provider's now plus the clock tolerance.
  * RFC 7523 §3 lets the server refuse an unreasonably distant `exp`; replay within the lifetime is accepted by
- * design (scope.md decision 15), so this bounds that window.
+ * design (scope.md decision 23), so this bounds that window.
  */
 const MAX_ASSERTION_LIFETIME_SECONDS = 300;
 
@@ -141,8 +141,9 @@ function extractBasic(authorization: string, parameters: ReadonlyMap<string, str
     ok: false,
     response: refuse(tokenErrorResponse("invalid_client", BASIC_CHALLENGE), "client_credentials_malformed"),
   };
-  // The scheme is case-insensitive and followed by exactly one space; anything else is another scheme.
-  const match = /^basic (.*)$/i.exec(authorization);
+  // The scheme is case-insensitive and followed by one or more spaces (RFC 7235 §2.1 allows any number of
+  // whitespace after the auth-scheme); anything else is another scheme.
+  const match = /^basic +(.*)$/i.exec(authorization);
   if (match === null) {
     return invalidClient;
   }
@@ -236,7 +237,7 @@ async function verifyAssertion(
 ): Promise<boolean> {
   // The verifier is built per request because it is cheap, and it reads the clock from the same source as the rest.
   // `jti` is required as RFC 7523 §3 and OpenID Connect Core §9 ask. Replay within the capped lifetime is accepted
-  // by design (scope.md decision 15).
+  // by design (scope.md decision 23).
   const verify = createVerifier({
     keys,
     issuer: clientId,

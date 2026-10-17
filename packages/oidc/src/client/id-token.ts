@@ -171,7 +171,8 @@ async function claimIssues(
   if (expected.accessToken !== undefined && !mistyped.has("at_hash")) {
     issues.push(...(await atHashIssues(payload, header, expected.accessToken)));
   }
-  if (expected.subject !== undefined && payload.sub !== expected.subject) {
+  // A `sub` that is missing or empty is already reported as invalid_claim, so it is not compared as well.
+  if (expected.subject !== undefined && isNonEmptyString(payload.sub) && payload.sub !== expected.subject) {
     issues.push({ code: "subject_mismatch", path: claimPath("sub") });
   }
   return issues;

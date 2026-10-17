@@ -136,7 +136,7 @@ function readUiLocales(uiLocales: readonly string[] | undefined): readonly strin
   const copy = denseCopy(uiLocales);
   if (copy === undefined || !copy.every(isLanguageTag)) {
     throw new TypeError(
-      "authorize: uiLocales must be an array of at most 100 non-empty, well-formed language tags without spaces",
+      "authorize: uiLocales must be an array of at most 100 non-empty strings of well-formed Unicode without spaces",
     );
   }
   const joined = (copy as string[]).join(" ");

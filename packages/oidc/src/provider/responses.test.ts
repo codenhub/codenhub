@@ -22,6 +22,10 @@ describe("redirectResponse", () => {
     expect(locationOf("https://app.example/cb?", { code: "c0de" })).toBe("https://app.example/cb?code=c0de");
   });
 
+  it("shouldAppendWithAmpersandWhenRegisteredUriEndsWithDoubleQuestionMark", () => {
+    expect(locationOf("https://app.example/cb??", { code: "c0de" })).toBe("https://app.example/cb??&code=c0de");
+  });
+
   it("shouldAddNoSeparatorWhenRegisteredQueryEndsWithAmpersand", () => {
     expect(locationOf("https://app.example/cb?a=1&", { code: "c0de" })).toBe("https://app.example/cb?a=1&code=c0de");
   });

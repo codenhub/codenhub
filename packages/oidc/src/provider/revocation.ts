@@ -16,9 +16,12 @@ import { readClientRequest } from "./token";
  * changes nothing, and the refresh token is consumed after, which spends it for good.
  *
  * A token issued to another client is refused with `invalid_request` (§2.1). An access token is left alone
- * then. A refresh token was already spent by the lookup, so its grant is revoked anyway: a refresh token
- * in another client's hands has leaked, and the next use of the spent token would revoke the grant as a
- * replay in any case.
+ * then. A refresh token is consumed by the lookup, so its grant is revoked even though the request is refused:
+ * a refresh token in another client's hands has leaked. The exception is a spent refresh token, which the
+ * replayed branch answers `200` after revoking its grant, without checking the client, since the next use of
+ * a spent token would revoke the grant as a replay in any case.
+ *
+ * Expiry is not checked: an expired token the store still holds revokes its grant.
  *
  * Never throws for a request. Store rejections propagate.
  *

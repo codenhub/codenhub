@@ -173,6 +173,22 @@ const cases: StoreConformanceCase[] = [
   }),
 
   defineCase(
+    "20 concurrent consumeInteraction calls on one key yield exactly one record and 19 undefined",
+    async (createStore) => {
+      const store = await createStore();
+      const key = newKey();
+      await store.saveInteraction(key, interactionFixture());
+      const results = await Promise.all(Array.from({ length: CONCURRENT_CALLS }, () => store.consumeInteraction(key)));
+      const records = results.filter((result) => result !== undefined).length;
+      const empty = results.filter((result) => result === undefined).length;
+      assert(
+        records === 1 && empty === CONCURRENT_CALLS - 1,
+        "consumeInteraction must be atomic: of concurrent calls on one key, exactly one may get the record",
+      );
+    },
+  ),
+
+  defineCase(
     "consumeInteraction, consumeCode, consumeRefreshToken and findAccessToken return undefined for an unknown key",
     async (createStore) => {
       const store = await createStore();
@@ -317,6 +333,26 @@ const cases: StoreConformanceCase[] = [
       "saveRefreshToken must reject a key that already exists",
     );
   }),
+
+  defineCase(
+    "revokeGrant makes a refresh token that was already consumed return undefined, not replayed",
+    async (createStore) => {
+      const store = await createStore();
+      const key = newKey();
+      const grantId = newKey();
+      await store.saveRefreshToken(key, refreshTokenFixture(grantId));
+      const first = await store.consumeRefreshToken(key);
+      assert(
+        first !== undefined && first.status === "consumed",
+        "consumeRefreshToken must return consumed on the first call",
+      );
+      await store.revokeGrant(grantId);
+      assert(
+        (await store.consumeRefreshToken(key)) === undefined,
+        "consumeRefreshToken must return undefined, not replayed, for a refresh token whose grant was revoked after it was consumed",
+      );
+    },
+  ),
 
   defineCase(
     "findAccessToken returns the saved record on every call, since it is not single-use",

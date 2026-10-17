@@ -197,6 +197,18 @@ describe("createIdTokenValidator", () => {
       ]);
     });
 
+    it("reports only invalid_claim for an empty sub when a subject is expected", async () => {
+      const result = await validator()(await tokenWith({ sub: "" }), { ...expected, subject: "user-2" });
+
+      expect(issuesOf(result)).toEqual([
+        {
+          code: "invalid_id_token",
+          path: ["id_token", "payload", "sub"],
+          params: { jwtCode: "invalid_claim" },
+        },
+      ]);
+    });
+
     it("refuses an amr that is a string rather than an array", async () => {
       const result = await validator()(await tokenWith({ amr: "pwd" }), expected);
 

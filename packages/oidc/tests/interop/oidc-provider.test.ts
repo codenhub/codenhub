@@ -34,7 +34,18 @@ describe("this client against oidc-provider", () => {
   });
 
   afterAll(async () => {
-    await op.close();
+    // beforeAll may have thrown before `op` was set; the original failure must still be the one reported.
+    await op?.close();
+  });
+
+  it("forwards the request's abort signal to the provider", async () => {
+    await expect(
+      op.fetch(`${ISSUER}/.well-known/openid-configuration`, { signal: AbortSignal.abort() }),
+    ).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("does not follow a redirect to a look-alike of the callback URI", async () => {
+    await expect(op.browse(`${ISSUER}/lookalike-callback`)).rejects.toThrow("the browser stopped at 404");
   });
 
   it("signs in, refreshes and reads userinfo", async () => {

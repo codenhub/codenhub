@@ -46,7 +46,7 @@ export interface ClientOptions {
   /** How the client authenticates to the token endpoint. */
   readonly auth: ClientAuth;
   /**
-   * The `fetch` to call for the token, userinfo, and JWKS endpoints.
+   * The `fetch` to call for the token, userinfo, revocation, and JWKS endpoints.
    *
    * @defaultValue `globalThis.fetch`, looked up at each call
    */

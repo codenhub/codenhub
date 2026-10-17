@@ -59,6 +59,12 @@ export async function startProvider(): Promise<RunningProvider> {
 
   const handle = provider.callback();
   const server: Server = createServer((request, response) => {
+    // Test hook: redirects to a look-alike of the callback, which the browser walk must not accept.
+    if (request.url === "/lookalike-callback") {
+      response.writeHead(302, { location: `${REDIRECT_URI}.evil` });
+      response.end();
+      return;
+    }
     if (!request.url?.startsWith("/interaction/")) {
       handle(request, response);
       return;
@@ -96,6 +102,7 @@ export async function startProvider(): Promise<RunningProvider> {
       headers,
       body,
       redirect: request.redirect,
+      signal: request.signal,
     });
   };
 
@@ -120,7 +127,7 @@ export async function startProvider(): Promise<RunningProvider> {
         throw new Error(`the browser stopped at ${response.status} ${current}: ${await response.text()}`);
       }
       current = new URL(location, current).href;
-      if (current.startsWith(REDIRECT_URI)) {
+      if (current === REDIRECT_URI || current.startsWith(`${REDIRECT_URI}?`)) {
         return current;
       }
     }

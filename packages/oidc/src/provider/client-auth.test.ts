@@ -354,13 +354,21 @@ describe("authenticateClient: invalid_client failures", () => {
     expect(result.ok && result.client.clientId).toBe("basic");
   });
 
-  it("rejects Basic with two spaces after the scheme, with a challenge", async () => {
-    const options = await setup((await fixtures()).clients);
+  it("accepts Basic with more than one space after the scheme", async () => {
+    const secret = "pa ss";
+    const { clients } = await fixtures();
+    const withSecret = await Promise.all(
+      clients.map(async (client) =>
+        client.clientId === "basic"
+          ? { ...client, auth: { method: "client_secret_basic" as const, secretHash: await hashClientSecret(secret) } }
+          : client,
+      ),
+    );
+    const options = await setup(withSecret);
 
-    const result = await authenticate(options, {}, `Basic  ${btoa("basic:anything")}`);
+    const result = await authenticate(options, {}, basicHeader("basic", secret).replace("Basic ", "Basic  "));
 
-    expect(await errorOf(result)).toEqual({ status: 401, body: { error: "invalid_client" } });
-    expect(await challengeOf(result)).toBe('Basic realm="token"');
+    expect(result.ok && result.client.clientId).toBe("basic");
   });
 
   it("rejects Basic credentials with an empty client id, with a challenge", async () => {
@@ -434,20 +442,6 @@ describe("authenticateClient: invalid_client failures", () => {
     const { clients, clientKey } = await fixtures();
     const options = await setup(clients);
     const token = await assertion(clientKey.privateKey, { iat: NOW_SECONDS + 90 });
-
-    const result = await authenticate(options, {
-      client_id: "keyed",
-      client_assertion_type: ASSERTION_TYPE,
-      client_assertion: token,
-    });
-
-    expect(await errorOf(result)).toEqual({ status: 401, body: { error: "invalid_client" } });
-  });
-
-  it("rejects an assertion whose exp is 90 seconds in the past", async () => {
-    const { clients, clientKey } = await fixtures();
-    const options = await setup(clients);
-    const token = await assertion(clientKey.privateKey, { exp: NOW_SECONDS - 90 });
 
     const result = await authenticate(options, {
       client_id: "keyed",

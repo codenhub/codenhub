@@ -302,22 +302,27 @@ describe("buildAuthorization", () => {
     expect((error as Error).message).toContain("8192");
   });
 
+  // The endpoint may be up to MAX_PARAMETER_LENGTH long, so a padded endpoint leaves the request's own parameters
+  // room: a login hint of plain letters is copied one for one, and `&login_hint=` adds 12 characters.
+  const LOGIN_HINT_OVERHEAD = "&login_hint=".length;
+  const paddedEndpoint = `${ISSUER}/authorize?x=${"a".repeat(4000)}`;
+  const roomFor = async (): Promise<number> => {
+    const { url: base } = await buildAuthorization(resolvedOptions(paddedEndpoint));
+    return MAX_URL_LENGTH - base.length - LOGIN_HINT_OVERHEAD;
+  };
+
   it("accepts a request whose URL is exactly at the provider's limit", async () => {
-    const endpoint = `${ISSUER}/authorize?x=`;
-    const { url: empty } = await buildAuthorization(resolvedOptions(endpoint));
-    const { url } = await buildAuthorization(
-      resolvedOptions(`${endpoint}${"a".repeat(MAX_URL_LENGTH - empty.length)}`),
-    );
+    const hint = "a".repeat(await roomFor());
+    const { url } = await buildAuthorization(resolvedOptions(paddedEndpoint), { loginHint: hint });
 
     expect(url.length).toBe(MAX_URL_LENGTH);
   });
 
   it("throws TypeError when the URL is one character over the provider's limit", async () => {
-    const endpoint = `${ISSUER}/authorize?x=`;
-    const { url: empty } = await buildAuthorization(resolvedOptions(endpoint));
-    const error = await buildAuthorization(
-      resolvedOptions(`${endpoint}${"a".repeat(MAX_URL_LENGTH - empty.length + 1)}`),
-    ).catch((caught: unknown) => caught);
+    const hint = "a".repeat((await roomFor()) + 1);
+    const error = await buildAuthorization(resolvedOptions(paddedEndpoint), { loginHint: hint }).catch(
+      (caught: unknown) => caught,
+    );
 
     expect(error).toBeInstanceOf(TypeError);
   });

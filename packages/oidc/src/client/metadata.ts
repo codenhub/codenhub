@@ -1,3 +1,4 @@
+import { MAX_PARAMETER_LENGTH } from "../shared/limits";
 import { fail, ok } from "../shared/result";
 import type { OidcIssue, OidcResult, ProviderMetadata } from "../shared/types";
 import { isHttpsUrl } from "../shared/urls";
@@ -52,6 +53,9 @@ const includesAnyOf =
 
 const isBoolean = (value: unknown): boolean => typeof value === "boolean";
 
+/** An https URL short enough that the authorization request URL still has room for its own parameters. */
+const isShortHttpsUrl = (value: unknown): boolean => isHttpsUrl(value) && value.length <= MAX_PARAMETER_LENGTH;
+
 const required = (name: string, accepts: Predicate): MemberRule => ({ name, required: true, accepts });
 
 const optional = (name: string, accepts: Predicate): MemberRule => ({ name, required: false, accepts });
@@ -61,7 +65,8 @@ const optional = (name: string, accepts: Predicate): MemberRule => ({ name, requ
  * not checked, because this package does not use it.
  */
 const MEMBER_RULES: readonly MemberRule[] = [
-  required("authorization_endpoint", isHttpsUrl),
+  // Capped so a valid endpoint always leaves room in the 8192-character request limit for the request's parameters.
+  required("authorization_endpoint", isShortHttpsUrl),
   required("token_endpoint", isHttpsUrl),
   required("jwks_uri", isHttpsUrl),
   optional("userinfo_endpoint", isHttpsUrl),
@@ -74,6 +79,8 @@ const MEMBER_RULES: readonly MemberRule[] = [
   optional("grant_types_supported", isStringArray),
   optional("token_endpoint_auth_methods_supported", isStringArray),
   optional("token_endpoint_auth_signing_alg_values_supported", isStringArray),
+  optional("revocation_endpoint_auth_methods_supported", isStringArray),
+  optional("revocation_endpoint_auth_signing_alg_values_supported", isStringArray),
   optional("claims_supported", isStringArray),
   // RFC 7636 §4.3: an S256 challenge is the only method this package uses, so a provider that lacks it cannot serve the client.
   optional("code_challenge_methods_supported", includesString(CODE_CHALLENGE_METHOD_S256)),

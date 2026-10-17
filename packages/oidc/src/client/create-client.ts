@@ -259,6 +259,31 @@ async function fetchUserinfo(
   return ok(claims as UserinfoClaims);
 }
 
+/**
+ * Checks the client's auth method, and a client-assertion key's algorithm, against the provider's advertised
+ * revocation-endpoint values. Revocation reuses the token endpoint's credentials, so a provider that lists
+ * different ones for revocation would refuse the request. An absent member means the provider has not stated
+ * them, so anything is accepted.
+ */
+function checkRevocationAuth(options: ResolvedClientOptions): void {
+  const { metadata, auth } = options;
+  const methods = metadata.revocation_endpoint_auth_methods_supported;
+  if (methods !== undefined && !methods.includes(auth.method)) {
+    throw new TypeError(
+      "revoke: the client's auth method is not in metadata.revocation_endpoint_auth_methods_supported",
+    );
+  }
+  if (auth.method !== "client_secret_jwt" && auth.method !== "private_key_jwt") {
+    return;
+  }
+  const algorithms = metadata.revocation_endpoint_auth_signing_alg_values_supported;
+  if (algorithms !== undefined && !algorithms.includes(auth.key.alg)) {
+    throw new TypeError(
+      "revoke: the key's algorithm is not in metadata.revocation_endpoint_auth_signing_alg_values_supported",
+    );
+  }
+}
+
 /** Revokes a token. A bad argument, or a provider without the endpoint, is a caller bug, so it throws. */
 async function revokeToken(options: ResolvedClientOptions, input: RevokeOptions): Promise<OidcResult<void>> {
   if (!isObject(input)) {
@@ -273,6 +298,7 @@ async function revokeToken(options: ResolvedClientOptions, input: RevokeOptions)
   if (url === undefined) {
     throw new TypeError("revoke: metadata has no revocation_endpoint");
   }
+  checkRevocationAuth(options);
   const form = new URLSearchParams({ token });
   if (hint !== undefined) {
     form.set("token_type_hint", hint);

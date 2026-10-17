@@ -98,10 +98,23 @@ describe("token revocation (RFC 7009)", () => {
 
   it("revokes the grant when a spent refresh token is presented", async () => {
     const rotated = await redeem(setup, refreshForm(issued.tokens.refresh_token ?? "", PUBLIC_CLIENT));
+    expect(rotated.status).toBe(200);
     const next = (await rotated.json()) as { access_token: string };
+    expect(typeof next.access_token).toBe("string");
+    expect(next.access_token).not.toBe("");
 
     expect((await revoke(issued.tokens.refresh_token ?? "")).status).toBe(200);
     expect(await userinfoStatus(next.access_token)).toBe(401);
+  });
+
+  it("revokes the grant when an expired access token is presented, since expiry is not checked", async () => {
+    const start = setup.now.ms;
+    setup.now.ms = start + 601_000;
+    expect(await userinfoStatus(issued.tokens.access_token)).toBe(401);
+
+    expect((await revoke(issued.tokens.access_token)).status).toBe(200);
+    setup.now.ms = start;
+    expect(await refreshStatus(issued.tokens.refresh_token ?? "")).toBe(400);
   });
 
   it("refuses a request without a token, or from a client that fails authentication", async () => {
@@ -124,6 +137,8 @@ describe("token revocation (RFC 7009)", () => {
     expect(get.status).toBe(405);
     expect(preflight.status).toBe(204);
     expect(preflight.headers.get("access-control-allow-origin")).toBe("*");
+    expect(preflight.headers.get("access-control-allow-methods")).toContain("POST");
+    expect(preflight.headers.get("access-control-allow-headers")).toBe("authorization, content-type");
   });
 
   it("is published in discovery with the token endpoint's authentication methods", async () => {
