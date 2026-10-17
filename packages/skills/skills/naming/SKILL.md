@@ -5,7 +5,7 @@ description: Generates, researches, and judges names for anything people will sa
 
 # Naming
 
-A great name is a compressed story. It points at one true thing about what it names, through a word that is short, sayable, and ownable, so that hearing it once is enough to remember it and connect it to the thing. Docker is a dock worker who loads containers. Helium is the lightest thing there is. Opus, Sonnet, and Haiku are literary forms of decreasing length, so the name tells you the model's size. Every recommendation this skill produces has to be able to tell its story in one sentence.
+A great name is a compressed story. It points at one true thing about what it names, through a word that is short, sayable, and ownable, so that hearing it once is enough to remember it and connect it to the thing. Docker is a dock worker who loads containers. Helium is the lightest noble gas, for a lightweight browser. Haiku, Sonnet, and Opus run from a three-line poem to a 14-line poem to a major work, so the name tells you the model's size. Every recommendation this skill produces has to be able to tell its story in one sentence.
 
 The default failures this skill exists to stop:
 
@@ -50,9 +50,9 @@ Write down the attributes from step 1: function, mechanism, feeling, promise, au
 - **Language roots.** Latin, Greek, Sanskrit, Japanese, Romance-language, and other words whose meaning fits (Manus is Latin for "hand", Vista is "view", Meta is "beyond").
 - **Arts and culture.** Musical and literary forms, archetypes, and roles (Opus, Sonnet, Rockstar).
 - **Nature.** Animals, plants, and landscapes whose behavior or character matches the thing.
-- **Coined forms.** Blends (Netflix, Pinterest), misspellings or truncations of a meaningful word (Google from googol), and invented words built from open syllables (Xano, Hulu).
+- **Coined forms.** Blends (Netflix, Pinterest), misspellings or truncations of a meaningful word (Google from googol), and invented words built from open syllables (Kodak, Xano).
 
-Generate 30 to 60 candidates across at least four lanes before judging any of them. Breadth across lanes beats synonyms within one lane: everyday words from the field are the easiest to think of and the most often taken, so if most of your pool comes from one lane, generate more in the others before moving on. For seeds, techniques, and the cautions that go with each lane, read [references/sources.md](references/sources.md).
+When the user brings names to judge, compare, or check, start at step 3 with their names, and generate new ones only if they ask or every name fails. Otherwise, generate 30 to 60 candidates across at least four lanes before judging any of them. Breadth across lanes beats synonyms within one lane: everyday words from the field are the easiest to think of and the most often taken, so if most of your pool comes from one lane, generate more in the others before moving on. For seeds, techniques, and the cautions that go with each lane, read [references/sources.md](references/sources.md).
 
 ### 3. Research
 
@@ -75,7 +75,7 @@ Cut any candidate that fails a gate:
 - **Length.** For a brand, more than three syllables or about ten letters needs a strong reason.
 - **No story.** You can't say in one sentence why this name fits this thing.
 
-The recommended name passes every gate. A concrete doubt your research turned up and couldn't resolve, such as a dictionary listing a possible slur, counts as a miss until someone resolves it. A check you didn't run isn't a miss; report it as unchecked. A mitigation, such as registering a likely misspelling, reduces the harm of a miss but doesn't make it a pass, since the owner pays for the miss every time the name is said. A strong candidate that misses one gate narrowly can appear only as an alternative, with the miss and its mitigation named.
+The recommended name passes every gate you could check. A gate you couldn't check, such as a registry you couldn't query, is neither a pass nor a miss: name it as unchecked, and don't imply the name is available or cleared. A concrete doubt your research turned up and couldn't resolve, such as a dictionary listing a possible slur, counts as a miss until someone resolves it. A mitigation, such as registering a likely misspelling, reduces the harm of a miss but doesn't make it a pass, since the owner pays for the miss every time the name is said. A strong candidate that misses one gate narrowly can appear only as an alternative, with the miss and its mitigation named.
 
 Rank the survivors by these strengths, as judgments rather than added-up scores:
 
@@ -97,20 +97,20 @@ Lead with the recommendation, then two to four alternatives that take meaningful
 
 Then list notable rejected candidates with a reason for each in a few words, so the user can see the search and steer it. Ask what they like or dislike, and in the next round lean toward the lanes and sounds they respond to.
 
-Example of one finalist (illustrative; its availability notes are not real research):
+Example of one finalist (illustrative; re-run the checks for real use):
 
-> **Heron** (HAIR-un), for a CLI that watches a repository and runs only the tests a change affects. Origin: the wading bird that stands still for long stretches and strikes only at what moves. Also the name of Hero of Alexandria, the engineer of the first steam device. Fit: the tool idles and acts only on what changed. Sound: two soft syllables and an easy spelling, written the same in most Latin-alphabet languages. Risks: Apache Heron, a stream-processing engine, is in an adjacent developer-tools space. Checked: npm `heron` is taken, so it would ship scoped; the domain wasn't checked.
+> **Escrow** (ES-kroh), for a Postgres job queue that enqueues a job only if the app's transaction commits. Origin: from Anglo-French _escroue_, a scroll or deed; in law, something a third party holds and releases only once a condition is met. Fit: the job is held and released to workers only if the transaction commits, the one promise a separate queue can't make. Sound: two syllables, one common spelling, and it works as a verb ("escrow a job"). Risks: searches will mix in payment and fintech results; non-native English speakers may not know the word. Checked: no job-queue library uses the name; npm `escrow` is an empty placeholder, so it would ship scoped; domains and trademarks weren't checked.
 
 ## Sound
 
 These effects are tendencies documented across languages, not laws. Use them to match the name to the feeling from step 1:
 
-- Front vowels (the "ee" in Zed, the "i" in Figma) suggest small, quick, light, and precise. Back vowels (Opus, Apolo, Docker) suggest large, deep, steady, and powerful.
+- Front vowels (the short "e" in Zed, the "i" in Figma) suggest small, quick, light, and precise. Back vowels (Opus, Apolo, Docker) suggest large, deep, steady, and powerful.
 - Hard stops (k, t, p, b, d, g) and the letters z and x feel sharp, fast, and punchy, as in Docker, Zed, Xano, and Tor. Liquids and nasals (l, m, n, r) and soft sibilants feel smooth and calm, as in Notion, Zen, and Manus.
-- Names built from alternating consonant and vowel syllables (A-po-lo, Ma-nus, Xa-no, Ge-mi-ni) travel well across languages. Consonant clusters (str, thr), "th", the w/v contrast, silent letters, and doubled letters (Flickr, Tumblr) cause misspelling and mispronunciation outside English.
+- Names built from alternating consonant and vowel syllables (A-po-lo, Ma-nus, Xa-no, Ge-mi-ni) travel well across languages. Consonant clusters (str, thr), "th", the w/v contrast, silent letters, and dropped vowels (Flickr, Tumblr) cause misspelling and mispronunciation outside English.
 - A name gets stuck in memory through rhythm and repetition (YouTube, Coca-Cola), a strong initial letter, or a single surprising sound.
 
 ## Families And Renames
 
-- **Families.** When names will multiply, such as model sizes, product tiers, releases, or sibling packages, choose a system with an order built into it, such as length (Haiku, Sonnet, Opus), the alphabet, or a scale. Then each new name explains itself. Members must be hard to confuse with one another in speech and in writing; Violin and Viola fail that test.
+- **Families.** When names will multiply, such as model sizes, product tiers, releases, or sibling packages, choose a system with an order built into it, such as scale (Haiku, Sonnet, Opus), the alphabet, or a scale. Then each new name explains itself. Members must be hard to confuse with one another in speech and in writing; Violin and Viola fail that test.
 - **Renames.** Renaming something already published or depended on changes public surface: imports, URLs, package names, search results, and what people remember. Present the rename as a decision with its migration cost, and get approval before changing anything. In a codebase, record the decision where the project records decisions.

@@ -25,7 +25,7 @@ Use these as calibration for the kind of link between a name and its thing that 
 | YouTube           | Field (compound)     | "You" plus "tube", slang for television: TV made by you.                   |
 | Netflix           | Coined (blend)       | Net plus flicks: films over the internet.                                  |
 | Claude            | History (first name) | Widely read as a nod to Claude Shannon; a human first name feels personal. |
-| Opus/Sonnet/Haiku | Arts (family)        | Literary forms ordered by length: the name tells you the model's size.     |
+| Opus/Sonnet/Haiku | Arts (family)        | Three-line poem, 14-line poem, major work: the name tells you the size.    |
 | Gemini            | Myth/astronomy       | The twins: a duality, and an echo of NASA's Gemini program.                |
 | Manus             | Language root        | Latin "hand": an agent that does things instead of only talking.           |
 | Docker            | Field (trade)        | A dock worker who loads shipping containers.                               |
@@ -57,7 +57,7 @@ Look for the figure, creature, place, or object whose specific story matches the
 - **Mesoamerican and Andean.** Inti (the Inca sun), Pacha (world, time, and earth in Quechua), Quipu (Inca knotted-cord records; see History).
 - **Jewish, Christian, and Islamic.** Golem (the clay helper animated by a word), Ezra (help), Babel (the confusion of languages), Manna (provision from heaven), Ark, Eden, Genesis, Seraph, Gabriel (the messenger), Raphael (the healer), Sinai.
 
-**Caution.** Using a figure who is worshipped today, such as Hindu deities, Christian and Islamic holy figures, or living sacred names, for a commercial product can read as disrespectful to believers. Prefer concepts, creatures, places, and figures from traditions that aren't practiced anymore, and say so when a candidate carries this risk.
+**Caution.** Using a sacred figure or name for a commercial product can read as disrespectful to the people who hold it sacred, and a tradition that looks ancient may still be practiced or revived, as Norse, Egyptian, and Andean traditions are. Research how the relevant communities and the target market regard a candidate, prefer concepts, creatures, places, and objects over worshipped figures, and say so when a candidate carries this risk.
 
 ## History
 
@@ -65,7 +65,7 @@ Look for the figure, creature, place, or object whose specific story matches the
 - **Places and empires.** Alexandria (the great library), Samarkand (the Silk Road crossroads), Timbuktu (manuscripts and learning), Byzantium, Carthage, Petra, Kyoto, Sparta (austerity, minimalism), Troy.
 - **Artifacts and inventions.** Rosetta (the stone that unlocked translation), Antikythera (the ancient analog computer), Quipu (Inca knotted-cord records), Codex, Abacus, Astrolabe, Sextant, Loom (the Jacquard loom led to punch cards), Papyrus, Compass.
 
-**Caution.** Some names of famous people are licensed and actively enforced, such as Einstein through his estate. Tesla and Nobel are already major brands. Prefer a first name, a work, or a discovery over a famous surname.
+**Caution.** Some names of famous people are licensed and actively enforced, such as Einstein's, which the Hebrew University of Jerusalem licenses. Check the current rights holder in the target markets. Tesla and Nobel are already major brands. Prefer a first name, a work, or a discovery over a famous surname.
 
 ## Science And Phenomena
 
@@ -119,8 +119,8 @@ Forms make good families because they have a natural order, such as length, temp
 
 Coined names are the easiest to own and the hardest to make meaningful. Build them from a meaningful root so they still have a story.
 
-- **Blend.** Join two words at a shared sound: Netflix, Pinterest, Microsoft, Instagram.
+- **Blend.** Join two words at a shared sound: Netflix, Pinterest, Microsoft, Instagram, Zillow (zillions and pillow).
 - **Truncate.** Cut a meaningful word down: Insta, Tumblr from tumbler.
 - **Respell.** Change a real word's spelling: Google from googol, Lyft. Respellings that drop vowels make people ask "how do you spell that?".
-- **Open-syllable coinage.** Alternate consonants and vowels into a word with no prior meaning, as in Xano, Hulu, and Zillow. Check that the result doesn't mean something in another language.
+- **Open-syllable coinage.** Alternate consonants and vowels into a word with no prior meaning, as in Kodak and Xano. Check that the result doesn't mean something in another language: Hulu, for example, is also a Chinese word for a gourd.
 - **Acronym that reads as a word.** Tor works because it's sayable on its own. An acronym you have to spell out letter by letter rarely makes a good brand.
