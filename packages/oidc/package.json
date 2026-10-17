@@ -77,7 +77,8 @@
   "codenhub": {
     "docs": {
       "label": "OidcKit",
-      "status": "experimental"
+      "status": "experimental",
+      "reference": {}
     }
   }
 }
