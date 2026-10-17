@@ -58,6 +58,7 @@ export interface ResolvedEndpoints {
   readonly token: string;
   readonly userinfo: string;
   readonly jwks: string;
+  readonly revocation: string;
 }
 
 /** Provider options after validation, as every endpoint reads them. */
@@ -111,7 +112,7 @@ function readEndpoints(issuer: string, endpoints: unknown): ResolvedEndpoints {
     return fail("endpoints", "must be an object");
   }
   const base = issuer.endsWith("/") ? issuer.slice(0, -1) : issuer;
-  const read = (name: "authorization" | "token" | "userinfo" | "jwks", path: string): string => {
+  const read = (name: "authorization" | "token" | "userinfo" | "jwks" | "revocation", path: string): string => {
     // Only `undefined` takes the default: an explicit `null` is a mistake to report, not a request for the default.
     const given = isRecord(endpoints) ? endpoints[name] : undefined;
     const value = given === undefined ? `${base}${path}` : given;
@@ -126,6 +127,7 @@ function readEndpoints(issuer: string, endpoints: unknown): ResolvedEndpoints {
     token: read("token", "/token"),
     userinfo: read("userinfo", "/userinfo"),
     jwks: read("jwks", "/jwks"),
+    revocation: read("revocation", "/revoke"),
   };
   // `handle` routes by origin and path, so two endpoints at one place would make one unreachable.
   const places = Object.values(resolved).map((url) => {

@@ -7,7 +7,7 @@ import { buildAuthorization, denseCopy } from "./authorize";
 import { readErrorCode, requestFailure, requestJson } from "./http";
 import { createIdTokenValidator, type IdTokenValidator } from "./id-token";
 import { type ResolvedClientOptions, resolveClientOptions } from "./options";
-import { requestTokens } from "./tokens";
+import { requestRevocation, requestTokens } from "./tokens";
 import type {
   AuthorizeOptions,
   Client,
@@ -16,6 +16,7 @@ import type {
   Refreshed,
   RefreshOptions,
   SignIn,
+  RevokeOptions,
   UserinfoOptions,
 } from "./types";
 
@@ -258,6 +259,27 @@ async function fetchUserinfo(
   return ok(claims as UserinfoClaims);
 }
 
+/** Revokes a token. A bad argument, or a provider without the endpoint, is a caller bug, so it throws. */
+async function revokeToken(options: ResolvedClientOptions, input: RevokeOptions): Promise<OidcResult<void>> {
+  if (!isObject(input)) {
+    throw new TypeError("revoke: options must be an object");
+  }
+  const token = readRequiredString(input, "token", "revoke");
+  const hint = input.tokenTypeHint;
+  if (hint !== undefined && hint !== "access_token" && hint !== "refresh_token") {
+    throw new TypeError('revoke: tokenTypeHint must be "access_token" or "refresh_token"');
+  }
+  const url = options.metadata.revocation_endpoint;
+  if (url === undefined) {
+    throw new TypeError("revoke: metadata has no revocation_endpoint");
+  }
+  const form = new URLSearchParams({ token });
+  if (hint !== undefined) {
+    form.set("token_type_hint", hint);
+  }
+  return requestRevocation(options, url, form);
+}
+
 /**
  * Creates a relying party for one provider and one registered client.
  *
@@ -311,5 +333,6 @@ export function createClient(options: ClientOptions): Client {
     callback: (url: string | URL, pending: PendingAuthorization) => finishSignIn(resolved, validate, url, pending),
     refresh: (request: RefreshOptions) => refreshTokens(resolved, validate, request),
     userinfo: (request: UserinfoOptions) => fetchUserinfo(resolved, request),
+    revoke: (request: RevokeOptions) => revokeToken(resolved, request),
   });
 }

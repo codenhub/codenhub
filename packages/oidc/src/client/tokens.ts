@@ -131,3 +131,46 @@ export async function requestTokens(
   const issues = tokenResponseIssues(body);
   return issues.length === 0 ? ok(toTokenSet(body, options.now)) : failAll(issues);
 }
+
+/**
+ * Asks the provider to revoke a token (RFC 7009 §2.1), authenticated as the client is configured.
+ *
+ * @remarks
+ * A `200` means the token is no longer valid, whatever it was: the provider answers `200` for an unknown or
+ * already revoked token too (§2.2). A non-`200` response with an OAuth `error` is `provider_error`, with the
+ * code narrowed by {@link readErrorCode}; any other non-`200` is `request_failed`. Never throws for any
+ * response.
+ *
+ * @param options - The resolved client options, supplying the credentials and clock.
+ * @param url - The provider's revocation endpoint.
+ * @param form - The `token` and optional `token_type_hint`. The credentials are added to it.
+ * @returns Success, or every issue found.
+ */
+export async function requestRevocation(
+  options: ResolvedClientOptions,
+  url: string,
+  form: URLSearchParams,
+): Promise<OidcResult<void>> {
+  const headers = await authenticate(options, form);
+  const response = await requestJson({
+    endpoint: "revocation",
+    url,
+    method: "POST",
+    headers,
+    form,
+    fetch: options.fetch,
+    timeoutMs: options.timeoutMs,
+    ignoreOkBody: true,
+  });
+  if (!response.ok) {
+    return response;
+  }
+  const { status, body } = response.value;
+  if (status === HTTP_OK) {
+    return ok(undefined);
+  }
+  const error = member(body, "error");
+  return typeof error === "string"
+    ? fail({ code: "provider_error", params: { endpoint: "revocation", error: readErrorCode(error) } })
+    : requestFailure("revocation", "status", status);
+}

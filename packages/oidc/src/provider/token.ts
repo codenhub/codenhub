@@ -35,40 +35,58 @@ interface Grant {
  * @returns The token response or an error response.
  */
 export async function handleToken(options: ResolvedOptions, request: Request): Promise<Response> {
-  if (request.method === "OPTIONS") {
-    return preflightResponse(["POST"]);
+  const read = await readClientRequest(options, request);
+  if (!read.ok) {
+    return read.response;
   }
-  if (request.method !== "POST") {
-    return methodNotAllowed(["POST", "OPTIONS"]);
-  }
-  if (!isFormContentType(request.headers.get("content-type"))) {
-    return tokenErrorResponse("invalid_request");
-  }
-  const body = await readBody(request, MAX_BODY_BYTES);
-  if (!body.ok) {
-    return tokenErrorResponse("invalid_request");
-  }
-  const parsed = parseParameters(body.text);
-  if (!parsed.ok) {
-    return tokenErrorResponse("invalid_request");
-  }
-  const parameters = parsed.parameters;
-  const auth = await authenticateClient(options, request, parameters);
-  if (!auth.ok) {
-    return auth.response;
-  }
+  const { client, parameters } = read;
   const grantType = parameters.get("grant_type");
   if (grantType === undefined) {
     return tokenErrorResponse("invalid_request");
   }
   switch (grantType) {
     case "authorization_code":
-      return exchangeCode(options, auth.client, parameters);
+      return exchangeCode(options, client, parameters);
     case "refresh_token":
-      return refreshTokens(options, auth.client, parameters);
+      return refreshTokens(options, client, parameters);
     default:
       return tokenErrorResponse("unsupported_grant_type");
   }
+}
+
+/** Outcome of {@link readClientRequest}: the authenticated client and its parameters, or the response to send. */
+export type ClientRequestResult =
+  | { readonly ok: true; readonly client: ClientRecord; readonly parameters: ReadonlyMap<string, string> }
+  | { readonly ok: false; readonly response: Response };
+
+/**
+ * Reads a client's form POST to the token or revocation endpoint, cheapest and least trusting check first:
+ * method, content type, body size, parameters (duplicates refused), then client authentication.
+ *
+ * @param options - The resolved provider options.
+ * @param request - The request to the endpoint.
+ * @returns The authenticated client and its parameters, or the response that refuses the request.
+ */
+export async function readClientRequest(options: ResolvedOptions, request: Request): Promise<ClientRequestResult> {
+  if (request.method === "OPTIONS") {
+    return { ok: false, response: preflightResponse(["POST"]) };
+  }
+  if (request.method !== "POST") {
+    return { ok: false, response: methodNotAllowed(["POST", "OPTIONS"]) };
+  }
+  if (!isFormContentType(request.headers.get("content-type"))) {
+    return { ok: false, response: tokenErrorResponse("invalid_request") };
+  }
+  const body = await readBody(request, MAX_BODY_BYTES);
+  if (!body.ok) {
+    return { ok: false, response: tokenErrorResponse("invalid_request") };
+  }
+  const parsed = parseParameters(body.text);
+  if (!parsed.ok) {
+    return { ok: false, response: tokenErrorResponse("invalid_request") };
+  }
+  const auth = await authenticateClient(options, request, parsed.parameters);
+  return auth.ok ? { ok: true, client: auth.client, parameters: parsed.parameters } : auth;
 }
 
 /**

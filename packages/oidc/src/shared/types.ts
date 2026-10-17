@@ -135,6 +135,10 @@ export interface ProviderMetadata {
   readonly token_endpoint_auth_signing_alg_values_supported?: readonly string[];
   readonly claims_supported?: readonly string[];
   readonly code_challenge_methods_supported?: readonly string[];
+  /** The token revocation endpoint (RFC 7009, RFC 8414 §2). */
+  readonly revocation_endpoint?: string;
+  readonly revocation_endpoint_auth_methods_supported?: readonly string[];
+  readonly revocation_endpoint_auth_signing_alg_values_supported?: readonly string[];
   /** Whether the provider sends `iss` in authorization responses (RFC 9207). */
   readonly authorization_response_iss_parameter_supported?: boolean;
   readonly claims_parameter_supported?: boolean;

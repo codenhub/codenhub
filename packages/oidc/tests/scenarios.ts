@@ -165,6 +165,16 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
     const claims = await rp.userinfo({ accessToken: first.value.tokens.accessToken, subject: "user-1" });
     check(!claims.ok, "access token not revoked after reuse");
   },
+
+  "revokes a sign-in from the client": async (modules) => {
+    const { rp, signedIn } = await signIn(modules, "client_secret_basic");
+    const revoked = await rp.revoke({ token: signedIn.tokens.refreshToken as string, tokenTypeHint: "refresh_token" });
+    check(revoked.ok, `revoke failed: ${JSON.stringify(revoked)}`);
+    const claims = await rp.userinfo({ accessToken: signedIn.tokens.accessToken, subject: "user-1" });
+    check(!claims.ok, "access token not revoked with its refresh token");
+    const again = await rp.revoke({ token: signedIn.tokens.accessToken });
+    check(again.ok, "revoking a revoked token was not answered 200");
+  },
 };
 
 /** Runs one scenario by name and reports `ok` or the failure, for runtimes that can only return text. */

@@ -1,8 +1,8 @@
 import type { OAuthErrorCode } from "../shared/types";
 
 /*
- * Responses of the endpoints a browser client may call from another origin: discovery, JWKS, token, and
- * userinfo. They allow any origin because none of them reads cookies or other ambient credentials: a
+ * Responses of the endpoints a browser client may call from another origin: discovery, JWKS, token,
+ * userinfo, and revocation. They allow any origin because none of them reads cookies or other ambient credentials: a
  * request is authorized only by what it carries itself, so a cross-origin page gains nothing it could
  * not send from a server. The authorization endpoint answers top-level navigations only and never gets
  * these headers.
@@ -43,6 +43,11 @@ export function jsonResponse(
 export function tokenErrorResponse(error: OAuthErrorCode, headers?: Readonly<Record<string, string>>): Response {
   const status = error === "invalid_client" ? 401 : error === "server_error" ? 500 : 400;
   return jsonResponse({ error }, { status, caching: "no-store", headers });
+}
+
+/** The answer to a revocation request the provider accepted, whatever the token was (RFC 7009 §2.2). */
+export function revocationResponse(): Response {
+  return new Response(null, { status: 200, headers: { ...CORS_HEADERS, ...NO_STORE_HEADERS } });
 }
 
 /**

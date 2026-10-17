@@ -3,12 +3,13 @@ import { beginAuthorization, completeAuthorization } from "./authorization";
 import { buildMetadata, createJwksDocument, type JwksDocument } from "./discovery";
 import { type ResolvedEndpoints, type ResolvedOptions, resolveOptions } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse } from "./responses";
+import { handleRevocation } from "./revocation";
 import { handleToken } from "./token";
 import type { AuthorizationDenial, AuthorizationGrant, Provider, ProviderOptions } from "./types";
 import { handleUserinfo } from "./userinfo";
 
 /** The endpoints this provider answers itself. The authorization endpoint is not one of them. */
-type EndpointRoute = "discovery" | "jwks" | "token" | "userinfo";
+type EndpointRoute = "discovery" | "jwks" | "token" | "userinfo" | "revocation";
 
 /** Everything a request needs to be answered, built once when the provider is created. */
 interface ProviderContext {
@@ -31,6 +32,7 @@ function buildRoutes(endpoints: ResolvedEndpoints): ReadonlyMap<string, Endpoint
     [endpointKey(new URL(endpoints.jwks)), "jwks"],
     [endpointKey(new URL(endpoints.token)), "token"],
     [endpointKey(new URL(endpoints.userinfo)), "userinfo"],
+    [endpointKey(new URL(endpoints.revocation)), "revocation"],
   ]);
 }
 
@@ -68,6 +70,8 @@ async function answerRequest(context: ProviderContext, request: Request): Promis
       return handleToken(context.options, request);
     case "userinfo":
       return handleUserinfo(context.options, request);
+    case "revocation":
+      return handleRevocation(context.options, request);
     default:
       return null;
   }
@@ -77,7 +81,7 @@ async function answerRequest(context: ProviderContext, request: Request): Promis
  * Creates an OpenID Provider from its options, ready to answer requests on the Fetch API.
  *
  * @remarks
- * The provider answers the discovery, JWKS, token, and userinfo endpoints through {@link Provider.handle},
+ * The provider answers the discovery, JWKS, token, userinfo, and revocation endpoints through {@link Provider.handle},
  * and runs the authorization flow through {@link Provider.beginAuthorization} and
  * {@link Provider.completeAuthorization}. The authorization endpoint itself is not routed, so the app
  * serves it and calls `beginAuthorization` from its own handler. Options are validated here, once, so a

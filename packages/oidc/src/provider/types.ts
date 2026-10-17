@@ -206,6 +206,8 @@ export interface ProviderEndpoints {
   readonly userinfo?: string;
   /** @defaultValue `${issuer}/jwks` */
   readonly jwks?: string;
+  /** Token revocation (RFC 7009). @defaultValue `${issuer}/revoke` */
+  readonly revocation?: string;
 }
 
 /** How {@link createProvider} runs. Invalid options throw `TypeError` at creation. */
@@ -304,7 +306,7 @@ export interface Provider {
   /** The discovery document this provider publishes. */
   readonly metadata: ProviderMetadata;
   /**
-   * Answers the discovery, JWKS, token, and userinfo endpoints.
+   * Answers the discovery, JWKS, token, userinfo, and revocation endpoints.
    *
    * @returns The response, or `null` when the request is for none of those URLs. Never throws for any
    * request; rejects only when the store or the `claims` callback does, or with a `TypeError` when the

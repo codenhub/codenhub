@@ -4,7 +4,7 @@ import { fail, ok } from "../shared/result";
 import type { OAuthErrorCode, OidcResult } from "../shared/types";
 
 /** Which provider endpoint a request went to, as `params.endpoint` of its issues. */
-export type Endpoint = "discovery" | "token" | "userinfo";
+export type Endpoint = "discovery" | "token" | "userinfo" | "revocation";
 
 /** Why a request failed, as `params.reason` of a `request_failed` issue. */
 type RequestFailureReason = "timeout" | "network" | "status" | "too_large" | "content_type" | "malformed";
@@ -19,6 +19,11 @@ export interface JsonRequest {
   readonly form?: URLSearchParams;
   readonly fetch: typeof fetch | undefined;
   readonly timeoutMs: number;
+  /**
+   * Accepts a `200` whatever its body, which is discarded and read as `{}`. A revocation response's body
+   * means nothing (RFC 7009 §2.2).
+   */
+  readonly ignoreOkBody?: boolean;
 }
 
 /** A JSON object response, of any status. */
@@ -118,6 +123,10 @@ async function send(request: JsonRequest, signal: AbortSignal): Promise<OidcResu
     signal,
   });
   const { endpoint } = request;
+  if (request.ignoreOkBody === true && response.status === HTTP_OK) {
+    discardBody(response);
+    return ok({ status: HTTP_OK, body: {} });
+  }
   const isJson = /^application\/json\s*(;|$)/i.test(response.headers.get("content-type") ?? "");
   if (!isJson) {
     discardBody(response);

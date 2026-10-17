@@ -65,6 +65,7 @@ const MEMBER_RULES: readonly MemberRule[] = [
   required("token_endpoint", isHttpsUrl),
   required("jwks_uri", isHttpsUrl),
   optional("userinfo_endpoint", isHttpsUrl),
+  optional("revocation_endpoint", isHttpsUrl),
   required("response_types_supported", includesString(RESPONSE_TYPE_CODE)),
   required("subject_types_supported", isStringArray),
   required("id_token_signing_alg_values_supported", includesAnyOf(ID_TOKEN_ALGORITHMS)),

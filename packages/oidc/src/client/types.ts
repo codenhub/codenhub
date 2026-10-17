@@ -156,6 +156,14 @@ export interface RefreshOptions {
 }
 
 /** What to ask the userinfo endpoint. */
+/** What {@link Client.revoke} revokes. */
+export interface RevokeOptions {
+  /** The access or refresh token to revoke. */
+  readonly token: string;
+  /** Which kind of token it is, a hint the provider may use to find it faster (RFC 7009 §2.1). */
+  readonly tokenTypeHint?: "access_token" | "refresh_token";
+}
+
 export interface UserinfoOptions {
   readonly accessToken: string;
   /** The `sub` of the ID token. The response's `sub` must equal it (OpenID Connect Core §5.3.2). */
@@ -205,4 +213,14 @@ export interface Client {
    * @throws {TypeError} When the provider metadata has no userinfo_endpoint, or an option is invalid.
    */
   userinfo(options: UserinfoOptions): Promise<OidcResult<UserinfoClaims>>;
+  /**
+   * Revokes an access or refresh token at the provider's revocation endpoint (RFC 7009), as when the user
+   * signs out. Providers such as this package's revoke every token of the sign-in along with it.
+   *
+   * @returns Success when the provider answered `200`, which it also does for a token that was unknown or
+   * already revoked, or every issue found. Never throws for any response; it rejects only for the caller
+   * errors listed below.
+   * @throws {TypeError} When the provider metadata has no revocation_endpoint, or an option is invalid.
+   */
+  revoke(options: RevokeOptions): Promise<OidcResult<void>>;
 }
