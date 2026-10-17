@@ -212,17 +212,19 @@ The authorization endpoint is served by the app, because the user's login and co
 `provider.beginAuthorization(request)` validates an authorization request. It accepts a `GET`, whose parameters are in the query, or a `POST` with an `application/x-www-form-urlencoded` body, whose `Content-Type` may carry only a UTF-8 `charset`, as the token endpoint requires. On success it saves the request as an interaction and returns it. On failure it returns a result whose `redirect` is either the response to return to the browser, or `null`:
 
 ```ts
+import type { AuthorizationInteraction } from "@codenhub/oidc/provider";
+
 async function authorize(request: Request): Promise<Response> {
   const begun = await provider.beginAuthorization(request);
   if (!begun.ok) {
     // A redirect goes back to the client. `null` means nothing could be verified, so the app renders its own error.
     return begun.error.redirect ?? new Response("Invalid authorization request.", { status: 400 });
   }
-  // Keep begun.value.id in the user's server-side session, then show the login and consent page.
-  return showLogin(begun.value.id);
+  // Keep the whole interaction in the user's server-side session, then show the login and consent page.
+  return showLogin(begun.value);
 }
 
-declare function showLogin(interactionId: string): Response; // the app's login and consent page
+declare function showLogin(interaction: AuthorizationInteraction): Response; // the app's login and consent page
 ```
 
 The checks run in this order, and the first failure is the one reported. Failures before the client and its redirect URI are verified render an error; failures after are redirected to the client's registered redirect URI with `error`, `state` and `iss`, so the client can see why.
@@ -252,7 +254,7 @@ On success the result carries the interaction:
 - `maxAge`, `loginHint` and `uiLocales`, when the request carried them. `loginHint` is passed through as sent. `uiLocales` has its empty entries, from repeated or trailing spaces, dropped; no entries left means absent. Both are within the length limit.
 - `createdAt`, in seconds since the Unix epoch.
 
-Keep `id` in the user's server-side session, or in a form field the app itself checks. Do not put it in a URL the user can edit, because whoever holds it can complete the interaction. The interaction lasts `ttl.interaction` seconds, 1800 by default, and it can be completed once.
+Keep the whole interaction in the user's server-side session. It is a frozen plain object, so it serializes as JSON. The pages between the two calls need it: the consent page shows `clientId` and `scopes`, the login page follows `prompt`, `maxAge` and `loginHint`, and the scopes the user grants must be among `scopes`. The provider offers no lookup by `id`, because the store's only read of an interaction is the atomic `consumeInteraction` that completes it. Do not put `id` in a URL the user can edit, because whoever holds it can complete the interaction. The interaction lasts `ttl.interaction` seconds, 1800 by default, and it can be completed once.
 
 ### Prompt and max_age
 

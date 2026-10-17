@@ -4,7 +4,7 @@
 
 OidcKit is OpenID Connect for both sides of the exchange: a relying-party client that signs users in through an identity provider, and an OpenID Provider that issues the tokens. Both sides run on the Fetch API (`Request`, `Response`, `fetch`) and Web Crypto, and both use `@codenhub/jwt` for every signature. Anything the other side sends, such as a discovery document, a callback URL, a token response or a token, is untrusted input: an operation on it returns a result or an OAuth error response and never throws.
 
-> **Experimental:** 0.0.1, before its first minor release. Option names, the `OidcStore` contract, issue `params` and function names may change before 0.1.0. The security behavior in the docs is not expected to loosen.
+> **Experimental:** no real application has run on this API yet. Option names, the `OidcStore` contract, issue `params` and function names are meant to hold, but a real consumer may still show that one of them must change; a breaking change ships as a new version with its migration documented. The security behavior in the docs is not expected to loosen.
 
 ## Installation
 
@@ -139,9 +139,9 @@ The two sides run in different processes, and the browser carries the messages b
 
 **The user clicks sign in.** The relying party calls `client.authorize()` and gets back a `url` and a `pending` value. It stores `pending` in the user's server-side session, then redirects the browser to `url`. `pending` holds the state, the nonce and the PKCE verifier.
 
-**The provider starts the request.** The browser reaches the provider's authorization endpoint, which the app serves. The app calls `provider.beginAuthorization(request)`. The package checks the request and saves it as an interaction. On success the app receives an `id` and the requested scopes, prompt and `max_age`. On failure the app either redirects the browser to the `redirect` it was given, or renders an error if `redirect` is `null`.
+**The provider starts the request.** The browser reaches the provider's authorization endpoint, which the app serves. The app calls `provider.beginAuthorization(request)`. The package checks the request and saves it as an interaction. On success the app receives the interaction: its `id`, `clientId`, `redirectUri`, `scopes` and `prompt`, and `maxAge`, `loginHint` and `uiLocales` when the request carried them. On failure the app either redirects the browser to the `redirect` it was given, or renders an error if `redirect` is `null`.
 
-**The user signs in and consents.** The app authenticates the user by its own means, asks for consent when it must, and keeps the `id` in its own session. Then it calls `provider.completeAuthorization(id, { subject, authTime, scopes })`. The package returns a `302` to the client's redirect URI carrying a `code`, the `state` and the `iss`.
+**The user signs in and consents.** The app keeps the whole interaction in its own session, since its login and consent pages need it and the provider has no lookup by `id`. It authenticates the user by its own means and asks for consent when it must. Then it calls `provider.completeAuthorization(interaction.id, { subject, authTime, scopes })`. The package returns a `302` to the client's redirect URI carrying a `code`, the `state` and the `iss`.
 
 **The relying party finishes.** The browser arrives at the redirect URI, and the relying party calls `client.callback(url, pending)`. The client checks the `state` and the `iss`, redeems the code at the token endpoint with the PKCE verifier, and validates the ID token against the nonce. On success it returns the claims and the tokens.
 
@@ -703,17 +703,19 @@ The authorization endpoint is served by the app, because the user's login and co
 `provider.beginAuthorization(request)` validates an authorization request. It accepts a `GET`, whose parameters are in the query, or a `POST` with an `application/x-www-form-urlencoded` body, whose `Content-Type` may carry only a UTF-8 `charset`, as the token endpoint requires. On success it saves the request as an interaction and returns it. On failure it returns a result whose `redirect` is either the response to return to the browser, or `null`:
 
 ```ts
+import type { AuthorizationInteraction } from "@codenhub/oidc/provider";
+
 async function authorize(request: Request): Promise<Response> {
   const begun = await provider.beginAuthorization(request);
   if (!begun.ok) {
     // A redirect goes back to the client. `null` means nothing could be verified, so the app renders its own error.
     return begun.error.redirect ?? new Response("Invalid authorization request.", { status: 400 });
   }
-  // Keep begun.value.id in the user's server-side session, then show the login and consent page.
-  return showLogin(begun.value.id);
+  // Keep the whole interaction in the user's server-side session, then show the login and consent page.
+  return showLogin(begun.value);
 }
 
-declare function showLogin(interactionId: string): Response; // the app's login and consent page
+declare function showLogin(interaction: AuthorizationInteraction): Response; // the app's login and consent page
 ```
 
 The checks run in this order, and the first failure is the one reported. Failures before the client and its redirect URI are verified render an error; failures after are redirected to the client's registered redirect URI with `error`, `state` and `iss`, so the client can see why.
@@ -743,7 +745,7 @@ On success the result carries the interaction:
 - `maxAge`, `loginHint` and `uiLocales`, when the request carried them. `loginHint` is passed through as sent. `uiLocales` has its empty entries, from repeated or trailing spaces, dropped; no entries left means absent. Both are within the length limit.
 - `createdAt`, in seconds since the Unix epoch.
 
-Keep `id` in the user's server-side session, or in a form field the app itself checks. Do not put it in a URL the user can edit, because whoever holds it can complete the interaction. The interaction lasts `ttl.interaction` seconds, 1800 by default, and it can be completed once.
+Keep the whole interaction in the user's server-side session. It is a frozen plain object, so it serializes as JSON. The pages between the two calls need it: the consent page shows `clientId` and `scopes`, the login page follows `prompt`, `maxAge` and `loginHint`, and the scopes the user grants must be among `scopes`. The provider offers no lookup by `id`, because the store's only read of an interaction is the atomic `consumeInteraction` that completes it. Do not put `id` in a URL the user can edit, because whoever holds it can complete the interaction. The interaction lasts `ttl.interaction` seconds, 1800 by default, and it can be completed once.
 
 ### Prompt and max_age
 

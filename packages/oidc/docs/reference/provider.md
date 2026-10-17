@@ -205,7 +205,7 @@ readonly subject: string;
 export interface AuthorizationInteraction
 ```
 
-An authorization request the app now handles: who the client is, and what it asked for. Frozen.
+An authorization request the app now handles: who the client is, and what it asked for. Frozen and JSON-serializable. Keep the whole value for the login and consent pages; the provider has no lookup by `id`.
 
 #### clientId
 
