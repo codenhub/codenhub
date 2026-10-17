@@ -1,5 +1,5 @@
 import { randomToken } from "../shared/encoding";
-import { MAX_PARAMETER_LENGTH } from "../shared/limits";
+import { MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
 import { computeCodeChallenge } from "../shared/pkce";
 import { deepFreeze } from "../shared/result";
 import type { Prompt } from "../shared/types";
@@ -31,7 +31,8 @@ const isScopeToken = (value: unknown): boolean => typeof value === "string" && S
 
 const isPrompt = (value: unknown): value is Prompt => typeof value === "string" && PROMPT_VALUES.has(value);
 
-const isLanguageTag = (value: unknown): boolean => typeof value === "string" && LANGUAGE_TAG.test(value);
+const isLanguageTag = (value: unknown): boolean =>
+  typeof value === "string" && value.isWellFormed() && LANGUAGE_TAG.test(value);
 
 /**
  * The longest list an option may hold. A request carries at most a few scopes, prompts or locales; the bound
@@ -118,6 +119,10 @@ function readLoginHint(loginHint: string | undefined): string | undefined {
   if (loginHint !== undefined && typeof loginHint !== "string") {
     throw new TypeError("authorize: loginHint must be a string");
   }
+  // A lone surrogate would be sent as U+FFFD, so the provider would see a different hint than the caller gave.
+  if (loginHint !== undefined && !loginHint.isWellFormed()) {
+    throw new TypeError("authorize: loginHint must be a string of well-formed Unicode");
+  }
   if (loginHint !== undefined && loginHint.length > MAX_PARAMETER_LENGTH) {
     throw new TypeError("authorize: loginHint is longer than the provider accepts");
   }
@@ -130,7 +135,9 @@ function readUiLocales(uiLocales: readonly string[] | undefined): readonly strin
   }
   const copy = denseCopy(uiLocales);
   if (copy === undefined || !copy.every(isLanguageTag)) {
-    throw new TypeError("authorize: uiLocales must be an array of at most 100 non-empty language tags without spaces");
+    throw new TypeError(
+      "authorize: uiLocales must be an array of at most 100 non-empty, well-formed language tags without spaces",
+    );
   }
   const joined = (copy as string[]).join(" ");
   if (joined.length > MAX_PARAMETER_LENGTH) {
@@ -195,7 +202,8 @@ function optionalParameters(request: ReadRequest): [string, string][] {
  * @param options - The resolved client options, supplying the endpoint, client, and redirect URI.
  * @param request - What to ask for. Omitted, it requests `openid` alone.
  * @returns The frozen URL and pending state. `pending.maxAge` is present only when `maxAge` was requested.
- * @throws {TypeError} When `request` is invalid. The message names the option and never its value.
+ * @throws {TypeError} When `request` is invalid, or when the URL it makes is longer than the provider reads. The
+ * message names the option or the limit and never its value or the URL.
  */
 export async function buildAuthorization(
   options: ResolvedClientOptions,
@@ -217,6 +225,11 @@ export async function buildAuthorization(
   ];
   for (const [name, value] of parameters) {
     url.searchParams.append(name, value);
+  }
+  // Each value is capped, but percent-encoding can grow them past the provider's URL limit, which would answer
+  // with its own error page instead of a redirect.
+  if (url.href.length > MAX_URL_LENGTH) {
+    throw new TypeError(`authorize: the authorization request URL is longer than ${MAX_URL_LENGTH} characters`);
   }
 
   const pending: PendingAuthorization =

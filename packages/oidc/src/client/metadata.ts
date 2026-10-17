@@ -106,14 +106,17 @@ function checkIssuer(document: object, issuer: string): OidcIssue[] {
 }
 
 /**
- * Marks a value that cannot be copied: a getter anywhere inside it, an object reached twice (which includes a
- * cycle), an array with holes or named members, or nesting deeper than {@link MAX_COPY_DEPTH}. No JSON document
- * has any of these.
+ * Marks a value that cannot be copied: a getter anywhere inside it, a cycle, an array with holes or named members,
+ * nesting deeper than {@link MAX_COPY_DEPTH}, or more containers than {@link MAX_COPY_NODES}. No JSON document has
+ * any of these. An object referenced from two places is copied at each place, since a copy shares nothing.
  */
 const UNCOPYABLE = Symbol("uncopyable");
 
 /** Matches the depth `@codenhub/jwt` allows in a JSON object; discovery documents are far shallower. */
 const MAX_COPY_DEPTH = 32;
+
+/** Bounds the containers copied, since shared references can multiply them. A document of 65536 bytes cannot hold this many. */
+const MAX_COPY_NODES = 65536;
 
 type Container = Record<string, unknown> | unknown[];
 
@@ -144,7 +147,7 @@ function copyValue(value: unknown): unknown {
     return value;
   }
   const root: Container = Array.isArray(value) ? [] : {};
-  const seen = new Set<object>([value]);
+  let nodes = 1;
   const pending: { readonly source: object; readonly target: Container; readonly depth: number }[] = [
     { source: value, target: root, depth: 1 },
   ];
@@ -164,10 +167,11 @@ function copyValue(value: unknown): unknown {
         setMember(target, key, child);
         continue;
       }
-      if (seen.has(child) || depth >= MAX_COPY_DEPTH) {
+      // A cycle never ends, so it reaches the depth limit; the depth check is what refuses it.
+      nodes += 1;
+      if (depth >= MAX_COPY_DEPTH || nodes > MAX_COPY_NODES) {
         return UNCOPYABLE;
       }
-      seen.add(child);
       const childTarget: Container = Array.isArray(child) ? [] : {};
       setMember(target, key, childTarget);
       pending.push({ source: child, target: childTarget, depth: depth + 1 });

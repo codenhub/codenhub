@@ -141,10 +141,13 @@ async function send(request: JsonRequest, signal: AbortSignal): Promise<OidcResu
   return body === undefined ? requestFailure(endpoint, "malformed") : ok({ status: response.status, body });
 }
 
-/** Parses strict UTF-8 JSON whose top level is an object. `undefined` for anything else. */
+/**
+ * Parses strict UTF-8 JSON whose top level is an object. A leading byte order mark is dropped, as RFC 8259
+ * section 8.1 allows. `undefined` for anything else.
+ */
 function parseObject(bytes: Uint8Array): Record<string, unknown> | undefined {
   try {
-    const parsed: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes));
+    const parsed: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes));
     return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
       ? (parsed as Record<string, unknown>)
       : undefined;

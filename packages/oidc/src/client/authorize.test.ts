@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
+import { MAX_URL_LENGTH } from "../shared/limits";
 import type { ProviderMetadata } from "../shared/types";
 import { buildAuthorization } from "./authorize";
 import { resolveClientOptions, type ResolvedClientOptions } from "./options";
@@ -289,6 +290,38 @@ describe("buildAuthorization", () => {
     expect((error as Error).message).toContain("loginHint");
   });
 
+  it("throws TypeError when loginHint is not well-formed Unicode", async () => {
+    const error = await refusalOf({ loginHint: "a\uD800b" });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("loginHint");
+  });
+
+  it("throws TypeError when the encoded URL is longer than the provider reads", async () => {
+    const error = await refusalOf({ loginHint: "\u{1F600}".repeat(2048) });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("8192");
+  });
+
+  it("accepts a request whose URL is exactly at the provider's limit", async () => {
+    const endpoint = `${ISSUER}/authorize?x=`;
+    const { url: empty } = await buildAuthorization(resolvedOptions(endpoint));
+    const { url } = await buildAuthorization(
+      resolvedOptions(`${endpoint}${"a".repeat(MAX_URL_LENGTH - empty.length)}`),
+    );
+
+    expect(url.length).toBe(MAX_URL_LENGTH);
+  });
+
+  it("throws TypeError when the URL is one character over the provider's limit", async () => {
+    const endpoint = `${ISSUER}/authorize?x=`;
+    const { url: empty } = await buildAuthorization(resolvedOptions(endpoint));
+    const error = await buildAuthorization(
+      resolvedOptions(`${endpoint}${"a".repeat(MAX_URL_LENGTH - empty.length + 1)}`),
+    ).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(TypeError);
+  });
+
   it("throws TypeError when uiLocales is not an array", async () => {
     const error = await refusalOf({ uiLocales: "en" });
     expect(error).toBeInstanceOf(TypeError);
@@ -309,7 +342,7 @@ describe("buildAuthorization", () => {
     expect((error as Error).message).toContain("uiLocales");
   });
 
-  it.each([["pt BR"], [""], [" en"]])("throws TypeError for ui locale %j", async (locale) => {
+  it.each([["pt BR"], [""], [" en"], ["en\uD800"]])("throws TypeError for ui locale %j", async (locale) => {
     const error = await refusalOf({ uiLocales: [locale] });
     expect(error).toBeInstanceOf(TypeError);
     expect((error as Error).message).toContain("uiLocales");

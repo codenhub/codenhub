@@ -197,6 +197,72 @@ describe("createIdTokenValidator", () => {
       ]);
     });
 
+    it("refuses an amr that is a string rather than an array", async () => {
+      const result = await validator()(await tokenWith({ amr: "pwd" }), expected);
+
+      expect(issuesOf(result)).toEqual([
+        {
+          code: "invalid_id_token",
+          path: ["id_token", "payload", "amr"],
+          params: { jwtCode: "invalid_claim" },
+        },
+      ]);
+    });
+
+    it("refuses an amr with an entry that is not a string", async () => {
+      const result = await validator()(await tokenWith({ amr: ["pwd", 1] }), expected);
+
+      expect(issuesOf(result)).toEqual([
+        {
+          code: "invalid_id_token",
+          path: ["id_token", "payload", "amr"],
+          params: { jwtCode: "invalid_claim" },
+        },
+      ]);
+    });
+
+    it("refuses an acr that is not a string", async () => {
+      const result = await validator()(await tokenWith({ acr: 1 }), expected);
+
+      expect(issuesOf(result)).toEqual([
+        {
+          code: "invalid_id_token",
+          path: ["id_token", "payload", "acr"],
+          params: { jwtCode: "invalid_claim" },
+        },
+      ]);
+    });
+
+    it("refuses an azp that is an array rather than a string", async () => {
+      const result = await validator()(await tokenWith({ azp: [CLIENT_ID] }), expected);
+
+      expect(issuesOf(result)).toEqual([
+        {
+          code: "invalid_id_token",
+          path: ["id_token", "payload", "azp"],
+          params: { jwtCode: "invalid_claim" },
+        },
+      ]);
+    });
+
+    it("refuses a nonce that is not a string, reported as a claim type and not a mismatch", async () => {
+      const result = await validator()(await tokenWith({ nonce: 1 }), expected);
+
+      expect(issuesOf(result)).toEqual([
+        {
+          code: "invalid_id_token",
+          path: ["id_token", "payload", "nonce"],
+          params: { jwtCode: "invalid_claim" },
+        },
+      ]);
+    });
+
+    it("accepts an amr array of strings and an acr string", async () => {
+      const result = await validator()(await tokenWith({ amr: ["pwd", "mfa"], acr: "urn:x" }), expected);
+
+      expect(result).toMatchObject({ ok: true, value: { amr: ["pwd", "mfa"], acr: "urn:x" } });
+    });
+
     it("refuses a token with a wrong nonce", async () => {
       const result = await validator()(await tokenWith({ nonce: "nonce-2" }), expected);
 

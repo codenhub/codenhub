@@ -150,6 +150,44 @@ describe("checkMetadata", () => {
     expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([{ code: "invalid_metadata", path: ["metadata"] }]);
   });
 
+  it("refuses a document that refers to itself", () => {
+    const document = validDocument();
+    document.vendor = document;
+
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([{ code: "invalid_metadata", path: ["metadata"] }]);
+  });
+
+  it("accepts an array that two members share, and copies it", () => {
+    const document = validDocument();
+    const algorithms = ["ES256"];
+    document.id_token_signing_alg_values_supported = algorithms;
+    document.token_endpoint_auth_signing_alg_values_supported = algorithms;
+
+    expect(checkMetadata(document, ISSUER)).toEqual({ ok: true, value: document });
+  });
+
+  it("refuses a chain of shared references 40 levels deep without hanging", () => {
+    let node: Record<string, unknown> = {};
+    for (let level = 0; level < 40; level++) {
+      node = { left: node, right: node };
+    }
+    const document = validDocument();
+    document.vendor = node;
+
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([{ code: "invalid_metadata", path: ["metadata"] }]);
+  });
+
+  it("refuses a chain of shared references within the depth limit by its node count", () => {
+    let node: Record<string, unknown> = {};
+    for (let level = 0; level < 30; level++) {
+      node = { left: node, right: node };
+    }
+    const document = validDocument();
+    document.vendor = node;
+
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([{ code: "invalid_metadata", path: ["metadata"] }]);
+  });
+
   it("keeps a member the package does not use", () => {
     const result = checkMetadata({ ...validDocument(), service_documentation: "docs" }, ISSUER);
 
