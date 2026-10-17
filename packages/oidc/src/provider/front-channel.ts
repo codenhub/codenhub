@@ -1,8 +1,7 @@
-import { readBody } from "../shared/body";
+import { assertBodyUnread, readBody } from "../shared/body";
+import { isFormContentType } from "../shared/content-type";
 import { MAX_BODY_BYTES, MAX_URL_LENGTH } from "../shared/limits";
 import { type ParameterFailure, parseParameters } from "../shared/parameters";
-
-const FORM_MEDIA_TYPE = "application/x-www-form-urlencoded";
 
 /** Outcome of {@link readFrontChannelParameters}. */
 export type FrontChannelParameters =
@@ -12,9 +11,11 @@ export type FrontChannelParameters =
 /**
  * Reads the parameters of a request the browser sends, such as authorization or logout: from the query for `GET`,
  * from the form body for `POST`. An oversized URL, another method or media type, or an unreadable body fails with
- * no reason; a parameter string that breaks a rule fails with that rule.
+ * no reason; a parameter string that breaks a rule fails with that rule. A body already read throws `TypeError`
+ * naming `operation`.
  */
-export async function readFrontChannelParameters(request: Request): Promise<FrontChannelParameters> {
+export async function readFrontChannelParameters(request: Request, operation: string): Promise<FrontChannelParameters> {
+  assertBodyUnread(request, operation);
   if (request.url.length > MAX_URL_LENGTH) {
     return { ok: false, reason: undefined };
   }
@@ -40,13 +41,4 @@ async function readRequestText(request: Request): Promise<string | undefined> {
   }
   const body = await readBody(request, MAX_BODY_BYTES);
   return body.ok ? body.text : undefined;
-}
-
-/** Tests for the form media type, ignoring its parameters and letter case. */
-function isFormContentType(contentType: string | null): boolean {
-  if (contentType === null) {
-    return false;
-  }
-  const [mediaType = ""] = contentType.split(";");
-  return mediaType.trim().toLowerCase() === FORM_MEDIA_TYPE;
 }

@@ -69,6 +69,14 @@ describe("endSessionUrl", () => {
     expect(attempt).not.toThrow(postLogoutRedirectUri);
   });
 
+  it("sends an idTokenHint longer than a client-chosen value may be, since the provider issued it", () => {
+    const hint = "a".repeat(5000);
+
+    const url = new URL(client().endSessionUrl({ idTokenHint: hint }));
+
+    expect(url.searchParams.get("id_token_hint")).toBe(hint);
+  });
+
   it.each([
     ["a javascript: postLogoutRedirectUri", { postLogoutRedirectUri: "javascript:alert(1)" }, "postLogoutRedirectUri"],
     [
@@ -78,7 +86,6 @@ describe("endSessionUrl", () => {
     ],
     ["a non-string state", { state: 42 }, "state"],
     ["a lone surrogate in logoutHint", { logoutHint: "\uD800" }, "logoutHint"],
-    ["an oversized idTokenHint", { idTokenHint: "a".repeat(4097) }, "idTokenHint"],
     ["a uiLocales entry with a space", { uiLocales: ["pt BR"] }, "uiLocales"],
     ["a URL over the provider's limit once encoded", { state: "é".repeat(1500) }, "8192"],
   ])("throws a TypeError for %s, naming it", (_name, options, member) => {

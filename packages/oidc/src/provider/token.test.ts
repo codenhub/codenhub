@@ -149,6 +149,44 @@ describe("handleToken: transport", () => {
     expect(await errorOf(response)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_request" }) });
   });
 
+  it("throws TypeError for a request whose body was already read, before any check", async () => {
+    const { options } = await setup();
+    const request = new Request(TOKEN_ENDPOINT, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+      }).toString(),
+    });
+    await request.formData();
+
+    await expect(handleToken(options, request)).rejects.toThrow(TypeError);
+  });
+
+  it("exposes the Basic challenge of an invalid_client response to cross-origin browsers", async () => {
+    const { options, store } = await setup();
+    const code = await saveCode(store);
+    const request = new Request(TOKEN_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        authorization: `Basic ${btoa("nobody:secret")}`,
+      },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: REDIRECT_URI,
+        code_verifier: VERIFIER,
+      }).toString(),
+    });
+
+    const response = await handleToken(options, request);
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toBe('Basic realm="token"');
+    expect(response.headers.get("access-control-expose-headers")).toBe("WWW-Authenticate");
+  });
+
   it("accepts a form content type with a utf-8 charset, in any case", async () => {
     const { options, store } = await setup();
     const code = await saveCode(store);

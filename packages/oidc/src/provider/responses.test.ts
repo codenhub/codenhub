@@ -1,12 +1,38 @@
 import { describe, expect, it } from "vitest";
 
-import { redirectResponse } from "./responses";
+import { bearerErrorResponse, jsonResponse, redirectResponse } from "./responses";
 
 const ISSUER = "https://op.example";
 
 function locationOf(redirectUri: string, parameters: Record<string, string | undefined>): string | null {
   return redirectResponse(redirectUri, parameters).headers.get("location");
 }
+
+describe("bearerErrorResponse", () => {
+  it("shouldExposeWwwAuthenticateWhenItCarriesAChallenge", () => {
+    const response = bearerErrorResponse("invalid_token");
+    expect(response.headers.get("access-control-expose-headers")).toBe("WWW-Authenticate");
+  });
+});
+
+describe("jsonResponse", () => {
+  it("shouldExposeWwwAuthenticateWhenACallerSendsOne", () => {
+    const response = jsonResponse(
+      { error: "invalid_client" },
+      {
+        status: 401,
+        caching: "no-store",
+        headers: { "www-authenticate": 'Basic realm="token"' },
+      },
+    );
+    expect(response.headers.get("access-control-expose-headers")).toBe("WWW-Authenticate");
+  });
+
+  it("shouldNotExposeAnythingWhenThereIsNoChallenge", () => {
+    const response = jsonResponse({}, { caching: "no-store" });
+    expect(response.headers.get("access-control-expose-headers")).toBeNull();
+  });
+});
 
 describe("redirectResponse", () => {
   it("shouldKeepRegisteredQueryByteForByteAndAppendParameters", () => {

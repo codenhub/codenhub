@@ -29,7 +29,8 @@ export function buildEndSessionUrl(options: ResolvedClientOptions, request: EndS
     throw new TypeError("endSessionUrl: postLogoutRedirectUri is longer than the provider accepts");
   }
   const parameters: [string, string | undefined][] = [
-    ["id_token_hint", readOptionalString(request.idTokenHint, "endSessionUrl: idTokenHint")],
+    // The provider issued the hint, so it decides how long a hint it accepts; only the URL limit applies.
+    ["id_token_hint", readOptionalString(request.idTokenHint, "endSessionUrl: idTokenHint", Number.POSITIVE_INFINITY)],
     ["logout_hint", readOptionalString(request.logoutHint, "endSessionUrl: logoutHint")],
     ["client_id", options.clientId],
     ["post_logout_redirect_uri", postLogoutRedirectUri],

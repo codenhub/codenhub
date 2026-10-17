@@ -144,7 +144,8 @@ export type Consumption<TRecord> =
  * The `consume*` methods must be atomic: two concurrent calls for one key must never both get
  * `consumed`. A store without a compare-and-set or transaction, such as plain Cloudflare KV, cannot
  * implement them; use D1, a Durable Object, or a SQL transaction. The revocation check belongs to the same
- * atomic step: a consumption that has not finished when `revokeGrant` resolves must not return `consumed`.
+ * atomic step: the store orders each consumption and each revocation of the same grant, and a consumption whose
+ * atomic step runs after the revocation's must not return `consumed`.
  *
  * Each `save*` method must reject when its key already exists, and must never reset a used entry, which
  * would make a spent code or refresh token consumable again. The provider's keys are random digests, so
@@ -326,7 +327,10 @@ export interface ProviderDiagnostic {
 
 /** How {@link createProvider} runs. Invalid options throw `TypeError` at creation. */
 export interface ProviderOptions {
-  /** The issuer identifier: an `https` URL without query or fragment, used byte for byte everywhere. */
+  /**
+   * The issuer identifier: an `https` URL of visible ASCII, with no query, fragment or credentials, used byte for
+   * byte everywhere.
+   */
   readonly issuer: string;
   /**
    * Key pairs from `generateKeyPair` or `importPrivateKey`/`importPublicKey`, each with a unique `kid`.
@@ -448,8 +452,8 @@ export interface Provider {
    *
    * @returns The response, or `null` when the request is for none of those URLs. Never throws for any
    * request; rejects only when the store, the `claims` callback or `onDiagnostic` does, or with a
-   * `TypeError` when the `claims` callback resolves to something that is not an object or the store returns
-   * a malformed client record.
+   * `TypeError` when the `claims` callback resolves to something that is not an object, the store returns
+   * a malformed client record, or a `POST`'s body was already read, such as by middleware that parsed it.
    */
   handle(request: Request): Promise<Response | null>;
   /**
@@ -457,7 +461,7 @@ export interface Provider {
    *
    * @returns The interaction, or a failure whose `redirect` is the response to send, or `null` when the app
    * must render an error itself. Never throws for any request; rejects only when the store does, or with a
-   * `TypeError` when the store returns a malformed client record.
+   * `TypeError` when the store returns a malformed client record or a `POST`'s body was already read.
    */
   beginAuthorization(request: Request): Promise<OidcResult<AuthorizationInteraction, AuthorizationFailure>>;
   /**
@@ -483,7 +487,7 @@ export interface Provider {
    * request or an `id_token_hint` issued to another client than `client_id`, `unknown_client`, or
    * `invalid_redirect_uri` with path `["post_logout_redirect_uri"]` for a URI the client did not register. A failure
    * never redirects. Never throws for any request; rejects only when the store does, or with a `TypeError` when
-   * the store returns a malformed client record.
+   * the store returns a malformed client record or a `POST`'s body was already read.
    */
   endSession(request: Request): Promise<OidcResult<EndSession>>;
 }

@@ -116,8 +116,15 @@ function readMaxAge(maxAge: number | undefined): number | undefined {
   return maxAge;
 }
 
-/** Reads an optional string parameter, such as a hint, sent as given. `name` is the option the message names. */
-export function readOptionalString(value: unknown, name: string): string | undefined {
+/**
+ * Reads an optional string parameter, such as a hint, sent as given. `name` is the option the message names, and
+ * `maxLength` defaults to the length the provider accepts per parameter.
+ */
+export function readOptionalString(
+  value: unknown,
+  name: string,
+  maxLength: number = MAX_PARAMETER_LENGTH,
+): string | undefined {
   if (value !== undefined && typeof value !== "string") {
     throw new TypeError(`${name} must be a string`);
   }
@@ -125,7 +132,7 @@ export function readOptionalString(value: unknown, name: string): string | undef
   if (value !== undefined && !value.isWellFormed()) {
     throw new TypeError(`${name} must be a string of well-formed Unicode`);
   }
-  if (value !== undefined && value.length > MAX_PARAMETER_LENGTH) {
+  if (value !== undefined && value.length > maxLength) {
     throw new TypeError(`${name} is longer than the provider accepts`);
   }
   return value;

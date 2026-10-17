@@ -52,6 +52,14 @@ describe("createProvider", () => {
     expect(() => createProvider(options)).toThrow(TypeError);
   });
 
+  it("shouldThrowTypeErrorWhenScopesIsAnArray", async () => {
+    const options = await optionsWith({
+      scopes: [["email"]] as unknown as ProviderOptions["scopes"],
+    });
+
+    expect(() => createProvider(options)).toThrow(TypeError);
+  });
+
   it("shouldThrowTypeErrorWhenAnEndpointIsExplicitlyNull", async () => {
     const options = await optionsWith({ endpoints: { token: null } as unknown as ProviderOptions["endpoints"] });
 

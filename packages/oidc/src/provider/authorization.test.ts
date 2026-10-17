@@ -153,6 +153,22 @@ describe("beginAuthorization", () => {
       expect(result.ok && result.value.clientId).toBe(CLIENT_ID);
     });
 
+    it("throws TypeError for a POST whose body was already read", async () => {
+      const request = postRequest(query(), "application/x-www-form-urlencoded");
+      await request.text();
+      await expect(beginAuthorization(options, request)).rejects.toThrow(TypeError);
+    });
+
+    it("refuses a form body whose charset is not utf-8 as it refuses any other content type", async () => {
+      const latin1 = await beginAuthorization(
+        options,
+        postRequest(query(), "application/x-www-form-urlencoded; charset=iso-8859-1"),
+      );
+      const plain = await beginAuthorization(options, postRequest(query(), "text/plain"));
+      expect(latin1.ok).toBe(false);
+      expect(failureOf(latin1)).toEqual(failureOf(plain));
+    });
+
     it("shouldSaveInteractionUnderDigestOfIdNotTheId", async () => {
       const saveSpy = vi.spyOn(store, "saveInteraction");
       const interaction = await beginOk();

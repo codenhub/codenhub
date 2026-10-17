@@ -4,10 +4,10 @@ import type { ResolvedOptions } from "./options";
 import { bearerErrorResponse, jsonResponse, methodNotAllowed, preflightResponse } from "./responses";
 
 /**
- * The `Authorization` header this endpoint accepts: the `Bearer` scheme in any letter case, one space, then
- * a token of the RFC 6750 §2.1 character set. Anything else is malformed, including a second space.
+ * The `Authorization` header this endpoint accepts: the `Bearer` scheme in any letter case, one or more spaces
+ * (RFC 6750 §2.1: `"Bearer" 1*SP`), then a token of the RFC 6750 §2.1 character set. Anything else is malformed.
  */
-const BEARER_AUTHORIZATION = /^Bearer ([A-Za-z0-9\-._~+/]+=*)$/i;
+const BEARER_AUTHORIZATION = /^Bearer +([A-Za-z0-9\-._~+/]+=*)$/i;
 
 const USERINFO_METHODS: readonly string[] = ["GET", "POST"];
 

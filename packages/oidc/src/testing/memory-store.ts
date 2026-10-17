@@ -148,9 +148,10 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
 }
 
 /**
- * Copies a client record one level down: the record, its redirect URIs and scopes, and its `auth` object.
- * A client may hold `@codenhub/jwt` keys, which are recognized by identity and hold functions, so they are
- * shared by reference rather than cloned. A value that is not an array is copied as it is, so a malformed
+ * Copies a client record one level down: the record, its redirect URIs, scopes, grant types and post-logout
+ * redirect URIs, and its `auth` object. An optional list is copied only when present, so an absent one stays
+ * absent. A client may hold `@codenhub/jwt` keys, which are recognized by identity and hold functions, so they
+ * are shared by reference rather than cloned. A value that is not an array is copied as it is, so a malformed
  * record reaches the provider's own check and gets its own `TypeError`.
  */
 function copyClient(client: ClientRecord): ClientRecord {
@@ -158,6 +159,10 @@ function copyClient(client: ClientRecord): ClientRecord {
     ...client,
     redirectUris: copyList(client.redirectUris),
     scopes: copyList(client.scopes),
+    ...(client.grantTypes === undefined ? {} : { grantTypes: copyList(client.grantTypes) }),
+    ...(client.postLogoutRedirectUris === undefined
+      ? {}
+      : { postLogoutRedirectUris: copyList(client.postLogoutRedirectUris) }),
     auth: typeof client.auth === "object" && client.auth !== null ? { ...client.auth } : client.auth,
   };
 }
