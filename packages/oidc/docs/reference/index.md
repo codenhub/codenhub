@@ -223,6 +223,14 @@ readonly claims_supported?: readonly string[];
 readonly code_challenge_methods_supported?: readonly string[];
 ```
 
+#### end_session_endpoint
+
+```ts
+readonly end_session_endpoint?: string;
+```
+
+RP-Initiated Logout 1.0 §2.1.
+
 #### grant_types_supported
 
 ```ts
@@ -358,7 +366,7 @@ OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 
 ### OidcIssueCode
 
 ```ts
-export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
+export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
 ```
 
 Stable category of a failure that callers can branch on without parsing messages.

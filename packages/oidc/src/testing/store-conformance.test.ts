@@ -11,7 +11,7 @@ import { createMemoryStore } from "./memory-store";
 import { storeConformanceCases } from "./store-conformance";
 
 it.each(storeConformanceCases)("$name", async (c) => {
-  await expect(c.run(() => createMemoryStore())).resolves.toBeUndefined();
+  await expect(c.run((seed) => createMemoryStore(seed))).resolves.toBeUndefined();
 });
 
 /** Runs the named case against `createStore` and returns the Error it rejects with. */
@@ -233,6 +233,18 @@ describe("storeConformanceCases rejects broken stores", () => {
     );
     expect(error).toBeInstanceOf(Error);
     expectNoKeyInMessage(error, seen);
+  });
+});
+
+describe("storeConformanceCases checks findClient", () => {
+  it("rejects a store that never finds a registered client", async () => {
+    const error = await failureOf(
+      "findClient returns a registered client with the values it was registered with",
+      () => ({ ...createMemoryStore(), findClient: async () => undefined }),
+    );
+    expect(error.message).toBe(
+      "OidcStore contract: findClient must return a registered client with the values it was registered with",
+    );
   });
 });
 

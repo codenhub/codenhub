@@ -18,20 +18,44 @@ export type ClientAuthentication =
   /** The client's public keys, from `createKeySet`, `importKeySet`, or `createRemoteKeySet`. */
   | { readonly method: "private_key_jwt"; readonly keys: KeySet };
 
+/**
+ * A grant a client may use at the token endpoint. `authorization_code` signs users in, and brings the refresh
+ * grant with it under `offline_access`; `client_credentials` gets the client an access token for itself
+ * (RFC 6749 §4.4).
+ */
+export type GrantType = "authorization_code" | "client_credentials";
+
 /** A registered client, as the store returns it. A malformed record throws `TypeError` when used. */
 export interface ClientRecord {
   readonly clientId: string;
   /**
-   * Redirect URIs, each compared to the requested one byte for byte. The list must be non-empty, and the provider
-   * checks each entry when it reads the record and throws `TypeError` if one fails: it must be a non-empty
-   * string, an absolute URL, made of visible ASCII only (no space, control character or backslash), without a
-   * fragment (`#`) or credentials, and with a scheme other than `javascript:`, `data:`, `vbscript:` or `file:`.
+   * Redirect URIs, each compared to the requested one byte for byte. The list must be non-empty when the client
+   * may use `authorization_code`, and may be empty otherwise. The provider checks each entry when it reads the
+   * record and throws `TypeError` if one fails: it must be a non-empty string, an absolute URL, made of visible
+   * ASCII only (no space, control character or backslash), without a fragment (`#`) or credentials, and with a
+   * scheme other than `javascript:`, `data:`, `vbscript:` or `file:`.
    */
   readonly redirectUris: readonly string[];
-  /** Scopes this client may request. Must include `openid`. */
+  /**
+   * Scopes this client may request. Must include `openid` when the client may use `authorization_code`. A
+   * `client_credentials` token never carries `openid` or `offline_access`, since no user is involved.
+   */
   readonly scopes: readonly string[];
+  /**
+   * Grants this client may use, without repeats, naming at least one: an empty list throws a `TypeError` when the
+   * record is read. `client_credentials` needs a client that authenticates, so not one whose `auth.method` is `none`.
+   *
+   * @defaultValue `["authorization_code"]`
+   */
+  readonly grantTypes?: readonly GrantType[];
   /** How this client authenticates to the token endpoint. */
   readonly auth: ClientAuthentication;
+  /**
+   * Where {@link Provider.endSession} may send the browser after logout, each compared byte for byte with the
+   * requested `post_logout_redirect_uri`, and held to the same rules as `redirectUris`. Absent or empty, no logout
+   * of this client redirects.
+   */
+  readonly postLogoutRedirectUris?: readonly string[];
 }
 
 /** A validated authorization request, saved between {@link Provider.beginAuthorization} and its completion. */
@@ -213,6 +237,12 @@ export interface ProviderTtl {
   readonly refreshToken?: number;
 }
 
+/** How access tokens are issued. See {@link ProviderOptions.accessToken}. */
+export type AccessTokenFormat =
+  | { readonly format: "opaque" }
+  /** `audience` is the `aud` every access token carries: the resource server's identifier, usually its URL. */
+  | { readonly format: "jwt"; readonly audience: string };
+
 /** Endpoint URLs, each an absolute `https` URL on any origin. */
 export interface ProviderEndpoints {
   /** @defaultValue `${issuer}/authorize` */
@@ -225,6 +255,12 @@ export interface ProviderEndpoints {
   readonly jwks?: string;
   /** Token revocation (RFC 7009). @defaultValue `${issuer}/revoke` */
   readonly revocation?: string;
+  /**
+   * RP-initiated logout. The app routes it and calls {@link Provider.endSession}, as it does for authorization.
+   *
+   * @defaultValue `${issuer}/logout`
+   */
+  readonly endSession?: string;
 }
 
 /**
@@ -246,6 +282,7 @@ export type ProviderDiagnosticReason =
   // The token request
   | "grant_type_missing"
   | "grant_type_unsupported"
+  | "grant_type_unauthorized"
   | "parameter_missing"
   | "code_verifier_malformed"
   | "code_unknown"
@@ -318,6 +355,15 @@ export interface ProviderOptions {
   readonly scopes?: Readonly<Record<string, readonly string[]>>;
   /** Token lifetimes. */
   readonly ttl?: ProviderTtl;
+  /**
+   * The format of access tokens. Opaque tokens are random values a resource server can check only through the
+   * provider's store. JWT access tokens (RFC 9068) are signed with the first signing key, with `typ: at+jwt` and
+   * this `audience`, so a resource server can verify them offline; such a server sees a revocation only when the
+   * token expires. Either format is stored by its digest, so the userinfo and revocation endpoints work alike.
+   *
+   * @defaultValue `{ format: "opaque" }`
+   */
+  readonly accessToken?: AccessTokenFormat;
   /** Endpoint URLs. */
   readonly endpoints?: ProviderEndpoints;
   /**
@@ -420,12 +466,51 @@ export interface Provider {
    * @returns The response, or `interaction_not_found` when the interaction does not exist, was already
    * completed, or expired.
    * @throws {TypeError} When `outcome` is invalid: scopes outside the request or without `openid`, an
-   * `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or older than the
-   * requested `max_age`. The interaction is consumed before these checks, so after a `TypeError` a retry
-   * gets `interaction_not_found` and the user must start over.
+   * `authTime` before the interaction under `prompt=login`, an `authTime` in the future, or more than the
+   * requested `max_age` before the request. The interaction is consumed before these checks, so after a
+   * `TypeError` a retry gets `interaction_not_found` and the user must start over.
    */
   completeAuthorization(
     interactionId: string,
     outcome: AuthorizationGrant | AuthorizationDenial,
   ): Promise<OidcResult<Response>>;
+  /**
+   * Validates an RP-initiated logout request (RP-Initiated Logout 1.0) at the end-session endpoint, which the app
+   * routes. The app then ends its own session, after asking the user to confirm when it chooses to, and answers
+   * with `redirect`, or with its own page when `redirect` is `null`.
+   *
+   * @returns What the request names, or a failure for the app to render: `invalid_request` for a malformed
+   * request or an `id_token_hint` issued to another client than `client_id`, `unknown_client`, or
+   * `invalid_redirect_uri` with path `["post_logout_redirect_uri"]` for a URI the client did not register. A failure
+   * never redirects. Never throws for any request; rejects only when the store does, or with a `TypeError` when
+   * the store returns a malformed client record.
+   */
+  endSession(request: Request): Promise<OidcResult<EndSession>>;
+}
+
+/**
+ * A validated logout request. Frozen. The provider keeps no sessions, so ending the user's session is the app's
+ * work; this says who asked and where to send the browser afterwards.
+ */
+export interface EndSession {
+  /**
+   * The registered client that asked: `client_id`, or the client a verified `id_token_hint` was issued to. Absent
+   * when that client is not registered in the store, when the hint names several audiences without a valid `azp`,
+   * or when no client is named.
+   */
+  readonly clientId?: string;
+  /**
+   * The user a verified `id_token_hint` names. Absent without one, as when the hint has expired: then nothing ties
+   * the request to a user, and the app should ask the user to confirm before it signs them out.
+   */
+  readonly subject?: string;
+  /** `logout_hint`, passed through as sent. */
+  readonly logoutHint?: string;
+  /** `ui_locales`, with empty entries dropped. */
+  readonly uiLocales?: readonly string[];
+  /**
+   * A `302` to the client's registered `post_logout_redirect_uri`, carrying `state`, or `null` when the request
+   * named no URI.
+   */
+  readonly redirect: Response | null;
 }

@@ -1,5 +1,5 @@
 import { isRedirectUri } from "../shared/urls";
-import type { ClientRecord } from "./types";
+import type { ClientRecord, GrantType } from "./types";
 
 const AUTH_METHODS = new Set([
   "none",
@@ -8,6 +8,12 @@ const AUTH_METHODS = new Set([
   "client_secret_jwt",
   "private_key_jwt",
 ]);
+
+const GRANT_TYPES: ReadonlySet<unknown> = new Set<GrantType>(["authorization_code", "client_credentials"]);
+const DEFAULT_GRANT_TYPES: readonly GrantType[] = Object.freeze(["authorization_code"]);
+
+/** A client record that passed {@link checkClientRecord}, with its grants resolved. */
+export type CheckedClient = ClientRecord & { readonly grantTypes: readonly GrantType[] };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
@@ -24,21 +30,23 @@ const invalid = (requirement: string): never => {
  *
  * @throws {TypeError} When the record is malformed or names another client.
  */
-export function checkClientRecord(record: unknown, clientId: string): ClientRecord {
+export function checkClientRecord(record: unknown, clientId: string): CheckedClient {
   if (!isRecord(record) || record.clientId !== clientId) {
     return invalid("must be an object whose clientId is the one looked up");
   }
+  const grantTypes = readGrantTypes(record.grantTypes);
+  const signsUsersIn = grantTypes.includes("authorization_code");
   if (
     !isStringArray(record.redirectUris) ||
-    record.redirectUris.length === 0 ||
+    (signsUsersIn && record.redirectUris.length === 0) ||
     !record.redirectUris.every(isRedirectUri)
   ) {
     return invalid(
-      "must list at least one redirect URI, each absolute, of visible ASCII, without fragment or credentials, and not javascript:, data:, vbscript: or file:",
+      "must list redirect URIs, at least one for authorization_code, each absolute, of visible ASCII, without fragment or credentials, and not javascript:, data:, vbscript: or file:",
     );
   }
-  if (!isStringArray(record.scopes) || !record.scopes.includes("openid")) {
-    return invalid("must list scopes including openid");
+  if (!isStringArray(record.scopes) || (signsUsersIn && !record.scopes.includes("openid"))) {
+    return invalid("must list scopes, including openid for authorization_code");
   }
   const { auth } = record;
   if (!isRecord(auth) || typeof auth.method !== "string" || !AUTH_METHODS.has(auth.method)) {
@@ -56,5 +64,31 @@ export function checkClientRecord(record: unknown, clientId: string): ClientReco
   if (auth.method === "private_key_jwt" && (!isRecord(auth.keys) || typeof auth.keys.select !== "function")) {
     return invalid("must carry an auth.keys key set for private_key_jwt");
   }
-  return record as unknown as ClientRecord;
+  if (
+    record.postLogoutRedirectUris !== undefined &&
+    (!isStringArray(record.postLogoutRedirectUris) || !record.postLogoutRedirectUris.every(isRedirectUri))
+  ) {
+    return invalid("must list postLogoutRedirectUris, when present, by the rules of redirectUris");
+  }
+  if (auth.method === "none" && grantTypes.includes("client_credentials")) {
+    return invalid("must not allow client_credentials to a client whose auth.method is none");
+  }
+  // Resolved here, so every endpoint reads the list without repeating the default.
+  return { ...(record as unknown as ClientRecord), grantTypes };
+}
+
+/** The client's grants, or the default when the record has none. */
+function readGrantTypes(grantTypes: unknown): readonly GrantType[] {
+  if (grantTypes === undefined) {
+    return DEFAULT_GRANT_TYPES;
+  }
+  if (
+    !Array.isArray(grantTypes) ||
+    grantTypes.length === 0 ||
+    !grantTypes.every((grantType) => GRANT_TYPES.has(grantType)) ||
+    new Set(grantTypes).size !== grantTypes.length
+  ) {
+    return invalid("must list grantTypes as authorization_code or client_credentials, at least one, without repeats");
+  }
+  return grantTypes as readonly GrantType[];
 }

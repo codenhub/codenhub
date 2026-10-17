@@ -1,6 +1,6 @@
 import { type KeySet, createKeySet, createVerifier } from "@codenhub/jwt";
 
-import { checkClientRecord } from "./client-record";
+import { type CheckedClient, checkClientRecord } from "./client-record";
 import { refuse } from "./diagnostics";
 import type { ResolvedOptions } from "./options";
 import { tokenErrorResponse } from "./responses";
@@ -32,7 +32,7 @@ const MAX_ASSERTION_LIFETIME_SECONDS = 300;
 
 /** Outcome of {@link authenticateClient}: the authenticated client, or the response to send. */
 export type ClientAuthResult =
-  | { readonly ok: true; readonly client: ClientRecord }
+  | { readonly ok: true; readonly client: CheckedClient }
   | { readonly ok: false; readonly response: Response };
 
 /**

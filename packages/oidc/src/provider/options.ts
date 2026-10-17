@@ -1,7 +1,7 @@
 import type { KeyPair, PublicKey } from "@codenhub/jwt";
 
 import { isHttpsUrl } from "../shared/urls";
-import type { ClaimsRequest, OidcStore, ProviderDiagnostic, ProviderOptions } from "./types";
+import type { AccessTokenFormat, ClaimsRequest, OidcStore, ProviderDiagnostic, ProviderOptions } from "./types";
 
 /** Claims each standard scope releases (OpenID Connect Core §5.4). */
 const STANDARD_SCOPE_CLAIMS: Readonly<Record<string, readonly string[]>> = {
@@ -59,6 +59,7 @@ export interface ResolvedEndpoints {
   readonly userinfo: string;
   readonly jwks: string;
   readonly revocation: string;
+  readonly endSession: string;
 }
 
 /** Provider options after validation, as every endpoint reads them. */
@@ -76,6 +77,7 @@ export interface ResolvedOptions {
   /** Every scope a client may request, with the claims it releases; `openid` and `offline_access` release none. */
   readonly scopeClaims: ReadonlyMap<string, readonly string[]>;
   readonly ttl: ResolvedTtl;
+  readonly accessToken: AccessTokenFormat;
   /** Current time in seconds since the Unix epoch, truncated to whole seconds. */
   readonly now: () => number;
   readonly onDiagnostic: ((diagnostic: ProviderDiagnostic) => void) | undefined;
@@ -113,7 +115,10 @@ function readEndpoints(issuer: string, endpoints: unknown): ResolvedEndpoints {
     return fail("endpoints", "must be an object");
   }
   const base = issuer.endsWith("/") ? issuer.slice(0, -1) : issuer;
-  const read = (name: "authorization" | "token" | "userinfo" | "jwks" | "revocation", path: string): string => {
+  const read = (
+    name: "authorization" | "token" | "userinfo" | "jwks" | "revocation" | "endSession",
+    path: string,
+  ): string => {
     // Only `undefined` takes the default: an explicit `null` is a mistake to report, not a request for the default.
     const given = isRecord(endpoints) ? endpoints[name] : undefined;
     const value = given === undefined ? `${base}${path}` : given;
@@ -129,6 +134,7 @@ function readEndpoints(issuer: string, endpoints: unknown): ResolvedEndpoints {
     userinfo: read("userinfo", "/userinfo"),
     jwks: read("jwks", "/jwks"),
     revocation: read("revocation", "/revoke"),
+    endSession: read("endSession", "/logout"),
   };
   // `handle` routes by origin and path, so two endpoints at one place would make one unreachable.
   const places = Object.values(resolved).map((url) => {
@@ -200,6 +206,25 @@ function readScopes(scopes: unknown): ReadonlyMap<string, readonly string[]> {
   return resolved;
 }
 
+const OPAQUE: AccessTokenFormat = Object.freeze({ format: "opaque" });
+
+function readAccessTokenFormat(accessToken: unknown): AccessTokenFormat {
+  if (accessToken === undefined) {
+    return OPAQUE;
+  }
+  if (!isRecord(accessToken) || (accessToken.format !== "opaque" && accessToken.format !== "jwt")) {
+    return fail("accessToken.format", 'must be "opaque" or "jwt"');
+  }
+  if (accessToken.format === "opaque") {
+    return OPAQUE;
+  }
+  // RFC 9068 §2.2 requires `aud`; there is no sensible default, since it names the resource server, not the provider.
+  if (typeof accessToken.audience !== "string" || accessToken.audience === "" || !accessToken.audience.isWellFormed()) {
+    return fail("accessToken.audience", "must be a non-empty string of well-formed Unicode for JWT access tokens");
+  }
+  return Object.freeze({ format: "jwt", audience: accessToken.audience });
+}
+
 function readTtl(ttl: unknown): ResolvedTtl {
   if (ttl !== undefined && !isRecord(ttl)) {
     return fail("ttl", "must be an object");
@@ -247,6 +272,7 @@ export function resolveOptions(options: ProviderOptions): ResolvedOptions {
     claims: options.claims,
     scopeClaims: readScopes(options.scopes),
     ttl: Object.freeze(readTtl(options.ttl)),
+    accessToken: readAccessTokenFormat(options.accessToken),
     now: () => Math.floor(clock() / 1000),
     onDiagnostic: options.onDiagnostic,
   });

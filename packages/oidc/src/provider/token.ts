@@ -8,8 +8,9 @@ import { computeCodeChallenge, isCodeVerifier } from "../shared/pkce";
 import { computeTokenHash } from "../shared/token-hash";
 import type { OAuthErrorCode } from "../shared/types";
 import { authenticateClient } from "./client-auth";
+import type { CheckedClient } from "./client-record";
 import { refuse } from "./diagnostics";
-import type { ResolvedOptions } from "./options";
+import { PROTOCOL_SCOPES, type ResolvedOptions } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse, tokenErrorResponse } from "./responses";
 import type { ClientRecord, CodeRecord, ProviderDiagnosticReason, RefreshTokenRecord } from "./types";
 
@@ -46,11 +47,22 @@ export async function handleToken(options: ResolvedOptions, request: Request): P
   if (grantType === undefined) {
     return refuse(tokenErrorResponse("invalid_request"), "grant_type_missing", client.clientId);
   }
+  const unauthorized = (): Response =>
+    refuse(tokenErrorResponse("unauthorized_client"), "grant_type_unauthorized", client.clientId);
   switch (grantType) {
+    // The refresh grant belongs to the code grant: it continues a sign-in that grant started.
     case "authorization_code":
-      return exchangeCode(options, client, parameters);
     case "refresh_token":
-      return refreshTokens(options, client, parameters);
+      if (!client.grantTypes.includes("authorization_code")) {
+        return unauthorized();
+      }
+      return grantType === "authorization_code"
+        ? exchangeCode(options, client, parameters)
+        : refreshTokens(options, client, parameters);
+    case "client_credentials":
+      return client.grantTypes.includes("client_credentials")
+        ? issueForClient(options, client, parameters)
+        : unauthorized();
     default:
       return refuse(tokenErrorResponse("unsupported_grant_type"), "grant_type_unsupported", client.clientId);
   }
@@ -58,7 +70,7 @@ export async function handleToken(options: ResolvedOptions, request: Request): P
 
 /** Outcome of {@link readClientRequest}: the authenticated client and its parameters, or the response to send. */
 export type ClientRequestResult =
-  | { readonly ok: true; readonly client: ClientRecord; readonly parameters: ReadonlyMap<string, string> }
+  | { readonly ok: true; readonly client: CheckedClient; readonly parameters: ReadonlyMap<string, string> }
   | { readonly ok: false; readonly response: Response };
 
 /**
@@ -271,14 +283,75 @@ function readRequestedScopes(
   return asked.every(isKnown) && asked.includes("openid") ? [...new Set(asked)] : "invalid";
 }
 
-/** Saves a new access token for a grant and returns the token value; only its digest is stored. */
+/**
+ * Issues an access token to the client itself (RFC 6749 §4.4). No user is involved, so the token's subject is the
+ * client, it carries neither `openid` nor `offline_access`, and no ID token or refresh token comes with it. Each
+ * response is its own grant, so revoking one token leaves the client's other tokens alone.
+ */
+async function issueForClient(
+  options: ResolvedOptions,
+  client: ClientRecord,
+  parameters: ReadonlyMap<string, string>,
+): Promise<Response> {
+  const scopes = readClientScopes(parameters.get("scope"), options, client);
+  if (scopes === "invalid") {
+    return refuse(tokenErrorResponse("invalid_scope"), "scope_invalid", client.clientId);
+  }
+  const now = options.now();
+  const accessToken = await issueAccessToken(
+    options,
+    { grantId: randomToken(), clientId: client.clientId, subject: client.clientId },
+    scopes,
+    now,
+  );
+  return jsonResponse(
+    {
+      access_token: accessToken,
+      token_type: "Bearer",
+      expires_in: options.ttl.accessToken,
+      scope: scopes.join(" "),
+    },
+    { caching: "no-store" },
+  );
+}
+
+/**
+ * Reads a client credentials request's `scope`: when absent, every scope the client may request other than the
+ * protocol ones; when present, scopes the provider and the client both have, none of them a protocol scope.
+ * `invalid` when that leaves no scope, or the request names one it may not have.
+ */
+function readClientScopes(
+  requested: string | undefined,
+  options: ResolvedOptions,
+  client: ClientRecord,
+): readonly string[] | "invalid" {
+  const isAllowed = (scope: string): boolean =>
+    scope !== "" && !PROTOCOL_SCOPES.includes(scope) && options.scopeClaims.has(scope) && client.scopes.includes(scope);
+  const scopes = requested === undefined ? client.scopes.filter(isAllowed) : requested.split(" ");
+  return scopes.length > 0 && scopes.every(isAllowed) ? [...new Set(scopes)] : "invalid";
+}
+
+/**
+ * Who an access token is for. A user's grant carries the authentication context, which a JWT access token repeats;
+ * a client credentials token has none.
+ */
+type AccessTokenGrant = Pick<Grant, "grantId" | "clientId" | "subject"> &
+  Partial<Pick<Grant, "authTime" | "amr" | "acr">>;
+
+/**
+ * Saves a new access token for a grant and returns the token value; only its digest is stored, whatever its
+ * format, so the userinfo and revocation endpoints find it the same way.
+ */
 async function issueAccessToken(
   options: ResolvedOptions,
-  grant: Grant,
+  grant: AccessTokenGrant,
   scopes: readonly string[],
   now: number,
 ): Promise<string> {
-  const accessToken = randomToken();
+  const accessToken =
+    options.accessToken.format === "jwt"
+      ? await signAccessToken(options, options.accessToken.audience, grant, scopes, now)
+      : randomToken();
   await options.store.saveAccessToken(await digestKey(accessToken), {
     grantId: grant.grantId,
     clientId: grant.clientId,
@@ -287,6 +360,35 @@ async function issueAccessToken(
     expiresAt: now + options.ttl.accessToken,
   });
   return accessToken;
+}
+
+/**
+ * Signs a JWT access token (RFC 9068 §2.2). Its `typ` of `at+jwt` is what keeps a resource server from taking an ID
+ * token for it, and `jti` makes every token distinct, so its digest is a unique store key.
+ */
+function signAccessToken(
+  options: ResolvedOptions,
+  audience: string,
+  grant: AccessTokenGrant,
+  scopes: readonly string[],
+  now: number,
+): Promise<string> {
+  return sign({
+    payload: {
+      iss: options.issuer,
+      exp: now + options.ttl.accessToken,
+      aud: audience,
+      sub: grant.subject,
+      client_id: grant.clientId,
+      iat: now,
+      jti: randomToken(),
+      scope: scopes.join(" "),
+      ...(grant.authTime !== undefined ? { auth_time: grant.authTime } : {}),
+      ...optionalAuthContext(grant),
+    },
+    key: options.signingKey.privateKey,
+    header: { typ: "at+jwt" },
+  });
 }
 
 /**

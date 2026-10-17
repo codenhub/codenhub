@@ -501,6 +501,28 @@ describe("completeAuthorization", () => {
     await expect(attempt).rejects.toThrow(member);
   });
 
+  it("shouldMeasureMaxAgeAtTheRequestNotAtCompletion", async () => {
+    const interaction = await beginOk(query({ max_age: "60" }));
+    // The login was 50 s old when the request arrived; the user then spent 20 s on the consent page.
+    clockMs += 20_000;
+    const result = await completeAuthorization(options, interaction.id, { ...GRANT, authTime: NOW_SECONDS - 50 });
+    expect(result.ok).toBe(true);
+  });
+
+  it("shouldAcceptMaxAgeZeroForALoginAfterTheRequest", async () => {
+    const interaction = await beginOk(query({ max_age: "0" }));
+    clockMs += 3_000;
+    const result = await completeAuthorization(options, interaction.id, { ...GRANT, authTime: NOW_SECONDS + 2 });
+    expect(result.ok).toBe(true);
+  });
+
+  it("shouldThrowTypeErrorForMaxAgeZeroWithALoginBeforeTheRequest", async () => {
+    const interaction = await beginOk(query({ max_age: "0" }));
+    await expect(
+      completeAuthorization(options, interaction.id, { ...GRANT, authTime: NOW_SECONDS - 1 }),
+    ).rejects.toThrow("outcome.authTime");
+  });
+
   it("shouldThrowTypeErrorForOldAuthTimeUnderPromptLogin", async () => {
     const interaction = await beginOk(query({ prompt: "login" }));
     clockMs += 10_000;

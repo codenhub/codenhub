@@ -67,6 +67,7 @@ export type OidcIssueCode =
   | "interaction_not_found"
   // Provider: requests answered at the client's redirect URI
   | "invalid_request"
+  | "unauthorized_client"
   | "unsupported_response_type"
   | "invalid_scope"
   | "request_not_supported"
@@ -145,6 +146,8 @@ export interface ProviderMetadata {
   readonly code_challenge_methods_supported?: readonly string[];
   /** The token revocation endpoint (RFC 7009, RFC 8414 §2). */
   readonly revocation_endpoint?: string;
+  /** RP-Initiated Logout 1.0 §2.1. */
+  readonly end_session_endpoint?: string;
   readonly revocation_endpoint_auth_methods_supported?: readonly string[];
   readonly revocation_endpoint_auth_signing_alg_values_supported?: readonly string[];
   /** Whether the provider sends `iss` in authorization responses (RFC 9207). */

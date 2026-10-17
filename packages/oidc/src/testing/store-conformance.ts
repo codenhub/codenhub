@@ -1,15 +1,25 @@
 import type {
   AccessTokenRecord,
+  ClientRecord,
   CodeRecord,
   InteractionRecord,
   OidcStore,
   RefreshTokenRecord,
 } from "../provider/types";
 
+/**
+ * What a case asks the store under test to hold before it runs. The `OidcStore` interface has no method that
+ * saves a client, so the factory registers these clients itself, the way the app's admin side would.
+ */
+export interface StoreSeed {
+  /** Clients `findClient` must return. Their identifiers are random per case. */
+  readonly clients: readonly ClientRecord[];
+}
+
 /** One check of the OidcStore contract. `run` resolves when the store conforms and rejects with an Error naming the broken rule otherwise. */
 export interface StoreConformanceCase {
   readonly name: string;
-  readonly run: (createStore: () => OidcStore | Promise<OidcStore>) => Promise<void>;
+  readonly run: (createStore: (seed: StoreSeed) => OidcStore | Promise<OidcStore>) => Promise<void>;
 }
 
 /** Every failure message starts with this, so a runner's output names the contract. */
@@ -17,6 +27,7 @@ const PREFIX = "OidcStore contract: ";
 /** Lifetime of every fixture, in seconds, so an adapter that purges expired rows keeps them. */
 const LIFETIME_SECONDS = 3600;
 const CONCURRENT_CALLS = 20;
+const NO_CLIENTS: StoreSeed = Object.freeze({ clients: Object.freeze([]) });
 const KEY_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
 /** Throws an Error naming the broken rule when `condition` is false. */
@@ -157,7 +168,7 @@ function defineCase(name: string, run: StoreConformanceCase["run"]): StoreConfor
 
 const cases: StoreConformanceCase[] = [
   defineCase("consumeInteraction returns the saved record once, then undefined", async (createStore) => {
-    const store = await createStore();
+    const store = await createStore(NO_CLIENTS);
     const key = newKey();
     const record = interactionFixture();
     const expected = structuredClone(record);
@@ -175,7 +186,7 @@ const cases: StoreConformanceCase[] = [
   defineCase(
     "20 concurrent consumeInteraction calls on one key yield exactly one record and 19 undefined",
     async (createStore) => {
-      const store = await createStore();
+      const store = await createStore(NO_CLIENTS);
       const key = newKey();
       await store.saveInteraction(key, interactionFixture());
       const results = await Promise.all(Array.from({ length: CONCURRENT_CALLS }, () => store.consumeInteraction(key)));
@@ -191,7 +202,7 @@ const cases: StoreConformanceCase[] = [
   defineCase(
     "consumeInteraction, consumeCode, consumeRefreshToken and findAccessToken return undefined for an unknown key",
     async (createStore) => {
-      const store = await createStore();
+      const store = await createStore(NO_CLIENTS);
       const key = newKey();
       assert(
         (await store.consumeInteraction(key)) === undefined,
@@ -212,7 +223,7 @@ const cases: StoreConformanceCase[] = [
   defineCase(
     "consumeCode reports consumed with the saved record once, then replayed with its grant",
     async (createStore) => {
-      const store = await createStore();
+      const store = await createStore(NO_CLIENTS);
       const key = newKey();
       const grantId = newKey();
       const record = codeFixture(grantId);
@@ -234,7 +245,7 @@ const cases: StoreConformanceCase[] = [
   defineCase(
     "consumeRefreshToken reports consumed with the saved record once, then replayed with its grant",
     async (createStore) => {
-      const store = await createStore();
+      const store = await createStore(NO_CLIENTS);
       const key = newKey();
       const grantId = newKey();
       const record = refreshTokenFixture(grantId);
@@ -256,7 +267,7 @@ const cases: StoreConformanceCase[] = [
   defineCase(
     "20 concurrent consumeCode calls on one key yield exactly one consumed and 19 replayed",
     async (createStore) => {
-      const store = await createStore();
+      const store = await createStore(NO_CLIENTS);
       const key = newKey();
       await store.saveCode(key, codeFixture(newKey()));
       const results = await Promise.all(Array.from({ length: CONCURRENT_CALLS }, () => store.consumeCode(key)));
@@ -272,7 +283,7 @@ const cases: StoreConformanceCase[] = [
   defineCase(
     "20 concurrent consumeRefreshToken calls on one key yield exactly one consumed and 19 replayed",
     async (createStore) => {
-      const store = await createStore();
+      const store = await createStore(NO_CLIENTS);
       const key = newKey();
       await store.saveRefreshToken(key, refreshTokenFixture(newKey()));
       const results = await Promise.all(Array.from({ length: CONCURRENT_CALLS }, () => store.consumeRefreshToken(key)));
@@ -286,7 +297,7 @@ const cases: StoreConformanceCase[] = [
   ),
 
   defineCase("saveCode rejects an existing key, and a consumed code stays spent", async (createStore) => {
-    const store = await createStore();
+    const store = await createStore(NO_CLIENTS);
     const key = newKey();
     const grantId = newKey();
     await store.saveCode(key, codeFixture(grantId));
@@ -302,8 +313,28 @@ const cases: StoreConformanceCase[] = [
     );
   }),
 
+  defineCase(
+    "saveRefreshToken rejects an existing key, and a consumed refresh token stays spent",
+    async (createStore) => {
+      const store = await createStore(NO_CLIENTS);
+      const key = newKey();
+      const grantId = newKey();
+      await store.saveRefreshToken(key, refreshTokenFixture(grantId));
+      await store.consumeRefreshToken(key);
+      await assertRejects(
+        () => store.saveRefreshToken(key, refreshTokenFixture(grantId)),
+        "saveRefreshToken must reject a key that already exists",
+      );
+      const after = await store.consumeRefreshToken(key);
+      assert(
+        after !== undefined && after.status === "replayed",
+        "a rejected saveRefreshToken must not make a consumed refresh token consumable again",
+      );
+    },
+  ),
+
   defineCase("saveInteraction rejects a key that already exists", async (createStore) => {
-    const store = await createStore();
+    const store = await createStore(NO_CLIENTS);
     const key = newKey();
     await store.saveInteraction(key, interactionFixture());
     await assertRejects(
@@ -313,7 +344,7 @@ const cases: StoreConformanceCase[] = [
   }),
 
   defineCase("saveAccessToken rejects a key that already exists", async (createStore) => {
-    const store = await createStore();
+    const store = await createStore(NO_CLIENTS);
     const key = newKey();
     const grantId = newKey();
     await store.saveAccessToken(key, accessTokenFixture(grantId));
@@ -324,7 +355,7 @@ const cases: StoreConformanceCase[] = [
   }),
 
   defineCase("saveRefreshToken rejects a key that already exists", async (createStore) => {
-    const store = await createStore();
+    const store = await createStore(NO_CLIENTS);
     const key = newKey();
     const grantId = newKey();
     await store.saveRefreshToken(key, refreshTokenFixture(grantId));
@@ -337,7 +368,7 @@ const cases: StoreConformanceCase[] = [
   defineCase(
     "revokeGrant makes a refresh token that was already consumed return undefined, not replayed",
     async (createStore) => {
-      const store = await createStore();
+      const store = await createStore(NO_CLIENTS);
       const key = newKey();
       const grantId = newKey();
       await store.saveRefreshToken(key, refreshTokenFixture(grantId));
@@ -357,7 +388,7 @@ const cases: StoreConformanceCase[] = [
   defineCase(
     "findAccessToken returns the saved record on every call, since it is not single-use",
     async (createStore) => {
-      const store = await createStore();
+      const store = await createStore(NO_CLIENTS);
       const key = newKey();
       const record = accessTokenFixture(newKey());
       const expected = structuredClone(record);
@@ -374,7 +405,7 @@ const cases: StoreConformanceCase[] = [
   ),
 
   defineCase("revokeGrant hides that grant's access token and refresh token", async (createStore) => {
-    const store = await createStore();
+    const store = await createStore(NO_CLIENTS);
     const grantId = newKey();
     const accessKey = newKey();
     const refreshKey = newKey();
@@ -394,7 +425,7 @@ const cases: StoreConformanceCase[] = [
   defineCase(
     "revokeGrant also hides access and refresh tokens of that grant saved after the revocation",
     async (createStore) => {
-      const store = await createStore();
+      const store = await createStore(NO_CLIENTS);
       const grantId = newKey();
       const accessKey = newKey();
       const refreshKey = newKey();
@@ -413,7 +444,7 @@ const cases: StoreConformanceCase[] = [
   ),
 
   defineCase("revokeGrant does not affect another grant's tokens", async (createStore) => {
-    const store = await createStore();
+    const store = await createStore(NO_CLIENTS);
     const revokedGrant = newKey();
     const otherGrant = newKey();
     const otherAccessKey = newKey();
@@ -434,10 +465,26 @@ const cases: StoreConformanceCase[] = [
     );
   }),
 
+  defineCase("findClient returns a registered client with the values it was registered with", async (createStore) => {
+    const client: ClientRecord = {
+      clientId: `conformance-${newKey()}`,
+      redirectUris: ["https://app.example/callback", "https://app.example/callback?tenant=a"],
+      scopes: ["openid", "profile", "offline_access"],
+      auth: { method: "client_secret_basic", secretHash: newKey() },
+      grantTypes: ["authorization_code"],
+      postLogoutRedirectUris: ["https://app.example/signed-out"],
+    };
+    const store = await createStore({ clients: [structuredClone(client)] });
+    assert(
+      sameRecord(await store.findClient(client.clientId), client),
+      "findClient must return a registered client with the values it was registered with",
+    );
+  }),
+
   defineCase(
     "findClient returns undefined for an unknown id, including prototype property names",
     async (createStore) => {
-      const store = await createStore();
+      const store = await createStore(NO_CLIENTS);
       const clientIds = [`unknown-${newKey()}`, "__proto__", "constructor", "toString"];
       const found = await Promise.all(clientIds.map((clientId) => store.findClient(clientId)));
       for (const client of found) {
@@ -452,7 +499,7 @@ const cases: StoreConformanceCase[] = [
   defineCase(
     "a record the store returns does not change when the caller mutates the object it saved",
     async (createStore) => {
-      const store = await createStore();
+      const store = await createStore(NO_CLIENTS);
       const interaction = interactionFixture();
       const interactionExpected = structuredClone(interaction);
       const code = codeFixture(newKey());
@@ -500,11 +547,12 @@ const cases: StoreConformanceCase[] = [
 ];
 
 /**
- * Every check of the OidcStore contract, for any test runner: `for (const c of storeConformanceCases) it(c.name, () => c.run(createStore))`.
+ * Every check of the OidcStore contract, for any test runner: `for (const c of storeConformanceCases) it(c.name, () => c.run((seed) => createStore(seed)))`.
  *
  * @remarks
- * Each case calls `createStore()` once and runs against the empty store it returns; no clients are needed.
- * Keys and grant identifiers are random per case, so cases never collide even when they share one database.
+ * Each case calls `createStore(seed)` once and runs against the store it returns, which must hold the clients in
+ * `seed.clients` and nothing else the case relies on. Most cases pass no clients. Keys, grant identifiers and
+ * client identifiers are random per case, so cases never collide even when they share one database.
  * Failures are plain `Error`s whose message names the broken rule and never a key or token value.
  *
  * Wire the suite into a runner by calling each case with a factory for the adapter under test. With Node.js's
@@ -517,7 +565,14 @@ const cases: StoreConformanceCase[] = [
  *
  * describe("OidcStore", () => {
  *   for (const c of storeConformanceCases) {
- *     test(c.name, () => c.run(() => createD1Store(env.DB)));
+ *     test(c.name, () =>
+ *       c.run(async ({ clients }) => {
+ *         for (const client of clients) {
+ *           await registerClient(env.DB, client); // the app's own admin write
+ *         }
+ *         return createD1Store(env.DB);
+ *       }),
+ *     );
  *   }
  * });
  * ```

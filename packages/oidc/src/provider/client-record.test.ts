@@ -15,7 +15,7 @@ describe("checkClientRecord", () => {
   it("shouldAcceptAValidRecord", () => {
     const record = valid() as unknown as ClientRecord;
 
-    expect(checkClientRecord(record, "client-a")).toBe(record);
+    expect(checkClientRecord(record, "client-a")).toEqual({ ...record, grantTypes: ["authorization_code"] });
   });
 
   it("shouldRejectARecordWithAnotherClientId", () => {
@@ -52,6 +52,67 @@ describe("checkClientRecord", () => {
 
   it("shouldRejectARecordWithoutOpenidScope", () => {
     expect(() => checkClientRecord(valid({ scopes: ["email"] }), "client-a")).toThrow(TypeError);
+  });
+
+  describe("grantTypes", () => {
+    const machine = (overrides: Record<string, unknown> = {}): Record<string, unknown> =>
+      valid({
+        redirectUris: [],
+        scopes: ["orders:read"],
+        auth: { method: "client_secret_basic", secretHash: "hash" },
+        grantTypes: ["client_credentials"],
+        ...overrides,
+      });
+
+    it("shouldAcceptAClientCredentialsClientWithNoRedirectUriAndNoOpenid", () => {
+      expect(checkClientRecord(machine(), "client-a").grantTypes).toEqual(["client_credentials"]);
+    });
+
+    it("shouldAcceptBothGrants", () => {
+      const record = valid({
+        auth: { method: "client_secret_basic", secretHash: "hash" },
+        grantTypes: ["authorization_code", "client_credentials"],
+      });
+
+      expect(checkClientRecord(record, "client-a").grantTypes).toEqual(["authorization_code", "client_credentials"]);
+    });
+
+    it("shouldStillRequireARedirectUriForAuthorizationCode", () => {
+      expect(() =>
+        checkClientRecord(
+          machine({ grantTypes: ["authorization_code", "client_credentials"], scopes: ["openid"] }),
+          "client-a",
+        ),
+      ).toThrow("at least one for authorization_code");
+    });
+
+    it("shouldStillRequireOpenidForAuthorizationCodeWhenRedirectUrisArePresent", () => {
+      expect(() =>
+        checkClientRecord(
+          machine({
+            grantTypes: ["authorization_code", "client_credentials"],
+            redirectUris: ["https://app.example/callback"],
+          }),
+          "client-a",
+        ),
+      ).toThrow("including openid for authorization_code");
+    });
+
+    it("shouldRejectClientCredentialsForAPublicClient", () => {
+      expect(() => checkClientRecord(machine({ auth: { method: "none" } }), "client-a")).toThrow(
+        "must not allow client_credentials to a client whose auth.method is none",
+      );
+    });
+
+    it.each([
+      ["an empty list", []],
+      ["an unknown grant", ["password"]],
+      ["the refresh grant, which comes with authorization_code", ["authorization_code", "refresh_token"]],
+      ["a repeat", ["client_credentials", "client_credentials"]],
+      ["a non-array", "client_credentials"],
+    ])("shouldRejectGrantTypesWith%s", (_name, grantTypes) => {
+      expect(() => checkClientRecord(machine({ grantTypes }), "client-a")).toThrow("grantTypes");
+    });
   });
 
   it("shouldRejectAnUnsupportedAuthMethod", () => {

@@ -110,16 +110,19 @@ describe("buildAuthorization", () => {
     expect(new URL(url).searchParams.get("max_age")).toBe("0");
   });
 
-  it("records max_age in the pending state when one was requested", async () => {
-    const { pending } = await buildAuthorization(resolvedOptions(), { maxAge: 300 });
+  it("records max_age and the request time, in whole seconds, in the pending state", async () => {
+    const options = { ...resolvedOptions(), now: () => 1_800_000_000_999 };
+    const { pending } = await buildAuthorization(options, { maxAge: 300 });
 
     expect(pending.maxAge).toBe(300);
+    expect(pending.requestedAt).toBe(1_800_000_000);
   });
 
-  it("omits maxAge from the pending state when none was requested", async () => {
+  it("omits maxAge and requestedAt from the pending state when no max_age was requested", async () => {
     const { pending } = await buildAuthorization(resolvedOptions());
 
     expect(Object.hasOwn(pending, "maxAge")).toBe(false);
+    expect(Object.hasOwn(pending, "requestedAt")).toBe(false);
   });
 
   it("sends login_hint when one was given", async () => {

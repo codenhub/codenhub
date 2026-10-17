@@ -3,7 +3,8 @@ import { MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
 import { parseParameters } from "../shared/parameters";
 import { fail, ok } from "../shared/result";
 import type { OidcIssue, OidcResult, UserinfoClaims } from "../shared/types";
-import { buildAuthorization, denseCopy } from "./authorize";
+import { buildAuthorization, denseCopy, requireRedirectUri } from "./authorize";
+import { buildEndSessionUrl } from "./end-session";
 import { readErrorCode, requestFailure, requestJson } from "./http";
 import { createIdTokenValidator, type IdTokenValidator } from "./id-token";
 import { type ResolvedClientOptions, resolveClientOptions } from "./options";
@@ -11,12 +12,15 @@ import { requestRevocation, requestTokens } from "./tokens";
 import type {
   AuthorizeOptions,
   Client,
+  ClientCredentialsOptions,
+  EndSessionOptions,
   ClientOptions,
   PendingAuthorization,
   Refreshed,
   RefreshOptions,
   SignIn,
   RevokeOptions,
+  TokenSet,
   UserinfoOptions,
 } from "./types";
 
@@ -24,6 +28,7 @@ const HTTP_OK = 200;
 
 /** RFC 6749 §3.3: printable ASCII except space, `"` and `\`. */
 const SCOPE_TOKEN = /^[\x21\x23-\x5B\x5D-\x7E]+$/;
+const PRINTABLE_ASCII = /^[\x20-\x7E]+$/;
 
 const isObject = (value: unknown): value is Readonly<Record<string, unknown>> =>
   typeof value === "object" && value !== null;
@@ -55,11 +60,17 @@ function readPending(pending: unknown): PendingAuthorization {
   const state = readRequiredString(pending, "state", "callback: pending");
   const nonce = readRequiredString(pending, "nonce", "callback: pending");
   const codeVerifier = readRequiredString(pending, "codeVerifier", "callback: pending");
-  const { maxAge } = pending;
-  if (maxAge !== undefined && !isNonNegativeInteger(maxAge)) {
+  const { maxAge, requestedAt } = pending;
+  if (maxAge === undefined) {
+    return { state, nonce, codeVerifier };
+  }
+  if (!isNonNegativeInteger(maxAge)) {
     throw new TypeError("callback: pending.maxAge must be a non-negative integer");
   }
-  return { state, nonce, codeVerifier, ...(maxAge === undefined ? {} : { maxAge: maxAge as number }) };
+  if (!isNonNegativeInteger(requestedAt)) {
+    throw new TypeError("callback: pending.requestedAt must be a non-negative integer when pending.maxAge is set");
+  }
+  return { state, nonce, codeVerifier, maxAge, requestedAt };
 }
 
 /** An `invalid_callback` issue at the callback URL, with optional facts about why. */
@@ -104,6 +115,7 @@ async function finishSignIn(
   if (typeof url !== "string" && !(url instanceof URL)) {
     throw new TypeError("callback: url must be a string or URL");
   }
+  const redirectUri = requireRedirectUri(options, "callback");
   const pending = readPending(pendingInput);
   const parameters = readCallbackParameters(url);
   if (!parameters.ok) {
@@ -137,7 +149,7 @@ async function finishSignIn(
   const form = new URLSearchParams({
     grant_type: "authorization_code",
     code,
-    redirect_uri: options.redirectUri,
+    redirect_uri: redirectUri,
     code_verifier: pending.codeVerifier,
   });
   const tokens = await requestTokens(options, form);
@@ -150,7 +162,9 @@ async function finishSignIn(
   }
   const claims = await validate(idToken, {
     nonce: pending.nonce,
-    maxAge: pending.maxAge,
+    ...(pending.maxAge === undefined || pending.requestedAt === undefined
+      ? {}
+      : { maxAge: { seconds: pending.maxAge, requestedAt: pending.requestedAt } }),
     accessToken: tokens.value.accessToken,
   });
   if (!claims.ok) {
@@ -168,21 +182,31 @@ function readRefreshOptions(options: unknown): {
   if (!isObject(options)) {
     throw new TypeError("refresh: options must be an object");
   }
-  // Copied by index, so a sparse or oversized array is refused rather than serialized.
-  const scope = options.scope === undefined ? undefined : denseCopy(options.scope);
-  if (options.scope !== undefined && (scope === undefined || scope.length === 0 || !scope.every(isScopeToken))) {
-    throw new TypeError("refresh: scope must be a non-empty array of at most 100 scope tokens");
-  }
-  const unique = scope === undefined ? undefined : [...new Set(scope as readonly string[])];
-  if (unique !== undefined && unique.join(" ").length > MAX_PARAMETER_LENGTH) {
-    throw new TypeError("refresh: scope is longer than the provider accepts");
-  }
   return {
     refreshToken: readRequiredString(options, "refreshToken", "refresh"),
     subject: readRequiredString(options, "subject", "refresh"),
-    // Duplicates are dropped in first-seen order, as the authorization request does, so the provider sees each scope once.
-    scope: unique,
+    scope: readScopeList(options.scope, "refresh"),
   };
+}
+
+/**
+ * Reads an optional scope list of a token request. Duplicates are dropped in first-seen order, as the authorization
+ * request does, so the provider sees each scope once.
+ */
+function readScopeList(value: unknown, caller: string): readonly string[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  // Copied by index, so a sparse or oversized array is refused rather than serialized.
+  const scope = denseCopy(value);
+  if (scope === undefined || scope.length === 0 || !scope.every(isScopeToken)) {
+    throw new TypeError(`${caller}: scope must be a non-empty array of at most 100 scope tokens`);
+  }
+  const unique = [...new Set(scope as readonly string[])];
+  if (unique.join(" ").length > MAX_PARAMETER_LENGTH) {
+    throw new TypeError(`${caller}: scope is longer than the provider accepts`);
+  }
+  return unique;
 }
 
 /**
@@ -216,10 +240,13 @@ function readUserinfoOptions(options: UserinfoOptions): { readonly accessToken: 
   if (!isObject(options)) {
     throw new TypeError("userinfo: options must be an object");
   }
-  return {
-    accessToken: readRequiredString(options, "accessToken", "userinfo"),
-    subject: readRequiredString(options, "subject", "userinfo"),
-  };
+  const accessToken = readRequiredString(options, "accessToken", "userinfo");
+  // The token goes into a header, which takes printable ASCII only; any other value would fail inside `fetch`
+  // and be reported as a network failure. Token responses are held to the same rule.
+  if (!PRINTABLE_ASCII.test(accessToken)) {
+    throw new TypeError("userinfo: accessToken must be printable ASCII");
+  }
+  return { accessToken, subject: readRequiredString(options, "subject", "userinfo") };
 }
 
 /**
@@ -309,6 +336,38 @@ async function revokeToken(options: ResolvedClientOptions, input: RevokeOptions)
   return requestRevocation(options, url, form);
 }
 
+async function requestClientToken(
+  options: ResolvedClientOptions,
+  input: ClientCredentialsOptions = {},
+): Promise<OidcResult<TokenSet>> {
+  if (!isObject(input)) {
+    throw new TypeError("clientCredentials: options must be an object");
+  }
+  // RFC 6749 §4.4: only a client that authenticates may use this grant.
+  if (options.auth.method === "none") {
+    throw new TypeError("clientCredentials: a client whose auth.method is none cannot use client_credentials");
+  }
+  const grants = options.metadata.grant_types_supported;
+  if (grants !== undefined && !grants.includes("client_credentials")) {
+    throw new TypeError("clientCredentials: metadata.grant_types_supported does not list client_credentials");
+  }
+  const scope = readScopeList(input.scope, "clientCredentials");
+  const form = new URLSearchParams({ grant_type: "client_credentials" });
+  if (scope !== undefined) {
+    form.set("scope", scope.join(" "));
+  }
+  const tokens = await requestTokens(options, form);
+  if (!tokens.ok || (tokens.value.idToken === undefined && tokens.value.refreshToken === undefined)) {
+    return tokens;
+  }
+  // RFC 6749 §4.4.3: a refresh token SHOULD NOT be included, and no ID token is checked without a user.
+  return ok(
+    Object.fromEntries(
+      Object.entries(tokens.value).filter(([name]) => name !== "idToken" && name !== "refreshToken"),
+    ) as TokenSet,
+  );
+}
+
 /**
  * Creates a relying party for one provider and one registered client.
  *
@@ -363,5 +422,7 @@ export function createClient(options: ClientOptions): Client {
     refresh: (request: RefreshOptions) => refreshTokens(resolved, validate, request),
     userinfo: (request: UserinfoOptions) => fetchUserinfo(resolved, request),
     revoke: (request: RevokeOptions) => revokeToken(resolved, request),
+    clientCredentials: (request?: ClientCredentialsOptions) => requestClientToken(resolved, request),
+    endSessionUrl: (request?: EndSessionOptions) => buildEndSessionUrl(resolved, request),
   });
 }

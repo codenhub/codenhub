@@ -140,7 +140,7 @@ A hint about the account to sign in with, such as an email address.
 readonly maxAge?: number;
 ```
 
-Maximum seconds since the user last authenticated. When set, the ID token must carry `auth_time`.
+Maximum seconds between the user's last authentication and this request. When set, the ID token must carry `auth_time`. `0` asks the user to authenticate again, as `prompt: ["login"]` does.
 
 #### prompt
 
@@ -198,6 +198,22 @@ callback(url: string | URL, pending: PendingAuthorization): Promise<OidcResult<S
 
 Finishes a sign-in from the URL the provider redirected the browser to: checks `state` and `iss`, exchanges the code, and validates the ID token.
 
+#### clientCredentials
+
+```ts
+clientCredentials(options?: ClientCredentialsOptions): Promise<OidcResult<TokenSet>>;
+```
+
+Gets an access token for the client itself, with no user, through the `client_credentials` grant (RFC 6749 §4.4), as a service calling an API does. No ID token or refresh token is involved: when the access token expires, call it again.
+
+#### endSessionUrl
+
+```ts
+endSessionUrl(options?: EndSessionOptions): string;
+```
+
+Builds the URL to send the browser to so the provider ends the user's session there (RP-Initiated Logout 1.0). Revoke the tokens and end the app's own session as well: logging out at the provider does neither.
+
 #### refresh
 
 ```ts
@@ -223,6 +239,22 @@ userinfo(options: UserinfoOptions): Promise<OidcResult<UserinfoClaims>>;
 ```
 
 Fetches the user's claims from the userinfo endpoint.
+
+### ClientCredentialsOptions
+
+```ts
+export interface ClientCredentialsOptions
+```
+
+What `Client.clientCredentials` asks for.
+
+#### scope
+
+```ts
+readonly scope?: readonly string[];
+```
+
+Scopes to request. Without it, the provider decides; this package's provider grants every scope the client is registered for that it defines, other than `openid` and `offline_access`. A registered scope it does not define is dropped.
 
 ### ClientOptions
 
@@ -283,10 +315,10 @@ Current time in milliseconds since the Unix epoch, for tests.
 #### redirectUri
 
 ```ts
-readonly redirectUri: string;
+readonly redirectUri?: string;
 ```
 
-The redirect URI registered for this client, sent with every authorization request.
+The redirect URI registered for this client, sent with every authorization request and code exchange. Required to sign users in: `Client.authorize` and `Client.callback` throw `TypeError` without it. A client that only calls `Client.clientCredentials` leaves it out.
 
 #### timeout
 
@@ -319,6 +351,54 @@ readonly timeout?: number;
 ```
 
 Seconds to wait for the response before failing. An integer from 1 through 60.
+
+### EndSessionOptions
+
+```ts
+export interface EndSessionOptions
+```
+
+What `Client.endSessionUrl` puts in the logout request. Every member is optional.
+
+#### idTokenHint
+
+```ts
+readonly idTokenHint?: string;
+```
+
+The ID token of the sign-in being ended. Recommended: it tells the provider which user is leaving, so it can skip asking them to confirm. An expired one is sent as well; this package's provider then ignores it.
+
+#### logoutHint
+
+```ts
+readonly logoutHint?: string;
+```
+
+A hint about the account being signed out, such as an email address.
+
+#### postLogoutRedirectUri
+
+```ts
+readonly postLogoutRedirectUri?: string;
+```
+
+Where the provider sends the browser afterwards. Must be registered for this client at the provider.
+
+#### state
+
+```ts
+readonly state?: string;
+```
+
+Returned unchanged to `postLogoutRedirectUri`, for the app to match the response to its request.
+
+#### uiLocales
+
+```ts
+readonly uiLocales?: readonly string[];
+```
+
+Preferred languages for the provider's logout page, as BCP 47 tags.
 
 ### IdTokenClaims
 
@@ -522,6 +602,14 @@ The `max_age` that was requested, in seconds, when one was.
 readonly nonce: string;
 ```
 
+#### requestedAt
+
+```ts
+readonly requestedAt?: number;
+```
+
+When the request was made, in seconds since the Unix epoch. Present exactly when `maxAge` is.
+
 #### state
 
 ```ts
@@ -567,6 +655,14 @@ readonly claims_supported?: readonly string[];
 ```ts
 readonly code_challenge_methods_supported?: readonly string[];
 ```
+
+#### end_session_endpoint
+
+```ts
+readonly end_session_endpoint?: string;
+```
+
+RP-Initiated Logout 1.0 §2.1.
 
 #### grant_types_supported
 
@@ -905,7 +1001,7 @@ OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 
 ### OidcIssueCode
 
 ```ts
-export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
+export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
 ```
 
 Stable category of a failure that callers can branch on without parsing messages.

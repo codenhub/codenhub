@@ -124,12 +124,14 @@ A store failure is never turned into an OAuth answer. Answering `invalid_grant` 
 `findClient` returns a `ClientRecord`:
 
 ```ts
-import type { ClientAuthentication } from "@codenhub/oidc/provider";
+import type { ClientAuthentication, GrantType } from "@codenhub/oidc/provider";
 
 interface ClientRecord {
   clientId: string;
-  redirectUris: readonly string[]; // each an absolute URL, compared byte for byte
-  scopes: readonly string[]; // must include "openid"
+  redirectUris: readonly string[]; // each an absolute URL, compared byte for byte; may be empty without authorization_code
+  scopes: readonly string[]; // must include "openid" with authorization_code
+  grantTypes?: readonly GrantType[]; // "authorization_code" (the default) or "client_credentials"
+  postLogoutRedirectUris?: readonly string[]; // each compared byte for byte at logout
   auth: ClientAuthentication;
 }
 ```
@@ -142,6 +144,10 @@ interface ClientRecord {
 - `{ method: "private_key_jwt", keys }`, where `keys` is the client's public `KeySet`, from `createKeySet`, `importKeySet` or `createRemoteKeySet`.
 
 A record that breaks these rules is a bug in the store, and the provider throws `TypeError` for it.
+
+`grantTypes` lists the grants the client may use. `authorization_code` signs users in and brings the refresh grant with it under `offline_access`. `client_credentials` issues an access token to the client itself. It defaults to `["authorization_code"]`, and when given it must be non-empty, without repeats, and hold only those two values. A client with `client_credentials` must authenticate, so its `auth.method` may not be `none`. A client without `authorization_code` may have no `redirectUris`, and its `scopes` need not include `openid`.
+
+`postLogoutRedirectUris` lists where [logout](provider.md#ending-sessions) may send the browser. Each entry is held to the redirect URI rules: an absolute URL of visible ASCII, without fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. Absent or empty, no logout of that client redirects.
 
 The `key` and `keys` values are `@codenhub/jwt` objects, not JSON. A plain object is not one of them, and `@codenhub/jwt` refuses it with `TypeError` when the provider uses it. A store that persists these records therefore keeps the key as a JWK and rebuilds the object on each read: `exportSecretJwk` or `exportPublicJwk` writes the key, and `importSecretKey` or `importKeySet` reads it back. A secret can be exported only when it was created or imported as extractable. A store may also keep the key objects in memory, as the in-memory store does.
 
@@ -172,15 +178,20 @@ The returned store has an extra method, `addClient(client)`, which registers or 
 
 ## Checking an adapter
 
-`storeConformanceCases` in `@codenhub/oidc/testing` checks an adapter against this contract. It is a list of named cases, and each case takes a factory that returns the adapter under test. A case rejects with an `Error` that names the broken rule, and the message never contains a key or a token. The cases cover:
+`storeConformanceCases` in `@codenhub/oidc/testing` checks an adapter against this contract. It is a list of named cases, and each case takes a factory that returns the adapter under test. A case rejects with an `Error` that names the broken rule, and the message never contains a key or a token.
+
+The factory receives a `StoreSeed`, `{ clients }`: the client records the case needs `findClient` to return. The contract has no method that saves a client, so the factory registers them itself, the way the app's admin side would, and returns a store whose `findClient` finds them. Most cases seed no clients. `createMemoryStore` takes the same shape, so `c.run((seed) => createMemoryStore(seed))` works. `StoreSeed` is exported as a type from `@codenhub/oidc/testing`.
+
+The cases cover:
 
 - Each interaction and code is single-use, and a consumed code is `replayed` on its next use.
 - Unknown keys give `undefined`.
 - Twenty concurrent `consumeCode` or `consumeRefreshToken` calls give exactly one `consumed` result and 19 `replayed`; twenty concurrent `consumeInteraction` calls give exactly one record and 19 `undefined`.
-- A `save*` call for an existing key rejects, and a spent code cannot be made consumable again.
+- A `save*` call for an existing key rejects, and a spent code or refresh token cannot be made consumable again.
 - `findAccessToken` is not single-use.
 - `revokeGrant` hides the grant's access and refresh tokens, including tokens saved after the call, and leaves other grants alone. A refresh token consumed before the revocation then gives `undefined`, not `replayed`.
 - `findClient` gives `undefined` for unknown identifiers, including `__proto__`, `constructor` and `toString`.
+- `findClient` returns a registered client with the values it was registered with.
 - The records a store returns do not change when the caller changes what it saved.
 
 Records use an `expiresAt` one hour ahead, so an adapter that purges expired rows still passes. Keys are random per case, so the factory may return stores on one shared database. The factory is called once for each case.
@@ -190,14 +201,22 @@ With vitest, register each case with `it`:
 ```ts
 import { describe, it } from "vitest";
 import { storeConformanceCases } from "@codenhub/oidc/testing";
-import type { OidcStore } from "@codenhub/oidc/provider";
+import type { ClientRecord, OidcStore } from "@codenhub/oidc/provider";
 
 declare const env: { DB: unknown }; // the database binding the adapter uses
 declare function createD1Store(db: unknown): OidcStore; // your adapter
+declare function registerClient(db: unknown, client: ClientRecord): Promise<void>; // your admin write
 
 describe("OidcStore", () => {
   for (const c of storeConformanceCases) {
-    it(c.name, () => c.run(() => createD1Store(env.DB)));
+    it(c.name, () =>
+      c.run(async ({ clients }) => {
+        for (const client of clients) {
+          await registerClient(env.DB, client);
+        }
+        return createD1Store(env.DB);
+      }),
+    );
   }
 });
 ```

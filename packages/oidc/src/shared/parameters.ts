@@ -16,13 +16,24 @@ const PERCENT_ESCAPE_RUN = /(?:%[0-9A-Fa-f]{2})+/g;
  */
 function hasInvalidUtf8Escape(text: string): boolean {
   for (const [run] of text.matchAll(PERCENT_ESCAPE_RUN)) {
-    try {
-      decodeURIComponent(run);
-    } catch {
+    if (decodeRun(run) === undefined) {
       return true;
     }
   }
   return false;
+}
+
+/**
+ * Decodes a run of percent-escapes, or returns `undefined` when they are not valid UTF-8. The decoded text is
+ * returned rather than discarded: the bundler treats `decodeURIComponent` as free of side effects, so a call
+ * whose result is unused is deleted along with the exception it exists to catch.
+ */
+function decodeRun(run: string): string | undefined {
+  try {
+    return decodeURIComponent(run);
+  } catch {
+    return undefined;
+  }
 }
 
 /** Outcome of {@link parseParameters}. */

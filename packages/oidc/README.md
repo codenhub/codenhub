@@ -46,8 +46,8 @@ To issue tokens as an OpenID Provider instead, see [Provider](docs/provider.md).
 ## Documentation
 
 - [Documentation overview](docs/index.md): what the code flow is, which entrypoint to import, the result shape, and a full sign-in walkthrough.
-- [Client](docs/client.md): discovery, every `createClient` option, starting and finishing a sign-in, refresh, userinfo, revocation, and client authentication.
-- [Provider](docs/provider.md): every `createProvider` option, routing, the authorization step, the token endpoint, userinfo, revocation, and the published metadata.
+- [Client](docs/client.md): discovery, every `createClient` option, starting and finishing a sign-in, refresh, userinfo, revocation, ending the session at the provider, client credentials, and client authentication.
+- [Provider](docs/provider.md): every `createProvider` option, routing, the authorization step, the token endpoint, userinfo, revocation, ending sessions, JWT access tokens, and the published metadata.
 - [Store](docs/store.md): the persistence contract the provider needs, the atomicity it requires, the in-memory reference for tests, and the conformance suite for store adapters.
 - [Hostile input](docs/security.md): what each kind of hostile input gets from each side, every limit, and what the package does not defend.
 - [Issues](docs/errors.md): the result shape, every issue code with where it comes from, what the app does with each client issue, and what throws instead.
@@ -62,13 +62,14 @@ To issue tokens as an OpenID Provider instead, see [Provider](docs/provider.md).
 ## Notes
 
 - **Experimental.** See the note at the top. The security behavior, the meaning of each issue code, and the result shape are the parts meant to hold.
-- **Authorization code flow only.** No implicit, hybrid or resource owner password flow. PKCE with `S256` is required of every client, and `plain` is refused.
-- **Opaque access tokens only.** An access token is a random value the store looks up by digest. The package does not issue JWT access tokens.
+- **Authorization code flow for users, client credentials for services.** No implicit, hybrid or resource owner password flow. PKCE with `S256` is required of every client, and `plain` is refused.
+- **Opaque access tokens by default.** An access token is a random value the store looks up by digest. The provider can issue JWT access tokens (RFC 9068) instead, with `accessToken: { format: "jwt", audience }`. See [Provider](docs/provider.md#jwt-access-tokens).
+- **Logout and service tokens.** `client.endSessionUrl` ends the session at the provider (RP-initiated logout), and `client.clientCredentials` gets a token for a client with no user. See [Client](docs/client.md#ending-the-session-at-the-provider) and [Client](docs/client.md#client-credentials).
 - **Exact redirect matching.** A redirect URI must match a registered one byte for byte. Wildcards, prefixes, normalization and loopback redirects with variable ports are not supported.
 - **The app keeps login, consent and sessions.** The provider decides what a request may ask for and checks the app's outcome against it. It does not decide who the user is, and it does not render pages.
 - **Token revocation.** A client revokes a token with `client.revoke` (RFC 7009), and the provider serves the revocation endpoint. The provider revokes the whole sign-in with either kind of token. A client presenting another client's access token is refused with `invalid_request`, and that token is left alone. See [Client](docs/client.md#revoking-tokens) and [Provider](docs/provider.md).
 - **Client assertion `jti` replay.** A client assertion's `jti` is required but not remembered, so an assertion can be replayed within its capped lifetime, which is five minutes plus the clock tolerance. This is by design: a replayed assertion alone yields nothing, since a code also needs its PKCE verifier and a refresh token is single-use. See [Hostile input](docs/security.md).
-- **Not yet:** logout, and certification by the OpenID conformance suite.
+- **Not yet:** certification by the OpenID conformance suite, the 0.1 criterion. Not planned: loopback redirect URIs with variable ports, PAR, pairwise subject identifiers, and front-channel and back-channel logout.
 
 ## License
 

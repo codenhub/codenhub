@@ -189,6 +189,24 @@ describe("checkMetadata", () => {
     expect(checkMetadata(document, ISSUER).ok).toBe(true);
   });
 
+  it("refuses an end_session_endpoint one character longer than MAX_PARAMETER_LENGTH", () => {
+    const document = validDocument();
+    document.end_session_endpoint = `${ISSUER}/${"a".repeat(MAX_PARAMETER_LENGTH + 1 - `${ISSUER}/`.length)}`;
+
+    expect(document.end_session_endpoint).toHaveLength(MAX_PARAMETER_LENGTH + 1);
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([
+      { code: "invalid_metadata", path: ["metadata", "end_session_endpoint"] },
+    ]);
+  });
+
+  it("accepts an end_session_endpoint of exactly MAX_PARAMETER_LENGTH characters", () => {
+    const document = validDocument();
+    document.end_session_endpoint = `${ISSUER}/${"a".repeat(MAX_PARAMETER_LENGTH - `${ISSUER}/`.length)}`;
+
+    expect(document.end_session_endpoint).toHaveLength(MAX_PARAMETER_LENGTH);
+    expect(checkMetadata(document, ISSUER).ok).toBe(true);
+  });
+
   it.each(["revocation_endpoint_auth_methods_supported", "revocation_endpoint_auth_signing_alg_values_supported"])(
     "refuses %s that is not an array of strings",
     (member) => {

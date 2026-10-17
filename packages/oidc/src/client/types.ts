@@ -41,8 +41,12 @@ export interface ClientOptions {
   readonly metadata: ProviderMetadata;
   /** The client identifier the provider registered. */
   readonly clientId: string;
-  /** The redirect URI registered for this client, sent with every authorization request. */
-  readonly redirectUri: string;
+  /**
+   * The redirect URI registered for this client, sent with every authorization request and code exchange.
+   * Required to sign users in: {@link Client.authorize} and {@link Client.callback} throw `TypeError` without it.
+   * A client that only calls {@link Client.clientCredentials} leaves it out.
+   */
+  readonly redirectUri?: string;
   /** How the client authenticates to the token endpoint. */
   readonly auth: ClientAuth;
   /**
@@ -82,7 +86,10 @@ export interface AuthorizeOptions {
   readonly scope?: readonly string[];
   /** Whether the provider must, or must not, show its login and consent pages. `none` stands alone. */
   readonly prompt?: readonly Prompt[];
-  /** Maximum seconds since the user last authenticated. When set, the ID token must carry `auth_time`. */
+  /**
+   * Maximum seconds between the user's last authentication and this request. When set, the ID token must carry
+   * `auth_time`. `0` asks the user to authenticate again, as `prompt: ["login"]` does.
+   */
   readonly maxAge?: number;
   /** A hint about the account to sign in with, such as an email address. */
   readonly loginHint?: string;
@@ -101,6 +108,8 @@ export interface PendingAuthorization {
   readonly codeVerifier: string;
   /** The `max_age` that was requested, in seconds, when one was. */
   readonly maxAge?: number;
+  /** When the request was made, in seconds since the Unix epoch. Present exactly when `maxAge` is. */
+  readonly requestedAt?: number;
 }
 
 /** A started authorization: where to send the user, and what to keep for the callback. */
@@ -153,6 +162,33 @@ export interface RefreshOptions {
   readonly subject: string;
   /** A narrower set of scopes to request. Must be within the original grant. */
   readonly scope?: readonly string[];
+}
+
+/** What {@link Client.clientCredentials} asks for. */
+export interface ClientCredentialsOptions {
+  /**
+   * Scopes to request. Without it, the provider decides; this package's provider grants every scope the client
+   * is registered for that it defines, other than `openid` and `offline_access`. A registered scope it does not
+   * define is dropped.
+   */
+  readonly scope?: readonly string[];
+}
+
+/** What {@link Client.endSessionUrl} puts in the logout request. Every member is optional. */
+export interface EndSessionOptions {
+  /**
+   * The ID token of the sign-in being ended. Recommended: it tells the provider which user is leaving, so it can
+   * skip asking them to confirm. An expired one is sent as well; this package's provider then ignores it.
+   */
+  readonly idTokenHint?: string;
+  /** Where the provider sends the browser afterwards. Must be registered for this client at the provider. */
+  readonly postLogoutRedirectUri?: string;
+  /** Returned unchanged to `postLogoutRedirectUri`, for the app to match the response to its request. */
+  readonly state?: string;
+  /** A hint about the account being signed out, such as an email address. */
+  readonly logoutHint?: string;
+  /** Preferred languages for the provider's logout page, as BCP 47 tags. */
+  readonly uiLocales?: readonly string[];
 }
 
 /** What {@link Client.revoke} revokes. */
@@ -223,4 +259,26 @@ export interface Client {
    * @throws {TypeError} When the provider metadata has no revocation_endpoint, or an option is invalid.
    */
   revoke(options: RevokeOptions): Promise<OidcResult<void>>;
+  /**
+   * Gets an access token for the client itself, with no user, through the `client_credentials` grant (RFC 6749
+   * §4.4), as a service calling an API does. No ID token or refresh token is involved: when the access token
+   * expires, call it again.
+   *
+   * @returns The tokens, or every issue found. An `id_token` or `refresh_token` in the response is dropped: nothing
+   * checks the one, and RFC 6749 §4.4.3 says the other SHOULD NOT be included.
+   * Never throws for any response; it rejects only for the caller errors listed below.
+   * @throws {TypeError} When the client authenticates with `none`, when the provider metadata lists
+   * grant_types_supported without client_credentials, or when `scope` is not a non-empty array of at most 100
+   * scope tokens.
+   */
+  clientCredentials(options?: ClientCredentialsOptions): Promise<OidcResult<TokenSet>>;
+  /**
+   * Builds the URL to send the browser to so the provider ends the user's session there (RP-Initiated Logout 1.0).
+   * Revoke the tokens and end the app's own session as well: logging out at the provider does neither.
+   *
+   * @returns The logout request URL, with `client_id` always included.
+   * @throws {TypeError} When the provider metadata has no end_session_endpoint, an option is invalid, or the URL
+   * would be longer than 8192 characters.
+   */
+  endSessionUrl(options?: EndSessionOptions): string;
 }
