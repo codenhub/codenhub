@@ -249,7 +249,7 @@ Maximum seconds since the user last authenticated.
 readonly prompt: readonly Prompt[];
 ```
 
-`login` means authenticate again; `consent` means ask again; `none` means show nothing.
+`login` means authenticate again; `consent` means ask again; `none` means show nothing. The app performs the login or consent step itself; the provider checks the outcome the app reports to `Provider.completeAuthorization`, such as the `authTime` under `prompt=login`.
 
 #### redirectUri
 
@@ -333,7 +333,7 @@ readonly clientId: string;
 readonly redirectUris: readonly string[];
 ```
 
-Redirect URIs, each compared to the requested one byte for byte. Each must be an absolute URL without a fragment.
+Redirect URIs, each compared to the requested one byte for byte. The list must be non-empty, and the provider checks each entry when it reads the record and throws `TypeError` if one fails: it must be a non-empty string, an absolute URL, made of visible ASCII only (no space, control character or backslash), without a fragment (`#`) or credentials, and with a scheme other than `javascript:`, `data:`, `vbscript:` or `file:`.
 
 #### scopes
 
@@ -583,7 +583,7 @@ Stable failure category.
 readonly params?: Readonly<Record<string, string | number | boolean>>;
 ```
 
-Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [OAuthErrorCode](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders.
+Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason` on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an [OAuthErrorCode](#oautherrorcode) or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
 
 #### path
 
@@ -623,7 +623,7 @@ export interface OidcStore
 
 Persistence the provider needs. The app implements it over its database; `@codenhub/oidc/testing` has an in-memory reference, and `storeConformanceCases` there checks an adapter against this contract.
 
-Every key the provider passes for a code, token, or interaction is a SHA-256 digest of the value, never the value itself, so a leaked store holds nothing usable. Interaction, code and token records are plain JSON; a client record may hold `@codenhub/jwt` keys, which the app rebuilds from what it persists. Methods may throw or reject on infrastructure failure; the provider lets that propagate rather than answering as if the value were invalid.
+Every key the provider passes for a code, token, or interaction is a SHA-256 digest of the value, never the value itself, so a leaked store holds no usable code, token or interaction. A client record is different: it may hold a `client_secret_jwt` HMAC key, which the provider needs in full, so a client record's credentials still need protection. Interaction, code and token records are plain JSON; a client record may hold `@codenhub/jwt` keys, which the app rebuilds from what it persists. Methods may throw or reject on infrastructure failure; the provider lets that propagate rather than answering as if the value were invalid.
 
 The `consume*` methods must be atomic: two concurrent calls for one key must never both get `consumed`. A store without a compare-and-set or transaction, such as plain Cloudflare KV, cannot implement them; use D1, a Durable Object, or a SQL transaction. The revocation check belongs to the same atomic step: a consumption that has not finished when `revokeGrant` resolves must not return `consumed`.
 
@@ -1019,7 +1019,9 @@ Current time in milliseconds since the Unix epoch, for tests.
 readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
 ```
 
-Called with the reason each time the token, userinfo, or revocation endpoint refuses a request, after the response is built and before `handle` resolves. The client only ever sees the OAuth error code, so this is how an operator tells an expired code from a wrong verifier. It is called synchronously; like the store and the `claims` callback, an exception it throws makes `handle` reject. Authorization failures are not reported here, since `beginAuthorization` and `completeAuthorization` already return their issues.
+Called with the reason each time the token, userinfo, or revocation endpoint refuses a request, after the response is built and before `handle` resolves. The client only ever sees the OAuth error code, so this is how an operator tells an expired code from a wrong verifier. Like the store and the `claims` callback, an exception it throws makes `handle` reject. Authorization failures are not reported here, since `beginAuthorization` and `completeAuthorization` already return their issues.
+
+A returned promise is awaited before the response is returned, so an async callback that rejects makes `handle` reject with its error, as a synchronous throw does.
 
 #### scopes
 
@@ -1212,10 +1214,10 @@ The outcome of consuming a single-use value.
 ### OAuthErrorCode
 
 ```ts
-export type OAuthErrorCode = "invalid_request" | "unauthorized_client" | "access_denied" | "unsupported_response_type" | "invalid_scope" | "server_error" | "temporarily_unavailable" | "invalid_client" | "invalid_grant" | "unsupported_grant_type" | "invalid_token" | "insufficient_scope" | "interaction_required" | "login_required" | "account_selection_required" | "consent_required" | "invalid_request_uri" | "invalid_request_object" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
+export type OAuthErrorCode = "invalid_request" | "unauthorized_client" | "access_denied" | "unsupported_response_type" | "invalid_scope" | "server_error" | "temporarily_unavailable" | "invalid_client" | "invalid_grant" | "unsupported_grant_type" | "invalid_token" | "unsupported_token_type" | "insufficient_scope" | "interaction_required" | "login_required" | "account_selection_required" | "consent_required" | "invalid_request_uri" | "invalid_request_object" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
 ```
 
-OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and §5.2, RFC 6750 §3.1, and OpenID Connect Core §3.1.2.6.
+OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, and OpenID Connect Core §3.1.2.6.
 
 ### OidcIssueCode
 

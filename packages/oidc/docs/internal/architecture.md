@@ -63,6 +63,8 @@ A code or refresh token is consumed before it is checked, so a wrong verifier or
 
 The revocation endpoint shares the token endpoint's front checks and client authentication (`readClientRequest` in `token.ts`). It reads the access token table first, because that read changes nothing, and then spends a refresh token, so either kind of token revokes its grant with no store method beyond the ones the token endpoint uses (decision 27). It does not check expiry: a token the store still holds revokes its grant whether or not it has expired, which is harmless.
 
+A token issued to another client is refused with `invalid_request` and left alone when it is an access token. A refresh token of another client is handled differently, because the lookup spends it before the client is compared. An unspent one is spent, its grant is revoked, and the answer is `invalid_request`. A spent one is a replay wherever it arrives, so its grant is revoked and the answer is `200`, the same as for the client's own token. The refusal of another client's access token is the only case that leaves a grant alone.
+
 ### Diagnostics
 
 A refusal at the token, userinfo or revocation endpoint is built with `refuse(response, reason, clientId?)` (`diagnostics.ts`), which records the reason in a `WeakMap` keyed by the response. `handle` passes the recorded refusal to `onDiagnostic` after the endpoint answers (decision 28). The reason never travels through return types, and a response the code did not mark is never reported. `clientId` is passed only where it comes from the store.
@@ -73,7 +75,7 @@ The bearer token is read from the `Authorization` header only. Access tokens, re
 
 ## Client
 
-`createClient` resolves and freezes its options; the metadata is checked by the same function as a discovered document. Every request goes through `requestJson` (`client/http.ts`): `redirect: "manual"`, a timeout raced against the request so a `fetch` that ignores its abort signal still cannot hold the caller, a response size cap enforced while streaming, and JSON content type required. It never throws; failures are `request_failed` with a `reason`.
+`createClient` resolves and freezes its options; the metadata is checked by the same function as a discovered document. Every request goes through `requestJson` (`client/http.ts`): `redirect: "manual"`, a timeout raced against the request so a `fetch` that ignores its abort signal still cannot hold the caller, a response size cap enforced while streaming, and JSON content type required. A revocation `200` is the one success that is accepted with any body, so it is read with `ignoreOkBody` and its body is discarded. It never throws; failures are `request_failed` with a `reason`.
 
 The callback checks, in order: the URL and its parameters, `state` (constant-time), `iss` when present or when the provider advertises it, an `error` response, then the code exchange and the ID token. The ID token goes through one `@codenhub/jwt` verifier per client, built on a remote key set restricted to the provider's advertised asymmetric algorithms, with the issuer, the client as audience, and `sub`, `exp` and `iat` required; the OpenID-specific checks (`azp`, `nonce`, `auth_time` under `max_age`, `at_hash`, `typ` not `at+jwt`) run on the verified payload, as `@codenhub/jwt` decision 7 intends. An OAuth `error` value from a provider is narrowed to a known code, or `unknown`, before it reaches an issue, so an issue never carries text the provider chose.
 

@@ -28,7 +28,7 @@ Each of these is its own specification and design, outside 0.1 by scope.md secti
 
 - **RFC 9068 JWT access tokens** as an option beside opaque ones (scope.md decision 2).
 - **Loopback redirect URIs with variable ports** for native and CLI apps (RFC 8252 §7.3; decision 3).
-- **Logout**: RP-initiated, then back-channel. The grant model already identifies what a session issued, and revocation (decision 27) already ends one.
+- **Logout**: RP-initiated, then back-channel. Revocation (decision 27) already ends a grant's tokens, which is a building block for logout. It does not end a session: the app owns sessions, so logout also needs the app's session to end.
 - **PAR (RFC 9126)**, client credentials, and pairwise subject identifiers.
 
 ## Not Planned

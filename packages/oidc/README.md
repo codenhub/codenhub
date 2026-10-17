@@ -51,6 +51,7 @@ To issue tokens as an OpenID Provider instead, see [Provider](docs/provider.md).
 - [Store](docs/store.md): the persistence contract the provider needs, the atomicity it requires, the in-memory reference for tests, and the conformance suite for store adapters.
 - [Hostile input](docs/security.md): what each kind of hostile input gets from each side, every limit, and what the package does not defend.
 - [Issues](docs/errors.md): the result shape, every issue code with where it comes from, what the app does with each client issue, and what throws instead.
+- [API reference](docs/reference/index.md): every export with its signature, generated from the TSDoc.
 
 ## Requirements
 
@@ -65,7 +66,7 @@ To issue tokens as an OpenID Provider instead, see [Provider](docs/provider.md).
 - **Opaque access tokens only.** An access token is a random value the store looks up by digest. The package does not issue JWT access tokens.
 - **Exact redirect matching.** A redirect URI must match a registered one byte for byte. Wildcards, prefixes, normalization and loopback redirects with variable ports are not supported.
 - **The app keeps login, consent and sessions.** The provider decides what a request may ask for and checks the app's outcome against it. It does not decide who the user is, and it does not render pages.
-- **Token revocation.** A client revokes a token with `client.revoke` (RFC 7009), and the provider serves the revocation endpoint. The provider revokes the whole sign-in with either kind of token. See [Client](docs/client.md#revoking-tokens) and [Provider](docs/provider.md).
+- **Token revocation.** A client revokes a token with `client.revoke` (RFC 7009), and the provider serves the revocation endpoint. The provider revokes the whole sign-in with either kind of token. A client presenting another client's access token is refused with `invalid_request`, and that token is left alone. See [Client](docs/client.md#revoking-tokens) and [Provider](docs/provider.md).
 - **Client assertion `jti` replay.** A client assertion's `jti` is required but not remembered, so an assertion can be replayed within its capped lifetime, which is five minutes plus the clock tolerance. This is by design: a replayed assertion alone yields nothing, since a code also needs its PKCE verifier and a refresh token is single-use. See [Hostile input](docs/security.md).
 - **Not yet:** logout, and certification by the OpenID conformance suite.
 

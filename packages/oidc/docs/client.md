@@ -29,7 +29,7 @@ if (!discovered.ok) {
 }
 ```
 
-The document is requested from `{issuer}/.well-known/openid-configuration`. A trailing slash on the issuer is removed before the well-known path is added, and an issuer with a path keeps that path. The request does not follow redirects. Its response must be a `200` with a JSON object of at most 65536 bytes, and it must finish within the timeout. The document's `issuer` member must equal the issuer you passed, byte for byte, so a document served for another issuer is refused. A UTF-8 byte order mark at the start of a JSON response is accepted, as RFC 8259 §8.1 allows; this applies to the document and to every other JSON response the client reads. A `revocation_endpoint`, when present, must be an `https` URL, like the other endpoints.
+The document is requested from `{issuer}/.well-known/openid-configuration`. A trailing slash on the issuer is removed before the well-known path is added, and an issuer with a path keeps that path. The request does not follow redirects. Its response must be a `200` with a JSON object of at most 65536 bytes, and it must finish within the timeout. The document's `issuer` member must equal the issuer you passed, byte for byte, so a document served for another issuer is refused. A UTF-8 byte order mark at the start of a discovery, token, userinfo or revocation response is accepted, as RFC 8259 §8.1 allows. The JWKS response is parsed by `@codenhub/jwt`, which does not strip a byte order mark. A `revocation_endpoint`, when present, must be an `https` URL, like the other endpoints.
 
 | Option    | Meaning                                                                                  | Default            |
 | --------- | ---------------------------------------------------------------------------------------- | ------------------ |
@@ -40,7 +40,7 @@ The document is requested from `{issuer}/.well-known/openid-configuration`. A tr
 
 - `request_failed` with `params.reason` of `timeout`, `network`, `status` (with `params.status`, for any response other than `200`, including redirects), `content_type` (a `200` that is not JSON), `too_large` or `malformed` (a body that is not a JSON object). `params.endpoint` is `discovery`.
 - `issuer_mismatch` when the document's `issuer` is not the issuer you passed.
-- `invalid_metadata` for each member that is missing or invalid, with its path, such as `["metadata", "jwks_uri"]`. Every such member is reported in one result.
+- `invalid_metadata` for each member that is missing or invalid, with its path, such as `["metadata", "jwks_uri"]`. Every such member is reported in one result. An `authorization_endpoint` longer than 4096 characters is `invalid_metadata` too, so the 8192-character authorization URL that `authorize` builds always has room for it. `revocation_endpoint_auth_methods_supported` and `revocation_endpoint_auth_signing_alg_values_supported`, when present, must be arrays of strings.
 
 Only a bad argument throws `TypeError`: an issuer that is not an `https` URL or has a query, `options` that is not an object, a `fetch` that is not a function, or a timeout outside 1 through 60.
 
@@ -233,10 +233,10 @@ The request is sent with the client's configured authentication, as the token en
 
 The failures are:
 
-- `provider_error` with `params.endpoint` of `revocation` and `params.error` set to the OAuth code the provider sent, or `unknown`, for a non-`200` response that carries an OAuth `error`.
+- `provider_error` with `params.endpoint` of `revocation` and `params.error` set to the OAuth code the provider sent, or `unknown`, for a non-`200` response that carries an OAuth `error`. `unsupported_token_type` (RFC 7009 §2.2.1) is one of those codes.
 - `request_failed` with `params.endpoint` of `revocation` for any other failure: a non-`200` response with no OAuth error, which has `params.reason` of `status` and `params.status`, and the network, timeout, size and content-type failures described under [Discovering the provider](#discovering-the-provider).
 
-`revoke` rejects with `TypeError` when the metadata has no `revocation_endpoint`, when `token` is not a non-empty string, or when `tokenTypeHint` is any other value.
+`revoke` rejects with `TypeError` when the metadata has no `revocation_endpoint`, when `token` is not a non-empty string, or when `tokenTypeHint` is any other value. It also rejects when the metadata lists `revocation_endpoint_auth_methods_supported` and the list does not include the client's auth method, or, for `client_secret_jwt` and `private_key_jwt`, when the metadata lists `revocation_endpoint_auth_signing_alg_values_supported` and the list does not include the key's `alg`. Each of these is a configuration mismatch, so it fails before any request is sent.
 
 ## Client authentication
 

@@ -82,3 +82,4 @@ Every URL the package uses must be `https`, including the issuer, every endpoint
 - [Store](store.md): The persistence contract the provider needs, including the atomicity it requires and what cannot satisfy it.
 - [Hostile input](security.md): What each input gets, every limit with its value, and what the package does not defend.
 - [Issues](errors.md): Every issue code, where it comes from, and its path and params.
+- [API reference](reference/index.md): Every export with its signature, generated from the TSDoc.

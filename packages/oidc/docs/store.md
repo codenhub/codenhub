@@ -39,7 +39,7 @@ Each method below is required. A store that lacks one is refused by `createProvi
 | `consumeRefreshToken` | Marks a refresh token used.                                   | As for `consumeCode`.                                                                | Atomic, as for `consumeCode`. `undefined` when it does not exist, or when its grant was revoked. A revoked token is reported as absent, not `replayed`.                             |
 | `revokeGrant`         | Revokes a grant.                                              | Nothing.                                                                             | From now on no access or refresh token of the grant is found or consumed, including tokens saved after this call by a request that was already running.                             |
 
-Four rules hold across the table.
+Five rules hold across the table.
 
 - **Saves never overwrite.** A `save*` method for a key that already exists must reject, and it must never reset a used entry, which would make a spent code or refresh token consumable again. The provider's keys are random digests, so this happens only through an adapter bug.
 - **Expiry is checked by the provider, and purging is the adapter's job.** No method purges. The provider checks `expiresAt` itself, so an adapter deletes expired rows itself, such as with a scheduled job. It keeps a used code or refresh token until at least its `expiresAt`, so a replay is still recognized. It keeps a revoked-grant marker until the grant's last token expires. That is at most `ttl.refreshToken + ttl.accessToken` after the code exchange: with the defaults, 30 days and 10 minutes.
@@ -176,10 +176,10 @@ The returned store has an extra method, `addClient(client)`, which registers or 
 
 - Each interaction and code is single-use, and a consumed code is `replayed` on its next use.
 - Unknown keys give `undefined`.
-- Twenty concurrent `consumeCode` calls give exactly one `consumed`.
+- Twenty concurrent `consumeCode`, `consumeRefreshToken` or `consumeInteraction` calls give exactly one `consumed` record.
 - A `save*` call for an existing key rejects, and a spent code cannot be made consumable again.
 - `findAccessToken` is not single-use.
-- `revokeGrant` hides the grant's access and refresh tokens, including tokens saved after the call, and leaves other grants alone.
+- `revokeGrant` hides the grant's access and refresh tokens, including tokens saved after the call, and leaves other grants alone. A refresh token consumed before the revocation then gives `undefined`, not `replayed`.
 - `findClient` gives `undefined` for unknown identifiers, including `__proto__`, `constructor` and `toString`.
 - The records a store returns do not change when the caller changes what it saved.
 

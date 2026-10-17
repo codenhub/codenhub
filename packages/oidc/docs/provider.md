@@ -45,7 +45,7 @@ export async function createSsoProvider() {
 | `scopes`       | Extra scopes and the claims each releases, merged over the standard scopes. See [Scopes](#scopes).                                                                     | Standard scopes only        |
 | `ttl`          | Token and interaction lifetimes in seconds. See [Lifetimes](#lifetimes).                                                                                               | See [Lifetimes](#lifetimes) |
 | `endpoints`    | The URLs of the authorization, token, userinfo, JWKS and revocation endpoints. See [Endpoints](#endpoints).                                                            | Paths under the issuer      |
-| `onDiagnostic` | Called with the reason each token, userinfo or revocation request is refused. See [Diagnostics](#diagnostics).                                                         | None                        |
+| `onDiagnostic` | Called with the reason each token, userinfo or revocation request is refused with an OAuth error response. See [Diagnostics](#diagnostics).                            | None                        |
 | `now`          | The current time in milliseconds since the Unix epoch. For tests.                                                                                                      | `Date.now`                  |
 
 `createProvider` throws `TypeError` when:
@@ -127,9 +127,7 @@ All values are seconds.
 
 ### Endpoints
 
-The four endpoints the provider answers default to paths under the issuer. The discovery document is always at `{issuer}/.well-known/openid-configuration`, and it cannot be moved.
-
-The endpoints below default to paths under the issuer; the authorization, token, userinfo, JWKS and revocation endpoints are all configurable.
+The five endpoints the provider answers default to paths under the issuer. The discovery document is always at `{issuer}/.well-known/openid-configuration`, and it cannot be moved. The authorization, token, userinfo, JWKS and revocation endpoints are all configurable.
 
 | `endpoints` key | Default              |
 | --------------- | -------------------- |
@@ -301,7 +299,7 @@ A token request presents its client's credentials one of four ways, and it must 
 | `client_assertion` with `client_assertion_type` set to the JWT bearer type                   | `client_id` and `client_assertion_type` in the body.                                                 | `client_secret_jwt` or `private_key_jwt`, by verifying the assertion |
 | Neither: only `client_id` in the body                                                        | `client_id` in the body.                                                                             | `none`                                                               |
 
-An `Authorization` header that does not authenticate the client is `invalid_client` with a `401`: a malformed Basic header, a header in another scheme such as `Bearer`, or an empty one. A failure of the check itself, whether an unknown client, a wrong secret, a wrong key or a method the client did not register, is the same `invalid_client` with a `401`. The two cases are not told apart, so a caller cannot learn which clients exist. Whenever the client was presented through the `Authorization` header and the check failed, the `401` carries `WWW-Authenticate: Basic realm="token"`, as RFC 6749 §5.2 asks. A request that combines the header with another credential is `invalid_request`, with no challenge.
+The `Basic` scheme may be followed by one or more spaces before the credentials, as RFC 7235 allows. An `Authorization` header that does not authenticate the client is `invalid_client` with a `401`: a malformed Basic header, a header in another scheme such as `Bearer`, or an empty one. A failure of the check itself, whether an unknown client, a wrong secret, a wrong key or a method the client did not register, is the same `invalid_client` with a `401`. The two cases are not told apart, so a caller cannot learn which clients exist. Whenever the client was presented through the `Authorization` header and the check failed, the `401` carries `WWW-Authenticate: Basic realm="token"`, as RFC 6749 §5.2 asks. A request that combines the header with another credential is `invalid_request`, with no challenge.
 
 A client secret is compared by its SHA-256 digest, in constant time. The record holds the digest from [hashClientSecret](#client-secrets), never the secret.
 
@@ -384,7 +382,7 @@ Revoking either kind of token revokes its whole grant, so every access token and
 | `token` missing or empty                                                         | `400`, `invalid_request`.                                                                                                                                                 |
 | A token the store does not find: unknown, purged, or of an already revoked grant | `200`, with nothing revoked. The answer does not show whether the token existed.                                                                                          |
 | An access token or refresh token the store holds, live or expired                | `200`, and its grant is revoked. The provider does not check `expiresAt` here, so an expired token the store still holds revokes its grant the same way a live one does.  |
-| A refresh token already spent                                                    | `200`, and its grant is revoked, since a spent token presented again is a replay.                                                                                         |
+| A refresh token already spent, of any client                                     | `200`, and its grant is revoked, since a spent token presented again is a replay.                                                                                         |
 | A token issued to another client                                                 | `400`, `invalid_request`. An access token is left alone. A refresh token is spent and its grant is revoked, because a refresh token in another client's hands has leaked. |
 | A method other than `POST` or `OPTIONS`                                          | `405`, with `Allow: POST, OPTIONS`.                                                                                                                                       |
 
@@ -455,4 +453,6 @@ The reasons, grouped as in the provider's types:
 | Userinfo                                | `access_token_missing`, `access_token_malformed`, `access_token_unknown`, `access_token_expired`, `access_token_without_openid`                                                                                                                                                                                                                                               |
 | Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                    |
 
-The callback is called synchronously, once for each refusal, after the response is built and before `handle` resolves. Authorization failures are not reported, since `beginAuthorization` and `completeAuthorization` return their issues. The diagnostic never holds a value the request carried: no token, code, verifier, secret or redirect URI. If the callback throws, `handle` rejects, the same as for a store failure, so keep it from throwing. A value that is not a function makes `createProvider` throw `TypeError`.
+The callback is called once for each refusal that is answered with an OAuth error response, after the response is built and before `handle` resolves. A `405` for a method the endpoint does not accept, and an `OPTIONS` preflight, are not reported. Authorization failures are not reported either, since `beginAuthorization` and `completeAuthorization` return their issues. The diagnostic never holds a value the request carried: no token, code, verifier, secret or redirect URI.
+
+The callback may return a promise. `handle` awaits it, so a slow callback delays the response. If it throws or its promise rejects, `handle` rejects, the same as for a store failure, so keep it from throwing. A value that is not a function makes `createProvider` throw `TypeError`.
