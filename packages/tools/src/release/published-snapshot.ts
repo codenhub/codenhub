@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parsePackageMetadata, type PackageMetadata } from "../documentation/package-metadata.ts";
@@ -136,15 +136,38 @@ async function snapshotPackage(
     await rm(destination, { force: true, recursive: true });
     return;
   }
-  const logo =
-    metadata?.logo === undefined
-      ? undefined
-      : { content: await readFile(path.join(destination, metadata.logo)), path: path.join(destination, metadata.logo) };
+  const logo = metadata?.logo === undefined ? undefined : await readLogo(destination, metadata.logo, tag);
   await pruneToPublishedSurfaces(destination);
   if (logo !== undefined) {
     await mkdir(path.dirname(logo.path), { recursive: true });
     await writeFile(logo.path, logo.content);
   }
+}
+
+/**
+ * Reads a released package's declared logo, refusing anything but a regular file inside the package.
+ *
+ * The snapshot is published, so a logo that is a symlink, or resolves outside
+ * the package, would copy whatever it points at onto the site.
+ * @param packageDirectory Materialized package directory.
+ * @param logo Package-relative logo path from the released manifest.
+ * @param tag Release tag, for the error message.
+ * @returns The logo's bytes and where to write them back after pruning.
+ * @throws When the logo is missing, not a regular file, or outside the package.
+ */
+async function readLogo(
+  packageDirectory: string,
+  logo: string,
+  tag: string,
+): Promise<{ content: Buffer; path: string }> {
+  const logoPath = path.join(packageDirectory, logo);
+  const entry = await lstat(logoPath).catch(() => undefined);
+  const relativePath =
+    entry?.isFile() === true ? path.relative(await realpath(packageDirectory), await realpath(logoPath)) : "..";
+  if (relativePath === "" || path.isAbsolute(relativePath) || relativePath.split(path.sep)[0] === "..") {
+    throw new Error(`${tag} declares codenhub.logo "${logo}", which is not a regular file in the package.`);
+  }
+  return { content: await readFile(logoPath), path: logoPath };
 }
 
 /**

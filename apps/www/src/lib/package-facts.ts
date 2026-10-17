@@ -37,6 +37,17 @@ function hasCondition(value: unknown, condition: string): boolean {
   );
 }
 
+// An `exports` string, or a map of conditions with no subpath keys, is the
+// root entrypoint alone; otherwise the subpath keys are the entrypoints.
+function entrypointsOf(exportsField: unknown): string[] {
+  if (typeof exportsField === "string" || Array.isArray(exportsField)) {
+    return ["."];
+  }
+  const keys = isRecord(exportsField) ? Object.keys(exportsField) : [];
+  const subpaths = keys.filter((key) => key === "." || key.startsWith("./"));
+  return subpaths.length === 0 && keys.length > 0 ? ["."] : subpaths;
+}
+
 /**
  * Reads a package's releases from its history.
  * @param history Releases newest first, as `@codenhub/tools/release` records them.
@@ -59,7 +70,7 @@ export function describeProperties(manifest: Record<string, unknown>): PackagePr
   return {
     bundled: Array.isArray(codenhub.bundled) ? codenhub.bundled.filter((name) => typeof name === "string") : [],
     dependencyCount: names(manifest.dependencies).length,
-    entrypoints: Object.keys(exportsField).filter((key) => key === "." || key.startsWith("./")),
+    entrypoints: entrypointsOf(manifest.exports),
     isEsmOnly: manifest.type === "module" && !hasCondition(exportsField, "require"),
     isSideEffectFree: manifest.sideEffects === false,
     peerDependencies: names(manifest.peerDependencies),

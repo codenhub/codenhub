@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -267,6 +267,11 @@ describe("buildPublishedSnapshot", () => {
 
     await buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps);
 
+    expect(deps.resolveLatestPublishedTag).toHaveBeenCalledWith("@codenhub/error", [
+      "@codenhub/error@0.2.0",
+      "@codenhub/error@0.3.0",
+    ]);
+
     expect(JSON.parse(await readFile(snapshotReleasesPath(snapshotRoot), "utf8"))).toEqual({
       "@codenhub/error": [
         { date: "2026-10-09T00:00:00+00:00", isPrerelease: false, version: "0.3.0" },
@@ -309,6 +314,38 @@ describe("buildPublishedSnapshot", () => {
     );
 
     await expect(readdir(snapshotPackagesRoot(snapshotRoot))).resolves.toEqual(["router"]);
+  });
+});
+
+describe("buildPublishedSnapshot logo", () => {
+  it("fails the build when the released logo links outside the package", async (context) => {
+    const repoRoot = await createTempDir();
+    const snapshotRoot = await createTempDir();
+    const outside = path.join(await createTempDir(), "secret.svg");
+    await writeFile(outside, "<svg/>", "utf8");
+    const manifest = { ...DOCS_MANIFEST, codenhub: { ...DOCS_MANIFEST.codenhub, logo: "logo.svg" } };
+    let canLink = true;
+    const deps = createDeps([createPackage(repoRoot, "packages/error", "@codenhub/error")], {
+      materializeTreeAtRef: vi.fn(async ({ destination }: MaterializeTreeOptions) => {
+        await mkdir(destination, { recursive: true });
+        await writeFile(path.join(destination, "package.json"), JSON.stringify(manifest), "utf8");
+        try {
+          await symlink(outside, path.join(destination, "logo.svg"), "file");
+        } catch {
+          canLink = false;
+        }
+        return true;
+      }),
+      resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.3.0"),
+    });
+
+    const build = buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps);
+    if (!canLink) {
+      await build.catch(() => undefined);
+      // Creating a symlink needs a privilege Windows grants only in developer mode.
+      context.skip();
+    }
+    await expect(build).rejects.toThrow('declares codenhub.logo "logo.svg"');
   });
 });
 

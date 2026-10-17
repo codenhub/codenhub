@@ -43,6 +43,11 @@ describe("describeProperties", () => {
     });
   });
 
+  it("treats a conditions-only exports map as the root entrypoint", () => {
+    expect(describeProperties({ exports: { import: "./index.js", types: "./index.d.ts" } }).entrypoints).toEqual(["."]);
+    expect(describeProperties({ exports: "./index.js" }).entrypoints).toEqual(["."]);
+  });
+
   it("does not call a package with a require condition ESM-only", () => {
     const properties = describeProperties({
       exports: { ".": { import: "./index.js", require: "./index.cjs" } },

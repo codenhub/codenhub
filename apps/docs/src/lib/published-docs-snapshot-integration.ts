@@ -1,7 +1,7 @@
 import { buildPublishedSnapshot, type PublishedSnapshotOptions } from "@codenhub/tools/release";
 import type { AstroIntegration } from "astro";
 
-interface IntegrationOptions extends PublishedSnapshotOptions {
+interface IntegrationOptions extends Pick<PublishedSnapshotOptions, "repoRoot" | "snapshotRoot"> {
   build?: (options: PublishedSnapshotOptions) => Promise<void>;
 }
 

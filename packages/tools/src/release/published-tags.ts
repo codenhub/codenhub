@@ -52,8 +52,9 @@ export async function listTags(cwd: string, git: GitRunner = runGit): Promise<st
     .filter((line) => line !== "");
 }
 
-// `major.minor.patch` and nothing more: no pre-release, no build metadata.
-const STABLE_VERSION = /^\d+\.\d+\.\d+$/;
+// `major.minor.patch` with no pre-release. Build metadata does not make a
+// version a pre-release: `distTagForVersion` publishes it under `latest`.
+const STABLE_VERSION = /^\d+\.\d+\.\d+(?:\+[0-9A-Za-z.-]+)?$/;
 
 /**
  * Reports whether a version is a stable release rather than a pre-release.
@@ -128,12 +129,19 @@ export async function listTagDates(cwd: string, git: GitRunner = runGit): Promis
   if (!outcome.isSuccess) {
     throw new Error(`Could not list git tags in ${cwd}.`);
   }
-  return new Map(
-    outcome.stdout
-      .split("\n")
-      .map((line) => line.trim().split("\t"))
-      .filter((fields): fields is [string, string] => fields.length === 2 && fields[0] !== "" && fields[1] !== ""),
-  );
+  const entries = outcome.stdout
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line): [string, string] => {
+      const [tag = "", date = ""] = line.trim().split("\t");
+      // A tag that names no commit has no date; a release would be missing
+      // from the history rather than reported, so it fails here instead.
+      if (tag === "" || date === "") {
+        throw new Error(`Could not read the commit date of tag "${line.trim()}" in ${cwd}.`);
+      }
+      return [tag, date];
+    });
+  return new Map(entries);
 }
 
 /**
