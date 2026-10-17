@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-09-30
+last_updated: 2026-10-17
 scope: Index of repository-wide documentation.
 ---
 
@@ -30,6 +30,7 @@ Root `docs/` contains durable repository knowledge. Package-specific consumer an
 | Document                                                         | Contains                                                                                  |
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | [Package lifecycle](specs/packages-lifecycle.md)                 | Package metadata, scripts, exports, builds, publication, and versioning.                  |
+| [Package metadata](specs/packages-metadata.md)                   | Package identity and presentation metadata in package.json#codenhub.                      |
 | [Package documentation](specs/packages-documentation.md)         | Consumer and maintainer documentation surfaces, ownership, completeness, and publication. |
 | [Package README](specs/packages-readme.md)                       | Public package README requirements.                                                       |
 | [README template](specs/packages-readme-template.md)             | A starting structure for a public package README.                                         |

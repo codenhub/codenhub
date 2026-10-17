@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-16
+last_updated: 2026-10-17
 scope: Naming and branding decisions across Coden, CodenHub, and their packages.
 ---
 
@@ -56,7 +56,7 @@ Branded and neutral packages will use different words by design, but the resolve
 <Name>, <one-line functional description using the naming vocabulary>.
 ```
 
-This governs the docs site: set `codenhub.docs.label` in `package.json` to `<Name>` (e.g. `IconKit`, `Coden Skills`, `Kbd`) — it drives the docs site's navigation, catalog, and page title. Pair it with `codenhub.docs.description` when the plain functional description reads better with the name folded in, e.g. "IconKit, a kit for combining icon families and dropping icons into any app."
+This governs every site that presents the package: set `codenhub.label` in `package.json` to `<Name>` (e.g. `IconKit`, `Coden Skills`, `Kbd`) — it drives the docs site's navigation, catalog, and page title, and the site index and demo list it too. Pair it with `codenhub.description` when the plain functional description reads better with the name folded in, e.g. "IconKit, a kit for combining icon families and dropping icons into any app."
 
 This does not govern the README title. `docs/specs/packages-readme.md` requires the README's first heading to be the package name exactly as published (e.g. `# @codenhub/icons`), and that rule is unaffected by this document — a resolved display name and a published npm name are allowed to differ, the same way they already differ for install commands (see the note in [Existing packages](#existing-packages)). The display name MAY still appear naturally in the README's opening description sentence as ordinary prose ("IconKit combines several icon families into one registry..."), but that is a writing choice, not a requirement.
 
@@ -88,7 +88,7 @@ This table resolves the _displayed_ name only. Whether the npm package name and 
 | `ui-kit`     | Neutral, kit    | `UI Kit`          | Left unfused (`UIKit`) to avoid colliding with Apple's UIKit framework name.                                           |
 | `validation` | Neutral, kit    | `ValidationKit`   |                                                                                                                        |
 
-Plugins (`plugins/tauri/webview`, `plugins/tauri/window`, `plugins/vite/add-loader`, `plugins/vite/defer-css`, `plugins/vite/icons`) are exceptions to this table: their npm names already follow their host ecosystem's own plugin-naming convention (`tauri-plugin-*`, `vite-plugin-*`), which takes precedence over the vocabulary above. Their existing `codenhub.docs.label` values (`Tauri WebView`, `Tauri Window`, `Vite Add Loader`, `Vite Deferred CSS`, `Vite Icons`) already follow that convention and stay unchanged.
+Plugins (`plugins/tauri/webview`, `plugins/tauri/window`, `plugins/vite/add-loader`, `plugins/vite/defer-css`, `plugins/vite/icons`) are exceptions to this table: their npm names already follow their host ecosystem's own plugin-naming convention (`tauri-plugin-*`, `vite-plugin-*`), which takes precedence over the vocabulary above. Their existing `codenhub.label` values (`Tauri WebView`, `Tauri Window`, `Vite Add Loader`, `Vite Deferred CSS`, `Vite Icons`) already follow that convention and stay unchanged.
 
 ## New packages
 

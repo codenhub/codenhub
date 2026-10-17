@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-07
+last_updated: 2026-10-17
 scope: repo-wide direction for the workspace's packages and deploy surfaces
 ---
 
@@ -12,11 +12,18 @@ Durable direction for the workspace: what is being worked on now, what is intend
 
 ## Current Focus
 
-- **Per-package landing pages.** Public surface stabilization is otherwise done: `apps/www`'s package list is the canonical entry point at `codenhub.dev`, `@codenhub/app-shell` gives the three deploy surfaces identical chrome, and `apps/docs` / `apps/demo` have slimmed their landing pages to a searchable list. What is left is a landing page per package at `codenhub.dev`, closer to a commercial page than a docs page, making the case for why a consumer should reach for it.
+- **Per-package landing pages.** Public surface stabilization is otherwise done: `apps/www`'s package list is the canonical entry point at `codenhub.dev`, `@codenhub/app-shell` gives the three deploy surfaces identical chrome, and `apps/docs` / `apps/demo` have slimmed their landing pages to a searchable list. What is left is making `codenhub.dev` the place a consumer goes for everything about a package, then a landing page per package there, closer to a commercial page than a docs page, making the case for why a consumer should reach for it. In order:
+  - **Package metadata on `codenhub`.** Identity moved out of `codenhub.docs` (`docs/specs/packages-metadata.md`), so no one site owns it.
+  - **Index data from release tags.** `apps/www` reads each package at its release tags, as `apps/docs` already does, instead of the working tree, and derives version history, release dates, license, links (docs, changelog, npm, GitHub path, demo, `llms.txt`), and package properties (dependencies, side effects, module format, types, entrypoints) from them.
+  - **Bundle size.** `hub release cut` measures each entrypoint, minified and gzipped with peers external, into a file the release commit carries; the publish workflow re-measures and refuses a mismatch. Releases from before that show no size.
+  - **Landing pages and index filters.** One page per package with its own metadata for search and sharing.
+  - **Package-provided sections.** A package-owned directory, such as `site/`, beside `docs/` and `demo/`, holding sections its landing page renders, such as `@codenhub/validation` comparing itself with zod, valibot, and yup. Landing pages are composed of sections so these slot in without a redesign.
 - **`apps/docs` polish.** UI/UX and code cleanup, and the navigation rework: a clearer scheme for what individual sidebar entries are named, per-symbol reference anchors, search weighting, and the deck treatment (`description` / `since`) for hand-authored pages. The Guides / Reference / Changelog tab strip has landed; deeper sidebar nesting was weighed and rejected.
 - **Generated API reference rollout.** The generator, the `reference` check, and the `codenhub.docs.reference` opt-in are proven on `@codenhub/error` and `@codenhub/validation`. Opting in `validation` showed gaps in merged declarations, overloads, and unexported types in public signatures. They are fixed, and the check now fails on a type it can't resolve and on an empty section. One known gap remains: TypeDoc drops a `@param` written on a method's first overload when only a later overload has that parameter. Next: opt in packages with different shapes (`icons`, `kbd`, `router`) to find where generated signatures and prose fall short, then flip to default-on with a `codenhub.docs.reference: false` opt-out.
 
 ## Planned
+
+- **Stop reading pre-migration package metadata.** `parsePackageMetadata` still accepts identity inside `codenhub.docs`, only because release tags cut before `docs/specs/packages-metadata.md` carry it. Remove that support as soon as the newest release tag of every package declaring `codenhub.docs` uses the current shape; the spec's "Pre-migration manifests" section lists what to delete.
 
 - **Repository governance.** `SECURITY.md`, the issue forms, the label list, and the pull-request template have landed. `CODEOWNERS` pays off once more than one person reviews here.
 - **Backfill package demos.** `apps/demo` aggregates `packages/*/demo/`, and only `icons` and `styles` have one, so the deployed surface shows two of thirteen public packages.

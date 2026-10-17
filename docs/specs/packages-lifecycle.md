@@ -31,7 +31,8 @@ Public package `package.json` files MUST include:
 - `exports`: explicit public exports.
 - `scripts`: package lifecycle scripts.
 - `publishConfig.access`: `public`.
-- `codenhub.docs`: public documentation eligibility, status, and optional presentation metadata as defined by `docs/specs/packages-documentation.md`.
+- `codenhub`: package identity and presentation metadata (`label`, `status`, `description`, `logo`, `listed`, `slug`, `order`, `demoUrl`) as defined by `docs/specs/packages-metadata.md`.
+- `codenhub.docs`: public documentation opt-in as defined by `docs/specs/packages-documentation.md`.
 
 Public package metadata SHOULD include `description`, `license`, and repository links when package publishing is ready.
 
