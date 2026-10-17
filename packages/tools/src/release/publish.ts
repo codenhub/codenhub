@@ -133,7 +133,7 @@ const TARBALL_EXTENSION = ".tgz";
  * npm's output then goes straight to the terminal rather than into the
  * returned output, which on an npm failure points there instead.
  * @param run Child process runner, defaulting to {@link execute}.
- * @returns Runner reporting whether every step succeeded, with their combined output.
+ * @returns Runner reporting whether every step succeeded, with the captured output of the steps before `npm publish`, or a pointer to npm's own output when the publish itself fails.
  */
 export function createPublishRunner(run: PublishStepRunner = execute): PublishRunner {
   return async (workspacePackage, timeoutMs) => {
