@@ -7,7 +7,7 @@ import { buildAuthorization, denseCopy } from "./authorize";
 import { readErrorCode, requestFailure, requestJson } from "./http";
 import { createIdTokenValidator, type IdTokenValidator } from "./id-token";
 import { type ResolvedClientOptions, resolveClientOptions } from "./options";
-import { requestTokens } from "./tokens";
+import { requestRevocation, requestTokens } from "./tokens";
 import type {
   AuthorizeOptions,
   Client,
@@ -16,6 +16,7 @@ import type {
   Refreshed,
   RefreshOptions,
   SignIn,
+  RevokeOptions,
   UserinfoOptions,
 } from "./types";
 
@@ -259,6 +260,56 @@ async function fetchUserinfo(
 }
 
 /**
+ * Checks the client's auth method, and a client-assertion key's algorithm, against the provider's advertised
+ * revocation-endpoint values. Revocation reuses the token endpoint's credentials, so a provider that lists
+ * different ones for revocation would refuse the request. An absent member means the provider has not stated
+ * them, so anything is accepted.
+ */
+function checkRevocationAuth(options: ResolvedClientOptions): void {
+  const { metadata, auth } = options;
+  const methods = metadata.revocation_endpoint_auth_methods_supported;
+  if (methods !== undefined && !methods.includes(auth.method)) {
+    throw new TypeError(
+      "revoke: the client's auth method is not in metadata.revocation_endpoint_auth_methods_supported",
+    );
+  }
+  if (auth.method !== "client_secret_jwt" && auth.method !== "private_key_jwt") {
+    return;
+  }
+  const algorithms = metadata.revocation_endpoint_auth_signing_alg_values_supported;
+  if (algorithms !== undefined && !algorithms.includes(auth.key.alg)) {
+    throw new TypeError(
+      "revoke: the key's algorithm is not in metadata.revocation_endpoint_auth_signing_alg_values_supported",
+    );
+  }
+}
+
+/**
+ * Revokes a token. A bad argument, a provider without the endpoint, or revocation auth lists that omit the client's
+ * method or its key's algorithm are caller bugs, so it throws.
+ */
+async function revokeToken(options: ResolvedClientOptions, input: RevokeOptions): Promise<OidcResult<void>> {
+  if (!isObject(input)) {
+    throw new TypeError("revoke: options must be an object");
+  }
+  const token = readRequiredString(input, "token", "revoke");
+  const hint = input.tokenTypeHint;
+  if (hint !== undefined && hint !== "access_token" && hint !== "refresh_token") {
+    throw new TypeError('revoke: tokenTypeHint must be "access_token" or "refresh_token"');
+  }
+  const url = options.metadata.revocation_endpoint;
+  if (url === undefined) {
+    throw new TypeError("revoke: metadata has no revocation_endpoint");
+  }
+  checkRevocationAuth(options);
+  const form = new URLSearchParams({ token });
+  if (hint !== undefined) {
+    form.set("token_type_hint", hint);
+  }
+  return requestRevocation(options, url, form);
+}
+
+/**
  * Creates a relying party for one provider and one registered client.
  *
  * @remarks
@@ -311,5 +362,6 @@ export function createClient(options: ClientOptions): Client {
     callback: (url: string | URL, pending: PendingAuthorization) => finishSignIn(resolved, validate, url, pending),
     refresh: (request: RefreshOptions) => refreshTokens(resolved, validate, request),
     userinfo: (request: UserinfoOptions) => fetchUserinfo(resolved, request),
+    revoke: (request: RevokeOptions) => revokeToken(resolved, request),
   });
 }

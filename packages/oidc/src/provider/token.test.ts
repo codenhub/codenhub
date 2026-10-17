@@ -43,7 +43,7 @@ const CLIENTS: readonly ClientRecord[] = [
 /** Options over a memory store, with a clock the test moves forward by setting `setClock`. */
 async function setup(): Promise<{ options: ResolvedOptions; store: MemoryStore; setClock: (ms: number) => void }> {
   let clock = NOW_MS;
-  const store = createMemoryStore({ clients: CLIENTS, now: () => clock });
+  const store = createMemoryStore({ clients: CLIENTS });
   const pair = await generateKeyPair({ alg: "ES256", kid: "k1" });
   const options = resolveOptions({
     issuer: ISSUER,
@@ -454,6 +454,20 @@ describe("handleToken: refresh_token grant", () => {
     const refused = await handleToken(
       options,
       tokenRequest(refreshBody(issued.refresh_token ?? "", { scope: "openid unknown" })),
+    );
+    const retried = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
+
+    expect(await errorOf(refused)).toEqual({ status: 400, body: JSON.stringify({ error: "invalid_scope" }) });
+    expect(retried.status).toBe(200);
+  });
+
+  it("refuses a refresh scope without openid with invalid_scope and keeps the token usable", async () => {
+    const { options, store } = await setup();
+    const issued = await redeemCode(options, store);
+
+    const refused = await handleToken(
+      options,
+      tokenRequest(refreshBody(issued.refresh_token ?? "", { scope: "profile" })),
     );
     const retried = await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")));
 

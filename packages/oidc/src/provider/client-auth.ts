@@ -1,10 +1,11 @@
 import { type KeySet, createKeySet, createVerifier } from "@codenhub/jwt";
 
 import { checkClientRecord } from "./client-record";
+import { refuse } from "./diagnostics";
 import type { ResolvedOptions } from "./options";
 import { tokenErrorResponse } from "./responses";
 import { verifyClientSecret } from "./secrets";
-import type { ClientRecord } from "./types";
+import type { ClientRecord, ProviderDiagnosticReason } from "./types";
 
 /** The client assertion type of RFC 7523 §2.2, the only one this provider accepts. */
 const CLIENT_ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
@@ -18,6 +19,16 @@ const BUFFER_MASK = 0xffff;
 
 /** RFC 6749 §5.2: a `401` for Basic credentials must say how to authenticate. */
 const BASIC_CHALLENGE: Readonly<Record<string, string>> = { "www-authenticate": 'Basic realm="token"' };
+
+/** Clock tolerance for client assertions, in seconds: client clocks drift, and a minute covers ordinary skew. */
+const ASSERTION_CLOCK_TOLERANCE_SECONDS = 60;
+
+/**
+ * Longest lifetime an assertion may claim, in seconds, measured from the provider's now plus the clock tolerance.
+ * RFC 7523 §3 lets the server refuse an unreasonably distant `exp`; replay within the lifetime is accepted by
+ * design (scope.md decision 23), so this bounds that window.
+ */
+const MAX_ASSERTION_LIFETIME_SECONDS = 300;
 
 /** Outcome of {@link authenticateClient}: the authenticated client, or the response to send. */
 export type ClientAuthResult =
@@ -38,12 +49,22 @@ type Extracted =
   | { readonly ok: true; readonly presented: Presented }
   | { readonly ok: false; readonly response: Response };
 
-const invalidRequest = (): Extracted => ({ ok: false, response: tokenErrorResponse("invalid_request") });
-
-/** A failed client check. The Basic challenge is added only when Basic was presented, as RFC 6749 §5.2 asks. */
-const rejectClient = (presented: Presented): ClientAuthResult => ({
+const invalidRequest = (reason: ProviderDiagnosticReason): Extracted => ({
   ok: false,
-  response: tokenErrorResponse("invalid_client", presented.method === "basic" ? BASIC_CHALLENGE : undefined),
+  response: refuse(tokenErrorResponse("invalid_request"), reason),
+});
+
+/**
+ * A failed client check. The Basic challenge is added only when Basic was presented, as RFC 6749 §5.2 asks.
+ * `clientId` is named only when it comes from the store.
+ */
+const rejectClient = (presented: Presented, reason: ProviderDiagnosticReason, clientId?: string): ClientAuthResult => ({
+  ok: false,
+  response: refuse(
+    tokenErrorResponse("invalid_client", presented.method === "basic" ? BASIC_CHALLENGE : undefined),
+    reason,
+    clientId,
+  ),
 });
 
 /**
@@ -71,10 +92,11 @@ export async function authenticateClient(
   const { presented } = extracted;
   const record = await options.store.findClient(presented.clientId);
   if (record === undefined) {
-    return rejectClient(presented);
+    return rejectClient(presented, "client_unknown");
   }
   const client = checkClientRecord(record, presented.clientId);
-  return (await proves(options, client, presented)) ? { ok: true, client } : rejectClient(presented);
+  const proof = await proves(options, client, presented);
+  return proof === "proven" ? { ok: true, client } : rejectClient(presented, proof, client.clientId);
 }
 
 /**
@@ -89,7 +111,7 @@ function extractCredentials(request: Request, parameters: ReadonlyMap<string, st
     (value) => value !== null && value !== undefined,
   ).length;
   if (presentedCount > 1) {
-    return invalidRequest();
+    return invalidRequest("client_credentials_ambiguous");
   }
   if (authorization !== null) {
     return extractBasic(authorization, parameters);
@@ -97,23 +119,33 @@ function extractCredentials(request: Request, parameters: ReadonlyMap<string, st
   if (secret !== undefined) {
     const clientId = parameters.get("client_id");
     return clientId === undefined
-      ? invalidRequest()
+      ? invalidRequest("client_credentials_missing")
       : { ok: true, presented: { method: "client_secret_post", clientId, secret } };
   }
   if (assertion !== undefined) {
     return extractAssertion(assertion, parameters);
   }
   const clientId = parameters.get("client_id");
-  return clientId === undefined ? invalidRequest() : { ok: true, presented: { method: "none", clientId } };
+  return clientId === undefined
+    ? invalidRequest("client_credentials_missing")
+    : { ok: true, presented: { method: "none", clientId } };
 }
 
-/** Reads a Basic `authorization` header (RFC 6749 §2.3.1). Any other scheme or malformed credentials are `invalid_client`. */
+/**
+ * Reads a Basic `authorization` header (RFC 6749 §2.3.1). Any other scheme, an empty header, or malformed Basic
+ * credentials are `invalid_client` with the Basic challenge, since the client attempted header authentication
+ * (RFC 6749 §5.2).
+ */
 function extractBasic(authorization: string, parameters: ReadonlyMap<string, string>): Extracted {
-  const invalidClient: Extracted = { ok: false, response: tokenErrorResponse("invalid_client", BASIC_CHALLENGE) };
-  // The scheme is case-insensitive and followed by exactly one space; anything else is another scheme.
-  const match = /^basic (.*)$/i.exec(authorization);
+  const invalidClient: Extracted = {
+    ok: false,
+    response: refuse(tokenErrorResponse("invalid_client", BASIC_CHALLENGE), "client_credentials_malformed"),
+  };
+  // The scheme is case-insensitive and followed by one or more spaces (RFC 7235 §2.1 allows any number of
+  // whitespace after the auth-scheme); anything else is another scheme.
+  const match = /^basic +(.*)$/i.exec(authorization);
   if (match === null) {
-    return { ok: false, response: tokenErrorResponse("invalid_client") };
+    return invalidClient;
   }
   const bytes = decodeBase64(match[1] ?? "");
   const text = bytes === undefined ? undefined : decodeUtf8(bytes);
@@ -130,7 +162,7 @@ function extractBasic(authorization: string, parameters: ReadonlyMap<string, str
   // A body client_id must agree with the header's, so the two cannot name different clients.
   const bodyClientId = parameters.get("client_id");
   if (bodyClientId !== undefined && bodyClientId !== clientId) {
-    return invalidRequest();
+    return invalidRequest("client_credentials_ambiguous");
   }
   return { ok: true, presented: { method: "basic", clientId, secret } };
 }
@@ -138,41 +170,64 @@ function extractBasic(authorization: string, parameters: ReadonlyMap<string, str
 /** Reads a JWT client assertion. Its `client_id` is required, since the payload is not decoded before it is verified. */
 function extractAssertion(assertion: string, parameters: ReadonlyMap<string, string>): Extracted {
   const clientId = parameters.get("client_id");
-  if (parameters.get("client_assertion_type") !== CLIENT_ASSERTION_TYPE || clientId === undefined) {
-    return invalidRequest();
+  if (clientId === undefined) {
+    return invalidRequest("client_credentials_missing");
+  }
+  if (parameters.get("client_assertion_type") !== CLIENT_ASSERTION_TYPE) {
+    return invalidRequest("client_credentials_malformed");
   }
   return { ok: true, presented: { method: "assertion", clientId, assertion } };
 }
 
+/** The method a registered client authentication expects to be presented with. */
+const PRESENTED_METHOD: Readonly<Record<ClientRecord["auth"]["method"], Presented["method"]>> = {
+  none: "none",
+  client_secret_basic: "basic",
+  client_secret_post: "client_secret_post",
+  client_secret_jwt: "assertion",
+  private_key_jwt: "assertion",
+};
+
 /**
- * Tests whether the presented credentials prove the client's registered method. A method mismatch is a
- * failure of the same kind as a wrong secret, so a caller cannot tell the two apart.
+ * Tests whether the presented credentials prove the client's registered method. A method mismatch gets the
+ * same response as a wrong secret, so a caller cannot tell the two apart; only the operator's diagnostic does.
  */
-async function proves(options: ResolvedOptions, client: ClientRecord, presented: Presented): Promise<boolean> {
+async function proves(
+  options: ResolvedOptions,
+  client: ClientRecord,
+  presented: Presented,
+): Promise<"proven" | "client_method_mismatch" | "client_credentials_wrong"> {
   const { auth } = client;
+  if (presented.method !== PRESENTED_METHOD[auth.method]) {
+    return "client_method_mismatch";
+  }
+  let proven: boolean;
   switch (auth.method) {
     case "none":
-      return presented.method === "none";
+      proven = true;
+      break;
     case "client_secret_basic":
-      return presented.method === "basic" && (await verifyClientSecret(presented.secret, auth.secretHash));
     case "client_secret_post":
-      return presented.method === "client_secret_post" && (await verifyClientSecret(presented.secret, auth.secretHash));
+      proven = "secret" in presented && (await verifyClientSecret(presented.secret, auth.secretHash));
+      break;
     case "client_secret_jwt":
-      return (
-        presented.method === "assertion" &&
-        (await verifyAssertion(options, presented.clientId, presented.assertion, createKeySet([auth.key])))
-      );
+      proven =
+        "assertion" in presented &&
+        (await verifyAssertion(options, presented.clientId, presented.assertion, createKeySet([auth.key])));
+      break;
     case "private_key_jwt":
-      return (
-        presented.method === "assertion" &&
-        (await verifyAssertion(options, presented.clientId, presented.assertion, auth.keys))
-      );
+      proven =
+        "assertion" in presented &&
+        (await verifyAssertion(options, presented.clientId, presented.assertion, auth.keys));
+      break;
   }
+  return proven ? "proven" : "client_credentials_wrong";
 }
 
 /**
  * Verifies a client assertion (RFC 7523 §3): signed by the client's key, issued by and about the client,
- * addressed to this provider or its token endpoint, unexpired, and with a `jti`.
+ * addressed to this provider or its token endpoint, unexpired, with a `jti`, and with a lifetime no longer than
+ * {@link MAX_ASSERTION_LIFETIME_SECONDS}.
  */
 async function verifyAssertion(
   options: ResolvedOptions,
@@ -181,16 +236,22 @@ async function verifyAssertion(
   keys: KeySet,
 ): Promise<boolean> {
   // The verifier is built per request because it is cheap, and it reads the clock from the same source as the rest.
-  // `jti` is required but not replay-checked: the store has no table for it yet.
+  // `jti` is required as RFC 7523 §3 and OpenID Connect Core §9 ask. Replay within the capped lifetime is accepted
+  // by design (scope.md decision 23).
   const verify = createVerifier({
     keys,
     issuer: clientId,
     audience: [options.issuer, options.endpoints.token],
     requiredClaims: ["sub", "exp", "jti"],
+    clockTolerance: ASSERTION_CLOCK_TOLERANCE_SECONDS,
     now: () => options.now() * 1000,
   });
   const result = await verify(assertion);
-  return result.ok && result.value.payload.sub === clientId;
+  if (!result.ok || result.value.payload.sub !== clientId) {
+    return false;
+  }
+  const exp = result.value.payload.exp ?? Number.POSITIVE_INFINITY;
+  return exp <= options.now() + MAX_ASSERTION_LIFETIME_SECONDS + ASSERTION_CLOCK_TOLERANCE_SECONDS;
 }
 
 /** Decodes strict standard base64 (RFC 4648 §4) with mandatory padding. Anything else is `undefined`. */

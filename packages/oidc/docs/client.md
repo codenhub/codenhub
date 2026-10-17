@@ -29,7 +29,7 @@ if (!discovered.ok) {
 }
 ```
 
-The document is requested from `{issuer}/.well-known/openid-configuration`. A trailing slash on the issuer is removed before the well-known path is added, and an issuer with a path keeps that path. The request does not follow redirects. Its response must be a `200` with a JSON object of at most 65536 bytes, and it must finish within the timeout. The document's `issuer` member must equal the issuer you passed, byte for byte, so a document served for another issuer is refused.
+The document is requested from `{issuer}/.well-known/openid-configuration`. A trailing slash on the issuer is removed before the well-known path is added, and an issuer with a path keeps that path. The request does not follow redirects. Its response must be a `200` with a JSON object of at most 65536 bytes, and it must finish within the timeout. The document's `issuer` member must equal the issuer you passed, byte for byte, so a document served for another issuer is refused. A UTF-8 byte order mark at the start of a discovery, token, userinfo or revocation response is accepted, as RFC 8259 §8.1 allows. The JWKS response is parsed by `@codenhub/jwt`, which does not strip a byte order mark. A `revocation_endpoint`, when present, must be an `https` URL, like the other endpoints.
 
 | Option    | Meaning                                                                                  | Default            |
 | --------- | ---------------------------------------------------------------------------------------- | ------------------ |
@@ -40,7 +40,7 @@ The document is requested from `{issuer}/.well-known/openid-configuration`. A tr
 
 - `request_failed` with `params.reason` of `timeout`, `network`, `status` (with `params.status`, for any response other than `200`, including redirects), `content_type` (a `200` that is not JSON), `too_large` or `malformed` (a body that is not a JSON object). `params.endpoint` is `discovery`.
 - `issuer_mismatch` when the document's `issuer` is not the issuer you passed.
-- `invalid_metadata` for each member that is missing or invalid, with its path, such as `["metadata", "jwks_uri"]`. Every such member is reported in one result.
+- `invalid_metadata` for each member that is missing or invalid, with its path, such as `["metadata", "jwks_uri"]`. Every such member is reported in one result. An `authorization_endpoint` longer than 4096 characters is `invalid_metadata` too, so the 8192-character authorization URL that `authorize` builds always has room for it. `revocation_endpoint_auth_methods_supported` and `revocation_endpoint_auth_signing_alg_values_supported`, when present, must be arrays of strings.
 
 Only a bad argument throws `TypeError`: an issuer that is not an `https` URL or has a query, `options` that is not an object, a `fetch` that is not a function, or a timeout outside 1 through 60.
 
@@ -74,7 +74,7 @@ The client accepts an ID token only when its signature verifies with one of the 
 
 `createClient` throws `TypeError` when:
 
-- The issuer in `metadata` is not an own data property holding an `https` URL of visible ASCII with no query, fragment or credentials, or the metadata is not valid. The message names the first invalid member.
+- The issuer in `metadata` is not an own data property holding an `https` URL of visible ASCII with no query, fragment or credentials, or the metadata is not valid. The message names the first invalid member. Hand-written metadata may reuse one object for two members, such as one algorithms array, because each place is copied. A value nested deeper than 32 levels, or a copy that would hold more than 65536 containers, makes the whole metadata invalid, even for a member the package does not read.
 - `auth.method` is not one of the five methods, or it is not in `metadata.token_endpoint_auth_methods_supported` when the provider lists those.
 - `auth.key` is not a key of the kind the method needs, or `auth.secret` is empty.
 - An option is missing or out of range.
@@ -91,17 +91,22 @@ const { url, pending } = await client.authorize({
 });
 ```
 
-| Option      | Meaning                                                                                                                                                                      | Default      |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `scope`     | Scopes to request, as a non-empty array of at most 100 scope tokens, at most 4096 characters when joined with spaces. It must include `openid`. Duplicates are removed.      | `["openid"]` |
-| `prompt`    | Whether the provider must, or must not, show its pages: `none`, `login`, `consent` or `select_account`. `none` must stand alone, and a value may not repeat.                 | None sent    |
-| `maxAge`    | The most seconds that may pass since the user last authenticated, as a non-negative integer. When set, the ID token must carry `auth_time`, and the callback checks its age. | None sent    |
-| `loginHint` | A hint about the account to sign in with, such as an email address. A string.                                                                                                | None sent    |
-| `uiLocales` | Preferred languages for the provider's pages, as at most 100 BCP 47 tags, each without spaces.                                                                               | None sent    |
+| Option      | Meaning                                                                                                                                                                                   | Default      |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `scope`     | Scopes to request, as a non-empty array of at most 100 scope tokens, at most 4096 characters when joined with spaces. It must include `openid`. Duplicates are removed.                   | `["openid"]` |
+| `prompt`    | Whether the provider must, or must not, show its pages: `none`, `login`, `consent` or `select_account`. `none` must stand alone, and a value may not repeat.                              | None sent    |
+| `maxAge`    | The most seconds that may pass since the user last authenticated, as an integer from 0 through 999999999. When set, the ID token must carry `auth_time`, and the callback checks its age. | None sent    |
+| `loginHint` | A hint about the account to sign in with, such as an email address. A string of well-formed Unicode (no lone surrogates), at most 4096 characters.                                        | None sent    |
+| `uiLocales` | Preferred languages for the provider's pages, as at most 100 BCP 47 tags, each non-empty, well-formed Unicode and without spaces. At most 4096 characters when joined with spaces.        | None sent    |
 
 The URL is the provider's authorization endpoint with the request's parameters added to any query it already has: `response_type=code`, `client_id`, `redirect_uri`, `scope`, `state`, `nonce`, `code_challenge` with `code_challenge_method=S256`, and whichever optional parameters you set. The `state`, `nonce` and PKCE verifier are random values from `crypto.getRandomValues`, generated for each call.
 
-`authorize` rejects with `TypeError` for an invalid option, such as a scope list without `openid` or a `prompt` value it does not know. A refused request leaves nothing behind, since everything is validated before any value is generated.
+`authorize` rejects with `TypeError` for an invalid option, such as a scope list without `openid` or a `prompt` value it does not know. A refused request leaves nothing behind, since everything is validated before any value is generated. The encoded URL must be at most 8192 characters. Percent-encoding can grow capped values past the limit the provider reads, so a request whose options are each within their caps can still be refused.
+
+```ts
+// Rejects with TypeError: the value is not well-formed Unicode.
+await client.authorize({ loginHint: "\uD800" });
+```
 
 ## Keeping `pending`
 
@@ -138,7 +143,7 @@ if (signedIn.ok) {
 The checks run in this order, and each one that fails ends the callback with its issue, so a request that fails `state` never reaches the token endpoint:
 
 1. The URL is a string or `URL`, and `pending` has the right shape. Otherwise `TypeError`.
-2. The URL is at most 8192 characters and parses. Its query has no duplicated parameter, at most 32 parameters, and no parameter longer than 4096 characters. Otherwise `invalid_callback` with path `["callback"]`, and for the parameter checks `params.reason` of `duplicate`, `too_many` or `too_long`.
+2. The URL is at most 8192 characters and parses. Its query has no duplicated parameter, at most 32 parameters, and no parameter longer than 4096 characters. Otherwise `invalid_callback` with path `["callback"]`. For the parameter checks, `params.reason` is `duplicate`, `too_many`, `too_long`, or `malformed` for a percent-escape that is not valid UTF-8, such as `%E9`. A `%zz`, which is not an escape, is kept as it is.
 3. The `state` parameter is present. Otherwise `invalid_callback` with path `["callback", "state"]`.
 4. The `state` equals `pending.state`, compared in constant time. Otherwise `state_mismatch` with path `["callback", "state"]`.
 5. The `iss` parameter equals the issuer. When it is absent and the provider advertises `authorization_response_iss_parameter_supported: true`, that is also a failure. Either way the issue is `iss_mismatch` with path `["callback", "iss"]` (RFC 9207).
@@ -150,14 +155,17 @@ The checks run in this order, and each one that fails ends the callback with its
 
 When the provider sends an OAuth error to the redirect URI, the callback returns `provider_error` with `params.endpoint` of `authorization` and `params.error` set to the error code: one of the OAuth codes, such as `access_denied`, or `unknown` for any other text. The provider's own description is never returned. Because check 5 runs first, an error that arrives with a missing `iss` is reported as `iss_mismatch` when the provider advertises the parameter.
 
+The callback matches the response on `state` and `iss` only. It does not compare the URL's origin and path with `redirectUri`: a proxy in front of the app may show it another URL, and `state` already binds the response to the request.
+
 ### ID token checks
 
 The ID token's signature and its registered claims are checked by `@codenhub/jwt`. A problem there becomes `invalid_id_token`, with `path` set to the place in the token, such as `["id_token", "payload", "exp"]`, and `params.jwtCode` set to the `@codenhub/jwt` code, such as `expired`, `wrong_audience` or `bad_signature`. The checks below follow, and the OpenID Connect checks report every failure they find, not just the first:
 
 - `iss` equals the provider's issuer, `aud` contains the client identifier, and `exp`, `iat` and `sub` are present. The times are compared with `clockTolerance`.
 - The header's `typ` is not an access token type (`at+jwt`). Otherwise `invalid_id_token` with path `["id_token", "header", "typ"]` and `jwtCode` of `wrong_type`.
+- The optional claims have their types when present: `amr` is an array of strings, and `acr`, `azp`, `nonce` and `at_hash` are strings. A claim of another type is `invalid_id_token` with path `["id_token", "payload", <claim>]` and `params.jwtCode` of `invalid_claim`. The check that reads that claim is then skipped, so the same claim is not reported twice.
 - `sub` is a non-empty string. Otherwise `invalid_id_token` with path `["id_token", "payload", "sub"]`.
-- `azp` is required when `aud` has more than one value, and when it is present it must equal the client identifier. Otherwise `azp_mismatch`.
+- `azp`, when present, must equal the client identifier, and it is required when `aud` has more than one value. A wrong value, or a missing one where `aud` has several, is `azp_mismatch`.
 - `nonce` equals `pending.nonce`. Otherwise `nonce_mismatch`.
 - `auth_time`, when present, is a number. Otherwise `invalid_id_token` with `jwtCode` of `invalid_claim`. When `pending.maxAge` is set, `auth_time` is required, and `auth_time_missing` is reported when it is absent. The token is too old when the time since `auth_time` is more than `maxAge` plus `clockTolerance`, which is `auth_too_old`.
 - `at_hash`, when present, equals the hash of the access token, which is the left half of SHA-256 for `ES256`, `RS256`, `PS256` and `HS256`, and of SHA-512 for `EdDSA` and `Ed25519`. Otherwise `at_hash_mismatch`.
@@ -203,6 +211,33 @@ The request sends the access token as a `Bearer` credential. The response's `sub
 
 `userinfo` rejects with `TypeError` when the metadata has no `userinfo_endpoint`, since the request cannot be made.
 
+## Revoking tokens
+
+`client.revoke(options)` asks the provider to revoke an access token or a refresh token, as RFC 7009 defines. Use it when the user signs out. It returns a promise of a result whose value is `undefined`.
+
+```ts
+// Sign out: revoke the refresh token, then drop the session, whether or not revocation worked.
+const revoked = await client.revoke({ token: refreshToken, tokenTypeHint: "refresh_token" });
+if (!revoked.ok) {
+  console.error(revoked.error.issues);
+}
+await session.destroy();
+```
+
+| Option          | Meaning                                                                                    | Default   |
+| --------------- | ------------------------------------------------------------------------------------------ | --------- |
+| `token`         | The access token or refresh token to revoke. A non-empty string.                           | Required  |
+| `tokenTypeHint` | `"access_token"` or `"refresh_token"`, a hint to the provider about which kind `token` is. | None sent |
+
+The request is sent with the client's configured authentication, as the token endpoint is. A `200` response is a success, whatever its body and whatever the token was. The provider answers `200` for an unknown or already revoked token too, so a success does not show that the token was valid. Providers such as this package's revoke the whole sign-in with either kind of token: the access and refresh tokens issued with it.
+
+The failures are:
+
+- `provider_error` with `params.endpoint` of `revocation` and `params.error` set to the OAuth code the provider sent, or `unknown`, for a non-`200` response that carries an OAuth `error`. `unsupported_token_type` (RFC 7009 §2.2.1) is one of those codes.
+- `request_failed` with `params.endpoint` of `revocation` for any other failure: a non-`200` response with no OAuth error, which has `params.reason` of `status` and `params.status`, and the network, timeout, size and content-type failures described under [Discovering the provider](#discovering-the-provider).
+
+`revoke` rejects with `TypeError` when the metadata has no `revocation_endpoint`, when `token` is not a non-empty string, or when `tokenTypeHint` is any other value. It also rejects when the metadata lists `revocation_endpoint_auth_methods_supported` and the list does not include the client's auth method, or, for `client_secret_jwt` and `private_key_jwt`, when the metadata lists `revocation_endpoint_auth_signing_alg_values_supported` and the list does not include the key's `alg`. Each of these is a configuration mismatch, so it fails before any request is sent.
+
 ## Client authentication
 
 The token endpoint must know which client is calling. The `auth` option picks how the client proves it, and it must match what the provider registered for the client.
@@ -217,7 +252,7 @@ The token endpoint must know which client is calling. The `auth` option picks ho
 
 The assertion methods sign a JWT with `iss` and `sub` set to the client identifier, `aud` set to the issuer, a random `jti`, `iat`, and an `exp` 60 seconds ahead. A provider that verifies the assertion accepts it only if its `aud` names the issuer or the token endpoint.
 
-`createClient` throws `TypeError` when the method is not advertised by the provider, or when `secret` or `key` is missing or of the wrong kind. A correct method with the wrong credentials is not caught at creation. The provider refuses it at the token endpoint, and the client returns `provider_error` with `params.endpoint` of `token` and `params.error` of `invalid_client`.
+`createClient` throws `TypeError` when the method is not advertised by the provider, or when `secret` or `key` is missing or of the wrong kind. For `client_secret_jwt` and `private_key_jwt`, it also throws when the key's `alg` is not in `token_endpoint_auth_signing_alg_values_supported`, if the metadata lists that member; without the member, any key is accepted. A correct method with the wrong credentials is not caught at creation. The provider refuses it at the token endpoint, and the client returns `provider_error` with `params.endpoint` of `token` and `params.error` of `invalid_client`.
 
 ### Token requests
 

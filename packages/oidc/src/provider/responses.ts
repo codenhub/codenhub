@@ -1,8 +1,8 @@
 import type { OAuthErrorCode } from "../shared/types";
 
 /*
- * Responses of the endpoints a browser client may call from another origin: discovery, JWKS, token, and
- * userinfo. They allow any origin because none of them reads cookies or other ambient credentials: a
+ * Responses of the endpoints a browser client may call from another origin: discovery, JWKS, token,
+ * userinfo, and revocation. They allow any origin because none of them reads cookies or other ambient credentials: a
  * request is authorized only by what it carries itself, so a cross-origin page gains nothing it could
  * not send from a server. The authorization endpoint answers top-level navigations only and never gets
  * these headers.
@@ -45,12 +45,17 @@ export function tokenErrorResponse(error: OAuthErrorCode, headers?: Readonly<Rec
   return jsonResponse({ error }, { status, caching: "no-store", headers });
 }
 
+/** The answer to a revocation request the provider accepted, whatever the token was (RFC 7009 §2.2). */
+export function revocationResponse(): Response {
+  return new Response(null, { status: 200, headers: { ...CORS_HEADERS, ...NO_STORE_HEADERS } });
+}
+
 /**
  * A bearer token challenge from the userinfo endpoint (RFC 6750 §3). Without `error`, it is the answer to
  * a request that carried no token at all, which §3.1 says gets no error code.
  */
-export function bearerErrorResponse(error?: "invalid_request" | "invalid_token"): Response {
-  const status = error === "invalid_request" ? 400 : 401;
+export function bearerErrorResponse(error?: "invalid_request" | "invalid_token" | "insufficient_scope"): Response {
+  const status = error === "invalid_request" ? 400 : error === "insufficient_scope" ? 403 : 401;
   const challenge = error === undefined ? "Bearer" : `Bearer error="${error}"`;
   return new Response(null, {
     status,
@@ -84,11 +89,20 @@ export function redirectResponse(
   redirectUri: string,
   parameters: Readonly<Record<string, string | undefined>>,
 ): Response {
-  const location = new URL(redirectUri);
+  const query = new URLSearchParams();
   for (const [name, value] of Object.entries(parameters)) {
     if (value !== undefined) {
-      location.searchParams.append(name, value);
+      query.append(name, value);
     }
   }
-  return new Response(null, { status: 302, headers: { location: location.href, "cache-control": "no-store" } });
+  const search = query.toString();
+  // A redirect URI never has a fragment (isRedirectUri rejects `#`), so the new parameters go at the end. The
+  // registered URI is kept as it is: re-serializing it with URL would rewrite its query. The separator is `?`
+  // when there is no query yet, nothing when the only `?` is the last character or the query ends with `&`,
+  // and `&` otherwise. A URI ending in `??` has a query of `?`, so it takes `&`.
+  const questionMark = redirectUri.indexOf("?");
+  const separator =
+    questionMark < 0 ? "?" : questionMark === redirectUri.length - 1 || redirectUri.endsWith("&") ? "" : "&";
+  const location = search === "" ? redirectUri : `${redirectUri}${separator}${search}`;
+  return new Response(null, { status: 302, headers: { location, "cache-control": "no-store" } });
 }

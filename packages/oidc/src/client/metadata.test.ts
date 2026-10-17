@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { MAX_PARAMETER_LENGTH } from "../shared/limits";
 import type { OidcIssue, OidcResult, ProviderMetadata } from "../shared/types";
 import { checkMetadata } from "./metadata";
 
@@ -146,6 +147,88 @@ describe("checkMetadata", () => {
     const cycle: Record<string, unknown> = {};
     cycle.self = cycle;
     document.vendor = cycle;
+
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([{ code: "invalid_metadata", path: ["metadata"] }]);
+  });
+
+  it("refuses a document that refers to itself", () => {
+    const document = validDocument();
+    document.vendor = document;
+
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([{ code: "invalid_metadata", path: ["metadata"] }]);
+  });
+
+  it("accepts an array that two members share, and copies it", () => {
+    const document = validDocument();
+    const algorithms = ["ES256"];
+    document.id_token_signing_alg_values_supported = algorithms;
+    document.token_endpoint_auth_signing_alg_values_supported = algorithms;
+
+    const copy = valueOf(checkMetadata(document, ISSUER));
+
+    expect(copy).toEqual(document);
+    expect(copy.id_token_signing_alg_values_supported).not.toBe(algorithms);
+    expect(copy.token_endpoint_auth_signing_alg_values_supported).not.toBe(algorithms);
+    expect(copy.id_token_signing_alg_values_supported).not.toBe(copy.token_endpoint_auth_signing_alg_values_supported);
+  });
+
+  it("refuses an authorization_endpoint longer than MAX_PARAMETER_LENGTH", () => {
+    const document = validDocument();
+    document.authorization_endpoint = `${ISSUER}/${"a".repeat(MAX_PARAMETER_LENGTH)}`;
+
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([
+      { code: "invalid_metadata", path: ["metadata", "authorization_endpoint"] },
+    ]);
+  });
+
+  it("accepts an authorization_endpoint of exactly MAX_PARAMETER_LENGTH characters", () => {
+    const document = validDocument();
+    document.authorization_endpoint = `${ISSUER}/${"a".repeat(MAX_PARAMETER_LENGTH - `${ISSUER}/`.length)}`;
+
+    expect(document.authorization_endpoint).toHaveLength(MAX_PARAMETER_LENGTH);
+    expect(checkMetadata(document, ISSUER).ok).toBe(true);
+  });
+
+  it.each(["revocation_endpoint_auth_methods_supported", "revocation_endpoint_auth_signing_alg_values_supported"])(
+    "refuses %s that is not an array of strings",
+    (member) => {
+      const document = validDocument();
+      document[member] = "client_secret_basic";
+
+      expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([
+        { code: "invalid_metadata", path: ["metadata", member] },
+      ]);
+    },
+  );
+
+  it("accepts the revocation auth members when they are string arrays", () => {
+    const document = {
+      ...validDocument(),
+      revocation_endpoint_auth_methods_supported: ["client_secret_basic"],
+      revocation_endpoint_auth_signing_alg_values_supported: ["ES256"],
+    };
+
+    expect(checkMetadata(document, ISSUER).ok).toBe(true);
+  });
+
+  it("refuses a chain of shared references 40 levels deep without hanging", () => {
+    let node: Record<string, unknown> = {};
+    for (let level = 0; level < 40; level++) {
+      node = { left: node, right: node };
+    }
+    const document = validDocument();
+    document.vendor = node;
+
+    expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([{ code: "invalid_metadata", path: ["metadata"] }]);
+  });
+
+  it("refuses a chain of shared references within the depth limit by its node count", () => {
+    let node: Record<string, unknown> = {};
+    for (let level = 0; level < 30; level++) {
+      node = { left: node, right: node };
+    }
+    const document = validDocument();
+    document.vendor = node;
 
     expect(issuesOf(checkMetadata(document, ISSUER))).toEqual([{ code: "invalid_metadata", path: ["metadata"] }]);
   });

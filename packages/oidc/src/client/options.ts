@@ -145,7 +145,25 @@ function checkAdvertised(metadata: ProviderMetadata, method: string): void {
   }
 }
 
-/** Copies the auth options into a fresh frozen object, so the caller's object is never frozen or kept. */
+/**
+ * Checks the key's algorithm against the provider's advertised client-assertion algorithms. A key the provider
+ * does not list would fail every token request, so it is refused here. An absent member means the provider has
+ * not stated them (OpenID Connect Discovery), so any key is accepted.
+ */
+function checkAssertionAlgorithm(metadata: ProviderMetadata, key: { readonly alg: string }): void {
+  const advertised = metadata.token_endpoint_auth_signing_alg_values_supported;
+  if (advertised !== undefined && !advertised.includes(key.alg)) {
+    throw new TypeError(
+      `${PREFIX} auth.key's algorithm is not in metadata.token_endpoint_auth_signing_alg_values_supported`,
+    );
+  }
+}
+
+/**
+ * Copies the auth options into a fresh frozen object, so the caller's auth object is never frozen or kept. A
+ * secret is copied by value. A key is kept by reference, as given: it is neither copied nor frozen, so the
+ * client shares the caller's key object.
+ */
 function readAuth(auth: ClientAuth, metadata: ProviderMetadata): ClientAuth {
   if (!isObject(auth)) {
     throw new TypeError(`${PREFIX} auth must be an object`);
@@ -164,9 +182,11 @@ function readAuth(auth: ClientAuth, metadata: ProviderMetadata): ClientAuth {
       return Object.freeze({ method: auth.method, secret: readSecret(auth.secret) });
     case "client_secret_jwt":
       checkKeyKind(auth.key, "secret");
+      checkAssertionAlgorithm(metadata, auth.key);
       return Object.freeze({ method: auth.method, key: auth.key });
     case "private_key_jwt":
       checkKeyKind(auth.key, "private");
+      checkAssertionAlgorithm(metadata, auth.key);
       return Object.freeze({ method: auth.method, key: auth.key });
   }
 }

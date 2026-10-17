@@ -14,6 +14,13 @@ describe("isHttpsUrl", () => {
     expect(isHttpsUrl("https://xn--caf-dma.example/cb")).toBe(true);
   });
 
+  it.each(["https://example.com\\evil.com/cb", "https://example.com/\\@evil.com/cb"])(
+    "refusesBackslash_%s, which the URL parser rewrites to a slash",
+    (value) => {
+      expect(isHttpsUrl(value)).toBe(false);
+    },
+  );
+
   it("shouldAcceptAbsoluteHttpsUrl", () => {
     expect(isHttpsUrl("https://provider.test/authorize")).toBe(true);
   });
@@ -71,6 +78,17 @@ describe("isRedirectUri", () => {
       expect(isRedirectUri(value)).toBe(false);
     },
   );
+
+  it.each(["JavaScript:alert(1)", "DATA:text/html,hi", "VbScript:msgbox", "FILE:///etc/passwd"])(
+    "shouldRejectMixedCaseDangerousScheme_%s",
+    (value) => {
+      expect(isRedirectUri(value)).toBe(false);
+    },
+  );
+
+  it("refusesBackslashInRedirectUri", () => {
+    expect(isRedirectUri("https://app.test\\evil.com/cb")).toBe(false);
+  });
 
   it("shouldRejectUriWithFragment", () => {
     expect(isRedirectUri("https://app.test/cb#")).toBe(false);

@@ -122,6 +122,36 @@ describe("handleUserinfo", () => {
     await expect(handleUserinfo(options, getWithToken(ACCESS_TOKEN))).rejects.toThrow("directory unavailable");
   });
 
+  it("shouldReleaseClaimsForABearerTokenSentWithPostAndNoBody", async () => {
+    const { options, store } = await setUp();
+    await saveAccessToken(store, ACCESS_TOKEN);
+
+    const response = await handleUserinfo(
+      options,
+      new Request(ENDPOINT, { method: "POST", headers: { authorization: `Bearer ${ACCESS_TOKEN}` } }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ email: "ada@example.test", sub: SUBJECT });
+  });
+
+  it("shouldRespond403InsufficientScopeWhenTheTokenLacksOpenid", async () => {
+    const { options, store, requests } = await setUp();
+    await store.saveAccessToken(await digestKey(ACCESS_TOKEN), {
+      grantId: "grant-1",
+      clientId: CLIENT_ID,
+      subject: SUBJECT,
+      scopes: ["email"],
+      expiresAt: NOW_S + 600,
+    });
+
+    const response = await handleUserinfo(options, getWithToken(ACCESS_TOKEN));
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get("www-authenticate")).toBe('Bearer error="insufficient_scope"');
+    expect(requests).toEqual([]);
+  });
+
   it("shouldRespond401WithBearerChallengeWhenNoAuthorizationHeader", async () => {
     const { options } = await setUp();
 

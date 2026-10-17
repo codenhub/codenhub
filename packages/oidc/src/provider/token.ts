@@ -6,10 +6,12 @@ import { MAX_BODY_BYTES } from "../shared/limits";
 import { parseParameters } from "../shared/parameters";
 import { computeCodeChallenge, isCodeVerifier } from "../shared/pkce";
 import { computeTokenHash } from "../shared/token-hash";
+import type { OAuthErrorCode } from "../shared/types";
 import { authenticateClient } from "./client-auth";
+import { refuse } from "./diagnostics";
 import type { ResolvedOptions } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse, tokenErrorResponse } from "./responses";
-import type { ClientRecord, CodeRecord, RefreshTokenRecord } from "./types";
+import type { ClientRecord, CodeRecord, ProviderDiagnosticReason, RefreshTokenRecord } from "./types";
 
 const FORM_MEDIA_TYPE = "application/x-www-form-urlencoded";
 
@@ -35,40 +37,58 @@ interface Grant {
  * @returns The token response or an error response.
  */
 export async function handleToken(options: ResolvedOptions, request: Request): Promise<Response> {
-  if (request.method === "OPTIONS") {
-    return preflightResponse(["POST"]);
+  const read = await readClientRequest(options, request);
+  if (!read.ok) {
+    return read.response;
   }
-  if (request.method !== "POST") {
-    return methodNotAllowed(["POST", "OPTIONS"]);
-  }
-  if (!isFormContentType(request.headers.get("content-type"))) {
-    return tokenErrorResponse("invalid_request");
-  }
-  const body = await readBody(request, MAX_BODY_BYTES);
-  if (!body.ok) {
-    return tokenErrorResponse("invalid_request");
-  }
-  const parsed = parseParameters(body.text);
-  if (!parsed.ok) {
-    return tokenErrorResponse("invalid_request");
-  }
-  const parameters = parsed.parameters;
-  const auth = await authenticateClient(options, request, parameters);
-  if (!auth.ok) {
-    return auth.response;
-  }
+  const { client, parameters } = read;
   const grantType = parameters.get("grant_type");
   if (grantType === undefined) {
-    return tokenErrorResponse("invalid_request");
+    return refuse(tokenErrorResponse("invalid_request"), "grant_type_missing", client.clientId);
   }
   switch (grantType) {
     case "authorization_code":
-      return exchangeCode(options, auth.client, parameters);
+      return exchangeCode(options, client, parameters);
     case "refresh_token":
-      return refreshTokens(options, auth.client, parameters);
+      return refreshTokens(options, client, parameters);
     default:
-      return tokenErrorResponse("unsupported_grant_type");
+      return refuse(tokenErrorResponse("unsupported_grant_type"), "grant_type_unsupported", client.clientId);
   }
+}
+
+/** Outcome of {@link readClientRequest}: the authenticated client and its parameters, or the response to send. */
+export type ClientRequestResult =
+  | { readonly ok: true; readonly client: ClientRecord; readonly parameters: ReadonlyMap<string, string> }
+  | { readonly ok: false; readonly response: Response };
+
+/**
+ * Reads a client's form POST to the token or revocation endpoint, cheapest and least trusting check first:
+ * method, content type, body size, parameters (duplicates refused), then client authentication.
+ *
+ * @param options - The resolved provider options.
+ * @param request - The request to the endpoint.
+ * @returns The authenticated client and its parameters, or the response that refuses the request.
+ */
+export async function readClientRequest(options: ResolvedOptions, request: Request): Promise<ClientRequestResult> {
+  if (request.method === "OPTIONS") {
+    return { ok: false, response: preflightResponse(["POST"]) };
+  }
+  if (request.method !== "POST") {
+    return { ok: false, response: methodNotAllowed(["POST", "OPTIONS"]) };
+  }
+  if (!isFormContentType(request.headers.get("content-type"))) {
+    return { ok: false, response: refuse(tokenErrorResponse("invalid_request"), "content_type") };
+  }
+  const body = await readBody(request, MAX_BODY_BYTES);
+  if (!body.ok) {
+    return { ok: false, response: refuse(tokenErrorResponse("invalid_request"), "body") };
+  }
+  const parsed = parseParameters(body.text);
+  if (!parsed.ok) {
+    return { ok: false, response: refuse(tokenErrorResponse("invalid_request"), "parameters") };
+  }
+  const auth = await authenticateClient(options, request, parsed.parameters);
+  return auth.ok ? { ok: true, client: auth.client, parameters: parsed.parameters } : auth;
 }
 
 /**
@@ -97,45 +117,54 @@ async function exchangeCode(
   const code = parameters.get("code");
   const redirectUri = parameters.get("redirect_uri");
   const verifier = parameters.get("code_verifier");
+  const refused = (error: OAuthErrorCode, reason: ProviderDiagnosticReason): Response =>
+    refuse(tokenErrorResponse(error), reason, client.clientId);
   if (code === undefined || redirectUri === undefined || verifier === undefined) {
-    return tokenErrorResponse("invalid_request");
+    return refused("invalid_request", "parameter_missing");
   }
   if (!isCodeVerifier(verifier)) {
-    return tokenErrorResponse("invalid_grant");
+    return refused("invalid_grant", "code_verifier_malformed");
   }
   const consumption = await options.store.consumeCode(await digestKey(code));
   if (consumption === undefined) {
-    return tokenErrorResponse("invalid_grant");
+    return refused("invalid_grant", "code_unknown");
   }
   if (consumption.status === "replayed") {
     await options.store.revokeGrant(consumption.grantId);
-    return tokenErrorResponse("invalid_grant");
+    return refused("invalid_grant", "code_replayed");
   }
   const record = consumption.record;
-  if (!(await isRedeemable(options, client, record, redirectUri, verifier))) {
-    return tokenErrorResponse("invalid_grant");
+  const unredeemable = await whyUnredeemable(options, client, record, redirectUri, verifier);
+  if (unredeemable !== undefined) {
+    return refused("invalid_grant", unredeemable);
   }
   return issueFromCode(options, client, record);
 }
 
 /**
- * Checks everything a consumed code must satisfy. The code is already spent by the time this runs, so a
- * failure here still burns it: that is the safe direction.
+ * Checks everything a consumed code must satisfy, and returns why it fails, or `undefined` when it does not.
+ * The code is already spent by the time this runs, so a failure here still burns it: that is the safe
+ * direction.
  */
-async function isRedeemable(
+async function whyUnredeemable(
   options: ResolvedOptions,
   client: ClientRecord,
   record: CodeRecord,
   redirectUri: string,
   verifier: string,
-): Promise<boolean> {
+): Promise<ProviderDiagnosticReason | undefined> {
   if (record.expiresAt <= options.now()) {
-    return false;
+    return "code_expired";
   }
-  if (record.clientId !== client.clientId || record.redirectUri !== redirectUri) {
-    return false;
+  if (record.clientId !== client.clientId) {
+    return "code_client_mismatch";
   }
-  return timingSafeEqual(await computeCodeChallenge(verifier), record.codeChallenge);
+  if (record.redirectUri !== redirectUri) {
+    return "redirect_uri_mismatch";
+  }
+  return timingSafeEqual(await computeCodeChallenge(verifier), record.codeChallenge)
+    ? undefined
+    : "code_verifier_mismatch";
 }
 
 /** Issues the first tokens of a grant from a redeemed code, with a refresh token only under `offline_access`. */
@@ -178,31 +207,36 @@ async function refreshTokens(
   client: ClientRecord,
   parameters: ReadonlyMap<string, string>,
 ): Promise<Response> {
+  const refused = (error: OAuthErrorCode, reason: ProviderDiagnosticReason): Response =>
+    refuse(tokenErrorResponse(error), reason, client.clientId);
   const refreshToken = parameters.get("refresh_token");
   if (refreshToken === undefined) {
-    return tokenErrorResponse("invalid_request");
+    return refused("invalid_request", "parameter_missing");
   }
   // Checked before consumption, so a malformed or unknown scope does not burn the client's token. Only the
   // subset check below needs the record, and the store offers no read that does not consume.
   const requested = readRequestedScopes(parameters.get("scope"), options, client);
   if (requested === "invalid") {
-    return tokenErrorResponse("invalid_scope");
+    return refused("invalid_scope", "scope_invalid");
   }
   const consumption = await options.store.consumeRefreshToken(await digestKey(refreshToken));
   if (consumption === undefined) {
-    return tokenErrorResponse("invalid_grant");
+    return refused("invalid_grant", "refresh_token_unknown");
   }
   if (consumption.status === "replayed") {
     await options.store.revokeGrant(consumption.grantId);
-    return tokenErrorResponse("invalid_grant");
+    return refused("invalid_grant", "refresh_token_replayed");
   }
   const record = consumption.record;
-  if (record.expiresAt <= options.now() || record.clientId !== client.clientId) {
-    return tokenErrorResponse("invalid_grant");
+  if (record.expiresAt <= options.now()) {
+    return refused("invalid_grant", "refresh_token_expired");
+  }
+  if (record.clientId !== client.clientId) {
+    return refused("invalid_grant", "refresh_token_client_mismatch");
   }
   const scopes = requested ?? record.scopes;
   if (!scopes.every((scope) => record.scopes.includes(scope))) {
-    return tokenErrorResponse("invalid_scope");
+    return refused("invalid_scope", "scope_not_granted");
   }
   const now = options.now();
   const grant: Grant = { ...grantRecord(record) };
@@ -220,7 +254,8 @@ async function refreshTokens(
 
 /**
  * Reads a refresh request's `scope`: `undefined` when absent, `invalid` when empty, malformed, unknown to the
- * provider, or not allowed for the client.
+ * provider, not allowed for the client, or without `openid`. Every token this provider issues is an OpenID
+ * Connect token, so a refresh may narrow the scope but never drop `openid`.
  */
 function readRequestedScopes(
   requested: string | undefined,
@@ -233,7 +268,7 @@ function readRequestedScopes(
   const asked = requested.split(" ");
   const isKnown = (scope: string): boolean =>
     scope !== "" && options.scopeClaims.has(scope) && client.scopes.includes(scope);
-  return asked.every(isKnown) ? [...new Set(asked)] : "invalid";
+  return asked.every(isKnown) && asked.includes("openid") ? [...new Set(asked)] : "invalid";
 }
 
 /** Saves a new access token for a grant and returns the token value; only its digest is stored. */

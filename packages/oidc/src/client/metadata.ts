@@ -1,3 +1,4 @@
+import { MAX_PARAMETER_LENGTH } from "../shared/limits";
 import { fail, ok } from "../shared/result";
 import type { OidcIssue, OidcResult, ProviderMetadata } from "../shared/types";
 import { isHttpsUrl } from "../shared/urls";
@@ -52,6 +53,9 @@ const includesAnyOf =
 
 const isBoolean = (value: unknown): boolean => typeof value === "boolean";
 
+/** An https URL short enough that the authorization request URL still has room for its own parameters. */
+const isShortHttpsUrl = (value: unknown): boolean => isHttpsUrl(value) && value.length <= MAX_PARAMETER_LENGTH;
+
 const required = (name: string, accepts: Predicate): MemberRule => ({ name, required: true, accepts });
 
 const optional = (name: string, accepts: Predicate): MemberRule => ({ name, required: false, accepts });
@@ -61,10 +65,12 @@ const optional = (name: string, accepts: Predicate): MemberRule => ({ name, requ
  * not checked, because this package does not use it.
  */
 const MEMBER_RULES: readonly MemberRule[] = [
-  required("authorization_endpoint", isHttpsUrl),
+  // Capped so a valid endpoint always leaves room in the 8192-character request limit for the request's parameters.
+  required("authorization_endpoint", isShortHttpsUrl),
   required("token_endpoint", isHttpsUrl),
   required("jwks_uri", isHttpsUrl),
   optional("userinfo_endpoint", isHttpsUrl),
+  optional("revocation_endpoint", isHttpsUrl),
   required("response_types_supported", includesString(RESPONSE_TYPE_CODE)),
   required("subject_types_supported", isStringArray),
   required("id_token_signing_alg_values_supported", includesAnyOf(ID_TOKEN_ALGORITHMS)),
@@ -73,6 +79,8 @@ const MEMBER_RULES: readonly MemberRule[] = [
   optional("grant_types_supported", isStringArray),
   optional("token_endpoint_auth_methods_supported", isStringArray),
   optional("token_endpoint_auth_signing_alg_values_supported", isStringArray),
+  optional("revocation_endpoint_auth_methods_supported", isStringArray),
+  optional("revocation_endpoint_auth_signing_alg_values_supported", isStringArray),
   optional("claims_supported", isStringArray),
   // RFC 7636 §4.3: an S256 challenge is the only method this package uses, so a provider that lacks it cannot serve the client.
   optional("code_challenge_methods_supported", includesString(CODE_CHALLENGE_METHOD_S256)),
@@ -106,14 +114,17 @@ function checkIssuer(document: object, issuer: string): OidcIssue[] {
 }
 
 /**
- * Marks a value that cannot be copied: a getter anywhere inside it, an object reached twice (which includes a
- * cycle), an array with holes or named members, or nesting deeper than {@link MAX_COPY_DEPTH}. No JSON document
- * has any of these.
+ * Marks a value that cannot be copied: a getter anywhere inside it, a cycle, an array with holes or named members,
+ * nesting deeper than {@link MAX_COPY_DEPTH}, or more containers than {@link MAX_COPY_NODES}. No JSON document has
+ * any of these. An object referenced from two places is copied at each place, since a copy shares nothing.
  */
 const UNCOPYABLE = Symbol("uncopyable");
 
 /** Matches the depth `@codenhub/jwt` allows in a JSON object; discovery documents are far shallower. */
 const MAX_COPY_DEPTH = 32;
+
+/** Bounds the containers copied, since shared references can multiply them. A document of 65536 bytes cannot hold this many. */
+const MAX_COPY_NODES = 65536;
 
 type Container = Record<string, unknown> | unknown[];
 
@@ -144,7 +155,7 @@ function copyValue(value: unknown): unknown {
     return value;
   }
   const root: Container = Array.isArray(value) ? [] : {};
-  const seen = new Set<object>([value]);
+  let nodes = 1;
   const pending: { readonly source: object; readonly target: Container; readonly depth: number }[] = [
     { source: value, target: root, depth: 1 },
   ];
@@ -164,10 +175,11 @@ function copyValue(value: unknown): unknown {
         setMember(target, key, child);
         continue;
       }
-      if (seen.has(child) || depth >= MAX_COPY_DEPTH) {
+      // A cycle never ends, so it reaches the depth limit; the depth check is what refuses it.
+      nodes += 1;
+      if (depth >= MAX_COPY_DEPTH || nodes > MAX_COPY_NODES) {
         return UNCOPYABLE;
       }
-      seen.add(child);
       const childTarget: Container = Array.isArray(child) ? [] : {};
       setMember(target, key, childTarget);
       pending.push({ source: child, target: childTarget, depth: depth + 1 });

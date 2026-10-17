@@ -1,7 +1,7 @@
 import type { KeyPair, PublicKey } from "@codenhub/jwt";
 
 import { isHttpsUrl } from "../shared/urls";
-import type { ClaimsRequest, OidcStore, ProviderOptions } from "./types";
+import type { ClaimsRequest, OidcStore, ProviderDiagnostic, ProviderOptions } from "./types";
 
 /** Claims each standard scope releases (OpenID Connect Core §5.4). */
 const STANDARD_SCOPE_CLAIMS: Readonly<Record<string, readonly string[]>> = {
@@ -58,6 +58,7 @@ export interface ResolvedEndpoints {
   readonly token: string;
   readonly userinfo: string;
   readonly jwks: string;
+  readonly revocation: string;
 }
 
 /** Provider options after validation, as every endpoint reads them. */
@@ -77,6 +78,7 @@ export interface ResolvedOptions {
   readonly ttl: ResolvedTtl;
   /** Current time in seconds since the Unix epoch, truncated to whole seconds. */
   readonly now: () => number;
+  readonly onDiagnostic: ((diagnostic: ProviderDiagnostic) => void) | undefined;
 }
 
 const STORE_METHODS = [
@@ -111,7 +113,7 @@ function readEndpoints(issuer: string, endpoints: unknown): ResolvedEndpoints {
     return fail("endpoints", "must be an object");
   }
   const base = issuer.endsWith("/") ? issuer.slice(0, -1) : issuer;
-  const read = (name: "authorization" | "token" | "userinfo" | "jwks", path: string): string => {
+  const read = (name: "authorization" | "token" | "userinfo" | "jwks" | "revocation", path: string): string => {
     // Only `undefined` takes the default: an explicit `null` is a mistake to report, not a request for the default.
     const given = isRecord(endpoints) ? endpoints[name] : undefined;
     const value = given === undefined ? `${base}${path}` : given;
@@ -126,6 +128,7 @@ function readEndpoints(issuer: string, endpoints: unknown): ResolvedEndpoints {
     token: read("token", "/token"),
     userinfo: read("userinfo", "/userinfo"),
     jwks: read("jwks", "/jwks"),
+    revocation: read("revocation", "/revoke"),
   };
   // `handle` routes by origin and path, so two endpoints at one place would make one unreachable.
   const places = Object.values(resolved).map((url) => {
@@ -231,6 +234,9 @@ export function resolveOptions(options: ProviderOptions): ResolvedOptions {
   if (options.now !== undefined && typeof options.now !== "function") {
     fail("now", "must be a function");
   }
+  if (options.onDiagnostic !== undefined && typeof options.onDiagnostic !== "function") {
+    fail("onDiagnostic", "must be a function");
+  }
   const clock = options.now ?? Date.now;
   return Object.freeze({
     issuer,
@@ -242,5 +248,6 @@ export function resolveOptions(options: ProviderOptions): ResolvedOptions {
     scopeClaims: readScopes(options.scopes),
     ttl: Object.freeze(readTtl(options.ttl)),
     now: () => Math.floor(clock() / 1000),
+    onDiagnostic: options.onDiagnostic,
   });
 }

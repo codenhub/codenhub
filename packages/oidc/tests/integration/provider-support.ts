@@ -77,6 +77,7 @@ export interface SetUpOverrides {
   readonly claims?: ProviderOptions["claims"];
   readonly scopes?: ProviderOptions["scopes"];
   readonly ttl?: ProviderOptions["ttl"];
+  readonly onDiagnostic?: ProviderOptions["onDiagnostic"];
   /** Wraps the memory store before the provider receives it, for example to record its calls. */
   readonly wrapStore?: (store: MemoryStore) => OidcStore;
 }
@@ -104,7 +105,6 @@ export async function setUpProvider(overrides: SetUpOverrides = {}): Promise<Pro
   const signingKey = await generateKeyPair({ alg: "ES256", kid: "op-1" });
   const secret = generateClientSecret();
   const memory = createMemoryStore({
-    now: () => now.ms,
     clients: [
       {
         clientId: PUBLIC_CLIENT,
@@ -128,6 +128,7 @@ export async function setUpProvider(overrides: SetUpOverrides = {}): Promise<Pro
     claims: overrides.claims ?? defaultClaims,
     scopes: overrides.scopes,
     ttl: overrides.ttl,
+    onDiagnostic: overrides.onDiagnostic,
     now: () => now.ms,
   });
   return {

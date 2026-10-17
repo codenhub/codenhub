@@ -61,7 +61,7 @@ async function fixtures(): Promise<Fixtures> {
 
 /** Provider options over a memory store holding `clients`. The provider's own key plays no part in client authentication. */
 async function setup(clients: readonly ClientRecord[]): Promise<ResolvedOptions> {
-  const store = createMemoryStore({ clients, now: () => NOW_MS });
+  const store = createMemoryStore({ clients });
   const signingKey = await generateKeyPair({ alg: "ES256", kid: "provider-k1" });
   return resolveOptions({
     issuer: ISSUER,
@@ -201,6 +201,48 @@ describe("authenticateClient: successful methods", () => {
     expect(result.ok && result.client.clientId).toBe("keyed");
   });
 
+  it("accepts an assertion issued 30 seconds in the future, within clock tolerance", async () => {
+    const { clients, clientKey } = await fixtures();
+    const options = await setup(clients);
+    const token = await assertion(clientKey.privateKey, { iat: NOW_SECONDS + 30 });
+
+    const result = await authenticate(options, {
+      client_id: "keyed",
+      client_assertion_type: ASSERTION_TYPE,
+      client_assertion: token,
+    });
+
+    expect(result.ok && result.client.clientId).toBe("keyed");
+  });
+
+  it("accepts an assertion whose exp is 30 seconds in the past, within clock tolerance", async () => {
+    const { clients, clientKey } = await fixtures();
+    const options = await setup(clients);
+    const token = await assertion(clientKey.privateKey, { exp: NOW_SECONDS - 30 });
+
+    const result = await authenticate(options, {
+      client_id: "keyed",
+      client_assertion_type: ASSERTION_TYPE,
+      client_assertion: token,
+    });
+
+    expect(result.ok && result.client.clientId).toBe("keyed");
+  });
+
+  it("accepts an assertion whose exp is exactly 300 seconds ahead", async () => {
+    const { clients, clientKey } = await fixtures();
+    const options = await setup(clients);
+    const token = await assertion(clientKey.privateKey, { exp: NOW_SECONDS + 300 });
+
+    const result = await authenticate(options, {
+      client_id: "keyed",
+      client_assertion_type: ASSERTION_TYPE,
+      client_assertion: token,
+    });
+
+    expect(result.ok && result.client.clientId).toBe("keyed");
+  });
+
   it("authenticates private_key_jwt with an assertion addressed to the token endpoint", async () => {
     const { clients, clientKey } = await fixtures();
     const options = await setup(clients);
@@ -268,13 +310,74 @@ describe("authenticateClient: invalid_client failures", () => {
     expect(await challengeOf(result)).toBe('Basic realm="token"');
   });
 
-  it("rejects an authorization header with another scheme, without a challenge", async () => {
+  it("rejects an authorization header with another scheme, with a Basic challenge", async () => {
     const options = await setup((await fixtures()).clients);
 
     const result = await authenticate(options, { client_id: "public" }, "Bearer abc");
 
     expect(await errorOf(result)).toEqual({ status: 401, body: { error: "invalid_client" } });
-    expect(await challengeOf(result)).toBeNull();
+    expect(await challengeOf(result)).toBe('Basic realm="token"');
+  });
+
+  it("rejects an empty authorization header, with a Basic challenge", async () => {
+    const options = await setup((await fixtures()).clients);
+
+    const result = await authenticate(options, { client_id: "public" }, "");
+
+    expect(await errorOf(result)).toEqual({ status: 401, body: { error: "invalid_client" } });
+    expect(await challengeOf(result)).toBe('Basic realm="token"');
+  });
+
+  it("rejects a bare Basic scheme with nothing after it, with a Basic challenge", async () => {
+    const options = await setup((await fixtures()).clients);
+
+    const result = await authenticate(options, { client_id: "public" }, "Basic");
+
+    expect(await errorOf(result)).toEqual({ status: 401, body: { error: "invalid_client" } });
+    expect(await challengeOf(result)).toBe('Basic realm="token"');
+  });
+
+  it("accepts the Basic scheme in lowercase", async () => {
+    const secret = "pa ss";
+    const { clients } = await fixtures();
+    const withSecret = await Promise.all(
+      clients.map(async (client) =>
+        client.clientId === "basic"
+          ? { ...client, auth: { method: "client_secret_basic" as const, secretHash: await hashClientSecret(secret) } }
+          : client,
+      ),
+    );
+    const options = await setup(withSecret);
+
+    const result = await authenticate(options, {}, basicHeader("basic", secret).replace("Basic ", "basic "));
+
+    expect(result.ok && result.client.clientId).toBe("basic");
+  });
+
+  it("accepts Basic with more than one space after the scheme", async () => {
+    const secret = "pa ss";
+    const { clients } = await fixtures();
+    const withSecret = await Promise.all(
+      clients.map(async (client) =>
+        client.clientId === "basic"
+          ? { ...client, auth: { method: "client_secret_basic" as const, secretHash: await hashClientSecret(secret) } }
+          : client,
+      ),
+    );
+    const options = await setup(withSecret);
+
+    const result = await authenticate(options, {}, basicHeader("basic", secret).replace("Basic ", "Basic  "));
+
+    expect(result.ok && result.client.clientId).toBe("basic");
+  });
+
+  it("rejects Basic credentials with an empty client id, with a challenge", async () => {
+    const options = await setup((await fixtures()).clients);
+
+    const result = await authenticate(options, {}, `Basic ${btoa(":secret")}`);
+
+    expect(await errorOf(result)).toEqual({ status: 401, body: { error: "invalid_client" } });
+    expect(await challengeOf(result)).toBe('Basic realm="token"');
   });
 
   it("rejects Basic credentials with no colon", async () => {
@@ -324,7 +427,49 @@ describe("authenticateClient: invalid_client failures", () => {
   it("rejects an expired assertion", async () => {
     const { clients, clientKey } = await fixtures();
     const options = await setup(clients);
-    const token = await assertion(clientKey.privateKey, { exp: NOW_SECONDS - 1 });
+    const token = await assertion(clientKey.privateKey, { exp: NOW_SECONDS - 90 });
+
+    const result = await authenticate(options, {
+      client_id: "keyed",
+      client_assertion_type: ASSERTION_TYPE,
+      client_assertion: token,
+    });
+
+    expect(await errorOf(result)).toEqual({ status: 401, body: { error: "invalid_client" } });
+  });
+
+  it("rejects an assertion issued 90 seconds in the future", async () => {
+    const { clients, clientKey } = await fixtures();
+    const options = await setup(clients);
+    const token = await assertion(clientKey.privateKey, { iat: NOW_SECONDS + 90 });
+
+    const result = await authenticate(options, {
+      client_id: "keyed",
+      client_assertion_type: ASSERTION_TYPE,
+      client_assertion: token,
+    });
+
+    expect(await errorOf(result)).toEqual({ status: 401, body: { error: "invalid_client" } });
+  });
+
+  it("rejects an assertion whose exp is past the 300-second lifetime plus clock tolerance", async () => {
+    const { clients, clientKey } = await fixtures();
+    const options = await setup(clients);
+    const token = await assertion(clientKey.privateKey, { exp: NOW_SECONDS + 361 });
+
+    const result = await authenticate(options, {
+      client_id: "keyed",
+      client_assertion_type: ASSERTION_TYPE,
+      client_assertion: token,
+    });
+
+    expect(await errorOf(result)).toEqual({ status: 401, body: { error: "invalid_client" } });
+  });
+
+  it("rejects an assertion whose exp is ten years ahead", async () => {
+    const { clients, clientKey } = await fixtures();
+    const options = await setup(clients);
+    const token = await assertion(clientKey.privateKey, { exp: NOW_SECONDS + 10 * 365 * 24 * 3600 });
 
     const result = await authenticate(options, {
       client_id: "keyed",

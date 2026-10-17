@@ -6,7 +6,7 @@ export type OidcPathSegment = string | number;
 
 /**
  * OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 6749 §4.1.2.1 and
- * §5.2, RFC 6750 §3.1, and OpenID Connect Core §3.1.2.6.
+ * §5.2, RFC 6750 §3.1, RFC 7009 §2.2.1, and OpenID Connect Core §3.1.2.6.
  */
 export type OAuthErrorCode =
   | "invalid_request"
@@ -20,6 +20,7 @@ export type OAuthErrorCode =
   | "invalid_grant"
   | "unsupported_grant_type"
   | "invalid_token"
+  | "unsupported_token_type"
   | "insufficient_scope"
   | "interaction_required"
   | "login_required"
@@ -35,7 +36,10 @@ export type OAuthErrorCode =
  * Stable category of a failure that callers can branch on without parsing messages.
  *
  * Client codes come from `discover` and the client's methods; provider codes from
- * `beginAuthorization` and `completeAuthorization`, which reuse the OAuth error code the client is sent.
+ * `beginAuthorization` and `completeAuthorization`. A `beginAuthorization` failure that redirects reuses the OAuth
+ * error code the client is sent; only the codes it can send are listed, so an exhaustive `switch` has no dead
+ * branches. An OAuth code a provider sends to this client is reported as `provider_error` with the code in
+ * `params.error`.
  */
 export type OidcIssueCode =
   // Client: network and documents
@@ -62,7 +66,12 @@ export type OidcIssueCode =
   | "invalid_redirect_uri"
   | "interaction_not_found"
   // Provider: requests answered at the client's redirect URI
-  | OAuthErrorCode;
+  | "invalid_request"
+  | "unsupported_response_type"
+  | "invalid_scope"
+  | "request_not_supported"
+  | "request_uri_not_supported"
+  | "registration_not_supported";
 
 /**
  * A single reason an operation failed.
@@ -76,7 +85,14 @@ export interface OidcIssue {
   readonly code: OidcIssueCode;
   /** Location the issue refers to, such as `["callback", "state"]` or `["id_token", "payload", "exp"]`. */
   readonly path?: readonly OidcPathSegment[];
-  /** Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. */
+  /**
+   * Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a
+   * fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason`
+   * on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an
+   * {@link OAuthErrorCode} or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and
+   * that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders, and on
+   * `invalid_callback` a parameter failure: `duplicate`, `too_many`, `too_long` or `malformed`.
+   */
   readonly params?: Readonly<Record<string, string | number | boolean>>;
 }
 
@@ -127,6 +143,10 @@ export interface ProviderMetadata {
   readonly token_endpoint_auth_signing_alg_values_supported?: readonly string[];
   readonly claims_supported?: readonly string[];
   readonly code_challenge_methods_supported?: readonly string[];
+  /** The token revocation endpoint (RFC 7009, RFC 8414 §2). */
+  readonly revocation_endpoint?: string;
+  readonly revocation_endpoint_auth_methods_supported?: readonly string[];
+  readonly revocation_endpoint_auth_signing_alg_values_supported?: readonly string[];
   /** Whether the provider sends `iss` in authorization responses (RFC 9207). */
   readonly authorization_response_iss_parameter_supported?: boolean;
   readonly claims_parameter_supported?: boolean;

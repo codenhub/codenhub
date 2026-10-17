@@ -127,6 +127,58 @@ describe("discover", () => {
     ]);
   });
 
+  it("accepts a discovery document that starts with a byte order mark", async () => {
+    const bytes = new TextEncoder().encode(`﻿${JSON.stringify(validDocument())}`);
+    const withBom = new Response(bytes, { status: 200, headers: { "content-type": "application/json" } });
+
+    const result = await discover(ISSUER, { fetch: stubFetch(() => withBom) });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts a JSON content type with a charset parameter", async () => {
+    const withCharset = new Response(JSON.stringify(validDocument()), {
+      status: 200,
+      headers: { "content-type": "application/json; charset=utf-8" },
+    });
+
+    const result = await discover(ISSUER, { fetch: stubFetch(() => withCharset) });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("returns request_failed for a body over 64 KiB whose Content-Length understates it", async () => {
+    const oversized = new Response(JSON.stringify({ ...validDocument(), padding: "x".repeat(70_000) }), {
+      status: 200,
+      headers: { "content-type": "application/json", "content-length": "100" },
+    });
+
+    const result = await discover(ISSUER, { fetch: stubFetch(() => oversized) });
+
+    expect(issuesOf(result)).toEqual([
+      { code: "request_failed", params: { endpoint: "discovery", reason: "too_large" } },
+    ]);
+  });
+
+  it("returns request_failed with reason timeout when the body stalls after its first chunk", async () => {
+    vi.useFakeTimers();
+    const stalled = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('{"issuer":'));
+      },
+    });
+    const pending = discover(ISSUER, {
+      fetch: stubFetch(() => new Response(stalled, { status: 200, headers: { "content-type": "application/json" } })),
+      timeout: 1,
+    });
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(issuesOf(await pending)).toEqual([
+      { code: "request_failed", params: { endpoint: "discovery", reason: "timeout" } },
+    ]);
+  });
+
   it("returns request_failed with reason timeout when the response never arrives", async () => {
     vi.useFakeTimers();
     const pending = discover(ISSUER, { fetch: stubFetch(() => new Promise<Response>(() => {})), timeout: 1 });

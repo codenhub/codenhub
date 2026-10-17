@@ -86,6 +86,12 @@ describe("readBody", () => {
     expect(await readBody(request, 1024)).toEqual({ ok: true, text: "" });
   });
 
+  it("shouldReportUnreadableWhenBodyWasAlreadyConsumed", async () => {
+    const request = new Request(URL_UNDER_TEST, { method: "POST", body: "grant_type=refresh_token" });
+    await request.text();
+    expect(await readBody(request, 1024)).toEqual({ ok: false, reason: "unreadable" });
+  });
+
   it("shouldReportUnreadableWhenStreamErrors", async () => {
     const stream = new ReadableStream<Uint8Array>({
       start(controller) {

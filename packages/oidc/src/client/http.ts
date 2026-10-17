@@ -4,7 +4,7 @@ import { fail, ok } from "../shared/result";
 import type { OAuthErrorCode, OidcResult } from "../shared/types";
 
 /** Which provider endpoint a request went to, as `params.endpoint` of its issues. */
-export type Endpoint = "discovery" | "token" | "userinfo";
+export type Endpoint = "discovery" | "token" | "userinfo" | "revocation";
 
 /** Why a request failed, as `params.reason` of a `request_failed` issue. */
 type RequestFailureReason = "timeout" | "network" | "status" | "too_large" | "content_type" | "malformed";
@@ -19,6 +19,11 @@ export interface JsonRequest {
   readonly form?: URLSearchParams;
   readonly fetch: typeof fetch | undefined;
   readonly timeoutMs: number;
+  /**
+   * Accepts a `200` whatever its body, which is discarded and read as `{}`. A revocation response's body
+   * means nothing (RFC 7009 §2.2).
+   */
+  readonly ignoreOkBody?: boolean;
 }
 
 /** A JSON object response, of any status. */
@@ -48,6 +53,7 @@ const OAUTH_ERROR_CODES: ReadonlySet<string> = new Set<OAuthErrorCode>([
   "invalid_grant",
   "unsupported_grant_type",
   "invalid_token",
+  "unsupported_token_type",
   "insufficient_scope",
   "interaction_required",
   "login_required",
@@ -76,7 +82,8 @@ export const requestFailure = (endpoint: Endpoint, reason: RequestFailureReason,
  * followed: a provider endpoint that redirects is misconfigured or compromised, and following it would
  * send credentials to whoever controls the target.
  *
- * @returns The status and the parsed object, whatever the status, when the response is JSON; otherwise
+ * @returns The status and the parsed object, whatever the status, when the response is JSON. With
+ * `ignoreOkBody`, a `200` is accepted whatever its body, and its status and `{}` are returned. Otherwise
  * `request_failed` with a `reason`. Never throws.
  */
 export async function requestJson(request: JsonRequest): Promise<OidcResult<JsonResponse>> {
@@ -118,6 +125,10 @@ async function send(request: JsonRequest, signal: AbortSignal): Promise<OidcResu
     signal,
   });
   const { endpoint } = request;
+  if (request.ignoreOkBody === true && response.status === HTTP_OK) {
+    discardBody(response);
+    return ok({ status: HTTP_OK, body: {} });
+  }
   const isJson = /^application\/json\s*(;|$)/i.test(response.headers.get("content-type") ?? "");
   if (!isJson) {
     discardBody(response);
@@ -141,10 +152,13 @@ async function send(request: JsonRequest, signal: AbortSignal): Promise<OidcResu
   return body === undefined ? requestFailure(endpoint, "malformed") : ok({ status: response.status, body });
 }
 
-/** Parses strict UTF-8 JSON whose top level is an object. `undefined` for anything else. */
+/**
+ * Parses strict UTF-8 JSON whose top level is an object. A leading byte order mark is dropped, as RFC 8259
+ * section 8.1 allows. `undefined` for anything else.
+ */
 function parseObject(bytes: Uint8Array): Record<string, unknown> | undefined {
   try {
-    const parsed: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes));
+    const parsed: unknown = JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes));
     return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
       ? (parsed as Record<string, unknown>)
       : undefined;

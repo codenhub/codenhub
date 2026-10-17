@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
+import { MAX_URL_LENGTH } from "../shared/limits";
 import type { ProviderMetadata } from "../shared/types";
 import { buildAuthorization } from "./authorize";
 import { resolveClientOptions, type ResolvedClientOptions } from "./options";
@@ -289,6 +290,43 @@ describe("buildAuthorization", () => {
     expect((error as Error).message).toContain("loginHint");
   });
 
+  it("throws TypeError when loginHint is not well-formed Unicode", async () => {
+    const error = await refusalOf({ loginHint: "a\uD800b" });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("loginHint");
+  });
+
+  it("throws TypeError when the encoded URL is longer than the provider reads", async () => {
+    const error = await refusalOf({ loginHint: "\u{1F600}".repeat(2048) });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("8192");
+  });
+
+  // The endpoint may be up to MAX_PARAMETER_LENGTH long, so a padded endpoint leaves the request's own parameters
+  // room: a login hint of plain letters is copied one for one, and `&login_hint=` adds 12 characters.
+  const LOGIN_HINT_OVERHEAD = "&login_hint=".length;
+  const paddedEndpoint = `${ISSUER}/authorize?x=${"a".repeat(4000)}`;
+  const roomFor = async (): Promise<number> => {
+    const { url: base } = await buildAuthorization(resolvedOptions(paddedEndpoint));
+    return MAX_URL_LENGTH - base.length - LOGIN_HINT_OVERHEAD;
+  };
+
+  it("accepts a request whose URL is exactly at the provider's limit", async () => {
+    const hint = "a".repeat(await roomFor());
+    const { url } = await buildAuthorization(resolvedOptions(paddedEndpoint), { loginHint: hint });
+
+    expect(url.length).toBe(MAX_URL_LENGTH);
+  });
+
+  it("throws TypeError when the URL is one character over the provider's limit", async () => {
+    const hint = "a".repeat((await roomFor()) + 1);
+    const error = await buildAuthorization(resolvedOptions(paddedEndpoint), { loginHint: hint }).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(TypeError);
+  });
+
   it("throws TypeError when uiLocales is not an array", async () => {
     const error = await refusalOf({ uiLocales: "en" });
     expect(error).toBeInstanceOf(TypeError);
@@ -309,7 +347,7 @@ describe("buildAuthorization", () => {
     expect((error as Error).message).toContain("uiLocales");
   });
 
-  it.each([["pt BR"], [""], [" en"]])("throws TypeError for ui locale %j", async (locale) => {
+  it.each([["pt BR"], [""], [" en"], ["en\uD800"]])("throws TypeError for ui locale %j", async (locale) => {
     const error = await refusalOf({ uiLocales: [locale] });
     expect(error).toBeInstanceOf(TypeError);
     expect((error as Error).message).toContain("uiLocales");

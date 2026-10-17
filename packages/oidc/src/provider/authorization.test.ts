@@ -39,7 +39,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   clockMs = NOW_MS;
-  store = createMemoryStore({ clients: [client], now: () => clockMs });
+  store = createMemoryStore({ clients: [client] });
   options = resolveOptions({
     issuer: ISSUER,
     signingKeys: [keyPair],
@@ -200,6 +200,16 @@ describe("beginAuthorization", () => {
       expect(interaction).toMatchObject({ loginHint: "ana@example.test", uiLocales: ["fr", "en"] });
     });
 
+    it("shouldDropEmptyUiLocaleEntries", async () => {
+      const interaction = await beginOk(query({ ui_locales: "en  fr " }));
+      expect(interaction.uiLocales).toEqual(["en", "fr"]);
+    });
+
+    it("shouldTreatUiLocalesWithNoEntriesAsAbsent", async () => {
+      const interaction = await beginOk(query({ ui_locales: "  " }));
+      expect(interaction.uiLocales).toBeUndefined();
+    });
+
     it("shouldIgnoreUnknownParameters", async () => {
       const result = await beginAuthorization(
         options,
@@ -350,6 +360,27 @@ describe("completeAuthorization", () => {
     const location = locationOf(result.ok ? result.value : null);
     expect(`${location.origin}${location.pathname}`).toBe(REDIRECT_URI);
     expect(location.searchParams.get("code")).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(location.searchParams.get("state")).toBe(STATE);
+    expect(location.searchParams.get("iss")).toBe(ISSUER);
+  });
+
+  it("shouldKeepRegisteredQueryOnCodeRedirect", async () => {
+    const registered = "https://app.example/cb?a&team=a%20b&v=~1";
+    store = createMemoryStore({ clients: [{ ...client, redirectUris: [registered] }] });
+    options = resolveOptions({
+      issuer: ISSUER,
+      signingKeys: [keyPair],
+      store,
+      claims: () => ({}),
+      now: () => clockMs,
+    });
+    const interaction = await beginOk(query({ redirect_uri: registered }));
+    const result = await completeAuthorization(options, interaction.id, GRANT);
+    expect(result.ok).toBe(true);
+    const location = locationOf(result.ok ? result.value : null);
+    expect(location.href.startsWith(`${registered}&code=`)).toBe(true);
+    expect(location.searchParams.get("a")).toBe("");
+    expect(location.searchParams.get("team")).toBe("a b");
     expect(location.searchParams.get("state")).toBe(STATE);
     expect(location.searchParams.get("iss")).toBe(ISSUER);
   });

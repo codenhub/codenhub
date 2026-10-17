@@ -789,6 +789,110 @@ describe("userinfo", () => {
   });
 });
 
+describe("revoke", () => {
+  const REVOCATION_ENDPOINT = `${ISSUER}/revoke`;
+  const revoker = (reply: (request: Request) => Response, sent: Request[] = []): Client =>
+    createClient({
+      ...baseOptions(async (input, init) => {
+        const request = new Request(input, init);
+        sent.push(request);
+        return reply(request);
+      }),
+      metadata: { ...fakeMetadata, revocation_endpoint: REVOCATION_ENDPOINT },
+    });
+
+  it("posts the token and hint with the client's credentials, and accepts a 200 with any body", async () => {
+    const sent: Request[] = [];
+    const rp = revoker(() => new Response("ignored", { status: 200, headers: { "content-type": "text/plain" } }), sent);
+
+    const result = await rp.revoke({ token: "rt-1", tokenTypeHint: "refresh_token" });
+
+    expect(result).toEqual({ ok: true, value: undefined });
+    expect(sent[0]?.url).toBe(REVOCATION_ENDPOINT);
+    expect(sent[0]?.method).toBe("POST");
+    expect(Object.fromEntries(new URLSearchParams(await sent[0]?.text()))).toEqual({
+      token: "rt-1",
+      token_type_hint: "refresh_token",
+      client_id: CLIENT_ID,
+    });
+  });
+
+  it("reports an OAuth error as provider_error, and any other failure as request_failed", async () => {
+    const refused = await revoker(() => json({ error: "unsupported_token_type", error_description: "x" }, 400)).revoke({
+      token: "at-1",
+    });
+    const nonsense = await revoker(() => json({ error: "made_up_code" }, 400)).revoke({ token: "at-1" });
+    const broken = await revoker(() => new Response(null, { status: 503 })).revoke({ token: "at-1" });
+
+    expect(issuesOf(refused)).toEqual([
+      { code: "provider_error", params: { endpoint: "revocation", error: "unsupported_token_type" } },
+    ]);
+    expect(issuesOf(nonsense)).toEqual([
+      { code: "provider_error", params: { endpoint: "revocation", error: "unknown" } },
+    ]);
+    expect(issuesOf(broken)).toEqual([
+      { code: "request_failed", params: { endpoint: "revocation", reason: "status", status: 503 } },
+    ]);
+  });
+
+  it("throws a TypeError when the revocation endpoint does not list the client's auth method", async () => {
+    const rp = createClient({
+      ...baseOptions(async () => new Response(null)),
+      metadata: {
+        ...fakeMetadata,
+        revocation_endpoint: REVOCATION_ENDPOINT,
+        revocation_endpoint_auth_methods_supported: ["client_secret_basic"],
+      },
+    });
+
+    await expect(rp.revoke({ token: "at-1" })).rejects.toThrow(TypeError);
+    await expect(rp.revoke({ token: "at-1" })).rejects.toThrow(
+      "revoke: the client's auth method is not in metadata.revocation_endpoint_auth_methods_supported",
+    );
+  });
+
+  it("throws a TypeError when the revocation endpoint does not list the key's algorithm", async () => {
+    const rp = createClient({
+      ...baseOptions(async () => new Response(null)),
+      metadata: {
+        ...fakeMetadata,
+        revocation_endpoint: REVOCATION_ENDPOINT,
+        revocation_endpoint_auth_methods_supported: ["client_secret_jwt"],
+        revocation_endpoint_auth_signing_alg_values_supported: ["ES256"],
+      },
+      auth: { method: "client_secret_jwt", key: await generateSecretKey({ alg: "HS256" }) },
+    });
+
+    await expect(rp.revoke({ token: "at-1" })).rejects.toThrow(TypeError);
+  });
+
+  it("revokes when the revocation endpoint lists the client's method and key algorithm", async () => {
+    const rp = createClient({
+      ...baseOptions(async () => new Response(null, { status: 200 })),
+      metadata: {
+        ...fakeMetadata,
+        revocation_endpoint: REVOCATION_ENDPOINT,
+        revocation_endpoint_auth_methods_supported: ["client_secret_jwt"],
+        revocation_endpoint_auth_signing_alg_values_supported: ["HS256"],
+      },
+      auth: { method: "client_secret_jwt", key: await generateSecretKey({ alg: "HS256" }) },
+    });
+
+    await expect(rp.revoke({ token: "at-1" })).resolves.toEqual({ ok: true, value: undefined });
+  });
+
+  it("throws a TypeError for a provider without the endpoint, an empty token, or an unknown hint", async () => {
+    const withoutEndpoint = clientFor(createFakeOp());
+    const rp = revoker(() => new Response(null));
+
+    await expect(withoutEndpoint.revoke({ token: "at-1" })).rejects.toThrow(TypeError);
+    await expect(rp.revoke({ token: "" })).rejects.toThrow(TypeError);
+    await expect(rp.revoke({ token: "at-1", tokenTypeHint: "id_token" as unknown as "access_token" })).rejects.toThrow(
+      TypeError,
+    );
+  });
+});
+
 describe("leaks", () => {
   it("keeps the code, tokens, state, nonce, and verifier out of every failure", async () => {
     const op = createFakeOp();

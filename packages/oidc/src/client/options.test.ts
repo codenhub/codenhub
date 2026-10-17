@@ -215,6 +215,50 @@ describe("resolveClientOptions", () => {
     ).toThrow("auth.key");
   });
 
+  it("accepts private_key_jwt when the provider does not state its assertion algorithms", () => {
+    const resolved = resolveClientOptions(withOptions({ auth: { method: "private_key_jwt", key: privateKey } }));
+
+    expect(resolved.auth.method).toBe("private_key_jwt");
+  });
+
+  it("accepts private_key_jwt when the provider lists the key's algorithm", () => {
+    const resolved = resolveClientOptions(
+      withOptions({
+        auth: { method: "private_key_jwt", key: privateKey },
+        metadata: { ...validMetadata(), token_endpoint_auth_signing_alg_values_supported: ["RS256", "ES256"] },
+      }),
+    );
+
+    expect(resolved.auth.method).toBe("private_key_jwt");
+  });
+
+  it("throws TypeError for private_key_jwt when the provider does not list the key's algorithm", () => {
+    expect(() =>
+      resolveClientOptions(
+        withOptions({
+          auth: { method: "private_key_jwt", key: privateKey },
+          metadata: { ...validMetadata(), token_endpoint_auth_signing_alg_values_supported: ["RS256"] },
+        }),
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        name: "TypeError",
+        message: expect.stringContaining("token_endpoint_auth_signing_alg_values_supported"),
+      }),
+    );
+  });
+
+  it("throws TypeError for client_secret_jwt when the provider does not list the key's algorithm", () => {
+    expect(() =>
+      resolveClientOptions(
+        withOptions({
+          auth: { method: "client_secret_jwt", key: secretKey },
+          metadata: { ...validMetadata(), token_endpoint_auth_signing_alg_values_supported: ["RS256"] },
+        }),
+      ),
+    ).toThrow(expect.objectContaining({ name: "TypeError", message: expect.stringContaining("auth.key") }));
+  });
+
   it("accepts client_secret_jwt with a secret key", () => {
     const auth: ClientAuth = { method: "client_secret_jwt", key: secretKey };
 

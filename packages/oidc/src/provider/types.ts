@@ -21,7 +21,12 @@ export type ClientAuthentication =
 /** A registered client, as the store returns it. A malformed record throws `TypeError` when used. */
 export interface ClientRecord {
   readonly clientId: string;
-  /** Redirect URIs, each compared to the requested one byte for byte. Each must be an absolute URL without a fragment. */
+  /**
+   * Redirect URIs, each compared to the requested one byte for byte. The list must be non-empty, and the provider
+   * checks each entry when it reads the record and throws `TypeError` if one fails: it must be a non-empty
+   * string, an absolute URL, made of visible ASCII only (no space, control character or backslash), without a
+   * fragment (`#`) or credentials, and with a scheme other than `javascript:`, `data:`, `vbscript:` or `file:`.
+   */
   readonly redirectUris: readonly string[];
   /** Scopes this client may request. Must include `openid`. */
   readonly scopes: readonly string[];
@@ -102,17 +107,29 @@ export type Consumption<TRecord> =
 
 /**
  * Persistence the provider needs. The app implements it over its database; `@codenhub/oidc/testing` has
- * an in-memory reference.
+ * an in-memory reference, and `storeConformanceCases` there checks an adapter against this contract.
  *
  * Every key the provider passes for a code, token, or interaction is a SHA-256 digest of the value, never
- * the value itself, so a leaked store holds nothing usable. Interaction, code and token records are plain
- * JSON; a client record may hold `@codenhub/jwt` keys, which the app rebuilds from what it persists. Methods may throw or
+ * the value itself, so a leaked store holds no usable code, token or interaction. A client record is different:
+ * it may hold a `client_secret_jwt` HMAC key, which the provider needs in full, so a client record's credentials
+ * still need protection. Interaction, code and token records are plain JSON; a client record may hold
+ * `@codenhub/jwt` keys, which the app rebuilds from what it persists. Methods may throw or
  * reject on infrastructure failure; the provider lets that propagate rather than answering as if the
  * value were invalid.
  *
  * The `consume*` methods must be atomic: two concurrent calls for one key must never both get
  * `consumed`. A store without a compare-and-set or transaction, such as plain Cloudflare KV, cannot
- * implement them; use D1, a Durable Object, or a SQL transaction.
+ * implement them; use D1, a Durable Object, or a SQL transaction. The revocation check belongs to the same
+ * atomic step: a consumption that has not finished when `revokeGrant` resolves must not return `consumed`.
+ *
+ * Each `save*` method must reject when its key already exists, and must never reset a used entry, which
+ * would make a spent code or refresh token consumable again. The provider's keys are random digests, so
+ * this happens only through an adapter bug.
+ *
+ * Expiry is the provider's to check: a method returns a record whatever its `expiresAt`. No method purges,
+ * so the adapter deletes expired rows itself, such as with a scheduled job, keeping a used code or refresh
+ * token at least until its `expiresAt`, so a replay is still recognized, and a revoked grant's marker until
+ * the last token of that grant expires: `ttl.refreshToken` after the code exchange plus one `ttl.accessToken`, since an access token issued by the last refresh outlives its family.
  */
 export interface OidcStore {
   /** Looks up a registered client. `undefined` when none has this identifier. */
@@ -206,6 +223,68 @@ export interface ProviderEndpoints {
   readonly userinfo?: string;
   /** @defaultValue `${issuer}/jwks` */
   readonly jwks?: string;
+  /** Token revocation (RFC 7009). @defaultValue `${issuer}/revoke` */
+  readonly revocation?: string;
+}
+
+/**
+ * Why the provider refused a request at the token, userinfo, or revocation endpoint. The client is sent only
+ * the OAuth error code, so this is what an operator debugs with.
+ */
+export type ProviderDiagnosticReason =
+  // The request, before the client is known
+  | "content_type"
+  | "body"
+  | "parameters"
+  // Client authentication
+  | "client_credentials_missing"
+  | "client_credentials_ambiguous"
+  | "client_credentials_malformed"
+  | "client_unknown"
+  | "client_method_mismatch"
+  | "client_credentials_wrong"
+  // The token request
+  | "grant_type_missing"
+  | "grant_type_unsupported"
+  | "parameter_missing"
+  | "code_verifier_malformed"
+  | "code_unknown"
+  | "code_replayed"
+  | "code_expired"
+  | "code_client_mismatch"
+  | "redirect_uri_mismatch"
+  | "code_verifier_mismatch"
+  | "scope_invalid"
+  | "refresh_token_unknown"
+  | "refresh_token_replayed"
+  | "refresh_token_expired"
+  | "refresh_token_client_mismatch"
+  | "scope_not_granted"
+  // Userinfo
+  | "access_token_missing"
+  | "access_token_malformed"
+  | "access_token_unknown"
+  | "access_token_expired"
+  | "access_token_without_openid"
+  // Revocation
+  | "token_missing"
+  | "token_of_another_client";
+
+/**
+ * One refused request, for the operator's logs. It never holds a value the request carried: no token, code,
+ * secret, verifier, or unverified client identifier.
+ */
+export interface ProviderDiagnostic {
+  readonly endpoint: "token" | "userinfo" | "revocation";
+  readonly reason: ProviderDiagnosticReason;
+  /** The HTTP status the client was sent. */
+  readonly status: number;
+  /**
+   * The client, when the provider knows it from the store: the authenticated client, the registered client
+   * whose authentication failed, or the client a presented token belongs to. Absent when the request only
+   * named a client.
+   */
+  readonly clientId?: string;
 }
 
 /** How {@link createProvider} runs. Invalid options throw `TypeError` at creation. */
@@ -247,6 +326,17 @@ export interface ProviderOptions {
    * @defaultValue `Date.now`
    */
   readonly now?: () => number;
+  /**
+   * Called with the reason each time the token, userinfo, or revocation endpoint refuses a request, after the
+   * response is built and before `handle` resolves. The client only ever sees the OAuth error code, so this
+   * is how an operator tells an expired code from a wrong verifier. Like the store and the `claims` callback,
+   * an exception it throws makes `handle` reject. Authorization failures are not reported here, since
+   * `beginAuthorization` and `completeAuthorization` already return their issues.
+   *
+   * A returned promise is awaited before the response is returned, so an async callback that rejects makes
+   * `handle` reject with its error, as a synchronous throw does.
+   */
+  readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
 }
 
 /** An authorization request the app now handles: who the client is, and what it asked for. Frozen. */
@@ -256,7 +346,11 @@ export interface AuthorizationInteraction {
   readonly clientId: string;
   readonly redirectUri: string;
   readonly scopes: readonly string[];
-  /** `login` means authenticate again; `consent` means ask again; `none` means show nothing. */
+  /**
+   * `login` means authenticate again; `consent` means ask again; `none` means show nothing. The app performs the
+   * login or consent step itself; the provider checks the outcome the app reports to
+   * {@link Provider.completeAuthorization}, such as the `authTime` under `prompt=login`.
+   */
   readonly prompt: readonly Prompt[];
   /** Maximum seconds since the user last authenticated. */
   readonly maxAge?: number;
@@ -304,18 +398,20 @@ export interface Provider {
   /** The discovery document this provider publishes. */
   readonly metadata: ProviderMetadata;
   /**
-   * Answers the discovery, JWKS, token, and userinfo endpoints.
+   * Answers the discovery, JWKS, token, userinfo, and revocation endpoints.
    *
    * @returns The response, or `null` when the request is for none of those URLs. Never throws for any
-   * request; rejects only when the store or the `claims` callback does, or with a `TypeError` when the
-   * `claims` callback resolves to something that is not an object.
+   * request; rejects only when the store, the `claims` callback or `onDiagnostic` does, or with a
+   * `TypeError` when the `claims` callback resolves to something that is not an object or the store returns
+   * a malformed client record.
    */
   handle(request: Request): Promise<Response | null>;
   /**
    * Validates an authorization request and saves it as an interaction for the app's login and consent pages.
    *
    * @returns The interaction, or a failure whose `redirect` is the response to send, or `null` when the app
-   * must render an error itself. Never throws for any request; rejects only when the store does.
+   * must render an error itself. Never throws for any request; rejects only when the store does, or with a
+   * `TypeError` when the store returns a malformed client record.
    */
   beginAuthorization(request: Request): Promise<OidcResult<AuthorizationInteraction, AuthorizationFailure>>;
   /**

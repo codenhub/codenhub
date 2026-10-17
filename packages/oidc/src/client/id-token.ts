@@ -33,6 +33,17 @@ const AT_JWT = "at+jwt";
 const APPLICATION_PREFIX = /^application\//;
 
 const isNonEmptyString = (value: unknown): value is string => typeof value === "string" && value !== "";
+const isString = (value: unknown): value is string => typeof value === "string";
+const isStringArray = (value: unknown): value is readonly string[] => Array.isArray(value) && value.every(isString);
+
+/** Each optional claim `IdTokenClaims` types, and the type it must have when present (OpenID Connect Core §2). */
+const OPTIONAL_CLAIM_TYPES: readonly (readonly [string, (value: unknown) => boolean])[] = [
+  ["acr", isString],
+  ["amr", isStringArray],
+  ["azp", isString],
+  ["nonce", isString],
+  ["at_hash", isString],
+];
 
 /** A `typ` names an access token when, lowercased and without an `application/` prefix, it is `at+jwt` (RFC 9068 §2.1). */
 const isAccessTokenType = (typ: string | undefined): boolean =>
@@ -68,11 +79,14 @@ function fromJwtIssues(issues: readonly JwtIssue[]): OidcResult<never> {
   );
 }
 
-/** `azp` is required when the audience has more than one value, and when present it must be this client (OpenID Connect Core §3.1.3.7). */
+/**
+ * `azp` is required when the audience has more than one value, and when present it must be this client (OpenID Connect Core §3.1.3.7).
+ * A non-string `azp` is reported as its claim type, so it is not reported again here.
+ */
 function azpIssues(payload: JwtPayload, clientId: string): OidcIssue[] {
   const multipleAudiences = Array.isArray(payload.aud) && payload.aud.length > 1;
   const azpMissing = payload.azp === undefined && multipleAudiences;
-  const azpWrong = payload.azp !== undefined && payload.azp !== clientId;
+  const azpWrong = typeof payload.azp === "string" && payload.azp !== clientId;
   return azpMissing || azpWrong ? [{ code: "azp_mismatch", path: claimPath("azp") }] : [];
 }
 
@@ -138,18 +152,27 @@ async function claimIssues(
   if (!isNonEmptyString(payload.sub)) {
     issues.push(invalidClaim("sub"));
   }
+  // A claim of the wrong type is reported once, here, and the checks that read it below skip it.
+  const mistyped = new Set<string>();
+  for (const [claim, isValid] of OPTIONAL_CLAIM_TYPES) {
+    if (payload[claim] !== undefined && !isValid(payload[claim])) {
+      mistyped.add(claim);
+      issues.push(invalidClaim(claim));
+    }
+  }
   issues.push(...azpIssues(payload, options.clientId));
-  if (expected.nonce !== undefined) {
+  if (expected.nonce !== undefined && !mistyped.has("nonce")) {
     const matches = typeof payload.nonce === "string" && timingSafeEqual(payload.nonce, expected.nonce);
     if (!matches) {
       issues.push({ code: "nonce_mismatch", path: claimPath("nonce") });
     }
   }
   issues.push(...authTimeIssues(payload, expected, options));
-  if (expected.accessToken !== undefined) {
+  if (expected.accessToken !== undefined && !mistyped.has("at_hash")) {
     issues.push(...(await atHashIssues(payload, header, expected.accessToken)));
   }
-  if (expected.subject !== undefined && payload.sub !== expected.subject) {
+  // A `sub` that is empty or not a string is already reported as invalid_claim, so it is not compared as well.
+  if (expected.subject !== undefined && isNonEmptyString(payload.sub) && payload.sub !== expected.subject) {
     issues.push({ code: "subject_mismatch", path: claimPath("sub") });
   }
   return issues;
