@@ -71,18 +71,20 @@ The callback checks, in order: the URL and its parameters, `state` (constant-tim
 
 ## Limits
 
-| Limit                             | Value        | Why this value                                                                          |
-| --------------------------------- | ------------ | --------------------------------------------------------------------------------------- |
-| Request URL read by the provider  | 8192 chars   | Authorization requests are a few hundred characters; the cap is checked before parsing. |
-| Request body read by the provider | 16384 bytes  | A token request with an RSA-4096 client assertion is under 3 KB.                        |
-| Parameters per request            | 32           | A request uses at most about a dozen.                                                   |
-| Parameter length                  | 4096 chars   | Fits a client assertion signed with RSA-4096.                                           |
-| Response body read by the client  | 65536 bytes  | Discovery documents and token responses are a few kilobytes.                            |
-| Client request timeout            | 5 s, 1 to 60 | A slow provider should fail a sign-in, not hold it.                                     |
-| Code lifetime                     | 60 s, ≤ 600  | Invariant 4: short-lived, bounded.                                                      |
-| Interaction lifetime              | 1800 s       | Time for a user to sign in and consent.                                                 |
-| Access and ID token lifetime      | 600 s        | Short, since opaque access tokens are checked at the store anyway.                      |
-| Refresh token family lifetime     | 30 days      | Decision 11.                                                                            |
+| Limit                             | Value         | Why this value                                                                             |
+| --------------------------------- | ------------- | ------------------------------------------------------------------------------------------ |
+| Request URL read by the provider  | 8192 chars    | Authorization requests are a few hundred characters; the cap is checked before parsing.    |
+| Request body read by the provider | 16384 bytes   | A token request with an RSA-4096 client assertion is under 3 KB.                           |
+| Parameters per request            | 32            | A request uses at most about a dozen.                                                      |
+| Parameter length                  | 4096 chars    | Fits a client assertion signed with RSA-4096.                                              |
+| Response body read by the client  | 65536 bytes   | Discovery documents and token responses are a few kilobytes.                               |
+| Client request timeout            | 5 s, 1 to 60  | A slow provider should fail a sign-in, not hold it.                                        |
+| Client option list entries        | 100           | `scope`, `prompt` and `uiLocales` of `authorize` and `scope` of `refresh`; decision 22.    |
+| URL characters                    | Visible ASCII | Issuers, endpoints and redirect URIs; the URL parser rewrites anything else (decision 22). |
+| Code lifetime                     | 60 s, ≤ 600   | Invariant 4: short-lived, bounded.                                                         |
+| Interaction lifetime              | 1800 s        | Time for a user to sign in and consent.                                                    |
+| Access and ID token lifetime      | 600 s         | Short, since opaque access tokens are checked at the store anyway.                         |
+| Refresh token family lifetime     | 30 days       | Decision 11.                                                                               |
 
 ## Error model
 
