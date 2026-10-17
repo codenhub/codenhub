@@ -360,7 +360,7 @@ async function requestClientToken(
   if (!tokens.ok || (tokens.value.idToken === undefined && tokens.value.refreshToken === undefined)) {
     return tokens;
   }
-  // RFC 6749 §4.4.3: no refresh token belongs in this response, and no ID token is checked without a user.
+  // RFC 6749 §4.4.3: a refresh token SHOULD NOT be included, and no ID token is checked without a user.
   return ok(
     Object.fromEntries(
       Object.entries(tokens.value).filter(([name]) => name !== "idToken" && name !== "refreshToken"),

@@ -297,13 +297,11 @@ if (granted.ok) {
 
 `scope` is optional. Without it, the provider grants every scope the client is registered for, except `openid` and `offline_access`, which need a user. With it, the scope list must be a non-empty array of at most 100 scope tokens. A scope the provider refuses is `provider_error` with `params.error` of `invalid_scope`.
 
-`clientCredentials` rejects with `TypeError` when the options are not an object, when the client authenticates with `none`, when the metadata lists `grant_types_supported` without `client_credentials`, or when `scope` is not a non-empty array of at most 100 scope tokens. Any other failure is a result.
-
-The token set has no ID token and no refresh token. An ID token or a refresh token in the response is dropped: no user is signed in, and RFC 6749 §4.4.3 says no refresh token belongs in the response. Each token is its own grant, so `client.revoke` on one leaves the client's other tokens valid. Userinfo refuses such a token, because it has no `openid` scope.
+The token set has no ID token and no refresh token. An ID token or a refresh token in the response is dropped: no user is signed in, and RFC 6749 §4.4.3 says a refresh token SHOULD NOT be included. Each token is its own grant, so `client.revoke` on one leaves the client's other tokens valid. Userinfo refuses such a token, because it has no `openid` scope: this package's provider answers `403` with `insufficient_scope`, which `client.userinfo` reports as `request_failed` with `params.reason` of `status` and `params.status` of `403`.
 
 The provider must have registered the client for this grant. Otherwise the result is `provider_error` with `params.error` of `unauthorized_client`.
 
-`clientCredentials` throws `TypeError` when `auth.method` is `none`, since only a client that authenticates may use the grant. It also throws when the metadata lists `grant_types_supported` and does not include `client_credentials`, or when `options` or `scope` is invalid.
+`clientCredentials` rejects with `TypeError` when `auth.method` is `none`, since only a client that authenticates may use the grant. It also rejects when the metadata lists `grant_types_supported` and does not include `client_credentials`, or when `options` or `scope` is invalid.
 
 ## Client authentication
 

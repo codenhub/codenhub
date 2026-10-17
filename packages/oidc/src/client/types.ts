@@ -264,7 +264,8 @@ export interface Client {
    * §4.4), as a service calling an API does. No ID token or refresh token is involved: when the access token
    * expires, call it again.
    *
-   * @returns The tokens, or every issue found. An `id_token` or `refresh_token` in the response is dropped: nothing checks the one, and RFC 6749 §4.4.3 leaves the other out.
+   * @returns The tokens, or every issue found. An `id_token` or `refresh_token` in the response is dropped: nothing
+   * checks the one, and RFC 6749 §4.4.3 says the other SHOULD NOT be included.
    * Never throws for any response; it rejects only for the caller errors listed below.
    * @throws {TypeError} When the client authenticates with `none`, when the provider metadata lists
    * grant_types_supported without client_credentials, or when `scope` is not a non-empty array of at most 100
