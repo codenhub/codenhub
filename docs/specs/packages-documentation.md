@@ -10,7 +10,7 @@ This document defines how packages document consumer-facing behavior and maintai
 
 ## Compliance
 
-Every `private: false` workspace package MUST follow this spec, MUST opt in by declaring `codenhub.docs` as defined below, and MUST declare its package metadata as defined by `docs/specs/packages-metadata.md`. A package's location within the workspace does not change these requirements. Private packages MAY opt in to this spec by declaring the same opt-in and metadata. Private packages and apps without public documentation metadata are not required to comply unless another document says so.
+Every `private: false` workspace package MUST follow this spec, MUST opt in by declaring `codenhub.docs` as defined below, and MUST declare its package metadata as defined by `docs/specs/packages-metadata.md`. A package's location within the workspace does not change these requirements. Private packages MAY opt in to this spec by declaring the same opt-in and metadata. Private packages and apps without the `codenhub.docs` opt-in are not required to comply unless another document says so.
 
 Public packages MUST contain:
 

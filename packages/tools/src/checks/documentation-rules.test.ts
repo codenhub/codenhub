@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -134,6 +134,24 @@ describe("documentation rule", () => {
     });
 
     expect(await runRule("documentation", workspacePackage)).toEqual([]);
+  });
+
+  it("reports a logo that links to a file outside the package", async (context) => {
+    const outside = join(await mkdtemp(join(tmpdir(), "codenhub-logo-")), "logo.svg");
+    await writeFile(outside, "<svg/>", "utf8");
+    const workspacePackage = await createDocumentedPackage({
+      manifest: { codenhub: { label: "Example", logo: "logo.svg", status: "active", docs: {} } },
+    });
+    try {
+      await symlink(outside, join(workspacePackage.directory, "logo.svg"), "file");
+    } catch {
+      // Creating a symlink needs a privilege Windows grants only in developer mode.
+      context.skip();
+    }
+
+    expect((await runRule("documentation", workspacePackage)).map(({ code }) => code)).toEqual([
+      "documentation/missing-logo",
+    ]);
   });
 
   it("reports a logo that names no file", async () => {

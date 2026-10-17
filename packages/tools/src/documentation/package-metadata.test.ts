@@ -267,6 +267,27 @@ describe("package documentation catalog", () => {
     expect(buildPackageDefinitions({ "../../packages/example/package.json": manifest }, [])).toEqual([]);
   });
 
+  it("rejects a codenhub.docs field other than reference", () => {
+    expect(() =>
+      parsePackageMetadata(
+        { name: "@codenhub/example", codenhub: { label: "Example", status: "active", docs: { refrence: {} } } },
+        "package.json",
+      ),
+    ).toThrow("Invalid codenhub.docs.refrence");
+  });
+
+  it("omits an unlisted package from summaries when it does not opt into the documentation site", () => {
+    const manifests = {
+      "../../packages/example/package.json": {
+        name: "@codenhub/example",
+        private: false,
+        codenhub: { label: "Example", listed: false, status: "active" },
+      },
+    };
+
+    expect(buildPublicPackageSummaries(manifests, buildPackageDefinitions(manifests, []))).toEqual([]);
+  });
+
   it("returns null when codenhub declares neither identity nor docs", () => {
     expect(parsePackageMetadata({ name: "@codenhub/example", codenhub: { bundled: [] } }, "package.json")).toBeNull();
   });
@@ -279,7 +300,7 @@ describe("package documentation catalog", () => {
     ).toBe("assets/logo.svg");
   });
 
-  it.each(["../logo.svg", "/logo.svg", "./logo.svg", "assets\\logo.svg", "logo.png"])(
+  it.each(["../logo.svg", "/logo.svg", "C:/logo.svg", "./logo.svg", "assets\\logo.svg", "logo.png"])(
     "rejects the logo path %s",
     (logo) => {
       const manifest = createManifest();

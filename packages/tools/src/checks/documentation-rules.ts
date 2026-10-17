@@ -1,5 +1,5 @@
-import { readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile, realpath, stat } from "node:fs/promises";
+import { isAbsolute, join, relative, sep } from "node:path";
 
 import { UnsupportedFrontmatterError } from "../documentation/document-policy.ts";
 import { buildLlmsFull, listLlmsFullSources } from "../documentation/llms-full.ts";
@@ -52,11 +52,18 @@ function collectSlugOwners(workspacePackages: readonly WorkspacePackage[]): Map<
   return owners;
 }
 
-async function isFile(path: string): Promise<boolean> {
-  return stat(path).then(
-    (entry) => entry.isFile(),
-    () => false,
-  );
+// `stat` follows symlinks, so containment is judged on real paths: a link to a
+// file outside the package would pass here and be missing from a release tree.
+async function isFileWithin(root: string, path: string): Promise<boolean> {
+  try {
+    if (!(await stat(path)).isFile()) {
+      return false;
+    }
+    const relativePath = relative(await realpath(root), await realpath(path));
+    return relativePath !== "" && !isAbsolute(relativePath) && relativePath.split(sep)[0] !== "..";
+  } catch {
+    return false;
+  }
 }
 
 async function checkDocumentation(
@@ -93,7 +100,10 @@ async function checkDocumentation(
       severity: "error",
     });
   }
-  if (metadata?.logo !== undefined && !(await isFile(join(workspacePackage.directory, metadata.logo)))) {
+  if (
+    metadata?.logo !== undefined &&
+    !(await isFileWithin(workspacePackage.directory, join(workspacePackage.directory, metadata.logo)))
+  ) {
     findings.push({
       code: "documentation/missing-logo",
       location: "package.json",

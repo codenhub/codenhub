@@ -125,6 +125,7 @@ function getLogo(value: unknown, manifestPath: string): string | undefined {
   if (
     logo.includes("\\") ||
     logo.startsWith("/") ||
+    /^[A-Za-z]:/u.test(logo) ||
     segments.includes("..") ||
     segments.includes(".") ||
     !logo.endsWith(".svg")
@@ -161,6 +162,12 @@ export function parsePackageMetadata(value: unknown, manifestPath: string): Pack
   }
 
   const legacy = usesLegacyMetadata(manifest);
+  const unknownDocsField = legacy ? undefined : Object.keys(docs ?? {}).find((field) => field !== "reference");
+  if (unknownDocsField !== undefined) {
+    throw new Error(
+      `Invalid codenhub.docs.${unknownDocsField} in ${manifestPath}: codenhub.docs only holds "reference".`,
+    );
+  }
   if (legacy && declaresAny(codenhub, IDENTITY_FIELDS)) {
     throw new Error(
       `Invalid codenhub in ${manifestPath}: declare package metadata on codenhub, not inside codenhub.docs.`,
@@ -324,8 +331,11 @@ export function buildPublicPackageSummaries(
         throw new Error(`Invalid package name in ${rawManifestPath}: expected a non-empty string.`);
       }
 
+      // Identity is read here rather than taken from the definitions, which
+      // only hold packages that opt into the documentation site.
+      const metadata = parsePackageMetadata(value, rawManifestPath) ?? undefined;
       const definition = definitionsByManifestPath.get(normalizePath(rawManifestPath));
-      if (definition?.listed === false) {
+      if (metadata?.listed === false) {
         return [];
       }
 
@@ -336,13 +346,13 @@ export function buildPublicPackageSummaries(
 
       return [
         {
-          order: definition?.order,
+          order: metadata?.order,
           summary: {
-            description: definition?.description ?? manifestDescription,
+            description: metadata?.description ?? manifestDescription,
             documentationRoute: definition === undefined ? undefined : `/${definition.slug}/`,
-            label: definition?.label ?? manifest.name,
+            label: metadata?.label ?? manifest.name,
             name: manifest.name,
-            status: definition?.status,
+            status: metadata?.status,
           } satisfies PublicPackageSummary,
         },
       ];
