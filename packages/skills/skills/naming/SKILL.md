@@ -50,7 +50,7 @@ Write down the attributes from step 1: function, mechanism, feeling, promise, au
 - **Language roots.** Latin, Greek, Sanskrit, Japanese, Romance-language, and other words whose meaning fits (Manus is Latin for "hand", Vista is "view", Meta is "beyond").
 - **Arts and culture.** Musical and literary forms, archetypes, and roles (Opus, Sonnet, Rockstar).
 - **Nature.** Animals, plants, and landscapes whose behavior or character matches the thing.
-- **Coined forms.** Blends (Netflix, Pinterest), misspellings or truncations of a meaningful word (Google from googol), and invented words built from open syllables (Kodak, Xano).
+- **Coined forms.** Blends (Netflix, Pinterest), misspellings or truncations of a meaningful word (Google from googol), and invented words built from alternating consonants and vowels (Kodak, Xano).
 
 When the user brings names to judge, compare, or check, start at step 3 with their names, and generate new ones only if they ask or every name fails. Otherwise, generate 30 to 60 candidates across at least four lanes before judging any of them. Breadth across lanes beats synonyms within one lane: everyday words from the field are the easiest to think of and the most often taken, so if most of your pool comes from one lane, generate more in the others before moving on. For seeds, techniques, and the cautions that go with each lane, read [references/sources.md](references/sources.md).
 

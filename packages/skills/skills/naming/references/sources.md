@@ -122,5 +122,5 @@ Coined names are the easiest to own and the hardest to make meaningful. Build th
 - **Blend.** Join two words at a shared sound: Netflix, Pinterest, Microsoft, Instagram, Zillow (zillions and pillow).
 - **Truncate.** Cut a meaningful word down: Insta, Tumblr from tumbler.
 - **Respell.** Change a real word's spelling: Google from googol, Lyft. Respellings that drop vowels make people ask "how do you spell that?".
-- **Open-syllable coinage.** Alternate consonants and vowels into a word with no prior meaning, as in Kodak and Xano. Check that the result doesn't mean something in another language: Hulu, for example, is also a Chinese word for a gourd.
+- **Invented word.** Alternate consonants and vowels into a word with no prior meaning, as in Kodak and Xano. Check that the result doesn't mean something in another language: Hulu, for example, is also a Chinese word for a gourd.
 - **Acronym that reads as a word.** Tor works because it's sayable on its own. An acronym you have to spell out letter by letter rarely makes a good brand.
