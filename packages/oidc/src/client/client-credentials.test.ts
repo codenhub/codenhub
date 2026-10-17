@@ -77,6 +77,16 @@ describe("clientCredentials", () => {
     expect(result.ok && Object.hasOwn(result.value, "idToken")).toBe(false);
   });
 
+  it("drops a refresh_token from the response, since the grant has none", async () => {
+    const endpoint = tokenEndpoint(() => json({ access_token: "at-1", token_type: "Bearer", refresh_token: "rt-1" }));
+
+    const result = await serviceClient(endpoint.fetch).clientCredentials();
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && Object.hasOwn(result.value, "refreshToken")).toBe(false);
+    expect(result.ok && result.value.accessToken).toBe("at-1");
+  });
+
   it("reports a provider error as provider_error", async () => {
     const endpoint = tokenEndpoint(() => json({ error: "unauthorized_client" }, 400));
 

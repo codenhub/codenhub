@@ -357,10 +357,15 @@ async function requestClientToken(
     form.set("scope", scope.join(" "));
   }
   const tokens = await requestTokens(options, form);
-  if (!tokens.ok || tokens.value.idToken === undefined) {
+  if (!tokens.ok || (tokens.value.idToken === undefined && tokens.value.refreshToken === undefined)) {
     return tokens;
   }
-  return ok(Object.fromEntries(Object.entries(tokens.value).filter(([name]) => name !== "idToken")) as TokenSet);
+  // RFC 6749 §4.4.3: no refresh token belongs in this response, and no ID token is checked without a user.
+  return ok(
+    Object.fromEntries(
+      Object.entries(tokens.value).filter(([name]) => name !== "idToken" && name !== "refreshToken"),
+    ) as TokenSet,
+  );
 }
 
 /**
