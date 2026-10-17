@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-04
+last_updated: 2026-10-17
 scope: Public workspace packages.
 ---
 
@@ -217,6 +217,8 @@ Version changes SHOULD follow semantic versioning:
 Breaking changes MUST update the package README and any relevant `docs/` files in the same change.
 
 Pre-1.0 packages may move faster, but breaking changes MUST still be documented.
+
+Every release SHOULD aim to be the last before its next breaking change, whatever its version. Before publishing, settle what is known to need changing, and put no known change off to a later version: a public surface people have started to depend on costs more to change with every release. Moving to the next minor before 1.0, such as from 0.0.x to 0.1.0, is a judgment that the package is ready for what it was built for, not a date by which its surface may still be fixed. An experimental notice therefore names what has not been proven, such as an API no real consumer has used yet, and does not promise changes before a version. Rejected: treating 0.0.x releases as drafts whose surface is settled before 0.1, which defers known changes to a point that arrives only after consumers have adopted the earlier shape.
 
 Packages are also encouraged to track release history following `docs/specs/packages-changelog.md`; it's recommended, not required, and does not replace the README and `docs/` updates required above. A package that has opted in MUST keep its changelog in step with its version, which `hub check` enforces.
 
