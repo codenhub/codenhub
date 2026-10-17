@@ -66,7 +66,7 @@ export interface PublicPackageSummary {
   label: string;
   /** Published package name. */
   name: string;
-  /** Package status when the package declares public documentation. */
+  /** Package status from `codenhub.status`, when the package declares it. */
   status?: PackageStatus;
 }
 
