@@ -212,6 +212,8 @@ The authorization endpoint is served by the app, because the user's login and co
 `provider.beginAuthorization(request)` validates an authorization request. It accepts a `GET`, whose parameters are in the query, or a `POST` with an `application/x-www-form-urlencoded` body, whose `Content-Type` may carry only a UTF-8 `charset`, as the token endpoint requires. On success it saves the request as an interaction and returns it. On failure it returns a result whose `redirect` is either the response to return to the browser, or `null`:
 
 ```ts
+import type { AuthorizationInteraction } from "@codenhub/oidc/provider";
+
 async function authorize(request: Request): Promise<Response> {
   const begun = await provider.beginAuthorization(request);
   if (!begun.ok) {
