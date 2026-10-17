@@ -122,7 +122,7 @@ export type Consumption<TRecord> =
  * Expiry is the provider's to check: a method returns a record whatever its `expiresAt`. No method purges,
  * so the adapter deletes expired rows itself, such as with a scheduled job, keeping a used code or refresh
  * token at least until its `expiresAt`, so a replay is still recognized, and a revoked grant's marker until
- * the last token of that grant expires, at most `ttl.refreshToken` after the code exchange.
+ * the last token of that grant expires: `ttl.refreshToken` after the code exchange plus one `ttl.accessToken`, since an access token issued by the last refresh outlives its family.
  */
 export interface OidcStore {
   /** Looks up a registered client. `undefined` when none has this identifier. */

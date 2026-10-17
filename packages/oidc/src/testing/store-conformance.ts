@@ -471,20 +471,21 @@ const cases: StoreConformanceCase[] = [
  * Keys and grant identifiers are random per case, so cases never collide even when they share one database.
  * Failures are plain `Error`s whose message names the broken rule and never a key or token value.
  *
- * Wire the suite into a runner by calling each case with a factory for the adapter under test. With vitest:
+ * Wire the suite into a runner by calling each case with a factory for the adapter under test. With Node.js's
+ * built-in runner:
  *
  * @example
  * ```ts
- * import { describe, it } from "vitest";
+ * import { describe, test } from "node:test";
  * import { storeConformanceCases } from "@codenhub/oidc/testing";
  *
  * describe("OidcStore", () => {
  *   for (const c of storeConformanceCases) {
- *     it(c.name, () => c.run(() => createD1Store(env.DB)));
+ *     test(c.name, () => c.run(() => createD1Store(env.DB)));
  *   }
  * });
  * ```
  *
- * `node:test` works the same way, with `test` in place of `it`.
+ * Vitest and Jest work the same way, with their `describe` and `it`.
  */
 export const storeConformanceCases: readonly StoreConformanceCase[] = Object.freeze(cases);

@@ -155,7 +155,6 @@ export interface RefreshOptions {
   readonly scope?: readonly string[];
 }
 
-/** What to ask the userinfo endpoint. */
 /** What {@link Client.revoke} revokes. */
 export interface RevokeOptions {
   /** The access or refresh token to revoke. */
@@ -164,6 +163,7 @@ export interface RevokeOptions {
   readonly tokenTypeHint?: "access_token" | "refresh_token";
 }
 
+/** What to ask the userinfo endpoint. */
 export interface UserinfoOptions {
   readonly accessToken: string;
   /** The `sub` of the ID token. The response's `sub` must equal it (OpenID Connect Core §5.3.2). */
