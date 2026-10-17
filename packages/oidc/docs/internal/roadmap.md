@@ -12,14 +12,14 @@ This records what stands between 0.0.1 and a 0.1.0 the SSO application can build
 
 ## Current Focus
 
-0.0.1 is the first publish, and its purpose is to find out whether the package holds up in the SSO application. The criteria of scope.md section 7 hold: the authorization code flow works end to end, this client against this provider, on Node.js and workerd; every invariant has tests; the hostile-input, leak and interop suites pass. The release audit of 2026-10-17 settled every deferred item: client credentials, JWT access tokens and RP-initiated logout ship in 0.0.1 (scope.md decisions 35 to 37), and the other four are not planned (decision 38). A follow-up audit the same day fixed what it found and took decisions 40 to 42.
+0.0.1 is the first publish, and its purpose is to find out whether the package holds up in the SSO application. The criteria of scope.md section 7 hold: the authorization code flow works end to end, this client against this provider, on Node.js and workerd; every invariant has tests; the hostile-input, leak and interop suites pass. The release audit of 2026-10-17 settled every deferred item: client credentials, JWT access tokens and RP-initiated logout ship in 0.0.1 (scope.md decisions 35 to 37), and the other four are not planned (decision 38). A follow-up audit the same day fixed what it found and took decisions 40 to 42, and the publish-readiness audit took decision 43.
 
 ## Planned
 
 0.1.0 is released when scope.md section 7 "0.1 is done when" holds:
 
 - **The OpenID conformance suite.** The provider passes the Basic OP and Config OP plans; the client runs the RP tests where practical. The plans need a provider reachable from the suite's runner, so a small deployable host (a Worker, or a Node.js server) comes with this item. Discovery's `id_token_signing_alg_values_supported` must list `RS256` for the Config OP plan, so the conformance host signs with an RS256 key (scope.md decisions 30 and 39).
-- **What the SSO application finds.** Changes the first real consumer shows the public API needs, before it freezes at 0.1.
+- **What the SSO application finds.** 0.0.1 aims to be the last release before a breaking change (`docs/specs/packages-lifecycle.md`, "Versioning"), so nothing known is left to settle here. A change the first real consumer shows the public API needs ships in the release that makes it, as a breaking change if it is one; 0.1.0 is the judgment that the SSO application builds on the package without such changes.
 - **A changelog from 0.1.0**, opened by `hub release --cut` with the release, per `docs/specs/packages-changelog.md`.
 
 ## Later / Possible

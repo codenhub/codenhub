@@ -389,7 +389,10 @@ export interface ProviderOptions {
   readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
 }
 
-/** An authorization request the app now handles: who the client is, and what it asked for. Frozen. */
+/**
+ * An authorization request the app now handles: who the client is, and what it asked for. Frozen and
+ * JSON-serializable. Keep the whole value for the login and consent pages; the provider has no lookup by `id`.
+ */
 export interface AuthorizationInteraction {
   /** Pass this to {@link Provider.completeAuthorization}. Keep it where the user's browser cannot swap it for another user's, such as the app's session. */
   readonly id: string;

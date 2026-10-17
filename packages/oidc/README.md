@@ -2,7 +2,7 @@
 
 OidcKit is OpenID Connect for both sides of the exchange: a relying-party client that signs users in through an identity provider, and an OpenID Provider that issues the tokens. Both sides run on the Fetch API (`Request`, `Response`, `fetch`) and Web Crypto, and both use `@codenhub/jwt` for every signature. Anything the other side sends, such as a discovery document, a callback URL, a token response or a token, is untrusted input: an operation on it returns a result or an OAuth error response and never throws.
 
-> **Experimental:** 0.0.1, before its first minor release. Option names, the `OidcStore` contract, issue `params` and function names may change before 0.1.0. The security behavior in the docs is not expected to loosen.
+> **Experimental:** no real application has run on this API yet. Option names, the `OidcStore` contract, issue `params` and function names are meant to hold, but a real consumer may still show one must change; a breaking change ships as a new version with its migration documented. The security behavior in the docs is not expected to loosen.
 
 ## Installation
 
