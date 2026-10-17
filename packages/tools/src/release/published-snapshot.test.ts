@@ -339,13 +339,17 @@ describe("buildPublishedSnapshot logo", () => {
       resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.3.0"),
     });
 
-    const build = buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps);
+    // Settled first: the mock that creates the link runs partway through the build.
+    const error = await buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps).then(
+      () => undefined,
+      (cause: unknown) => cause,
+    );
     if (!canLink) {
-      await build.catch(() => undefined);
       // Creating a symlink needs a privilege Windows grants only in developer mode.
       context.skip();
     }
-    await expect(build).rejects.toThrow('declares codenhub.logo "logo.svg"');
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain('declares codenhub.logo "logo.svg"');
   });
 });
 
