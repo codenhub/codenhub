@@ -182,7 +182,7 @@ describe("handleToken: transport", () => {
   it("refuses an unknown grant_type with unsupported_grant_type", async () => {
     const { options } = await setup();
 
-    const response = await handleToken(options, tokenRequest("grant_type=client_credentials&client_id=public"));
+    const response = await handleToken(options, tokenRequest("grant_type=password&client_id=public"));
 
     expect(await errorOf(response)).toEqual({ status: 400, body: JSON.stringify({ error: "unsupported_grant_type" }) });
   });

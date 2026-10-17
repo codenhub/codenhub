@@ -326,7 +326,7 @@ describe("createIdTokenValidator", () => {
     it("refuses max_age when auth_time is missing", async () => {
       const result = await validator()(await tokenWith({}, { remove: ["auth_time"] }), {
         nonce: "nonce-1",
-        maxAge: 300,
+        maxAge: { seconds: 300, requestedAt: NOW_S },
       });
 
       expect(issuesOf(result)).toEqual([{ code: "auth_time_missing", path: ["id_token", "payload", "auth_time"] }]);
@@ -335,22 +335,53 @@ describe("createIdTokenValidator", () => {
     it("refuses max_age when the authentication is older than allowed", async () => {
       const result = await validator()(await tokenWith({ auth_time: NOW_S - 1000 }), {
         nonce: "nonce-1",
-        maxAge: 300,
+        maxAge: { seconds: 300, requestedAt: NOW_S },
       });
 
       expect(issuesOf(result)).toEqual([{ code: "auth_too_old", path: ["id_token", "payload", "auth_time"] }]);
     });
 
     it("accepts an authentication within max_age", async () => {
-      const result = await validator()(await tokenWith({ auth_time: NOW_S - 100 }), { nonce: "nonce-1", maxAge: 300 });
+      const result = await validator()(await tokenWith({ auth_time: NOW_S - 100 }), {
+        nonce: "nonce-1",
+        maxAge: { seconds: 300, requestedAt: NOW_S },
+      });
 
       expect(result.ok).toBe(true);
+    });
+
+    it("measures max_age at the request, not at the callback", async () => {
+      // Signed in 250 s before a request made 100 s ago: within max_age then, 350 s old now.
+      const result = await validator()(await tokenWith({ auth_time: NOW_S - 350 }), {
+        nonce: "nonce-1",
+        maxAge: { seconds: 300, requestedAt: NOW_S - 100 },
+      });
+
+      expect(result.ok).toBe(true);
+    });
+
+    it("accepts max_age=0 for an authentication after the request", async () => {
+      const result = await validator()(await tokenWith({ auth_time: NOW_S - 5 }), {
+        nonce: "nonce-1",
+        maxAge: { seconds: 0, requestedAt: NOW_S - 10 },
+      });
+
+      expect(result.ok).toBe(true);
+    });
+
+    it("refuses max_age=0 for an authentication before the request", async () => {
+      const result = await validator()(await tokenWith({ auth_time: NOW_S - 11 }), {
+        nonce: "nonce-1",
+        maxAge: { seconds: 0, requestedAt: NOW_S - 10 },
+      });
+
+      expect(issuesOf(result)).toEqual([{ code: "auth_too_old", path: ["id_token", "payload", "auth_time"] }]);
     });
 
     it("allows the clock tolerance on top of max_age", async () => {
       const result = await validatorWith(serveJwks(), 60)(await tokenWith({ auth_time: NOW_S - 350 }), {
         nonce: "nonce-1",
-        maxAge: 300,
+        maxAge: { seconds: 300, requestedAt: NOW_S },
       });
 
       expect(result.ok).toBe(true);
@@ -382,7 +413,11 @@ describe("createIdTokenValidator", () => {
     it("reports every failing claim in one result", async () => {
       const token = await tokenWith({ nonce: "nonce-2", auth_time: NOW_S - 1000 });
 
-      const result = await validator()(token, { nonce: "nonce-1", maxAge: 300, subject: "user-2" });
+      const result = await validator()(token, {
+        nonce: "nonce-1",
+        maxAge: { seconds: 300, requestedAt: NOW_S },
+        subject: "user-2",
+      });
 
       expect(issuesOf(result).map((issue) => issue.code)).toEqual([
         "nonce_mismatch",

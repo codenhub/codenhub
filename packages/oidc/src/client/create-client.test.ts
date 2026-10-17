@@ -236,6 +236,7 @@ describe("createClient", () => {
 
   it("refuses a missing or invalid option at creation, naming it", () => {
     expect(() => createClient({ ...baseOptions(createFakeOp().fetch), clientId: "" })).toThrow(TypeError);
+    expect(() => createClient({ ...baseOptions(createFakeOp().fetch), clientId: "" })).toThrow("clientId");
   });
 });
 
@@ -479,6 +480,15 @@ describe("callback", () => {
     const malformed = { ...pending, maxAge: -1 } as PendingAuthorization;
 
     await expect(rp.callback(url, malformed)).rejects.toThrow(TypeError);
+  });
+
+  it("throws a TypeError when pending.maxAge has no requestedAt", async () => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    const { pending, url } = await begin(op, rp, {}, { maxAge: 300 });
+    const malformed = { state: pending.state, nonce: pending.nonce, codeVerifier: pending.codeVerifier, maxAge: 300 };
+
+    await expect(rp.callback(url, malformed)).rejects.toThrow("pending.requestedAt");
   });
 
   it("throws a TypeError when the url is neither a string nor a URL", async () => {
@@ -787,6 +797,18 @@ describe("userinfo", () => {
 
     await expect(rp.userinfo({ accessToken: "", subject: "user-1" })).rejects.toThrow(TypeError);
   });
+
+  it.each([
+    ["a non-ASCII character", "at-\u20ac"],
+    ["a line break", "at-1\r\nx-injected: 1"],
+  ])(
+    "throws a TypeError for an access token with %s, rather than reporting a network failure",
+    async (_name, token) => {
+      const rp = clientFor(createFakeOp());
+
+      await expect(rp.userinfo({ accessToken: token, subject: "user-1" })).rejects.toThrow("userinfo: accessToken");
+    },
+  );
 });
 
 describe("revoke", () => {

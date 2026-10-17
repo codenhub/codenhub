@@ -2,6 +2,7 @@ import type { ProviderMetadata } from "../shared/types";
 import { beginAuthorization, completeAuthorization } from "./authorization";
 import { reportRefusal } from "./diagnostics";
 import { buildMetadata, createJwksDocument, type JwksDocument } from "./discovery";
+import { endSession } from "./end-session";
 import { type ResolvedEndpoints, type ResolvedOptions, resolveOptions } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse } from "./responses";
 import { handleRevocation } from "./revocation";
@@ -88,8 +89,8 @@ async function answerRequest(context: ProviderContext, request: Request): Promis
  * @remarks
  * The provider answers the discovery, JWKS, token, userinfo, and revocation endpoints through {@link Provider.handle},
  * and runs the authorization flow through {@link Provider.beginAuthorization} and
- * {@link Provider.completeAuthorization}. The authorization endpoint itself is not routed, so the app
- * serves it and calls `beginAuthorization` from its own handler. Options are validated here, once, so a
+ * {@link Provider.completeAuthorization}. The authorization and end-session endpoints are not routed, so the app
+ * serves them and calls `beginAuthorization` and {@link Provider.endSession} from its own handlers. Options are validated here, once, so a
  * misconfiguration fails at startup instead of on the first request. Key pairs are checked for shape,
  * algorithm and `kid` only: not that the two halves match, nor that the keys come from this package's
  * `@codenhub/jwt` copy.
@@ -133,5 +134,6 @@ export function createProvider(options: ProviderOptions): Provider {
     beginAuthorization: (request: Request) => beginAuthorization(resolved, request),
     completeAuthorization: (interactionId: string, outcome: AuthorizationGrant | AuthorizationDenial) =>
       completeAuthorization(resolved, interactionId, outcome),
+    endSession: (request: Request) => endSession(resolved, request),
   });
 }

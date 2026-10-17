@@ -17,8 +17,11 @@ import type { ResolvedClientOptions } from "./options";
 export interface IdTokenExpectations {
   /** The nonce sent with the authorization request. The token must carry the same one. */
   readonly nonce?: string;
-  /** The `max_age` requested, in seconds. The token must carry `auth_time` no older than this. */
-  readonly maxAge?: number;
+  /**
+   * The `max_age` requested, in seconds, and when the request was made. The token must carry an `auth_time` no
+   * more than `maxAge` seconds before the request.
+   */
+  readonly maxAge?: { readonly seconds: number; readonly requestedAt: number };
   /** The access token issued with the ID token, for `at_hash`. */
   readonly accessToken?: string;
   /** The `sub` the token must carry, such as the one a refresh continues. */
@@ -112,8 +115,10 @@ function authTimeIssues(
   if (typeof authTime !== "number" || !Number.isFinite(authTime)) {
     return [];
   }
-  const ageSeconds = options.now() / MILLISECONDS_PER_SECOND - authTime;
-  return ageSeconds > expected.maxAge + options.clockTolerance
+  // Measured at the request, as the provider measures it (OpenID Connect Core §3.1.2.1): time the user spends
+  // signing in does not count, and max_age=0 means an authentication after the request.
+  const { seconds, requestedAt } = expected.maxAge;
+  return requestedAt - authTime > seconds + options.clockTolerance
     ? [{ code: "auth_too_old", path: claimPath("auth_time") }]
     : [];
 }

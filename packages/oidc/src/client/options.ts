@@ -20,7 +20,7 @@ const SECONDS_TO_MILLISECONDS = 1000;
 export interface ResolvedClientOptions {
   readonly metadata: ProviderMetadata;
   readonly clientId: string;
-  readonly redirectUri: string;
+  readonly redirectUri: string | undefined;
   readonly auth: ClientAuth;
   readonly fetch: typeof fetch | undefined;
   readonly timeoutMs: number;
@@ -107,9 +107,9 @@ function readClientId(clientId: unknown): string {
   return clientId;
 }
 
-function readRedirectUri(redirectUri: unknown): string {
+function readRedirectUri(redirectUri: unknown): string | undefined {
   // `isRedirectUri` accepts visible ASCII only, which also refuses a lone surrogate.
-  if (!isRedirectUri(redirectUri)) {
+  if (redirectUri !== undefined && !isRedirectUri(redirectUri)) {
     throw new TypeError(
       `${PREFIX} redirectUri must be an absolute URI of visible ASCII, without fragment or credentials, and not javascript:, data:, vbscript: or file:`,
     );

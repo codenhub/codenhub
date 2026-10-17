@@ -22,6 +22,7 @@ type Scenario = (modules: Modules) => Promise<void>;
 
 const ISSUER = "https://op.example";
 const REDIRECT_URI = "https://app.example/callback";
+const SIGNED_OUT_URI = "https://app.example/signed-out";
 
 function check(condition: boolean, what: string): void {
   if (!condition) {
@@ -32,7 +33,7 @@ function check(condition: boolean, what: string): void {
 type AuthMethod = "none" | "client_secret_basic" | "client_secret_post" | "client_secret_jwt" | "private_key_jwt";
 
 /** A provider and a `fetch` that answers the client's requests from it, with no network. */
-async function setUp(modules: Modules, auth: AuthMethod) {
+async function setUp(modules: Modules, auth: AuthMethod, accessToken?: providerModule.AccessTokenFormat) {
   const { jwt, provider, testing } = modules;
   const signingKey = await jwt.generateKeyPair({ alg: "ES256", kid: "op-1" });
   const secret = provider.generateClientSecret();
@@ -55,6 +56,7 @@ async function setUp(modules: Modules, auth: AuthMethod) {
         redirectUris: [REDIRECT_URI],
         scopes: ["openid", "profile", "offline_access"],
         auth: registered,
+        postLogoutRedirectUris: [SIGNED_OUT_URI],
       },
     ],
   });
@@ -63,6 +65,7 @@ async function setUp(modules: Modules, auth: AuthMethod) {
     signingKeys: [signingKey],
     store,
     claims: ({ subject }) => ({ name: `User ${subject}`, email: "never-released@example.com" }),
+    ...(accessToken === undefined ? {} : { accessToken }),
   });
   const fetchFromProvider: typeof fetch = async (input, init) =>
     (await op.handle(new Request(input, init))) ?? new Response(null, { status: 404 });
@@ -76,12 +79,17 @@ async function setUp(modules: Modules, auth: AuthMethod) {
           : auth === "client_secret_jwt"
             ? ({ method: "client_secret_jwt", key: hmacKey } as const)
             : ({ method: "private_key_jwt", key: clientKey.privateKey } as const);
-  return { op, fetchFromProvider, clientAuth };
+  return { op, fetchFromProvider, clientAuth, signingKey };
 }
 
 /** Runs a sign-in through the provider's authorization step, as the app's login page would. */
-async function signIn(modules: Modules, auth: AuthMethod) {
-  const { op, fetchFromProvider, clientAuth } = await setUp(modules, auth);
+async function signIn(
+  modules: Modules,
+  auth: AuthMethod,
+  maxAge = 300,
+  accessToken?: providerModule.AccessTokenFormat,
+) {
+  const { op, fetchFromProvider, clientAuth, signingKey } = await setUp(modules, auth, accessToken);
   const discovered = await modules.client.discover(ISSUER, { fetch: fetchFromProvider });
   check(discovered.ok, "discovery failed");
   if (!discovered.ok) {
@@ -97,7 +105,7 @@ async function signIn(modules: Modules, auth: AuthMethod) {
   const { url, pending } = await rp.authorize({
     scope: ["openid", "profile", "offline_access"],
     prompt: ["consent"],
-    maxAge: 300,
+    maxAge,
   });
   const begun = await op.beginAuthorization(new Request(url));
   check(begun.ok, "beginAuthorization failed");
@@ -120,7 +128,7 @@ async function signIn(modules: Modules, auth: AuthMethod) {
   if (!signedIn.ok) {
     throw new Error("unreachable");
   }
-  return { rp, signedIn: signedIn.value };
+  return { rp, signedIn: signedIn.value, signingKey };
 }
 
 const signInWith =
@@ -140,6 +148,27 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
   "signs in with client_secret_post": signInWith("client_secret_post"),
   "signs in with client_secret_jwt": signInWith("client_secret_jwt"),
   "signs in with private_key_jwt": signInWith("private_key_jwt"),
+
+  // max_age=0 asks for a login after the request, which the app reports as now.
+  "signs in under max_age=0": async (modules) => {
+    const { signedIn } = await signIn(modules, "none", 0);
+    check(signedIn.claims.sub === "user-1", "wrong sub");
+  },
+
+  "issues JWT access tokens a resource server verifies": async (modules) => {
+    const audience = "https://api.example";
+    const { rp, signedIn, signingKey } = await signIn(modules, "none", 300, { format: "jwt", audience });
+    const verify = modules.jwt.createVerifier({
+      keys: modules.jwt.createKeySet([signingKey.publicKey]),
+      issuer: ISSUER,
+      audience,
+      type: "at+jwt",
+    });
+    const verified = await verify(signedIn.tokens.accessToken);
+    check(verified.ok && verified.value.payload.sub === "user-1", "access token did not verify as at+jwt");
+    const claims = await rp.userinfo({ accessToken: signedIn.tokens.accessToken, subject: "user-1" });
+    check(claims.ok, "userinfo refused a JWT access token");
+  },
 
   "fetches userinfo for the granted scopes": async (modules) => {
     const { rp, signedIn } = await signIn(modules, "none");
@@ -166,6 +195,23 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
     check(!claims.ok, "access token not revoked after reuse");
   },
 
+  "logs out at the provider and returns to the app": async (modules) => {
+    const { rp, signedIn } = await signIn(modules, "none");
+    const url = rp.endSessionUrl({
+      idTokenHint: signedIn.tokens.idToken,
+      postLogoutRedirectUri: SIGNED_OUT_URI,
+      state: "bye",
+    });
+    const { op } = await setUp(modules, "none");
+    // A second provider with other keys cannot verify the hint, so it names no user but still redirects.
+    const foreign = await op.endSession(new Request(url));
+    check(foreign.ok && foreign.value.subject === undefined, "a hint from other keys named a user");
+    check(
+      foreign.ok && foreign.value.redirect?.headers.get("location") === `${SIGNED_OUT_URI}?state=bye`,
+      "no redirect to the registered URI",
+    );
+  },
+
   "revokes a sign-in from the client": async (modules) => {
     const { rp, signedIn } = await signIn(modules, "client_secret_basic");
     const revoked = await rp.revoke({ token: signedIn.tokens.refreshToken as string, tokenTypeHint: "refresh_token" });
@@ -174,6 +220,56 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
     check(!claims.ok, "access token not revoked with its refresh token");
     const again = await rp.revoke({ token: signedIn.tokens.accessToken });
     check(again.ok, "revoking a revoked token was not answered 200");
+  },
+
+  "gets a client_credentials token and revokes it": async (modules) => {
+    const { jwt, provider, testing, client } = modules;
+    const secret = provider.generateClientSecret();
+    const store = testing.createMemoryStore({
+      clients: [
+        {
+          clientId: "service",
+          redirectUris: [],
+          scopes: ["orders:read"],
+          auth: { method: "client_secret_post", secretHash: await provider.hashClientSecret(secret) },
+          grantTypes: ["client_credentials"],
+        },
+      ],
+    });
+    const op = provider.createProvider({
+      issuer: ISSUER,
+      signingKeys: [await jwt.generateKeyPair({ alg: "ES256", kid: "op-1" })],
+      store,
+      claims: () => ({}),
+      scopes: { "orders:read": [] },
+    });
+    const fetchFromProvider: typeof fetch = async (input, init) =>
+      (await op.handle(new Request(input, init))) ?? new Response(null, { status: 404 });
+    const service = client.createClient({
+      metadata: op.metadata,
+      clientId: "service",
+      auth: { method: "client_secret_post", secret },
+      fetch: fetchFromProvider,
+    });
+    const tokens = await service.clientCredentials();
+    check(tokens.ok, `client_credentials failed: ${JSON.stringify(tokens)}`);
+    if (!tokens.ok) {
+      throw new Error("unreachable");
+    }
+    check(tokens.value.scope?.join(" ") === "orders:read", "wrong scope");
+    check(tokens.value.refreshToken === undefined && tokens.value.idToken === undefined, "unexpected tokens");
+    const revoked = await service.revoke({ token: tokens.value.accessToken });
+    check(revoked.ok, "revoke failed");
+  },
+
+  // Run here as well as on Node.js because a bundler once dropped the check as dead code.
+  "refuses invalid UTF-8 escapes": async (modules) => {
+    const { op } = await setUp(modules, "none");
+    const begun = await op.beginAuthorization(new Request(`${ISSUER}/authorize?client_id=app&login_hint=%E9`));
+    check(
+      !begun.ok && begun.error.redirect === null && begun.error.issues[0]?.params?.reason === "malformed",
+      `invalid escape accepted: ${JSON.stringify(begun)}`,
+    );
   },
 };
 

@@ -1,6 +1,7 @@
 export { createProvider } from "./provider/create-provider";
 export { generateClientSecret, hashClientSecret } from "./provider/secrets";
 export type {
+  AccessTokenFormat,
   AccessTokenRecord,
   AuthorizationDenial,
   AuthorizationFailure,
@@ -11,6 +12,8 @@ export type {
   ClientRecord,
   CodeRecord,
   Consumption,
+  EndSession,
+  GrantType,
   InteractionRecord,
   OidcStore,
   Provider,

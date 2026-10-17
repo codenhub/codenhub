@@ -16,6 +16,7 @@ const LANGUAGE_TAG = /^\S+$/;
 /** The provider reads max_age only as one to nine digits, so a larger value would be refused after the redirect. */
 const MAX_AGE_LIMIT = 999999999;
 const RESPONSE_TYPE = "code";
+const MILLISECONDS_PER_SECOND = 1000;
 const CODE_CHALLENGE_METHOD = "S256";
 
 /** The validated, normalized request. Every field is ready to send. */
@@ -115,33 +116,39 @@ function readMaxAge(maxAge: number | undefined): number | undefined {
   return maxAge;
 }
 
-function readLoginHint(loginHint: string | undefined): string | undefined {
-  if (loginHint !== undefined && typeof loginHint !== "string") {
-    throw new TypeError("authorize: loginHint must be a string");
+/** Reads an optional string parameter, such as a hint, sent as given. `name` is the option the message names. */
+export function readOptionalString(value: unknown, name: string): string | undefined {
+  if (value !== undefined && typeof value !== "string") {
+    throw new TypeError(`${name} must be a string`);
   }
-  // A lone surrogate would be sent as U+FFFD, so the provider would see a different hint than the caller gave.
-  if (loginHint !== undefined && !loginHint.isWellFormed()) {
-    throw new TypeError("authorize: loginHint must be a string of well-formed Unicode");
+  // A lone surrogate would be sent as U+FFFD, so the provider would see a different value than the caller gave.
+  if (value !== undefined && !value.isWellFormed()) {
+    throw new TypeError(`${name} must be a string of well-formed Unicode`);
   }
-  if (loginHint !== undefined && loginHint.length > MAX_PARAMETER_LENGTH) {
-    throw new TypeError("authorize: loginHint is longer than the provider accepts");
+  if (value !== undefined && value.length > MAX_PARAMETER_LENGTH) {
+    throw new TypeError(`${name} is longer than the provider accepts`);
   }
-  return loginHint;
+  return value;
 }
 
-function readUiLocales(uiLocales: readonly string[] | undefined): readonly string[] {
+function readLoginHint(loginHint: string | undefined): string | undefined {
+  return readOptionalString(loginHint, "authorize: loginHint");
+}
+
+/** Reads `ui_locales` for a request. `caller` is the method the message names. */
+export function readUiLocales(uiLocales: readonly string[] | undefined, caller = "authorize"): readonly string[] {
   if (uiLocales === undefined) {
     return [];
   }
   const copy = denseCopy(uiLocales);
   if (copy === undefined || !copy.every(isLanguageTag)) {
     throw new TypeError(
-      "authorize: uiLocales must be an array of at most 100 non-empty strings of well-formed Unicode without spaces",
+      `${caller}: uiLocales must be an array of at most 100 non-empty strings of well-formed Unicode without spaces`,
     );
   }
   const joined = (copy as string[]).join(" ");
   if (joined.length > MAX_PARAMETER_LENGTH) {
-    throw new TypeError("authorize: uiLocales is longer than the provider accepts");
+    throw new TypeError(`${caller}: uiLocales is longer than the provider accepts`);
   }
   return copy as string[];
 }
@@ -157,16 +164,25 @@ function readRequest(request: AuthorizeOptions): ReadRequest {
   };
 }
 
+/** The client's redirect URI, which signing a user in needs. A client made for `client_credentials` alone has none. */
+export function requireRedirectUri(options: ResolvedClientOptions, caller: string): string {
+  if (options.redirectUri === undefined) {
+    throw new TypeError(`${caller}: createClient needs a redirectUri to sign users in`);
+  }
+  return options.redirectUri;
+}
+
 /** The parameters every request sends, in the order OpenID Connect Core §3.1.2.1 lists them. */
 function requiredParameters(
   options: ResolvedClientOptions,
+  redirectUri: string,
   request: ReadRequest,
   values: { readonly state: string; readonly nonce: string; readonly codeChallenge: string },
 ): [string, string][] {
   return [
     ["response_type", RESPONSE_TYPE],
     ["client_id", options.clientId],
-    ["redirect_uri", options.redirectUri],
+    ["redirect_uri", redirectUri],
     ["scope", request.scope.join(" ")],
     ["state", values.state],
     ["nonce", values.nonce],
@@ -201,7 +217,8 @@ function optionalParameters(request: ReadRequest): [string, string][] {
  *
  * @param options - The resolved client options, supplying the endpoint, client, and redirect URI.
  * @param request - What to ask for. Omitted, it requests `openid` alone.
- * @returns The frozen URL and pending state. `pending.maxAge` is present only when `maxAge` was requested.
+ * @returns The frozen URL and pending state. `pending.maxAge` and `pending.requestedAt` are present only when
+ * `maxAge` was requested.
  * @throws {TypeError} When `request` is invalid, or when the URL it makes is longer than the provider reads. The
  * message names the option or the limit and never its value or the URL.
  */
@@ -212,6 +229,7 @@ export async function buildAuthorization(
   if (typeof request !== "object" || request === null) {
     throw new TypeError("authorize: options must be an object");
   }
+  const redirectUri = requireRedirectUri(options, "authorize");
   const read = readRequest(request);
   const state = randomToken();
   const nonce = randomToken();
@@ -220,7 +238,7 @@ export async function buildAuthorization(
 
   const url = new URL(options.metadata.authorization_endpoint);
   const parameters = [
-    ...requiredParameters(options, read, { state, nonce, codeChallenge }),
+    ...requiredParameters(options, redirectUri, read, { state, nonce, codeChallenge }),
     ...optionalParameters(read),
   ];
   for (const [name, value] of parameters) {
@@ -232,7 +250,16 @@ export async function buildAuthorization(
     throw new TypeError(`authorize: the authorization request URL is longer than ${MAX_URL_LENGTH} characters`);
   }
 
+  // max_age is measured when the request is made (OpenID Connect Core §3.1.2.1), so the callback needs that time.
   const pending: PendingAuthorization =
-    read.maxAge === undefined ? { state, nonce, codeVerifier } : { state, nonce, codeVerifier, maxAge: read.maxAge };
+    read.maxAge === undefined
+      ? { state, nonce, codeVerifier }
+      : {
+          state,
+          nonce,
+          codeVerifier,
+          maxAge: read.maxAge,
+          requestedAt: Math.floor(options.now() / MILLISECONDS_PER_SECOND),
+        };
   return deepFreeze({ url: url.href, pending });
 }

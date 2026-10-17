@@ -71,6 +71,8 @@ const MEMBER_RULES: readonly MemberRule[] = [
   required("jwks_uri", isHttpsUrl),
   optional("userinfo_endpoint", isHttpsUrl),
   optional("revocation_endpoint", isHttpsUrl),
+  // Capped like the authorization endpoint, since the logout request is also a URL the browser is sent to.
+  optional("end_session_endpoint", isShortHttpsUrl),
   required("response_types_supported", includesString(RESPONSE_TYPE_CODE)),
   required("subject_types_supported", isStringArray),
   required("id_token_signing_alg_values_supported", includesAnyOf(ID_TOKEN_ALGORITHMS)),

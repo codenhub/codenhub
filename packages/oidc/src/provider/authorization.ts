@@ -1,7 +1,4 @@
-import { readBody } from "../shared/body";
 import { digestKey, randomToken } from "../shared/encoding";
-import { MAX_BODY_BYTES, MAX_URL_LENGTH } from "../shared/limits";
-import { parseParameters } from "../shared/parameters";
 import { isCodeChallenge } from "../shared/pkce";
 import { fail, failWith, ok } from "../shared/result";
 import type {
@@ -13,7 +10,8 @@ import type {
   OidcResult,
   Prompt,
 } from "../shared/types";
-import { checkClientRecord } from "./client-record";
+import { type CheckedClient, checkClientRecord } from "./client-record";
+import { readFrontChannelParameters } from "./front-channel";
 import type { ResolvedOptions } from "./options";
 import { redirectResponse } from "./responses";
 import type {
@@ -57,12 +55,11 @@ interface ValidatedRequest {
 /** What the checks after client verification read from. */
 interface RequestContext {
   readonly options: ResolvedOptions;
-  readonly client: ClientRecord;
+  readonly client: CheckedClient;
   readonly parameters: ParameterMap;
   readonly target: RedirectTarget;
 }
 
-const FORM_MEDIA_TYPE = "application/x-www-form-urlencoded";
 const MAX_AGE_PATTERN = /^\d{1,9}$/;
 const PROMPTS: readonly Prompt[] = ["none", "login", "consent", "select_account"];
 /** The OAuth codes a validation failure redirects with, which are also its issue codes. */
@@ -94,9 +91,6 @@ export async function beginAuthorization(
   options: ResolvedOptions,
   request: Request,
 ): Promise<OidcResult<AuthorizationInteraction, AuthorizationFailure>> {
-  if (request.url.length > MAX_URL_LENGTH) {
-    return renderError(issueOf("invalid_request"));
-  }
   const parameters = await readParameters(request);
   if (!parameters.ok) {
     return parameters;
@@ -189,40 +183,15 @@ function targetOf(options: ResolvedOptions, interaction: InteractionRecord): Red
 
 /** Reads the parameters from the query for GET or from the form body for POST, refusing anything else. */
 async function readParameters(request: Request): Promise<Checked<ParameterMap>> {
-  const text = await readRequestText(request);
-  if (text === undefined) {
-    return renderError(issueOf("invalid_request"));
+  const read = await readFrontChannelParameters(request);
+  if (!read.ok) {
+    return renderError(
+      read.reason === undefined
+        ? issueOf("invalid_request")
+        : { code: "invalid_request", params: { reason: read.reason } },
+    );
   }
-  const parsed = parseParameters(text);
-  if (!parsed.ok) {
-    return renderError({ code: "invalid_request", params: { reason: parsed.reason } });
-  }
-  return { ok: true, value: parsed.parameters };
-}
-
-/**
- * The raw query or form text, or `undefined` for a method or body this endpoint refuses.
- *
- * POST reads the body alone: parameters in the URL of a POST are not part of the request this endpoint answers.
- */
-async function readRequestText(request: Request): Promise<string | undefined> {
-  if (request.method === "GET") {
-    return new URL(request.url).search.slice(1);
-  }
-  if (request.method !== "POST" || !isFormContentType(request.headers.get("content-type"))) {
-    return undefined;
-  }
-  const body = await readBody(request, MAX_BODY_BYTES);
-  return body.ok ? body.text : undefined;
-}
-
-/** Tests for the form media type, ignoring its parameters and letter case. */
-function isFormContentType(contentType: string | null): boolean {
-  if (contentType === null) {
-    return false;
-  }
-  const [mediaType = ""] = contentType.split(";");
-  return mediaType.trim().toLowerCase() === FORM_MEDIA_TYPE;
+  return { ok: true, value: read.parameters };
 }
 
 /**
@@ -231,7 +200,7 @@ function isFormContentType(contentType: string | null): boolean {
  * Results are returned as plain objects rather than through `ok`, because `ok` deep-freezes its value and
  * that would freeze the app's own client record.
  */
-async function lookupClient(options: ResolvedOptions, parameters: ParameterMap): Promise<Checked<ClientRecord>> {
+async function lookupClient(options: ResolvedOptions, parameters: ParameterMap): Promise<Checked<CheckedClient>> {
   const clientId = parameters.get("client_id");
   if (clientId === undefined) {
     return renderError(issueOf("invalid_request", ["client_id"]));
@@ -255,7 +224,10 @@ function checkRedirectUri(client: ClientRecord, parameters: ParameterMap): Check
 /** Runs the request checks in the order the spec gives, so the first failure found is the one reported. */
 function checkRequest(context: RequestContext): Checked<ValidatedRequest> {
   const failure =
-    findUnsupportedParameter(context) ?? findResponseTypeFailure(context) ?? findResponseModeFailure(context);
+    findUnauthorizedClient(context) ??
+    findUnsupportedParameter(context) ??
+    findResponseTypeFailure(context) ??
+    findResponseModeFailure(context);
   if (failure !== undefined) {
     return failure;
   }
@@ -290,6 +262,11 @@ function checkRequest(context: RequestContext): Checked<ValidatedRequest> {
       uiLocales: readUiLocales(parameters),
     },
   };
+}
+
+/** A client registered only for `client_credentials` signs no users in. */
+function findUnauthorizedClient({ client, target }: RequestContext): Failure | undefined {
+  return client.grantTypes.includes("authorization_code") ? undefined : redirectFailure(target, "unauthorized_client");
 }
 
 function findUnsupportedParameter({ parameters, target }: RequestContext): Failure | undefined {
@@ -473,7 +450,9 @@ function assertGrantFits(interaction: InteractionRecord, grant: AuthorizationGra
   if (interaction.prompt.includes("login") && grant.authTime < interaction.createdAt) {
     throw new TypeError("completeAuthorization: outcome.authTime must not precede the request under prompt=login");
   }
-  if (interaction.maxAge !== undefined && now - grant.authTime > interaction.maxAge) {
+  // max_age is the age of the login when the request arrived (OpenID Connect Core §3.1.2.1), so time spent on the
+  // login and consent pages does not count against it. max_age=0 therefore asks for a login after the request.
+  if (interaction.maxAge !== undefined && interaction.createdAt - grant.authTime > interaction.maxAge) {
     throw new TypeError("completeAuthorization: outcome.authTime must be within the requested max_age");
   }
 }
