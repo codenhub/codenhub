@@ -102,7 +102,7 @@ export type Consumption<TRecord> =
 
 /**
  * Persistence the provider needs. The app implements it over its database; `@codenhub/oidc/testing` has
- * an in-memory reference.
+ * an in-memory reference, and `storeConformanceCases` there checks an adapter against this contract.
  *
  * Every key the provider passes for a code, token, or interaction is a SHA-256 digest of the value, never
  * the value itself, so a leaked store holds nothing usable. Interaction, code and token records are plain
@@ -112,7 +112,17 @@ export type Consumption<TRecord> =
  *
  * The `consume*` methods must be atomic: two concurrent calls for one key must never both get
  * `consumed`. A store without a compare-and-set or transaction, such as plain Cloudflare KV, cannot
- * implement them; use D1, a Durable Object, or a SQL transaction.
+ * implement them; use D1, a Durable Object, or a SQL transaction. The revocation check belongs to the same
+ * atomic step: a consumption that has not finished when `revokeGrant` resolves must not return `consumed`.
+ *
+ * Each `save*` method must reject when its key already exists, and must never reset a used entry, which
+ * would make a spent code or refresh token consumable again. The provider's keys are random digests, so
+ * this happens only through an adapter bug.
+ *
+ * Expiry is the provider's to check: a method returns a record whatever its `expiresAt`. No method purges,
+ * so the adapter deletes expired rows itself, such as with a scheduled job, keeping a used code or refresh
+ * token at least until its `expiresAt`, so a replay is still recognized, and a revoked grant's marker until
+ * the last token of that grant expires, at most `ttl.refreshToken` after the code exchange.
  */
 export interface OidcStore {
   /** Looks up a registered client. `undefined` when none has this identifier. */
@@ -377,15 +387,17 @@ export interface Provider {
    * Answers the discovery, JWKS, token, userinfo, and revocation endpoints.
    *
    * @returns The response, or `null` when the request is for none of those URLs. Never throws for any
-   * request; rejects only when the store or the `claims` callback does, or with a `TypeError` when the
-   * `claims` callback resolves to something that is not an object.
+   * request; rejects only when the store, the `claims` callback or `onDiagnostic` does, or with a
+   * `TypeError` when the `claims` callback resolves to something that is not an object or the store returns
+   * a malformed client record.
    */
   handle(request: Request): Promise<Response | null>;
   /**
    * Validates an authorization request and saves it as an interaction for the app's login and consent pages.
    *
    * @returns The interaction, or a failure whose `redirect` is the response to send, or `null` when the app
-   * must render an error itself. Never throws for any request; rejects only when the store does.
+   * must render an error itself. Never throws for any request; rejects only when the store does, or with a
+   * `TypeError` when the store returns a malformed client record.
    */
   beginAuthorization(request: Request): Promise<OidcResult<AuthorizationInteraction, AuthorizationFailure>>;
   /**

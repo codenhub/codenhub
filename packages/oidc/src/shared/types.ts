@@ -84,7 +84,13 @@ export interface OidcIssue {
   readonly code: OidcIssueCode;
   /** Location the issue refers to, such as `["callback", "state"]` or `["id_token", "payload", "exp"]`. */
   readonly path?: readonly OidcPathSegment[];
-  /** Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. */
+  /**
+   * Facts that are never input values, such as `{ endpoint: "token", reason: "timeout" }`. The keys are a
+   * fixed set: `endpoint` (`discovery`, `authorization`, `token`, `userinfo` or `revocation`) and `reason`
+   * on `request_failed`, with `status` when the reason is `status`; `endpoint` and `error` (an
+   * {@link OAuthErrorCode} or `unknown`) on `provider_error`; `jwtCode`, the `@codenhub/jwt` issue code, and
+   * that issue's own params on `invalid_id_token`; `reason` on a provider `invalid_request` the app renders.
+   */
   readonly params?: Readonly<Record<string, string | number | boolean>>;
 }
 
