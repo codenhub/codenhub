@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "../shared/encoding";
-import { MAX_URL_LENGTH } from "../shared/limits";
+import { MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
 import { parseParameters } from "../shared/parameters";
 import { fail, ok } from "../shared/result";
 import type { OidcIssue, OidcResult, UserinfoClaims } from "../shared/types";
@@ -172,11 +172,15 @@ function readRefreshOptions(options: unknown): {
   if (options.scope !== undefined && (scope === undefined || scope.length === 0 || !scope.every(isScopeToken))) {
     throw new TypeError("refresh: scope must be a non-empty array of at most 100 scope tokens");
   }
+  const unique = scope === undefined ? undefined : [...new Set(scope as readonly string[])];
+  if (unique !== undefined && unique.join(" ").length > MAX_PARAMETER_LENGTH) {
+    throw new TypeError("refresh: scope is longer than the provider accepts");
+  }
   return {
     refreshToken: readRequiredString(options, "refreshToken", "refresh"),
     subject: readRequiredString(options, "subject", "refresh"),
     // Duplicates are dropped in first-seen order, as the authorization request does, so the provider sees each scope once.
-    scope: scope === undefined ? undefined : [...new Set(scope as readonly string[])],
+    scope: unique,
   };
 }
 

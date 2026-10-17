@@ -693,6 +693,16 @@ describe("refresh", () => {
     );
   });
 
+  it("throws a TypeError for a joined scope longer than the provider accepts", async () => {
+    const rp = clientFor(createFakeOp());
+
+    await expect(
+      rp.refresh({ refreshToken: "rt-seed", subject: "user-1", scope: ["openid", "s".repeat(4096)] }),
+    ).rejects.toThrow(
+      expect.objectContaining({ name: "TypeError", message: expect.stringContaining("refresh: scope") }),
+    );
+  });
+
   it("throws a TypeError for a sparse scope list", async () => {
     const rp = clientFor(createFakeOp());
     // oxlint-disable-next-line no-sparse-arrays -- the hole is what this test is about

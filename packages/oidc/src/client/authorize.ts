@@ -76,7 +76,12 @@ function readScope(scope: readonly string[] | undefined): readonly string[] {
   if (!copy.includes(REQUIRED_SCOPE)) {
     throw new TypeError("authorize: scope must include openid");
   }
-  return [...new Set(copy as string[])];
+  const unique = [...new Set(copy as string[])];
+  // The provider refuses a longer parameter with its own error page, which never reaches this client.
+  if (unique.join(" ").length > MAX_PARAMETER_LENGTH) {
+    throw new TypeError("authorize: scope is longer than the provider accepts");
+  }
+  return unique;
 }
 
 /**

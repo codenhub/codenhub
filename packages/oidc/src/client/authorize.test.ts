@@ -195,6 +195,12 @@ describe("buildAuthorization", () => {
     expect((error as Error).message).toContain("scope");
   });
 
+  it("throws TypeError when the joined scope is longer than the provider accepts", async () => {
+    const error = await refusalOf({ scope: ["openid", "s".repeat(4096)] });
+    expect(error).toBeInstanceOf(TypeError);
+    expect((error as Error).message).toContain("scope");
+  });
+
   it("throws TypeError when scope is empty", async () => {
     const error = await refusalOf({ scope: [] });
     expect(error).toBeInstanceOf(TypeError);
