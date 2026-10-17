@@ -176,7 +176,7 @@ The returned store has an extra method, `addClient(client)`, which registers or 
 
 - Each interaction and code is single-use, and a consumed code is `replayed` on its next use.
 - Unknown keys give `undefined`.
-- Twenty concurrent `consumeCode`, `consumeRefreshToken` or `consumeInteraction` calls give exactly one `consumed` record.
+- Twenty concurrent `consumeCode` or `consumeRefreshToken` calls give exactly one `consumed` result and 19 `replayed`; twenty concurrent `consumeInteraction` calls give exactly one record and 19 `undefined`.
 - A `save*` call for an existing key rejects, and a spent code cannot be made consumable again.
 - `findAccessToken` is not single-use.
 - `revokeGrant` hides the grant's access and refresh tokens, including tokens saved after the call, and leaves other grants alone. A refresh token consumed before the revocation then gives `undefined`, not `replayed`.

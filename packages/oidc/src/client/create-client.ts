@@ -284,7 +284,10 @@ function checkRevocationAuth(options: ResolvedClientOptions): void {
   }
 }
 
-/** Revokes a token. A bad argument, or a provider without the endpoint, is a caller bug, so it throws. */
+/**
+ * Revokes a token. A bad argument, a provider without the endpoint, or revocation auth lists that omit the client's
+ * method or its key's algorithm are caller bugs, so it throws.
+ */
 async function revokeToken(options: ResolvedClientOptions, input: RevokeOptions): Promise<OidcResult<void>> {
   if (!isObject(input)) {
     throw new TypeError("revoke: options must be an object");
