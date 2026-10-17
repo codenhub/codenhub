@@ -159,7 +159,7 @@ Each value is an absolute `https` URL of visible ASCII (no spaces, control or no
 
 `provider.handle(request)` answers the five endpoints it owns. It returns a promise of a `Response`, or of `null` when the request is for none of them. It routes by method and by origin and path, and ignores the query, so a client may append parameters to the discovery URL.
 
-Pass the request before anything reads its body. Middleware that parses the form first, such as a framework body parser, leaves an empty stream, so `handle`, `beginAuthorization` and `endSession` reject with `TypeError` for a `POST` whose body was already read, rather than refuse a valid request.
+Pass the request before anything reads its body. Middleware that parses the form first, such as a framework body parser, leaves an empty stream, so `beginAuthorization`, `endSession`, and `handle` for a token or revocation request reject with `TypeError` for a `POST` whose body was already read, rather than refuse a valid request. Userinfo reads no body, so it is unaffected.
 
 Routing compares the request URL's origin with the origin of the provider's endpoints, so `request.url` must carry the public origin the endpoints use. Behind a TLS-terminating proxy, Node.js adapters often build `request.url` from `http://` and the internal host, and then `handle` returns `null` for every request. Rebuild the request with the public URL before calling `handle`:
 
@@ -181,7 +181,7 @@ const response = await provider.handle(new Request(url, { method: request.method
 | Userinfo   | `GET`, `POST`, `OPTIONS` | The released claims or a bearer challenge. See [Userinfo](#userinfo).                    |
 | Revocation | `POST`, `OPTIONS`        | `200` with no body, or an OAuth error. See [Token revocation](#token-revocation).        |
 
-A method an endpoint does not accept is `405` with an `Allow` header. `HEAD` is not accepted by the discovery or JWKS endpoints, so it gets `405` too. The authorization and end-session endpoints are not among the five, so `handle` returns `null` for them. The app serves both itself: it calls `beginAuthorization` from the authorization endpoint and `endSession` from the end-session endpoint. `handle` never throws for a request. It rejects only when the store, the `claims` callback or `onDiagnostic` rejects, or when the JWKS keys cannot be exported.
+A method an endpoint does not accept is `405` with an `Allow` header. `HEAD` is not accepted by the discovery or JWKS endpoints, so it gets `405` too. The authorization and end-session endpoints are not among the five, so `handle` returns `null` for them. The app serves both itself: it calls `beginAuthorization` from the authorization endpoint and `endSession` from the end-session endpoint. `handle` never throws for a request. It rejects only when the store, the `claims` callback or `onDiagnostic` rejects, when the JWKS keys cannot be exported, or with `TypeError` for a token or revocation `POST` whose body was already read.
 
 The routing sketch below uses only `Request` and `Response`, as a plain Worker would. It answers the five endpoints from `handle`, and passes the authorization and logout requests to the app's own handlers.
 

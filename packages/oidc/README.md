@@ -55,7 +55,7 @@ To issue tokens as an OpenID Provider instead, see [Provider](docs/provider.md).
 
 ## Requirements
 
-- Node.js 24 or newer. Browsers and edge runtimes such as Cloudflare Workers work too, when they provide Web Crypto, `fetch`, `Request`, `Response`, `URL`, `URL.canParse`, `TextEncoder`, `TextDecoder`, `String.prototype.isWellFormed` and `Object.hasOwn`. The package uses no Node.js API.
+- Node.js 24 or newer. Browsers and edge runtimes such as Cloudflare Workers work too, when they provide Web Crypto, `fetch`, `Request`, `Response`, `URL`, `URL.canParse`, `URLSearchParams`, `TextEncoder`, `TextDecoder`, `String.prototype.isWellFormed` and `Object.hasOwn`. The package uses no Node.js API.
 - `@codenhub/jwt` `^0.0.1` as a peer dependency. The keys `@codenhub/jwt` creates are recognized only by the copy that created them. Your provider's signing keys and your client's keys must come from the copy this package loads, so install one version of it: `pnpm why @codenhub/jwt` should list one.
 - ES modules only. `EdDSA` and `Ed25519` ID tokens need Web Crypto's Ed25519 support, which Node.js 24, Chrome 137, Firefox 129 and Safari 17 provide.
 

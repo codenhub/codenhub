@@ -80,7 +80,7 @@ describe("isRedirectUri", () => {
   });
 
   it.each(["https:app.example/cb", "http:app.example/cb", "HTTPS:app.example/cb"])(
-    "refusesSpecialSchemeWithoutDoubleSlash_%s, which a browser would resolve against the provider's origin",
+    "refusesSpecialSchemeWithoutDoubleSlash_%s, which the URL parser rewrites",
     (value) => {
       expect(isRedirectUri(value)).toBe(false);
     },

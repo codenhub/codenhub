@@ -453,7 +453,8 @@ export interface Provider {
    * @returns The response, or `null` when the request is for none of those URLs. Never throws for any
    * request; rejects only when the store, the `claims` callback or `onDiagnostic` does, or with a
    * `TypeError` when the `claims` callback resolves to something that is not an object, the store returns
-   * a malformed client record, or a `POST`'s body was already read, such as by middleware that parsed it.
+   * a malformed client record, or a token or revocation `POST`'s body was already read, such as by middleware
+   * that parsed it.
    */
   handle(request: Request): Promise<Response | null>;
   /**

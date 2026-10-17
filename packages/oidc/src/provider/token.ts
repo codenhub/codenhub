@@ -30,7 +30,8 @@ interface Grant {
  *
  * @remarks
  * Never throws for a request: every refusal is an OAuth error response with only `{ error }` in its body.
- * Store rejections propagate, because a store that fails must not look like a refused request.
+ * Store rejections propagate, because a store that fails must not look like a refused request, and a request
+ * whose body was already read rejects with `TypeError`, since that is a bug in the calling code.
  *
  * @param options - The resolved provider options.
  * @param request - The request to the token endpoint.

@@ -23,7 +23,8 @@ import { readClientRequest } from "./token";
  *
  * Expiry is not checked: an expired token the store still holds revokes its grant.
  *
- * Never throws for a request. Store rejections propagate.
+ * Never throws for a request. Store rejections propagate, and a request whose body was already read rejects with
+ * `TypeError`.
  *
  * @param options - The resolved provider options.
  * @param request - The request to the revocation endpoint.

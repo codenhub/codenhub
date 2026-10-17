@@ -276,7 +276,7 @@ On the page at `postLogoutRedirectUri`, compare the `state` parameter with the `
 
 The URL always carries `client_id`, so the provider can match `postLogoutRedirectUri` even after the hint has expired. A hint issued to a different client is refused: the provider returns `invalid_request` at `id_token_hint`, so send the hint from the client it was issued to. The URL keeps any query the endpoint already has. Empty strings are left out.
 
-`endSessionUrl` throws `TypeError` when the metadata has no `end_session_endpoint`, when `postLogoutRedirectUri` breaks the redirect URI rules, when a string option is not a string, not well-formed Unicode or longer than 4096 characters, when `uiLocales` is invalid, or when the URL is longer than 8192 characters once encoded.
+`endSessionUrl` throws `TypeError` when the metadata has no `end_session_endpoint`, when `postLogoutRedirectUri` breaks the redirect URI rules, when a string option is not a string, not well-formed Unicode or longer than 4096 characters (except `idTokenHint`, which has no cap of its own), when `uiLocales` is invalid, or when the URL is longer than 8192 characters once encoded.
 
 ## Client credentials
 
