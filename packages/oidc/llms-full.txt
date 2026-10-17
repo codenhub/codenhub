@@ -57,7 +57,7 @@ To issue tokens as an OpenID Provider instead, see [Provider](docs/provider.md).
 
 ## Requirements
 
-- Node.js 24 or newer. Browsers and edge runtimes such as Cloudflare Workers work too, when they provide Web Crypto, `fetch`, `Request`, `Response`, `URL`, `URL.canParse`, `URLSearchParams`, `TextEncoder`, `TextDecoder`, `String.prototype.isWellFormed` and `Object.hasOwn`. The package uses no Node.js API.
+- Node.js 24 or newer. Browsers and edge runtimes such as Cloudflare Workers work too, when they provide Web Crypto, `fetch`, `Request`, `Response`, `URL`, `URL.canParse`, `URLSearchParams`, `AbortController`, `setTimeout`, `clearTimeout`, `TextEncoder`, `TextDecoder`, `String.prototype.isWellFormed` and `Object.hasOwn`. The package uses no Node.js API.
 - `@codenhub/jwt` `^0.0.1` as a peer dependency. The keys `@codenhub/jwt` creates are recognized only by the copy that created them. Your provider's signing keys and your client's keys must come from the copy this package loads, so install one version of it: `pnpm why @codenhub/jwt` should list one.
 - ES modules only. `EdDSA` and `Ed25519` ID tokens need Web Crypto's Ed25519 support, which Node.js 24, Chrome 137, Firefox 129 and Safari 17 provide.
 
@@ -151,7 +151,7 @@ The detailed steps are in [Client](docs/client.md) and [Provider](docs/provider.
 
 ## Requirements
 
-- Node.js 24 or newer, or a browser or edge runtime that provides Web Crypto, `fetch`, `Request`, `Response`, `URL`, `URL.canParse`, `URLSearchParams`, `TextEncoder`, `TextDecoder`, `String.prototype.isWellFormed` and `Object.hasOwn`.
+- Node.js 24 or newer, or a browser or edge runtime that provides Web Crypto, `fetch`, `Request`, `Response`, `URL`, `URL.canParse`, `URLSearchParams`, `AbortController`, `setTimeout`, `clearTimeout`, `TextEncoder`, `TextDecoder`, `String.prototype.isWellFormed` and `Object.hasOwn`.
 - `@codenhub/jwt` as a peer dependency, `^0.0.1`. Install one copy of it, because keys it creates are recognized only by the copy that created them.
 - ES modules only. Ed25519 requires Web Crypto's Ed25519 support.
 
