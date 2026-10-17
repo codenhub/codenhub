@@ -9,9 +9,15 @@ describe("catalogPackages", () => {
     expect(icons).toMatchObject({
       label: "IconKit",
       documentationRoute: "/icons/",
-      githubUrl: "https://github.com/codenhub/codenhub/tree/main/packages/icons",
-      npmUrl: "https://www.npmjs.com/package/@codenhub/icons",
-      docsUrl: "https://docs.codenhub.dev/icons/",
+      license: "Apache-2.0",
+      links: {
+        changelog: "https://docs.codenhub.dev/icons/changelog/",
+        demo: "https://icons.codenhub.dev",
+        docs: "https://docs.codenhub.dev/icons/",
+        github: "https://github.com/codenhub/codenhub/tree/main/packages/icons",
+        npm: "https://www.npmjs.com/package/@codenhub/icons",
+      },
+      slug: "icons",
     });
   });
 

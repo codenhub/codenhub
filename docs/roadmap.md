@@ -23,7 +23,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
 
 ## Planned
 
-- **Stop reading pre-migration package metadata.** `parsePackageMetadata` still accepts identity inside `codenhub.docs`, only because release tags cut before `docs/specs/packages-metadata.md` carry it. Remove that support as soon as the newest release tag of every package declaring `codenhub.docs` uses the current shape; the spec's "Pre-migration manifests" section lists what to delete.
+- **Stop reading pre-migration package metadata.** `parsePackageMetadata` still accepts identity inside `codenhub.docs`, only because release tags cut before `docs/specs/packages-metadata.md` carry it. Remove that support as soon as the newest release tag of every package declaring `codenhub.docs` uses the current shape; the spec's "Pre-migration manifests" section lists what to delete. The same section covers the site index's fallback for release tags with no `codenhub` metadata at all, which ends once every public package's newest stable tag declares a label and status.
 
 - **Repository governance.** `SECURITY.md`, the issue forms, the label list, and the pull-request template have landed. `CODEOWNERS` pays off once more than one person reviews here.
 - **Backfill package demos.** `apps/demo` aggregates `packages/*/demo/`, and only `icons` and `styles` have one, so the deployed surface shows two of thirteen public packages.
