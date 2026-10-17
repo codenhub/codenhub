@@ -136,6 +136,20 @@ jobs:
             echo "::warning::Could not reach the codenhub-docs deploy hook; trigger a rebuild by hand."
           fi
 
+      # `apps/www` reads release tags the same way (docs/ci.md, "The site
+      # index"), so a publish is what changes its versions and dates.
+      - name: Trigger the site index rebuild
+        env:
+          DEPLOY_HOOK_URL: ${{ secrets.CLOUDFLARE_WWW_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK_URL" ]; then
+            echo "::warning::CLOUDFLARE_WWW_DEPLOY_HOOK_URL is not set; trigger a codenhub rebuild by hand."
+            exit 0
+          fi
+          if ! curl --fail --silent --show-error --connect-timeout 10 --max-time 30 --request POST "$DEPLOY_HOOK_URL"; then
+            echo "::warning::Could not reach the codenhub deploy hook; trigger a rebuild by hand."
+          fi
+
   release:
     name: GitHub release
     needs: publish
