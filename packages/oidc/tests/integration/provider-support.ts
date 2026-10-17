@@ -104,7 +104,6 @@ export async function setUpProvider(overrides: SetUpOverrides = {}): Promise<Pro
   const signingKey = await generateKeyPair({ alg: "ES256", kid: "op-1" });
   const secret = generateClientSecret();
   const memory = createMemoryStore({
-    now: () => now.ms,
     clients: [
       {
         clientId: PUBLIC_CLIENT,

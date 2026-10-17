@@ -1,3 +1,4 @@
+import { generateSecretKey } from "@codenhub/jwt";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -10,7 +11,8 @@ import type {
 import { createMemoryStore } from "./memory-store";
 
 const LATER_EXPIRY_SECONDS = 2_000;
-const CLOCK_START_MS = 1_000_000;
+// Far in the past of the real clock, so any record saved with it is expired by the time it is read.
+const PAST_EXPIRY_SECONDS = 1_100;
 
 function makeClient(overrides: Partial<ClientRecord> = {}): ClientRecord {
   return {
@@ -73,13 +75,6 @@ function makeRefreshToken(overrides: Partial<RefreshTokenRecord> = {}): RefreshT
   };
 }
 
-/** A store whose clock the test moves by hand, so expiry is deterministic. */
-function makeClockedStore(clientsToRegister: readonly ClientRecord[] = []) {
-  const clock = { nowMs: CLOCK_START_MS };
-  const store = createMemoryStore({ clients: clientsToRegister, now: () => clock.nowMs });
-  return { clock, store };
-}
-
 describe("findClient", () => {
   it("should return the client registered at creation", async () => {
     const store = createMemoryStore({ clients: [makeClient()] });
@@ -91,13 +86,6 @@ describe("findClient", () => {
     const store = createMemoryStore({ clients: [makeClient()] });
 
     expect(await store.findClient("client-unknown")).toBeUndefined();
-  });
-
-  it("should return the same record object that was registered", async () => {
-    const client = makeClient();
-    const store = createMemoryStore({ clients: [client] });
-
-    expect(await store.findClient("client-a")).toBe(client);
   });
 
   it("should replace a client when addClient is called with the same id", async () => {
@@ -121,6 +109,37 @@ describe("findClient", () => {
 
     expect(await store.findClient("__proto__")).toBeUndefined();
   });
+
+  it("should not change the stored client when the caller mutates the registered arrays", async () => {
+    const client = makeClient();
+    const store = createMemoryStore({ clients: [client] });
+
+    (client.scopes as string[]).push("email");
+    (client.redirectUris as string[]).push("https://other.example/callback");
+
+    expect(await store.findClient("client-a")).toEqual(makeClient());
+  });
+
+  it("should not change the next find when the caller mutates a returned client", async () => {
+    const store = createMemoryStore({ clients: [makeClient()] });
+
+    const found = await store.findClient("client-a");
+    (found!.scopes as string[]).push("email");
+
+    expect((await store.findClient("client-a"))?.scopes).toEqual(["openid"]);
+  });
+
+  it("should keep a jwt key object in a client record by identity, since it cannot be copied", async () => {
+    const key = await generateSecretKey({ alg: "HS256" });
+    const store = createMemoryStore({
+      clients: [makeClient({ auth: { method: "client_secret_jwt", key } })],
+    });
+
+    const found = await store.findClient("client-a");
+
+    expect(found?.auth).toEqual({ method: "client_secret_jwt", key });
+    expect(found?.auth.method === "client_secret_jwt" ? found.auth.key : undefined).toBe(key);
+  });
 });
 
 describe("interactions", () => {
@@ -130,7 +149,7 @@ describe("interactions", () => {
 
     await store.saveInteraction("key-1", interaction);
 
-    expect(await store.consumeInteraction("key-1")).toBe(interaction);
+    expect(await store.consumeInteraction("key-1")).toEqual(interaction);
   });
 
   it("should return undefined from a second consumeInteraction for the same key", async () => {
@@ -157,7 +176,17 @@ describe("interactions", () => {
 
     await store.consumeInteraction("key-1");
 
-    expect(await store.consumeInteraction("key-2")).toBe(second);
+    expect(await store.consumeInteraction("key-2")).toEqual(second);
+  });
+
+  it("should not change the saved interaction when the caller mutates the record after save", async () => {
+    const store = createMemoryStore();
+    const interaction = makeInteraction();
+    await store.saveInteraction("key-1", interaction);
+
+    (interaction.scopes as string[]).push("email");
+
+    expect(await store.consumeInteraction("key-1")).toEqual(makeInteraction());
   });
 });
 
@@ -210,6 +239,16 @@ describe("authorization codes", () => {
 
     expect(results.filter((result) => result?.status === "consumed")).toHaveLength(1);
   });
+
+  it("should not change the saved code when the caller mutates the record after save", async () => {
+    const store = createMemoryStore();
+    const code = makeCode();
+    await store.saveCode("code-1", code);
+
+    (code.scopes as string[]).push("email");
+
+    expect(await store.consumeCode("code-1")).toEqual({ status: "consumed", record: makeCode() });
+  });
 });
 
 describe("access tokens", () => {
@@ -218,7 +257,7 @@ describe("access tokens", () => {
     const token = makeAccessToken();
     await store.saveAccessToken("at-1", token);
 
-    expect(await store.findAccessToken("at-1")).toBe(token);
+    expect(await store.findAccessToken("at-1")).toEqual(token);
   });
 
   it("should return undefined from findAccessToken for a key never saved", async () => {
@@ -234,7 +273,27 @@ describe("access tokens", () => {
 
     await store.findAccessToken("at-1");
 
-    expect(await store.findAccessToken("at-1")).toBe(token);
+    expect(await store.findAccessToken("at-1")).toEqual(token);
+  });
+
+  it("should not change the saved access token when the caller mutates the record after save", async () => {
+    const store = createMemoryStore();
+    const token = makeAccessToken();
+    await store.saveAccessToken("at-1", token);
+
+    (token.scopes as string[]).push("email");
+
+    expect(await store.findAccessToken("at-1")).toEqual(makeAccessToken());
+  });
+
+  it("should not change the next find when the caller mutates a returned access token", async () => {
+    const store = createMemoryStore();
+    await store.saveAccessToken("at-1", makeAccessToken());
+
+    const found = await store.findAccessToken("at-1");
+    (found!.scopes as string[]).push("email");
+
+    expect(await store.findAccessToken("at-1")).toEqual(makeAccessToken());
   });
 });
 
@@ -278,6 +337,16 @@ describe("refresh tokens", () => {
 
     expect(results.filter((result) => result?.status === "consumed")).toHaveLength(1);
   });
+
+  it("should not change the saved refresh token when the caller mutates the record after save", async () => {
+    const store = createMemoryStore();
+    const token = makeRefreshToken();
+    await store.saveRefreshToken("rt-1", token);
+
+    (token.scopes as string[]).push("email");
+
+    expect(await store.consumeRefreshToken("rt-1")).toEqual({ status: "consumed", record: makeRefreshToken() });
+  });
 });
 
 describe("revokeGrant", () => {
@@ -316,7 +385,7 @@ describe("revokeGrant", () => {
 
     await store.revokeGrant("grant-1");
 
-    expect(await store.findAccessToken("at-2")).toBe(other);
+    expect(await store.findAccessToken("at-2")).toEqual(other);
   });
 
   it("should leave a refresh token of another grant consumable", async () => {
@@ -347,6 +416,14 @@ describe("revokeGrant", () => {
     expect(await store.consumeRefreshToken("rt-late")).toBeUndefined();
   });
 
+  it("should reject a save under the key of a token of the revoked grant, since revoking removes nothing", async () => {
+    const store = createMemoryStore();
+    await store.saveAccessToken("at-1", makeAccessToken({ grantId: "grant-1" }));
+    await store.revokeGrant("grant-1");
+
+    await expect(store.saveAccessToken("at-1", makeAccessToken({ grantId: "grant-1" }))).rejects.toThrow(Error);
+  });
+
   it("should leave existing tokens alone when revoking a grant that has none", async () => {
     const store = createMemoryStore();
     const token = makeAccessToken({ grantId: "grant-1" });
@@ -354,91 +431,65 @@ describe("revokeGrant", () => {
 
     await store.revokeGrant("grant-unknown");
 
-    expect(await store.findAccessToken("at-1")).toBe(token);
+    expect(await store.findAccessToken("at-1")).toEqual(token);
   });
 });
 
-describe("purging expired entries", () => {
-  it("should not return an expired access token once a save of any kind has run after its expiry", async () => {
-    const { clock, store } = makeClockedStore();
-    await store.saveAccessToken("at-old", makeAccessToken({ expiresAt: 1_100 }));
+describe("retention", () => {
+  // The store never purges. The provider reads `expiresAt` itself, so a record that the store keeps past
+  // its expiry is harmless, while a record it dropped would look like a missing value.
 
-    clock.nowMs = 1_100_000;
-    await store.saveRefreshToken("rt-new", makeRefreshToken());
-
-    expect(await store.findAccessToken("at-old")).toBeUndefined();
-  });
-
-  it("should purge an entry whose expiry equals the current time", async () => {
-    const { clock, store } = makeClockedStore();
-    await store.saveAccessToken("at-edge", makeAccessToken({ expiresAt: 1_100 }));
-
-    clock.nowMs = 1_100_000;
-    await store.saveAccessToken("at-other", makeAccessToken());
-
-    expect(await store.findAccessToken("at-edge")).toBeUndefined();
-  });
-
-  it("should keep an entry whose expiry is one millisecond later than the current time", async () => {
-    const { clock, store } = makeClockedStore();
-    await store.saveAccessToken("at-almost", makeAccessToken({ expiresAt: 1_100 }));
-
-    clock.nowMs = 1_099_999;
-    await store.saveAccessToken("at-other", makeAccessToken());
-
-    expect(await store.findAccessToken("at-almost")).toBeDefined();
-  });
-
-  it("should purge an expired interaction once a save of any kind has run", async () => {
-    const { clock, store } = makeClockedStore();
-    await store.saveInteraction("key-old", makeInteraction({ expiresAt: 1_100 }));
-
-    clock.nowMs = 1_100_000;
-    await store.saveCode("code-new", makeCode());
-
-    expect(await store.consumeInteraction("key-old")).toBeUndefined();
-  });
-
-  it("should purge an expired code once a save of any kind has run", async () => {
-    const { clock, store } = makeClockedStore();
-    await store.saveCode("code-old", makeCode({ expiresAt: 1_100 }));
-
-    clock.nowMs = 1_100_000;
-    await store.saveAccessToken("at-new", makeAccessToken());
-
-    expect(await store.consumeCode("code-old")).toBeUndefined();
-  });
-
-  it("should keep a used code reporting replayed until its expiry", async () => {
-    const { clock, store } = makeClockedStore();
-    await store.saveCode("code-used", makeCode({ grantId: "grant-5", expiresAt: 1_500 }));
+  it("should keep a used code reporting replayed after its expiresAt has passed", async () => {
+    const store = createMemoryStore();
+    await store.saveCode("code-used", makeCode({ grantId: "grant-5", expiresAt: PAST_EXPIRY_SECONDS }));
     await store.consumeCode("code-used");
 
-    clock.nowMs = 1_200_000;
     await store.saveAccessToken("at-new", makeAccessToken());
 
     expect(await store.consumeCode("code-used")).toEqual({ status: "replayed", grantId: "grant-5" });
   });
 
-  it("should keep a used refresh token reporting replayed until its expiry", async () => {
-    const { clock, store } = makeClockedStore();
-    await store.saveRefreshToken("rt-used", makeRefreshToken({ grantId: "grant-6", expiresAt: 1_500 }));
+  it("should keep a code whose expiresAt has passed on the real clock, so a later save does not remove it", async () => {
+    const store = createMemoryStore();
+    await store.saveCode("code-old", makeCode({ expiresAt: PAST_EXPIRY_SECONDS }));
+
+    await store.saveAccessToken("at-new", makeAccessToken());
+    await store.saveRefreshToken("rt-new", makeRefreshToken());
+
+    expect(await store.consumeCode("code-old")).toEqual({
+      status: "consumed",
+      record: makeCode({ expiresAt: PAST_EXPIRY_SECONDS }),
+    });
+  });
+
+  it("should keep an access token whose expiresAt has passed, so find still returns it", async () => {
+    const store = createMemoryStore();
+    const token = makeAccessToken({ expiresAt: PAST_EXPIRY_SECONDS });
+    await store.saveAccessToken("at-expired", token);
+
+    await store.saveCode("code-new", makeCode());
+
+    expect(await store.findAccessToken("at-expired")).toEqual(token);
+  });
+
+  it("should keep an interaction whose expiresAt has passed, so consume still returns it", async () => {
+    const store = createMemoryStore();
+    const interaction = makeInteraction({ expiresAt: PAST_EXPIRY_SECONDS });
+    await store.saveInteraction("key-old", interaction);
+
+    await store.saveCode("code-new", makeCode());
+
+    expect(await store.consumeInteraction("key-old")).toEqual(interaction);
+  });
+
+  it("should keep a used refresh token reporting replayed after its expiresAt has passed", async () => {
+    const store = createMemoryStore();
+    await store.saveRefreshToken("rt-used", makeRefreshToken({ grantId: "grant-6", expiresAt: PAST_EXPIRY_SECONDS }));
     await store.consumeRefreshToken("rt-used");
 
-    clock.nowMs = 1_200_000;
     await store.saveCode("code-new", makeCode());
 
     expect(await store.consumeRefreshToken("rt-used")).toEqual({ status: "replayed", grantId: "grant-6" });
-  });
-
-  it("should still return an expired access token from find before any save runs", async () => {
-    const { clock, store } = makeClockedStore();
-    const token = makeAccessToken({ expiresAt: 1_100 });
-    await store.saveAccessToken("at-expired", token);
-
-    clock.nowMs = 1_200_000;
-
-    expect(await store.findAccessToken("at-expired")).toBe(token);
   });
 });
 
@@ -458,35 +509,35 @@ describe("store contract under unusual keys", () => {
 
 describe("saving a key that already exists", () => {
   it("should reject saveInteraction with an Error when the key exists", async () => {
-    const { store } = makeClockedStore();
+    const store = createMemoryStore();
     await store.saveInteraction("key-1", makeInteraction());
 
     await expect(store.saveInteraction("key-1", makeInteraction())).rejects.toThrow(Error);
   });
 
   it("should reject saveCode with an Error when the key exists", async () => {
-    const { store } = makeClockedStore();
+    const store = createMemoryStore();
     await store.saveCode("code-1", makeCode());
 
     await expect(store.saveCode("code-1", makeCode())).rejects.toThrow(Error);
   });
 
   it("should reject saveAccessToken with an Error when the key exists", async () => {
-    const { store } = makeClockedStore();
+    const store = createMemoryStore();
     await store.saveAccessToken("at-1", makeAccessToken());
 
     await expect(store.saveAccessToken("at-1", makeAccessToken())).rejects.toThrow(Error);
   });
 
   it("should reject saveRefreshToken with an Error when the key exists", async () => {
-    const { store } = makeClockedStore();
+    const store = createMemoryStore();
     await store.saveRefreshToken("rt-1", makeRefreshToken());
 
     await expect(store.saveRefreshToken("rt-1", makeRefreshToken())).rejects.toThrow(Error);
   });
 
   it("should keep a spent code replayed when a save under its key is rejected", async () => {
-    const { store } = makeClockedStore();
+    const store = createMemoryStore();
     await store.saveCode("code-1", makeCode());
     await store.consumeCode("code-1");
 
@@ -496,7 +547,7 @@ describe("saving a key that already exists", () => {
   });
 
   it("should keep a spent refresh token replayed when a save under its key is rejected", async () => {
-    const { store } = makeClockedStore();
+    const store = createMemoryStore();
     await store.saveRefreshToken("rt-1", makeRefreshToken());
     await store.consumeRefreshToken("rt-1");
 
@@ -505,14 +556,10 @@ describe("saving a key that already exists", () => {
     expect((await store.consumeRefreshToken("rt-1"))?.status).toBe("replayed");
   });
 
-  it("should allow a save under a key whose code expired and was purged", async () => {
-    const clock = { nowMs: CLOCK_START_MS };
-    const store = createMemoryStore({ now: () => clock.nowMs });
-    await store.saveCode("code-1", makeCode({ expiresAt: 1_001 }));
-    clock.nowMs = 1_001_000;
+  it("should reject a save under a key whose code has expired, since nothing is purged", async () => {
+    const store = createMemoryStore();
+    await store.saveCode("code-1", makeCode({ expiresAt: PAST_EXPIRY_SECONDS }));
 
-    const replacement = makeCode();
-    await expect(store.saveCode("code-1", replacement)).resolves.toBeUndefined();
-    await expect(store.consumeCode("code-1")).resolves.toEqual({ status: "consumed", record: replacement });
+    await expect(store.saveCode("code-1", makeCode())).rejects.toThrow(Error);
   });
 });

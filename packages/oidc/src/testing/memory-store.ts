@@ -12,8 +12,6 @@ import type {
 export interface MemoryStoreOptions {
   /** Clients to register. */
   readonly clients?: readonly ClientRecord[];
-  /** Current time in milliseconds since the Unix epoch; used only to purge expired entries. @defaultValue `Date.now` */
-  readonly now?: () => number;
 }
 
 /** An {@link OidcStore} that also lets tests register clients. */
@@ -28,9 +26,6 @@ interface Entry<TRecord> {
   used: boolean;
 }
 
-/** Records expire in seconds, while `now` returns milliseconds; this bridges the two units. */
-const MILLISECONDS_PER_SECOND = 1000;
-
 /**
  * Creates an in-memory {@link MemoryStore} that keeps everything in one process's memory.
  *
@@ -39,12 +34,15 @@ const MILLISECONDS_PER_SECOND = 1000;
  * for tests and examples, and it is the reference for the {@link OidcStore} contract that other adapters
  * are judged against.
  *
- * @param options - Clients to register, and the clock used to purge expired entries.
+ * Records are never purged. The store keeps every record for its lifetime, and the provider checks
+ * `expiresAt` itself, so memory grows with use; that is one more reason it is not for production. Saved
+ * and returned records are copies, so the caller can change its own objects without changing the store.
+ *
+ * @param options - Clients to register.
  * @returns A store whose methods resolve for any string key, except that each `save*` method rejects when
  * its key already exists, so a spent code or refresh token can never be made consumable again.
  */
 export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore {
-  const now = options.now ?? (() => Date.now());
   const clients = new Map<string, ClientRecord>();
   const interactions = new Map<string, Entry<InteractionRecord>>();
   const codes = new Map<string, Entry<CodeRecord>>();
@@ -54,11 +52,11 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
   const revokedGrants = new Set<string>();
 
   for (const client of options.clients ?? []) {
-    clients.set(client.clientId, client);
+    clients.set(client.clientId, copyClient(client));
   }
 
   const addClient = (client: ClientRecord): void => {
-    clients.set(client.clientId, client);
+    clients.set(client.clientId, copyClient(client));
   };
 
   /**
@@ -73,26 +71,19 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     }
   };
 
-  // Purging happens on writes only. Reads return expired records too, because the provider decides from
-  // `expiresAt` itself and a read-time purge would make expiry look like a missing value.
-  const purgeExpired = (): void => {
-    const nowMs = now();
-    purgeEntries(interactions, nowMs);
-    purgeEntries(codes, nowMs);
-    purgeEntries(accessTokens, nowMs);
-    purgeEntries(refreshTokens, nowMs);
-  };
-
   return {
     addClient,
 
-    findClient: (clientId) => run(() => clients.get(clientId)),
+    findClient: (clientId) =>
+      run(() => {
+        const client = clients.get(clientId);
+        return client === undefined ? undefined : copyClient(client);
+      }),
 
     saveInteraction: (key, record) =>
       run(() => {
-        purgeExpired();
         rejectIfPresent(interactions, key);
-        interactions.set(key, { record, used: false });
+        interactions.set(key, { record: structuredClone(record), used: false });
       }),
 
     consumeInteraction: (key) =>
@@ -103,14 +94,13 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
         }
         // Deleted rather than marked used: an interaction is single-use and never reported as replayed.
         interactions.delete(key);
-        return entry.record;
+        return structuredClone(entry.record);
       }),
 
     saveCode: (key, record) =>
       run(() => {
-        purgeExpired();
         rejectIfPresent(codes, key);
-        codes.set(key, { record, used: false });
+        codes.set(key, { record: structuredClone(record), used: false });
       }),
 
     consumeCode: (key) =>
@@ -121,9 +111,8 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
 
     saveAccessToken: (key, record) =>
       run(() => {
-        purgeExpired();
         rejectIfPresent(accessTokens, key);
-        accessTokens.set(key, { record, used: false });
+        accessTokens.set(key, { record: structuredClone(record), used: false });
       }),
 
     findAccessToken: (key) =>
@@ -132,14 +121,13 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
         if (entry === undefined || revokedGrants.has(entry.record.grantId)) {
           return undefined;
         }
-        return entry.record;
+        return structuredClone(entry.record);
       }),
 
     saveRefreshToken: (key, record) =>
       run(() => {
-        purgeExpired();
         rejectIfPresent(refreshTokens, key);
-        refreshTokens.set(key, { record, used: false });
+        refreshTokens.set(key, { record: structuredClone(record), used: false });
       }),
 
     consumeRefreshToken: (key) =>
@@ -155,10 +143,28 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): MemoryStore
     revokeGrant: (grantId) =>
       run(() => {
         revokedGrants.add(grantId);
-        removeGrantEntries(accessTokens, grantId);
-        removeGrantEntries(refreshTokens, grantId);
       }),
   };
+}
+
+/**
+ * Copies a client record one level down: the record, its redirect URIs and scopes, and its `auth` object.
+ * A client may hold `@codenhub/jwt` keys, which are recognized by identity and hold functions, so they are
+ * shared by reference rather than cloned. A value that is not an array is copied as it is, so a malformed
+ * record reaches the provider's own check and gets its own `TypeError`.
+ */
+function copyClient(client: ClientRecord): ClientRecord {
+  return {
+    ...client,
+    redirectUris: copyList(client.redirectUris),
+    scopes: copyList(client.scopes),
+    auth: typeof client.auth === "object" && client.auth !== null ? { ...client.auth } : client.auth,
+  };
+}
+
+/** Copies an array; any other value is returned unchanged. */
+function copyList<T>(value: T): T {
+  return Array.isArray(value) ? ([...value] as T) : value;
 }
 
 /**
@@ -173,39 +179,13 @@ function rejectIfPresent<TRecord>(entries: Map<string, Entry<TRecord>>, key: str
 
 /**
  * Marks a single-use entry consumed, or reports its replay. Synchronous by design: the caller must not
- * await between finding the entry and calling this.
+ * await between finding the entry and calling this. The consumed record is a copy, so the caller cannot
+ * change the stored one.
  */
 function consumeEntry<TRecord extends { readonly grantId: string }>(entry: Entry<TRecord>): Consumption<TRecord> {
   if (entry.used) {
     return { status: "replayed", grantId: entry.record.grantId };
   }
   entry.used = true;
-  return { status: "consumed", record: entry.record };
-}
-
-/**
- * Deletes every entry whose expiry has passed. Codes and refresh tokens are kept until `expiresAt` even
- * when used, so a replay inside that window is still reported as `replayed`.
- */
-function purgeEntries<TRecord extends { readonly expiresAt: number }>(
-  entries: Map<string, Entry<TRecord>>,
-  nowMs: number,
-): void {
-  for (const [key, entry] of entries) {
-    if (entry.record.expiresAt * MILLISECONDS_PER_SECOND <= nowMs) {
-      entries.delete(key);
-    }
-  }
-}
-
-/** Removes a revoked grant's tokens to free memory. Reads already hide them through the revoked set. */
-function removeGrantEntries<TRecord extends { readonly grantId: string }>(
-  entries: Map<string, Entry<TRecord>>,
-  grantId: string,
-): void {
-  for (const [key, entry] of entries) {
-    if (entry.record.grantId === grantId) {
-      entries.delete(key);
-    }
-  }
+  return { status: "consumed", record: structuredClone(entry.record) };
 }
