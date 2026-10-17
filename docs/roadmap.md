@@ -23,7 +23,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
 
 ## Planned
 
-- **Stop reading pre-migration package metadata.** `parsePackageMetadata` still accepts identity inside `codenhub.docs`, only because release tags cut before `docs/specs/packages-metadata.md` carry it. Remove that support as soon as the newest release tag of every package declaring `codenhub.docs` uses the current shape; the spec's "Pre-migration manifests" section lists what to delete.
+- **Stop reading pre-migration package metadata.** `parsePackageMetadata` still accepts identity inside `codenhub.docs`, only because release tags cut before `docs/specs/packages-metadata.md` carry it. Remove that support as soon as the newest release tag of every package declaring `codenhub.docs` uses the current shape; the spec's "Pre-migration manifests" section lists what to delete. The same section covers the site index's fallback for release tags with no `codenhub` metadata at all, which ends once every public package's newest stable tag declares a label and status.
 
 - **Repository governance.** `SECURITY.md`, the issue forms, the label list, and the pull-request template have landed. `CODEOWNERS` pays off once more than one person reviews here.
 - **Backfill package demos.** `apps/demo` aggregates `packages/*/demo/`, and only `icons` and `styles` have one, so the deployed surface shows two of thirteen public packages.
@@ -52,7 +52,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
 
 ## Notes
 
-- **Delivery split.** All three deploy surfaces run from Cloudflare dashboard state — the `codenhub`, `codenhub-docs`, and `codenhub-demo` Workers Builds projects. The repository carries build configuration (`apps/*/wrangler.jsonc`) and, for `codenhub-docs` alone, one deploy-hook secret that lets a publish trigger a rebuild directly instead of waiting on a merge (`docs/ci.md`, "Publish-scoped content" and "Credentials"). `docs/ci.md` records each project's build watch-path excludes and the reasoning.
+- **Delivery split.** All three deploy surfaces run from Cloudflare dashboard state — the `codenhub`, `codenhub-docs`, and `codenhub-demo` Workers Builds projects. The repository carries build configuration (`apps/*/wrangler.jsonc`) and, for `codenhub-docs` and `codenhub`, a deploy-hook secret each that lets a publish trigger a rebuild directly instead of waiting on a merge (`docs/ci.md`, "Publish-scoped content" and "Credentials"). `docs/ci.md` records each project's build watch-path excludes and the reasoning.
 - **Release model.** A maintainer authorizes a release by pushing a `<package name>@<version>` tag; `.github/workflows/publish.yml` publishes through trusted publishing (OIDC, provenance), refusing a tag whose version disagrees with the manifest. The first release of a name is manual, because npm cannot configure a trusted publisher for a name that does not exist yet. `docs/specs/packages-lifecycle.md` and `docs/ci.md` own the rules.
 - **`ui-kit` is on hold.** `@codenhub/ui-kit` is old and is not being worked on. It will be either deprecated or rewritten from scratch. Until then it is left out of audits, reviews, and cross-package compliance work: a finding against it is not acted on, and it is not a reason to change another package or a spec.
 - **Unlisted packages.** `router`, `store`, `theme`, the plugins, and `ui-kit` are internal, WIP, deprecated, or evaluated separately, and are absent from the per-package list above by intent.

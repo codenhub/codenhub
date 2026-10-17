@@ -52,13 +52,14 @@ export async function listTags(cwd: string, git: GitRunner = runGit): Promise<st
     .filter((line) => line !== "");
 }
 
-// `major.minor.patch` and nothing more: no pre-release, no build metadata.
-const STABLE_VERSION = /^\d+\.\d+\.\d+$/;
+// `major.minor.patch` with no pre-release. Build metadata does not make a
+// version a pre-release: `distTagForVersion` publishes it under `latest`.
+const STABLE_VERSION = /^\d+\.\d+\.\d+(?:\+[0-9A-Za-z.-]+)?$/;
 
 /**
  * Reports whether a version is a stable release rather than a pre-release.
  * @param version Version as written in a release tag, such as `0.3.0` or `0.3.1-beta.1`.
- * @returns `true` for a plain `major.minor.patch` version.
+ * @returns `true` for `major.minor.patch` with no pre-release, build metadata (`+build.5`) allowed.
  */
 export function isStableVersion(version: string): boolean {
   return STABLE_VERSION.test(version);
@@ -93,4 +94,69 @@ export function resolveLatestPublishedTag(packageName: string, tags: readonly st
     }
     return latest;
   }, undefined)?.tag;
+}
+
+/** One released version of a package, as its release tag records it. */
+export interface PackageRelease {
+  /** Committer date of the commit the tag names, as an ISO 8601 string. */
+  date: string;
+  /** Whether the version is a pre-release, which publishes under the `next` dist-tag. */
+  isPrerelease: boolean;
+  /** Version the tag releases, such as `0.3.0`. */
+  version: string;
+}
+
+/**
+ * Lists every local tag with the date of the commit it names.
+ *
+ * Release tags here are lightweight, so a tag has no date of its own: this is
+ * the date of the release commit, which can precede the npm publish by however
+ * long the tag waited to be pushed.
+ * @param cwd Directory inside the repository.
+ * @param git Git runner, defaulting to a real `git for-each-ref`.
+ * @returns Tag names mapped to ISO 8601 commit dates.
+ * @throws When the underlying `git for-each-ref` command fails.
+ */
+export async function listTagDates(cwd: string, git: GitRunner = runGit): Promise<Map<string, string>> {
+  const outcome = await git(
+    [
+      "for-each-ref",
+      "--format=%(refname:short)%09%(*committerdate:iso-strict)%(committerdate:iso-strict)",
+      "refs/tags",
+    ],
+    cwd,
+  );
+  if (!outcome.isSuccess) {
+    throw new Error(`Could not list git tags in ${cwd}.`);
+  }
+  const entries = outcome.stdout
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line): [string, string] => {
+      const [tag = "", date = ""] = line.trim().split("\t");
+      // A tag that names no commit has no date; a release would be missing
+      // from the history rather than reported, so it fails here instead.
+      if (tag === "" || date === "") {
+        throw new Error(`Could not read the commit date of tag "${line.trim()}" in ${cwd}.`);
+      }
+      return [tag, date];
+    });
+  return new Map(entries);
+}
+
+/**
+ * Collects a package's releases from its release tags.
+ * @param packageName Full package name, such as `@codenhub/error`.
+ * @param tagDates Tag names mapped to dates, as {@link listTagDates} returns them.
+ * @returns The package's releases, newest version first.
+ */
+export function collectReleases(packageName: string, tagDates: ReadonlyMap<string, string>): PackageRelease[] {
+  return [...tagDates]
+    .flatMap(([tag, date]): PackageRelease[] => {
+      const release = parseReleaseTag(tag);
+      return release === undefined || release.name !== packageName
+        ? []
+        : [{ date, isPrerelease: !isStableVersion(release.version), version: release.version }];
+    })
+    .sort((left, right) => compareVersions(right.version, left.version));
 }

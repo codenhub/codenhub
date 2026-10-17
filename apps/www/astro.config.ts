@@ -5,12 +5,21 @@ import lucide from "@codenhub/icons/data/lucide";
 import { viteIcons } from "@codenhub/icons/vite";
 import { defineConfig } from "astro/config";
 
+import { createReleaseSnapshotIntegration } from "./src/lib/release-snapshot-integration";
 import { siteConfig } from "./src/site-config";
 
-const packagesRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../packages");
+const appRoot = path.dirname(fileURLToPath(import.meta.url));
+const packagesRoot = path.resolve(appRoot, "../../packages");
 
 export default defineConfig({
   site: siteConfig.siteUrl,
+  integrations: [
+    createReleaseSnapshotIntegration({
+      logosRoot: path.join(appRoot, "public/logos"),
+      repoRoot: path.resolve(packagesRoot, ".."),
+      snapshotRoot: path.join(appRoot, ".codenhub-published"),
+    }),
+  ],
   vite: {
     plugins: [
       viteIcons({
