@@ -59,7 +59,7 @@ const STABLE_VERSION = /^\d+\.\d+\.\d+(?:\+[0-9A-Za-z.-]+)?$/;
 /**
  * Reports whether a version is a stable release rather than a pre-release.
  * @param version Version as written in a release tag, such as `0.3.0` or `0.3.1-beta.1`.
- * @returns `true` for a plain `major.minor.patch` version.
+ * @returns `true` for `major.minor.patch` with no pre-release, build metadata (`+build.5`) allowed.
  */
 export function isStableVersion(version: string): boolean {
   return STABLE_VERSION.test(version);
