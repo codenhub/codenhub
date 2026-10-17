@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { fetchReleaseTags, listTags, resolveLatestPublishedTag, type GitRunner } from "./published-tags.ts";
+import {
+  collectReleases,
+  fetchReleaseTags,
+  listTagDates,
+  listTags,
+  resolveLatestPublishedTag,
+  type GitRunner,
+} from "./published-tags.ts";
 
 describe("fetchReleaseTags", () => {
   it("runs a forced tag fetch from origin", async () => {
@@ -61,5 +68,40 @@ describe("resolveLatestPublishedTag", () => {
 
   it("ignores tags that are not release tags", () => {
     expect(resolveLatestPublishedTag("@codenhub/error", ["v1.0.0", "release"])).toBeUndefined();
+  });
+});
+
+describe("listTagDates", () => {
+  it("maps each tag to the date git reports for it", async () => {
+    const git = vi.fn<GitRunner>().mockResolvedValue({
+      isSuccess: true,
+      stdout: "@codenhub/error@0.3.0\t2026-10-09T12:00:00+00:00\nbroken\n\n",
+    });
+    await expect(listTagDates("/repo", git)).resolves.toEqual(
+      new Map([["@codenhub/error@0.3.0", "2026-10-09T12:00:00+00:00"]]),
+    );
+  });
+
+  it("throws when git fails, rather than reporting no tags", async () => {
+    const git = vi.fn<GitRunner>().mockResolvedValue({ isSuccess: false, stdout: "" });
+    await expect(listTagDates("/repo", git)).rejects.toThrow("Could not list git tags");
+  });
+});
+
+describe("collectReleases", () => {
+  it("lists one package's releases, newest version first, marking pre-releases", () => {
+    const tagDates = new Map([
+      ["@codenhub/error@0.2.0", "2026-08-01T00:00:00+00:00"],
+      ["@codenhub/error@0.10.0", "2026-10-01T00:00:00+00:00"],
+      ["@codenhub/error@0.11.0-beta.1", "2026-10-10T00:00:00+00:00"],
+      ["@codenhub/errors@1.0.0", "2026-10-11T00:00:00+00:00"],
+      ["v1.0.0", "2026-01-01T00:00:00+00:00"],
+    ]);
+
+    expect(collectReleases("@codenhub/error", tagDates)).toEqual([
+      { date: "2026-10-10T00:00:00+00:00", isPrerelease: true, version: "0.11.0-beta.1" },
+      { date: "2026-10-01T00:00:00+00:00", isPrerelease: false, version: "0.10.0" },
+      { date: "2026-08-01T00:00:00+00:00", isPrerelease: false, version: "0.2.0" },
+    ]);
   });
 });

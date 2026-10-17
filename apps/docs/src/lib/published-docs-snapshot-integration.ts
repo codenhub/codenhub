@@ -1,9 +1,8 @@
+import { buildPublishedSnapshot, type PublishedSnapshotOptions } from "@codenhub/tools/release";
 import type { AstroIntegration } from "astro";
 
-import { buildPublishedDocsSnapshot, type PublishedDocsSnapshotOptions } from "./published-docs-snapshot";
-
-interface IntegrationOptions extends PublishedDocsSnapshotOptions {
-  build?: (options: PublishedDocsSnapshotOptions) => Promise<void>;
+interface IntegrationOptions extends PublishedSnapshotOptions {
+  build?: (options: PublishedSnapshotOptions) => Promise<void>;
 }
 
 /**
@@ -33,7 +32,7 @@ export function readsPublishedSnapshot(command: string): boolean {
  * @returns Astro integration to register in `astro.config.ts`.
  */
 export function createPublishedDocsSnapshotIntegration(options: IntegrationOptions): AstroIntegration {
-  const build = options.build ?? buildPublishedDocsSnapshot;
+  const build = options.build ?? buildPublishedSnapshot;
   return {
     name: "codenhub-published-docs-snapshot",
     hooks: {

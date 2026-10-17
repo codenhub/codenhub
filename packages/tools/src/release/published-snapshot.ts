@@ -1,38 +1,57 @@
-import { mkdir, readdir, readFile, rm } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { parsePackageMetadata } from "@codenhub/tools/documentation";
-import { fetchReleaseTags, listTags, materializeTreeAtRef, resolveLatestPublishedTag } from "@codenhub/tools/release";
-import { discoverWorkspace, type WorkspacePackage } from "@codenhub/tools/workspace";
+import { parsePackageMetadata, type PackageMetadata } from "../documentation/package-metadata.ts";
+import { discoverWorkspace, type WorkspacePackage } from "../workspace/discover.ts";
+import {
+  collectReleases,
+  fetchReleaseTags,
+  listTagDates,
+  resolveLatestPublishedTag,
+  type PackageRelease,
+} from "./published-tags.ts";
+import { materializeTreeAtRef } from "./tag-content.ts";
+
+/** Every released package's releases, newest first, keyed by package name. */
+export type ReleaseHistory = Record<string, PackageRelease[]>;
 
 /** Where the repository and the tag-scoped snapshot live. */
-export interface PublishedDocsSnapshotOptions {
+export interface PublishedSnapshotOptions {
   /** Absolute repository root, used to run `git` and resolve workspace packages. */
   repoRoot: string;
   /** Absolute directory the snapshot is written into. Cleared and rebuilt on every call. */
   snapshotRoot: string;
+  /**
+   * Which released packages the snapshot keeps, judged on the manifest at the
+   * release tag and its metadata (`null` when it declares none). Defaults to
+   * packages that declare `codenhub.docs`.
+   */
+  includes?: (manifest: Record<string, unknown>, metadata: PackageMetadata | null) => boolean;
 }
 
 /** Collaborators the snapshot builder calls through, injected by tests. */
-export interface PublishedDocsSnapshotDeps {
+export interface PublishedSnapshotDeps {
   discoverWorkspace: typeof discoverWorkspace;
   fetchReleaseTags: typeof fetchReleaseTags;
-  listTags: typeof listTags;
+  listTagDates: typeof listTagDates;
   materializeTreeAtRef: typeof materializeTreeAtRef;
   resolveLatestPublishedTag: typeof resolveLatestPublishedTag;
 }
 
-// What the site reads from a package: the catalog reads the manifest and
+// What the sites read from a package: the catalogs read the manifest and
 // `docs/`, and resource publication validates the README and `llms` files and
 // serves `LICENSE` and `NOTICE`. Public docs may link nowhere else
 // (`invalid-docs-escape`), so nothing outside this set can be a link target.
+// A declared `codenhub.logo` is kept as well, wherever it sits.
 const ROOT_SURFACES = new Set(["LICENSE", "NOTICE", "README.md", "llms-full.txt", "llms.txt", "package.json"]);
 const DOCS_DIRECTORY = "docs";
 
-const defaultDeps: PublishedDocsSnapshotDeps = {
+const RELEASES_FILE = "releases.json";
+
+const defaultDeps: PublishedSnapshotDeps = {
   discoverWorkspace,
   fetchReleaseTags,
-  listTags,
+  listTagDates,
   materializeTreeAtRef,
   resolveLatestPublishedTag,
 };
@@ -46,12 +65,43 @@ export function snapshotPackagesRoot(snapshotRoot: string): string {
   return path.join(snapshotRoot, "packages");
 }
 
+/**
+ * Where the snapshot keeps the release history of every released package.
+ * @param snapshotRoot Directory the snapshot is written into.
+ * @returns Absolute path of the {@link ReleaseHistory} JSON file.
+ */
+export function snapshotReleasesPath(snapshotRoot: string): string {
+  return path.join(snapshotRoot, RELEASES_FILE);
+}
+
+/**
+ * Collects every workspace package's releases from the local release tags.
+ *
+ * Reads tags as they are; {@link buildPublishedSnapshot} fetches them first.
+ * A package with no release tag has no entry.
+ * @param repoRoot Absolute repository root.
+ * @param deps Collaborators to call through, defaulting to the real filesystem and `git`.
+ * @returns Releases keyed by package name.
+ */
+export async function buildReleaseHistory(
+  repoRoot: string,
+  deps: Pick<PublishedSnapshotDeps, "discoverWorkspace" | "listTagDates"> = defaultDeps,
+): Promise<ReleaseHistory> {
+  const [workspace, tagDates] = await Promise.all([deps.discoverWorkspace(repoRoot), deps.listTagDates(repoRoot)]);
+  return Object.fromEntries(
+    workspace.packages.flatMap((workspacePackage) => {
+      const releases = collectReleases(workspacePackage.name, tagDates);
+      return releases.length === 0 ? [] : [[workspacePackage.name, releases] as const];
+    }),
+  );
+}
+
 async function snapshotPackage(
-  deps: PublishedDocsSnapshotDeps,
+  deps: PublishedSnapshotDeps,
   workspacePackage: WorkspacePackage,
-  context: { repoRoot: string; snapshotRoot: string; tags: readonly string[] },
+  context: Required<PublishedSnapshotOptions> & { tags: readonly string[] },
 ): Promise<void> {
-  const { repoRoot, snapshotRoot, tags } = context;
+  const { includes, repoRoot, snapshotRoot, tags } = context;
   const tag = deps.resolveLatestPublishedTag(workspacePackage.name, tags);
   if (tag === undefined) {
     // No tag means no release, so there is nothing published to show. The
@@ -80,12 +130,21 @@ async function snapshotPackage(
     throw new Error(`${tag} has ${String(name)} at ${workspacePackage.location}, not ${workspacePackage.name}.`);
   }
   // The opt-in is read from the released manifest, like everything else here:
-  // a package opts into the site in the same release that ships its docs.
-  if (parsePackageMetadata(manifest, `${workspacePackage.location}/package.json`)?.documented !== true) {
+  // a package opts into a site in the same release that ships what it shows.
+  const metadata = parsePackageMetadata(manifest, `${workspacePackage.location}/package.json`);
+  if (!includes(manifest as Record<string, unknown>, metadata)) {
     await rm(destination, { force: true, recursive: true });
     return;
   }
+  const logo =
+    metadata?.logo === undefined
+      ? undefined
+      : { content: await readFile(path.join(destination, metadata.logo)), path: path.join(destination, metadata.logo) };
   await pruneToPublishedSurfaces(destination);
+  if (logo !== undefined) {
+    await mkdir(path.dirname(logo.path), { recursive: true });
+    await writeFile(logo.path, logo.content);
+  }
 }
 
 /**
@@ -108,7 +167,8 @@ async function pruneToPublishedSurfaces(packageDirectory: string): Promise<void>
 }
 
 /**
- * Materializes every released, documentation-enabled package as of its latest release tag.
+ * Materializes every released, documentation-enabled package as of its latest release tag,
+ * with the release history of every released package beside it.
  *
  * A build that reads `packages/*` straight from the working tree shows whatever
  * happens to sit on `main`, which can describe behavior that has not reached npm
@@ -131,11 +191,12 @@ async function pruneToPublishedSurfaces(packageDirectory: string): Promise<void>
  * @param deps Collaborators to call through, defaulting to the real filesystem and `git`.
  * @throws When tags cannot be fetched, a tag cannot be read, or a package's location or name at its tag disagrees with the workspace.
  */
-export async function buildPublishedDocsSnapshot(
-  options: PublishedDocsSnapshotOptions,
-  deps: PublishedDocsSnapshotDeps = defaultDeps,
+export async function buildPublishedSnapshot(
+  options: PublishedSnapshotOptions,
+  deps: PublishedSnapshotDeps = defaultDeps,
 ): Promise<void> {
   const { repoRoot, snapshotRoot } = options;
+  const includes = options.includes ?? ((_manifest, metadata) => metadata?.documented === true);
   await rm(snapshotRoot, { force: true, recursive: true });
   // Created even when nothing has released, so every reader of the snapshot
   // finds an empty tree rather than a missing one.
@@ -146,11 +207,17 @@ export async function buildPublishedDocsSnapshot(
   if (!(await deps.fetchReleaseTags(repoRoot))) {
     throw new Error(`Could not fetch release tags from origin in ${repoRoot}.`);
   }
-  const [workspace, tags] = await Promise.all([deps.discoverWorkspace(repoRoot), deps.listTags(repoRoot)]);
+  const [workspace, tagDates] = await Promise.all([deps.discoverWorkspace(repoRoot), deps.listTagDates(repoRoot)]);
+  const tags = [...tagDates.keys()];
 
   await Promise.all(
     workspace.packages.map((workspacePackage) =>
-      snapshotPackage(deps, workspacePackage, { repoRoot, snapshotRoot, tags }),
+      snapshotPackage(deps, workspacePackage, { includes, repoRoot, snapshotRoot, tags }),
     ),
   );
+  const history = await buildReleaseHistory(repoRoot, {
+    discoverWorkspace: async () => workspace,
+    listTagDates: async () => tagDates,
+  });
+  await writeFile(snapshotReleasesPath(snapshotRoot), `${JSON.stringify(history, undefined, 2)}\n`, "utf8");
 }

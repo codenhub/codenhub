@@ -2,15 +2,17 @@ import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import type { MaterializeTreeOptions } from "@codenhub/tools/release";
-import type { Workspace, WorkspacePackage } from "@codenhub/tools/workspace";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { Workspace, WorkspacePackage } from "../workspace/discover.ts";
 import {
-  buildPublishedDocsSnapshot,
+  buildPublishedSnapshot,
+  buildReleaseHistory,
   snapshotPackagesRoot,
-  type PublishedDocsSnapshotDeps,
-} from "./published-docs-snapshot.ts";
+  snapshotReleasesPath,
+  type PublishedSnapshotDeps,
+} from "./published-snapshot.ts";
+import type { MaterializeTreeOptions } from "./tag-content.ts";
 
 const DOCS_MANIFEST = { codenhub: { label: "Error", status: "active", docs: {} }, name: "@codenhub/error" };
 
@@ -53,28 +55,28 @@ async function createTempDir(): Promise<string> {
   return directory;
 }
 
-function createDeps(packages: WorkspacePackage[], overrides: Partial<PublishedDocsSnapshotDeps> = {}) {
+function createDeps(packages: WorkspacePackage[], overrides: Partial<PublishedSnapshotDeps> = {}) {
   const workspace: Workspace = { packages, root: "/repo" };
   return {
     discoverWorkspace: vi.fn().mockResolvedValue(workspace),
     fetchReleaseTags: vi.fn().mockResolvedValue(true),
-    listTags: vi.fn().mockResolvedValue([]),
+    listTagDates: vi.fn().mockResolvedValue(new Map<string, string>()),
     materializeTreeAtRef: vi.fn().mockResolvedValue(true),
     resolveLatestPublishedTag: vi.fn().mockReturnValue(undefined),
     ...overrides,
-  } satisfies PublishedDocsSnapshotDeps;
+  } satisfies PublishedSnapshotDeps;
 }
 
 afterEach(async () => {
   await Promise.all(tempDirectories.splice(0).map((directory) => rm(directory, { force: true, recursive: true })));
 });
 
-describe("buildPublishedDocsSnapshot", () => {
+describe("buildPublishedSnapshot", () => {
   it("materializes a released package from its latest tag at its workspace location", async () => {
     const repoRoot = await createTempDir();
     const snapshotRoot = await createTempDir();
     const deps = createDeps([createPackage(repoRoot, "packages/error", "@codenhub/error")], {
-      listTags: vi.fn().mockResolvedValue(["@codenhub/error@0.3.0"]),
+      listTagDates: vi.fn().mockResolvedValue(new Map([["@codenhub/error@0.3.0", "2026-10-09T12:00:00+00:00"]])),
       materializeTreeAtRef: materializeFiles({
         "docs/index.md": "# Error\n\nPublished content.\n",
         "package.json": JSON.stringify(DOCS_MANIFEST),
@@ -82,7 +84,7 @@ describe("buildPublishedDocsSnapshot", () => {
       resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.3.0"),
     });
 
-    await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps);
+    await buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps);
 
     expect(deps.materializeTreeAtRef).toHaveBeenCalledWith({
       cwd: repoRoot,
@@ -117,7 +119,7 @@ describe("buildPublishedDocsSnapshot", () => {
       resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.3.0"),
     });
 
-    await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps);
+    await buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps);
 
     const packageDirectory = path.join(snapshotRoot, "packages/error");
     await expect(readdir(packageDirectory).then((entries) => entries.sort())).resolves.toEqual([
@@ -140,7 +142,7 @@ describe("buildPublishedDocsSnapshot", () => {
     const snapshotRoot = await createTempDir();
     const deps = createDeps([createPackage(repoRoot, "packages/toaster", "@codenhub/toaster")]);
 
-    await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps);
+    await buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps);
 
     expect(deps.materializeTreeAtRef).not.toHaveBeenCalled();
     await expect(readdir(snapshotPackagesRoot(snapshotRoot))).resolves.toEqual([]);
@@ -157,7 +159,7 @@ describe("buildPublishedDocsSnapshot", () => {
       resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.1.0"),
     });
 
-    await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps);
+    await buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps);
 
     await expect(readdir(snapshotPackagesRoot(snapshotRoot))).resolves.toEqual([]);
   });
@@ -174,7 +176,7 @@ describe("buildPublishedDocsSnapshot", () => {
       resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.3.0"),
     });
 
-    await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps);
+    await buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps);
 
     await expect(readdir(snapshotPackagesRoot(snapshotRoot))).resolves.toEqual(["error"]);
   });
@@ -183,7 +185,7 @@ describe("buildPublishedDocsSnapshot", () => {
     const repoRoot = await createTempDir();
     const snapshotRoot = await createTempDir();
 
-    await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, createDeps([]));
+    await buildPublishedSnapshot({ repoRoot, snapshotRoot }, createDeps([]));
 
     await expect(readdir(snapshotPackagesRoot(snapshotRoot))).resolves.toEqual([]);
   });
@@ -193,7 +195,7 @@ describe("buildPublishedDocsSnapshot", () => {
     const snapshotRoot = await createTempDir();
     await mkdir(path.join(snapshotRoot, "packages/stale"), { recursive: true });
 
-    await buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, createDeps([]));
+    await buildPublishedSnapshot({ repoRoot, snapshotRoot }, createDeps([]));
 
     await expect(readdir(snapshotPackagesRoot(snapshotRoot))).resolves.toEqual([]);
   });
@@ -205,7 +207,7 @@ describe("buildPublishedDocsSnapshot", () => {
       fetchReleaseTags: vi.fn().mockResolvedValue(false),
     });
 
-    await expect(buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps)).rejects.toThrow(
+    await expect(buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps)).rejects.toThrow(
       "Could not fetch release tags",
     );
   });
@@ -218,7 +220,7 @@ describe("buildPublishedDocsSnapshot", () => {
       resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/vite-plugin-icons@0.0.1"),
     });
 
-    await expect(buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps)).rejects.toThrow(
+    await expect(buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps)).rejects.toThrow(
       "the package moved after its last release",
     );
   });
@@ -231,7 +233,7 @@ describe("buildPublishedDocsSnapshot", () => {
       resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.3.0"),
     });
 
-    await expect(buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps)).rejects.toThrow(
+    await expect(buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps)).rejects.toThrow(
       "has @codenhub/other at packages/error",
     );
   });
@@ -244,8 +246,82 @@ describe("buildPublishedDocsSnapshot", () => {
       resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.3.0"),
     });
 
-    await expect(buildPublishedDocsSnapshot({ repoRoot, snapshotRoot }, deps)).rejects.toThrow(
+    await expect(buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps)).rejects.toThrow(
       "Could not read @codenhub/error@0.3.0",
     );
+  });
+
+  it("writes the release history of every released package beside the packages", async () => {
+    const repoRoot = await createTempDir();
+    const snapshotRoot = await createTempDir();
+    const deps = createDeps([createPackage(repoRoot, "packages/error", "@codenhub/error")], {
+      listTagDates: vi.fn().mockResolvedValue(
+        new Map([
+          ["@codenhub/error@0.2.0", "2026-08-01T00:00:00+00:00"],
+          ["@codenhub/error@0.3.0", "2026-10-09T00:00:00+00:00"],
+        ]),
+      ),
+      materializeTreeAtRef: materializeFiles({ "package.json": JSON.stringify(DOCS_MANIFEST) }),
+      resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.3.0"),
+    });
+
+    await buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps);
+
+    expect(JSON.parse(await readFile(snapshotReleasesPath(snapshotRoot), "utf8"))).toEqual({
+      "@codenhub/error": [
+        { date: "2026-10-09T00:00:00+00:00", isPrerelease: false, version: "0.3.0" },
+        { date: "2026-08-01T00:00:00+00:00", isPrerelease: false, version: "0.2.0" },
+      ],
+    });
+  });
+
+  it("keeps the logo the released manifest declares", async () => {
+    const repoRoot = await createTempDir();
+    const snapshotRoot = await createTempDir();
+    const manifest = { ...DOCS_MANIFEST, codenhub: { ...DOCS_MANIFEST.codenhub, logo: "assets/logo.svg" } };
+    const deps = createDeps([createPackage(repoRoot, "packages/error", "@codenhub/error")], {
+      materializeTreeAtRef: materializeFiles({
+        "assets/logo.svg": "<svg/>",
+        "assets/other.svg": "<svg/>",
+        "package.json": JSON.stringify(manifest),
+      }),
+      resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/error@0.3.0"),
+    });
+
+    await buildPublishedSnapshot({ repoRoot, snapshotRoot }, deps);
+
+    await expect(readdir(path.join(snapshotRoot, "packages/error/assets"))).resolves.toEqual(["logo.svg"]);
+  });
+
+  it("keeps whichever released packages the caller includes, metadata or not", async () => {
+    const repoRoot = await createTempDir();
+    const snapshotRoot = await createTempDir();
+    const deps = createDeps([createPackage(repoRoot, "packages/router", "@codenhub/router")], {
+      materializeTreeAtRef: materializeFiles({
+        "package.json": JSON.stringify({ name: "@codenhub/router", private: false }),
+      }),
+      resolveLatestPublishedTag: vi.fn().mockReturnValue("@codenhub/router@0.0.2"),
+    });
+
+    await buildPublishedSnapshot(
+      { includes: (manifest, metadata) => manifest.private === false && metadata === null, repoRoot, snapshotRoot },
+      deps,
+    );
+
+    await expect(readdir(snapshotPackagesRoot(snapshotRoot))).resolves.toEqual(["router"]);
+  });
+});
+
+describe("buildReleaseHistory", () => {
+  it("leaves out a package with no release tag", async () => {
+    const history = await buildReleaseHistory("/repo", {
+      discoverWorkspace: vi.fn().mockResolvedValue({
+        packages: [createPackage("/repo", "packages/error", "@codenhub/error")],
+        root: "/repo",
+      }),
+      listTagDates: vi.fn().mockResolvedValue(new Map([["@codenhub/styles@0.7.0", "2026-10-01T00:00:00+00:00"]])),
+    });
+
+    expect(history).toEqual({});
   });
 });
