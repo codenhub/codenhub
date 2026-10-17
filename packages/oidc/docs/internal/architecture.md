@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-16
+last_updated: 2026-10-17
 scope: How `@codenhub/oidc` is built and why, for whoever changes it next.
 ---
 
@@ -33,8 +33,8 @@ Out of scope, and documented rather than defended:
 | `src/index.ts`  | The root export: shared types only (decision 6).                                                                          |
 | `src/shared/`   | Public types, results, limits, base64url and digests, PKCE, `at_hash`, strict parameter parsing, bounded bodies.          |
 | `src/client/`   | `discover`, `createClient`, and the client's bounded JSON fetch, metadata checks, client authentication, ID token checks. |
-| `src/provider/` | `createProvider`, option resolution, the four endpoints, client authentication, secrets, responses.                       |
-| `src/testing/`  | The in-memory reference store.                                                                                            |
+| `src/provider/` | `createProvider`, option resolution, the five endpoints, client authentication, secrets, responses, diagnostics.          |
+| `src/testing/`  | The in-memory reference store and the store conformance cases.                                                            |
 
 Each subpath is its own build entry (`client.ts`, `provider.ts`, `testing.ts`), and the client never imports from `src/provider/`, so `@codenhub/oidc/client` does not carry provider code (scope.md section 3). Both sides import `src/shared/`, which the bundler emits as a shared chunk.
 
@@ -59,6 +59,14 @@ Order of checks, cheapest and least trusting first: method, content type, body s
 
 A code or refresh token is consumed before it is checked, so a wrong verifier or redirect URI still burns it, and a second attempt is a replay. A replay revokes the grant. Because a replay can arrive while the first exchange is still saving its tokens, the store contract requires `revokeGrant` to cover tokens saved after it (decision 10); the memory store keeps a set of revoked grants and checks it on every read.
 
+### Revocation endpoint
+
+The revocation endpoint shares the token endpoint's front checks and client authentication (`readClientRequest` in `token.ts`). It reads the access token table first, because that read changes nothing, and then spends a refresh token, so either kind of token revokes its grant with no store method beyond the ones the token endpoint uses (decision 27). It does not check expiry: a token the store still holds revokes its grant whether or not it has expired, which is harmless.
+
+### Diagnostics
+
+A refusal at the token, userinfo or revocation endpoint is built with `refuse(response, reason, clientId?)` (`diagnostics.ts`), which records the reason in a `WeakMap` keyed by the response. `handle` passes the recorded refusal to `onDiagnostic` after the endpoint answers (decision 28). The reason never travels through return types, and a response the code did not mark is never reported. `clientId` is passed only where it comes from the store.
+
 ### Userinfo
 
 The bearer token is read from the `Authorization` header only. Access tokens, refresh tokens and ID tokens never share a lookup: an access token is found only through `findAccessToken`, so presenting any other token there finds nothing, which is the type-confusion defense for opaque tokens. Released claims are filtered to the names the granted scopes release, read without running getters, and `sub` is set last from the record.
@@ -71,20 +79,24 @@ The callback checks, in order: the URL and its parameters, `state` (constant-tim
 
 ## Limits
 
-| Limit                             | Value         | Why this value                                                                             |
-| --------------------------------- | ------------- | ------------------------------------------------------------------------------------------ |
-| Request URL read by the provider  | 8192 chars    | Authorization requests are a few hundred characters; the cap is checked before parsing.    |
-| Request body read by the provider | 16384 bytes   | A token request with an RSA-4096 client assertion is under 3 KB.                           |
-| Parameters per request            | 32            | A request uses at most about a dozen.                                                      |
-| Parameter length                  | 4096 chars    | Fits a client assertion signed with RSA-4096.                                              |
-| Response body read by the client  | 65536 bytes   | Discovery documents and token responses are a few kilobytes.                               |
-| Client request timeout            | 5 s, 1 to 60  | A slow provider should fail a sign-in, not hold it.                                        |
-| Client option list entries        | 100           | `scope`, `prompt` and `uiLocales` of `authorize` and `scope` of `refresh`; decision 22.    |
-| URL characters                    | Visible ASCII | Issuers, endpoints and redirect URIs; the URL parser rewrites anything else (decision 22). |
-| Code lifetime                     | 60 s, ≤ 600   | Invariant 4: short-lived, bounded.                                                         |
-| Interaction lifetime              | 1800 s        | Time for a user to sign in and consent.                                                    |
-| Access and ID token lifetime      | 600 s         | Short, since opaque access tokens are checked at the store anyway.                         |
-| Refresh token family lifetime     | 30 days       | Decision 11.                                                                               |
+| Limit                                 | Value                      | Why this value                                                                                  |
+| ------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------- |
+| Request URL read by the provider      | 8192 chars                 | Authorization requests are a few hundred characters; the cap is checked before parsing.         |
+| Request body read by the provider     | 16384 bytes                | A token request with an RSA-4096 client assertion is under 3 KB.                                |
+| Parameters per request                | 32                         | A request uses at most about a dozen.                                                           |
+| Parameter length                      | 4096 chars                 | Fits a client assertion signed with RSA-4096.                                                   |
+| Response body read by the client      | 65536 bytes                | Discovery documents and token responses are a few kilobytes.                                    |
+| Client request timeout                | 5 s, 1 to 60               | A slow provider should fail a sign-in, not hold it.                                             |
+| Client option list entries            | 100                        | `scope`, `prompt` and `uiLocales` of `authorize` and `scope` of `refresh`; decision 22.         |
+| URL characters                        | Visible ASCII              | Issuers, endpoints and redirect URIs, less `\`; the URL parser rewrites the rest (decision 22). |
+| Authorization URL built by the client | 8192 chars                 | The provider's URL limit, checked after encoding (decision 24).                                 |
+| Metadata copy                         | Depth 32, 65536 containers | Bounds hand-written metadata that reuses objects; no fetched document reaches either.           |
+| Client assertion clock tolerance      | 60 s                       | Client clocks drift; with none, a clock one second ahead failed every request (decision 23).    |
+| Client assertion lifetime             | 300 s                      | Bounds replay of an untracked `jti` (decision 23).                                              |
+| Code lifetime                         | 60 s, ≤ 600                | Invariant 4: short-lived, bounded.                                                              |
+| Interaction lifetime                  | 1800 s                     | Time for a user to sign in and consent.                                                         |
+| Access and ID token lifetime          | 600 s                      | Short, since opaque access tokens are checked at the store anyway.                              |
+| Refresh token family lifetime         | 30 days                    | Decision 11.                                                                                    |
 
 ## Error model
 
@@ -92,6 +104,7 @@ The callback checks, in order: the URL and its parameters, `state` (constant-tim
 - **Programmer error throws `TypeError`**: invalid options at creation, a malformed client record from the store, a malformed `PendingAuthorization`, and an outcome that contradicts the request.
 - **Issues carry no input.** `params` hold only fixed vocabulary (`endpoint`, `reason`, a known OAuth `error`, a `jwtCode`) and numbers such as an HTTP `status`. Error responses carry only the OAuth code.
 - **Results are deep-frozen.**
+- **Operators get reasons, clients get codes.** `onDiagnostic` receives a fixed-vocabulary reason for each refusal at the token, userinfo and revocation endpoints; the response still carries only the OAuth code (decision 28).
 
 ## Runtime constraints
 
