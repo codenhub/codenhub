@@ -2,7 +2,7 @@ import { mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { type CommandOutcome, type CommandSpec, execute } from "../process/execute.ts";
+import { type CommandOutcome, type CommandSpec, type ExecuteOptions, execute } from "../process/execute.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import type { ReadinessCheck } from "./readiness.ts";
 
@@ -97,12 +97,10 @@ export type PublishRunner = (
 ) => Promise<{ isSuccess: boolean; output: string }>;
 
 /** Runs one child process for {@link createPublishRunner}. Injected by tests. */
-export type PublishStepRunner = (spec: CommandSpec, timeoutMs?: number) => Promise<CommandOutcome>;
+export type PublishStepRunner = (spec: CommandSpec, options: ExecuteOptions) => Promise<CommandOutcome>;
 
 const PREPUBLISH_SCRIPT = "prepublishOnly";
 const TARBALL_EXTENSION = ".tgz";
-
-const runStep: PublishStepRunner = async (spec, timeoutMs) => execute(spec, { stdio: "pipe", timeoutMs });
 
 /**
  * Creates the runner that packs a package with pnpm and publishes the tarball with npm.
@@ -126,15 +124,26 @@ const runStep: PublishStepRunner = async (spec, timeoutMs) => execute(spec, { st
  * generates a provenance attestation on its own, and the flag is rejected
  * outside a supported CI provider — passing it would buy nothing in the
  * workflow and break the same command on a maintainer's machine.
+ *
+ * `npm publish` alone runs with the terminal inherited and no timeout. On a
+ * maintainer's machine with two-factor authentication npm waits for a web
+ * sign-in or prompts for a one-time code, and without a TTY it answers `EOTP`
+ * and exits at once; a timeout would cut a slow sign-in short. In the
+ * workflow nothing prompts, and the job's own time limit bounds the step.
+ * npm's output then goes straight to the terminal rather than into the
+ * returned output, which on an npm failure points there instead.
  * @param run Child process runner, defaulting to {@link execute}.
- * @returns Runner reporting whether every step succeeded, with their combined output.
+ * @returns Runner reporting whether every step succeeded, with the captured output of the steps before `npm publish`, or a pointer to npm's own output when the publish itself fails.
  */
-export function createPublishRunner(run: PublishStepRunner = runStep): PublishRunner {
+export function createPublishRunner(run: PublishStepRunner = execute): PublishRunner {
   return async (workspacePackage, timeoutMs) => {
     const cwd = workspacePackage.directory;
     const outputs: string[] = [];
-    const step = async (spec: CommandSpec): Promise<boolean> => {
-      const outcome = await run(spec, timeoutMs);
+    const step = async (
+      spec: CommandSpec,
+      options: ExecuteOptions = { stdio: "pipe", timeoutMs },
+    ): Promise<boolean> => {
+      const outcome = await run(spec, options);
       outputs.push(outcome.output ?? "");
       return outcome.isSuccess;
     };
@@ -159,13 +168,20 @@ export function createPublishRunner(run: PublishStepRunner = runStep): PublishRu
       }
       const distTag = distTagForVersion(String(workspacePackage.manifest.version));
       const tarball = join(destination, tarballs[0] as string);
-      return result(
-        await step({
+      const isPublished = await step(
+        {
           args: ["publish", tarball, "--access", "public", ...(distTag === undefined ? [] : ["--tag", distTag])],
           command: "npm",
           cwd,
-        }),
+        },
+        { stdio: "inherit" },
       );
+      if (!isPublished) {
+        // The earlier steps succeeded, so their logs would only bury npm's own
+        // error, which it has already printed to the terminal.
+        return { isSuccess: false, output: "npm publish printed its error above." };
+      }
+      return result(true);
     } finally {
       await rm(destination, { force: true, recursive: true });
     }
