@@ -35,7 +35,10 @@ export type OAuthErrorCode =
  * Stable category of a failure that callers can branch on without parsing messages.
  *
  * Client codes come from `discover` and the client's methods; provider codes from
- * `beginAuthorization` and `completeAuthorization`, which reuse the OAuth error code the client is sent.
+ * `beginAuthorization` and `completeAuthorization`. A `beginAuthorization` failure that redirects reuses the OAuth
+ * error code the client is sent; only the codes it can send are listed, so an exhaustive `switch` has no dead
+ * branches. An OAuth code a provider sends to this client is reported as `provider_error` with the code in
+ * `params.error`.
  */
 export type OidcIssueCode =
   // Client: network and documents
@@ -62,7 +65,12 @@ export type OidcIssueCode =
   | "invalid_redirect_uri"
   | "interaction_not_found"
   // Provider: requests answered at the client's redirect URI
-  | OAuthErrorCode;
+  | "invalid_request"
+  | "unsupported_response_type"
+  | "invalid_scope"
+  | "request_not_supported"
+  | "request_uri_not_supported"
+  | "registration_not_supported";
 
 /**
  * A single reason an operation failed.

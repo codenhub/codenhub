@@ -4,7 +4,15 @@ import { MAX_BODY_BYTES, MAX_URL_LENGTH } from "../shared/limits";
 import { parseParameters } from "../shared/parameters";
 import { isCodeChallenge } from "../shared/pkce";
 import { fail, failWith, ok } from "../shared/result";
-import type { OAuthErrorCode, OidcErr, OidcIssue, OidcPathSegment, OidcResult, Prompt } from "../shared/types";
+import type {
+  OAuthErrorCode,
+  OidcErr,
+  OidcIssue,
+  OidcIssueCode,
+  OidcPathSegment,
+  OidcResult,
+  Prompt,
+} from "../shared/types";
 import { checkClientRecord } from "./client-record";
 import type { ResolvedOptions } from "./options";
 import { redirectResponse } from "./responses";
@@ -57,6 +65,9 @@ interface RequestContext {
 const FORM_MEDIA_TYPE = "application/x-www-form-urlencoded";
 const MAX_AGE_PATTERN = /^\d{1,9}$/;
 const PROMPTS: readonly Prompt[] = ["none", "login", "consent", "select_account"];
+/** The OAuth codes a validation failure redirects with, which are also its issue codes. */
+type RedirectErrorCode = Extract<OAuthErrorCode, OidcIssueCode>;
+
 const DENIAL_ERRORS = new Set<unknown>([
   "access_denied",
   "login_required",
@@ -66,7 +77,7 @@ const DENIAL_ERRORS = new Set<unknown>([
 ]);
 
 /** Parameters this provider refuses because it does not implement the mechanism they carry (OpenID Connect Core §6, §7). */
-const UNSUPPORTED_PARAMETERS: readonly (readonly [string, OAuthErrorCode])[] = [
+const UNSUPPORTED_PARAMETERS: readonly (readonly [string, RedirectErrorCode])[] = [
   ["request", "request_not_supported"],
   ["request_uri", "request_uri_not_supported"],
   ["registration", "registration_not_supported"],
@@ -160,7 +171,7 @@ function renderError(issue: OidcIssue): Failure {
 }
 
 /** The redirect for a request that failed after the client and redirect URI were verified. */
-function redirectFailure(target: RedirectTarget, code: OAuthErrorCode, path?: readonly OidcPathSegment[]): Failure {
+function redirectFailure(target: RedirectTarget, code: RedirectErrorCode, path?: readonly OidcPathSegment[]): Failure {
   return failWith<AuthorizationFailure>({
     issues: [issueOf(code, path)],
     redirect: respond(target, { error: code }),
