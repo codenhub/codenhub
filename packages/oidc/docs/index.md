@@ -38,6 +38,8 @@ A deployment that runs a relying party imports from `/client`, and one that runs
 Every operation on untrusted input returns this shape, which is the same as `@codenhub/jwt` returns:
 
 ```ts
+import type { OidcIssue } from "@codenhub/oidc";
+
 type OidcResult<T> = { ok: true; value: T } | { ok: false; error: { issues: [OidcIssue, ...OidcIssue[]] } };
 ```
 
@@ -61,7 +63,7 @@ The two sides run in different processes, and the browser carries the messages b
 
 **The relying party finishes.** The browser arrives at the redirect URI, and the relying party calls `client.callback(url, pending)`. The client checks the `state` and the `iss`, redeems the code at the token endpoint with the PKCE verifier, and validates the ID token against the nonce. On success it returns the claims and the tokens.
 
-**Later.** The relying party can call `client.userinfo` with the access token to get the profile claims the granted scopes release. When the access token is about to expire and it holds a refresh token, `client.refresh` exchanges that token for new tokens, and the app must store the new refresh token, since the old one is spent.
+**Later.** The relying party can call `client.userinfo` with the access token to get the profile claims the granted scopes release. When the access token is about to expire and it holds a refresh token, `client.refresh` exchanges that token for new tokens, and the app must store the new refresh token, since the old one is spent. To sign the user out, `client.revoke` revokes a token at the provider, see [Client](client.md#revoking-tokens).
 
 The detailed steps are in [Client](client.md) and [Provider](provider.md). The guarantees each step gives, and what an attacker gets by sending anything else, are in [Hostile input](security.md).
 
@@ -75,7 +77,7 @@ Every URL the package uses must be `https`, including the issuer, every endpoint
 
 ## Next steps
 
-- [Client](client.md): Discovery, creating a client, sign-in, refresh, userinfo, and how the client authenticates to the token endpoint.
+- [Client](client.md): Discovery, creating a client, sign-in, refresh, userinfo, revocation, and how the client authenticates to the token endpoint.
 - [Provider](provider.md): Creating a provider, routing its endpoints, the authorization step, the token endpoint and its grants, and the published metadata.
 - [Store](store.md): The persistence contract the provider needs, including the atomicity it requires and what cannot satisfy it.
 - [Hostile input](security.md): What each input gets, every limit with its value, and what the package does not defend.
