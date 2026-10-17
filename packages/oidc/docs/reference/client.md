@@ -254,7 +254,7 @@ What `Client.clientCredentials` asks for.
 readonly scope?: readonly string[];
 ```
 
-Scopes to request. Without it, the provider decides; this package's provider grants every scope the client is registered for other than `openid` and `offline_access`.
+Scopes to request. Without it, the provider decides; this package's provider grants every scope the client is registered for that it defines, other than `openid` and `offline_access`. A registered scope it does not define is dropped.
 
 ### ClientOptions
 

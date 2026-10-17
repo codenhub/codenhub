@@ -13,7 +13,7 @@ interface Hint {
   readonly subject: string;
   readonly audiences: readonly string[];
   /** The client the token names: its only audience, or `azp` when it has several. */
-  readonly clientId: string | undefined;
+  readonly clientId: string;
 }
 
 /**
@@ -69,8 +69,10 @@ const optionalMember = <K extends string, V>(key: K, value: V | undefined): Part
   value === undefined ? {} : ({ [key]: value } as Record<K, V>);
 
 /**
- * Verifies an `id_token_hint` as an ID token this provider issued: signed by one of its keys, with its issuer, and
- * unexpired. `@codenhub/jwt` returns no payload for a token that fails, so an expired hint names no one.
+ * Verifies an `id_token_hint` as an ID token this provider issued: signed by one of its keys, with its issuer, typed
+ * `JWT` and unexpired. `@codenhub/jwt` returns no payload for a token that fails, so an expired hint names no one.
+ * The type keeps a JWT access token (`at+jwt`), signed by the same keys, from passing as a hint. A hint with several
+ * audiences and no `azp` among them names no client, so it is ignored rather than trusted for any of them.
  */
 async function verifyHint(options: ResolvedOptions, idTokenHint: string | undefined): Promise<Hint | undefined> {
   if (idTokenHint === undefined) {
@@ -79,7 +81,8 @@ async function verifyHint(options: ResolvedOptions, idTokenHint: string | undefi
   const verify = createVerifier({
     keys: createKeySet(options.publicKeys),
     issuer: options.issuer,
-    requiredClaims: ["sub", "aud"],
+    type: "JWT",
+    requiredClaims: ["sub", "aud", "exp", "iat"],
     now: () => options.now() * 1000,
   });
   const verified = await verify(idTokenHint);
@@ -90,7 +93,7 @@ async function verifyHint(options: ResolvedOptions, idTokenHint: string | undefi
   const audiences = typeof aud === "string" ? [aud] : (aud ?? []);
   const clientId =
     audiences.length === 1 ? audiences[0] : typeof azp === "string" && audiences.includes(azp) ? azp : undefined;
-  return { subject: sub, audiences, clientId };
+  return clientId === undefined ? undefined : { subject: sub, audiences, clientId };
 }
 
 async function findClient(options: ResolvedOptions, clientId: string): Promise<ClientRecord | undefined> {

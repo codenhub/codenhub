@@ -77,10 +77,25 @@ describe("checkClientRecord", () => {
       expect(checkClientRecord(record, "client-a").grantTypes).toEqual(["authorization_code", "client_credentials"]);
     });
 
-    it("shouldStillRequireOpenidAndARedirectUriForAuthorizationCode", () => {
+    it("shouldStillRequireARedirectUriForAuthorizationCode", () => {
       expect(() =>
-        checkClientRecord(machine({ grantTypes: ["authorization_code", "client_credentials"] }), "client-a"),
+        checkClientRecord(
+          machine({ grantTypes: ["authorization_code", "client_credentials"], scopes: ["openid"] }),
+          "client-a",
+        ),
       ).toThrow("at least one for authorization_code");
+    });
+
+    it("shouldStillRequireOpenidForAuthorizationCodeWhenRedirectUrisArePresent", () => {
+      expect(() =>
+        checkClientRecord(
+          machine({
+            grantTypes: ["authorization_code", "client_credentials"],
+            redirectUris: ["https://app.example/callback"],
+          }),
+          "client-a",
+        ),
+      ).toThrow("including openid for authorization_code");
     });
 
     it("shouldRejectClientCredentialsForAPublicClient", () => {

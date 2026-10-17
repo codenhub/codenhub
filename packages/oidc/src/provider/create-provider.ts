@@ -90,9 +90,9 @@ async function answerRequest(context: ProviderContext, request: Request): Promis
  * The provider answers the discovery, JWKS, token, userinfo, and revocation endpoints through {@link Provider.handle},
  * and runs the authorization flow through {@link Provider.beginAuthorization} and
  * {@link Provider.completeAuthorization}. The authorization and end-session endpoints are not routed, so the app
- * serves them and calls `beginAuthorization` and {@link Provider.endSession} from its own handlers. Options are validated here, once, so a
- * misconfiguration fails at startup instead of on the first request. Key pairs are checked for shape,
- * algorithm and `kid` only: not that the two halves match, nor that the keys come from this package's
+ * serves them and calls `beginAuthorization` and {@link Provider.endSession} from its own handlers. Options are
+ * validated here, once, so a misconfiguration fails at startup instead of on the first request. Key pairs are checked
+ * for shape, algorithm and `kid` only: not that the two halves match, nor that the keys come from this package's
  * `@codenhub/jwt` copy.
  *
  * @param options - The issuer, signing keys, store, claims callback, and optional scopes, lifetimes, and

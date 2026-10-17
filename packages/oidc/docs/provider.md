@@ -179,7 +179,7 @@ const response = await provider.handle(new Request(url, { method: request.method
 | Userinfo   | `GET`, `POST`, `OPTIONS` | The released claims or a bearer challenge. See [Userinfo](#userinfo).                    |
 | Revocation | `POST`, `OPTIONS`        | `200` with no body, or an OAuth error. See [Token revocation](#token-revocation).        |
 
-A method an endpoint does not accept is `405` with an `Allow` header. `HEAD` is not accepted by the discovery or JWKS endpoints, so it gets `405` too. The authorization and end-session endpoints are not among the five, so `handle` returns `null` for them. The app serves both itself: it calls `beginAuthorization` from the authorization endpoint and `endSession` from the end-session endpoint. `handle` never throws for a request. It rejects only when the store or the `claims` callback rejects.
+A method an endpoint does not accept is `405` with an `Allow` header. `HEAD` is not accepted by the discovery or JWKS endpoints, so it gets `405` too. The authorization and end-session endpoints are not among the five, so `handle` returns `null` for them. The app serves both itself: it calls `beginAuthorization` from the authorization endpoint and `endSession` from the end-session endpoint. `handle` never throws for a request. It rejects only when the store, the `claims` callback or `onDiagnostic` rejects, or when the JWKS keys cannot be exported.
 
 The routing sketch below uses only `Request` and `Response`, as a plain Worker would. It answers the five endpoints from `handle`, and passes the authorization and logout requests to the app's own handlers.
 
@@ -297,14 +297,14 @@ The provider implements RP-initiated logout. Its end-session endpoint is `endpoi
 
 `endSession` returns an `OidcResult<EndSession>`. A failed request never redirects, so the app renders its issues:
 
-- A malformed request, such as a method or media type the endpoint does not accept, an oversized URL, or a parameter that does not parse: `invalid_request`, with `params.reason` for a parameter failure.
+- A malformed request, such as a method or media type the endpoint does not accept, an oversized URL or request body, an unreadable body, or a parameter that does not parse: `invalid_request`, with `params.reason` for a parameter failure.
 - An unknown `client_id`: `unknown_client`.
 - A verified `id_token_hint` issued to another client than `client_id`: `invalid_request`, path `["id_token_hint"]`.
 - A `post_logout_redirect_uri` that is not, byte for byte, one of the client's `postLogoutRedirectUris`, or that comes with no client known from `client_id` or the hint: `invalid_redirect_uri`, path `["post_logout_redirect_uri"]`.
 
 A success carries `clientId` when a client is known, `subject` when the hint verified, `logoutHint` and `uiLocales` when given, and `redirect`. `redirect` is a `302` to `post_logout_redirect_uri`, with `state` appended when the request had one, or `null` when the request named no `post_logout_redirect_uri`.
 
-The `id_token_hint` is verified as an ID token this provider issued: signed by one of its keys, with its issuer, unexpired, and with `sub` and `aud`. A hint that does not verify, such as an expired one, is ignored. It is not a failure, and the result has no `subject`. Nothing then ties the request to a user, so ask the user to confirm the logout before signing them out.
+The `id_token_hint` is verified as an ID token this provider issued: signed by one of its keys, with its issuer, typed `JWT`, unexpired, and with `sub`, `aud`, `exp` and `iat`. The type keeps a JWT access token (`at+jwt`) from passing as a hint. A hint with several audiences must name one of them in `azp`. A hint that does not verify, such as an expired one, is ignored. It is not a failure, and the result has no `subject`. Nothing then ties the request to a user, so ask the user to confirm the logout before signing them out.
 
 The URIs a client may redirect to after logout are listed in its record's `postLogoutRedirectUris`, each held to the redirect URI rules. See [Client records](store.md#client-records).
 
@@ -313,6 +313,7 @@ The provider keeps no sessions. The app ends its own session, and may revoke the
 ```ts
 declare function renderError(issues: unknown): Response;
 declare function endAppSession(request: Request): Promise<void>;
+declare function renderLogoutConfirmation(request: Request): Response;
 declare function renderSignedOutPage(): Response;
 
 // The app's logout route, e.g. GET or POST /logout
@@ -321,7 +322,8 @@ if (!result.ok) {
   return renderError(result.error.issues); // never redirect on failure
 }
 if (result.value.subject === undefined) {
-  // No verified ID token hint: ask the user to confirm before signing out.
+  // No verified ID token hint: stop here, and end the session only once the user confirms on the page the app renders.
+  return renderLogoutConfirmation(request);
 }
 await endAppSession(request); // the app's own session
 return result.value.redirect ?? renderSignedOutPage();
@@ -464,13 +466,13 @@ if (verified.ok) {
 
 The userinfo endpoint answers `GET` and `POST`, and `OPTIONS` for a preflight. It reads the access token from the `Authorization` header only, in the form `Bearer` followed by one space and an RFC 6750 token. The scheme's letter case does not matter. A token in the body or the query is never read, so a credential does not land in a URL a proxy or a log keeps.
 
-| Request                                                   | Answer                                                                                                                                                                                             |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| No `Authorization` header                                 | `401` with `WWW-Authenticate: Bearer`, and no error code, as RFC 6750 asks.                                                                                                                        |
-| A header that is not a well-formed `Bearer` credential    | `400` with `WWW-Authenticate: Bearer error="invalid_request"`.                                                                                                                                     |
-| A token that is unknown, expired, or from a revoked grant | `401` with `WWW-Authenticate: Bearer error="invalid_token"`.                                                                                                                                       |
-| A valid access token                                      | `200` with the released claims as JSON, and `Cache-Control: no-store`.                                                                                                                             |
-| A valid access token whose scopes do not include `openid` | `403` with `WWW-Authenticate: Bearer error="insufficient_scope"`, and `claims` is not called. Every token this provider issues has `openid`, so only records written outside it reach this answer. |
+| Request                                                   | Answer                                                                                                                                                                                                                                                            |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No `Authorization` header                                 | `401` with `WWW-Authenticate: Bearer`, and no error code, as RFC 6750 asks.                                                                                                                                                                                       |
+| A header that is not a well-formed `Bearer` credential    | `400` with `WWW-Authenticate: Bearer error="invalid_request"`.                                                                                                                                                                                                    |
+| A token that is unknown, expired, or from a revoked grant | `401` with `WWW-Authenticate: Bearer error="invalid_token"`.                                                                                                                                                                                                      |
+| A valid access token                                      | `200` with the released claims as JSON, and `Cache-Control: no-store`.                                                                                                                                                                                            |
+| A valid access token whose scopes do not include `openid` | `403` with `WWW-Authenticate: Bearer error="insufficient_scope"`, and `claims` is not called. A token from a user sign-in always has `openid`. A client-credentials token has none, so this is the answer it gets; see [Client credentials](#client-credentials). |
 
 The lookup finds only access tokens. An ID token or a refresh token presented here is not found, so it gets `invalid_token`. The released claims are the names the token's scopes release, each taken from what the `claims` callback returns, and `sub` set to the token's subject. See [Claims](#claims).
 

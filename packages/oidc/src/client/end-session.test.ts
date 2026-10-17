@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { MAX_PARAMETER_LENGTH } from "../shared/limits";
 import type { ProviderMetadata } from "../shared/types";
 import { createClient } from "./create-client";
 import type { EndSessionOptions } from "./types";
@@ -46,7 +47,26 @@ describe("endSessionUrl", () => {
   });
 
   it("throws a TypeError when the provider has no end_session_endpoint", () => {
+    expect(() => client({ end_session_endpoint: undefined }).endSessionUrl()).toThrow(TypeError);
     expect(() => client({ end_session_endpoint: undefined }).endSessionUrl()).toThrow("end_session_endpoint");
+  });
+
+  it("accepts a postLogoutRedirectUri of exactly MAX_PARAMETER_LENGTH characters", () => {
+    const postLogoutRedirectUri = `https://app.example/${"a".repeat(MAX_PARAMETER_LENGTH - "https://app.example/".length)}`;
+
+    const url = new URL(client().endSessionUrl({ postLogoutRedirectUri }));
+
+    expect(postLogoutRedirectUri).toHaveLength(MAX_PARAMETER_LENGTH);
+    expect(url.searchParams.get("post_logout_redirect_uri")).toBe(postLogoutRedirectUri);
+  });
+
+  it("throws a TypeError for a postLogoutRedirectUri one character over MAX_PARAMETER_LENGTH, without its value", () => {
+    const postLogoutRedirectUri = `https://app.example/${"a".repeat(MAX_PARAMETER_LENGTH + 1 - "https://app.example/".length)}`;
+    const attempt = () => client().endSessionUrl({ postLogoutRedirectUri });
+
+    expect(attempt).toThrow(TypeError);
+    expect(attempt).toThrow("postLogoutRedirectUri is longer than the provider accepts");
+    expect(attempt).not.toThrow(postLogoutRedirectUri);
   });
 
   it.each([
@@ -62,6 +82,7 @@ describe("endSessionUrl", () => {
     ["a uiLocales entry with a space", { uiLocales: ["pt BR"] }, "uiLocales"],
     ["a URL over the provider's limit once encoded", { state: "é".repeat(1500) }, "8192"],
   ])("throws a TypeError for %s, naming it", (_name, options, member) => {
+    expect(() => client().endSessionUrl(options as EndSessionOptions)).toThrow(TypeError);
     expect(() => client().endSessionUrl(options as EndSessionOptions)).toThrow(member);
   });
 });

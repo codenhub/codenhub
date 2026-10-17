@@ -1,4 +1,4 @@
-import { MAX_URL_LENGTH } from "../shared/limits";
+import { MAX_PARAMETER_LENGTH, MAX_URL_LENGTH } from "../shared/limits";
 import { isRedirectUri } from "../shared/urls";
 import { readOptionalString, readUiLocales } from "./authorize";
 import type { ResolvedClientOptions } from "./options";
@@ -24,6 +24,9 @@ export function buildEndSessionUrl(options: ResolvedClientOptions, request: EndS
     throw new TypeError(
       "endSessionUrl: postLogoutRedirectUri must be an absolute URI of visible ASCII, without fragment or credentials, and not javascript:, data:, vbscript: or file:",
     );
+  }
+  if (postLogoutRedirectUri !== undefined && postLogoutRedirectUri.length > MAX_PARAMETER_LENGTH) {
+    throw new TypeError("endSessionUrl: postLogoutRedirectUri is longer than the provider accepts");
   }
   const parameters: [string, string | undefined][] = [
     ["id_token_hint", readOptionalString(request.idTokenHint, "endSessionUrl: idTokenHint")],

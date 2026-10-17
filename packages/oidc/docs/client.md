@@ -40,7 +40,7 @@ The document is requested from `{issuer}/.well-known/openid-configuration`. A tr
 
 - `request_failed` with `params.reason` of `timeout`, `network`, `status` (with `params.status`, for any response other than `200`, including redirects), `content_type` (a `200` that is not JSON), `too_large` or `malformed` (a body that is not a JSON object). `params.endpoint` is `discovery`.
 - `issuer_mismatch` when the document's `issuer` is not the issuer you passed.
-- `invalid_metadata` for each member that is missing or invalid, with its path, such as `["metadata", "jwks_uri"]`. Every such member is reported in one result. An `authorization_endpoint` longer than 4096 characters is `invalid_metadata` too, so the 8192-character authorization URL that `authorize` builds always has room for it. `revocation_endpoint_auth_methods_supported` and `revocation_endpoint_auth_signing_alg_values_supported`, when present, must be arrays of strings.
+- `invalid_metadata` for each member that is missing or invalid, with its path, such as `["metadata", "jwks_uri"]`. Every such member is reported in one result. An `authorization_endpoint` longer than 4096 characters is `invalid_metadata` too, so the 8192-character authorization URL that `authorize` builds always has room for it. An `end_session_endpoint` longer than 4096 characters is capped the same way, so it is `invalid_metadata` too, and an over-long one fails `discover` for every caller, not only those that log out. `revocation_endpoint_auth_methods_supported` and `revocation_endpoint_auth_signing_alg_values_supported`, when present, must be arrays of strings.
 
 Only a bad argument throws `TypeError`: an issuer that is not an `https` URL or has a query, `options` that is not an object, a `fetch` that is not a function, or a timeout outside 1 through 60.
 
@@ -253,18 +253,18 @@ The failures are:
 Logging out at the provider does not revoke the user's tokens, and it does not end the application's session. The application does both itself.
 
 ```ts
-// Sign out: revoke the refresh token and end the app's session, then send the browser to the provider.
+// Sign out: build the logout URL, revoke the refresh token and end the app's session, then send the browser to the provider.
+const logoutState = crypto.randomUUID(); // kept in a short-lived cookie, since the session is destroyed below
+const logoutUrl = client.endSessionUrl({
+  idTokenHint: idToken, // the ID token from the sign-in, read from the session before it is destroyed
+  postLogoutRedirectUri: "https://app.example.com/signed-out",
+  state: logoutState,
+});
 await client.revoke({ token: refreshToken, tokenTypeHint: "refresh_token" });
 await session.destroy();
-
-const logoutUrl = client.endSessionUrl({
-  idTokenHint: idToken, // the ID token from the sign-in, kept in the session
-  postLogoutRedirectUri: "https://app.example.com/signed-out",
-  state: logoutState, // a random value, kept in the session
-});
 ```
 
-On the page at `postLogoutRedirectUri`, compare the `state` parameter with the `logoutState` kept in the session before you show the user as signed out. The provider returns `state` unchanged.
+On the page at `postLogoutRedirectUri`, compare the `state` parameter with the `logoutState` in that cookie before you show the user as signed out. The provider returns `state` unchanged.
 
 | Option                  | Meaning                                                                                                                                          | Default   |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
@@ -274,13 +274,13 @@ On the page at `postLogoutRedirectUri`, compare the `state` parameter with the `
 | `logoutHint`            | A hint about the account being signed out, such as an email address.                                                                             | None sent |
 | `uiLocales`             | Preferred languages for the provider's logout page, as BCP 47 tags, under the same rules as `authorize`.                                         | None sent |
 
-The URL always carries `client_id`, so the provider can match `postLogoutRedirectUri` even after the hint has expired. The URL keeps any query the endpoint already has. Empty strings are left out.
+The URL always carries `client_id`, so the provider can match `postLogoutRedirectUri` even after the hint has expired. A hint issued to a different client is refused: the provider returns `invalid_request` at `id_token_hint`, so send the hint from the client it was issued to. The URL keeps any query the endpoint already has. Empty strings are left out.
 
 `endSessionUrl` throws `TypeError` when the metadata has no `end_session_endpoint`, when `postLogoutRedirectUri` breaks the redirect URI rules, when a string option is not a string, not well-formed Unicode or longer than 4096 characters, when `uiLocales` is invalid, or when the URL is longer than 8192 characters once encoded.
 
 ## Client credentials
 
-A service client has no user, so it signs no one in. It can still get an access token for itself with the client credentials grant (RFC 6749 §4.4). `client.clientCredentials(options?)` sends the grant with the client's authentication and returns a `TokenSet`. The client is created without a `redirectUri`, since it never redirects a user.
+A service client has no user, so it signs no one in. It can still get an access token for itself with the client credentials grant (RFC 6749 §4.4). `client.clientCredentials(options?)` sends the grant with the client's authentication. It returns a promise of a result whose value is a `TokenSet`. The client is created without a `redirectUri`, since it never redirects a user.
 
 ```ts
 const service = createClient({

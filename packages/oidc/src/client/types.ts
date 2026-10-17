@@ -168,7 +168,8 @@ export interface RefreshOptions {
 export interface ClientCredentialsOptions {
   /**
    * Scopes to request. Without it, the provider decides; this package's provider grants every scope the client
-   * is registered for other than `openid` and `offline_access`.
+   * is registered for that it defines, other than `openid` and `offline_access`. A registered scope it does not
+   * define is dropped.
    */
   readonly scope?: readonly string[];
 }

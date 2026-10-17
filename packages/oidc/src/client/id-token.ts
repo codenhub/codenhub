@@ -18,8 +18,9 @@ export interface IdTokenExpectations {
   /** The nonce sent with the authorization request. The token must carry the same one. */
   readonly nonce?: string;
   /**
-   * The `max_age` requested, in seconds, and when the request was made. The token must carry an `auth_time` no
-   * more than `maxAge` seconds before the request.
+   * The `max_age` requested, as `seconds`, and when the request was made, as `requestedAt` in whole Unix seconds
+   * (not the milliseconds `now()` returns). The token's `auth_time` must be no more than `seconds` plus the
+   * client's `clockTolerance` before `requestedAt`.
    */
   readonly maxAge?: { readonly seconds: number; readonly requestedAt: number };
   /** The access token issued with the ID token, for `at_hash`. */

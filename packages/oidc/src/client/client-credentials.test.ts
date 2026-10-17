@@ -73,6 +73,7 @@ describe("clientCredentials", () => {
 
     const result = await serviceClient(endpoint.fetch).clientCredentials();
 
+    expect(result.ok).toBe(true);
     expect(result.ok && Object.hasOwn(result.value, "idToken")).toBe(false);
   });
 
@@ -88,8 +89,10 @@ describe("clientCredentials", () => {
 
   it("throws a TypeError for a public client", async () => {
     const client = serviceClient(tokenEndpoint().fetch, { auth: { method: "none" } });
+    const attempt = client.clientCredentials();
 
-    await expect(client.clientCredentials()).rejects.toThrow("auth.method is none");
+    await expect(attempt).rejects.toThrow(TypeError);
+    await expect(attempt).rejects.toThrow("auth.method is none");
   });
 
   it("throws a TypeError when the provider does not list the grant", async () => {
@@ -97,7 +100,10 @@ describe("clientCredentials", () => {
       metadata: { ...metadata, grant_types_supported: ["authorization_code"] },
     });
 
-    await expect(client.clientCredentials()).rejects.toThrow("grant_types_supported");
+    const attempt = client.clientCredentials();
+
+    await expect(attempt).rejects.toThrow(TypeError);
+    await expect(attempt).rejects.toThrow("grant_types_supported");
   });
 
   it.each([
@@ -107,9 +113,10 @@ describe("clientCredentials", () => {
   ])("throws a TypeError for a scope that is %s", async (_name, scope) => {
     const client = serviceClient(tokenEndpoint().fetch);
 
-    await expect(client.clientCredentials({ scope: scope as readonly string[] })).rejects.toThrow(
-      "clientCredentials: scope",
-    );
+    const attempt = client.clientCredentials({ scope: scope as readonly string[] });
+
+    await expect(attempt).rejects.toThrow(TypeError);
+    await expect(attempt).rejects.toThrow("clientCredentials: scope");
   });
 });
 
@@ -118,9 +125,14 @@ describe("a client without a redirect URI", () => {
     const client = serviceClient(tokenEndpoint().fetch, { auth: { method: "none" } });
     const pending = { state: "s", nonce: "n", codeVerifier: "v".repeat(43) };
 
-    await expect(client.authorize()).rejects.toThrow("authorize: createClient needs a redirectUri");
-    await expect(client.callback("https://app.example/cb?state=s&code=c", pending)).rejects.toThrow(
-      "callback: createClient needs a redirectUri",
-    );
+    const authorize = client.authorize();
+
+    await expect(authorize).rejects.toThrow(TypeError);
+    await expect(authorize).rejects.toThrow("authorize: createClient needs a redirectUri");
+
+    const callback = client.callback("https://app.example/cb?state=s&code=c", pending);
+
+    await expect(callback).rejects.toThrow(TypeError);
+    await expect(callback).rejects.toThrow("callback: createClient needs a redirectUri");
   });
 });

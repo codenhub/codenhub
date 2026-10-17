@@ -56,11 +56,11 @@ async function setup(accessToken: AccessTokenFormat = { format: "jwt", audience:
 }
 
 /** A resource server's check of an RFC 9068 token, with `@codenhub/jwt` alone, as the docs show it. */
-const resourceServer = (pair: KeyPair) =>
+const resourceServer = (pair: KeyPair, audience = AUDIENCE) =>
   createVerifier({
     keys: createKeySet([pair.publicKey]),
     issuer: ISSUER,
-    audience: AUDIENCE,
+    audience,
     type: "at+jwt",
     requiredClaims: ["sub", "client_id", "iat", "jti"],
     now: () => NOW_MS,
@@ -144,9 +144,11 @@ describe("JWT access tokens", () => {
     const context = await setup();
     const body = await signIn(context);
 
-    const verified = await resourceServer(context.pair)(body.id_token as string);
+    // The ID token's audience is the client, so the audience check passes and the `typ` check must report it.
+    const verified = await resourceServer(context.pair, "web")(body.id_token as string);
 
     expect(verified.ok).toBe(false);
+    expect(!verified.ok && verified.error.issues).toContainEqual({ code: "wrong_type", path: ["header", "typ"] });
   });
 
   it("works at userinfo and revocation like an opaque token", async () => {

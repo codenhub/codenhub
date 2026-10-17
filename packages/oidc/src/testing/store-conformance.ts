@@ -471,6 +471,8 @@ const cases: StoreConformanceCase[] = [
       redirectUris: ["https://app.example/callback", "https://app.example/callback?tenant=a"],
       scopes: ["openid", "profile", "offline_access"],
       auth: { method: "client_secret_basic", secretHash: newKey() },
+      grantTypes: ["authorization_code"],
+      postLogoutRedirectUris: ["https://app.example/signed-out"],
     };
     const store = await createStore({ clients: [structuredClone(client)] });
     assert(
@@ -545,7 +547,7 @@ const cases: StoreConformanceCase[] = [
 ];
 
 /**
- * Every check of the OidcStore contract, for any test runner: `for (const c of storeConformanceCases) it(c.name, () => c.run(createStore))`.
+ * Every check of the OidcStore contract, for any test runner: `for (const c of storeConformanceCases) it(c.name, () => c.run((seed) => createStore(seed)))`.
  *
  * @remarks
  * Each case calls `createStore(seed)` once and runs against the store it returns, which must hold the clients in

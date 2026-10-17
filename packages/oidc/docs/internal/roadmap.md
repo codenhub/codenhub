@@ -12,7 +12,7 @@ This records what stands between 0.0.1 and a 0.1.0 the SSO application can build
 
 ## Current Focus
 
-0.0.1 is the first publish, and its purpose is to find out whether the package holds up in the SSO application. The criteria of scope.md section 7 hold: the authorization code flow works end to end, this client against this provider, on Node.js and workerd; every invariant has tests; the hostile-input, leak and interop suites pass. The release audit of 2026-10-17 settled every deferred item: client credentials, JWT access tokens and RP-initiated logout ship in 0.0.1 (scope.md decisions 35 to 37), and the rest are not planned (decision 38).
+0.0.1 is the first publish, and its purpose is to find out whether the package holds up in the SSO application. The criteria of scope.md section 7 hold: the authorization code flow works end to end, this client against this provider, on Node.js and workerd; every invariant has tests; the hostile-input, leak and interop suites pass. The release audit of 2026-10-17 settled every deferred item: client credentials, JWT access tokens and RP-initiated logout ship in 0.0.1 (scope.md decisions 35 to 37), and the other four are not planned (decision 38).
 
 ## Planned
 
@@ -24,7 +24,7 @@ This records what stands between 0.0.1 and a 0.1.0 the SSO application can build
 
 ## Later / Possible
 
-None. Each candidate the scope named was implemented or moved to Not Planned in the release audit (scope.md decision 38).
+None. The two candidates the scope named shipped: token revocation (scope.md decision 27) and JWT access tokens (decision 36). Device flow, CIBA, DPoP and mTLS are out of scope by scope.md section 2, and decision 38 moved four items to Not Planned.
 
 ## Not Planned
 

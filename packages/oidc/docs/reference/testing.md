@@ -145,7 +145,7 @@ Clients `findClient` must return. Their identifiers are random per case.
 export declare const storeConformanceCases: readonly StoreConformanceCase[];
 ```
 
-Every check of the OidcStore contract, for any test runner: `for (const c of storeConformanceCases) it(c.name, () => c.run(createStore))`.
+Every check of the OidcStore contract, for any test runner: `for (const c of storeConformanceCases) it(c.name, () => c.run((seed) => createStore(seed)))`.
 
 Each case calls `createStore(seed)` once and runs against the store it returns, which must hold the clients in `seed.clients` and nothing else the case relies on. Most cases pass no clients. Keys, grant identifiers and client identifiers are random per case, so cases never collide even when they share one database. Failures are plain `Error`s whose message names the broken rule and never a key or token value.
 

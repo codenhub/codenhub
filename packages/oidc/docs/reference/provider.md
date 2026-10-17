@@ -333,7 +333,7 @@ readonly clientId: string;
 readonly grantTypes?: readonly GrantType[];
 ```
 
-Grants this client may use, without repeats. `client_credentials` needs a client that authenticates, so not one whose `auth.method` is `none`.
+Grants this client may use, without repeats, naming at least one: an empty list throws a `TypeError` when the record is read. `client_credentials` needs a client that authenticates, so not one whose `auth.method` is `none`.
 
 #### postLogoutRedirectUris
 
@@ -463,7 +463,7 @@ A validated logout request. Frozen. The provider keeps no sessions, so ending th
 readonly clientId?: string;
 ```
 
-The client that asked: `client_id`, or the client a verified `id_token_hint` was issued to.
+The registered client that asked: `client_id`, or the client a verified `id_token_hint` was issued to. Absent when that client is not registered in the store, when the hint names several audiences without a valid `azp`, or when no client is named.
 
 #### logoutHint
 

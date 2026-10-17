@@ -34,12 +34,20 @@ async function setup(): Promise<{ op: Provider; pair: KeyPair }> {
   return { op, pair };
 }
 
-/** An ID token as the provider issues it, with `overrides` applied. */
-function idToken(pair: KeyPair, overrides: Record<string, unknown> = {}): Promise<string> {
+/** An ID token as the provider issues it, with `overrides` applied; an `undefined` override drops the claim. */
+function idToken(pair: KeyPair, overrides: Record<string, unknown> = {}, typ = "JWT"): Promise<string> {
+  const payload = {
+    iss: ISSUER,
+    sub: "user-1",
+    aud: "web",
+    iat: NOW_SECONDS - 60,
+    exp: NOW_SECONDS + 540,
+    ...overrides,
+  };
   return sign({
-    payload: { iss: ISSUER, sub: "user-1", aud: "web", iat: NOW_SECONDS - 60, exp: NOW_SECONDS + 540, ...overrides },
+    payload: Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined)),
     key: pair.privateKey,
-    header: { typ: "JWT" },
+    header: { typ },
   });
 }
 
@@ -109,6 +117,11 @@ describe("endSession", () => {
     ["a hint from another issuer", (pair: KeyPair) => idToken(pair, { iss: "https://evil.example" })],
     ["a hint signed by another key", async () => idToken(await generateKeyPair({ alg: "ES256", kid: "k1" }))],
     ["a hint that is not a JWT", async () => "not-a-jwt"],
+    ["a JWT access token", (pair: KeyPair) => idToken(pair, {}, "at+jwt")],
+    ["a hint without exp", (pair: KeyPair) => idToken(pair, { exp: undefined })],
+    ["a hint without iat", (pair: KeyPair) => idToken(pair, { iat: undefined })],
+    ["a hint with several audiences and no azp", (pair: KeyPair) => idToken(pair, { aud: ["api", "web"] })],
+    ["a hint whose azp is not an audience", (pair: KeyPair) => idToken(pair, { aud: ["api", "web"], azp: "other" })],
   ])("ignores %s, so it names no user, yet still redirects for a client_id", async (_name, build) => {
     const { op, pair } = await setup();
 
@@ -198,6 +211,9 @@ describe("endSession", () => {
       claims: () => ({}),
     });
 
-    await expect(op.endSession(logout({ client_id: "web" }))).rejects.toThrow("postLogoutRedirectUris");
+    const result = op.endSession(logout({ client_id: "web" }));
+
+    await expect(result).rejects.toThrow(TypeError);
+    await expect(result).rejects.toThrow("postLogoutRedirectUris");
   });
 });

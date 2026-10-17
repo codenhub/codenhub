@@ -124,7 +124,7 @@ A store failure is never turned into an OAuth answer. Answering `invalid_grant` 
 `findClient` returns a `ClientRecord`:
 
 ```ts
-import type { ClientAuthentication } from "@codenhub/oidc/provider";
+import type { ClientAuthentication, GrantType } from "@codenhub/oidc/provider";
 
 interface ClientRecord {
   clientId: string;

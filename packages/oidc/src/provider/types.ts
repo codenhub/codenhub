@@ -42,8 +42,8 @@ export interface ClientRecord {
    */
   readonly scopes: readonly string[];
   /**
-   * Grants this client may use, without repeats. `client_credentials` needs a client that authenticates, so not
-   * one whose `auth.method` is `none`.
+   * Grants this client may use, without repeats, naming at least one: an empty list throws a `TypeError` when the
+   * record is read. `client_credentials` needs a client that authenticates, so not one whose `auth.method` is `none`.
    *
    * @defaultValue `["authorization_code"]`
    */
@@ -493,7 +493,11 @@ export interface Provider {
  * work; this says who asked and where to send the browser afterwards.
  */
 export interface EndSession {
-  /** The client that asked: `client_id`, or the client a verified `id_token_hint` was issued to. */
+  /**
+   * The registered client that asked: `client_id`, or the client a verified `id_token_hint` was issued to. Absent
+   * when that client is not registered in the store, when the hint names several audiences without a valid `azp`,
+   * or when no client is named.
+   */
   readonly clientId?: string;
   /**
    * The user a verified `id_token_hint` names. Absent without one, as when the hint has expired: then nothing ties
