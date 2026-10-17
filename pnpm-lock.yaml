@@ -9,6 +9,9 @@ catalogs:
     '@codenhub/error':
       specifier: ^0.2.1
       version: 0.2.1
+    '@codenhub/jwt':
+      specifier: ^0.0.1
+      version: 0.0.1
     '@codenhub/store':
       specifier: ^0.0.2
       version: 0.0.2
@@ -469,6 +472,30 @@ importers:
       jsdom:
         specifier: 'catalog:'
         version: 29.1.1
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.22.8(typescript@6.0.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.10(@types/node@26.1.1)(@vitest/coverage-v8@4.1.10)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.0))
+
+  packages/oidc:
+    devDependencies:
+      '@codenhub/jwt':
+        specifier: 'catalog:'
+        version: 0.0.1
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.1.1
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.1.10(vitest@4.1.10)
+      miniflare:
+        specifier: 'catalog:'
+        version: 5.20260801.1-alpha
       tsdown:
         specifier: 'catalog:'
         version: 0.22.8(typescript@6.0.3)
@@ -1261,6 +1288,10 @@ packages:
   '@codenhub/error@0.2.1':
     resolution: {integrity: sha512-LQm9qgdxwfEaMrUhPpjvAOo0VN+cxj/shyQFadVrQeZy9+HX49jtY/wOt7VoMntGoPLnbJr3BK2QDLTfR6tC+Q==}
     engines: {node: '>=22'}
+
+  '@codenhub/jwt@0.0.1':
+    resolution: {integrity: sha512-xQE8W7YMvH3tg+rrxH3F1il5vU0i9xkGjINYnXCSL/0uFyoKMvdE7rbDE1/zrO7bpx4/s3HHlJZXjcgSigt/5Q==}
+    engines: {node: '>=24'}
 
   '@codenhub/store@0.0.2':
     resolution: {integrity: sha512-iXhHcUAOl7u3Kp4odYypuq9XPTvHp2CI98YWQWJI3awTLAH0i4tr8hW37Q7nybCKHX5jBHS9D2Ng/9jxMJrl1A==}
@@ -4425,6 +4456,8 @@ snapshots:
     optional: true
 
   '@codenhub/error@0.2.1': {}
+
+  '@codenhub/jwt@0.0.1': {}
 
   '@codenhub/store@0.0.2': {}
 

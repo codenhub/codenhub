@@ -7,6 +7,7 @@ packages:
 
 catalog:
   "@codenhub/error": ^0.2.1
+  "@codenhub/jwt": ^0.0.1
   "@codenhub/store": ^0.0.2
   "@codenhub/styles": ^0.6.0
   "@codenhub/theme": ^0.1.2
@@ -48,3 +49,4 @@ linkWorkspacePackages: false
 
 minimumReleaseAgeExclude:
   - "@codenhub/validation@0.3.0"
+  - "@codenhub/jwt@0.0.1"

@@ -78,6 +78,7 @@ This table resolves the _displayed_ name only. Whether the npm package name and 
 | `icons`      | Neutral, kit    | `IconKit`         |                                                                                                                        |
 | `jwt`        | Neutral, kit    | `JwtKit`          | Fused like `IconKit`.                                                                                                  |
 | `kbd`        | Neutral, plain  | `Kbd`             | Not a dictionary word; already distinctive unfused.                                                                    |
+| `oidc`       | Neutral, kit    | `OidcKit`         | Fused like `JwtKit`.                                                                                                   |
 | `router`     | Neutral, plain  | `Router`          |                                                                                                                        |
 | `skills`     | Branded         | `Coden Skills`    |                                                                                                                        |
 | `store`      | Neutral, system | `StoreSystem`     |                                                                                                                        |
