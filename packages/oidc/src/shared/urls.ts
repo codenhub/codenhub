@@ -3,17 +3,19 @@ const FORBIDDEN_REDIRECT_PROTOCOLS: ReadonlySet<string> = new Set(["javascript:"
 
 const FIRST_VISIBLE_ASCII = 0x21;
 const LAST_VISIBLE_ASCII = 0x7e;
+const BACKSLASH = 0x5c;
 
 /**
- * Whether a string holds anything but visible ASCII. The URL parser strips spaces and controls, drops tabs and
- * newlines anywhere, and maps non-ASCII host characters through IDNA (`example。com` becomes
- * `example.com`), so such a string would differ from the URL it serializes to. Internationalized URLs are
- * written in their ASCII form: punycode hosts and percent-encoded paths.
+ * Whether a string holds anything but visible ASCII except backslash. The URL parser strips spaces and controls,
+ * drops tabs and newlines anywhere, and maps non-ASCII host characters through IDNA (`example。com` becomes
+ * `example.com`), so such a string would differ from the URL it serializes to. Special schemes also rewrite a
+ * backslash to a slash (`https://example.com\evil.com` becomes `https://example.com/evil.com`). Internationalized
+ * URLs are written in their ASCII form: punycode hosts and percent-encoded paths.
  */
 function hasNonVisibleAscii(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
     const code = value.charCodeAt(index);
-    if (code < FIRST_VISIBLE_ASCII || code > LAST_VISIBLE_ASCII) {
+    if (code < FIRST_VISIBLE_ASCII || code > LAST_VISIBLE_ASCII || code === BACKSLASH) {
       return true;
     }
   }

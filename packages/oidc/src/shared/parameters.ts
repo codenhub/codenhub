@@ -1,7 +1,29 @@
 import { MAX_PARAMETER_LENGTH, MAX_PARAMETERS } from "./limits";
 
-/** Why a parameter string was refused: too many pairs, a pair too long, or a name repeated. */
-export type ParameterFailure = "too_many" | "too_long" | "duplicate";
+/**
+ * Why a parameter string was refused: too many pairs, a pair too long, a name repeated, or a percent-escape
+ * that is not valid UTF-8.
+ */
+export type ParameterFailure = "too_many" | "too_long" | "duplicate" | "malformed";
+
+/** A maximal run of percent-escapes: the bytes of one or more UTF-8 sequences. */
+const PERCENT_ESCAPE_RUN = /(?:%[0-9A-Fa-f]{2})+/g;
+
+/**
+ * Tests whether a run of percent-escapes decodes to invalid UTF-8. `URLSearchParams` would replace such bytes
+ * with U+FFFD, so two different inputs would compare equal. A malformed escape such as `%zz` is not part of a
+ * run and is left alone, as the URL standard keeps it literally.
+ */
+function hasInvalidUtf8Escape(text: string): boolean {
+  for (const [run] of text.matchAll(PERCENT_ESCAPE_RUN)) {
+    try {
+      decodeURIComponent(run);
+    } catch {
+      return true;
+    }
+  }
+  return false;
+}
 
 /** Outcome of {@link parseParameters}. */
 export type ParseParametersResult =
@@ -15,6 +37,9 @@ export type ParseParametersResult =
  * duplicates. The pair count is checked while parsing, so an oversized input never builds a map.
  */
 export function parseParameters(text: string): ParseParametersResult {
+  if (hasInvalidUtf8Escape(text)) {
+    return { ok: false, reason: "malformed" };
+  }
   const entries: [string, string][] = [];
   // `URLSearchParams` parses all of `text` before this loop can stop it, so callers must bound the text
   // length first; the URL length and body size caps do. The pair cap bounds what is kept, not what is parsed.

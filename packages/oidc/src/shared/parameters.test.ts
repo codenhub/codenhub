@@ -77,4 +77,28 @@ describe("parseParameters", () => {
   it("shouldNotThrowOnMalformedPercentEncoding", () => {
     expect(() => parseParameters("a=%E0%A4%A&b=%")).not.toThrow();
   });
+
+  it.each(["a=%E9", "a=%FF", "a=%C3", "a=%ED%A0%80", "a=%C3x", "%E9=1"])("shouldRejectInvalidUtf8Escape_%s", (text) => {
+    expect(parseParameters(text)).toEqual({ ok: false, reason: "malformed" });
+  });
+
+  it("shouldAcceptEncodedReplacementCharacterAsTheClientSentIt", () => {
+    const result = parseParameters("a=%EF%BF%BD");
+    expect(result.ok && result.parameters.get("a")).toBe("�");
+  });
+
+  it("shouldAcceptValidMultiByteUtf8Escape", () => {
+    const result = parseParameters("a=%C3%A9");
+    expect(result.ok && result.parameters.get("a")).toBe("é");
+  });
+
+  it("shouldKeepMalformedEscapeLiterally", () => {
+    const result = parseParameters("a=%zz");
+    expect(result.ok && result.parameters.get("a")).toBe("%zz");
+  });
+
+  it("shouldDecodePlusAloneAsSpace", () => {
+    const result = parseParameters("a=+");
+    expect(result.ok && result.parameters.get("a")).toBe(" ");
+  });
 });
