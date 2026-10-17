@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import type { CommandOutcome, CommandSpec } from "../process/execute.ts";
+import type { CommandOutcome, CommandSpec, ExecuteOptions } from "../process/execute.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { createPublishRunner, distTagForVersion, parseReleaseTag, resolveTagTarget } from "./publish.ts";
 
@@ -90,9 +90,11 @@ describe("distTagForVersion", () => {
 describe("createPublishRunner", () => {
   function createRecorder(options: { failing?: string; tarballs?: number } = {}) {
     const calls: CommandSpec[] = [];
+    const executions: ExecuteOptions[] = [];
     let destination = "";
-    const run = async (spec: CommandSpec): Promise<CommandOutcome> => {
+    const run = async (spec: CommandSpec, execution: ExecuteOptions): Promise<CommandOutcome> => {
       calls.push(spec);
+      executions.push(execution);
       const [subcommand] = spec.args;
       if (subcommand === "pack") {
         destination = spec.args[2] as string;
@@ -105,7 +107,7 @@ describe("createPublishRunner", () => {
       const isSuccess = subcommand !== options.failing;
       return { didTimeOut: false, durationMs: 0, isSuccess, output: `${spec.command} ${subcommand}` };
     };
-    return { calls, destination: () => destination, run };
+    return { calls, destination: () => destination, executions, run };
   }
 
   const withPrepublish = (version = "1.0.0"): WorkspacePackage => ({
@@ -130,6 +132,18 @@ describe("createPublishRunner", () => {
       join(recorder.destination(), "package-0.tgz"),
       "--access",
       "public",
+    ]);
+  });
+
+  it("hands npm publish the terminal with no timeout so npm can authenticate interactively", async () => {
+    const recorder = createRecorder();
+
+    await createPublishRunner(recorder.run)(withPrepublish(), 60_000);
+
+    expect(recorder.executions).toEqual([
+      { stdio: "pipe", timeoutMs: 60_000 },
+      { stdio: "pipe", timeoutMs: 60_000 },
+      { stdio: "inherit" },
     ]);
   });
 
@@ -173,7 +187,7 @@ describe("createPublishRunner", () => {
 
     const outcome = await createPublishRunner(recorder.run)(withPrepublish());
 
-    expect(outcome.isSuccess).toBe(false);
+    expect(outcome).toEqual({ isSuccess: false, output: "npm publish printed its error above." });
     await expect(access(recorder.destination())).rejects.toThrow(/ENOENT/);
   });
 });
