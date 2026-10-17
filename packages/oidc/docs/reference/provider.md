@@ -17,7 +17,7 @@ export declare function createProvider(options: ProviderOptions): Provider;
 
 Creates an OpenID Provider from its options, ready to answer requests on the Fetch API.
 
-The provider answers the discovery, JWKS, token, userinfo, and revocation endpoints through `Provider.handle`, and runs the authorization flow through `Provider.beginAuthorization` and `Provider.completeAuthorization`. The authorization endpoint itself is not routed, so the app serves it and calls `beginAuthorization` from its own handler. Options are validated here, once, so a misconfiguration fails at startup instead of on the first request. Key pairs are checked for shape, algorithm and `kid` only: not that the two halves match, nor that the keys come from this package's `@codenhub/jwt` copy.
+The provider answers the discovery, JWKS, token, userinfo, and revocation endpoints through `Provider.handle`, and runs the authorization flow through `Provider.beginAuthorization` and `Provider.completeAuthorization`. The authorization and end-session endpoints are not routed, so the app serves them and calls `beginAuthorization` and `Provider.endSession` from its own handlers. Options are validated here, once, so a misconfiguration fails at startup instead of on the first request. Key pairs are checked for shape, algorithm and `kid` only: not that the two halves match, nor that the keys come from this package's `@codenhub/jwt` copy.
 
 **Parameters**
 
@@ -327,13 +327,29 @@ How this client authenticates to the token endpoint.
 readonly clientId: string;
 ```
 
+#### grantTypes
+
+```ts
+readonly grantTypes?: readonly GrantType[];
+```
+
+Grants this client may use, without repeats. `client_credentials` needs a client that authenticates, so not one whose `auth.method` is `none`.
+
+#### postLogoutRedirectUris
+
+```ts
+readonly postLogoutRedirectUris?: readonly string[];
+```
+
+Where `Provider.endSession` may send the browser after logout, each compared byte for byte with the requested `post_logout_redirect_uri`, and held to the same rules as `redirectUris`. Absent or empty, no logout of this client redirects.
+
 #### redirectUris
 
 ```ts
 readonly redirectUris: readonly string[];
 ```
 
-Redirect URIs, each compared to the requested one byte for byte. The list must be non-empty, and the provider checks each entry when it reads the record and throws `TypeError` if one fails: it must be a non-empty string, an absolute URL, made of visible ASCII only (no space, control character or backslash), without a fragment (`#`) or credentials, and with a scheme other than `javascript:`, `data:`, `vbscript:` or `file:`.
+Redirect URIs, each compared to the requested one byte for byte. The list must be non-empty when the client may use `authorization_code`, and may be empty otherwise. The provider checks each entry when it reads the record and throws `TypeError` if one fails: it must be a non-empty string, an absolute URL, made of visible ASCII only (no space, control character or backslash), without a fragment (`#`) or credentials, and with a scheme other than `javascript:`, `data:`, `vbscript:` or `file:`.
 
 #### scopes
 
@@ -341,7 +357,7 @@ Redirect URIs, each compared to the requested one byte for byte. The list must b
 readonly scopes: readonly string[];
 ```
 
-Scopes this client may request. Must include `openid`.
+Scopes this client may request. Must include `openid` when the client may use `authorization_code`. A `client_credentials` token never carries `openid` or `offline_access`, since no user is involved.
 
 ### CodeRecord
 
@@ -432,6 +448,54 @@ Granted scopes.
 ```ts
 readonly subject: string;
 ```
+
+### EndSession
+
+```ts
+export interface EndSession
+```
+
+A validated logout request. Frozen. The provider keeps no sessions, so ending the user's session is the app's work; this says who asked and where to send the browser afterwards.
+
+#### clientId
+
+```ts
+readonly clientId?: string;
+```
+
+The client that asked: `client_id`, or the client a verified `id_token_hint` was issued to.
+
+#### logoutHint
+
+```ts
+readonly logoutHint?: string;
+```
+
+`logout_hint`, passed through as sent.
+
+#### redirect
+
+```ts
+readonly redirect: Response | null;
+```
+
+A `302` to the client's registered `post_logout_redirect_uri`, carrying `state`, or `null` when the request named no URI.
+
+#### subject
+
+```ts
+readonly subject?: string;
+```
+
+The user a verified `id_token_hint` names. Absent without one, as when the hint has expired: then nothing ties the request to a user, and the app should ask the user to confirm before it signs them out.
+
+#### uiLocales
+
+```ts
+readonly uiLocales?: readonly string[];
+```
+
+`ui_locales`, with empty entries dropped.
 
 ### InteractionRecord
 
@@ -743,6 +807,14 @@ completeAuthorization(interactionId: string, outcome: AuthorizationGrant | Autho
 
 Finishes an interaction: issues a code, or sends the denial, as a `302` to the client's redirect URI.
 
+#### endSession
+
+```ts
+endSession(request: Request): Promise<OidcResult<EndSession>>;
+```
+
+Validates an RP-initiated logout request (RP-Initiated Logout 1.0) at the end-session endpoint, which the app routes. The app then ends its own session, after asking the user to confirm when it chooses to, and answers with `redirect`, or with its own page when `redirect` is `null`.
+
 #### handle
 
 ```ts
@@ -800,6 +872,14 @@ Endpoint URLs, each an absolute `https` URL on any origin.
 ```ts
 readonly authorization?: string;
 ```
+
+#### endSession
+
+```ts
+readonly endSession?: string;
+```
+
+RP-initiated logout. The app routes it and calls `Provider.endSession`, as it does for authorization.
 
 #### jwks
 
@@ -866,6 +946,14 @@ readonly claims_supported?: readonly string[];
 ```ts
 readonly code_challenge_methods_supported?: readonly string[];
 ```
+
+#### end_session_endpoint
+
+```ts
+readonly end_session_endpoint?: string;
+```
+
+RP-Initiated Logout 1.0 §2.1.
 
 #### grant_types_supported
 
@@ -980,6 +1068,14 @@ export interface ProviderOptions
 ```
 
 How [createProvider](#createprovider) runs. Invalid options throw `TypeError` at creation.
+
+#### accessToken
+
+```ts
+readonly accessToken?: AccessTokenFormat;
+```
+
+The format of access tokens. Opaque tokens are random values a resource server can check only through the provider's store. JWT access tokens (RFC 9068) are signed with the first signing key, with `typ: at+jwt` and this `audience`, so a resource server can verify them offline; such a server sees a revocation only when the token expires. Either format is stored by its digest, so the userinfo and revocation endpoints work alike.
 
 #### claims
 
@@ -1165,6 +1261,21 @@ readonly subject: string;
 
 ## Type aliases
 
+### AccessTokenFormat
+
+```ts
+export type AccessTokenFormat = {
+    readonly format: "opaque";
+}
+/** `audience` is the `aud` every access token carries: the resource server's identifier, usually its URL. */
+ | {
+    readonly format: "jwt";
+    readonly audience: string;
+};
+```
+
+How access tokens are issued. See `ProviderOptions.accessToken`.
+
 ### ClientAuthentication
 
 ```ts
@@ -1211,6 +1322,14 @@ export type Consumption<TRecord> =
 
 The outcome of consuming a single-use value.
 
+### GrantType
+
+```ts
+export type GrantType = "authorization_code" | "client_credentials";
+```
+
+A grant a client may use at the token endpoint. `authorization_code` signs users in, and brings the refresh grant with it under `offline_access`; `client_credentials` gets the client an access token for itself (RFC 6749 §4.4).
+
 ### OAuthErrorCode
 
 ```ts
@@ -1222,7 +1341,7 @@ OAuth 2.0 and OpenID Connect error codes a provider sends to a client, from RFC 
 ### OidcIssueCode
 
 ```ts
-export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
+export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mismatch" | "invalid_token_response" | "invalid_userinfo" | "provider_error" | "invalid_callback" | "state_mismatch" | "iss_mismatch" | "invalid_id_token" | "nonce_mismatch" | "azp_mismatch" | "at_hash_mismatch" | "auth_time_missing" | "auth_too_old" | "subject_mismatch" | "unknown_client" | "invalid_redirect_uri" | "interaction_not_found" | "invalid_request" | "unauthorized_client" | "unsupported_response_type" | "invalid_scope" | "request_not_supported" | "request_uri_not_supported" | "registration_not_supported";
 ```
 
 Stable category of a failure that callers can branch on without parsing messages.
@@ -1256,7 +1375,7 @@ A `prompt` value (OpenID Connect Core §3.1.2.1).
 ### ProviderDiagnosticReason
 
 ```ts
-export type ProviderDiagnosticReason = "content_type" | "body" | "parameters" | "client_credentials_missing" | "client_credentials_ambiguous" | "client_credentials_malformed" | "client_unknown" | "client_method_mismatch" | "client_credentials_wrong" | "grant_type_missing" | "grant_type_unsupported" | "parameter_missing" | "code_verifier_malformed" | "code_unknown" | "code_replayed" | "code_expired" | "code_client_mismatch" | "redirect_uri_mismatch" | "code_verifier_mismatch" | "scope_invalid" | "refresh_token_unknown" | "refresh_token_replayed" | "refresh_token_expired" | "refresh_token_client_mismatch" | "scope_not_granted" | "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_without_openid" | "token_missing" | "token_of_another_client";
+export type ProviderDiagnosticReason = "content_type" | "body" | "parameters" | "client_credentials_missing" | "client_credentials_ambiguous" | "client_credentials_malformed" | "client_unknown" | "client_method_mismatch" | "client_credentials_wrong" | "grant_type_missing" | "grant_type_unsupported" | "grant_type_unauthorized" | "parameter_missing" | "code_verifier_malformed" | "code_unknown" | "code_replayed" | "code_expired" | "code_client_mismatch" | "redirect_uri_mismatch" | "code_verifier_mismatch" | "scope_invalid" | "refresh_token_unknown" | "refresh_token_replayed" | "refresh_token_expired" | "refresh_token_client_mismatch" | "scope_not_granted" | "access_token_missing" | "access_token_malformed" | "access_token_unknown" | "access_token_expired" | "access_token_without_openid" | "token_missing" | "token_of_another_client";
 ```
 
 Why the provider refused a request at the token, userinfo, or revocation endpoint. The client is sent only the OAuth error code, so this is what an operator debugs with.

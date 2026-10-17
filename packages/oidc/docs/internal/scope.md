@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-16
+last_updated: 2026-10-17
 scope: What `@codenhub/oidc` 0.1 covers, the invariants it keeps, and the decisions taken while building it.
 ---
 
@@ -8,7 +8,7 @@ scope: What `@codenhub/oidc` 0.1 covers, the invariants it keeps, and the decisi
 
 > **How to read this document.** This started as the outcome of a brainstorming session, not a final spec. Section 4 lists the **invariants**: security and design commitments that hold unless there's a strong, explained reason to break them. Sections 1 to 3, 5 and 7 are the agreed scope of 0.1. The API sketch in section 6 was a **proposal**; the shipped API answers it differently in places, and section 8 records how. Section 8 also records the decisions taken while building the package, marked by who settled them. If you find a better API shape, better behavior, or a better-established practice, propose it and explain why, as `docs/guidelines/documentation.md` asks for reversing a decision. The goal is the best possible package, not faithfulness to this document.
 >
-> The invariants and every decision in section 8 are approved by the maintainer; decisions 5 to 22 were reviewed in the pre-release audit of 2026-10-16, which also took decisions 23 to 31.
+> The invariants and every decision in section 8 are approved by the maintainer; decisions 5 to 22 were reviewed in the pre-release audit of 2026-10-16, which also took decisions 23 to 31. The release audit of 2026-10-17 took decisions 32 to 39.
 >
 > The display name is `OidcKit`. How the package is built, and why, is in [architecture.md](architecture.md). What remains before 0.1 is in [roadmap.md](roadmap.md).
 
@@ -62,13 +62,14 @@ The package covers both sides on purpose. It isn't "a package built for one proj
 
 - **Endpoints**: discovery, JWKS, authorization, token, userinfo.
 - **Authorization** is split into begin and complete steps, because login and consent UI belong to the app (see section 6).
-- **Grants**: `authorization_code` and `refresh_token`.
+- **Grants**: `authorization_code`, `refresh_token`, and `client_credentials` (decision 35).
 - **Client authentication verification** for the same methods the client supports.
 - **Request handling**:
   - `prompt`: `none` must return `login_required` / `consent_required`; `login` and `consent` must force those steps. As shipped, the app performs these steps, since sessions and consent are its own (decision 3): it answers `prompt=none` with a denial, and the provider checks the outcome it reports, such as an `authTime` no older than the request under `prompt=login` (decision 16).
   - `max_age`, with `auth_time` in the ID token.
   - Scopes mapped to claims.
 - **`iss` in the authorization response** (RFC 9207), advertised in discovery.
+- **RP-initiated logout** (RP-Initiated Logout 1.0): the end-session request is validated by the provider and the session ended by the app (decision 37).
 - **Refresh tokens** rotate on every use. Reuse detection revokes the whole token family.
 - **Code replay** revokes every token issued from that code.
 - **Store interface**: the adapters the app implements (section 5).
@@ -77,7 +78,7 @@ The package covers both sides on purpose. It isn't "a package built for one proj
 ### Candidates (in if cheap and clean, otherwise later)
 
 - Token revocation (RFC 7009). It's useful for logout and for the SSO dashboard. Shipped in 0.0.1 (decision 27).
-- JWT access tokens (RFC 9068, `typ: at+jwt`) as an option alongside opaque tokens. Later (decision 2).
+- JWT access tokens (RFC 9068, `typ: at+jwt`) as an option alongside opaque tokens. Shipped in 0.0.1 (decision 36).
 
 ### Out of scope (0.1)
 
@@ -85,14 +86,13 @@ These are left out to keep the surface small, not because they're bad:
 
 - **Never supported:** implicit and hybrid flows, the password grant (ROPC), and PKCE `plain`.
 - **Out of scope for 0.1:**
-  - Client credentials. It will probably matter later for the SSO's user-data API.
-  - Device flow, CIBA, and PAR (RFC 9126). PAR is a strong later candidate.
+  - Device flow, CIBA, and PAR (RFC 9126). PAR is not planned (decision 38).
   - DPoP and mTLS.
   - Dynamic client registration.
   - Request objects (JAR) and JWE-encrypted tokens.
-  - Logout specs: RP-initiated, front-channel, back-channel, and session management. These are the next step after 0.1.
+  - Front-channel and back-channel logout, and session management. RP-initiated logout is in (decision 37).
   - Token introspection.
-  - Pairwise subject identifiers. They're interesting for the SSO's privacy story, so the design should leave room for them.
+  - Pairwise subject identifiers, which the app can already compute itself (decision 38).
 
 ---
 
@@ -108,7 +108,7 @@ These are left out to keep the surface small, not because they're bad:
 ## 4. Invariants
 
 1. **PKCE `S256` is required for every client**, confidential ones included. A missing or `plain` challenge is rejected.
-2. **`redirect_uri` matches exactly.** It's a byte-for-byte comparison against a registered value, with no normalization, wildcards, or prefix matching. Loopback redirects with variable ports (RFC 8252) would be allowed only if explicitly enabled per client. Decision 3 defers them, so 0.0.1 matches exactly in every case.
+2. **`redirect_uri` matches exactly.** It's a byte-for-byte comparison against a registered value, with no normalization, wildcards, or prefix matching. Loopback redirects with variable ports (RFC 8252) are not planned (decision 38), so the match is exact in every case.
 3. **No open redirects.** The provider only redirects to a redirect URI it has verified for that client. The types make the difference between "send this error back to the client" and "render an error yourself" impossible to miss.
 4. **Authorization codes:**
    - single-use
@@ -144,7 +144,7 @@ The store is where most real-world bugs live. Its contract should be precise and
 
 The provider needs, at minimum:
 
-- **Clients**: look up by `client_id`. This returns registered redirect URIs, allowed scopes, the authentication method, and either a secret verifier or a JWKS.
+- **Clients**: look up by `client_id`. This returns registered redirect URIs, allowed scopes, the authentication method, and either a secret verifier or a JWKS. As shipped, a record also lists its grants and its post-logout redirect URIs (decisions 35 and 37).
 - **Authorization codes**: `save` with a TTL, and `consume`. `consume` **must be atomic**. Decision 10 makes it an atomic mark-as-used rather than a get-and-delete, so a replay can be recognized. Document what that rules out: plain Cloudflare KV is not atomic, so it needs D1 or Durable Objects.
 - **Refresh tokens**: `save`, `rotate` (atomic), `revokeFamily`.
 - **Grants or sessions**, if needed, for code-replay revocation and refresh-family tracking.
@@ -276,8 +276,8 @@ Decisions bind work while they stand; reversing one follows "Recording decisions
 ### Approved by the maintainer (2026-10-16)
 
 1. **The interaction handle is an opaque identifier, kept server-side through the store.** `beginAuthorization` saves the validated request with `saveInteraction` and returns a random 256-bit `id`; `completeAuthorization` consumes it atomically, so an interaction completes at most once. The store key is the identifier's SHA-256 digest, like every other secret value. Rejected: a signed JWT handle kept by the app in a cookie or form, which needs a signing key, can be replayed until it expires unless the app tracks it, and grows with the request.
-2. **Access tokens are opaque in 0.0.1.** A random 256-bit value, stored hashed; revoking a family is a store revocation (`revokeGrant`, which must also hide tokens of that grant saved after it, decision 10). RFC 9068 JWT access tokens are a later option (roadmap). Rejected for now: shipping `at+jwt` alongside, which adds surface and tests to 0.0.1 and gives tokens that cannot be revoked before they expire.
-3. **Consent belongs to the app, and `redirect_uri` matching is exact only.** The app decides whether to show consent and passes the granted scopes to `completeAuthorization`; the store has no consent table. Loopback redirects with variable ports (RFC 8252 §7.3) are deferred. Rejected for now: a provider-side consent store, which adds a table and a policy the SSO app must own anyway.
+2. **Access tokens are opaque by default.** A random 256-bit value, stored hashed; revoking a family is a store revocation (`revokeGrant`, which must also hide tokens of that grant saved after it, decision 10). RFC 9068 JWT access tokens became an option in the release audit (decision 36). Rejected at first: shipping `at+jwt` alongside, which adds surface and tests to 0.0.1 and gives tokens that cannot be revoked before they expire; decision 36 reversed this with opaque kept the default.
+3. **Consent belongs to the app, and `redirect_uri` matching is exact only.** The app decides whether to show consent and passes the granted scopes to `completeAuthorization`; the store has no consent table. Loopback redirects with variable ports (RFC 8252 §7.3) are not planned (decision 38). Rejected for now: a provider-side consent store, which adds a table and a policy the SSO app must own anyway.
 4. **0.0.1 targets the "0.0.1 is done when" criteria of section 7.** Interop against panva's `oidc-provider` and `openid-client`, the OpenID conformance runs, and token revocation (RFC 7009) were left for later; the audit brought interop and revocation into 0.0.1 (decisions 27 and 30).
 
 ### Taken while building, approved in the pre-release audit (2026-10-16)
@@ -293,7 +293,7 @@ Decisions bind work while they stand; reversing one follows "Recording decisions
 13. **CORS.** Discovery, JWKS, token and userinfo answer any origin (`Access-Control-Allow-Origin: *`) and their preflights; the authorization endpoint never has CORS headers. None of the cross-origin endpoints reads cookies or other ambient credentials, so a page on another origin can do nothing through them it could not do from a server.
 14. **Error responses never carry `error_description`.** Token errors are `{ "error": code }`, userinfo errors a `WWW-Authenticate` challenge, authorization errors a redirect with `error`, `state` and `iss`.
 15. **`private_key_jwt` and `client_secret_jwt` need `client_id` in the body.** The provider finds the client before it verifies the assertion and never decodes an unverified payload, which `@codenhub/jwt` deliberately does not offer. The assertion's `aud` may be the issuer or the token endpoint URL. Its `jti` is required but not tracked, and its lifetime is capped (decision 23).
-16. **`completeAuthorization` throws `TypeError` when the app's outcome contradicts the request**: scopes that were not requested or no `openid`, an `authTime` before the interaction under `prompt=login`, or older than `max_age`. These are bugs in the app's login flow, and answering them with a code would silently log a user in without the step the client asked for.
+16. **`completeAuthorization` throws `TypeError` when the app's outcome contradicts the request**: scopes that were not requested or no `openid`, an `authTime` before the interaction under `prompt=login`, or more than `max_age` before the request (decision 32). These are bugs in the app's login flow, and answering them with a code would silently log a user in without the step the client asked for.
 17. **Store failures propagate.** A store that throws or rejects makes `handle`, `beginAuthorization` or `completeAuthorization` reject. Answering `invalid_grant` for a database outage would hide it and log users out. The `claims` callback is treated the same way.
 18. **The client's clock tolerance defaults to 0 seconds**, following `@codenhub/jwt` decision 6; an app whose clock may drift from the provider's sets `clockTolerance`.
 19. **`@codenhub/jwt` is a peer dependency.** Its keys are recognized only by the copy that created them, so the app and this package must share one copy. It is installed from its release through the catalog, as `docs/specs/packages-lifecycle.md` asks.
@@ -318,3 +318,14 @@ Decisions bind work while they stand; reversing one follows "Recording decisions
 29. **`storeConformanceCases` checks an adapter against the `OidcStore` contract with any test runner.** Each case is a name and a `run(createStore)` that rejects with an `Error` naming the broken rule. The audit also wrote down rules the contract left unsaid: saves never overwrite, the revocation check is atomic with consumption, and adapters purge expired rows themselves, keeping replay and revocation markers as long as they matter. Rejected: a suite bound to one runner, such as Vitest's `describe`.
 30. **Interop runs now; OpenID conformance certification stays a 0.1 item.** Dev-only suites run openid-client against this provider and this client against oidc-provider. The OpenID conformance plans need a provider reachable from the OpenID Foundation's runner, so they wait for a deployable host. Rejected: documenting "how far it gets" for 0.0.1 without running it, which would be a guess.
 31. **Behaviors settled in the audit.** A refresh `scope` must include `openid`, checked before the token is spent, and userinfo answers `insufficient_scope` (403) for a token without `openid` (OpenID Connect Core §5.3). A failing `Authorization` header at the token or revocation endpoint always gets the Basic challenge (RFC 6749 §5.2). A registered redirect URI's query is kept byte for byte (§3.1.2). Invalid percent-encoded UTF-8 is refused as `malformed` rather than decoded to U+FFFD. Empty `ui_locales` entries are dropped, since it is a hint. The client strips a JSON byte order mark (RFC 8259 §8.1), accepts hand-written metadata that reuses an object, type-checks every claim `IdTokenClaims` types, and refuses at creation an assertion key whose algorithm the provider does not advertise.
+
+### Taken in the release audit, approved by the maintainer (2026-10-17)
+
+32. **`max_age` is measured at the request, on both sides.** OpenID Connect Core §3.1.2.1 asks for re-authentication when the time since the last login is more than `max_age`, which is judged when the request arrives. The client measured it at the callback, against a millisecond clock and a whole-second `auth_time`, so `authorize({ maxAge: 0 })`, the spec's equivalent of `prompt=login`, failed every sign-in with `auth_too_old` (5 of 5, this client against this provider), and small values failed whenever the login took longer than `max_age`. The provider measured it in `completeAuthorization`, so a user who spent longer on the consent page than `max_age` allowed made it throw `TypeError`. The provider now compares `authTime` with the interaction's `createdAt`, and `PendingAuthorization` carries `requestedAt` beside `maxAge` for the client to compare with. Rejected: fixing only the provider and refusing `maxAge: 0`, which drops a value the spec defines and still fails small values; a clock tolerance as the remedy, which loosens every other time check to fix one.
+33. **`storeConformanceCases` seeds clients.** `createStore` receives `{ clients }`, the shape `createMemoryStore` already takes, and a case checks that `findClient` returns a registered client with its values. The suite passed an adapter whose `findClient` never found anything, the one read every request starts with, because `OidcStore` has no method that saves a client. A refresh-token twin of the duplicate-save case was added beside it. Rejected: narrowing the documentation to say the suite does not check `findClient`, which leaves that read untested in every adapter.
+34. **Behaviors settled in the release audit.** `userinfo` throws `TypeError` for an access token that is not printable ASCII, rather than reporting the header `fetch` refuses as a network failure that invites a retry. The hostile parameter check runs in workerd against the built package as well, since the bundler had deleted it from `dist/` (`AGENTS.md` records the trap).
+35. **Client credentials (RFC 6749 §4.4) ships, gated per client.** A client record lists `grantTypes`, `authorization_code` by default, or `client_credentials`; the refresh grant comes with `authorization_code`. Only a client that authenticates may use `client_credentials`, and a record that gives it to a `none` client is a `TypeError`. A request without `scope` gets every scope of the client but `openid` and `offline_access`, which mean nothing without a user; asking for either is `invalid_scope`. The token's subject is the client, as RFC 9068 §2.2 has it, no ID token or refresh token is issued, and each token is its own grant, so revoking one leaves the client's others. A client not allowed a grant gets `unauthorized_client`, which joins `OidcIssueCode` for the authorization redirect. On the client, `clientCredentials` sends the grant and drops an `id_token` nothing would check, and `redirectUri` becomes optional, since a service client signs no user in; `authorize` and `callback` throw `TypeError` without it. The SSO application's user-data API is the consumer section 2 anticipated. Rejected: `refresh_token` as its own grant type, as RFC 7591 lists it, since `offline_access` already decides whether a sign-in may refresh; a separate record type for service clients, which every adapter would have to store twice.
+36. **JWT access tokens (RFC 9068) ship as an option; opaque stays the default.** `accessToken: { format: "jwt", audience }` signs access tokens with the first signing key, with `typ: at+jwt`, `iss`, `exp`, `aud`, `sub`, `client_id`, `iat`, `jti`, `scope`, and, for a user's grant, `auth_time`, `amr` and `acr`. They are stored by digest like opaque tokens, so userinfo and revocation work alike; a resource server verifies them offline with `@codenhub/jwt`'s `createVerifier({ type: "at+jwt" })` and sees a revocation only when the token expires, which the documentation states and `ttl.accessToken` bounds. This reverses decision 2's "later": the maintainer settled deferred items before 0.0.1, and decision 2's reason, tokens that outlive their revocation, is answered by keeping opaque the default. Rejected: per-client or per-scope audiences through resource indicators (RFC 8707), which wait for a second resource server; a verifier helper in this package, which `@codenhub/jwt` already is; leaving JWT access tokens out of the store, which would break userinfo and revocation for them.
+37. **RP-initiated logout ships as a stateless validation step, like authorization.** The app routes the end-session endpoint (`endpoints.endSession`, `${issuer}/logout` by default, advertised as `end_session_endpoint`) and calls `endSession(request)`, which reads `GET` or a `POST` form and returns who asked and a `redirect`, or a failure the app renders: a logout request never redirects to anything unverified. An `id_token_hint` is verified as this provider's ID token; one that does not verify is ignored, because `@codenhub/jwt` returns no payload for a token that fails and an expired hint is normal, so the result names no user and the app asks the user to confirm. A verified hint issued to another client than `client_id` is `invalid_request` (RP-Initiated Logout 1.0 §2). A `post_logout_redirect_uri` must match one of the client's `postLogoutRedirectUris` byte for byte, which needs a known client from `client_id` or the hint. The client gains `endSessionUrl`, which always sends `client_id`, so the redirect works after the hint expires. Rejected: accepting expired hints, which needs a decoded unverified payload, refused for the reason decision 15 gives; a store-backed logout interaction, which keeps state the request does not need; front-channel and back-channel logout, which need session identifiers (`sid`) and calls from the provider (decision 38).
+38. **Not planned, each until a consumer needs it:** loopback redirect URIs with variable ports (RFC 8252 §7.3), since the SSO application's clients are web apps and the exact match of invariant 2 is simpler to keep; PAR (RFC 9126), since its gain is keeping large or sensitive request parameters out of the URL, and no client of this package sends any; pairwise subject identifiers, since the app chooses the `subject` it passes to `completeAuthorization` and can derive it per client already, leaving only `subject_types_supported` to change; front-channel and back-channel logout and session management, which need the app's sessions to carry `sid` and the provider to call clients. Rejected: keeping them as "later", which the maintainer asked to settle before 0.0.1. Reopening one needs the consumer and its case.
+39. **The OpenID conformance run stays the 0.1 release criterion.** It is a criterion of section 7, not a feature: it needs a host reachable from the OpenID Foundation's runner, and 0.0.1 is the release that puts the provider behind a real host in the SSO application. Rejected: dropping it with the deferred features, which would leave 0.1 without an outside check of the provider.

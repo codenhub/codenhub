@@ -12,27 +12,24 @@ This records what stands between 0.0.1 and a 0.1.0 the SSO application can build
 
 ## Current Focus
 
-0.0.1 is the first publish, and its purpose is to find out whether the package holds up in the SSO application. The criteria of scope.md section 7 hold: the authorization code flow works end to end, this client against this provider, on Node.js and workerd; every invariant has tests; the hostile-input, leak and interop suites pass. The pre-release audit settled every pending decision (scope.md section 8).
+0.0.1 is the first publish, and its purpose is to find out whether the package holds up in the SSO application. The criteria of scope.md section 7 hold: the authorization code flow works end to end, this client against this provider, on Node.js and workerd; every invariant has tests; the hostile-input, leak and interop suites pass. The release audit of 2026-10-17 settled every deferred item: client credentials, JWT access tokens and RP-initiated logout ship in 0.0.1 (scope.md decisions 35 to 37), and the rest are not planned (decision 38).
 
 ## Planned
 
 0.1.0 is released when scope.md section 7 "0.1 is done when" holds:
 
-- **The OpenID conformance suite.** The provider passes the Basic OP and Config OP plans; the client runs the RP tests where practical. The plans need a provider reachable from the suite's runner, so a small deployable host (a Worker, or a Node.js server) comes with this item. Discovery's `id_token_signing_alg_values_supported` must list `RS256` for the Config OP plan, so the conformance host signs with an RS256 key (scope.md decision 30).
+- **The OpenID conformance suite.** The provider passes the Basic OP and Config OP plans; the client runs the RP tests where practical. The plans need a provider reachable from the suite's runner, so a small deployable host (a Worker, or a Node.js server) comes with this item. Discovery's `id_token_signing_alg_values_supported` must list `RS256` for the Config OP plan, so the conformance host signs with an RS256 key (scope.md decisions 30 and 39).
 - **What the SSO application finds.** Changes the first real consumer shows the public API needs, before it freezes at 0.1.
 - **A changelog from 0.1.0**, opened by `hub release --cut` with the release, per `docs/specs/packages-changelog.md`.
 
 ## Later / Possible
 
-Each of these is its own specification and design, outside 0.1 by scope.md section 2, and waits for a consumer that needs it:
-
-- **RFC 9068 JWT access tokens** as an option beside opaque ones (scope.md decision 2).
-- **Loopback redirect URIs with variable ports** for native and CLI apps (RFC 8252 §7.3; decision 3).
-- **Logout**: RP-initiated, then back-channel. Revocation (decision 27) already ends a grant's tokens, which is a building block for logout. It does not end a session: the app owns sessions, so logout also needs the app's session to end.
-- **PAR (RFC 9126)**, client credentials, and pairwise subject identifiers.
+None. Each candidate the scope named was implemented or moved to Not Planned in the release audit (scope.md decision 38).
 
 ## Not Planned
 
 - Implicit and hybrid flows, the password grant, and PKCE `plain` (scope.md section 2, "Never supported").
 - Tracking client assertion `jti` values (scope.md decision 23).
 - A non-consuming refresh token lookup, unless a real client needs it (scope.md decision 20).
+- Loopback redirect URIs with variable ports, PAR, pairwise subject identifiers, and front-channel or back-channel logout and session management. Each waits for a consumer and its case (scope.md decision 38).
+- Device flow, CIBA, DPoP, mTLS, dynamic client registration, request objects, JWE-encrypted tokens and token introspection (scope.md section 2).

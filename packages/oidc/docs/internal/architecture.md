@@ -14,7 +14,7 @@ In scope, and the package must get right:
 
 - **Any request to the provider**, and any callback URL, discovery document, token response, userinfo response or JWKS the client receives. For these, bad input is a result or an OAuth error response and never an exception, and costs a bounded amount of work.
 - **Authorization code interception and injection**: PKCE `S256` is required of every client, and a code is bound to its client, redirect URI, challenge, nonce and scopes.
-- **Open redirects**: the provider redirects only to a redirect URI it matched byte for byte against the client's registration.
+- **Open redirects**: the provider redirects only to a redirect URI, or a post-logout redirect URI, it matched byte for byte against the client's registration.
 - **Mix-up and CSRF on the callback**: `state` and the RFC 9207 `iss` parameter are checked before anything in the response is used.
 - **Replay**: codes and refresh tokens are single-use, and a second use revokes everything issued from the same grant.
 - **Token type confusion**: an ID token is never accepted where an access token is, a refresh token never where either is.
@@ -33,7 +33,7 @@ Out of scope, and documented rather than defended:
 | `src/index.ts`  | The root export: shared types only (decision 6).                                                                          |
 | `src/shared/`   | Public types, results, limits, base64url and digests, PKCE, `at_hash`, strict parameter parsing, bounded bodies.          |
 | `src/client/`   | `discover`, `createClient`, and the client's bounded JSON fetch, metadata checks, client authentication, ID token checks. |
-| `src/provider/` | `createProvider`, option resolution, the five endpoints, client authentication, secrets, responses, diagnostics.          |
+| `src/provider/` | `createProvider`, option resolution, the endpoints, logout, client authentication, secrets, responses, diagnostics.       |
 | `src/testing/`  | The in-memory reference store and the store conformance cases.                                                            |
 
 Each subpath is its own build entry (`client.ts`, `provider.ts`, `testing.ts`), and the client never imports from `src/provider/`, so `@codenhub/oidc/client` does not carry provider code (scope.md section 3). Both sides import `src/shared/`, which the bundler emits as a shared chunk.
@@ -44,18 +44,26 @@ Each subpath is its own build entry (`client.ts`, `provider.ts`, `testing.ts`), 
 
 `resolveOptions` (`provider/options.ts`) checks every option once, at creation, and freezes the result, so a misconfiguration throws `TypeError` at startup and each request reads plain resolved values. `now()` there returns whole seconds, the unit of every record and claim. Endpoint URLs default to paths under the issuer, and `handle` compares a request's origin and path with each one, ignoring the query.
 
+### Client records
+
+`checkClientRecord` (`provider/client-record.ts`) checks every record the store returns and resolves its `grantTypes`, so endpoints read a `CheckedClient` and never repeat the default. A client's grants gate both flows: `beginAuthorization` redirects with `unauthorized_client` for a client without `authorization_code`, and the token endpoint answers `unauthorized_client` for a grant the client lacks, the refresh grant counting as part of `authorization_code` (scope.md decision 35).
+
 ### Authorization
 
-`beginAuthorization` splits failures by what can be trusted when they happen:
+`beginAuthorization` reads its parameters through `readFrontChannelParameters` (`provider/front-channel.ts`), which `endSession` shares: the query of a `GET` or the form of a `POST`, after the URL length cap. It splits failures by what can be trusted when they happen:
 
 1. Before the client and its redirect URI are known, nothing in the request can be trusted with a redirect: an oversized URL, a bad method or body, a malformed or duplicated parameter, an unknown client, or a redirect URI that is not exactly one of the client's. These fail with `redirect: null`, and the app renders its own error.
 2. After both are verified, every failure is a `302` to that redirect URI with `error`, `state` and `iss`.
 
-The validated request is saved through `saveInteraction` under the digest of a random identifier (decision 1). `completeAuthorization` consumes it atomically, so a second completion gets `interaction_not_found`; it then checks the app's outcome against the request (decision 16) and saves a code record carrying everything the token endpoint must compare.
+The validated request is saved through `saveInteraction` under the digest of a random identifier (decision 1). `completeAuthorization` consumes it atomically, so a second completion gets `interaction_not_found`; it then checks the app's outcome against the request (decision 16) and saves a code record carrying everything the token endpoint must compare. `max_age` is checked against the interaction's `createdAt`, not the time of completion, so time the user spends on the login and consent pages does not count (decision 32); the client measures from `pending.requestedAt` for the same reason.
 
 ### Token endpoint
 
 Order of checks, cheapest and least trusting first: method, content type, body size, parameter parsing (duplicates refused), client authentication, grant type, then the grant. Client authentication finds exactly one presented method (Basic header, `client_secret` in the body, a client assertion, or nothing) and requires it to be the registered one; the presented credential is then checked against the record: a secret by comparing SHA-256 digests in constant time, an assertion with `@codenhub/jwt`'s verifier with the client as issuer and the issuer or token endpoint as audience.
+
+The client credentials grant consumes nothing: it checks the requested scopes, then issues an access token whose subject is the client, under a new grant of its own, with no ID token or refresh token.
+
+Access tokens are opaque by default, or RFC 9068 JWTs signed with the ID token key when `accessToken.format` is `jwt` (decision 36). Both are saved under their digest, so userinfo and revocation never parse a token: a JWT access token is found the same way as an opaque one, and its signature matters only to resource servers.
 
 A code or refresh token is consumed before it is checked, so a wrong verifier or redirect URI still burns it, and a second attempt is a replay. A replay revokes the grant. Because a replay can arrive while the first exchange is still saving its tokens, the store contract requires `revokeGrant` to cover tokens saved after it (decision 10); the memory store keeps a set of revoked grants and checks it on every read.
 
@@ -64,6 +72,10 @@ A code or refresh token is consumed before it is checked, so a wrong verifier or
 The revocation endpoint shares the token endpoint's front checks and client authentication (`readClientRequest` in `token.ts`). It reads the access token table first, because that read changes nothing, and then spends a refresh token, so either kind of token revokes its grant with no store method beyond the ones the token endpoint uses (decision 27). It does not check expiry: a token the store still holds revokes its grant whether or not it has expired, which is harmless.
 
 A token issued to another client is refused with `invalid_request` and left alone when it is an access token. A refresh token of another client is handled differently, because the lookup spends it before the client is compared. An unspent one is spent, its grant is revoked, and the answer is `invalid_request`. A spent one is a replay wherever it arrives, so its grant is revoked and the answer is `200`, the same as for the client's own token. The refusal of another client's access token is the only case that leaves a grant alone.
+
+### End session
+
+`endSession` (`provider/end-session.ts`) keeps no state: it validates the request and returns a `redirect` for the app to send after it ends its own session (decision 37). An `id_token_hint` is verified with `@codenhub/jwt` against the provider's public keys and issuer, with no audience, and its `aud` is compared with `client_id` afterwards, so a hint for another client is refused while an expired one is ignored. A `post_logout_redirect_uri` is honored only for a known client that registered it; every failure has no redirect, since nothing in a failed logout request can be trusted with one.
 
 ### Diagnostics
 
@@ -76,6 +88,8 @@ The bearer token is read from the `Authorization` header only. Access tokens, re
 ## Client
 
 `createClient` resolves and freezes its options; the metadata is checked by the same function as a discovered document. Every request goes through `requestJson` (`client/http.ts`): `redirect: "manual"`, a timeout raced against the request so a `fetch` that ignores its abort signal still cannot hold the caller, a response size cap enforced while streaming, and JSON content type required. A revocation `200` is the one success that is accepted with any body, so it is read with `ignoreOkBody` and its body is discarded. It never throws; failures are `request_failed` with a `reason`.
+
+`redirectUri` is optional, so one client type serves both a web app and a service using `clientCredentials`; `authorize` and `callback` check for it through `requireRedirectUri`. `endSessionUrl` builds the logout URL synchronously, under the same 8192-character cap as the authorization URL.
 
 The callback checks, in order: the URL and its parameters, `state` (constant-time), `iss` when present or when the provider advertises it, an `error` response, then the code exchange and the ID token. The ID token goes through one `@codenhub/jwt` verifier per client, built on a remote key set restricted to the provider's advertised asymmetric algorithms, with the issuer, the client as audience, and `sub`, `exp` and `iat` required; the OpenID-specific checks (`azp`, `nonce`, `auth_time` under `max_age`, `at_hash`, `typ` not `at+jwt`) run on the verified payload, as `@codenhub/jwt` decision 7 intends. An OAuth `error` value from a provider is narrowed to a known code, or `unknown`, before it reaches an issue, so an issue never carries text the provider chose.
 
@@ -92,6 +106,7 @@ The callback checks, in order: the URL and its parameters, `state` (constant-tim
 | Client option list entries            | 100                        | `scope`, `prompt` and `uiLocales` of `authorize` and `scope` of `refresh`; decision 22.         |
 | URL characters                        | Visible ASCII              | Issuers, endpoints and redirect URIs, less `\`; the URL parser rewrites the rest (decision 22). |
 | Authorization URL built by the client | 8192 chars                 | The provider's URL limit, checked after encoding (decision 24).                                 |
+| Logout URL built by the client        | 8192 chars                 | The same limit, for `endSessionUrl`.                                                            |
 | Metadata copy                         | Depth 32, 65536 containers | Bounds hand-written metadata that reuses objects; no fetched document reaches either.           |
 | Client assertion clock tolerance      | 60 s                       | Client clocks drift; with none, a clock one second ahead failed every request (decision 23).    |
 | Client assertion lifetime             | 300 s                      | Bounds replay of an untracked `jti` (decision 23).                                              |

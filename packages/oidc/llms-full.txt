@@ -48,8 +48,8 @@ To issue tokens as an OpenID Provider instead, see [Provider](docs/provider.md).
 ## Documentation
 
 - [Documentation overview](docs/index.md): what the code flow is, which entrypoint to import, the result shape, and a full sign-in walkthrough.
-- [Client](docs/client.md): discovery, every `createClient` option, starting and finishing a sign-in, refresh, userinfo, revocation, and client authentication.
-- [Provider](docs/provider.md): every `createProvider` option, routing, the authorization step, the token endpoint, userinfo, revocation, and the published metadata.
+- [Client](docs/client.md): discovery, every `createClient` option, starting and finishing a sign-in, refresh, userinfo, revocation, ending the session at the provider, client credentials, and client authentication.
+- [Provider](docs/provider.md): every `createProvider` option, routing, the authorization step, the token endpoint, userinfo, revocation, ending sessions, JWT access tokens, and the published metadata.
 - [Store](docs/store.md): the persistence contract the provider needs, the atomicity it requires, the in-memory reference for tests, and the conformance suite for store adapters.
 - [Hostile input](docs/security.md): what each kind of hostile input gets from each side, every limit, and what the package does not defend.
 - [Issues](docs/errors.md): the result shape, every issue code with where it comes from, what the app does with each client issue, and what throws instead.
@@ -64,13 +64,14 @@ To issue tokens as an OpenID Provider instead, see [Provider](docs/provider.md).
 ## Notes
 
 - **Experimental.** See the note at the top. The security behavior, the meaning of each issue code, and the result shape are the parts meant to hold.
-- **Authorization code flow only.** No implicit, hybrid or resource owner password flow. PKCE with `S256` is required of every client, and `plain` is refused.
-- **Opaque access tokens only.** An access token is a random value the store looks up by digest. The package does not issue JWT access tokens.
+- **Authorization code flow for users, client credentials for services.** No implicit, hybrid or resource owner password flow. PKCE with `S256` is required of every client, and `plain` is refused.
+- **Opaque access tokens by default.** An access token is a random value the store looks up by digest. The provider can issue JWT access tokens (RFC 9068) instead, with `accessToken: { format: "jwt", audience }`. See [Provider](docs/provider.md#jwt-access-tokens).
+- **Logout and service tokens.** `client.endSessionUrl` ends the session at the provider (RP-initiated logout), and `client.clientCredentials` gets a token for a client with no user. See [Client](docs/client.md#ending-the-session-at-the-provider) and [Client](docs/client.md#client-credentials).
 - **Exact redirect matching.** A redirect URI must match a registered one byte for byte. Wildcards, prefixes, normalization and loopback redirects with variable ports are not supported.
 - **The app keeps login, consent and sessions.** The provider decides what a request may ask for and checks the app's outcome against it. It does not decide who the user is, and it does not render pages.
 - **Token revocation.** A client revokes a token with `client.revoke` (RFC 7009), and the provider serves the revocation endpoint. The provider revokes the whole sign-in with either kind of token. A client presenting another client's access token is refused with `invalid_request`, and that token is left alone. See [Client](docs/client.md#revoking-tokens) and [Provider](docs/provider.md).
 - **Client assertion `jti` replay.** A client assertion's `jti` is required but not remembered, so an assertion can be replayed within its capped lifetime, which is five minutes plus the clock tolerance. This is by design: a replayed assertion alone yields nothing, since a code also needs its PKCE verifier and a refresh token is single-use. See [Hostile input](docs/security.md).
-- **Not yet:** logout, and certification by the OpenID conformance suite.
+- **Not yet:** certification by the OpenID conformance suite, the 0.1 criterion. Not planned: loopback redirect URIs with variable ports, PAR, pairwise subject identifiers, and front-channel and back-channel logout.
 
 ## License
 
@@ -96,6 +97,12 @@ This package implements the **authorization code flow**, the one OpenID Connect 
 4. The client checks the ID token: its signature, issuer, audience, expiry, nonce and the other claims the spec names.
 
 PKCE is required on every flow, including for confidential clients. The client and provider each see only what the other must see: the browser carries the code and the state, and the token endpoint, reached directly by the client, carries the verifier.
+
+Beyond the code flow, the package also covers:
+
+- **RP-initiated logout**, which ends the user's session at the provider. See [Client](docs/client.md#ending-the-session-at-the-provider) and [Provider](docs/provider.md#ending-sessions).
+- **Client credentials** (RFC 6749 §4.4), which gives a service client a token for itself, with no user. See [Client](docs/client.md#client-credentials).
+- **JWT access tokens** (RFC 9068), as an option in place of the opaque default. See [Provider](docs/provider.md#jwt-access-tokens).
 
 ## Which entrypoint to import
 
@@ -138,7 +145,7 @@ The two sides run in different processes, and the browser carries the messages b
 
 **The relying party finishes.** The browser arrives at the redirect URI, and the relying party calls `client.callback(url, pending)`. The client checks the `state` and the `iss`, redeems the code at the token endpoint with the PKCE verifier, and validates the ID token against the nonce. On success it returns the claims and the tokens.
 
-**Later.** The relying party can call `client.userinfo` with the access token to get the profile claims the granted scopes release. When the access token is about to expire and it holds a refresh token, `client.refresh` exchanges that token for new tokens, and the app must store the new refresh token, since the old one is spent. To sign the user out, `client.revoke` revokes a token at the provider, see [Client](docs/client.md#revoking-tokens).
+**Later.** The relying party can call `client.userinfo` with the access token to get the profile claims the granted scopes release. When the access token is about to expire and it holds a refresh token, `client.refresh` exchanges that token for new tokens, and the app must store the new refresh token, since the old one is spent. To sign the user out, `client.revoke` revokes a token at the provider, see [Client](docs/client.md#revoking-tokens), and `client.endSessionUrl` ends the session at the provider, see [Client](docs/client.md#ending-the-session-at-the-provider). A service client with no user gets its own token with `client.clientCredentials`, see [Client](docs/client.md#client-credentials).
 
 The detailed steps are in [Client](docs/client.md) and [Provider](docs/provider.md). The guarantees each step gives, and what an attacker gets by sending anything else, are in [Hostile input](docs/security.md).
 
@@ -152,8 +159,8 @@ Every URL the package uses must be `https`, including the issuer, every endpoint
 
 ## Next steps
 
-- [Client](docs/client.md): Discovery, creating a client, sign-in, refresh, userinfo, revocation, and how the client authenticates to the token endpoint.
-- [Provider](docs/provider.md): Creating a provider, routing its endpoints, the authorization step, the token endpoint and its grants, and the published metadata.
+- [Client](docs/client.md): Discovery, creating a client, sign-in, refresh, userinfo, revocation, ending the session at the provider, client credentials, and how the client authenticates to the token endpoint.
+- [Provider](docs/provider.md): Creating a provider, routing its endpoints, the authorization step, the token endpoint and its grants, ending sessions, JWT access tokens, and the published metadata.
 - [Store](docs/store.md): The persistence contract the provider needs, including the atomicity it requires and what cannot satisfy it.
 - [Hostile input](docs/security.md): What each input gets, every limit with its value, and what the package does not defend.
 - [Issues](docs/errors.md): Every issue code, where it comes from, and its path and params.
@@ -208,6 +215,11 @@ Cache the metadata, or the client, rather than calling `discover` on every sign-
 `createClient(options)` returns a frozen client. It makes no request, and it throws `TypeError` when an option is invalid, so a misconfigured client never starts. Its message names the option and never its value.
 
 ```ts
+const discovered = await discover("https://login.example.com");
+if (!discovered.ok) {
+  throw new Error("provider unavailable");
+}
+
 const client = createClient({
   metadata: discovered.value,
   clientId: "my-app",
@@ -216,16 +228,16 @@ const client = createClient({
 });
 ```
 
-| Option           | Meaning                                                                                                                                                                                                                                                                                                                | Default            |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `metadata`       | The provider's metadata, from `discover` or written by hand. Checked as strictly as a fetched document.                                                                                                                                                                                                                | Required           |
-| `clientId`       | The client identifier the provider registered. A non-empty string.                                                                                                                                                                                                                                                     | Required           |
-| `redirectUri`    | The redirect URI registered for this client. Sent with every authorization request and token request. An absolute URI of visible ASCII (no spaces, control or non-ASCII characters; use punycode hosts and percent-encoding), with no fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. | Required           |
-| `auth`           | How the client authenticates to the token endpoint. See [Client authentication](#client-authentication).                                                                                                                                                                                                               | Required           |
-| `fetch`          | The `fetch` for the token, userinfo and JWKS requests. Looked up on each call when you omit it.                                                                                                                                                                                                                        | `globalThis.fetch` |
-| `timeout`        | Seconds to wait for each response, including its body, before failing. An integer from 1 through 60.                                                                                                                                                                                                                   | `5`                |
-| `clockTolerance` | Seconds of clock skew allowed on the ID token's `exp`, `iat` and `auth_time`. An integer from 0 through 300.                                                                                                                                                                                                           | `0`                |
-| `now`            | The current time in milliseconds since the Unix epoch. For tests.                                                                                                                                                                                                                                                      | `Date.now`         |
+| Option           | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Default                   |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `metadata`       | The provider's metadata, from `discover` or written by hand. Checked as strictly as a fetched document.                                                                                                                                                                                                                                                                                                                                                                                                                                       | Required                  |
+| `clientId`       | The client identifier the provider registered. A non-empty string of well-formed Unicode, with no lone surrogates.                                                                                                                                                                                                                                                                                                                                                                                                                            | Required                  |
+| `redirectUri`    | The redirect URI registered for this client. Sent in the authorization request and in the code exchange at the token endpoint, but not in refresh requests (RFC 6749 §6). An absolute URI of visible ASCII (no spaces, control or non-ASCII characters; use punycode hosts and percent-encoding), with no fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. Required by `authorize` and `callback`, which throw `TypeError` without it. A service client that only calls `clientCredentials` can leave it out. | None; required to sign in |
+| `auth`           | How the client authenticates to the token endpoint. See [Client authentication](#client-authentication).                                                                                                                                                                                                                                                                                                                                                                                                                                      | Required                  |
+| `fetch`          | The `fetch` for the token, userinfo and JWKS requests. Looked up on each call when you omit it.                                                                                                                                                                                                                                                                                                                                                                                                                                               | `globalThis.fetch`        |
+| `timeout`        | Seconds to wait for each response, including its body, before failing. An integer from 1 through 60.                                                                                                                                                                                                                                                                                                                                                                                                                                          | `5`                       |
+| `clockTolerance` | Seconds of clock skew allowed on the ID token's `exp`, `iat` and `auth_time`. An integer from 0 through 300.                                                                                                                                                                                                                                                                                                                                                                                                                                  | `0`                       |
+| `now`            | The current time in milliseconds since the Unix epoch. For tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `Date.now`                |
 
 The client accepts an ID token only when its signature verifies with one of the provider's keys, and only with an asymmetric algorithm the provider advertises in `id_token_signing_alg_values_supported` that this package supports: `ES256`, `EdDSA`, `Ed25519`, `RS256` or `PS256`. An ID token signed with `HS256` or `none` is never accepted. The keys come from the provider's `jwks_uri`, which the client fetches on first use and caches.
 
@@ -233,7 +245,7 @@ The client accepts an ID token only when its signature verifies with one of the 
 
 - The issuer in `metadata` is not an own data property holding an `https` URL of visible ASCII with no query, fragment or credentials, or the metadata is not valid. The message names the first invalid member. Hand-written metadata may reuse one object for two members, such as one algorithms array, because each place is copied. A value nested deeper than 32 levels, or a copy that would hold more than 65536 containers, makes the whole metadata invalid, even for a member the package does not read.
 - `auth.method` is not one of the five methods, or it is not in `metadata.token_endpoint_auth_methods_supported` when the provider lists those.
-- `auth.key` is not a key of the kind the method needs, or `auth.secret` is empty.
+- `auth.key` is not a key of the kind the method needs, or `auth.secret` is empty or not well-formed Unicode.
 - An option is missing or out of range.
 
 ## Starting a sign-in
@@ -248,13 +260,13 @@ const { url, pending } = await client.authorize({
 });
 ```
 
-| Option      | Meaning                                                                                                                                                                                   | Default      |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `scope`     | Scopes to request, as a non-empty array of at most 100 scope tokens, at most 4096 characters when joined with spaces. It must include `openid`. Duplicates are removed.                   | `["openid"]` |
-| `prompt`    | Whether the provider must, or must not, show its pages: `none`, `login`, `consent` or `select_account`. `none` must stand alone, and a value may not repeat.                              | None sent    |
-| `maxAge`    | The most seconds that may pass since the user last authenticated, as an integer from 0 through 999999999. When set, the ID token must carry `auth_time`, and the callback checks its age. | None sent    |
-| `loginHint` | A hint about the account to sign in with, such as an email address. A string of well-formed Unicode (no lone surrogates), at most 4096 characters.                                        | None sent    |
-| `uiLocales` | Preferred languages for the provider's pages, as at most 100 BCP 47 tags, each non-empty, well-formed Unicode and without spaces. At most 4096 characters when joined with spaces.        | None sent    |
+| Option      | Meaning                                                                                                                                                                                                                                                                                                                            | Default      |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `scope`     | Scopes to request, as a non-empty array of at most 100 scope tokens, at most 4096 characters when joined with spaces. It must include `openid`. Duplicates are removed.                                                                                                                                                            | `["openid"]` |
+| `prompt`    | Whether the provider must, or must not, show its pages: `none`, `login`, `consent` or `select_account`. `none` must stand alone, and a value may not repeat.                                                                                                                                                                       | None sent    |
+| `maxAge`    | The most seconds that may pass since the user last authenticated, as an integer from 0 through 999999999. The age is measured from the request, not the callback, so time spent signing in does not count. When set, the ID token must carry `auth_time`, and the callback checks its age. `0` asks for a login after the request. | None sent    |
+| `loginHint` | A hint about the account to sign in with, such as an email address. A string of well-formed Unicode (no lone surrogates), at most 4096 characters.                                                                                                                                                                                 | None sent    |
+| `uiLocales` | Preferred languages for the provider's pages, as at most 100 BCP 47 tags, each non-empty, well-formed Unicode and without spaces. At most 4096 characters when joined with spaces.                                                                                                                                                 | None sent    |
 
 The URL is the provider's authorization endpoint with the request's parameters added to any query it already has: `response_type=code`, `client_id`, `redirect_uri`, `scope`, `state`, `nonce`, `code_challenge` with `code_challenge_method=S256`, and whichever optional parameters you set. The `state`, `nonce` and PKCE verifier are random values from `crypto.getRandomValues`, generated for each call.
 
@@ -273,10 +285,11 @@ await client.authorize({ loginHint: "\uD800" });
 - `nonce`, a random value the ID token must carry.
 - `codeVerifier`, the PKCE verifier that redeems the code.
 - `maxAge`, present only when you requested one.
+- `requestedAt`, present exactly when `maxAge` is: the time of the request, in whole seconds since the Unix epoch. The callback compares the user's `auth_time` with it.
 
 It is plain JSON, so `JSON.stringify` and `structuredClone` preserve it. Keep it where the user's browser cannot read or change it: a server-side session, or an encrypted, `HttpOnly` cookie. Treat it as a secret, because the verifier redeems the code. Discard it after the callback, whether the callback succeeded or failed, so a second callback cannot use the same values.
 
-The callback checks the shape of `pending`, and a malformed value throws `TypeError`, since the application stored it and a bad value is a bug in the application.
+The callback checks the shape of `pending`, and a malformed value throws `TypeError`, since the application stored it and a bad value is a bug in the application. A `pending` with a `maxAge` but no non-negative integer `requestedAt` is malformed in the same way.
 
 ## Finishing a sign-in
 
@@ -299,7 +312,7 @@ if (signedIn.ok) {
 
 The checks run in this order, and each one that fails ends the callback with its issue, so a request that fails `state` never reaches the token endpoint:
 
-1. The URL is a string or `URL`, and `pending` has the right shape. Otherwise `TypeError`.
+1. The URL is a string or `URL`, and `pending` has the right shape, including `requestedAt` when `maxAge` is set. Otherwise `TypeError`.
 2. The URL is at most 8192 characters and parses. Its query has no duplicated parameter, at most 32 parameters, and no parameter longer than 4096 characters. Otherwise `invalid_callback` with path `["callback"]`. For the parameter checks, `params.reason` is `duplicate`, `too_many`, `too_long`, or `malformed` for a percent-escape that is not valid UTF-8, such as `%E9`. A `%zz`, which is not an escape, is kept as it is.
 3. The `state` parameter is present. Otherwise `invalid_callback` with path `["callback", "state"]`.
 4. The `state` equals `pending.state`, compared in constant time. Otherwise `state_mismatch` with path `["callback", "state"]`.
@@ -324,7 +337,7 @@ The ID token's signature and its registered claims are checked by `@codenhub/jwt
 - `sub` is a non-empty string. Otherwise `invalid_id_token` with path `["id_token", "payload", "sub"]`.
 - `azp`, when present, must equal the client identifier, and it is required when `aud` has more than one value. A wrong value, or a missing one where `aud` has several, is `azp_mismatch`.
 - `nonce` equals `pending.nonce`. Otherwise `nonce_mismatch`.
-- `auth_time`, when present, is a number. Otherwise `invalid_id_token` with `jwtCode` of `invalid_claim`. When `pending.maxAge` is set, `auth_time` is required, and `auth_time_missing` is reported when it is absent. The token is too old when the time since `auth_time` is more than `maxAge` plus `clockTolerance`, which is `auth_too_old`.
+- `auth_time`, when present, is a number. Otherwise `invalid_id_token` with `jwtCode` of `invalid_claim`. When `pending.maxAge` is set, `auth_time` is required, and `auth_time_missing` is reported when it is absent. The age is measured to the request, `pending.requestedAt`, not to the callback: the token is too old when `requestedAt` minus `auth_time` is more than `maxAge` plus `clockTolerance`, which is `auth_too_old`. Time the user spends on the provider's login and consent pages does not count. `maxAge: 0` therefore accepts only an authentication at or after the request, within `clockTolerance`.
 - `at_hash`, when present, equals the hash of the access token, which is the left half of SHA-256 for `ES256`, `RS256`, `PS256` and `HS256`, and of SHA-512 for `EdDSA` and `Ed25519`. Otherwise `at_hash_mismatch`.
 
 A successful callback returns the claims as the verifier read them, after these checks.
@@ -366,20 +379,22 @@ if (profile.ok) {
 
 The request sends the access token as a `Bearer` credential. The response's `sub` must equal `subject`, or the result is `subject_mismatch`, so a userinfo response about another user is refused. It fails with `invalid_userinfo` with path `["userinfo", "sub"]` when `sub` is missing or not a string, and with `request_failed` for every other failure of the request, with `params.endpoint` of `userinfo`. A `401` from the endpoint, for an access token that has expired or been revoked, is `request_failed` with `params.reason` of `status` and `params.status` of `401`.
 
-`userinfo` rejects with `TypeError` when the metadata has no `userinfo_endpoint`, since the request cannot be made.
+`userinfo` rejects with `TypeError` when the metadata has no `userinfo_endpoint`, since the request cannot be made. It also rejects with `TypeError` when `accessToken` holds a character outside printable ASCII (U+0020 through U+007E), since the token goes into a header. Such a value is a bug in the caller, not a network failure, so it is not reported as `request_failed`.
 
 ## Revoking tokens
 
 `client.revoke(options)` asks the provider to revoke an access token or a refresh token, as RFC 7009 defines. Use it when the user signs out. It returns a promise of a result whose value is `undefined`.
 
 ```ts
-// Sign out: revoke the refresh token, then drop the session, whether or not revocation worked.
+// Sign out of the app: revoke the refresh token, then drop the session, whether or not revocation worked.
 const revoked = await client.revoke({ token: refreshToken, tokenTypeHint: "refresh_token" });
 if (!revoked.ok) {
   console.error(revoked.error.issues);
 }
 await session.destroy();
 ```
+
+Revoking does not sign the user out of the provider. To end the provider's session as well, see [Ending the session at the provider](#ending-the-session-at-the-provider).
 
 | Option          | Meaning                                                                                    | Default   |
 | --------------- | ------------------------------------------------------------------------------------------ | --------- |
@@ -395,6 +410,63 @@ The failures are:
 
 `revoke` rejects with `TypeError` when the metadata has no `revocation_endpoint`, when `token` is not a non-empty string, or when `tokenTypeHint` is any other value. It also rejects when the metadata lists `revocation_endpoint_auth_methods_supported` and the list does not include the client's auth method, or, for `client_secret_jwt` and `private_key_jwt`, when the metadata lists `revocation_endpoint_auth_signing_alg_values_supported` and the list does not include the key's `alg`. Each of these is a configuration mismatch, so it fails before any request is sent.
 
+## Ending the session at the provider
+
+`client.endSessionUrl(options?)` builds the provider's `end_session_endpoint` URL for RP-initiated logout (OpenID Connect RP-Initiated Logout 1.0 §2). It is synchronous and makes no request. Redirect the browser to the URL it returns. The provider checks the request and, when one was given, sends the browser back to `postLogoutRedirectUri`.
+
+Logging out at the provider does not revoke the user's tokens, and it does not end the application's session. The application does both itself.
+
+```ts
+// Sign out: revoke the refresh token and end the app's session, then send the browser to the provider.
+await client.revoke({ token: refreshToken, tokenTypeHint: "refresh_token" });
+await session.destroy();
+
+const logoutUrl = client.endSessionUrl({
+  idTokenHint: idToken, // the ID token from the sign-in, kept in the session
+  postLogoutRedirectUri: "https://app.example.com/signed-out",
+  state: logoutState, // a random value, kept in the session
+});
+```
+
+On the page at `postLogoutRedirectUri`, compare the `state` parameter with the `logoutState` kept in the session before you show the user as signed out. The provider returns `state` unchanged.
+
+| Option                  | Meaning                                                                                                                                          | Default   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| `idTokenHint`           | The ID token of the sign-in being ended. It tells the provider which user is leaving. An expired one is still sent, and the provider ignores it. | None sent |
+| `postLogoutRedirectUri` | Where the provider sends the browser afterwards. It must be registered for this client at the provider.                                          | None sent |
+| `state`                 | Returned unchanged to `postLogoutRedirectUri`.                                                                                                   | None sent |
+| `logoutHint`            | A hint about the account being signed out, such as an email address.                                                                             | None sent |
+| `uiLocales`             | Preferred languages for the provider's logout page, as BCP 47 tags, under the same rules as `authorize`.                                         | None sent |
+
+The URL always carries `client_id`, so the provider can match `postLogoutRedirectUri` even after the hint has expired. The URL keeps any query the endpoint already has. Empty strings are left out.
+
+`endSessionUrl` throws `TypeError` when the metadata has no `end_session_endpoint`, when `postLogoutRedirectUri` breaks the redirect URI rules, when a string option is not a string, not well-formed Unicode or longer than 4096 characters, when `uiLocales` is invalid, or when the URL is longer than 8192 characters once encoded.
+
+## Client credentials
+
+A service client has no user, so it signs no one in. It can still get an access token for itself with the client credentials grant (RFC 6749 §4.4). `client.clientCredentials(options?)` sends the grant with the client's authentication and returns a `TokenSet`. The client is created without a `redirectUri`, since it never redirects a user.
+
+```ts
+const service = createClient({
+  metadata: discovered.value,
+  clientId: "reports-service",
+  auth: { method: "client_secret_basic", secret: secretFromVault() }, // the secret, from your secret store
+});
+
+const granted = await service.clientCredentials({ scope: ["reports:read"] });
+if (granted.ok) {
+  // Send granted.value.accessToken as a Bearer credential. Request a new one when it expires.
+}
+```
+
+`scope` is optional. Without it, the provider grants every scope the client is registered for, except `openid` and `offline_access`, which need a user. With it, the scope list must be a non-empty array of at most 100 scope tokens. A scope the provider refuses is `provider_error` with `params.error` of `invalid_scope`.
+
+The token set has no ID token and no refresh token. An ID token in the response is dropped, since no user is signed in. Each token is its own grant, so `client.revoke` on one leaves the client's other tokens valid. Userinfo refuses such a token, because it has no `openid` scope.
+
+The provider must have registered the client for this grant. Otherwise the result is `provider_error` with `params.error` of `unauthorized_client`.
+
+`clientCredentials` throws `TypeError` when `auth.method` is `none`, since only a client that authenticates may use the grant. It also throws when the metadata lists `grant_types_supported` and does not include `client_credentials`, or when `options` or `scope` is invalid.
+
 ## Client authentication
 
 The token endpoint must know which client is calling. The `auth` option picks how the client proves it, and it must match what the provider registered for the client.
@@ -402,10 +474,10 @@ The token endpoint must know which client is calling. The `auth` option picks ho
 | `auth.method`         | Credentials sent to the token endpoint                                                                              | `auth` field and how to get it                                                                                                                                                                                                                                            |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `none`                | `client_id` in the body. For public clients, such as single-page and native apps, which rely on PKCE alone.         | Nothing else.                                                                                                                                                                                                                                                             |
-| `client_secret_basic` | An `Authorization: Basic` header holding the client identifier and secret, each form-encoded and joined by a colon. | `secret`, a non-empty string. Generated with `generateClientSecret` on the provider side. Keep it out of logs and source code.                                                                                                                                            |
+| `client_secret_basic` | An `Authorization: Basic` header holding the client identifier and secret, each form-encoded and joined by a colon. | `secret`, a non-empty string of well-formed Unicode. Generated with `generateClientSecret` on the provider side. Keep it out of logs and source code.                                                                                                                     |
 | `client_secret_post`  | `client_id` and `client_secret` in the body.                                                                        | `secret`, as for `client_secret_basic`.                                                                                                                                                                                                                                   |
 | `client_secret_jwt`   | A client assertion, a JWT signed with the secret, sent as `client_assertion` with the JWT bearer assertion type.    | `key`, an HS256 `SecretKey` from `@codenhub/jwt`. Use `generateSecretKey({ alg: "HS256" })`, or `importSecretKey(bytes, { alg: "HS256" })` for an existing secret. `importSecretKey` returns a result, so unwrap its value. A secret shorter than 32 bytes is `weak_key`. |
-| `private_key_jwt`     | A client assertion signed with the client's private key.                                                            | `key`, a `PrivateKey` from `@codenhub/jwt`, from `generateKeyPair` or `importPrivateKey`. Its public half is what the provider registered for the client.                                                                                                                 |
+| `private_key_jwt`     | A client assertion signed with the client's private key.                                                            | `key`, a `PrivateKey` from `@codenhub/jwt`: the `privateKey` of `generateKeyPair`'s result, or `importPrivateKey`, which returns a result, so unwrap its value. Its public half is what the provider registered for the client.                                           |
 
 The assertion methods sign a JWT with `iss` and `sub` set to the client identifier, `aud` set to the issuer, a random `jti`, `iat`, and an `exp` 60 seconds ahead. A provider that verifies the assertion accepts it only if its `aud` names the issuer or the token endpoint.
 
@@ -413,9 +485,9 @@ The assertion methods sign a JWT with `iss` and `sub` set to the client identifi
 
 ### Token requests
 
-The client sends the token request for a sign-in, a refresh, and nothing else. The failures a token request can return are the same for every method:
+The client sends the token request for a sign-in, a refresh, a client credentials grant, and nothing else. The failures a token request can return are the same for every method:
 
-- `provider_error` with `params.endpoint` of `token` and `params.error` set to the OAuth code the provider sent, such as `invalid_grant` for a spent or expired code, `invalid_client` for rejected credentials, or `invalid_scope` for a refresh that asked for more than the grant holds. Any other code is `unknown`.
+- `provider_error` with `params.endpoint` of `token` and `params.error` set to the OAuth code the provider sent, such as `invalid_grant` for a spent or expired code, `invalid_client` for rejected credentials, `invalid_scope` for a refresh or client credentials request that asked for more than the grant holds, or `unauthorized_client` for a grant the client is not registered for. Any other code is `unknown`.
 - `request_failed` with `params.endpoint` of `token` for a non-`200` response that carries no OAuth error, and for the network, timeout, size and content-type failures described under [Discovering the provider](#discovering-the-provider).
 - `invalid_token_response` with path `["response", <member>]` when a `200` response is not a valid token response. The members checked are `access_token` (a non-empty string of printable ASCII, as RFC 6749 §A.12 defines it), `token_type` (`Bearer`, in any letter case), `expires_in` (a non-negative number, when present), `refresh_token` and `id_token` (non-empty strings, when present), and `scope` (a string, when present). Every bad member is reported in one result.
 
@@ -463,7 +535,8 @@ export async function createSsoProvider() {
 | `claims`       | Returns the claims about a user for the scopes granted. See [Claims](#claims).                                                                                         | Required                    |
 | `scopes`       | Extra scopes and the claims each releases, merged over the standard scopes. See [Scopes](#scopes).                                                                     | Standard scopes only        |
 | `ttl`          | Token and interaction lifetimes in seconds. See [Lifetimes](#lifetimes).                                                                                               | See [Lifetimes](#lifetimes) |
-| `endpoints`    | The URLs of the authorization, token, userinfo, JWKS and revocation endpoints. See [Endpoints](#endpoints).                                                            | Paths under the issuer      |
+| `accessToken`  | How access tokens are issued: opaque, the default, or a signed JWT. See [JWT access tokens](#jwt-access-tokens).                                                       | `{ format: "opaque" }`      |
+| `endpoints`    | The URLs of the authorization, end-session, token, userinfo, JWKS and revocation endpoints. See [Endpoints](#endpoints).                                               | Paths under the issuer      |
 | `onDiagnostic` | Called with the reason each token, userinfo or revocation request is refused with an OAuth error response. See [Diagnostics](#diagnostics).                            | None                        |
 | `now`          | The current time in milliseconds since the Unix epoch. For tests.                                                                                                      | `Date.now`                  |
 
@@ -473,6 +546,7 @@ export async function createSsoProvider() {
 - `signingKeys` is empty, is not an array of `{ privateKey, publicKey }` pairs, pairs a private and a public key of different algorithms, gives a pair's two keys different `kid`s, or repeats a `kid`.
 - `store` is not an object, or one of its methods is not a function. The message names the first missing method, such as `store.findClient`.
 - `claims` is not a function, or `now` or `onDiagnostic` is given and is not a function.
+- `accessToken` is not `{ format: "opaque" }` or `{ format: "jwt", audience }`, or its `audience` is missing, empty or not well-formed Unicode. The message names `accessToken.format` or `accessToken.audience`.
 - A lifetime is outside its range, an endpoint is not an `https` URL, two endpoints share an origin and path, or `scopes` breaks the rules under [Scopes](#scopes).
 
 ### Signing keys
@@ -540,13 +614,13 @@ All values are seconds.
 | -------------- | ------------------- | ------------------- | ---------------------------------------------------------------------------------------------------- |
 | `code`         | `60`                | 1 through 600       | An authorization code, from the moment the app completes the interaction.                            |
 | `interaction`  | `1800`              | 60 through 86400    | An authorization request, from `beginAuthorization` until the app completes it.                      |
-| `accessToken`  | `600`               | 60 through 86400    | An access token. It is also the `expires_in` the token endpoint returns.                             |
+| `accessToken`  | `600`               | 60 through 86400    | An access token, opaque or JWT. It is also the `expires_in` the token endpoint returns.              |
 | `idToken`      | `600`               | 60 through 86400    | An ID token's `exp`, counted from when it is issued.                                                 |
 | `refreshToken` | `2592000` (30 days) | 60 through 31536000 | A refresh token family, counted from the code exchange that started it. Rotation does not extend it. |
 
 ### Endpoints
 
-The five endpoints the provider answers default to paths under the issuer. The discovery document is always at `{issuer}/.well-known/openid-configuration`, and it cannot be moved. The authorization, token, userinfo, JWKS and revocation endpoints are all configurable.
+The five endpoints the provider answers, and the authorization and end-session endpoints the app serves, default to paths under the issuer. The discovery document is always at `{issuer}/.well-known/openid-configuration`, and it cannot be moved. The authorization, token, userinfo, JWKS, revocation and end-session endpoints are all configurable.
 
 | `endpoints` key | Default              |
 | --------------- | -------------------- |
@@ -555,16 +629,17 @@ The five endpoints the provider answers default to paths under the issuer. The d
 | `userinfo`      | `{issuer}/userinfo`  |
 | `jwks`          | `{issuer}/jwks`      |
 | `revocation`    | `{issuer}/revoke`    |
+| `endSession`    | `{issuer}/logout`    |
 
-Each value is an absolute `https` URL of visible ASCII (no spaces, control or non-ASCII characters, and no backslash, which the URL parser reads as a slash; use punycode hosts and percent-encoding), with no fragment or credentials, on any origin. The six URLs, including discovery, must each have their own origin and path, because `handle` tells endpoints apart by origin and path. The query string is ignored when a request is routed.
+Each value is an absolute `https` URL of visible ASCII (no spaces, control or non-ASCII characters, and no backslash, which the URL parser reads as a slash; use punycode hosts and percent-encoding), with no fragment or credentials, on any origin. The seven URLs, including discovery, must each have their own origin and path, because a request is routed by origin and path. The query string is ignored when a request is routed.
 
 ### The published metadata
 
 `provider.metadata` is the discovery document, frozen. Every value comes from the options, so it cannot drift from what the endpoints enforce:
 
-- `issuer`, the five endpoint URLs, and `scopes_supported`, which lists every scope the provider knows.
+- `issuer`, the endpoint URLs (`end_session_endpoint` among them), and `scopes_supported`, which lists every scope the provider knows.
 - `response_types_supported`: `["code"]`. `response_modes_supported`: `["query"]`.
-- `grant_types_supported`: `["authorization_code", "refresh_token"]`. `subject_types_supported`: `["public"]`.
+- `grant_types_supported`: `["authorization_code", "refresh_token", "client_credentials"]`. `subject_types_supported`: `["public"]`.
 - `id_token_signing_alg_values_supported`: the algorithms of every published key.
 - `token_endpoint_auth_methods_supported`: `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `private_key_jwt` and `none`. `token_endpoint_auth_signing_alg_values_supported`: `ES256`, `EdDSA`, `Ed25519`, `RS256`, `PS256` and `HS256`. The revocation endpoint publishes the same two lists as `revocation_endpoint_auth_methods_supported` and `revocation_endpoint_auth_signing_alg_values_supported`, and `revocation_endpoint` holds its URL.
 - `claims_supported`: the ID token's claims and every claim the scopes release.
@@ -575,6 +650,18 @@ Each value is an absolute `https` URL of visible ASCII (no spaces, control or no
 
 `provider.handle(request)` answers the five endpoints it owns. It returns a promise of a `Response`, or of `null` when the request is for none of them. It routes by method and by origin and path, and ignores the query, so a client may append parameters to the discovery URL.
 
+Routing compares the request URL's origin with the origin of the provider's endpoints, so `request.url` must carry the public origin the endpoints use. Behind a TLS-terminating proxy, Node.js adapters often build `request.url` from `http://` and the internal host, and then `handle` returns `null` for every request. Rebuild the request with the public URL before calling `handle`:
+
+```ts
+const url = new URL(request.url);
+url.protocol = "https:";
+url.host = "sso.example";
+const body = request.body === null ? undefined : await request.arrayBuffer();
+const response = await provider.handle(new Request(url, { method: request.method, headers: request.headers, body }));
+```
+
+`beginAuthorization` reads only the query or body of the request, not its origin, so it does not need this.
+
 | Endpoint   | Methods                  | Answer                                                                                   |
 | ---------- | ------------------------ | ---------------------------------------------------------------------------------------- |
 | Discovery  | `GET`, `OPTIONS`         | The metadata as JSON, with `Cache-Control: public, max-age=300`.                         |
@@ -583,9 +670,9 @@ Each value is an absolute `https` URL of visible ASCII (no spaces, control or no
 | Userinfo   | `GET`, `POST`, `OPTIONS` | The released claims or a bearer challenge. See [Userinfo](#userinfo).                    |
 | Revocation | `POST`, `OPTIONS`        | `200` with no body, or an OAuth error. See [Token revocation](#token-revocation).        |
 
-A method an endpoint does not accept is `405` with an `Allow` header. `HEAD` is not accepted by the discovery or JWKS endpoints, so it gets `405` too. The authorization endpoint is not one of the five, so `handle` returns `null` for it. The app serves that endpoint itself and calls `beginAuthorization` from it. `handle` never throws for a request. It rejects only when the store or the `claims` callback rejects.
+A method an endpoint does not accept is `405` with an `Allow` header. `HEAD` is not accepted by the discovery or JWKS endpoints, so it gets `405` too. The authorization and end-session endpoints are not among the five, so `handle` returns `null` for them. The app serves both itself: it calls `beginAuthorization` from the authorization endpoint and `endSession` from the end-session endpoint. `handle` never throws for a request. It rejects only when the store or the `claims` callback rejects.
 
-The routing sketch below uses only `Request` and `Response`, as a plain Worker would. It answers the five endpoints from `handle` and passes everything else to the app's own authorization handler.
+The routing sketch below uses only `Request` and `Response`, as a plain Worker would. It answers the five endpoints from `handle`, and passes the authorization and logout requests to the app's own handlers.
 
 ```ts
 export default {
@@ -596,6 +683,9 @@ export default {
     }
     if (new URL(request.url).pathname === "/authorize") {
       return authorize(request);
+    }
+    if (new URL(request.url).pathname === "/logout") {
+      return logout(request);
     }
     return new Response("Not found.", { status: 404 });
   },
@@ -634,6 +724,7 @@ The checks run in this order, and the first failure is the one reported. Failure
 | `client_id` is present.                                                                                                                           | `invalid_request`, path `["client_id"]`                                                        | `null`     |
 | The client is registered.                                                                                                                         | `unknown_client`                                                                               | `null`     |
 | `redirect_uri` is present and is one of the client's registered URIs, byte for byte.                                                              | `invalid_redirect_uri`                                                                         | `null`     |
+| The client is registered with `authorization_code` in its `grantTypes`. A client registered only for `client_credentials` signs no users in.      | `unauthorized_client`                                                                          | Redirect   |
 | No `request`, `request_uri` or `registration` parameter is present.                                                                               | `request_not_supported`, `request_uri_not_supported` or `registration_not_supported`           | Redirect   |
 | `response_type` is present and is `code`.                                                                                                         | `invalid_request` with path `["response_type"]` when missing, else `unsupported_response_type` | Redirect   |
 | `response_mode`, when present, is `query`.                                                                                                        | `invalid_request`, path `["response_mode"]`                                                    | Redirect   |
@@ -660,7 +751,7 @@ The provider does not show pages, so the app enforces what the request asks for:
 - `prompt=consent`: the app must ask the user to consent, then pass the granted scopes.
 - `prompt=select_account`: the app must let the user choose an account.
 - `prompt=none`: the app must not show any page. If the user is not signed in, or consent is needed, the app completes the interaction with a denial such as `login_required`, `consent_required`, `interaction_required` or `account_selection_required`. The package does not check the user's session for `prompt=none`, so this is the app's responsibility.
-- `max_age`: the app must not grant a login older than `max_age` seconds. `completeAuthorization` rejects an `authTime` older than that, with `TypeError`.
+- `max_age`: the app must not grant a login that happened more than `max_age` seconds before the request arrived. `completeAuthorization` rejects an `authTime` more than `max_age` seconds before the interaction's `createdAt`, with `TypeError`. Time spent on the login and consent pages does not count, so `max_age=0` asks for a login after the request.
 
 ### Finishing: completeAuthorization
 
@@ -689,7 +780,43 @@ A code lasts `ttl.code` seconds, 60 by default, and the client can redeem it onc
 The method throws `TypeError` in two cases, and they are different:
 
 - **The outcome is the wrong shape**, such as a non-empty `subject` missing, an `authTime` that is not a non-negative integer, or a denial with extra members. This is checked before the interaction is taken, so the interaction is still usable and the app can fix the call and retry.
-- **The outcome contradicts the request**: scopes the client did not request or no `openid`, an `authTime` in the future, an `authTime` before the interaction under `prompt=login`, or an `authTime` older than the requested `max_age`. The interaction has already been taken at this point, so it is gone. The app must restart the sign-in. These are bugs in the login flow, and the package refuses them rather than issue a code that would skip the step the client asked for.
+- **The outcome contradicts the request**: scopes the client did not request or no `openid`, an `authTime` in the future, an `authTime` before the interaction under `prompt=login`, or an `authTime` more than the requested `max_age` seconds before the request. The interaction has already been taken at this point, so it is gone. The app must restart the sign-in. These are bugs in the login flow, and the package refuses them rather than issue a code that would skip the step the client asked for.
+
+## Ending sessions
+
+The provider implements RP-initiated logout. Its end-session endpoint is `endpoints.endSession`, `{issuer}/logout` by default, and discovery advertises it as `end_session_endpoint`. Like the authorization endpoint, it is served by the app: `handle` returns `null` for it, and the app calls `provider.endSession(request)` from its logout route. The request is a `GET` with its parameters in the query, or a `POST` with a form body, read with the same limits and duplicate and UTF-8 rules as the authorization request. It reads `id_token_hint`, `client_id`, `post_logout_redirect_uri`, `state`, `logout_hint` and `ui_locales`.
+
+`endSession` returns an `OidcResult<EndSession>`. A failed request never redirects, so the app renders its issues:
+
+- A malformed request, such as a method or media type the endpoint does not accept, an oversized URL, or a parameter that does not parse: `invalid_request`, with `params.reason` for a parameter failure.
+- An unknown `client_id`: `unknown_client`.
+- A verified `id_token_hint` issued to another client than `client_id`: `invalid_request`, path `["id_token_hint"]`.
+- A `post_logout_redirect_uri` that is not, byte for byte, one of the client's `postLogoutRedirectUris`, or that comes with no client known from `client_id` or the hint: `invalid_redirect_uri`, path `["post_logout_redirect_uri"]`.
+
+A success carries `clientId` when a client is known, `subject` when the hint verified, `logoutHint` and `uiLocales` when given, and `redirect`. `redirect` is a `302` to `post_logout_redirect_uri`, with `state` appended when the request had one, or `null` when the request named no `post_logout_redirect_uri`.
+
+The `id_token_hint` is verified as an ID token this provider issued: signed by one of its keys, with its issuer, unexpired, and with `sub` and `aud`. A hint that does not verify, such as an expired one, is ignored. It is not a failure, and the result has no `subject`. Nothing then ties the request to a user, so ask the user to confirm the logout before signing them out.
+
+The URIs a client may redirect to after logout are listed in its record's `postLogoutRedirectUris`, each held to the redirect URI rules. See [Client records](docs/store.md#client-records).
+
+The provider keeps no sessions. The app ends its own session, and may revoke the user's grants in its store, before it returns `redirect`, or its own signed-out page when `redirect` is `null`:
+
+```ts
+declare function renderError(issues: unknown): Response;
+declare function endAppSession(request: Request): Promise<void>;
+declare function renderSignedOutPage(): Response;
+
+// The app's logout route, e.g. GET or POST /logout
+const result = await provider.endSession(request);
+if (!result.ok) {
+  return renderError(result.error.issues); // never redirect on failure
+}
+if (result.value.subject === undefined) {
+  // No verified ID token hint: ask the user to confirm before signing out.
+}
+await endAppSession(request); // the app's own session
+return result.value.redirect ?? renderSignedOutPage();
+```
 
 ## The token endpoint
 
@@ -700,12 +827,12 @@ The token endpoint answers `POST` with an `application/x-www-form-urlencoded` bo
 The checks run in this order:
 
 1. The method. `OPTIONS` gets a preflight. Any other method but `POST` gets `405` with `Allow: POST, OPTIONS`.
-2. The `Content-Type`. It must be `application/x-www-form-urlencoded`, optionally with `charset=utf-8`. Otherwise `invalid_request`.
+2. The `Content-Type`. It must be `application/x-www-form-urlencoded`, optionally with `charset=utf-8`, which may be quoted (`charset="utf-8"`) and written in any letter case. Otherwise `invalid_request`.
 3. The body. It is read as strict UTF-8 and is at most 16384 bytes. Otherwise `invalid_request`.
 4. The parameters. No duplicate, at most 32, and none longer than 4096 characters. Otherwise `invalid_request`.
 5. The client's credentials. See [Client authentication](#client-authentication).
-6. The `grant_type`. Missing is `invalid_request`. A value other than `authorization_code` or `refresh_token` is `unsupported_grant_type`.
-7. The grant. See [Authorization code](#authorization-code) and [Refresh tokens](#refresh-tokens).
+6. The `grant_type`. Missing is `invalid_request`. `authorization_code` and `refresh_token` are `unauthorized_client` for a client whose record does not list `authorization_code` in `grantTypes`, and `client_credentials` is `unauthorized_client` for a client whose record does not list it. A value other than these three is `unsupported_grant_type`.
+7. The grant. See [Authorization code](#authorization-code), [Refresh tokens](#refresh-tokens) and [Client credentials](#client-credentials).
 
 ### Client authentication
 
@@ -735,7 +862,7 @@ A request for `authorization_code` must carry `code`, `redirect_uri` and `code_v
 
 On success the provider starts a grant, and issues:
 
-- An access token, an opaque random value that only its digest is stored under. It lasts `ttl.accessToken` seconds.
+- An access token: by default an opaque random value that only its digest is stored under, or a JWT under [`accessToken`](#jwt-access-tokens). It lasts `ttl.accessToken` seconds.
 - A refresh token, only when the granted scopes include `offline_access`. Its family lasts `ttl.refreshToken` seconds from this exchange.
 - An ID token, signed with the first signing key. Its claims are `iss`, `sub`, `aud` (the client identifier), `iat`, `exp` (`ttl.idToken` after `iat`), `auth_time`, `amr` and `acr` when the grant had them, `nonce` when the authorization request had one, and `at_hash` for the access token. Its header is `typ: JWT` and the key's `alg` and `kid`. An ID token carries no scope claims, which are released at userinfo.
 
@@ -754,6 +881,19 @@ The response has the same shape as the code exchange, with `scope` set to the sc
 
 A refresh token that is spent by a request for a scope its family does not hold is gone: the provider does not issue a new one, and the client must sign the user in again. The same is true of a refresh token that a different client presents, which is refused after it has been spent. Both checks need the token's record, and the store reads it only by spending it. A scope the provider or the client does not know is refused before the token is spent.
 
+### Client credentials
+
+A client may ask for a token for itself with `grant_type=client_credentials` (RFC 6749 §4.4). No user is involved. The client's record lists the grants it may use in `grantTypes`, which defaults to `["authorization_code"]`. The list must be non-empty, without repeats, and hold only `authorization_code` or `client_credentials`. A client that uses `client_credentials` must authenticate, so a record that gives it to a client whose `auth.method` is `none` throws `TypeError` when it is read. See [Client records](docs/store.md#client-records).
+
+The client authenticates as at any token request, and its `scope` parameter is read as follows:
+
+- Absent: every scope in the client's record that the provider defines, except `openid` and `offline_access`.
+- Present: each scope must be defined by the provider and listed in the client's record, and must not be `openid` or `offline_access`.
+
+A scope that breaks these rules, or an empty result, is `invalid_scope` with status `400`.
+
+On success the response is a `200` with `Cache-Control: no-store`, and a body with `access_token`, `token_type` (`Bearer`), `expires_in` and `scope`. It carries no `id_token` and no `refresh_token`. The access token is opaque or JWT, as [`accessToken`](#jwt-access-tokens) says. Its subject is the client identifier, and each response is its own grant, so revoking one token leaves the client's other tokens valid. The token has no `openid`, so [userinfo](#userinfo) answers `403` for it.
+
 ### Responses
 
 A successful token response is JSON, with `Cache-Control: no-store` and `Pragma: no-cache`:
@@ -770,6 +910,46 @@ A successful token response is JSON, with `Cache-Control: no-store` and `Pragma:
 ```
 
 `refresh_token` is present only when a family was issued or rotated. Every error is a JSON object holding only the OAuth code, with no `error_description`. Its status depends on the code: `invalid_client` is `401`, `server_error` is `500`, and every other code is `400`.
+
+## JWT access tokens
+
+The `accessToken` option chooses the format of access tokens. The default, `{ format: "opaque" }`, issues a random value. `{ format: "jwt", audience }` issues a signed JWT (RFC 9068) instead, whose `aud` is `audience`, usually the resource server's identifier. `audience` must be a non-empty string of well-formed Unicode.
+
+```ts
+import { createProvider, type ProviderOptions } from "@codenhub/oidc/provider";
+
+declare const options: ProviderOptions; // the options shown above
+
+export const provider = createProvider({
+  ...options,
+  accessToken: { format: "jwt", audience: "https://api.example" },
+});
+```
+
+A JWT access token is signed with the first signing key. Its header has `typ: "at+jwt"`. Its payload has `iss`, `exp` (`ttl.accessToken` after issue), `aud`, `sub`, `client_id`, `iat`, a random `jti`, and `scope` (space-separated). A user's token also has `auth_time`, `amr` and `acr` when the grant had them. A client credentials token has none of these three, and its `sub` is the client identifier.
+
+The provider stores a JWT access token by its digest, as it stores an opaque one, so userinfo and revocation accept it, and a revocation takes effect at the provider at once. A resource server that verifies the token offline sees a revocation only when the token expires, so keep `ttl.accessToken` short. The ID token's `at_hash` is computed over the JWT string.
+
+A resource server verifies the token with `@codenhub/jwt`. The `at+jwt` type is what stops an ID token from passing as an access token:
+
+```ts
+import { createRemoteKeySet, createVerifier } from "@codenhub/jwt";
+
+const verifyAccessToken = createVerifier({
+  keys: createRemoteKeySet({ url: "https://sso.example/jwks" }),
+  issuer: "https://sso.example",
+  audience: "https://api.example",
+  type: "at+jwt",
+  requiredClaims: ["sub", "client_id", "iat", "jti"],
+});
+
+declare const bearerToken: string; // from the Authorization header
+
+const verified = await verifyAccessToken(bearerToken);
+if (verified.ok) {
+  // verified.value.payload.sub, .client_id, .scope
+}
+```
 
 ## Userinfo
 
@@ -864,13 +1044,13 @@ Each diagnostic is a frozen object with these members:
 
 The reasons, grouped as in the provider's types:
 
-| Group                                   | Reasons                                                                                                                                                                                                                                                                                                                                                                       |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The request, before the client is known | `content_type`, `body`, `parameters`                                                                                                                                                                                                                                                                                                                                          |
-| Client authentication                   | `client_credentials_missing`, `client_credentials_ambiguous`, `client_credentials_malformed`, `client_unknown`, `client_method_mismatch`, `client_credentials_wrong`                                                                                                                                                                                                          |
-| The token request                       | `grant_type_missing`, `grant_type_unsupported`, `parameter_missing`, `code_verifier_malformed`, `code_unknown`, `code_replayed`, `code_expired`, `code_client_mismatch`, `redirect_uri_mismatch`, `code_verifier_mismatch`, `scope_invalid`, `refresh_token_unknown`, `refresh_token_replayed`, `refresh_token_expired`, `refresh_token_client_mismatch`, `scope_not_granted` |
-| Userinfo                                | `access_token_missing`, `access_token_malformed`, `access_token_unknown`, `access_token_expired`, `access_token_without_openid`                                                                                                                                                                                                                                               |
-| Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                    |
+| Group                                   | Reasons                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The request, before the client is known | `content_type`, `body`, `parameters`                                                                                                                                                                                                                                                                                                                                                                     |
+| Client authentication                   | `client_credentials_missing`, `client_credentials_ambiguous`, `client_credentials_malformed`, `client_unknown`, `client_method_mismatch`, `client_credentials_wrong`                                                                                                                                                                                                                                     |
+| The token request                       | `grant_type_missing`, `grant_type_unsupported`, `grant_type_unauthorized`, `parameter_missing`, `code_verifier_malformed`, `code_unknown`, `code_replayed`, `code_expired`, `code_client_mismatch`, `redirect_uri_mismatch`, `code_verifier_mismatch`, `scope_invalid`, `refresh_token_unknown`, `refresh_token_replayed`, `refresh_token_expired`, `refresh_token_client_mismatch`, `scope_not_granted` |
+| Userinfo                                | `access_token_missing`, `access_token_malformed`, `access_token_unknown`, `access_token_expired`, `access_token_without_openid`                                                                                                                                                                                                                                                                          |
+| Revocation                              | `token_missing`, `token_of_another_client`                                                                                                                                                                                                                                                                                                                                                               |
 
 The callback is called once for each refusal that is answered with an OAuth error response, after the response is built and before `handle` resolves. A `405` for a method the endpoint does not accept, and an `OPTIONS` preflight, are not reported. Authorization failures are not reported either, since `beginAuthorization` and `completeAuthorization` return their issues. The diagnostic never holds a value the request carried: no token, code, verifier, secret or redirect URI.
 
@@ -1002,8 +1182,10 @@ import type { ClientAuthentication } from "@codenhub/oidc/provider";
 
 interface ClientRecord {
   clientId: string;
-  redirectUris: readonly string[]; // each an absolute URL, compared byte for byte
-  scopes: readonly string[]; // must include "openid"
+  redirectUris: readonly string[]; // each an absolute URL, compared byte for byte; may be empty without authorization_code
+  scopes: readonly string[]; // must include "openid" with authorization_code
+  grantTypes?: readonly GrantType[]; // "authorization_code" (the default) or "client_credentials"
+  postLogoutRedirectUris?: readonly string[]; // each compared byte for byte at logout
   auth: ClientAuthentication;
 }
 ```
@@ -1016,6 +1198,10 @@ interface ClientRecord {
 - `{ method: "private_key_jwt", keys }`, where `keys` is the client's public `KeySet`, from `createKeySet`, `importKeySet` or `createRemoteKeySet`.
 
 A record that breaks these rules is a bug in the store, and the provider throws `TypeError` for it.
+
+`grantTypes` lists the grants the client may use. `authorization_code` signs users in and brings the refresh grant with it under `offline_access`. `client_credentials` issues an access token to the client itself. It defaults to `["authorization_code"]`, and when given it must be non-empty, without repeats, and hold only those two values. A client with `client_credentials` must authenticate, so its `auth.method` may not be `none`. A client without `authorization_code` may have no `redirectUris`, and its `scopes` need not include `openid`.
+
+`postLogoutRedirectUris` lists where [logout](docs/provider.md#ending-sessions) may send the browser. Each entry is held to the redirect URI rules: an absolute URL of visible ASCII, without fragment or credentials, and not `javascript:`, `data:`, `vbscript:` or `file:`. Absent or empty, no logout of that client redirects.
 
 The `key` and `keys` values are `@codenhub/jwt` objects, not JSON. A plain object is not one of them, and `@codenhub/jwt` refuses it with `TypeError` when the provider uses it. A store that persists these records therefore keeps the key as a JWK and rebuilds the object on each read: `exportSecretJwk` or `exportPublicJwk` writes the key, and `importSecretKey` or `importKeySet` reads it back. A secret can be exported only when it was created or imported as extractable. A store may also keep the key objects in memory, as the in-memory store does.
 
@@ -1046,15 +1232,20 @@ The returned store has an extra method, `addClient(client)`, which registers or 
 
 ## Checking an adapter
 
-`storeConformanceCases` in `@codenhub/oidc/testing` checks an adapter against this contract. It is a list of named cases, and each case takes a factory that returns the adapter under test. A case rejects with an `Error` that names the broken rule, and the message never contains a key or a token. The cases cover:
+`storeConformanceCases` in `@codenhub/oidc/testing` checks an adapter against this contract. It is a list of named cases, and each case takes a factory that returns the adapter under test. A case rejects with an `Error` that names the broken rule, and the message never contains a key or a token.
+
+The factory receives a `StoreSeed`, `{ clients }`: the client records the case needs `findClient` to return. The contract has no method that saves a client, so the factory registers them itself, the way the app's admin side would, and returns a store whose `findClient` finds them. Most cases seed no clients. `createMemoryStore` takes the same shape, so `c.run((seed) => createMemoryStore(seed))` works. `StoreSeed` is exported as a type from `@codenhub/oidc/testing`.
+
+The cases cover:
 
 - Each interaction and code is single-use, and a consumed code is `replayed` on its next use.
 - Unknown keys give `undefined`.
 - Twenty concurrent `consumeCode` or `consumeRefreshToken` calls give exactly one `consumed` result and 19 `replayed`; twenty concurrent `consumeInteraction` calls give exactly one record and 19 `undefined`.
-- A `save*` call for an existing key rejects, and a spent code cannot be made consumable again.
+- A `save*` call for an existing key rejects, and a spent code or refresh token cannot be made consumable again.
 - `findAccessToken` is not single-use.
 - `revokeGrant` hides the grant's access and refresh tokens, including tokens saved after the call, and leaves other grants alone. A refresh token consumed before the revocation then gives `undefined`, not `replayed`.
 - `findClient` gives `undefined` for unknown identifiers, including `__proto__`, `constructor` and `toString`.
+- `findClient` returns a registered client with the values it was registered with.
 - The records a store returns do not change when the caller changes what it saved.
 
 Records use an `expiresAt` one hour ahead, so an adapter that purges expired rows still passes. Keys are random per case, so the factory may return stores on one shared database. The factory is called once for each case.
@@ -1064,14 +1255,22 @@ With vitest, register each case with `it`:
 ```ts
 import { describe, it } from "vitest";
 import { storeConformanceCases } from "@codenhub/oidc/testing";
-import type { OidcStore } from "@codenhub/oidc/provider";
+import type { ClientRecord, OidcStore } from "@codenhub/oidc/provider";
 
 declare const env: { DB: unknown }; // the database binding the adapter uses
 declare function createD1Store(db: unknown): OidcStore; // your adapter
+declare function registerClient(db: unknown, client: ClientRecord): Promise<void>; // your admin write
 
 describe("OidcStore", () => {
   for (const c of storeConformanceCases) {
-    it(c.name, () => c.run(() => createD1Store(env.DB)));
+    it(c.name, () =>
+      c.run(async ({ clients }) => {
+        for (const client of clients) {
+          await registerClient(env.DB, client);
+        }
+        return createD1Store(env.DB);
+      }),
+    );
   }
 });
 ```
@@ -1111,12 +1310,26 @@ These inputs arrive at `beginAuthorization` and `completeAuthorization`. "Render
 | An interaction id that is forged, empty, reused, or expired                                                                                                                   | `completeAuthorization` returns `interaction_not_found`, with no redirect.                              |
 | An app outcome that grants scopes the request did not ask for, or grants no `openid`                                                                                          | `completeAuthorization` throws `TypeError`, and the interaction is already consumed.                    |
 
+## Provider: the end-session endpoint
+
+The end-session endpoint never redirects a failed request, so the app renders each row below, except where it says otherwise. A redirect goes only to a `post_logout_redirect_uri` the client registered.
+
+| Input                                                                                                                                                                                    | Outcome                                                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| A method or media type the endpoint does not accept, or a URL longer than 8192 characters                                                                                                | Render, `invalid_request`.                                                                             |
+| A duplicated, too many, too long or malformed parameter, or a percent-escape that is not valid UTF-8                                                                                     | Render, `invalid_request`, with `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`. |
+| An unknown `client_id`                                                                                                                                                                   | Render, `unknown_client`.                                                                              |
+| An `id_token_hint` that verifies, issued to a client other than `client_id`                                                                                                              | Render, `invalid_request`, path `["id_token_hint"]`.                                                   |
+| A forged, expired or foreign `id_token_hint`                                                                                                                                             | Ignored. The result has no `subject` and no failure, so the app asks the user to confirm the logout.   |
+| A `post_logout_redirect_uri` that is not, byte for byte, one of the client's `postLogoutRedirectUris`: a trailing slash, a different case, a port, an added query, or an encoded variant | Render, `invalid_redirect_uri`, path `["post_logout_redirect_uri"]`. Nothing is redirected.            |
+| A `post_logout_redirect_uri` when no client is known, from `client_id` or from the hint                                                                                                  | Render, `invalid_redirect_uri`. Nothing is redirected.                                                 |
+
 ## Provider: the token endpoint
 
 | Input                                                                                                                                                                                           | Outcome                                                                                                                          |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | A method other than `POST`                                                                                                                                                                      | `405`, with `Allow: POST, OPTIONS`.                                                                                              |
-| A `Content-Type` other than `application/x-www-form-urlencoded`, with `charset=utf-8` allowed                                                                                                   | `400`, `invalid_request`.                                                                                                        |
+| A `Content-Type` other than `application/x-www-form-urlencoded`, with `charset=utf-8` allowed, quoted or not, in any letter case                                                                | `400`, `invalid_request`.                                                                                                        |
 | A body larger than 16384 bytes. A declared `Content-Length` above the cap is refused without reading the body.                                                                                  | `400`, `invalid_request`. The body is cancelled as soon as it passes the cap, even when the declared length lied.                |
 | A body that is not valid UTF-8, a percent-escape that is not valid UTF-8 (such as `%E9`), or a duplicated, too-long or excess parameter                                                         | `400`, `invalid_request`.                                                                                                        |
 | Credentials presented two ways at once (`Authorization`, `client_secret` and `client_assertion` together)                                                                                       | `400`, `invalid_request`.                                                                                                        |
@@ -1135,6 +1348,8 @@ These inputs arrive at `beginAuthorization` and `completeAuthorization`. "Render
 | A refresh `scope` that names a scope the provider or the client does not have                                                                                                                   | `400`, `invalid_scope`. The token is not spent.                                                                                  |
 | A refresh `scope` that names a scope the family does not hold                                                                                                                                   | `400`, `invalid_scope`. The token is spent, and no new refresh token is issued.                                                  |
 | An access token sent as a `refresh_token`                                                                                                                                                       | `400`, `invalid_grant`. Refresh tokens are looked up in their own table.                                                         |
+| A `client_credentials` request that asks for `openid` or `offline_access`, or for a scope the provider or the client does not have                                                              | `400`, `invalid_scope`. No token is issued.                                                                                      |
+| A `grant_type` the client is not registered for: `client_credentials` from a client without it, or `authorization_code` or `refresh_token` from a client without `authorization_code`           | `400`, `unauthorized_client`. Nothing is spent or issued.                                                                        |
 
 ## Provider: userinfo
 
@@ -1183,7 +1398,7 @@ Each row is checked before any token request is sent, unless it says otherwise.
 | An ID token whose `nonce` is not the one sent, or was replayed                                                                              | `nonce_mismatch`.                                                                                                                |
 | An `azp` that is not this client, or is missing when `aud` lists several                                                                    | `azp_mismatch`.                                                                                                                  |
 | An `at_hash` that does not match the access token                                                                                           | `at_hash_mismatch`.                                                                                                              |
-| No `auth_time` when `max_age` was requested, or one older than `max_age`                                                                    | `auth_time_missing` or `auth_too_old`.                                                                                           |
+| No `auth_time` when `max_age` was requested, or one more than `max_age` seconds before the request, plus the clock tolerance                | `auth_time_missing` or `auth_too_old`.                                                                                           |
 | An ID token longer than 8192 characters                                                                                                     | `invalid_id_token`, with `jwtCode` of `too_large`. See [Limits](#limits).                                                        |
 | A JWKS the client cannot fetch, or that is not valid                                                                                        | `invalid_id_token`, with `jwtCode` of `key_fetch_failed` and `params.reason`.                                                    |
 
@@ -1211,8 +1426,8 @@ Every limit the package enforces, with its value. Where a limit applies to one p
 | Limit                                           | Value                                                                                 | Applies to                                                                                                                                                                                |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Request URL                                     | 8192 characters                                                                       | The provider's authorization request, and the client's callback URL. The other endpoints read no URL beyond routing.                                                                      |
-| Request body                                    | 16384 bytes                                                                           | The token endpoint, and a `POST` to the authorization endpoint.                                                                                                                           |
-| Parameters per request                          | 32                                                                                    | Every parsed query and form: the authorization request, the token request and the callback.                                                                                               |
+| Request body                                    | 16384 bytes                                                                           | The token endpoint, the revocation endpoint, and a `POST` to the authorization endpoint.                                                                                                  |
+| Parameters per request                          | 32                                                                                    | Every parsed query and form: the authorization request, the token request, the revocation request and the callback.                                                                       |
 | Parameter length, name or value                 | 4096 characters                                                                       | Every parsed query and form.                                                                                                                                                              |
 | Response body                                   | 65536 bytes                                                                           | Discovery, token, userinfo, revocation and JWKS responses.                                                                                                                                |
 | Client request timeout                          | 5 seconds by default, 1 to 60                                                         | Discovery, token, userinfo, revocation and JWKS requests, including the body.                                                                                                             |
@@ -1256,6 +1471,7 @@ These are outside its scope. Each one is either the app's job or a known gap.
 - **Store atomicity.** A store that does not satisfy the contract in [Store](docs/store.md) breaks single use for codes and refresh tokens. The package cannot detect that, and it does not try.
 - **Assertion replay.** A client assertion's `jti` is required but not remembered, so a captured assertion can be replayed while it is accepted: an `exp` at most 300 seconds ahead of the provider's clock, plus 60 seconds of tolerance. This is by design. A replayed assertion alone gets nothing, since a code also needs its PKCE verifier and a refresh token is single use. Remembering every `jti` would cost each store a table and a write on every token request.
 - **Revocation reaches only what the provider sees.** The revocation endpoint ends a grant, but the package has no introspection endpoint. A resource server sees a revocation only by calling userinfo. An access token it accepts without calling userinfo keeps working until `ttl.accessToken` seconds have passed.
+- **JWT access tokens and revocation.** With `accessToken: { format: "jwt" }`, the provider revokes a token at once, but a resource server that verifies it offline sees a revocation only when the token expires. Keep `ttl.accessToken` short, as [JWT access tokens](docs/provider.md#jwt-access-tokens) advises.
 - **Sender-constrained tokens.** Access tokens are bearer tokens. DPoP and mutual TLS are not supported.
 - **How the user authenticates.** The package records what the app says about the login in `authTime`, `amr` and `acr`. It does not verify them, and an `amr` of `["pwd"]` is what the app claims, not a check.
 - **Key management.** The package signs with the keys it is given. Storage of the private keys, the timing of rotation, and a compromised signing key are the app's. A key that leaks lets anyone forge ID tokens for that provider.
@@ -1348,31 +1564,35 @@ The OAuth codes a provider can send as `provider_error`'s `params.error` are the
 
 ## Provider issues
 
-These come from `beginAuthorization` and `completeAuthorization`. The token and userinfo endpoints do not return issues. They answer with the OAuth error responses described in [Provider](docs/provider.md#the-token-endpoint), which carry only the code.
+These come from `beginAuthorization`, `completeAuthorization` and `endSession`. The token and userinfo endpoints do not return issues. They answer with the OAuth error responses described in [Provider](docs/provider.md#the-token-endpoint), which carry only the code.
 
-Six of the OAuth codes are issue codes, and only in this table: `invalid_request`, `unsupported_response_type`, `invalid_scope`, `request_not_supported`, `request_uri_not_supported` and `registration_not_supported`. No other OAuth code is an issue code. A denial that `completeAuthorization` returns is a redirect carrying an `error` parameter, such as `access_denied`, which the client receives in its callback, not an issue.
+Seven of the OAuth codes are issue codes, and only in this table: `invalid_request`, `unauthorized_client`, `unsupported_response_type`, `invalid_scope`, `request_not_supported`, `request_uri_not_supported` and `registration_not_supported`. No other OAuth code is an issue code. A denial that `completeAuthorization` returns is a redirect carrying an `error` parameter, such as `access_denied`, which the client receives in its callback, not an issue.
 
-| Code                                                                               | Where it comes from                                                                                                       | `path`                                                                                                                                                | `params`                                                                                                                                          |
-| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `invalid_request`                                                                  | `beginAuthorization`, for a URL, a body, a parameter set, or a missing or malformed parameter.                            | `["client_id"]`, `["response_type"]`, `["response_mode"]`, `["code_challenge"]`, `["code_challenge_method"]`, `["prompt"]` or `["max_age"]`, or none. | `reason`, for a parameter set that does not parse: `duplicate`, `too_many`, `too_long` or `malformed` (a percent-escape that is not valid UTF-8). |
-| `unknown_client`                                                                   | `beginAuthorization`, when no client has the `client_id`. Always rendered.                                                | None.                                                                                                                                                 | None.                                                                                                                                             |
-| `invalid_redirect_uri`                                                             | `beginAuthorization`, when `redirect_uri` is missing or not registered. Always rendered.                                  | None.                                                                                                                                                 | None.                                                                                                                                             |
-| `unsupported_response_type`                                                        | `beginAuthorization`, when `response_type` is not `code`. Redirected.                                                     | None.                                                                                                                                                 | None.                                                                                                                                             |
-| `invalid_scope`                                                                    | `beginAuthorization`, when `scope` lacks `openid`, or names a scope the provider or the client does not have. Redirected. | None.                                                                                                                                                 | None.                                                                                                                                             |
-| `request_not_supported`, `request_uri_not_supported`, `registration_not_supported` | `beginAuthorization`, for a `request`, `request_uri` or `registration` parameter. Redirected.                             | None.                                                                                                                                                 | None.                                                                                                                                             |
-| `interaction_not_found`                                                            | `completeAuthorization`, when the id is empty or unknown, was completed, or has expired. Not redirected.                  | None.                                                                                                                                                 | None.                                                                                                                                             |
+| Code                                                                               | Where it comes from                                                                                                                                         | `path`                                                                                                                                                | `params`                                                                                                                                          |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invalid_request`                                                                  | `beginAuthorization`, for a URL, a body, a parameter set, or a missing or malformed parameter.                                                              | `["client_id"]`, `["response_type"]`, `["response_mode"]`, `["code_challenge"]`, `["code_challenge_method"]`, `["prompt"]` or `["max_age"]`, or none. | `reason`, for a parameter set that does not parse: `duplicate`, `too_many`, `too_long` or `malformed` (a percent-escape that is not valid UTF-8). |
+| `unknown_client`                                                                   | `beginAuthorization`, when no client has the `client_id`. Always rendered.                                                                                  | None.                                                                                                                                                 | None.                                                                                                                                             |
+| `invalid_redirect_uri`                                                             | `beginAuthorization`, when `redirect_uri` is missing or not registered. Always rendered.                                                                    | None.                                                                                                                                                 | None.                                                                                                                                             |
+| `unauthorized_client`                                                              | `beginAuthorization`, when the client is registered without `authorization_code`. Redirected, once the client and redirect URI are verified.                | None.                                                                                                                                                 | None.                                                                                                                                             |
+| `unsupported_response_type`                                                        | `beginAuthorization`, when `response_type` is not `code`. Redirected.                                                                                       | None.                                                                                                                                                 | None.                                                                                                                                             |
+| `invalid_scope`                                                                    | `beginAuthorization`, when `scope` lacks `openid`, or names a scope the provider or the client does not have. Redirected.                                   | None.                                                                                                                                                 | None.                                                                                                                                             |
+| `request_not_supported`, `request_uri_not_supported`, `registration_not_supported` | `beginAuthorization`, for a `request`, `request_uri` or `registration` parameter. Redirected.                                                               | None.                                                                                                                                                 | None.                                                                                                                                             |
+| `interaction_not_found`                                                            | `completeAuthorization`, when the id is empty or unknown, was completed, or has expired. Not redirected.                                                    | None.                                                                                                                                                 | None.                                                                                                                                             |
+| `invalid_request`                                                                  | `endSession`, for a malformed request: a method or media type the endpoint does not accept, an oversized URL, or a parameter that does not parse. Rendered. | `["id_token_hint"]` when a verified hint was issued to another client than `client_id`; otherwise none.                                               | `reason` for a parameter that does not parse: `duplicate`, `too_many`, `too_long` or `malformed`.                                                 |
+| `unknown_client`                                                                   | `endSession`, when `client_id` names no client. Rendered.                                                                                                   | None.                                                                                                                                                 | None.                                                                                                                                             |
+| `invalid_redirect_uri`                                                             | `endSession`, when `post_logout_redirect_uri` is not one of the client's `postLogoutRedirectUris`, or no client is known to check it against. Rendered.     | `["post_logout_redirect_uri"]`.                                                                                                                       | None.                                                                                                                                             |
 
-Whether a `beginAuthorization` code redirects depends on whether the client and its redirect URI were verified first. The codes checked after that verification redirect, and the others are rendered.
+Whether a `beginAuthorization` code redirects depends on whether the client and its redirect URI were verified first. The codes checked after that verification redirect, and the others are rendered. The `endSession` codes are always rendered.
 
 ## What throws
 
 Some mistakes throw instead of returning a result. They are bugs in the code that calls the package, and the message names the option or member at fault, never its value.
 
-- **`TypeError` from a synchronous call.** `createClient` and `createProvider` throw when an option is invalid, so a misconfigured client or provider never starts. `createClient` throws, for example, for a non-`https` issuer, a `clientId` that is empty, a `redirectUri` with a fragment, an `auth.method` the provider does not advertise, or a `client_secret_jwt` or `private_key_jwt` key whose `alg` the provider does not list in `token_endpoint_auth_signing_alg_values_supported`. `createProvider` throws when `onDiagnostic` is given and is not a function.
+- **`TypeError` from a synchronous call.** `createClient` and `createProvider` throw when an option is invalid, so a misconfigured client or provider never starts. `createClient` throws, for example, for a non-`https` issuer, a `clientId` that is empty, a `redirectUri` with a fragment, an `auth.method` the provider does not advertise, or a `client_secret_jwt` or `private_key_jwt` key whose `alg` the provider does not list in `token_endpoint_auth_signing_alg_values_supported`. `createProvider` throws when `onDiagnostic` is given and is not a function, or when `accessToken` is not `{ format: "opaque" }` or a `{ format: "jwt", audience }` with a valid `audience`.
 - **`TypeError` from an asynchronous call.** Every other method that takes an options or outcome object rejects with `TypeError` rather than throwing. These are `discover` for its arguments, `client.authorize`, `client.callback`, `client.refresh`, `client.userinfo`, `client.revoke`, `provider.completeAuthorization`, and `hashClientSecret`. Some of them reject for more:
   - `client.authorize` rejects when a `loginHint` or a `uiLocales` entry is not well-formed Unicode, and when the encoded authorization URL is longer than 8192 characters.
   - `client.userinfo` rejects when the metadata has no `userinfo_endpoint`, and `client.revoke` when it has no `revocation_endpoint`.
-- **`TypeError` from the store or the callback.** A malformed client record from `findClient` is a `TypeError`. `handle` and `beginAuthorization` reject with it when a request uses the record, for example one whose redirect URI has a fragment. A `claims` callback that resolves to something other than an object is a `TypeError` too. Both reject the request that reached them.
+- **`TypeError` from the store or the callback.** A malformed client record from `findClient` is a `TypeError`: for example one whose redirect URI has a fragment, whose `grantTypes` repeats a value, whose `postLogoutRedirectUris` breaks the redirect URI rules, or that gives `client_credentials` to a client with `auth.method` `none`. `handle`, `beginAuthorization` and `endSession` reject with it when a request uses the record. A `claims` callback that resolves to something other than an object is a `TypeError` too. Both reject the request that reached them.
 - **Store and callback failures.** A store method that throws or rejects, and a `claims` callback that throws or rejects, reject the call that reached them. They are not results. See [Store](docs/store.md#errors).
 
 Hostile input never produces a `TypeError`. A token that does not parse, a discovery document with a missing member, and a callback with no `state` each produce an issue, and no operation throws because of them.

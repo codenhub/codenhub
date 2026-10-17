@@ -118,8 +118,24 @@ readonly name: string;
 #### run
 
 ```ts
-readonly run: (createStore: () => OidcStore | Promise<OidcStore>) => Promise<void>;
+readonly run: (createStore: (seed: StoreSeed) => OidcStore | Promise<OidcStore>) => Promise<void>;
 ```
+
+### StoreSeed
+
+```ts
+export interface StoreSeed
+```
+
+What a case asks the store under test to hold before it runs. The `OidcStore` interface has no method that saves a client, so the factory registers these clients itself, the way the app's admin side would.
+
+#### clients
+
+```ts
+readonly clients: readonly ClientRecord[];
+```
+
+Clients `findClient` must return. Their identifiers are random per case.
 
 ## Variables
 
@@ -131,7 +147,7 @@ export declare const storeConformanceCases: readonly StoreConformanceCase[];
 
 Every check of the OidcStore contract, for any test runner: `for (const c of storeConformanceCases) it(c.name, () => c.run(createStore))`.
 
-Each case calls `createStore()` once and runs against the empty store it returns; no clients are needed. Keys and grant identifiers are random per case, so cases never collide even when they share one database. Failures are plain `Error`s whose message names the broken rule and never a key or token value.
+Each case calls `createStore(seed)` once and runs against the store it returns, which must hold the clients in `seed.clients` and nothing else the case relies on. Most cases pass no clients. Keys, grant identifiers and client identifiers are random per case, so cases never collide even when they share one database. Failures are plain `Error`s whose message names the broken rule and never a key or token value.
 
 Wire the suite into a runner by calling each case with a factory for the adapter under test. With Node.js's built-in runner:
 
@@ -143,7 +159,14 @@ import { storeConformanceCases } from "@codenhub/oidc/testing";
 
 describe("OidcStore", () => {
   for (const c of storeConformanceCases) {
-    test(c.name, () => c.run(() => createD1Store(env.DB)));
+    test(c.name, () =>
+      c.run(async ({ clients }) => {
+        for (const client of clients) {
+          await registerClient(env.DB, client); // the app's own admin write
+        }
+        return createD1Store(env.DB);
+      }),
+    );
   }
 });
 ```
