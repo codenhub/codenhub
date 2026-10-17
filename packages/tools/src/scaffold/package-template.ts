@@ -89,12 +89,11 @@ function createManifest(options: PackageTemplateOptions, fullName: string): stri
       vitest: "catalog:",
     },
     codenhub: {
-      docs: {
-        label: options.label,
-        // Every new package starts experimental. Promoting it is a deliberate
-        // act that has to update the README notice at the same time.
-        status: "experimental",
-      },
+      label: options.label,
+      // Every new package starts experimental. Promoting it is a deliberate
+      // act that has to update the README notice at the same time.
+      status: "experimental",
+      docs: {},
     },
   };
   return `${JSON.stringify(manifest, undefined, 2)}\n`;

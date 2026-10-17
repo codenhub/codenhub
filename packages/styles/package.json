@@ -226,9 +226,8 @@
     }
   },
   "codenhub": {
-    "docs": {
-      "label": "StyleKit",
-      "status": "active"
-    }
+    "label": "StyleKit",
+    "status": "active",
+    "docs": {}
   }
 }

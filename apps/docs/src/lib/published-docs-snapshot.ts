@@ -81,7 +81,7 @@ async function snapshotPackage(
   }
   // The opt-in is read from the released manifest, like everything else here:
   // a package opts into the site in the same release that ships its docs.
-  if (parsePackageMetadata(manifest, `${workspacePackage.location}/package.json`) === null) {
+  if (parsePackageMetadata(manifest, `${workspacePackage.location}/package.json`)?.documented !== true) {
     await rm(destination, { force: true, recursive: true });
     return;
   }

@@ -85,7 +85,7 @@ describe("package documentation loading", () => {
         await writeFile(
           path.join(rootPath, "package.json"),
           JSON.stringify({
-            codenhub: { docs: { label: name, status: "active" } },
+            codenhub: { label: name, status: "active", docs: {} },
             name: `@codenhub/${name}`,
           }),
         );

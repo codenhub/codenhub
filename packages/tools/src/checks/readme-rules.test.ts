@@ -10,14 +10,17 @@ import type { Finding } from "./rule.ts";
 
 const ACTIVE_README = "# @codenhub/example\n\nAn example package.\n\n## Installation\n";
 
-async function runRule(readme: string, docs: Record<string, unknown> = {}): Promise<Finding[]> {
+async function runRule(readme: string, codenhubFields: Record<string, unknown> = {}): Promise<Finding[]> {
   const directory = await mkdtemp(join(tmpdir(), "codenhub-readme-rule-"));
   await writeFile(join(directory, "README.md"), readme, "utf8");
   const workspacePackage = {
     directory,
     isPrivate: false,
     location: "packages/example",
-    manifest: { codenhub: { docs: { label: "Example", status: "active", ...docs } }, name: "@codenhub/example" },
+    manifest: {
+      codenhub: { label: "Example", status: "active", docs: {}, ...codenhubFields },
+      name: "@codenhub/example",
+    },
     name: "@codenhub/example",
     unscopedName: "example",
   } as unknown as WorkspacePackage;
@@ -88,7 +91,7 @@ describe("readme status rule", () => {
       directory,
       isPrivate: false,
       location: "packages/example",
-      manifest: { codenhub: { docs: { label: "Example", status: "experimental" } }, name: "@codenhub/example" },
+      manifest: { codenhub: { label: "Example", status: "experimental", docs: {} }, name: "@codenhub/example" },
       name: "@codenhub/example",
     } as unknown as WorkspacePackage;
     const [rule] = createReadmeRules();

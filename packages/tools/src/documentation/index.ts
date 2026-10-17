@@ -55,6 +55,7 @@ export {
   buildPublicPackageSummaries,
   getDocumentRoute,
   parsePackageMetadata,
+  usesLegacyMetadata,
   type DocumentDefinition,
   type PackageDefinition,
   type PackageMetadata,

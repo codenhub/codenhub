@@ -58,9 +58,9 @@
     "node": ">=24"
   },
   "codenhub": {
+    "label": "ValidationKit",
+    "status": "experimental",
     "docs": {
-      "label": "ValidationKit",
-      "status": "experimental",
       "reference": {
         "pages": {
           ".": {

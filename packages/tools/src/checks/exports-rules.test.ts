@@ -26,7 +26,7 @@ async function runRule(fixture: Fixture): Promise<Finding[]> {
     isPrivate: false,
     location: "packages/example",
     manifest: {
-      codenhub: { docs: { label: "Example", status: "active" } },
+      codenhub: { label: "Example", status: "active", docs: {} },
       exports: "exports" in fixture ? fixture.exports : EXPORTS,
       name: "@codenhub/example",
     },

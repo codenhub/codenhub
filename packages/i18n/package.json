@@ -66,10 +66,9 @@
     "node": ">=24"
   },
   "codenhub": {
-    "docs": {
-      "label": "i18n",
-      "status": "active"
-    },
+    "label": "i18n",
+    "status": "active",
+    "docs": {},
     "bundled": [
       "@codenhub/validation"
     ]

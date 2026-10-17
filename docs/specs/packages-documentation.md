@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-06
+last_updated: 2026-10-17
 scope: Documentation for public workspace packages.
 ---
 
@@ -10,7 +10,7 @@ This document defines how packages document consumer-facing behavior and maintai
 
 ## Compliance
 
-Every `private: false` workspace package MUST follow this spec and MUST declare its public documentation metadata as defined below. A package's location within the workspace does not change these requirements. Private packages MAY opt in to this spec by declaring the same metadata. Private packages and apps without public documentation metadata are not required to comply unless another document says so.
+Every `private: false` workspace package MUST follow this spec, MUST opt in by declaring `codenhub.docs` as defined below, and MUST declare its package metadata as defined by `docs/specs/packages-metadata.md`. A package's location within the workspace does not change these requirements. Private packages MAY opt in to this spec by declaring the same opt-in and metadata. Private packages and apps without the `codenhub.docs` opt-in are not required to comply unless another document says so.
 
 Public packages MUST contain:
 
@@ -25,45 +25,21 @@ docs/
 
 All four documentation surfaces are required even for small packages. A small API or one clear use case MAY mean fewer pages, not thinner explanations on the pages that exist — see "Completeness over compactness" below. `docs/internal/` MAY be empty or absent until maintainer-only knowledge exists, but it is the required location for such knowledge.
 
-## Public documentation metadata
+## Public documentation opt-in
 
-Public documentation eligibility and package-level presentation metadata belong in the package's `package.json` under `codenhub.docs`:
+A package opts into the documentation site by declaring `codenhub.docs` in its `package.json`:
 
 ```json
 {
   "codenhub": {
-    "docs": {
-      "label": "Example Package",
-      "status": "active",
-      "listed": true,
-      "slug": "example-package",
-      "description": "Utilities for building example workflows.",
-      "order": 10,
-      "demoUrl": "https://example.coden.agency"
-    }
+    "label": "Example Package",
+    "status": "active",
+    "docs": {}
   }
 }
 ```
 
-The presence of `codenhub.docs` declares that the package has public documentation intended for publication and, by default, catalog discovery. Its fields are:
-
-- `label`: REQUIRED human-readable package label used by documentation tools.
-- `status`: REQUIRED documentation status. Allowed values are `active`, `experimental`, and `deprecated`.
-- `listed`: OPTIONAL boolean controlling catalog discovery. It defaults to `true`. When `false`, catalogs MUST omit the package, but documentation tools MUST still publish its documentation routes. This is not an access-control mechanism; unlisted documentation remains accessible by direct URL.
-- `slug`: OPTIONAL stable kebab-case identifier. It defaults to the unscoped package name, such as `styles` for `@codenhub/styles`.
-- `description`: OPTIONAL catalog description. It defaults to the package `description`.
-- `order`: OPTIONAL non-negative integer used for relative ordering. Lower values appear first; tools MUST use a deterministic fallback when it is absent.
-- `demoUrl`: OPTIONAL absolute URL to a standalone live demo application for the package. Catalog and documentation sites MAY use this to render live demo links or embedded previews.
-
-Slugs MUST be unique among packages that declare public documentation metadata. A malformed `codenhub.docs` object or field is invalid. Tools MUST NOT use package metadata fallbacks to hide missing required fields or malformed public documentation metadata.
-
-Package catalogs MUST omit packages with `codenhub.docs.listed` set to `false`. For listed packages, catalogs use `codenhub.docs.label` and use `codenhub.docs.description` when present. A valid metadata object without a documentation description falls back to the package `description`. When cataloging a package without public documentation metadata, catalogs MAY fall back to the package `name` and `description`. These fallbacks do not make a non-compliant public package compliant with this spec. Package consumers and documentation tools MAY ignore presentation fields they do not need.
-
-Documentation status has these meanings:
-
-- `active`: Supported for normal consumer use.
-- `experimental`: Publicly available, but some identified part of its API, behavior, output, or support level remains unstable.
-- `deprecated`: Retained for existing consumers but not recommended for new adoption.
+The presence of `codenhub.docs` declares that the package has public documentation intended for publication. It MUST be an object; its only field is the OPTIONAL `reference`, defined by `docs/specs/packages-reference.md`. A package that declares it MUST also declare the package metadata defined by `docs/specs/packages-metadata.md`, which supplies the label, status, slug, description, listing, and order the documentation site presents. The site publishes each package's documents under `/<slug>/`, and its catalog follows that spec's `listed` rule.
 
 ## Documentation ownership
 
@@ -176,7 +152,7 @@ Every public package `docs/**/*.md` file outside `docs/internal/` MUST start wit
 
 Unknown fields, including repository governance fields, are invalid. Every public document MUST contain exactly one H1, but its text is unrestricted and independent from the frontmatter title. Frontmatter controls presentation metadata; Markdown controls article markup. Publishing tools MUST render the Markdown body as authored and MUST NOT inject titles, descriptions, package identifiers, status notices, or other metadata into the article body. The single exception is a generated `docs/reference/` page (per `docs/specs/packages-reference.md`): a publishing tool MAY render that page's `description` and `since` frontmatter as a deck immediately after the page H1, since both are generator-derived and read as part of the entrypoint heading they sit under. Site chrome outside the article body MAY present package metadata, navigation, breadcrumbs, or status. Browser titles MUST add the package label between the page title and site title so pages with common titles remain distinguishable.
 
-Deprecated packages MUST state their status near the top of `README.md` and point to a replacement when one exists. Experimental packages MUST identify what remains unstable in `README.md`. Supporting tools MAY use `codenhub.docs.status` to present the same package-wide status in site chrome without requiring public documents to repeat it. Documentation chrome MUST show warning status for experimental and deprecated packages and MUST NOT show a status badge for active packages.
+Deprecated packages MUST state their status near the top of `README.md` and point to a replacement when one exists. Experimental packages MUST identify what remains unstable in `README.md`. Supporting tools MAY use `codenhub.status` to present the same package-wide status in site chrome without requiring public documents to repeat it. Documentation chrome MUST show warning status for experimental and deprecated packages and MUST NOT show a status badge for active packages.
 
 ## Internal documentation
 

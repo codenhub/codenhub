@@ -59,9 +59,8 @@
     "node": ">=24"
   },
   "codenhub": {
-    "docs": {
-      "label": "JwtKit",
-      "status": "experimental"
-    }
+    "label": "JwtKit",
+    "status": "experimental",
+    "docs": {}
   }
 }

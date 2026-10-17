@@ -419,7 +419,7 @@ export type Identifier = string;
     pkg.isPrivate = true;
     pkg.manifest = { ...pkg.manifest, private: true };
     expect(rule.appliesTo(pkg)).toBe(false);
-    pkg.manifest = { ...pkg.manifest, codenhub: { docs: { label: "Example", status: "active" } } };
+    pkg.manifest = { ...pkg.manifest, codenhub: { label: "Example", status: "active", docs: {} } };
     expect(rule.appliesTo(pkg)).toBe(true);
   });
 });

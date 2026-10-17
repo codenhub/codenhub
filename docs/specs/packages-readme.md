@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-30
+last_updated: 2026-10-17
 scope: README files for workspace packages.
 ---
 
@@ -122,9 +122,9 @@ Critical observable failure behavior SHOULD appear near README usage when it cha
 
 ## Package states
 
-Deprecated packages MUST state they are deprecated near the top and point to the replacement when one exists. The notice MUST agree with `codenhub.docs.status`.
+Deprecated packages MUST state they are deprecated near the top and point to the replacement when one exists. The notice MUST agree with `codenhub.status`.
 
-Experimental packages MUST state what is unstable: API shape, behavior, build output, or support level. The notice MUST agree with `codenhub.docs.status`.
+Experimental packages MUST state what is unstable: API shape, behavior, build output, or support level. The notice MUST agree with `codenhub.status`.
 
 ## Exceptions
 

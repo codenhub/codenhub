@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-08
+last_updated: 2026-10-17
 scope: Generated API reference documentation for public workspace packages.
 ---
 
@@ -27,9 +27,9 @@ A package opts in through `codenhub.docs.reference` in its `package.json`, neste
 ```json
 {
   "codenhub": {
+    "label": "ErrorKit",
+    "status": "active",
     "docs": {
-      "label": "ErrorKit",
-      "status": "active",
       "reference": {
         "entrypoints": ["."],
         "prose": true

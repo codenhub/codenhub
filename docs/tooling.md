@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-10-13
+last_updated: 2026-10-17
 scope: Repository-wide developer tooling and root workspace scripts.
 ---
 
@@ -365,9 +365,11 @@ Findings carry a `<rule>/<detail>` code and a severity. Only `error` findings fa
 | `documentation`       | Required surfaces, frontmatter, single H1, link targets, and slug uniqueness.                                           |
 | `undocumented-export` | JSDoc/TSDoc presence on top-level typed package exports, following declaration barrels.                                 |
 | `llms-full`           | `llms-full.txt` still matches the documents it compiles.                                                                |
-| `readme`              | README status notices agree with `codenhub.docs.status`.                                                                |
+| `readme`              | README status notices agree with `codenhub.status`.                                                                     |
 | `changelog`           | An opted-in changelog documents, dates, describes, and links the version the manifest declares.                         |
 | `assets`              | `codenhub.assets` entries resolve to real files under root `assets/`.                                                   |
+
+The `documentation` rule also reports `documentation/legacy-metadata` when a package declares identity (`label`, `status`, and the other fields `docs/specs/packages-metadata.md` lists) inside `codenhub.docs` instead of on `codenhub`, and `documentation/missing-logo` when `codenhub.logo` names no file in the package.
 
 The `undocumented-export` rule reports `undocumented-export/missing-jsdoc` errors for top-level declarations exposed through `exports` subpaths with type targets. It applies to public packages and private packages with `codenhub.docs`, skips `./package.json`, expands typed wildcard subpaths, and follows re-export aliases to the original declaration before checking for JSDoc/TSDoc. It reads emitted declarations when available and otherwise emits declarations in memory with the TypeScript compiler API. It does not run TypeDoc. Run a build after source changes to keep on-disk declarations current; `hub verify` and PR CI already build before checking. Missing documentation fails the check. Unresolvable declaration dependencies, wildcards that match nothing, and generated targets that need a package build first report `undocumented-export/unresolved-export` warnings. The one exception is a typed export target whose file does not exist once `dist/` exists, which is an `error`: its message names a stale build as the usual cause and a rebuild as the first step to try. Class and interface members and documentation quality remain review responsibilities. Source documentation coverage belongs to this rule alone; the `reference` rule checks generated-page correctness.
 

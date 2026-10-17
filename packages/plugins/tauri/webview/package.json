@@ -50,9 +50,8 @@
     "@tauri-apps/api": "^2.0.0"
   },
   "codenhub": {
-    "docs": {
-      "label": "Tauri WebView",
-      "status": "experimental"
-    }
+    "label": "Tauri WebView",
+    "status": "experimental",
+    "docs": {}
   }
 }

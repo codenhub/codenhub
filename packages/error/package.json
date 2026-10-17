@@ -74,9 +74,9 @@
     "node": ">=24"
   },
   "codenhub": {
+    "label": "ErrorKit",
+    "status": "active",
     "docs": {
-      "label": "ErrorKit",
-      "status": "active",
       "reference": {}
     }
   }
