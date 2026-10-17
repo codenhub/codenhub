@@ -1,17 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { buildPackageDefinitions, buildPublicPackageSummaries, parsePackageMetadata } from "./package-metadata.ts";
+import {
+  buildPackageDefinitions,
+  buildPublicPackageSummaries,
+  parsePackageMetadata,
+  usesLegacyMetadata,
+} from "./package-metadata.ts";
 
 function createManifest(slug?: string) {
   return {
     name: "@codenhub/example",
     description: "Example package.",
     codenhub: {
-      docs: {
-        label: "Example",
-        status: "experimental",
-        ...(slug === undefined ? {} : { slug }),
-      },
+      label: "Example",
+      status: "experimental",
+      ...(slug === undefined ? {} : { slug }),
+      docs: {},
     },
   };
 }
@@ -65,12 +69,7 @@ describe("package documentation catalog", () => {
     const manifest = {
       ...createManifest(),
       private: false,
-      codenhub: {
-        docs: {
-          ...createManifest().codenhub.docs,
-          listed: false,
-        },
-      },
+      codenhub: { ...createManifest().codenhub, listed: false },
     };
     const manifests = { "../../packages/example/package.json": manifest };
     const definitions = buildPackageDefinitions(manifests, ["../../packages/example/docs/index.md"]);
@@ -169,11 +168,11 @@ describe("package documentation catalog", () => {
       parsePackageMetadata(
         {
           name: "@codenhub/example",
-          codenhub: { docs: { status: "stable" } },
+          codenhub: { label: "Example", status: "stable", docs: {} },
         },
         "package.json",
       ),
-    ).toThrow("Invalid codenhub.docs.status");
+    ).toThrow("Invalid codenhub.status");
   });
 
   it("rejects documentation metadata without a label", () => {
@@ -181,11 +180,11 @@ describe("package documentation catalog", () => {
       parsePackageMetadata(
         {
           name: "@codenhub/example",
-          codenhub: { docs: { status: "experimental" } },
+          codenhub: { status: "experimental", docs: {} },
         },
         "package.json",
       ),
-    ).toThrow("Invalid codenhub.docs.label");
+    ).toThrow("Invalid codenhub.label");
   });
 
   it("rejects non-boolean catalog listing metadata", () => {
@@ -193,11 +192,11 @@ describe("package documentation catalog", () => {
       parsePackageMetadata(
         {
           name: "@codenhub/example",
-          codenhub: { docs: { label: "Example", listed: "no", status: "experimental" } },
+          codenhub: { label: "Example", listed: "no", status: "experimental", docs: {} },
         },
         "package.json",
       ),
-    ).toThrow("Invalid codenhub.docs.listed");
+    ).toThrow("Invalid codenhub.listed");
   });
 
   it("uses the package description when documentation metadata omits it", () => {
@@ -207,7 +206,7 @@ describe("package documentation catalog", () => {
   it("keeps an absolute demo URL", () => {
     const manifest = {
       name: "@codenhub/example",
-      codenhub: { docs: { demoUrl: "https://example.coden.agency", label: "Example", status: "experimental" } },
+      codenhub: { demoUrl: "https://example.coden.agency", label: "Example", status: "experimental", docs: {} },
     };
 
     expect(parsePackageMetadata(manifest, "package.json")?.demoUrl).toBe("https://example.coden.agency");
@@ -218,10 +217,75 @@ describe("package documentation catalog", () => {
       parsePackageMetadata(
         {
           name: "@codenhub/example",
-          codenhub: { docs: { demoUrl: "/demo", label: "Example", status: "experimental" } },
+          codenhub: { demoUrl: "/demo", label: "Example", status: "experimental", docs: {} },
         },
         "package.json",
       ),
-    ).toThrow("Invalid codenhub.docs.demoUrl");
+    ).toThrow("Invalid codenhub.demoUrl");
   });
+
+  it("reads the pre-migration shape from codenhub.docs", () => {
+    const manifest = {
+      name: "@codenhub/example",
+      codenhub: { docs: { label: "Example", listed: false, reference: {}, status: "active" } },
+    };
+
+    expect(usesLegacyMetadata(manifest)).toBe(true);
+    expect(parsePackageMetadata(manifest, "package.json")).toMatchObject({
+      documented: true,
+      label: "Example",
+      listed: false,
+      status: "active",
+    });
+  });
+
+  it("names the pre-migration field in its errors", () => {
+    expect(() =>
+      parsePackageMetadata({ name: "@codenhub/example", codenhub: { docs: { label: "Example" } } }, "package.json"),
+    ).toThrow("Invalid codenhub.docs.status");
+  });
+
+  it("does not treat a reference-only codenhub.docs as the pre-migration shape", () => {
+    expect(usesLegacyMetadata({ codenhub: { label: "Example", status: "active", docs: { reference: {} } } })).toBe(
+      false,
+    );
+  });
+
+  it("rejects a manifest that mixes both shapes", () => {
+    expect(() =>
+      parsePackageMetadata(
+        { name: "@codenhub/example", codenhub: { label: "Example", docs: { status: "active" } } },
+        "package.json",
+      ),
+    ).toThrow("not inside codenhub.docs");
+  });
+
+  it("reads identity without opting into the documentation site", () => {
+    const manifest = { name: "@codenhub/example", codenhub: { label: "Example", status: "active" } };
+
+    expect(parsePackageMetadata(manifest, "package.json")?.documented).toBe(false);
+    expect(buildPackageDefinitions({ "../../packages/example/package.json": manifest }, [])).toEqual([]);
+  });
+
+  it("returns null when codenhub declares neither identity nor docs", () => {
+    expect(parsePackageMetadata({ name: "@codenhub/example", codenhub: { bundled: [] } }, "package.json")).toBeNull();
+  });
+
+  it("keeps a package-relative SVG logo", () => {
+    const manifest = createManifest();
+    expect(
+      parsePackageMetadata({ ...manifest, codenhub: { ...manifest.codenhub, logo: "assets/logo.svg" } }, "package.json")
+        ?.logo,
+    ).toBe("assets/logo.svg");
+  });
+
+  it.each(["../logo.svg", "/logo.svg", "./logo.svg", "assets\\logo.svg", "logo.png"])(
+    "rejects the logo path %s",
+    (logo) => {
+      const manifest = createManifest();
+      expect(() =>
+        parsePackageMetadata({ ...manifest, codenhub: { ...manifest.codenhub, logo } }, "package.json"),
+      ).toThrow("Invalid codenhub.logo");
+    },
+  );
 });

@@ -102,7 +102,7 @@ async function checkMetadata(workspacePackage: WorkspacePackage): Promise<Findin
     fail("publish-config", `"publishConfig.access" must be "public".`);
   }
   if (!hasDocumentationMetadata(workspacePackage)) {
-    fail("docs", `"codenhub.docs" must declare public documentation metadata.`);
+    fail("docs", `"codenhub.docs" must opt the package into public documentation.`);
   }
   for (const field of RECOMMENDED_FIELDS) {
     if (manifest[field] === undefined) {

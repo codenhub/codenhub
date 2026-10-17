@@ -9,7 +9,7 @@ import { createManifestRules } from "./manifest-rules.ts";
 import type { Finding } from "./rule.ts";
 
 const COMPLIANT_MANIFEST = {
-  codenhub: { docs: { label: "Example", status: "active" } },
+  codenhub: { label: "Example", status: "active", docs: {} },
   description: "An example package.",
   exports: { ".": "./dist/index.js" },
   files: ["dist"],

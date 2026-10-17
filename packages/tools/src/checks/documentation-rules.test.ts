@@ -56,7 +56,7 @@ async function createDocumentedPackage(overrides: PackageOverrides = {}): Promis
     isPrivate: false,
     location: "packages/example",
     manifest: {
-      codenhub: { docs: { label: "Example", status: "active" } },
+      codenhub: { label: "Example", status: "active", docs: {} },
       name: "@codenhub/example",
       ...overrides.manifest,
     },
@@ -109,7 +109,7 @@ describe("documentation rule", () => {
 
   it("reports malformed documentation metadata instead of inspecting the package", async () => {
     const workspacePackage = await createDocumentedPackage({
-      manifest: { codenhub: { docs: { label: "Example", status: "shipped" } } },
+      manifest: { codenhub: { label: "Example", status: "shipped", docs: {} } },
     });
 
     expect(await runRule("documentation", workspacePackage)).toEqual([
@@ -117,11 +117,40 @@ describe("documentation rule", () => {
     ]);
   });
 
+  it("reports identity declared inside codenhub.docs", async () => {
+    const workspacePackage = await createDocumentedPackage({
+      manifest: { codenhub: { docs: { label: "Example", status: "active" } } },
+    });
+
+    expect((await runRule("documentation", workspacePackage)).map(({ code }) => code)).toEqual([
+      "documentation/legacy-metadata",
+    ]);
+  });
+
+  it("accepts a logo that exists in the package", async () => {
+    const workspacePackage = await createDocumentedPackage({
+      files: { "assets/logo.svg": "<svg/>" },
+      manifest: { codenhub: { label: "Example", logo: "assets/logo.svg", status: "active", docs: {} } },
+    });
+
+    expect(await runRule("documentation", workspacePackage)).toEqual([]);
+  });
+
+  it("reports a logo that names no file", async () => {
+    const workspacePackage = await createDocumentedPackage({
+      manifest: { codenhub: { label: "Example", logo: "assets/logo.svg", status: "active", docs: {} } },
+    });
+
+    expect((await runRule("documentation", workspacePackage)).map(({ code }) => code)).toEqual([
+      "documentation/missing-logo",
+    ]);
+  });
+
   it("applies to a private package that opts in through documentation metadata", () => {
     const rules = createDocumentationRules([]);
     const optedIn = {
       isPrivate: true,
-      manifest: { codenhub: { docs: { label: "Example", status: "active" } } },
+      manifest: { codenhub: { label: "Example", status: "active", docs: {} } },
     } as unknown as WorkspacePackage;
 
     expect(rules.every((rule) => rule.appliesTo(optedIn))).toBe(true);
@@ -137,7 +166,7 @@ describe("documentation rule", () => {
     const workspacePackage = await createDocumentedPackage();
     const rival = await createDocumentedPackage({
       manifest: {
-        codenhub: { docs: { label: "Rival", slug: "example", status: "active" } },
+        codenhub: { label: "Rival", slug: "example", status: "active", docs: {} },
         name: "@fixture/rival",
       },
       name: "@fixture/rival",

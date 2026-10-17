@@ -20,7 +20,7 @@ function fakePackage(reference: unknown): WorkspacePackage {
     isPrivate: false,
     scripts: {},
     workspaceDependencies: [],
-    manifest: { name: "@codenhub/example", codenhub: { docs: { label: "Example", status: "active", reference } } },
+    manifest: { name: "@codenhub/example", codenhub: { label: "Example", status: "active", docs: { reference } } },
   };
 }
 

@@ -16,7 +16,7 @@ export async function createReferenceFixture(name: string, sources: Record<strin
     name: `@codenhub/${name}`,
     version: "1.0.0",
     exports: { ".": { types: "./dist/index.d.ts", import: "./dist/index.js" } },
-    codenhub: { docs: { label: "Fixture", status: "active", reference: {} } },
+    codenhub: { label: "Fixture", status: "active", docs: { reference: {} } },
   };
   await writeFile(join(directory, "package.json"), JSON.stringify(manifest, null, 2));
   await writeFile(

@@ -1,7 +1,7 @@
 import type { WorkspacePackage } from "./discover.ts";
 
 /**
- * Reports whether a package declares public documentation metadata.
+ * Reports whether a package opts into public documentation.
  * @param workspacePackage Package to inspect.
  * @returns `true` when the manifest has a `codenhub.docs` object.
  */

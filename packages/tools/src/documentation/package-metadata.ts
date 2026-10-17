@@ -1,43 +1,38 @@
-const DOCS_STATUSES = ["active", "experimental", "deprecated"] as const;
+const STATUSES = ["active", "experimental", "deprecated"] as const;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+// Identity fields `codenhub.docs` held before they moved to `codenhub` itself.
+const LEGACY_FIELDS = ["demoUrl", "description", "label", "listed", "order", "slug", "status"] as const;
+const IDENTITY_FIELDS = [...LEGACY_FIELDS, "logo"] as const;
 
-/** Documentation status declared by `codenhub.docs.status`. */
-export type PackageStatus = (typeof DOCS_STATUSES)[number];
-
-interface DocsMetadata {
-  demoUrl?: string;
-  description?: string;
-  label: string;
-  listed?: boolean;
-  order?: number;
-  slug?: string;
-  status: PackageStatus;
-}
+/** Package status declared by `codenhub.status`. */
+export type PackageStatus = (typeof STATUSES)[number];
 
 interface PackageManifest {
-  codenhub?: {
-    docs?: unknown;
-  };
+  codenhub?: unknown;
   description?: unknown;
   name?: unknown;
   private?: unknown;
 }
 
-/** Resolved `codenhub.docs` metadata with defaults applied. */
+/** Resolved `codenhub` package metadata with defaults applied. */
 export interface PackageMetadata {
   /** Absolute URL of a standalone live demo application. */
   demoUrl?: string;
   /** Catalog description, falling back to the package description. */
   description?: string;
+  /** Whether the package declares `codenhub.docs`, opting into the documentation site. */
+  documented: boolean;
   /** Human-readable package label. */
   label: string;
   /** Whether catalogs list the package. */
   listed: boolean;
+  /** Package-relative path to an SVG logo. */
+  logo?: string;
   /** Relative ordering hint. */
   order?: number;
   /** Stable kebab-case identifier, defaulting to the unscoped package name. */
   slug: string;
-  /** Documentation status. */
+  /** Package status. */
   status: PackageStatus;
 }
 
@@ -71,7 +66,7 @@ export interface PublicPackageSummary {
   label: string;
   /** Published package name. */
   name: string;
-  /** Documentation status when the package declares public documentation. */
+  /** Package status when the package declares public documentation. */
   status?: PackageStatus;
 }
 
@@ -87,62 +82,67 @@ function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
+function declaresAny(value: Record<string, unknown>, fields: readonly string[]): boolean {
+  return fields.some((field) => value[field] !== undefined);
+}
+
+/**
+ * Reports whether a manifest declares its identity in the pre-migration shape,
+ * inside `codenhub.docs` instead of on `codenhub` itself.
+ *
+ * Only release tags cut before the migration still carry that shape. The reader
+ * accepts it for them alone, and `hub check` rejects it in the working tree;
+ * `docs/specs/packages-metadata.md` says when the shape stops being read.
+ * @param manifest Parsed package manifest.
+ * @returns `true` when `codenhub.docs` holds any identity field.
+ */
+export function usesLegacyMetadata(manifest: unknown): boolean {
+  if (!isRecord(manifest) || !isRecord(manifest.codenhub)) {
+    return false;
+  }
+  const docs = manifest.codenhub.docs;
+  return isRecord(docs) && declaresAny(docs, LEGACY_FIELDS);
+}
+
 function getOptionalText(value: unknown, field: string, manifestPath: string): string | undefined {
   if (value === undefined) {
     return undefined;
   }
 
   if (typeof value !== "string" || value.trim() === "") {
-    throw new Error(`Invalid codenhub.docs.${field} in ${manifestPath}: expected a non-empty string.`);
+    throw new Error(`Invalid ${field} in ${manifestPath}: expected a non-empty string.`);
   }
 
   return value;
 }
 
-function getDocsMetadata(value: unknown, manifestPath: string): DocsMetadata {
-  if (!isRecord(value)) {
-    throw new Error(`Invalid codenhub.docs in ${manifestPath}: expected an object.`);
+function getLogo(value: unknown, manifestPath: string): string | undefined {
+  const logo = getOptionalText(value, "codenhub.logo", manifestPath);
+  if (logo === undefined) {
+    return undefined;
   }
-
-  if (typeof value.status !== "string" || !DOCS_STATUSES.includes(value.status as PackageStatus)) {
-    throw new Error(`Invalid codenhub.docs.status in ${manifestPath}: expected active, experimental, or deprecated.`);
+  const segments = logo.split("/");
+  if (
+    logo.includes("\\") ||
+    logo.startsWith("/") ||
+    segments.includes("..") ||
+    segments.includes(".") ||
+    !logo.endsWith(".svg")
+  ) {
+    throw new Error(`Invalid codenhub.logo in ${manifestPath}: expected a package-relative path to an .svg file.`);
   }
-
-  if (value.order !== undefined && (!Number.isInteger(value.order) || (value.order as number) < 0)) {
-    throw new Error(`Invalid codenhub.docs.order in ${manifestPath}: expected a non-negative integer.`);
-  }
-
-  if (value.listed !== undefined && typeof value.listed !== "boolean") {
-    throw new Error(`Invalid codenhub.docs.listed in ${manifestPath}: expected a boolean.`);
-  }
-
-  const label = getOptionalText(value.label, "label", manifestPath);
-  if (label === undefined) {
-    throw new Error(`Invalid codenhub.docs.label in ${manifestPath}: expected a non-empty string.`);
-  }
-
-  const demoUrl = getOptionalText(value.demoUrl, "demoUrl", manifestPath);
-  if (demoUrl !== undefined && !URL.canParse(demoUrl)) {
-    throw new Error(`Invalid codenhub.docs.demoUrl in ${manifestPath}: expected an absolute URL.`);
-  }
-
-  return {
-    demoUrl,
-    description: getOptionalText(value.description, "description", manifestPath),
-    label,
-    listed: value.listed as boolean | undefined,
-    order: value.order as number | undefined,
-    slug: getOptionalText(value.slug, "slug", manifestPath),
-    status: value.status as PackageStatus,
-  };
+  return logo;
 }
 
 /**
- * Reads the `codenhub.docs` metadata that opts a package into public documentation.
+ * Reads a package's `codenhub` metadata.
+ *
+ * Identity lives on `codenhub` itself. A manifest from a release tag cut before
+ * the migration keeps it inside `codenhub.docs` instead, and reads the same.
  * @param value Parsed package manifest.
  * @param manifestPath Manifest path used in error messages.
- * @returns Resolved metadata, or `null` when the package declares none.
- * @throws When the manifest or its documentation metadata is malformed.
+ * @returns Resolved metadata, or `null` when the package declares neither identity nor `codenhub.docs`.
+ * @throws When the manifest or its metadata is malformed, or mixes both shapes.
  */
 export function parsePackageMetadata(value: unknown, manifestPath: string): PackageMetadata | null {
   if (!isRecord(value)) {
@@ -150,7 +150,23 @@ export function parsePackageMetadata(value: unknown, manifestPath: string): Pack
   }
 
   const manifest = value as PackageManifest;
-  if (!isRecord(manifest.codenhub) || manifest.codenhub.docs === undefined) {
+  if (!isRecord(manifest.codenhub)) {
+    return null;
+  }
+
+  const codenhub = manifest.codenhub;
+  const docs = codenhub.docs;
+  if (docs !== undefined && !isRecord(docs)) {
+    throw new Error(`Invalid codenhub.docs in ${manifestPath}: expected an object.`);
+  }
+
+  const legacy = usesLegacyMetadata(manifest);
+  if (legacy && declaresAny(codenhub, IDENTITY_FIELDS)) {
+    throw new Error(
+      `Invalid codenhub in ${manifestPath}: declare package metadata on codenhub, not inside codenhub.docs.`,
+    );
+  }
+  if (docs === undefined && !declaresAny(codenhub, IDENTITY_FIELDS)) {
     return null;
   }
 
@@ -158,25 +174,49 @@ export function parsePackageMetadata(value: unknown, manifestPath: string): Pack
     throw new Error(`Invalid package name in ${manifestPath}: expected a non-empty string.`);
   }
 
-  const docs = getDocsMetadata(manifest.codenhub.docs, manifestPath);
-  const fallbackSlug = manifest.name.split("/").at(-1);
-  const slug = docs.slug ?? fallbackSlug;
+  const source = legacy ? (docs as Record<string, unknown>) : codenhub;
+  const prefix = legacy ? "codenhub.docs" : "codenhub";
 
+  if (typeof source.status !== "string" || !STATUSES.includes(source.status as PackageStatus)) {
+    throw new Error(`Invalid ${prefix}.status in ${manifestPath}: expected active, experimental, or deprecated.`);
+  }
+
+  if (source.order !== undefined && (!Number.isInteger(source.order) || (source.order as number) < 0)) {
+    throw new Error(`Invalid ${prefix}.order in ${manifestPath}: expected a non-negative integer.`);
+  }
+
+  if (source.listed !== undefined && typeof source.listed !== "boolean") {
+    throw new Error(`Invalid ${prefix}.listed in ${manifestPath}: expected a boolean.`);
+  }
+
+  const label = getOptionalText(source.label, `${prefix}.label`, manifestPath);
+  if (label === undefined) {
+    throw new Error(`Invalid ${prefix}.label in ${manifestPath}: expected a non-empty string.`);
+  }
+
+  const demoUrl = getOptionalText(source.demoUrl, `${prefix}.demoUrl`, manifestPath);
+  if (demoUrl !== undefined && !URL.canParse(demoUrl)) {
+    throw new Error(`Invalid ${prefix}.demoUrl in ${manifestPath}: expected an absolute URL.`);
+  }
+
+  const slug = getOptionalText(source.slug, `${prefix}.slug`, manifestPath) ?? manifest.name.split("/").at(-1);
   if (slug === undefined || !SLUG_PATTERN.test(slug)) {
-    throw new Error(`Invalid codenhub.docs.slug in ${manifestPath}: expected a kebab-case slug.`);
+    throw new Error(`Invalid ${prefix}.slug in ${manifestPath}: expected a kebab-case slug.`);
   }
 
   const packageDescription =
     typeof manifest.description === "string" && manifest.description.trim() !== "" ? manifest.description : undefined;
 
   return {
-    demoUrl: docs.demoUrl,
-    description: docs.description ?? packageDescription,
-    label: docs.label,
-    listed: docs.listed ?? true,
-    order: docs.order,
+    demoUrl,
+    description: getOptionalText(source.description, `${prefix}.description`, manifestPath) ?? packageDescription,
+    documented: docs !== undefined,
+    label,
+    listed: (source.listed as boolean | undefined) ?? true,
+    logo: legacy ? undefined : getLogo(codenhub.logo, manifestPath),
+    order: source.order as number | undefined,
     slug,
-    status: docs.status,
+    status: source.status as PackageStatus,
   };
 }
 
@@ -207,7 +247,7 @@ export function buildPackageDefinitions(
   const packages = Object.entries(manifests).flatMap(([rawManifestPath, manifest]) => {
     const manifestPath = normalizePath(rawManifestPath);
     const metadata = parsePackageMetadata(manifest, manifestPath);
-    if (metadata === null) {
+    if (metadata === null || !metadata.documented) {
       return [];
     }
 

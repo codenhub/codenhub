@@ -1,10 +1,10 @@
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 
 import { UnsupportedFrontmatterError } from "../documentation/document-policy.ts";
 import { buildLlmsFull, listLlmsFullSources } from "../documentation/llms-full.ts";
 import { inspectPackageDocumentation } from "../documentation/package-documentation.ts";
-import { parsePackageMetadata } from "../documentation/package-metadata.ts";
+import { parsePackageMetadata, usesLegacyMetadata, type PackageMetadata } from "../documentation/package-metadata.ts";
 import { hasContentDrift } from "../generators/generator.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { isDocumentedPackage } from "../workspace/package-policy.ts";
@@ -12,10 +12,14 @@ import type { CheckRule, CheckRuleContext, Finding } from "./rule.ts";
 
 const LLMS_FULL = "llms-full.txt";
 
-function resolveSlug(workspacePackage: WorkspacePackage): { slug: string; finding?: Finding } {
+function resolveSlug(workspacePackage: WorkspacePackage): {
+  slug: string;
+  finding?: Finding;
+  metadata?: PackageMetadata | null;
+} {
   try {
     const metadata = parsePackageMetadata(workspacePackage.manifest, `${workspacePackage.location}/package.json`);
-    return { slug: metadata?.slug ?? workspacePackage.unscopedName };
+    return { metadata, slug: metadata?.slug ?? workspacePackage.unscopedName };
   } catch (cause) {
     return {
       finding: {
@@ -48,12 +52,19 @@ function collectSlugOwners(workspacePackages: readonly WorkspacePackage[]): Map<
   return owners;
 }
 
+async function isFile(path: string): Promise<boolean> {
+  return stat(path).then(
+    (entry) => entry.isFile(),
+    () => false,
+  );
+}
+
 async function checkDocumentation(
   context: CheckRuleContext,
   slugOwners: ReadonlyMap<string, string[]>,
 ): Promise<Finding[]> {
   const workspacePackage = context.package;
-  const { finding, slug } = resolveSlug(workspacePackage);
+  const { finding, metadata, slug } = resolveSlug(workspacePackage);
   if (finding !== undefined) {
     return [finding];
   }
@@ -70,6 +81,26 @@ async function checkDocumentation(
             severity: "error",
           },
         ];
+
+  // The reader still accepts this shape for release tags cut before the
+  // migration; only the working tree is held to the current one.
+  if (usesLegacyMetadata(workspacePackage.manifest)) {
+    findings.push({
+      code: "documentation/legacy-metadata",
+      location: "package.json",
+      message:
+        'Package metadata belongs on "codenhub", not inside "codenhub.docs"; move every field except "reference" up one level.',
+      severity: "error",
+    });
+  }
+  if (metadata?.logo !== undefined && !(await isFile(join(workspacePackage.directory, metadata.logo)))) {
+    findings.push({
+      code: "documentation/missing-logo",
+      location: "package.json",
+      message: `codenhub.logo references "${metadata.logo}", which is not a file in the package.`,
+      severity: "error",
+    });
+  }
 
   const report = await inspectPackageDocumentation({
     includeNpmInventory: context.includePack,

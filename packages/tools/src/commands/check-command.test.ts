@@ -148,7 +148,7 @@ describe("hub check", () => {
   it("waives the registered undocumented-export rule through the exception register", async () => {
     const pkg = createPackage("@codenhub/example", {
       name: "@codenhub/example",
-      codenhub: { docs: { label: "Example", status: "active" } },
+      codenhub: { label: "Example", status: "active", docs: {} },
       exports: { ".": { types: "./dist/index.d.ts" } },
     });
     pkg.directory = await mkdtemp(join(tmpdir(), "codenhub-check-export-"));

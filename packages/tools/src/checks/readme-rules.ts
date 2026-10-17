@@ -54,7 +54,7 @@ async function checkReadmeStatus(workspacePackage: WorkspacePackage): Promise<Fi
         {
           code: "readme/missing-status-notice",
           location: README,
-          message: `"codenhub.docs.status" is "${status}", so the README must state it above the first section.`,
+          message: `"codenhub.status" is "${status}", so the README must state it above the first section.`,
           severity: "error",
         },
       ];
@@ -64,7 +64,7 @@ async function checkReadmeStatus(workspacePackage: WorkspacePackage): Promise<Fi
         {
           code: "readme/conflicting-status-notice",
           location: README,
-          message: `The README opens with a "${noticedStatus}" notice while "codenhub.docs.status" is "${status}".`,
+          message: `The README opens with a "${noticedStatus}" notice while "codenhub.status" is "${status}".`,
           severity: "error",
         },
       ];

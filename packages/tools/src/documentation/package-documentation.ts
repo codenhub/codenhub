@@ -172,7 +172,9 @@ export async function loadWorkspaceDocumentation(
         throw new Error(`Invalid package manifest at ${manifestPath}: ${(cause as Error).message}`);
       }
       const metadata = parsePackageMetadata(manifest, manifestPath);
-      return metadata === null ? undefined : { rootPath: dirname(manifestPath), slug: metadata.slug };
+      return metadata === null || !metadata.documented
+        ? undefined
+        : { rootPath: dirname(manifestPath), slug: metadata.slug };
     }),
   );
   const documentedPackages = packages

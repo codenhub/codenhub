@@ -12,7 +12,7 @@ import {
   type PublishedDocsSnapshotDeps,
 } from "./published-docs-snapshot.ts";
 
-const DOCS_MANIFEST = { codenhub: { docs: { label: "Error", status: "active" } }, name: "@codenhub/error" };
+const DOCS_MANIFEST = { codenhub: { label: "Error", status: "active", docs: {} }, name: "@codenhub/error" };
 
 function createPackage(root: string, location: string, name: string): WorkspacePackage {
   return {
@@ -20,7 +20,7 @@ function createPackage(root: string, location: string, name: string): WorkspaceP
     directoryName: location.slice(location.lastIndexOf("/") + 1),
     isPrivate: false,
     location,
-    manifest: { codenhub: { docs: { label: name, status: "active" } }, name },
+    manifest: { codenhub: { label: name, status: "active", docs: {} }, name },
     name,
     scripts: {},
     unscopedName: name.slice(name.lastIndexOf("/") + 1),

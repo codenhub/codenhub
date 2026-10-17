@@ -101,7 +101,7 @@ describe("hub new", () => {
     expect(manifest.private).toBe(false);
     expect(manifest.type).toBe("module");
     expect(manifest.publishConfig).toEqual({ access: "public" });
-    expect(manifest.codenhub.docs).toEqual({ label: "Widget", status: "experimental" });
+    expect(manifest.codenhub).toEqual({ label: "Widget", status: "experimental", docs: {} });
     expect(Object.keys(manifest.scripts).sort()).toEqual([
       "build",
       "prepublishOnly",
@@ -127,14 +127,14 @@ describe("hub new", () => {
     const result = await runNew(["sample-widget", "--description=Widget helpers."]);
     const manifest = JSON.parse(await readFile(join(result.root, "packages/sample-widget/package.json"), "utf8"));
 
-    expect(manifest.codenhub.docs.label).toBe("Sample Widget");
+    expect(manifest.codenhub.label).toBe("Sample Widget");
   });
 
   it("uses a label the author gives", async () => {
     const result = await runNew(["widget", "--label=Widget Kit", "--description=Widget helpers."]);
     const manifest = JSON.parse(await readFile(join(result.root, "packages/widget/package.json"), "utf8"));
 
-    expect(manifest.codenhub.docs.label).toBe("Widget Kit");
+    expect(manifest.codenhub.label).toBe("Widget Kit");
   });
 
   it("refuses an empty label rather than writing one hub check rejects", async () => {
