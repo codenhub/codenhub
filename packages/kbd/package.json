@@ -46,9 +46,8 @@
     "vitest": "catalog:"
   },
   "codenhub": {
-    "docs": {
-      "label": "Kbd",
-      "status": "experimental"
-    }
+    "label": "Kbd",
+    "status": "experimental",
+    "docs": {}
   }
 }

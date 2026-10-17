@@ -90,10 +90,9 @@
     }
   },
   "codenhub": {
-    "docs": {
-      "label": "ComponentSystem",
-      "status": "experimental",
-      "listed": false
-    }
+    "label": "ComponentSystem",
+    "status": "experimental",
+    "listed": false,
+    "docs": {}
   }
 }

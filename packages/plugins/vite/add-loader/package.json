@@ -51,9 +51,8 @@
     "vite": "^8.0.0"
   },
   "codenhub": {
-    "docs": {
-      "label": "Vite Add Loader",
-      "status": "experimental"
-    }
+    "label": "Vite Add Loader",
+    "status": "experimental",
+    "docs": {}
   }
 }

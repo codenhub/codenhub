@@ -49,9 +49,8 @@
     "@tauri-apps/api": "^2.0.0"
   },
   "codenhub": {
-    "docs": {
-      "label": "Tauri Window",
-      "status": "experimental"
-    }
+    "label": "Tauri Window",
+    "status": "experimental",
+    "docs": {}
   }
 }

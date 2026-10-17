@@ -51,9 +51,8 @@
     "vite": "^8.0.0"
   },
   "codenhub": {
-    "docs": {
-      "label": "Vite Deferred CSS",
-      "status": "experimental"
-    }
+    "label": "Vite Deferred CSS",
+    "status": "experimental",
+    "docs": {}
   }
 }
