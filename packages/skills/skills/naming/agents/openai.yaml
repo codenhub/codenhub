@@ -1,0 +1,4 @@
+interface:
+  display_name: "Naming"
+  short_description: "Find meaningful, memorable, ownable names"
+  default_prompt: "Use $naming to name this: understand what it does and its essence, generate candidates across myth, history, science, the field, language roots, and coined forms, verify meanings and check collisions, then recommend one name with a one-sentence story and a few distinct alternatives."
