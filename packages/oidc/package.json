@@ -62,6 +62,8 @@
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "miniflare": "catalog:",
+    "oidc-provider": "catalog:",
+    "openid-client": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
