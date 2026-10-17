@@ -14,6 +14,8 @@ export type {
   InteractionRecord,
   OidcStore,
   Provider,
+  ProviderDiagnostic,
+  ProviderDiagnosticReason,
   ProviderEndpoints,
   ProviderOptions,
   ProviderTtl,

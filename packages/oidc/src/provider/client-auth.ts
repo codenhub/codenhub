@@ -1,10 +1,11 @@
 import { type KeySet, createKeySet, createVerifier } from "@codenhub/jwt";
 
 import { checkClientRecord } from "./client-record";
+import { refuse } from "./diagnostics";
 import type { ResolvedOptions } from "./options";
 import { tokenErrorResponse } from "./responses";
 import { verifyClientSecret } from "./secrets";
-import type { ClientRecord } from "./types";
+import type { ClientRecord, ProviderDiagnosticReason } from "./types";
 
 /** The client assertion type of RFC 7523 §2.2, the only one this provider accepts. */
 const CLIENT_ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
@@ -48,12 +49,22 @@ type Extracted =
   | { readonly ok: true; readonly presented: Presented }
   | { readonly ok: false; readonly response: Response };
 
-const invalidRequest = (): Extracted => ({ ok: false, response: tokenErrorResponse("invalid_request") });
-
-/** A failed client check. The Basic challenge is added only when Basic was presented, as RFC 6749 §5.2 asks. */
-const rejectClient = (presented: Presented): ClientAuthResult => ({
+const invalidRequest = (reason: ProviderDiagnosticReason): Extracted => ({
   ok: false,
-  response: tokenErrorResponse("invalid_client", presented.method === "basic" ? BASIC_CHALLENGE : undefined),
+  response: refuse(tokenErrorResponse("invalid_request"), reason),
+});
+
+/**
+ * A failed client check. The Basic challenge is added only when Basic was presented, as RFC 6749 §5.2 asks.
+ * `clientId` is named only when it comes from the store.
+ */
+const rejectClient = (presented: Presented, reason: ProviderDiagnosticReason, clientId?: string): ClientAuthResult => ({
+  ok: false,
+  response: refuse(
+    tokenErrorResponse("invalid_client", presented.method === "basic" ? BASIC_CHALLENGE : undefined),
+    reason,
+    clientId,
+  ),
 });
 
 /**
@@ -81,10 +92,11 @@ export async function authenticateClient(
   const { presented } = extracted;
   const record = await options.store.findClient(presented.clientId);
   if (record === undefined) {
-    return rejectClient(presented);
+    return rejectClient(presented, "client_unknown");
   }
   const client = checkClientRecord(record, presented.clientId);
-  return (await proves(options, client, presented)) ? { ok: true, client } : rejectClient(presented);
+  const proof = await proves(options, client, presented);
+  return proof === "proven" ? { ok: true, client } : rejectClient(presented, proof, client.clientId);
 }
 
 /**
@@ -99,7 +111,7 @@ function extractCredentials(request: Request, parameters: ReadonlyMap<string, st
     (value) => value !== null && value !== undefined,
   ).length;
   if (presentedCount > 1) {
-    return invalidRequest();
+    return invalidRequest("client_credentials_ambiguous");
   }
   if (authorization !== null) {
     return extractBasic(authorization, parameters);
@@ -107,14 +119,16 @@ function extractCredentials(request: Request, parameters: ReadonlyMap<string, st
   if (secret !== undefined) {
     const clientId = parameters.get("client_id");
     return clientId === undefined
-      ? invalidRequest()
+      ? invalidRequest("client_credentials_missing")
       : { ok: true, presented: { method: "client_secret_post", clientId, secret } };
   }
   if (assertion !== undefined) {
     return extractAssertion(assertion, parameters);
   }
   const clientId = parameters.get("client_id");
-  return clientId === undefined ? invalidRequest() : { ok: true, presented: { method: "none", clientId } };
+  return clientId === undefined
+    ? invalidRequest("client_credentials_missing")
+    : { ok: true, presented: { method: "none", clientId } };
 }
 
 /**
@@ -123,7 +137,10 @@ function extractCredentials(request: Request, parameters: ReadonlyMap<string, st
  * (RFC 6749 §5.2).
  */
 function extractBasic(authorization: string, parameters: ReadonlyMap<string, string>): Extracted {
-  const invalidClient: Extracted = { ok: false, response: tokenErrorResponse("invalid_client", BASIC_CHALLENGE) };
+  const invalidClient: Extracted = {
+    ok: false,
+    response: refuse(tokenErrorResponse("invalid_client", BASIC_CHALLENGE), "client_credentials_malformed"),
+  };
   // The scheme is case-insensitive and followed by exactly one space; anything else is another scheme.
   const match = /^basic (.*)$/i.exec(authorization);
   if (match === null) {
@@ -144,7 +161,7 @@ function extractBasic(authorization: string, parameters: ReadonlyMap<string, str
   // A body client_id must agree with the header's, so the two cannot name different clients.
   const bodyClientId = parameters.get("client_id");
   if (bodyClientId !== undefined && bodyClientId !== clientId) {
-    return invalidRequest();
+    return invalidRequest("client_credentials_ambiguous");
   }
   return { ok: true, presented: { method: "basic", clientId, secret } };
 }
@@ -152,36 +169,58 @@ function extractBasic(authorization: string, parameters: ReadonlyMap<string, str
 /** Reads a JWT client assertion. Its `client_id` is required, since the payload is not decoded before it is verified. */
 function extractAssertion(assertion: string, parameters: ReadonlyMap<string, string>): Extracted {
   const clientId = parameters.get("client_id");
-  if (parameters.get("client_assertion_type") !== CLIENT_ASSERTION_TYPE || clientId === undefined) {
-    return invalidRequest();
+  if (clientId === undefined) {
+    return invalidRequest("client_credentials_missing");
+  }
+  if (parameters.get("client_assertion_type") !== CLIENT_ASSERTION_TYPE) {
+    return invalidRequest("client_credentials_malformed");
   }
   return { ok: true, presented: { method: "assertion", clientId, assertion } };
 }
 
+/** The method a registered client authentication expects to be presented with. */
+const PRESENTED_METHOD: Readonly<Record<ClientRecord["auth"]["method"], Presented["method"]>> = {
+  none: "none",
+  client_secret_basic: "basic",
+  client_secret_post: "client_secret_post",
+  client_secret_jwt: "assertion",
+  private_key_jwt: "assertion",
+};
+
 /**
- * Tests whether the presented credentials prove the client's registered method. A method mismatch is a
- * failure of the same kind as a wrong secret, so a caller cannot tell the two apart.
+ * Tests whether the presented credentials prove the client's registered method. A method mismatch gets the
+ * same response as a wrong secret, so a caller cannot tell the two apart; only the operator's diagnostic does.
  */
-async function proves(options: ResolvedOptions, client: ClientRecord, presented: Presented): Promise<boolean> {
+async function proves(
+  options: ResolvedOptions,
+  client: ClientRecord,
+  presented: Presented,
+): Promise<"proven" | "client_method_mismatch" | "client_credentials_wrong"> {
   const { auth } = client;
+  if (presented.method !== PRESENTED_METHOD[auth.method]) {
+    return "client_method_mismatch";
+  }
+  let proven: boolean;
   switch (auth.method) {
     case "none":
-      return presented.method === "none";
+      proven = true;
+      break;
     case "client_secret_basic":
-      return presented.method === "basic" && (await verifyClientSecret(presented.secret, auth.secretHash));
     case "client_secret_post":
-      return presented.method === "client_secret_post" && (await verifyClientSecret(presented.secret, auth.secretHash));
+      proven = "secret" in presented && (await verifyClientSecret(presented.secret, auth.secretHash));
+      break;
     case "client_secret_jwt":
-      return (
-        presented.method === "assertion" &&
-        (await verifyAssertion(options, presented.clientId, presented.assertion, createKeySet([auth.key])))
-      );
+      proven =
+        "assertion" in presented &&
+        (await verifyAssertion(options, presented.clientId, presented.assertion, createKeySet([auth.key])));
+      break;
     case "private_key_jwt":
-      return (
-        presented.method === "assertion" &&
-        (await verifyAssertion(options, presented.clientId, presented.assertion, auth.keys))
-      );
+      proven =
+        "assertion" in presented &&
+        (await verifyAssertion(options, presented.clientId, presented.assertion, auth.keys));
+      break;
   }
+  return proven ? "proven" : "client_credentials_wrong";
 }
 
 /**

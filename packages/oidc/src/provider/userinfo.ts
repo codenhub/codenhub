@@ -1,4 +1,5 @@
 import { digestKey } from "../shared/encoding";
+import { refuse } from "./diagnostics";
 import type { ResolvedOptions } from "./options";
 import { bearerErrorResponse, jsonResponse, methodNotAllowed, preflightResponse } from "./responses";
 
@@ -36,23 +37,26 @@ export async function handleUserinfo(options: ResolvedOptions, request: Request)
 async function answerWithAccessToken(options: ResolvedOptions, request: Request): Promise<Response> {
   const header = request.headers.get("authorization");
   if (header === null) {
-    return bearerErrorResponse();
+    return refuse(bearerErrorResponse(), "access_token_missing");
   }
   const match = BEARER_AUTHORIZATION.exec(header);
   const token = match?.[1];
   if (token === undefined) {
-    return bearerErrorResponse("invalid_request");
+    return refuse(bearerErrorResponse("invalid_request"), "access_token_malformed");
   }
 
   // Looked up by digest in the access-token table only. An ID token or refresh token presented here is
   // never found, which is what stops one kind of token from being used as another.
   const record = await options.store.findAccessToken(await digestKey(token));
-  if (record === undefined || record.expiresAt <= options.now()) {
-    return bearerErrorResponse("invalid_token");
+  if (record === undefined) {
+    return refuse(bearerErrorResponse("invalid_token"), "access_token_unknown");
+  }
+  if (record.expiresAt <= options.now()) {
+    return refuse(bearerErrorResponse("invalid_token"), "access_token_expired", record.clientId);
   }
   // OpenID Connect Core §5.3: the endpoint serves only tokens obtained with `openid`.
   if (!record.scopes.includes("openid")) {
-    return bearerErrorResponse("insufficient_scope");
+    return refuse(bearerErrorResponse("insufficient_scope"), "access_token_without_openid", record.clientId);
   }
 
   const claimNames = claimNamesFor(options, record.scopes);

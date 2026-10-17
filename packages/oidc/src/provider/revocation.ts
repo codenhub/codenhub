@@ -1,4 +1,5 @@
 import { digestKey } from "../shared/encoding";
+import { refuse } from "./diagnostics";
 import type { ResolvedOptions } from "./options";
 import { revocationResponse, tokenErrorResponse } from "./responses";
 import { readClientRequest } from "./token";
@@ -31,16 +32,18 @@ export async function handleRevocation(options: ResolvedOptions, request: Reques
     return read.response;
   }
   const token = read.parameters.get("token");
+  const clientId = read.client.clientId;
   if (token === undefined || token === "") {
-    return tokenErrorResponse("invalid_request");
+    return refuse(tokenErrorResponse("invalid_request"), "token_missing", clientId);
   }
   const key = await digestKey(token);
-  const clientId = read.client.clientId;
+  const otherClient = (): Response =>
+    refuse(tokenErrorResponse("invalid_request"), "token_of_another_client", clientId);
 
   const accessToken = await options.store.findAccessToken(key);
   if (accessToken !== undefined) {
     if (accessToken.clientId !== clientId) {
-      return tokenErrorResponse("invalid_request");
+      return otherClient();
     }
     await options.store.revokeGrant(accessToken.grantId);
     return revocationResponse();
@@ -56,5 +59,5 @@ export async function handleRevocation(options: ResolvedOptions, request: Reques
     return revocationResponse();
   }
   await options.store.revokeGrant(consumption.record.grantId);
-  return consumption.record.clientId === clientId ? revocationResponse() : tokenErrorResponse("invalid_request");
+  return consumption.record.clientId === clientId ? revocationResponse() : otherClient();
 }

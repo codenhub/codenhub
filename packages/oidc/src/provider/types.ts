@@ -210,6 +210,66 @@ export interface ProviderEndpoints {
   readonly revocation?: string;
 }
 
+/**
+ * Why the provider refused a request at the token, userinfo, or revocation endpoint. The client is sent only
+ * the OAuth error code, so this is what an operator debugs with.
+ */
+export type ProviderDiagnosticReason =
+  // The request, before the client is known
+  | "content_type"
+  | "body"
+  | "parameters"
+  // Client authentication
+  | "client_credentials_missing"
+  | "client_credentials_ambiguous"
+  | "client_credentials_malformed"
+  | "client_unknown"
+  | "client_method_mismatch"
+  | "client_credentials_wrong"
+  // The token request
+  | "grant_type_missing"
+  | "grant_type_unsupported"
+  | "parameter_missing"
+  | "code_verifier_malformed"
+  | "code_unknown"
+  | "code_replayed"
+  | "code_expired"
+  | "code_client_mismatch"
+  | "redirect_uri_mismatch"
+  | "code_verifier_mismatch"
+  | "scope_invalid"
+  | "refresh_token_unknown"
+  | "refresh_token_replayed"
+  | "refresh_token_expired"
+  | "refresh_token_client_mismatch"
+  | "scope_not_granted"
+  // Userinfo
+  | "access_token_missing"
+  | "access_token_malformed"
+  | "access_token_unknown"
+  | "access_token_expired"
+  | "access_token_without_openid"
+  // Revocation
+  | "token_missing"
+  | "token_of_another_client";
+
+/**
+ * One refused request, for the operator's logs. It never holds a value the request carried: no token, code,
+ * secret, verifier, or unverified client identifier.
+ */
+export interface ProviderDiagnostic {
+  readonly endpoint: "token" | "userinfo" | "revocation";
+  readonly reason: ProviderDiagnosticReason;
+  /** The HTTP status the client was sent. */
+  readonly status: number;
+  /**
+   * The client, when the provider knows it from the store: the authenticated client, the registered client
+   * whose authentication failed, or the client a presented token belongs to. Absent when the request only
+   * named a client.
+   */
+  readonly clientId?: string;
+}
+
 /** How {@link createProvider} runs. Invalid options throw `TypeError` at creation. */
 export interface ProviderOptions {
   /** The issuer identifier: an `https` URL without query or fragment, used byte for byte everywhere. */
@@ -249,6 +309,14 @@ export interface ProviderOptions {
    * @defaultValue `Date.now`
    */
   readonly now?: () => number;
+  /**
+   * Called with the reason each time the token, userinfo, or revocation endpoint refuses a request, after the
+   * response is built and before `handle` resolves. The client only ever sees the OAuth error code, so this
+   * is how an operator tells an expired code from a wrong verifier. It is called synchronously; like the store
+   * and the `claims` callback, an exception it throws makes `handle` reject. Authorization failures are not
+   * reported here, since `beginAuthorization` and `completeAuthorization` already return their issues.
+   */
+  readonly onDiagnostic?: (diagnostic: ProviderDiagnostic) => void;
 }
 
 /** An authorization request the app now handles: who the client is, and what it asked for. Frozen. */

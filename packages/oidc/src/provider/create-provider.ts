@@ -1,5 +1,6 @@
 import type { ProviderMetadata } from "../shared/types";
 import { beginAuthorization, completeAuthorization } from "./authorization";
+import { reportRefusal } from "./diagnostics";
 import { buildMetadata, createJwksDocument, type JwksDocument } from "./discovery";
 import { type ResolvedEndpoints, type ResolvedOptions, resolveOptions } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse } from "./responses";
@@ -67,11 +68,15 @@ async function answerRequest(context: ProviderContext, request: Request): Promis
     case "jwks":
       return answerDocument(request, context.loadJwks);
     case "token":
-      return handleToken(context.options, request);
+      return reportRefusal(context.options.onDiagnostic, "token", await handleToken(context.options, request));
     case "userinfo":
-      return handleUserinfo(context.options, request);
+      return reportRefusal(context.options.onDiagnostic, "userinfo", await handleUserinfo(context.options, request));
     case "revocation":
-      return handleRevocation(context.options, request);
+      return reportRefusal(
+        context.options.onDiagnostic,
+        "revocation",
+        await handleRevocation(context.options, request),
+      );
     default:
       return null;
   }

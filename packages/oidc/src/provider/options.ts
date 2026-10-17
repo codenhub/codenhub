@@ -1,7 +1,7 @@
 import type { KeyPair, PublicKey } from "@codenhub/jwt";
 
 import { isHttpsUrl } from "../shared/urls";
-import type { ClaimsRequest, OidcStore, ProviderOptions } from "./types";
+import type { ClaimsRequest, OidcStore, ProviderDiagnostic, ProviderOptions } from "./types";
 
 /** Claims each standard scope releases (OpenID Connect Core §5.4). */
 const STANDARD_SCOPE_CLAIMS: Readonly<Record<string, readonly string[]>> = {
@@ -78,6 +78,7 @@ export interface ResolvedOptions {
   readonly ttl: ResolvedTtl;
   /** Current time in seconds since the Unix epoch, truncated to whole seconds. */
   readonly now: () => number;
+  readonly onDiagnostic: ((diagnostic: ProviderDiagnostic) => void) | undefined;
 }
 
 const STORE_METHODS = [
@@ -233,6 +234,9 @@ export function resolveOptions(options: ProviderOptions): ResolvedOptions {
   if (options.now !== undefined && typeof options.now !== "function") {
     fail("now", "must be a function");
   }
+  if (options.onDiagnostic !== undefined && typeof options.onDiagnostic !== "function") {
+    fail("onDiagnostic", "must be a function");
+  }
   const clock = options.now ?? Date.now;
   return Object.freeze({
     issuer,
@@ -244,5 +248,6 @@ export function resolveOptions(options: ProviderOptions): ResolvedOptions {
     scopeClaims: readScopes(options.scopes),
     ttl: Object.freeze(readTtl(options.ttl)),
     now: () => Math.floor(clock() / 1000),
+    onDiagnostic: options.onDiagnostic,
   });
 }
