@@ -159,6 +159,8 @@ Each value is an absolute `https` URL of visible ASCII (no spaces, control or no
 
 `provider.handle(request)` answers the five endpoints it owns. It returns a promise of a `Response`, or of `null` when the request is for none of them. It routes by method and by origin and path, and ignores the query, so a client may append parameters to the discovery URL.
 
+Pass the request before anything reads its body. Middleware that parses the form first, such as a framework body parser, leaves an empty stream, so `handle`, `beginAuthorization` and `endSession` reject with `TypeError` for a `POST` whose body was already read, rather than refuse a valid request.
+
 Routing compares the request URL's origin with the origin of the provider's endpoints, so `request.url` must carry the public origin the endpoints use. Behind a TLS-terminating proxy, Node.js adapters often build `request.url` from `http://` and the internal host, and then `handle` returns `null` for every request. Rebuild the request with the public URL before calling `handle`:
 
 ```ts
@@ -207,7 +209,7 @@ The authorization endpoint is served by the app, because the user's login and co
 
 ### Starting: beginAuthorization
 
-`provider.beginAuthorization(request)` validates an authorization request. It accepts a `GET`, whose parameters are in the query, or a `POST` with an `application/x-www-form-urlencoded` body. On success it saves the request as an interaction and returns it. On failure it returns a result whose `redirect` is either the response to return to the browser, or `null`:
+`provider.beginAuthorization(request)` validates an authorization request. It accepts a `GET`, whose parameters are in the query, or a `POST` with an `application/x-www-form-urlencoded` body, whose `Content-Type` may carry only a UTF-8 `charset`, as the token endpoint requires. On success it saves the request as an interaction and returns it. On failure it returns a result whose `redirect` is either the response to return to the browser, or `null`:
 
 ```ts
 async function authorize(request: Request): Promise<Response> {
@@ -229,7 +231,7 @@ The checks run in this order, and the first failure is the one reported. Failure
 | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------- |
 | The URL is at most 8192 characters.                                                                                                               | `invalid_request`                                                                              | `null`     |
 | The method is `GET`, or `POST` with a form body. The body is at most 16384 bytes.                                                                 | `invalid_request`                                                                              | `null`     |
-| The parameters parse: no duplicate, at most 32, none longer than 4096 characters.                                                                 | `invalid_request`, with `params.reason` of `duplicate`, `too_many` or `too_long`               | `null`     |
+| The parameters parse: no duplicate, at most 32, none longer than 4096 characters, and no percent-escape that is not valid UTF-8.                  | `invalid_request`, with `params.reason` of `duplicate`, `too_many`, `too_long` or `malformed`  | `null`     |
 | `client_id` is present.                                                                                                                           | `invalid_request`, path `["client_id"]`                                                        | `null`     |
 | The client is registered.                                                                                                                         | `unknown_client`                                                                               | `null`     |
 | `redirect_uri` is present and is one of the client's registered URIs, byte for byte.                                                              | `invalid_redirect_uri`                                                                         | `null`     |
@@ -293,7 +295,7 @@ The method throws `TypeError` in two cases, and they are different:
 
 ## Ending sessions
 
-The provider implements RP-initiated logout. Its end-session endpoint is `endpoints.endSession`, `{issuer}/logout` by default, and discovery advertises it as `end_session_endpoint`. Like the authorization endpoint, it is served by the app: `handle` returns `null` for it, and the app calls `provider.endSession(request)` from its logout route. The request is a `GET` with its parameters in the query, or a `POST` with a form body, read with the same limits and duplicate and UTF-8 rules as the authorization request. It reads `id_token_hint`, `client_id`, `post_logout_redirect_uri`, `state`, `logout_hint` and `ui_locales`.
+The provider implements RP-initiated logout. Its end-session endpoint is `endpoints.endSession`, `{issuer}/logout` by default, and discovery advertises it as `end_session_endpoint`. Like the authorization endpoint, it is served by the app: `handle` returns `null` for it, and the app calls `provider.endSession(request)` from its logout route. The request is a `GET` with its parameters in the query, or a `POST` with a form body whose `Content-Type` may carry only a UTF-8 `charset`, as the token endpoint requires, read with the same limits and duplicate and UTF-8 rules as the authorization request. It reads `id_token_hint`, `client_id`, `post_logout_redirect_uri`, `state`, `logout_hint` and `ui_locales`.
 
 `endSession` returns an `OidcResult<EndSession>`. A failed request never redirects, so the app renders its issues:
 
@@ -340,7 +342,7 @@ The checks run in this order:
 1. The method. `OPTIONS` gets a preflight. Any other method but `POST` gets `405` with `Allow: POST, OPTIONS`.
 2. The `Content-Type`. It must be `application/x-www-form-urlencoded`, optionally with `charset=utf-8`, which may be quoted (`charset="utf-8"`) and written in any letter case. Otherwise `invalid_request`.
 3. The body. It is read as strict UTF-8 and is at most 16384 bytes. Otherwise `invalid_request`.
-4. The parameters. No duplicate, at most 32, and none longer than 4096 characters. Otherwise `invalid_request`.
+4. The parameters. No duplicate, at most 32, none longer than 4096 characters, and no percent-escape that is not valid UTF-8. Otherwise `invalid_request`.
 5. The client's credentials. See [Client authentication](#client-authentication).
 6. The `grant_type`. Missing is `invalid_request`. `authorization_code` and `refresh_token` are `unauthorized_client` for a client whose record does not list `authorization_code` in `grantTypes`, and `client_credentials` is `unauthorized_client` for a client whose record does not list it. A value other than these three is `unsupported_grant_type`.
 7. The grant. See [Authorization code](#authorization-code), [Refresh tokens](#refresh-tokens) and [Client credentials](#client-credentials).
@@ -375,7 +377,7 @@ On success the provider starts a grant, and issues:
 
 - An access token: by default an opaque random value that only its digest is stored under, or a JWT under [`accessToken`](#jwt-access-tokens). It lasts `ttl.accessToken` seconds.
 - A refresh token, only when the granted scopes include `offline_access`. Its family lasts `ttl.refreshToken` seconds from this exchange.
-- An ID token, signed with the first signing key. Its claims are `iss`, `sub`, `aud` (the client identifier), `iat`, `exp` (`ttl.idToken` after `iat`), `auth_time`, `amr` and `acr` when the grant had them, `nonce` when the authorization request had one, and `at_hash` for the access token. Its header is `typ: JWT` and the key's `alg` and `kid`. An ID token carries no scope claims, which are released at userinfo.
+- An ID token, signed with the first signing key. Its claims are `iss`, `sub`, `aud` (the client identifier), `iat`, `exp` (`ttl.idToken` after `iat`), `auth_time`, and `amr` and `acr` when the grant had them, `nonce` when the authorization request had one, and `at_hash` for the access token. Its header is `typ: JWT` and the key's `alg` and `kid`. An ID token carries no scope claims, which are released at userinfo.
 
 ### Refresh tokens
 
@@ -464,7 +466,7 @@ if (verified.ok) {
 
 ## Userinfo
 
-The userinfo endpoint answers `GET` and `POST`, and `OPTIONS` for a preflight. It reads the access token from the `Authorization` header only, in the form `Bearer` followed by one space and an RFC 6750 token. The scheme's letter case does not matter. A token in the body or the query is never read, so a credential does not land in a URL a proxy or a log keeps.
+The userinfo endpoint answers `GET` and `POST`, and `OPTIONS` for a preflight. It reads the access token from the `Authorization` header only, in the form `Bearer` followed by one or more spaces and an RFC 6750 token. The scheme's letter case does not matter. A token in the body or the query is never read, so a credential does not land in a URL a proxy or a log keeps.
 
 | Request                                                   | Answer                                                                                                                                                                                                                                                            |
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -506,7 +508,7 @@ Both are public documents and may be cached. They answer `GET`, with `Cache-Cont
 
 ## Cross-origin requests
 
-The discovery, JWKS, token, userinfo and revocation endpoints answer any origin, with `Access-Control-Allow-Origin: *`, and they answer CORS preflights. This is safe because none of them reads cookies or any other ambient credential: a request is authorized only by what it carries itself, so a page on another origin can do nothing through them that a server could not do with the same credentials.
+The discovery, JWKS, token, userinfo and revocation endpoints answer any origin, with `Access-Control-Allow-Origin: *`, and they answer CORS preflights. A response that carries a `WWW-Authenticate` challenge, from userinfo or from client authentication at the token and revocation endpoints, also sends `Access-Control-Expose-Headers: WWW-Authenticate`, so a browser client can read it. This is safe because none of them reads cookies or any other ambient credential: a request is authorized only by what it carries itself, so a page on another origin can do nothing through them that a server could not do with the same credentials.
 
 The authorization endpoint never receives CORS headers. The app serves it, so the app decides its headers, and the package adds none, which means a cross-origin page cannot read its response. The endpoint is meant for top-level navigation. Protecting it from requests that other sites trigger is the app's job, as [Hostile input](security.md) notes.
 

@@ -48,7 +48,7 @@ Cache the metadata, or the client, rather than calling `discover` on every sign-
 
 ## Creating a client
 
-`createClient(options)` returns a frozen client. It makes no request, and it throws `TypeError` when an option is invalid, so a misconfigured client never starts. Its message names the option and never its value.
+`createClient(options)` returns a frozen client. It makes no request, and it throws `TypeError` when an option is invalid, so a misconfigured client never starts. Its message names the option and never its value. The client's `metadata` property holds the provider metadata it was created with.
 
 ```ts
 const discovered = await discover("https://login.example.com");
@@ -266,13 +266,13 @@ await session.destroy();
 
 On the page at `postLogoutRedirectUri`, compare the `state` parameter with the `logoutState` in that cookie before you show the user as signed out. The provider returns `state` unchanged.
 
-| Option                  | Meaning                                                                                                                                          | Default   |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
-| `idTokenHint`           | The ID token of the sign-in being ended. It tells the provider which user is leaving. An expired one is still sent, and the provider ignores it. | None sent |
-| `postLogoutRedirectUri` | Where the provider sends the browser afterwards. It must be registered for this client at the provider.                                          | None sent |
-| `state`                 | Returned unchanged to `postLogoutRedirectUri`.                                                                                                   | None sent |
-| `logoutHint`            | A hint about the account being signed out, such as an email address.                                                                             | None sent |
-| `uiLocales`             | Preferred languages for the provider's logout page, as BCP 47 tags, under the same rules as `authorize`.                                         | None sent |
+| Option                  | Meaning                                                                                                                                                                                                                      | Default   |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `idTokenHint`           | The ID token of the sign-in being ended. It tells the provider which user is leaving. An expired one is still sent, and the provider ignores it. It has no length cap of its own; only the 8192-character URL limit applies. | None sent |
+| `postLogoutRedirectUri` | Where the provider sends the browser afterwards. It must be registered for this client at the provider.                                                                                                                      | None sent |
+| `state`                 | Returned unchanged to `postLogoutRedirectUri`.                                                                                                                                                                               | None sent |
+| `logoutHint`            | A hint about the account being signed out, such as an email address.                                                                                                                                                         | None sent |
+| `uiLocales`             | Preferred languages for the provider's logout page, as BCP 47 tags, under the same rules as `authorize`.                                                                                                                     | None sent |
 
 The URL always carries `client_id`, so the provider can match `postLogoutRedirectUri` even after the hint has expired. A hint issued to a different client is refused: the provider returns `invalid_request` at `id_token_hint`, so send the hint from the client it was issued to. The URL keeps any query the endpoint already has. Empty strings are left out.
 
@@ -297,7 +297,7 @@ if (granted.ok) {
 
 `scope` is optional. Without it, the provider grants every scope the client is registered for, except `openid` and `offline_access`, which need a user. With it, the scope list must be a non-empty array of at most 100 scope tokens. A scope the provider refuses is `provider_error` with `params.error` of `invalid_scope`.
 
-The token set has no ID token and no refresh token. An ID token or a refresh token in the response is dropped: no user is signed in, and RFC 6749 §4.4.3 says a refresh token SHOULD NOT be included. Each token is its own grant, so `client.revoke` on one leaves the client's other tokens valid. Userinfo refuses such a token, because it has no `openid` scope: this package's provider answers `403` with `insufficient_scope`, which `client.userinfo` reports as `request_failed` with `params.reason` of `status` and `params.status` of `403`.
+The token set has no ID token and no refresh token. An ID token or a refresh token in the response is checked like any token response, then dropped: no user is signed in, and RFC 6749 §4.4.3 says a refresh token SHOULD NOT be included. Each token is its own grant, so `client.revoke` on one leaves the client's other tokens valid. Userinfo refuses such a token, because it has no `openid` scope: this package's provider answers `403` with `insufficient_scope`, which `client.userinfo` reports as `request_failed` with `params.reason` of `status` and `params.status` of `403`.
 
 The provider must have registered the client for this grant. Otherwise the result is `provider_error` with `params.error` of `unauthorized_client`.
 

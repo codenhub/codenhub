@@ -689,7 +689,7 @@ Persistence the provider needs. The app implements it over its database; `@coden
 
 Every key the provider passes for a code, token, or interaction is a SHA-256 digest of the value, never the value itself, so a leaked store holds no usable code, token or interaction. A client record is different: it may hold a `client_secret_jwt` HMAC key, which the provider needs in full, so a client record's credentials still need protection. Interaction, code and token records are plain JSON; a client record may hold `@codenhub/jwt` keys, which the app rebuilds from what it persists. Methods may throw or reject on infrastructure failure; the provider lets that propagate rather than answering as if the value were invalid.
 
-The `consume*` methods must be atomic: two concurrent calls for one key must never both get `consumed`. A store without a compare-and-set or transaction, such as plain Cloudflare KV, cannot implement them; use D1, a Durable Object, or a SQL transaction. The revocation check belongs to the same atomic step: a consumption that has not finished when `revokeGrant` resolves must not return `consumed`.
+The `consume*` methods must be atomic: two concurrent calls for one key must never both get `consumed`. A store without a compare-and-set or transaction, such as plain Cloudflare KV, cannot implement them; use D1, a Durable Object, or a SQL transaction. The revocation check belongs to the same atomic step: the store orders each consumption and each revocation of the same grant, and a consumption whose atomic step runs after the revocation's must not return `consumed`.
 
 Each `save*` method must reject when its key already exists, and must never reset a used entry, which would make a spent code or refresh token consumable again. The provider's keys are random digests, so this happens only through an adapter bug.
 
@@ -1099,7 +1099,7 @@ Endpoint URLs.
 readonly issuer: string;
 ```
 
-The issuer identifier: an `https` URL without query or fragment, used byte for byte everywhere.
+The issuer identifier: an `https` URL of visible ASCII, with no query, fragment or credentials, used byte for byte everywhere.
 
 #### now
 
@@ -1346,7 +1346,7 @@ export type OidcIssueCode = "request_failed" | "invalid_metadata" | "issuer_mism
 
 Stable category of a failure that callers can branch on without parsing messages.
 
-Client codes come from `discover` and the client's methods; provider codes from `beginAuthorization` and `completeAuthorization`. A `beginAuthorization` failure that redirects reuses the OAuth error code the client is sent; only the codes it can send are listed, so an exhaustive `switch` has no dead branches. An OAuth code a provider sends to this client is reported as `provider_error` with the code in `params.error`.
+Client codes come from `discover` and the client's methods; provider codes from `beginAuthorization`, `completeAuthorization` and `endSession`. A `beginAuthorization` failure that redirects reuses the OAuth error code the client is sent; only the codes it can send are listed, so an exhaustive `switch` has no dead branches. An OAuth code a provider sends to this client is reported as `provider_error` with the code in `params.error`.
 
 ### OidcPathSegment
 
