@@ -184,7 +184,7 @@ function readStore(store: unknown): OidcStore {
 }
 
 function readScopes(scopes: unknown): ReadonlyMap<string, readonly string[]> {
-  if (scopes !== undefined && !isRecord(scopes)) {
+  if (scopes !== undefined && (!isRecord(scopes) || Array.isArray(scopes))) {
     return fail("scopes", "must be an object");
   }
   const resolved = new Map<string, readonly string[]>(PROTOCOL_SCOPES.map((scope) => [scope, []]));

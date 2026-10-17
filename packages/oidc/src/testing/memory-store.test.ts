@@ -120,6 +120,55 @@ describe("findClient", () => {
     expect(await store.findClient("client-a")).toEqual(makeClient());
   });
 
+  it("should not change the stored client when the caller mutates grantTypes or postLogoutRedirectUris", async () => {
+    const client = makeClient({
+      grantTypes: ["authorization_code"],
+      postLogoutRedirectUris: ["https://app.example/signed-out"],
+    });
+    const store = createMemoryStore({ clients: [client] });
+
+    (client.grantTypes as string[]).push("refresh_token");
+    (client.postLogoutRedirectUris as string[]).push("https://other.example/signed-out");
+
+    expect(await store.findClient("client-a")).toEqual(
+      makeClient({
+        grantTypes: ["authorization_code"],
+        postLogoutRedirectUris: ["https://app.example/signed-out"],
+      }),
+    );
+  });
+
+  it("should not change the next find when the caller mutates returned grantTypes or postLogoutRedirectUris", async () => {
+    const store = createMemoryStore({
+      clients: [
+        makeClient({
+          grantTypes: ["authorization_code"],
+          postLogoutRedirectUris: ["https://app.example/out"],
+        }),
+      ],
+    });
+
+    const found = await store.findClient("client-a");
+    (found!.grantTypes as string[]).push("refresh_token");
+    (found!.postLogoutRedirectUris as string[]).push("https://other.example/out");
+
+    expect(await store.findClient("client-a")).toEqual(
+      makeClient({
+        grantTypes: ["authorization_code"],
+        postLogoutRedirectUris: ["https://app.example/out"],
+      }),
+    );
+  });
+
+  it("should not add grantTypes or postLogoutRedirectUris to a client that did not have them", async () => {
+    const store = createMemoryStore({ clients: [makeClient()] });
+
+    const found = await store.findClient("client-a");
+
+    expect(found).not.toHaveProperty("grantTypes");
+    expect(found).not.toHaveProperty("postLogoutRedirectUris");
+  });
+
   it("should not change the next find when the caller mutates a returned client", async () => {
     const store = createMemoryStore({ clients: [makeClient()] });
 

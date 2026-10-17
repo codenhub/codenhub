@@ -16,6 +16,19 @@ const NO_STORE_HEADERS: Readonly<Record<string, string>> = {
   pragma: "no-cache",
 };
 
+/**
+ * `WWW-Authenticate` is not a CORS-safelisted response header, so a cross-origin page reads a challenge only when
+ * the response names it here. Every response that carries a challenge also carries CORS_HEADERS, so both go together.
+ */
+const CHALLENGE_EXPOSURE: Readonly<Record<string, string>> = {
+  "access-control-expose-headers": "WWW-Authenticate",
+};
+
+/** Whether a header set carries a `WWW-Authenticate` challenge, whatever the letter case of its name. */
+function carriesChallenge(headers: Readonly<Record<string, string>> | undefined): boolean {
+  return Object.keys(headers ?? {}).some((name) => name.toLowerCase() === "www-authenticate");
+}
+
 /** Whether a response may be cached by the browser and intermediaries. */
 export type Caching = "public" | "no-store";
 
@@ -31,6 +44,7 @@ export function jsonResponse(
       ...init.headers,
       "content-type": "application/json",
       ...CORS_HEADERS,
+      ...(carriesChallenge(init.headers) ? CHALLENGE_EXPOSURE : {}),
       ...(init.caching === "no-store" ? NO_STORE_HEADERS : { "cache-control": "public, max-age=300" }),
     },
   });
@@ -59,7 +73,7 @@ export function bearerErrorResponse(error?: "invalid_request" | "invalid_token" 
   const challenge = error === undefined ? "Bearer" : `Bearer error="${error}"`;
   return new Response(null, {
     status,
-    headers: { ...CORS_HEADERS, ...NO_STORE_HEADERS, "www-authenticate": challenge },
+    headers: { ...CORS_HEADERS, ...CHALLENGE_EXPOSURE, ...NO_STORE_HEADERS, "www-authenticate": challenge },
   });
 }
 

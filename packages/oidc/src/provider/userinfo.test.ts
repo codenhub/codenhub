@@ -161,6 +161,29 @@ describe("handleUserinfo", () => {
     expect(response.headers.get("www-authenticate")).toBe("Bearer");
   });
 
+  it("shouldAcceptBearerFollowedByMoreThanOneSpace", async () => {
+    const { options, store } = await setUp();
+    await saveAccessToken(store, ACCESS_TOKEN);
+
+    const response = await handleUserinfo(
+      options,
+      new Request(ENDPOINT, {
+        headers: { authorization: `Bearer  ${ACCESS_TOKEN}` },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+  });
+
+  it("shouldExposeTheBearerChallengeToCrossOriginBrowsers", async () => {
+    const { options } = await setUp();
+
+    const response = await handleUserinfo(options, new Request(ENDPOINT));
+
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    expect(response.headers.get("access-control-expose-headers")).toBe("WWW-Authenticate");
+  });
+
   it("shouldRespond400WhenTheSchemeIsNotBearer", async () => {
     const { options } = await setUp();
 

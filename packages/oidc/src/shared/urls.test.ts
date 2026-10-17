@@ -21,6 +21,17 @@ describe("isHttpsUrl", () => {
     },
   );
 
+  it.each(["https:example.com", "https:/example.com/cb"])(
+    "refusesSchemeWithoutDoubleSlash_%s, which the URL parser rewrites to a host it did not name",
+    (value) => {
+      expect(isHttpsUrl(value)).toBe(false);
+    },
+  );
+
+  it("shouldAcceptUppercaseSchemeWithDoubleSlash", () => {
+    expect(isHttpsUrl("HTTPS://provider.test/authorize")).toBe(true);
+  });
+
   it("shouldAcceptAbsoluteHttpsUrl", () => {
     expect(isHttpsUrl("https://provider.test/authorize")).toBe(true);
   });
@@ -66,6 +77,17 @@ describe("isRedirectUri", () => {
 
   it("shouldAcceptCustomSchemeForNativeApps", () => {
     expect(isRedirectUri("com.example.app:/oauth2redirect")).toBe(true);
+  });
+
+  it.each(["https:app.example/cb", "http:app.example/cb", "HTTPS:app.example/cb"])(
+    "refusesSpecialSchemeWithoutDoubleSlash_%s, which the URL parser rewrites",
+    (value) => {
+      expect(isRedirectUri(value)).toBe(false);
+    },
+  );
+
+  it("shouldAcceptCustomSchemeWithSingleSlashForNativeApps", () => {
+    expect(isRedirectUri("com.example.app:/callback")).toBe(true);
   });
 
   it("shouldAcceptHttpLoopbackRedirectUri", () => {

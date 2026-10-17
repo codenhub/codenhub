@@ -92,6 +92,41 @@ describe("endSession", () => {
     expect(result.ok && result.value.redirect?.headers.get("location")).toBe(AFTER_LOGOUT);
   });
 
+  it("throws TypeError for a POST whose body was already read", async () => {
+    const { op, pair } = await setup();
+    const request = new Request(LOGOUT, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        id_token_hint: await idToken(pair),
+      }).toString(),
+    });
+    await request.text();
+
+    await expect(op.endSession(request)).rejects.toThrow(TypeError);
+  });
+
+  it("refuses a form body whose charset is not utf-8 as it refuses any other content type", async () => {
+    const { op, pair } = await setup();
+    const body = new URLSearchParams({
+      id_token_hint: await idToken(pair),
+      post_logout_redirect_uri: AFTER_LOGOUT,
+    });
+    const refusal = (contentType: string) =>
+      op.endSession(
+        new Request(LOGOUT, {
+          method: "POST",
+          headers: { "content-type": contentType },
+          body: body.toString(),
+        }),
+      );
+
+    const latin1 = await refusal("application/x-www-form-urlencoded; charset=iso-8859-1");
+
+    expect(latin1.ok).toBe(false);
+    expect(latin1).toEqual(await refusal("text/plain"));
+  });
+
   it("takes the client from the hint when client_id is absent, and from azp for several audiences", async () => {
     const { op, pair } = await setup();
 

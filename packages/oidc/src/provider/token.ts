@@ -1,6 +1,7 @@
 import { sign } from "@codenhub/jwt";
 
-import { readBody } from "../shared/body";
+import { assertBodyUnread, readBody } from "../shared/body";
+import { isFormContentType } from "../shared/content-type";
 import { digestKey, randomToken, timingSafeEqual } from "../shared/encoding";
 import { MAX_BODY_BYTES } from "../shared/limits";
 import { parseParameters } from "../shared/parameters";
@@ -13,8 +14,6 @@ import { refuse } from "./diagnostics";
 import { PROTOCOL_SCOPES, type ResolvedOptions } from "./options";
 import { jsonResponse, methodNotAllowed, preflightResponse, tokenErrorResponse } from "./responses";
 import type { ClientRecord, CodeRecord, ProviderDiagnosticReason, RefreshTokenRecord } from "./types";
-
-const FORM_MEDIA_TYPE = "application/x-www-form-urlencoded";
 
 /** A token grant's identity and what it carries: enough to issue tokens for it again. */
 interface Grant {
@@ -31,7 +30,8 @@ interface Grant {
  *
  * @remarks
  * Never throws for a request: every refusal is an OAuth error response with only `{ error }` in its body.
- * Store rejections propagate, because a store that fails must not look like a refused request.
+ * Store rejections propagate, because a store that fails must not look like a refused request, and a request
+ * whose body was already read rejects with `TypeError`, since that is a bug in the calling code.
  *
  * @param options - The resolved provider options.
  * @param request - The request to the token endpoint.
@@ -82,6 +82,7 @@ export type ClientRequestResult =
  * @returns The authenticated client and its parameters, or the response that refuses the request.
  */
 export async function readClientRequest(options: ResolvedOptions, request: Request): Promise<ClientRequestResult> {
+  assertBodyUnread(request, "handle");
   if (request.method === "OPTIONS") {
     return { ok: false, response: preflightResponse(["POST"]) };
   }
@@ -101,20 +102,6 @@ export async function readClientRequest(options: ResolvedOptions, request: Reque
   }
   const auth = await authenticateClient(options, request, parsed.parameters);
   return auth.ok ? { ok: true, client: auth.client, parameters: parsed.parameters } : auth;
-}
-
-/**
- * Tests the request's `Content-Type` (RFC 6749 §4.1.3). Parameters are allowed only as a UTF-8 charset,
- * because the body is always decoded as UTF-8.
- */
-function isFormContentType(value: string | null): boolean {
-  if (value === null) {
-    return false;
-  }
-  const [mediaType, ...parameters] = value.split(";").map((part) => part.trim().toLowerCase());
-  return (
-    mediaType === FORM_MEDIA_TYPE && parameters.every((part) => part === "charset=utf-8" || part === 'charset="utf-8"')
-  );
 }
 
 /**

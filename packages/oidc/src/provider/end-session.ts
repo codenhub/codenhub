@@ -26,7 +26,7 @@ interface Hint {
  * registration.
  */
 export async function endSession(options: ResolvedOptions, request: Request): Promise<OidcResult<EndSession>> {
-  const read = await readFrontChannelParameters(request);
+  const read = await readFrontChannelParameters(request, "endSession");
   if (!read.ok) {
     return fail(
       read.reason === undefined

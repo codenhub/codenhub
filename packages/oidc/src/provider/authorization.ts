@@ -183,7 +183,7 @@ function targetOf(options: ResolvedOptions, interaction: InteractionRecord): Red
 
 /** Reads the parameters from the query for GET or from the form body for POST, refusing anything else. */
 async function readParameters(request: Request): Promise<Checked<ParameterMap>> {
-  const read = await readFrontChannelParameters(request);
+  const read = await readFrontChannelParameters(request, "beginAuthorization");
   if (!read.ok) {
     return renderError(
       read.reason === undefined

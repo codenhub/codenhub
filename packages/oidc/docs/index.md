@@ -30,12 +30,12 @@ Beyond the code flow, the package also covers:
 
 ## Which entrypoint to import
 
-| Import                    | What it is for                                                                                                                                                     |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@codenhub/oidc`          | Types only: the result shape, the issue types, and the metadata, claims and token types. It has no runtime code.                                                   |
-| `@codenhub/oidc/client`   | The relying party: `discover` and `createClient`, with the client's types.                                                                                         |
-| `@codenhub/oidc/provider` | The OpenID Provider: `createProvider`, `generateClientSecret` and `hashClientSecret`, with the provider's types, including the `OidcStore` contract you implement. |
-| `@codenhub/oidc/testing`  | `createMemoryStore`, an in-memory store for tests and examples. Not for production.                                                                                |
+| Import                    | What it is for                                                                                                                                                                                                                 |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@codenhub/oidc`          | Types only: the result shape, the issue types, the OAuth error and prompt types, and the metadata and claim types. It has no runtime code.                                                                                     |
+| `@codenhub/oidc/client`   | The relying party: `discover` and `createClient`, with the client's types.                                                                                                                                                     |
+| `@codenhub/oidc/provider` | The OpenID Provider: `createProvider`, `generateClientSecret` and `hashClientSecret`, with the provider's types, including the `OidcStore` contract you implement.                                                             |
+| `@codenhub/oidc/testing`  | `createMemoryStore`, an in-memory store for tests and examples. Not for production. `storeConformanceCases`, the checks of the `OidcStore` contract for your own store, with the `StoreConformanceCase` and `StoreSeed` types. |
 
 A deployment that runs a relying party imports from `/client`, and one that runs a provider imports from `/provider`. The two do not depend on each other, so a client bundle does not carry provider code.
 
@@ -51,7 +51,7 @@ type OidcResult<T> = { ok: true; value: T } | { ok: false; error: { issues: [Oid
 
 A failed result lists every issue the operation found, in the order its checks ran, and the list is never empty. Each issue has a stable `code` to branch on, an optional `path` naming the place the issue concerns, and optional `params` of facts that are never input values. The result is deeply frozen. [Issues](errors.md) lists every code.
 
-A few operations return a richer failure: `beginAuthorization` also returns a `redirect`, which is either the response to send to the client, or `null` when the app must render an error itself.
+`beginAuthorization` returns a richer failure: `error.redirect` is either the response to send to the client, or `null` when the app must render an error itself. `endSession` returns a plain failure with no `redirect`; its success value carries `redirect`.
 
 Failures the package cannot answer for a caller, such as an invalid option, a malformed store record or an outcome that contradicts the authorization request, are not results. They throw `TypeError`, or reject for the methods that are asynchronous, because they are bugs in the code calling the package and not something the other side did.
 
@@ -75,7 +75,7 @@ The detailed steps are in [Client](client.md) and [Provider](provider.md). The g
 
 ## Requirements
 
-- Node.js 24 or newer, or a browser or edge runtime that provides Web Crypto, `fetch`, `Request`, `Response`, `URL`, `TextEncoder` and `TextDecoder`.
+- Node.js 24 or newer, or a browser or edge runtime that provides Web Crypto, `fetch`, `Request`, `Response`, `URL`, `URL.canParse`, `URLSearchParams`, `AbortController`, `setTimeout`, `clearTimeout`, `TextEncoder`, `TextDecoder`, `String.prototype.isWellFormed` and `Object.hasOwn`.
 - `@codenhub/jwt` as a peer dependency, `^0.0.1`. Install one copy of it, because keys it creates are recognized only by the copy that created them.
 - ES modules only. Ed25519 requires Web Crypto's Ed25519 support.
 

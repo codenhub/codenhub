@@ -6,6 +6,16 @@ export type ReadBodyResult =
 const DECIMAL_INTEGER_PATTERN = /^\d+$/;
 
 /**
+ * Throws when a request's body was already read, which leaves an empty stream. That is a bug in the calling code,
+ * such as middleware that parsed the form first, so it throws rather than refusing a valid request.
+ */
+export function assertBodyUnread(request: Request, operation: string): void {
+  if (request.bodyUsed) {
+    throw new TypeError(`${operation}: the request body was already read; pass the request before anything reads it`);
+  }
+}
+
+/**
  * Reads a request body as UTF-8 text, refusing it once it exceeds `maxBytes`.
  *
  * A `content-length` over the limit is refused without reading. The header can lie, so the byte count
