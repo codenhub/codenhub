@@ -367,7 +367,9 @@
   gap: 0.75rem;
 }
 
-.package-header-title h1 {
+/* The README's own title is an <h2> under the page's <h1>, sized to match it. */
+.package-header-title h1,
+.package-readme-title {
   margin: 0;
   font-size: clamp(2rem, 1.2rem + 3vw, 3rem);
   line-height: 1.1;
@@ -412,7 +414,7 @@
   fill: currentcolor;
 }
 
-.package-section h2 {
+.package-section > h2 {
   margin: 0 0 1rem;
   font-size: 1.25rem;
 }

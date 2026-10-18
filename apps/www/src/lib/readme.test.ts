@@ -5,10 +5,11 @@ import { renderReadme } from "./readme";
 const BASE_URL = "https://github.com/codenhub/codenhub/blob/@codenhub/validation@0.4.0/packages/validation/";
 
 describe("renderReadme", () => {
-  it("drops the leading title, which the page already shows", async () => {
+  it("keeps the leading title as a section heading that looks like a title", async () => {
     const html = await renderReadme("# @codenhub/validation\n\nValidation for data.\n", BASE_URL);
 
     expect(html).not.toContain("<h1");
+    expect(html).toMatch(/<h2 class="package-readme-title"[^>]*>@codenhub\/validation<\/h2>/u);
     expect(html).toContain("<p>Validation for data.</p>");
   });
 

@@ -5,15 +5,17 @@ interface MarkdownNode {
   depth?: number;
   url?: string;
   children?: MarkdownNode[];
+  data?: { hProperties?: Record<string, unknown> };
 }
 
 // A URL with a scheme, a protocol-relative URL, or an in-page fragment stays as written.
 const UNRESOLVED_URL = /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/iu;
 
 /**
- * Fits a README to the package page: drops its leading title, which the page
- * already shows, and resolves package-relative link and image URLs against
- * `baseUrl`, since they name files beside the README rather than site pages.
+ * Fits a README to the package page: demotes its leading title to an `<h2>`,
+ * since the page has its own `<h1>`, styled to look like the page title. It
+ * also resolves package-relative link and image URLs against `baseUrl`, since
+ * they name files beside the README rather than site pages.
  */
 function remarkPackageReadme(baseUrl: string) {
   const resolve = (node: MarkdownNode): void => {
@@ -25,7 +27,8 @@ function remarkPackageReadme(baseUrl: string) {
   return () => (tree: MarkdownNode) => {
     const first = tree.children?.[0];
     if (first?.type === "heading" && first.depth === 1) {
-      tree.children?.shift();
+      first.depth = 2;
+      first.data = { ...first.data, hProperties: { ...first.data?.hProperties, className: ["package-readme-title"] } };
     }
     resolve(tree);
   };
