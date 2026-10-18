@@ -30,6 +30,12 @@ function walk(node: MarkdownNode, visit: (node: MarkdownNode) => void): void {
  * since the page has its own `<h1>`, styled to look like the page title. It
  * also resolves package-relative URLs, since they name files beside the README
  * rather than site pages: images against `imageBaseUrl`, links against `baseUrl`.
+ *
+ * Only Markdown links, images, and definitions are resolved. Raw HTML reaches
+ * the renderer as unparsed strings, so a relative `src` or `href` written in it,
+ * such as `<img src="docs/logo.svg">`, stays relative to the package page and
+ * breaks. No package README uses raw HTML today; one that does should write
+ * absolute URLs, or parse its HTML here first.
  */
 function remarkPackageReadme({ baseUrl, imageBaseUrl }: ReadmeBases) {
   return () => (tree: MarkdownNode) => {
