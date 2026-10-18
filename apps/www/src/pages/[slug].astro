@@ -9,6 +9,7 @@ import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
 import type { GetStaticPaths } from "astro";
 
 import BrandIcon from "../components/brand-icon.astro";
+import InstallTabs from "../components/install-tabs.astro";
 import { catalogPackages, type CatalogPackage } from "../lib/catalog";
 import { formatDate } from "../lib/format";
 import { describeRootSize, formatBytes } from "../lib/package-facts";
@@ -27,11 +28,6 @@ const { links, properties, releases, size } = entry;
 const latest = releases.latest;
 const rootSize = describeRootSize(size);
 
-const installCommands = [
-  ["npm", `npm install ${entry.name}`],
-  ["pnpm", `pnpm add ${entry.name}`],
-  ["yarn", `yarn add ${entry.name}`],
-] as const;
 
 interface Link {
   href: string;
@@ -85,7 +81,6 @@ const hasSizes = entrypoints.some((entrypoint) => entrypoint.size !== undefined)
           {latest !== undefined && <span class="badge secondary soft">v{latest.version}</span>}
           {entry.status !== undefined && <StatusBadge status={entry.status} />}
         </div>
-        <code class="package-name">{entry.name}</code>
         {entry.description !== undefined && <p class="package-description">{entry.description}</p>}
         <nav aria-label={`${entry.label} links`} class="package-links">
           {
@@ -107,16 +102,7 @@ const hasSizes = entrypoints.some((entrypoint) => entrypoint.size !== undefined)
 
       <section aria-labelledby="install-title" class="package-section">
         <h2 id="install-title">Install</h2>
-        <ul class="package-install">
-          {
-            installCommands.map(([manager, command]) => (
-              <li>
-                <span class="package-install-manager">{manager}</span>
-                <code>{command}</code>
-              </li>
-            ))
-          }
-        </ul>
+        <InstallTabs packageName={entry.name} />
       </section>
 
       <section aria-labelledby="facts-title" class="package-section">

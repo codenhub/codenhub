@@ -1,0 +1,153 @@
+---
+/**
+ * The install command for each package manager, one tab each, with a copy
+ * button. The manager a visitor picks is remembered across package pages.
+ * Without JavaScript the first tab's command still shows.
+ *
+ * @param packageName - Full npm name, such as `@codenhub/validation`.
+ */
+import BrandIcon, { type Brand } from "./brand-icon.astro";
+
+interface Props {
+  packageName: string;
+}
+
+const { packageName } = Astro.props;
+
+const managers: { brand: Brand; command: string }[] = [
+  { brand: "npm", command: `npm install ${packageName}` },
+  { brand: "pnpm", command: `pnpm add ${packageName}` },
+  { brand: "yarn", command: `yarn add ${packageName}` },
+  { brand: "bun", command: `bun add ${packageName}` },
+];
+---
+
+<div class="install-tabs" data-install-tabs>
+  <div aria-label="Package manager" class="install-tablist" role="tablist">
+    {
+      managers.map(({ brand }, index) => (
+        <button
+          aria-controls={`install-panel-${brand}`}
+          aria-selected={index === 0 ? "true" : "false"}
+          class="install-tab"
+          data-manager={brand}
+          id={`install-tab-${brand}`}
+          role="tab"
+          tabindex={index === 0 ? 0 : -1}
+          type="button"
+        >
+          <BrandIcon brand={brand} class="install-tab-icon" />
+          {brand}
+        </button>
+      ))
+    }
+  </div>
+  {
+    managers.map(({ brand, command }, index) => (
+      <div
+        aria-labelledby={`install-tab-${brand}`}
+        class="install-panel"
+        hidden={index !== 0}
+        id={`install-panel-${brand}`}
+        role="tabpanel"
+      >
+        <code>{command}</code>
+        <button aria-label="Copy command" class="install-copy" data-copy={command} title="Copy command" type="button">
+          <i aria-hidden="true" class="ic-lucide-copy" data-copy-icon="idle" />
+          <i aria-hidden="true" class="ic-lucide-check" data-copy-icon="done" hidden />
+        </button>
+      </div>
+    ))
+  }
+</div>
+
+<script>
+  const STORAGE_KEY = "codenhub:package-manager";
+
+  for (const root of document.querySelectorAll<HTMLElement>("[data-install-tabs]")) {
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+
+    const select = (tab: HTMLButtonElement, focus: boolean): void => {
+      for (const candidate of tabs) {
+        const isSelected = candidate === tab;
+        candidate.setAttribute("aria-selected", String(isSelected));
+        candidate.tabIndex = isSelected ? 0 : -1;
+        const panel = document.getElementById(candidate.getAttribute("aria-controls") ?? "");
+        if (panel !== null) {
+          panel.hidden = !isSelected;
+        }
+      }
+      if (focus) {
+        tab.focus();
+      }
+    };
+
+    // Storage can be unavailable (private windows, blocked site data); the first tab is the fallback.
+    let remembered: string | null = null;
+    try {
+      remembered = localStorage.getItem(STORAGE_KEY);
+    } catch {
+      // Keep the first tab.
+    }
+    const initial = tabs.find((tab) => tab.dataset.manager === remembered);
+    if (initial !== undefined) {
+      select(initial, false);
+    }
+
+    root.addEventListener("click", (event) => {
+      const tab = (event.target as Element).closest<HTMLButtonElement>('[role="tab"]');
+      if (tab !== null) {
+        select(tab, false);
+        try {
+          localStorage.setItem(STORAGE_KEY, tab.dataset.manager ?? "");
+        } catch {
+          // The choice just is not remembered.
+        }
+      }
+    });
+
+    root.addEventListener("keydown", (event) => {
+      const index = tabs.indexOf(event.target as HTMLButtonElement);
+      if (index === -1) {
+        return;
+      }
+      const next =
+        event.key === "ArrowRight"
+          ? tabs[(index + 1) % tabs.length]
+          : event.key === "ArrowLeft"
+            ? tabs[(index - 1 + tabs.length) % tabs.length]
+            : event.key === "Home"
+              ? tabs[0]
+              : event.key === "End"
+                ? tabs.at(-1)
+                : undefined;
+      if (next !== undefined) {
+        event.preventDefault();
+        select(next, true);
+      }
+    });
+
+    for (const button of root.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
+      button.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(button.dataset.copy ?? "");
+        } catch {
+          return;
+        }
+        const [idle, done] = ["idle", "done"].map((state) =>
+          button.querySelector<HTMLElement>(`[data-copy-icon="${state}"]`),
+        );
+        idle?.toggleAttribute("hidden", true);
+        done?.toggleAttribute("hidden", false);
+        button.setAttribute("aria-label", "Copied");
+        button.title = "Copied";
+        setTimeout(() => {
+          idle?.toggleAttribute("hidden", false);
+          done?.toggleAttribute("hidden", true);
+          button.setAttribute("aria-label", "Copy command");
+          button.title = "Copy command";
+        }, 1500);
+      });
+    }
+  }
+</script>

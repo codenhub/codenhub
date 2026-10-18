@@ -359,12 +359,6 @@
   height: 2.5rem;
 }
 
-.package-name {
-  align-self: flex-start;
-  color: var(--color-text-secondary);
-  overflow-wrap: anywhere;
-}
-
 .package-description {
   margin: 0;
   max-width: 44rem;
@@ -391,31 +385,91 @@
   font-size: 1.25rem;
 }
 
-.package-install {
-  display: grid;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.install-tabs {
+  max-width: 44rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-surface);
+  overflow: hidden;
 }
 
-.package-install li {
+.install-tablist {
   display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.package-install-manager {
-  flex: none;
-  width: 2.5rem;
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
-}
-
-.package-install code {
   overflow-x: auto;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.install-tab {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: color var(--motion-duration-fast, 120ms) var(--motion-ease);
+}
+
+.install-tab:hover,
+.install-tab[aria-selected="true"] {
+  color: var(--color-text);
+}
+
+.install-tab[aria-selected="true"] {
+  border-bottom-color: currentcolor;
+}
+
+.install-tab-icon {
+  width: 1rem;
+  height: 1rem;
+  fill: currentcolor;
+}
+
+.install-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.75rem 0.75rem 1rem;
+}
+
+/* `hidden` loses to the `display` above without this. */
+.install-panel[hidden] {
+  display: none;
+}
+
+.install-panel code {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 0;
+  background: none;
   white-space: nowrap;
+}
+
+.install-copy {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--control-height, 2.25rem);
+  height: var(--control-height, 2.25rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.install-copy:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-hover);
+}
+
+.install-copy [hidden] {
+  display: none;
 }
 
 .package-facts {
@@ -447,23 +501,14 @@
   overflow-x: auto;
 }
 
+/* Borders, padding, and fill come from the native `data-table` styling. */
 .package-table {
   width: 100%;
-  border-collapse: collapse;
   font-variant-numeric: tabular-nums;
 }
 
 .package-table :is(th, td) {
-  padding: 0.5rem 1rem 0.5rem 0;
-  border-bottom: 1px solid var(--color-border);
-  text-align: start;
   white-space: nowrap;
-}
-
-.package-table th {
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
-  font-weight: 500;
 }
 
 .package-note {
