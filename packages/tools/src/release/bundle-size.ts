@@ -72,14 +72,14 @@ export async function measureEntrypoint(file: string, peers: readonly string[]):
 export type PackageBuilder = (
   workspacePackage: WorkspacePackage,
   timeoutMs?: number,
-) => Promise<{ isSuccess: boolean; output: string }>;
+) => Promise<{ isSuccess: boolean; didTimeOut?: boolean; output: string }>;
 
 const runBuild: PackageBuilder = async (workspacePackage, timeoutMs) => {
   const outcome = await execute(
     { args: ["run", "build"], command: "pnpm", cwd: workspacePackage.directory },
     { stdio: "pipe", timeoutMs },
   );
-  return { isSuccess: outcome.isSuccess, output: outcome.output ?? "" };
+  return { didTimeOut: outcome.didTimeOut, isSuccess: outcome.isSuccess, output: outcome.output ?? "" };
 };
 
 /** How {@link measurePackage} builds and measures. Injected by tests. */
@@ -107,6 +107,13 @@ export async function measurePackage(
   options: MeasureOptions = {},
 ): Promise<SizeReport> {
   const built = await (options.build ?? runBuild)(workspacePackage, options.timeoutMs);
+  if (built.didTimeOut === true) {
+    // A build killed at the timeout is not a compile failure, and its partial
+    // output would read like one.
+    throw new Error(
+      `${workspacePackage.name} did not finish building within ${String((options.timeoutMs ?? 0) / 1000)} s, so its size cannot be measured; raise --timeout or find what hangs.\n${built.output}`,
+    );
+  }
   if (!built.isSuccess) {
     throw new Error(`${workspacePackage.name} did not build, so its size cannot be measured.\n${built.output}`);
   }

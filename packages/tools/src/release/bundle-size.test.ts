@@ -130,6 +130,17 @@ describe("measurePackage", () => {
     expect(timeouts).toEqual([1234]);
   });
 
+  it("says a build that hit the timeout timed out, rather than failed", async () => {
+    const directory = await createBuiltPackage();
+
+    await expect(
+      measurePackage(createPackage(directory), {
+        build: async () => ({ didTimeOut: true, isSuccess: false, output: "partial" }),
+        timeoutMs: 600_000,
+      }),
+    ).rejects.toThrow("did not finish building within 600 s");
+  });
+
   it("refuses to measure a package that does not build", async () => {
     const directory = await createBuiltPackage();
 
