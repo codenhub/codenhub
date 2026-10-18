@@ -9,10 +9,11 @@ import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
 import type { GetStaticPaths } from "astro";
 
 import BrandIcon from "../components/brand-icon.astro";
+import CopyButton from "../components/copy-button.astro";
 import InstallTabs from "../components/install-tabs.astro";
 import { catalogPackages, type CatalogPackage } from "../lib/catalog";
 import { formatDate } from "../lib/format";
-import { describeRootSize, formatBytes } from "../lib/package-facts";
+import { describeRootSize, formatBytes, npmTarballUrl } from "../lib/package-facts";
 import { siteConfig } from "../site-config";
 import "../styles/global.css";
 
@@ -44,30 +45,49 @@ const linkCandidates: (Link | undefined)[] = [
   { href: links.npm, label: "npm", brand: "npm", external: true },
   links.llms === undefined ? undefined : { href: links.llms, label: "llms.txt", icon: "ic-lucide-bot", external: true },
 ];
-const pageLinks = linkCandidates.filter((link): link is Link => link !== undefined);
+// The first link is the page's main action and keeps its label; the rest are icons with a tooltip.
+const [primaryLink, ...secondaryLinks] = linkCandidates.filter((link): link is Link => link !== undefined);
 
-const yesNo = (value: boolean): string => (value ? "Yes" : "No");
-const facts: [string, string][] = [
-  [
-    "Latest version",
-    latest !== undefined ? latest.version : releases.history.length === 0 ? "Unreleased" : "No stable release",
-  ],
+const facts: { icon: string; term: string; value: string }[] = [
+  {
+    icon: "ic-lucide-tag",
+    term: "Latest version",
+    value: latest !== undefined ? latest.version : releases.history.length === 0 ? "Unreleased" : "No stable release",
+  },
   ...(releases.lastPublished === undefined
     ? []
-    : [["Last published", formatDate(releases.lastPublished.date)] as [string, string]]),
-  ...(entry.license === undefined ? [] : [["License", entry.license] as [string, string]]),
-  ...(rootSize === undefined ? [] : [["Bundle size", rootSize] as [string, string]]),
-  ["Dependencies", properties.dependencyCount === 0 ? "None" : String(properties.dependencyCount)],
-  ["Peer dependencies", properties.peerDependencies.length === 0 ? "None" : properties.peerDependencies.join(", ")],
-  ["Module format", properties.isEsmOnly ? "ESM only" : "ESM and CommonJS"],
-  ["TypeScript types", properties.shipsTypes ? "Included" : "Not included"],
-  ["Side-effect free", yesNo(properties.isSideEffectFree)],
-  ...(properties.bundled.length === 0 ? [] : [["Bundles", properties.bundled.join(", ")] as [string, string]]),
+    : [{ icon: "ic-lucide-calendar", term: "Last published", value: formatDate(releases.lastPublished.date) }]),
+  ...(entry.license === undefined ? [] : [{ icon: "ic-lucide-scale", term: "License", value: entry.license }]),
+  ...(rootSize === undefined ? [] : [{ icon: "ic-lucide-package", term: "Bundle size", value: rootSize }]),
+  {
+    icon: "ic-lucide-network",
+    term: "Dependencies",
+    value: properties.dependencyCount === 0 ? "None" : String(properties.dependencyCount),
+  },
+  {
+    icon: "ic-lucide-plug",
+    term: "Peer dependencies",
+    value: properties.peerDependencies.length === 0 ? "None" : properties.peerDependencies.join(", "),
+  },
+  { icon: "ic-lucide-file-code", term: "Module format", value: properties.isEsmOnly ? "ESM only" : "ESM and CommonJS" },
+  { icon: "ic-lucide-file-type", term: "TypeScript types", value: properties.shipsTypes ? "Included" : "Not included" },
+  { icon: "ic-lucide-leaf", term: "Side-effect free", value: properties.isSideEffectFree ? "Yes" : "No" },
+  ...(properties.bundled.length === 0
+    ? []
+    : [{ icon: "ic-lucide-boxes", term: "Bundles", value: properties.bundled.join(", ") }]),
 ];
 
 // Every entrypoint the manifest exports, with its size when the release measured it.
-const entrypoints = properties.entrypoints.map((subpath) => ({ size: size?.entrypoints[subpath], subpath }));
+const entrypoints = properties.entrypoints.map((subpath) => ({
+  size: size?.entrypoints[subpath],
+  specifier: subpath === "." ? entry.name : `${entry.name}${subpath.slice(1)}`,
+}));
 const hasSizes = entrypoints.some((entrypoint) => entrypoint.size !== undefined);
+
+const detailTabs = [
+  ...(entrypoints.length === 0 ? [] : [{ id: "entrypoints", label: "Entry points" }]),
+  { id: "releases", label: "Releases" },
+];
 ---
 
 <BaseLayout
@@ -80,103 +100,231 @@ const hasSizes = entrypoints.some((entrypoint) => entrypoint.size !== undefined)
       <a class="package-back" href="/"><i aria-hidden="true" class="ic-lucide-arrow-left"></i>All packages</a>
 
       <header class="package-header">
-        <div class="package-header-title">
-          {entry.logoUrl !== undefined && <img alt="" class="package-logo" src={entry.logoUrl} />}
-          <h1>{entry.label}</h1>
-          {latest !== undefined && <span class="badge secondary soft">v{latest.version}</span>}
-          {entry.status !== undefined && <StatusBadge status={entry.status} />}
+        <div class="package-header-main">
+          <div class="package-header-title">
+            {entry.logoUrl !== undefined && <img alt="" class="package-logo" src={entry.logoUrl} />}
+            <h1>{entry.label}</h1>
+            {latest !== undefined && <span class="badge secondary soft">v{latest.version}</span>}
+            {entry.status !== undefined && <StatusBadge status={entry.status} />}
+          </div>
+          <div class="package-name">
+            <code>{entry.name}</code>
+            <CopyButton label="Copy package name" text={entry.name} />
+          </div>
         </div>
-        {entry.description !== undefined && <p class="package-description">{entry.description}</p>}
         <nav aria-label={`${entry.label} links`} class="package-links">
           {
-            pageLinks.map((link, index) => (
-              <a
-                class:list={["btn", "sm", index === 0 ? "primary" : "secondary"]}
-                href={link.href}
-                rel={link.external ? "noopener noreferrer" : undefined}
-                target={link.external ? "_blank" : undefined}
-              >
-                {link.brand !== undefined && <BrandIcon brand={link.brand} class="package-link-brand" />}
-                {link.icon !== undefined && <i aria-hidden="true" class={link.icon} />}
-                {link.label}
-              </a>
+            secondaryLinks.map((link, index) => (
+              <span class="tooltip" data-tooltip-position="bottom">
+                <a
+                  aria-labelledby={`package-link-tip-${index}`}
+                  class="btn ghost edged icon sm"
+                  href={link.href}
+                  rel={link.external ? "noopener noreferrer" : undefined}
+                  target={link.external ? "_blank" : undefined}
+                >
+                  {link.brand !== undefined && <BrandIcon brand={link.brand} class="package-link-brand" />}
+                  {link.icon !== undefined && <i aria-hidden="true" class={link.icon} />}
+                </a>
+                <span class="tooltip-bubble" id={`package-link-tip-${index}`} role="tooltip">
+                  {link.label}
+                </span>
+              </span>
             ))
           }
+          {
+            primaryLink !== undefined && (
+              <a
+                class="btn primary sm"
+                href={primaryLink.href}
+                rel={primaryLink.external ? "noopener noreferrer" : undefined}
+                target={primaryLink.external ? "_blank" : undefined}
+              >
+                {primaryLink.brand !== undefined && <BrandIcon brand={primaryLink.brand} class="package-link-brand" />}
+                {primaryLink.icon !== undefined && <i aria-hidden="true" class={primaryLink.icon} />}
+                {primaryLink.label}
+              </a>
+            )
+          }
         </nav>
+        {entry.description !== undefined && <p class="package-description">{entry.description}</p>}
       </header>
+
+      <dl aria-label="At a glance" class="package-facts">
+        {
+          facts.map(({ icon, term, value }) => (
+            <div class="card soft edgeless p-sm">
+              <dt>
+                <i aria-hidden="true" class={icon} />
+                {term}
+              </dt>
+              <dd>{value}</dd>
+            </div>
+          ))
+        }
+      </dl>
 
       <section aria-labelledby="install-title" class="package-section">
         <h2 id="install-title">Install</h2>
         <InstallTabs packageName={entry.name} />
       </section>
 
-      <section aria-labelledby="facts-title" class="package-section">
-        <h2 id="facts-title">At a glance</h2>
-        <dl class="package-facts">
+      <section aria-label="Package details" class="package-section" data-package-tabs>
+        <div aria-label="Package details" class="www-tablist" role="tablist">
           {
-            facts.map(([term, value]) => (
-              <div>
-                <dt>{term}</dt>
-                <dd>{value}</dd>
-              </div>
+            detailTabs.map(({ id, label }, index) => (
+              <button
+                aria-controls={`package-panel-${id}`}
+                aria-selected={index === 0 ? "true" : "false"}
+                class="www-tab"
+                id={`package-tab-${id}`}
+                role="tab"
+                tabindex={index === 0 ? 0 : -1}
+                type="button"
+              >
+                {label}
+              </button>
             ))
           }
-        </dl>
-      </section>
+        </div>
 
-      {
-        entrypoints.length > 0 && (
-          <section aria-labelledby="entrypoints-title" class="package-section">
-            <h2 id="entrypoints-title">Entry points</h2>
-            <div class="package-table-wrap">
-              <table class="package-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Import</th>
-                    {hasSizes && <th scope="col">Minified</th>}
-                    {hasSizes && <th scope="col">Gzipped</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {entrypoints.map(({ size: entrySize, subpath }) => (
-                    <tr>
-                      <td>
-                        <code>{subpath === "." ? entry.name : `${entry.name}${subpath.slice(1)}`}</code>
-                      </td>
-                      {hasSizes && <td>{entrySize === undefined ? "—" : formatBytes(entrySize.minified)}</td>}
-                      {hasSizes && (
-                        <td>
-                          {entrySize === undefined ? "—" : formatBytes(entrySize.minified === 0 ? 0 : entrySize.gzip)}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {hasSizes && <p class="package-note">Measured at release, with peer dependencies left out.</p>}
-          </section>
-        )
-      }
-
-      <section aria-labelledby="releases-title" class="package-section">
-        <h2 id="releases-title">Releases</h2>
         {
-          releases.history.length === 0 ? (
-            <p class="package-note">No release yet.</p>
-          ) : (
-            <ol class="package-releases">
-              {releases.history.map((release) => (
-                <li>
-                  <span class="package-release-version">{release.version}</span>
-                  {release.isPrerelease && <span class="badge warning soft">Pre-release</span>}
-                  <time datetime={release.date}>{formatDate(release.date)}</time>
-                </li>
-              ))}
-            </ol>
+          entrypoints.length > 0 && (
+            <div
+              aria-labelledby="package-tab-entrypoints"
+              class="package-panel"
+              id="package-panel-entrypoints"
+              role="tabpanel"
+            >
+              <div class="package-table-wrap">
+                <table class="package-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Import</th>
+                      {hasSizes && <th scope="col">Minified</th>}
+                      {hasSizes && <th scope="col">Gzipped</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entrypoints.map(({ size: entrySize, specifier }) => (
+                      <tr>
+                        <td>
+                          <span class="package-inline-copy">
+                            <code>{specifier}</code>
+                            <CopyButton label="Copy import path" text={specifier} />
+                          </span>
+                        </td>
+                        {hasSizes && <td>{entrySize === undefined ? "—" : formatBytes(entrySize.minified)}</td>}
+                        {hasSizes && (
+                          <td>
+                            {entrySize === undefined ? "—" : formatBytes(entrySize.minified === 0 ? 0 : entrySize.gzip)}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {hasSizes && <p class="package-note">Measured at release, with peer dependencies left out.</p>}
+            </div>
           )
         }
+
+        <div
+          aria-labelledby="package-tab-releases"
+          class="package-panel"
+          hidden={entrypoints.length > 0}
+          id="package-panel-releases"
+          role="tabpanel"
+        >
+          {
+            releases.history.length === 0 ? (
+              <p class="package-note">No release yet.</p>
+            ) : (
+              <div class="package-table-wrap">
+                <table class="package-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Version</th>
+                      <th scope="col">Published</th>
+                      <th scope="col">
+                        <span class="visually-hidden">Actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {releases.history.map((release) => (
+                      <tr>
+                        <td>
+                          <span class="package-release-version">
+                            <code>{release.version}</code>
+                            {release === latest && <span class="badge primary soft">Latest</span>}
+                            {release.isPrerelease && <span class="badge warning soft">Pre-release</span>}
+                          </span>
+                        </td>
+                        <td>
+                          <time datetime={release.date}>{formatDate(release.date)}</time>
+                        </td>
+                        <td>
+                          <span class="package-release-actions">
+                            <CopyButton
+                              label={`Copy install command for ${release.version}`}
+                              text={`npm install ${entry.name}@${release.version}`}
+                            />
+                            <a
+                              aria-label={`Download ${release.version} tarball`}
+                              class="btn secondary ghost icon sm"
+                              href={npmTarballUrl(entry.name, release.version)}
+                              title={`Download ${release.version} tarball`}
+                            >
+                              <i aria-hidden="true" class="ic-lucide-download" />
+                            </a>
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          }
+        </div>
+        <noscript>
+          <style>
+            [data-package-tabs] [role="tablist"] {
+              display: none;
+            }
+            .package-panel[hidden] {
+              display: block;
+            }
+          </style>
+        </noscript>
       </section>
     </div>
   </main>
 </BaseLayout>
+
+<script>
+  import { bindTabs } from "../lib/tabs";
+
+  for (const root of document.querySelectorAll<HTMLElement>("[data-package-tabs]")) {
+    bindTabs(root);
+  }
+
+  // Escape dismisses a link's tooltip without moving the pointer or focus (WCAG 1.4.13).
+  for (const tooltip of document.querySelectorAll<HTMLElement>(".package-links .tooltip")) {
+    const reopen = (): void => tooltip.removeAttribute("data-state");
+    tooltip.addEventListener("pointerleave", reopen);
+    tooltip.addEventListener("focusout", reopen);
+  }
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") {
+      return;
+    }
+    for (const tooltip of document.querySelectorAll<HTMLElement>(
+      ".package-links .tooltip:hover, .package-links .tooltip:focus-within",
+    )) {
+      tooltip.dataset.state = "closed";
+    }
+  });
+</script>

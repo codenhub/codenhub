@@ -120,3 +120,13 @@ export function describeRootSize(size: SizeReport | undefined): string | undefin
   }
   return `${formatBytes(root.minified === 0 ? 0 : root.gzip)} gzip`;
 }
+
+/**
+ * Where the npm registry serves one release's tarball.
+ * @param name Full npm name, such as `@codenhub/validation`.
+ * @param version Released version, such as `0.4.0`.
+ * @returns Such as `https://registry.npmjs.org/@codenhub/validation/-/validation-0.4.0.tgz`.
+ */
+export function npmTarballUrl(name: string, version: string): string {
+  return `https://registry.npmjs.org/${name}/-/${name.slice(name.lastIndexOf("/") + 1)}-${version}.tgz`;
+}
