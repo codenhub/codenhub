@@ -7,6 +7,7 @@
  * @param packageName - Full npm name, such as `@codenhub/validation`.
  */
 import BrandIcon, { type Brand } from "./brand-icon.astro";
+import CopyButton from "./copy-button.astro";
 
 interface Props {
   packageName: string;
@@ -23,13 +24,13 @@ const managers: { brand: Brand; command: string }[] = [
 ---
 
 <div class="install-tabs" data-install-tabs>
-  <div aria-label="Package manager" class="install-tablist" role="tablist">
+  <div aria-label="Package manager" class="www-tablist" role="tablist">
     {
       managers.map(({ brand }, index) => (
         <button
           aria-controls={`install-panel-${brand}`}
           aria-selected={index === 0 ? "true" : "false"}
-          class="install-tab"
+          class="www-tab"
           data-manager={brand}
           id={`install-tab-${brand}`}
           role="tab"
@@ -52,45 +53,25 @@ const managers: { brand: Brand; command: string }[] = [
         role="tabpanel"
       >
         <code>{command}</code>
-        <button aria-label="Copy command" class="btn secondary ghost icon sm" data-copy={command} title="Copy command" type="button">
-          <i aria-hidden="true" class="ic-lucide-copy" data-copy-icon="idle" />
-          <i aria-hidden="true" class="ic-lucide-check" data-copy-icon="done" hidden />
-          <i aria-hidden="true" class="ic-lucide-x" data-copy-icon="failed" hidden />
-        </button>
+        <CopyButton label="Copy command" text={command} />
       </div>
     ))
   }
-  <span class="visually-hidden" data-copy-status role="status"></span>
 </div>
 
 <script>
+  import { bindTabs } from "../lib/tabs";
+
   const STORAGE_KEY = "codenhub:package-manager";
-  // Matches the docs code blocks' copy feedback.
-  const COPY_FEEDBACK_DURATION_MS = 2000;
-  const COPY_LABELS = { done: "Copied", failed: "Copy failed. Try again", idle: "Copy command" } as const;
 
   for (const root of document.querySelectorAll<HTMLElement>("[data-install-tabs]")) {
-    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
-
-    const select = (tab: HTMLButtonElement, focus: boolean): void => {
-      for (const candidate of tabs) {
-        const isSelected = candidate === tab;
-        candidate.setAttribute("aria-selected", String(isSelected));
-        candidate.tabIndex = isSelected ? 0 : -1;
-        const panel = document.getElementById(candidate.getAttribute("aria-controls") ?? "");
-        if (panel !== null) {
-          panel.hidden = !isSelected;
-        }
-      }
-      if (focus) {
-        tab.focus();
-      }
+    const select = bindTabs(root, (tab) => {
       try {
         localStorage.setItem(STORAGE_KEY, tab.dataset.manager ?? "");
       } catch {
         // The choice just is not remembered.
       }
-    };
+    });
 
     // Storage can be unavailable (private windows, blocked site data); the first tab is the fallback.
     let remembered: string | null = null;
@@ -99,76 +80,11 @@ const managers: { brand: Brand; command: string }[] = [
     } catch {
       // Keep the first tab.
     }
-    const initial = tabs.find((tab) => tab.dataset.manager === remembered);
+    const initial = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find(
+      (tab) => tab.dataset.manager === remembered,
+    );
     if (initial !== undefined) {
-      select(initial, false);
-    }
-
-    root.addEventListener("click", (event) => {
-      const tab = (event.target as Element).closest<HTMLButtonElement>('[role="tab"]');
-      if (tab !== null) {
-        select(tab, false);
-      }
-    });
-
-    root.addEventListener("keydown", (event) => {
-      const index = tabs.indexOf(event.target as HTMLButtonElement);
-      if (index === -1) {
-        return;
-      }
-      const next =
-        event.key === "ArrowRight"
-          ? tabs[(index + 1) % tabs.length]
-          : event.key === "ArrowLeft"
-            ? tabs[(index - 1 + tabs.length) % tabs.length]
-            : event.key === "Home"
-              ? tabs[0]
-              : event.key === "End"
-                ? tabs.at(-1)
-                : undefined;
-      if (next !== undefined) {
-        event.preventDefault();
-        select(next, true);
-      }
-    });
-
-    const status = root.querySelector<HTMLElement>("[data-copy-status]");
-    for (const button of root.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
-      let resetTimer: ReturnType<typeof setTimeout> | undefined;
-      // Only the latest click may show its result; an older write can settle after it.
-      let generation = 0;
-      const show = (state: keyof typeof COPY_LABELS): void => {
-        for (const icon of button.querySelectorAll<HTMLElement>("[data-copy-icon]")) {
-          icon.hidden = icon.dataset.copyIcon !== state;
-        }
-        button.setAttribute("aria-label", COPY_LABELS[state]);
-        button.title = COPY_LABELS[state];
-      };
-
-      button.addEventListener("click", async () => {
-        const current = ++generation;
-        clearTimeout(resetTimer);
-        let state: "done" | "failed" = "done";
-        try {
-          await navigator.clipboard.writeText(button.dataset.copy ?? "");
-        } catch {
-          // Denied permission or no clipboard API: say so instead of looking unchanged.
-          state = "failed";
-        }
-        if (current !== generation) {
-          return;
-        }
-        show(state);
-        if (status !== null) {
-          status.textContent = state === "done" ? "Copied" : "Copy failed";
-        }
-        resetTimer = setTimeout(() => {
-          show("idle");
-          if (status !== null) {
-            status.textContent = "";
-          }
-        }, COPY_FEEDBACK_DURATION_MS);
-      });
+      select(initial);
     }
   }
 </script>

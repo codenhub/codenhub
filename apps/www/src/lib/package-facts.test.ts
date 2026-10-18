@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { describeProperties, describeReleases, describeRootSize, formatBytes } from "./package-facts";
+import { describeProperties, describeReleases, describeRootSize, formatBytes, npmTarballUrl } from "./package-facts";
 
 describe("describeReleases", () => {
   it("takes the newest stable release as the latest, skipping a newer pre-release", () => {
@@ -100,5 +100,17 @@ describe("describeRootSize", () => {
   it("shows nothing for a release without a size or without a measured root", () => {
     expect(describeRootSize(undefined)).toBeUndefined();
     expect(describeRootSize({ bundler: "rolldown@1.1.5", entrypoints: { "./x": entry(1, 1) } })).toBeUndefined();
+  });
+});
+
+describe("npmTarballUrl", () => {
+  it("names a scoped package's tarball after its unscoped name", () => {
+    expect(npmTarballUrl("@codenhub/validation", "0.4.0")).toBe(
+      "https://registry.npmjs.org/@codenhub/validation/-/validation-0.4.0.tgz",
+    );
+  });
+
+  it("names an unscoped package's tarball after its name", () => {
+    expect(npmTarballUrl("left-pad", "1.3.0")).toBe("https://registry.npmjs.org/left-pad/-/left-pad-1.3.0.tgz");
   });
 });

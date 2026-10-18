@@ -9,6 +9,7 @@ import { parseSizeReport, type ReleaseHistory, type SizeReport } from "@codenhub
 
 import { siteConfig } from "../site-config";
 import { describeProperties, describeReleases, type PackageProperties, type PackageReleases } from "./package-facts";
+import type { ReadmeBases } from "./readme";
 
 /** Outbound links for one package, each present only when its target exists. */
 export interface CatalogLinks {
@@ -34,6 +35,8 @@ export interface CatalogPackage extends PublicPackageSummary {
   /** Site path of the package's logo, when it declares one. */
   logoUrl?: string;
   properties: PackageProperties;
+  /** The package's README, with where its package-relative links and images resolve. */
+  readme?: ReadmeBases & { source: string };
   releases: PackageReleases;
   /** Bundle sizes the release recorded, absent for a release cut before sizes were. */
   size?: SizeReport;
@@ -66,6 +69,13 @@ const llmsPaths = Object.keys(
     ? import.meta.glob("../../.codenhub-published/packages/**/llms.txt", { query: "?raw" })
     : import.meta.glob("../../../../packages/**/llms.txt", { query: "?raw" }),
 );
+const readmeModules = import.meta.env.PROD
+  ? import.meta.glob<string>("../../.codenhub-published/packages/**/README.md", {
+      eager: true,
+      import: "default",
+      query: "?raw",
+    })
+  : import.meta.glob<string>("../../../../packages/**/README.md", { eager: true, import: "default", query: "?raw" });
 // A release's `size.json`, written by `hub release --cut` (docs/specs/packages-lifecycle.md, "Bundle size").
 const sizeModules = import.meta.env.PROD
   ? import.meta.glob<string>("../../.codenhub-published/packages/**/size.json", {
@@ -122,6 +132,7 @@ function describePackage(summary: PublicPackageSummary): CatalogPackage {
   const docs = isDocumented && siteConfig.docsUrl !== undefined ? packageDocsUrl(siteConfig.docsUrl, slug) : undefined;
   const tag = releases.latest === undefined ? undefined : `${summary.name}@${releases.latest.version}`;
   const sizeContents = sizeModules[`${root}/size.json`];
+  const readmeSource = readmeModules[`${root}/README.md`];
 
   return {
     ...summary,
@@ -146,6 +157,15 @@ function describePackage(summary: PublicPackageSummary): CatalogPackage {
     },
     logoUrl: metadata?.logo === undefined ? undefined : `/logos/${slug}.svg`,
     properties: describeProperties(manifest),
+    readme:
+      readmeSource === undefined
+        ? undefined
+        : {
+            // The release's files on GitHub; the default branch's when there is no stable release to pin.
+            baseUrl: `${siteConfig.githubUrl}/blob/${tag ?? "HEAD"}/${workspaceRoot(manifestPath)}/`,
+            imageBaseUrl: `${siteConfig.githubUrl}/raw/${tag ?? "HEAD"}/${workspaceRoot(manifestPath)}/`,
+            source: readmeSource,
+          },
     releases,
     size: sizeContents === undefined ? undefined : parseSizeReport(sizeContents, `${root}/size.json`),
     slug,
