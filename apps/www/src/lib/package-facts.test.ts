@@ -35,7 +35,7 @@ describe("describeProperties", () => {
     ).toEqual({
       bundled: ["@codenhub/validation"],
       dependencyCount: 2,
-      entrypoints: [".", "./data/*", "./package.json"],
+      entrypoints: [".", "./data/*"],
       isEsmOnly: true,
       isSideEffectFree: true,
       peerDependencies: ["@codenhub/styles", "react"],

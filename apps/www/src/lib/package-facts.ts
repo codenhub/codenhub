@@ -44,7 +44,8 @@ function entrypointsOf(exportsField: unknown): string[] {
     return ["."];
   }
   const keys = isRecord(exportsField) ? Object.keys(exportsField) : [];
-  const subpaths = keys.filter((key) => key === "." || key.startsWith("./"));
+  // `./package.json` is exported for tools that read the manifest, not as code to import.
+  const subpaths = keys.filter((key) => (key === "." || key.startsWith("./")) && key !== "./package.json");
   return subpaths.length === 0 && keys.length > 0 ? ["."] : subpaths;
 }
 

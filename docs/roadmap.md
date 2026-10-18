@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-10-17
+last_updated: 2026-10-18
 scope: repo-wide direction for the workspace's packages and deploy surfaces
 ---
 
@@ -16,7 +16,7 @@ Durable direction for the workspace: what is being worked on now, what is intend
   - **Package metadata on `codenhub`.** Identity moved out of `codenhub.docs` (`docs/specs/packages-metadata.md`), so no one site owns it.
   - **Index data from release tags.** `apps/www` reads each package at its release tags, as `apps/docs` already does, instead of the working tree, and derives version history, release dates, license, links (docs, changelog, npm, GitHub path, demo, `llms.txt`), and package properties (dependencies, side effects, module format, types, entrypoints) from them.
   - **Bundle size.** `hub release --cut` measures each JavaScript entrypoint, minified and gzipped with peers external, into the `size.json` the release commit carries; `hub publish` re-measures and refuses a mismatch, and the index card shows the root entrypoint's size (`docs/specs/packages-lifecycle.md`, "Bundle size"). Releases from before that show no size.
-  - **Landing pages and index filters.** One page per package with its own metadata for search and sharing.
+  - **Landing pages and index filters.** Each listed package has a page at `codenhub.dev/<slug>/` with everything the index derives (install, links, properties, entrypoint sizes, release history), and the index cards summarize and link to it. Left: index filters, and per-page metadata for search and sharing beyond the title and description.
   - **Package-provided sections.** A package-owned directory, such as `site/`, beside `docs/` and `demo/`, holding sections its landing page renders, such as `@codenhub/validation` comparing itself with zod, valibot, and yup. Landing pages are composed of sections so these slot in without a redesign.
 - **`apps/docs` polish.** UI/UX and code cleanup, and the navigation rework: a clearer scheme for what individual sidebar entries are named, per-symbol reference anchors, search weighting, and the deck treatment (`description` / `since`) for hand-authored pages. The Guides / Reference / Changelog tab strip has landed; deeper sidebar nesting was weighed and rejected.
 - **Generated API reference rollout.** The generator, the `reference` check, and the `codenhub.docs.reference` opt-in are proven on `@codenhub/error` and `@codenhub/validation`. Opting in `validation` showed gaps in merged declarations, overloads, and unexported types in public signatures. They are fixed, and the check now fails on a type it can't resolve and on an empty section. One known gap remains: TypeDoc drops a `@param` written on a method's first overload when only a later overload has that parameter. Next: opt in packages with different shapes (`icons`, `kbd`, `router`) to find where generated signatures and prose fall short, then flip to default-on with a `codenhub.docs.reference: false` opt-out.

@@ -1,0 +1,191 @@
+---
+/**
+ * One package's page: everything the index knows about it, from its latest
+ * release. The page is a stack of sections so a package can later contribute
+ * its own (docs/roadmap.md, "Package-provided sections").
+ */
+import BaseLayout from "@codenhub/app-shell/layouts/base-layout.astro";
+import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
+import type { GetStaticPaths } from "astro";
+
+import BrandIcon from "../components/brand-icon.astro";
+import { catalogPackages, type CatalogPackage } from "../lib/catalog";
+import { formatDate } from "../lib/format";
+import { describeRootSize, formatBytes } from "../lib/package-facts";
+import { siteConfig } from "../site-config";
+import "../styles/global.css";
+
+export const getStaticPaths = (() =>
+  catalogPackages.map((entry) => ({ params: { slug: entry.slug }, props: { entry } }))) satisfies GetStaticPaths;
+
+interface Props {
+  entry: CatalogPackage;
+}
+
+const { entry } = Astro.props;
+const { links, properties, releases, size } = entry;
+const latest = releases.latest;
+const rootSize = describeRootSize(size);
+
+const installCommands = [
+  ["npm", `npm install ${entry.name}`],
+  ["pnpm", `pnpm add ${entry.name}`],
+  ["yarn", `yarn add ${entry.name}`],
+] as const;
+
+interface Link {
+  href: string;
+  label: string;
+  icon?: string;
+  brand?: "github" | "npm";
+  external: boolean;
+}
+
+const pageLinks = [
+  links.docs === undefined ? undefined : { href: links.docs, label: "Documentation", icon: "ic-lucide-book-open", external: false },
+  links.changelog === undefined ? undefined : { href: links.changelog, label: "Changelog", icon: "ic-lucide-history", external: false },
+  links.demo === undefined ? undefined : { href: links.demo, label: "Demo", icon: "ic-lucide-play", external: false },
+  links.github === undefined ? undefined : { href: links.github, label: "Source", brand: "github", external: true },
+  { href: links.npm, label: "npm", brand: "npm", external: true },
+  links.llms === undefined ? undefined : { href: links.llms, label: "llms.txt", icon: "ic-lucide-bot", external: true },
+].filter((link): link is Link => link !== undefined);
+
+const yesNo = (value: boolean): string => (value ? "Yes" : "No");
+const facts: [string, string][] = [
+  ["Latest version", latest === undefined ? "Unreleased" : latest.version],
+  ...(releases.history[0] === undefined ? [] : [["Last published", formatDate(releases.history[0].date)] as [string, string]]),
+  ...(entry.license === undefined ? [] : [["License", entry.license] as [string, string]]),
+  ...(rootSize === undefined ? [] : [["Bundle size", rootSize] as [string, string]]),
+  ["Dependencies", properties.dependencyCount === 0 ? "None" : String(properties.dependencyCount)],
+  ["Peer dependencies", properties.peerDependencies.length === 0 ? "None" : properties.peerDependencies.join(", ")],
+  ["Module format", properties.isEsmOnly ? "ESM only" : "ESM and CommonJS"],
+  ["TypeScript types", properties.shipsTypes ? "Included" : "Not included"],
+  ["Side-effect free", yesNo(properties.isSideEffectFree)],
+  ...(properties.bundled.length === 0 ? [] : [["Bundles", properties.bundled.join(", ")] as [string, string]]),
+];
+
+// Every entrypoint the manifest exports, with its size when the release measured it.
+const entrypoints = properties.entrypoints.map((subpath) => ({ size: size?.entrypoints[subpath], subpath }));
+const hasSizes = entrypoints.some((entrypoint) => entrypoint.size !== undefined);
+---
+
+<BaseLayout
+  description={entry.description ?? `${entry.name} on CodenHub.`}
+  siteConfig={siteConfig}
+  title={entry.label}
+>
+  <main class="www-main" id="main-content">
+    <div class="shell-content package-page">
+      <a class="package-back" href="/"><i aria-hidden="true" class="ic-lucide-arrow-left"></i>All packages</a>
+
+      <header class="package-header">
+        <div class="package-header-title">
+          {entry.logoUrl !== undefined && <img alt="" class="package-logo" src={entry.logoUrl} />}
+          <h1>{entry.label}</h1>
+          {latest !== undefined && <span class="badge secondary soft">v{latest.version}</span>}
+          {entry.status !== undefined && <StatusBadge status={entry.status} />}
+        </div>
+        <code class="package-name">{entry.name}</code>
+        {entry.description !== undefined && <p class="package-description">{entry.description}</p>}
+        <nav aria-label={`${entry.label} links`} class="package-links">
+          {
+            pageLinks.map((link, index) => (
+              <a
+                class:list={["btn", "sm", index === 0 ? "primary" : "secondary"]}
+                href={link.href}
+                rel={link.external ? "noopener noreferrer" : undefined}
+                target={link.external ? "_blank" : undefined}
+              >
+                {link.brand !== undefined && <BrandIcon brand={link.brand} class="package-link-brand" />}
+                {link.icon !== undefined && <i aria-hidden="true" class={link.icon} />}
+                {link.label}
+              </a>
+            ))
+          }
+        </nav>
+      </header>
+
+      <section aria-labelledby="install-title" class="package-section">
+        <h2 id="install-title">Install</h2>
+        <ul class="package-install">
+          {
+            installCommands.map(([manager, command]) => (
+              <li>
+                <span class="package-install-manager">{manager}</span>
+                <code>{command}</code>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <section aria-labelledby="facts-title" class="package-section">
+        <h2 id="facts-title">At a glance</h2>
+        <dl class="package-facts">
+          {
+            facts.map(([term, value]) => (
+              <div>
+                <dt>{term}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </section>
+
+      {
+        entrypoints.length > 0 && (
+          <section aria-labelledby="entrypoints-title" class="package-section">
+            <h2 id="entrypoints-title">Entry points</h2>
+            <div class="package-table-wrap">
+              <table class="package-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Import</th>
+                    {hasSizes && <th scope="col">Minified</th>}
+                    {hasSizes && <th scope="col">Gzipped</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {entrypoints.map(({ size: entrySize, subpath }) => (
+                    <tr>
+                      <td>
+                        <code>{subpath === "." ? entry.name : `${entry.name}${subpath.slice(1)}`}</code>
+                      </td>
+                      {hasSizes && <td>{entrySize === undefined ? "—" : formatBytes(entrySize.minified)}</td>}
+                      {hasSizes && (
+                        <td>
+                          {entrySize === undefined ? "—" : formatBytes(entrySize.minified === 0 ? 0 : entrySize.gzip)}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {hasSizes && <p class="package-note">Measured at release, with peer dependencies left out.</p>}
+          </section>
+        )
+      }
+
+      <section aria-labelledby="releases-title" class="package-section">
+        <h2 id="releases-title">Releases</h2>
+        {
+          releases.history.length === 0 ? (
+            <p class="package-note">No release yet.</p>
+          ) : (
+            <ol class="package-releases">
+              {releases.history.map((release) => (
+                <li>
+                  <span class="package-release-version">{release.version}</span>
+                  {release.isPrerelease && <span class="badge warning soft">Pre-release</span>}
+                  <time datetime={release.date}>{formatDate(release.date)}</time>
+                </li>
+              ))}
+            </ol>
+          )
+        }
+      </section>
+    </div>
+  </main>
+</BaseLayout>
