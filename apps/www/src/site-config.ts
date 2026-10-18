@@ -10,3 +10,10 @@ export const siteConfig: SiteConfig = {
   demoUrl: "https://demo.codenhub.dev",
   npmUrl: "https://www.npmjs.com/org/codenhub",
 };
+
+/**
+ * What the shell header gets. Documentation and Demo stay off the header: the
+ * index reaches them through its route cards and a package page through its
+ * link buttons, which point at that package's docs and demo.
+ */
+export const headerConfig: SiteConfig = { ...siteConfig, docsUrl: undefined, demoUrl: undefined };

@@ -8,14 +8,13 @@ import BaseLayout from "@codenhub/app-shell/layouts/base-layout.astro";
 import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
 import type { GetStaticPaths } from "astro";
 
-import BrandIcon from "../components/brand-icon.astro";
 import CopyButton from "../components/copy-button.astro";
 import InstallTabs from "../components/install-tabs.astro";
 import { catalogPackages, type CatalogPackage } from "../lib/catalog";
 import { formatDate } from "../lib/format";
 import { describeRootSize, formatBytes, npmTarballUrl } from "../lib/package-facts";
 import { renderReadme } from "../lib/readme";
-import { siteConfig } from "../site-config";
+import { headerConfig } from "../site-config";
 import "../styles/global.css";
 
 export const getStaticPaths = (() =>
@@ -30,11 +29,17 @@ const { links, properties, releases, size } = entry;
 const latest = releases.latest;
 const rootSize = describeRootSize(size);
 
+// The header's GitHub and npm marks open this package rather than the monorepo and the org.
+const packageHeaderConfig = {
+  ...headerConfig,
+  githubUrl: links.github ?? headerConfig.githubUrl,
+  npmUrl: links.npm,
+};
+
 interface Link {
   href: string;
   label: string;
-  icon?: string;
-  brand?: "github" | "npm";
+  icon: string;
   external: boolean;
 }
 
@@ -42,8 +47,6 @@ const linkCandidates: (Link | undefined)[] = [
   links.docs === undefined ? undefined : { href: links.docs, label: "Documentation", icon: "ic-lucide-book-open", external: false },
   links.changelog === undefined ? undefined : { href: links.changelog, label: "Changelog", icon: "ic-lucide-history", external: false },
   links.demo === undefined ? undefined : { href: links.demo, label: "Demo", icon: "ic-lucide-play", external: false },
-  links.github === undefined ? undefined : { href: links.github, label: "Source", brand: "github", external: true },
-  { href: links.npm, label: "npm", brand: "npm", external: true },
   links.llms === undefined ? undefined : { href: links.llms, label: "llms.txt", icon: "ic-lucide-bot", external: true },
 ];
 // The first link is the page's main action and keeps its label; the rest are icons with a tooltip.
@@ -98,7 +101,9 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
 
 <BaseLayout
   description={entry.description ?? `${entry.name} on CodenHub.`}
-  siteConfig={siteConfig}
+  githubLabel={links.github === undefined ? undefined : `${entry.name} on GitHub`}
+  npmLabel={`${entry.name} on npm`}
+  siteConfig={packageHeaderConfig}
   title={entry.label}
 >
   <main class="www-main" id="main-content">
@@ -118,41 +123,40 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
             <CopyButton label="Copy package name" text={entry.name} />
           </div>
         </div>
-        <nav aria-label={`${entry.label} links`} class="package-links">
-          {
-            secondaryLinks.map((link, index) => (
-              <span class="tooltip" data-tooltip-position="bottom">
-                <a
-                  aria-labelledby={`package-link-tip-${index}`}
-                  class="btn ghost edged icon sm"
-                  href={link.href}
-                  rel={link.external ? "noopener noreferrer" : undefined}
-                  target={link.external ? "_blank" : undefined}
-                >
-                  {link.brand !== undefined && <BrandIcon brand={link.brand} class="package-link-brand" />}
-                  {link.icon !== undefined && <i aria-hidden="true" class={link.icon} />}
-                </a>
-                <span class="tooltip-bubble" id={`package-link-tip-${index}`} role="tooltip">
-                  {link.label}
-                </span>
-              </span>
-            ))
-          }
-          {
-            primaryLink !== undefined && (
+        {
+          // Secondary links exist only beside a primary one, so this covers both.
+          primaryLink !== undefined && (
+            <nav aria-label={`${entry.label} links`} class="package-links">
+              {
+                secondaryLinks.map((link, index) => (
+                  <span class="tooltip" data-tooltip-position="bottom">
+                    <a
+                      aria-labelledby={`package-link-tip-${index}`}
+                      class="btn ghost edged icon sm"
+                      href={link.href}
+                      rel={link.external ? "noopener noreferrer" : undefined}
+                      target={link.external ? "_blank" : undefined}
+                    >
+                      <i aria-hidden="true" class={link.icon} />
+                    </a>
+                    <span class="tooltip-bubble" id={`package-link-tip-${index}`} role="tooltip">
+                      {link.label}
+                    </span>
+                  </span>
+                ))
+              }
               <a
                 class="btn primary sm"
                 href={primaryLink.href}
                 rel={primaryLink.external ? "noopener noreferrer" : undefined}
                 target={primaryLink.external ? "_blank" : undefined}
               >
-                {primaryLink.brand !== undefined && <BrandIcon brand={primaryLink.brand} class="package-link-brand" />}
-                {primaryLink.icon !== undefined && <i aria-hidden="true" class={primaryLink.icon} />}
+                <i aria-hidden="true" class={primaryLink.icon} />
                 {primaryLink.label}
               </a>
-            )
-          }
-        </nav>
+            </nav>
+          )
+        }
         {entry.description !== undefined && <p class="package-description">{entry.description}</p>}
       </header>
 
