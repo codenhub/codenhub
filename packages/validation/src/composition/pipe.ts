@@ -38,12 +38,11 @@ export function pipe<const TValidators extends readonly [AnyValidator, ...AnyVal
     throw new TypeError("pipe() needs at least one validator");
   }
   validators.forEach((validator, index) => assertFunction(`validators[${index}]`, validator));
-  const validate = composed(
-    (input, place): Maybe<ValidationResult<unknown>> =>
-      validators.reduce<Maybe<ValidationResult<unknown>>>(
-        (previous, next) => chain(previous, (result) => (result.ok ? call(next, result.value, place) : result)),
-        pass(input),
-      ),
+  const validate = composed((input, place): Maybe<ValidationResult<unknown>> =>
+    validators.reduce<Maybe<ValidationResult<unknown>>>(
+      (previous, next) => chain(previous, (result) => (result.ok ? call(next, result.value, place) : result)),
+      pass(input),
+    ),
   );
   return described(validate, { kind: "pipe", steps: Object.freeze([...validators]) }) as unknown as Composed<
     TValidators[number],

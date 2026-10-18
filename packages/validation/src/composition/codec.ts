@@ -68,12 +68,10 @@ export function codec<TInput extends AnyValidator, TOutput extends AnyValidator>
   assertFunction("decode", decode);
   assertFunction("encode", encode);
   const validate = composed((given, place) =>
-    chain(
-      call(input, given, place),
-      (read): Maybe<ValidationResult<unknown>> =>
-        read.ok
-          ? call(output, decided("codec", decode as (value: unknown) => unknown, read.value, "decode"), place)
-          : read,
+    chain(call(input, given, place), (read): Maybe<ValidationResult<unknown>> =>
+      read.ok
+        ? call(output, decided("codec", decode as (value: unknown) => unknown, read.value, "decode"), place)
+        : read,
     ),
   );
   return described(validate, { kind: "codec", input, output, decode, encode }) as unknown as Composed<

@@ -51,19 +51,17 @@ async function runVerify(
   const lines: string[] = [];
   const ran: string[] = [];
   const builtBySelf: Record<string, boolean> = {};
-  const resolver = vi.fn(
-    (name: string): CommandDefinition => ({
-      name,
-      run: async (stepContext) => {
-        ran.push(name);
-        builtBySelf[name] = stepContext.options.shouldBuild;
-        expect(stepContext.passthrough).toEqual([]);
-        return name === failingStep ? EXIT_FAILURE : EXIT_SUCCESS;
-      },
-      summary: name,
-      usage: name,
-    }),
-  );
+  const resolver = vi.fn((name: string): CommandDefinition => ({
+    name,
+    run: async (stepContext) => {
+      ran.push(name);
+      builtBySelf[name] = stepContext.options.shouldBuild;
+      expect(stepContext.passthrough).toEqual([]);
+      return name === failingStep ? EXIT_FAILURE : EXIT_SUCCESS;
+    },
+    summary: name,
+    usage: name,
+  }));
   const context: CommandContext = {
     options: parseArguments(["verify", ...argv]).options,
     passthrough: ["--reporter=verbose"],

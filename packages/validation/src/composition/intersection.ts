@@ -243,16 +243,15 @@ export function intersection(left: AnyValidator, right: AnyValidator, ...rest: u
   assertFunction("right", right);
   const [options, reject, accept, checks] = tail<MessageOptions, unknown>(rest);
   return described(
-    composed(
-      (input, place): Maybe<ValidationResult<unknown>> =>
-        chain(collect(runEach(2, (index) => call(index === 0 ? left : right, input, place))), ([first, second]) => {
-          if (first?.ok && second?.ok) {
-            const conflicts: ValidationIssue[] = [];
-            const merged = merge(first.value, second.value, conflicts);
-            return conflicts.length > 0 ? reject(cap(conflicts, undefined, undefined), place) : accept(merged, place);
-          }
-          return failWith([first, second].flatMap((result) => (result?.ok === false ? result.error.issues : [])));
-        }),
+    composed((input, place): Maybe<ValidationResult<unknown>> =>
+      chain(collect(runEach(2, (index) => call(index === 0 ? left : right, input, place))), ([first, second]) => {
+        if (first?.ok && second?.ok) {
+          const conflicts: ValidationIssue[] = [];
+          const merged = merge(first.value, second.value, conflicts);
+          return conflicts.length > 0 ? reject(cap(conflicts, undefined, undefined), place) : accept(merged, place);
+        }
+        return failWith([first, second].flatMap((result) => (result?.ok === false ? result.error.issues : [])));
+      }),
     ),
     { kind: "intersection", options, checks, members: Object.freeze([left, right]) },
   );

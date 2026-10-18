@@ -125,10 +125,8 @@ export function encode<TValidator extends AnyValidator>(
     const message = record.options?.["message"];
     const rules = (unknown as unknown as Make)(...(message === undefined ? [] : [{ message }]), ...checks);
     return composed((given, place) =>
-      chain(
-        call(encoded, given, place),
-        (result): Maybe<ValidationResult<unknown>> =>
-          result.ok ? chain(call(rules, given, place), (ruled) => (ruled.ok ? result : ruled)) : result,
+      chain(call(encoded, given, place), (result): Maybe<ValidationResult<unknown>> =>
+        result.ok ? chain(call(rules, given, place), (ruled) => (ruled.ok ? result : ruled)) : result,
       ),
     ) as AnyValidator;
   };
@@ -167,10 +165,8 @@ export function encode<TValidator extends AnyValidator>(
     // would refuse, such as JSON of `undefined` or a list written as a key it reads only once, fails.
     const readBack = (writer: AnyValidator): AnyValidator =>
       composed((given, place) =>
-        chain(
-          call(writer, given, place),
-          (written): Maybe<ValidationResult<unknown>> =>
-            written.ok ? chain(call(target, written.value, place), (read) => (read.ok ? written : read)) : written,
+        chain(call(writer, given, place), (written): Maybe<ValidationResult<unknown>> =>
+          written.ok ? chain(call(target, written.value, place), (read) => (read.ok ? written : read)) : written,
         ),
       ) as AnyValidator;
 

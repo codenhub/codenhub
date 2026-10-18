@@ -263,19 +263,6 @@
    container stays put, the way only `.btn` and an opted-in card press under
    the aesthetic class. */
 .cyber-solo:is(
-  button,
-  a[href],
-  [role="button"],
-  summary,
-  input[type="button"],
-  input[type="submit"],
-  input[type="reset"]
-):active:not(:disabled, [aria-disabled="true"]) {
-  transform: scale(0.97);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cyber-solo:is(
     button,
     a[href],
     [role="button"],
@@ -284,6 +271,19 @@
     input[type="submit"],
     input[type="reset"]
   ):active:not(:disabled, [aria-disabled="true"]) {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cyber-solo:is(
+      button,
+      a[href],
+      [role="button"],
+      summary,
+      input[type="button"],
+      input[type="submit"],
+      input[type="reset"]
+    ):active:not(:disabled, [aria-disabled="true"]) {
     transform: none;
   }
 }

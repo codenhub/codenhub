@@ -31,10 +31,10 @@
   --toast-default-color-info: light-dark(oklab(0.511 0.0317755 -0.260066), oklab(0.511 0.0317755 -0.260066));
   --toast-default-color-info-contrast: light-dark(oklab(0.985 0 0), oklab(0.985 0 0));
   --toast-default-color-info-strong: light-dark(oklab(0.398 0.0250004 -0.193391), oklab(0.785 0.00944898 -0.114611));
-  --toast-default-color-neutral: light-dark(oklch(0.145 0 0), oklch(0.985 0 0));
+  --toast-default-color-neutral: light-dark(oklch(0.145 0 none), oklch(0.985 0 none));
   --toast-default-color-neutral-contrast: light-dark(oklab(0.205 0 0), oklab(0.97 0 0));
   --toast-default-color-neutral-strong: light-dark(oklab(0.205 0 0), oklab(0.97 0 0));
-  --toast-default-color-neutral-border: light-dark(oklch(0.708 0 0), oklch(0.371 0 0));
+  --toast-default-color-neutral-border: light-dark(oklch(0.708 0 none), oklch(0.371 0 none));
   --toast-default-color-btn-primary: light-dark(oklab(0.145 0 0), oklab(0.985 0 0));
   --toast-default-color-btn-primary-contrast: light-dark(oklab(0.985 0 0), oklab(0.145 0 0));
   --toast-default-color-btn-primary-hover: light-dark(oklab(0.371 0 0), oklab(0.922 0 0));
@@ -53,10 +53,10 @@
     oklab(0.51189 0.194868 0.0640785),
     oklab(0.549356 0.21195 0.0500346)
   );
-  --toast-default-color-surface: light-dark(oklch(0.922 0 0), oklch(0.269 0 0));
-  --toast-default-color-text: light-dark(oklch(0.145 0 0), oklch(0.985 0 0));
-  --toast-default-color-border: light-dark(oklch(0.708 0 0), oklch(0.371 0 0));
-  --toast-default-color-background: light-dark(oklch(0.985 0 0), oklch(0.145 0 0));
+  --toast-default-color-surface: light-dark(oklch(0.922 0 none), oklch(0.269 0 none));
+  --toast-default-color-text: light-dark(oklch(0.145 0 none), oklch(0.985 0 none));
+  --toast-default-color-border: light-dark(oklch(0.708 0 none), oklch(0.371 0 none));
+  --toast-default-color-background: light-dark(oklch(0.985 0 none), oklch(0.145 0 none));
 }
 
 .light,

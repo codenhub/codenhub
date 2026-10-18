@@ -206,22 +206,6 @@
    container -- a toast clicked to dismiss -- stays put, the way only `.btn` and
    an opted-in card press under the aesthetic class. */
 .neobrutalism-solo:is(
-  button,
-  a[href],
-  [role="button"],
-  summary,
-  input[type="button"],
-  input[type="submit"],
-  input[type="reset"]
-):active:not(:disabled, [aria-disabled="true"]) {
-  box-shadow:
-    0 0 0 0 var(--_solo-ink),
-    inset 0 0 0 100vmax var(--_solo-fill);
-  transform: translate(var(--_solo-depth), var(--_solo-depth));
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .neobrutalism-solo:is(
     button,
     a[href],
     [role="button"],
@@ -230,6 +214,22 @@
     input[type="submit"],
     input[type="reset"]
   ):active:not(:disabled, [aria-disabled="true"]) {
+  box-shadow:
+    0 0 0 0 var(--_solo-ink),
+    inset 0 0 0 100vmax var(--_solo-fill);
+  transform: translate(var(--_solo-depth), var(--_solo-depth));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neobrutalism-solo:is(
+      button,
+      a[href],
+      [role="button"],
+      summary,
+      input[type="button"],
+      input[type="submit"],
+      input[type="reset"]
+    ):active:not(:disabled, [aria-disabled="true"]) {
     transform: none;
   }
 }

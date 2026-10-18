@@ -113,9 +113,10 @@ export async function schemaIssues(schema: StandardSchemaV1, payload: JwtPayload
   if (result.issues === undefined) {
     return [];
   }
-  const issues = result.issues.map(
-    (issue): JwtIssue => ({ code: "invalid_claims", path: ["payload", ...pathOf(issue)] }),
-  );
+  const issues = result.issues.map((issue): JwtIssue => ({
+    code: "invalid_claims",
+    path: ["payload", ...pathOf(issue)],
+  }));
   // A failure the schema reports without issues is still a failure.
   return issues.length > 0 ? issues : [{ code: "invalid_claims", path: ["payload"] }];
 }

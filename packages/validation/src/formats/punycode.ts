@@ -54,7 +54,7 @@ export function fromPunycode(text: string): string | undefined {
   let n = INITIAL_N;
   let bias = INITIAL_BIAS;
   let i = 0;
-  for (let index = delimiter > 0 ? delimiter + 1 : 0; index < text.length; ) {
+  for (let index = delimiter > 0 ? delimiter + 1 : 0; index < text.length;) {
     const previous = i;
     let weight = 1;
     for (let k = BASE; ; k += BASE) {
