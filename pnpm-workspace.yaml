@@ -6,6 +6,7 @@ packages:
   - "packages/plugins/**"
 
 catalog:
+  "@astrojs/check": ^0.9.10
   "@codenhub/error": ^0.2.1
   "@codenhub/jwt": ^0.0.1
   "@codenhub/store": ^0.0.2
@@ -38,6 +39,11 @@ catalog:
 
 blockExoticSubdeps: true
 trustPolicy: no-downgrade
+# @astrojs/check needs chokidar ^4.0.3. chokidar 4.0.1 shipped with provenance;
+# 4.0.2 and 4.0.3 were published by hand by the same maintainer, which the
+# policy reads as a downgrade. Remove once @astrojs/check moves to chokidar 5.
+trustPolicyExclude:
+  - "chokidar@4.0.3"
 allowBuilds:
   "@parcel/watcher": true
   esbuild: true

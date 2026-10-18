@@ -1,10 +1,10 @@
 ---
 import "virtual:icons.css";
 
-import type { SiteConfig } from "../site-config";
+import type { SiteConfig } from "../site-config.ts";
 import SiteFooter from "../components/site-footer.astro";
 import SiteHeader from "../components/site-header.astro";
-import { THEME_STORAGE_KEY } from "../theme";
+import { THEME_STORAGE_KEY } from "../theme.ts";
 
 interface Props {
   siteConfig: SiteConfig;
@@ -77,7 +77,7 @@ const pageTitle =
     <slot />
     <SiteFooter />
     <script>
-      import { nextTheme, themeToggleAria, THEME_STORAGE_KEY } from "../theme";
+      import { nextTheme, themeToggleAria, THEME_STORAGE_KEY } from "../theme.ts";
 
       const themeToggle = document.querySelector("[data-theme-toggle]");
       const footerYear = document.querySelector("[data-footer-year]");

@@ -22,7 +22,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "typecheck": "tsc -b"
+    "typecheck": "astro-check"
   },
   "dependencies": {
     "@codenhub/icons": "workspace:*",
@@ -30,6 +30,7 @@
     "@codenhub/tools": "workspace:*"
   },
   "devDependencies": {
+    "@astrojs/check": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "astro": "catalog:",
