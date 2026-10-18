@@ -64,6 +64,11 @@ describe("formatBytes", () => {
     expect(formatBytes(27_598)).toBe("27.6 kB");
     expect(formatBytes(16_550_509)).toBe("16.6 MB");
   });
+
+  it("moves to the next unit when rounding reaches it", () => {
+    expect(formatBytes(999_960)).toBe("1.0 MB");
+    expect(formatBytes(949)).toBe("949 B");
+  });
 });
 
 describe("describeRootSize", () => {

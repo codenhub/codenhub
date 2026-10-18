@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -60,14 +60,27 @@ const built = async () => ({ isSuccess: true, output: "" });
 describe("measureEntrypoint", () => {
   it("inlines dependencies and dynamic imports and leaves peers and builtins external", async () => {
     const directory = await createBuiltPackage();
-    const measured = await measureEntrypoint(join(directory, "dist/index.js"), ["peer"]);
-    const withPeerInlined = measureEntrypoint(join(directory, "dist/index.js"), []);
+    const entry = join(directory, "dist/index.js");
+    const grow = async (file: string, text: string): Promise<void> => {
+      const contents = await readFile(join(directory, file), "utf8");
+      await writeFile(join(directory, file), contents.replace(text, `${text}${"x".repeat(100)}`));
+    };
 
-    expect(measured.minified).toBeGreaterThan("INLINED_TEXT".length + "a lazily loaded module".length);
-    expect(measured.gzip).toBeGreaterThan(0);
-    expect(measured.sha256).toMatch(/^[0-9a-f]{64}$/u);
-    // Without `peer` external, rolldown has to resolve it, and nothing installs it.
-    await expect(withPeerInlined).rejects.toThrow("Could not resolve 'peer'");
+    const before = await measureEntrypoint(entry, ["peer"]);
+    await grow("node_modules/dependency/index.js", "INLINED_TEXT");
+    const withLongerDependency = await measureEntrypoint(entry, ["peer"]);
+    await grow("dist/lazy.js", "a lazily loaded module");
+    const withLongerLazyModule = await measureEntrypoint(entry, ["peer"]);
+
+    // A string literal grown by 100 characters grows the bundle by exactly that
+    // much only when the module holding it is inside the bundle.
+    expect(withLongerDependency.minified - before.minified).toBe(100);
+    expect(withLongerLazyModule.minified - withLongerDependency.minified).toBe(100);
+    expect(before.gzip).toBeGreaterThan(0);
+    expect(before.sha256).toMatch(/^[0-9a-f]{64}$/u);
+    // Neither `peer` nor `node:fs/promises` is installed, so bundling succeeds
+    // only because both stay external; making the peer internal fails.
+    await expect(measureEntrypoint(entry, [])).rejects.toThrow("Could not resolve 'peer'");
   });
 
   it("measures the same bytes from any directory", async () => {
@@ -101,6 +114,22 @@ describe("measurePackage", () => {
     expect(report).toEqual({ bundler: BUNDLER, entrypoints: { ".": { gzip: 1, minified: 2, sha256: "aa" } } });
   });
 
+  it("hands the build its timeout", async () => {
+    const directory = await createBuiltPackage();
+    const timeouts: (number | undefined)[] = [];
+
+    await measurePackage(createPackage(directory), {
+      build: async (_workspacePackage, timeoutMs) => {
+        timeouts.push(timeoutMs);
+        return { isSuccess: true, output: "" };
+      },
+      measure: async () => ({ gzip: 1, minified: 2, sha256: "aa" }),
+      timeoutMs: 1234,
+    });
+
+    expect(timeouts).toEqual([1234]);
+  });
+
   it("refuses to measure a package that does not build", async () => {
     const directory = await createBuiltPackage();
 
@@ -131,6 +160,16 @@ describe("checkBundleSize", () => {
 
     expect(check.status).toBe("blocked");
     expect(check.detail).toContain("no size.json");
+  });
+
+  it("reports a size.json it cannot read as unreadable, not as missing", async () => {
+    const directory = await createBuiltPackage();
+    await mkdir(join(directory, "size.json"));
+
+    const check = await checkBundleSize(createPackage(directory), { build: built });
+
+    expect(check.status).toBe("blocked");
+    expect(check.detail).toContain("size.json could not be read");
   });
 
   it("blocks when the build no longer matches size.json", async () => {

@@ -89,7 +89,8 @@ const SIZE_UNITS = [
  * @returns Such as `840 B`, `27.6 kB`, or `16.6 MB`.
  */
 export function formatBytes(bytes: number): string {
-  const unit = SIZE_UNITS.find(([size]) => bytes >= size);
+  // The unit is chosen on the rounded figure, so 999,960 bytes reads `1.0 MB`, not `1000.0 kB`.
+  const unit = SIZE_UNITS.find(([size]) => Number((bytes / size).toFixed(1)) >= 1);
   return unit === undefined ? `${bytes} B` : `${(bytes / unit[0]).toFixed(1)} ${unit[1]}`;
 }
 

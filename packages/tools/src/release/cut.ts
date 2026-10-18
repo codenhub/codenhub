@@ -181,11 +181,19 @@ export interface CutResult {
 }
 
 /** Measures a package's bundle size for its `size.json`. Injected by tests. */
-export type SizeMeasurer = (workspacePackage: WorkspacePackage) => Promise<SizeReport>;
+export type SizeMeasurer = (workspacePackage: WorkspacePackage, timeoutMs?: number) => Promise<SizeReport>;
 
-const measureSize: SizeMeasurer = async (workspacePackage) =>
+const measureSize: SizeMeasurer = async (workspacePackage, timeoutMs) =>
   // Loaded on demand so that every other `hub` command starts without rolldown.
-  (await import("./bundle-size.ts")).measurePackage(workspacePackage);
+  (await import("./bundle-size.ts")).measurePackage(workspacePackage, { timeoutMs });
+
+/** How {@link cutRelease} measures the package. */
+export interface CutOptions {
+  /** Size measurer, defaulting to building and bundling the package. Injected by tests. */
+  measure?: SizeMeasurer;
+  /** Milliseconds before the package build is killed, or `undefined` to wait indefinitely. */
+  timeoutMs?: number;
+}
 
 /**
  * Raises a package's version, records its bundle size, and scaffolds the changelog entry that documents it.
@@ -202,7 +210,7 @@ const measureSize: SizeMeasurer = async (workspacePackage) =>
  * @param workspacePackage Package to cut.
  * @param requested A bump name, or an explicit version.
  * @param today Release date in ISO `YYYY-MM-DD` form.
- * @param measure Size measurer, defaulting to building and bundling the package.
+ * @param options Size measurer and build timeout.
  * @returns What was written and the tag that would publish it.
  * @throws When the version request is unusable, the package cannot be measured, or the manifest cannot be rewritten.
  */
@@ -210,14 +218,14 @@ export async function cutRelease(
   workspacePackage: WorkspacePackage,
   requested: string,
   today: string,
-  measure: SizeMeasurer = measureSize,
+  options: CutOptions = {},
 ): Promise<CutResult> {
   const current = workspacePackage.manifest.version;
   if (typeof current !== "string") {
     throw new Error(`${workspacePackage.name} has no "version" in its manifest.`);
   }
   const version = resolveNextVersion(current, requested);
-  const size = await measure(workspacePackage);
+  const size = await (options.measure ?? measureSize)(workspacePackage, options.timeoutMs);
   const written: string[] = [];
 
   const manifestPath = join(workspacePackage.directory, MANIFEST);

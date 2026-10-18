@@ -8,11 +8,13 @@ import {
   type SizeReport,
 } from "./size-report.ts";
 
+const [HASH_A, HASH_B, HASH_C, HASH_D] = ["a", "b", "c", "d"].map((digit) => digit.repeat(64));
+
 const REPORT: SizeReport = {
   bundler: "rolldown@1.1.5",
   entrypoints: {
-    ".": { gzip: 400, minified: 1000, sha256: "aa" },
-    "./client": { gzip: 40, minified: 100, sha256: "bb" },
+    ".": { gzip: 400, minified: 1000, sha256: HASH_A },
+    "./client": { gzip: 40, minified: 100, sha256: HASH_B },
   },
 };
 
@@ -72,6 +74,9 @@ describe("parseSizeReport", () => {
     expect(() =>
       parseSizeReport(`{"bundler":"rolldown@1.1.5","entrypoints":{".":{"minified":1.5,"gzip":1,"sha256":"a"}}}`, "x"),
     ).toThrow(`"." needs integer "minified" and "gzip"`);
+    expect(() =>
+      parseSizeReport(`{"bundler":"rolldown@1.1.5","entrypoints":{".":{"minified":1,"gzip":1,"sha256":"AB"}}}`, "x"),
+    ).toThrow(`"." has a "sha256" that is not 64 lowercase hex digits`);
   });
 });
 
@@ -87,8 +92,8 @@ describe("compareSizeReports", () => {
     const measured: SizeReport = {
       bundler: "rolldown@1.2.0",
       entrypoints: {
-        ".": { gzip: 400, minified: 1000, sha256: "changed" },
-        "./server": { gzip: 1, minified: 1, sha256: "cc" },
+        ".": { gzip: 400, minified: 1000, sha256: HASH_D },
+        "./server": { gzip: 1, minified: 1, sha256: HASH_C },
       },
     };
     const shorter = structuredClone(REPORT);

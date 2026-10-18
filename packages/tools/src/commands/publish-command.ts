@@ -39,12 +39,12 @@ export interface PublishOptions {
   /** Resolver for the release-tag precondition, defaulting to `git rev-parse`. */
   resolveRevision?: RevisionResolver;
   /** The bundle-size precondition, defaulting to building and measuring the package. */
-  checkSize?: (workspacePackage: WorkspacePackage) => Promise<ReadinessCheck>;
+  checkSize?: (workspacePackage: WorkspacePackage, timeoutMs?: number) => Promise<ReadinessCheck>;
 }
 
 // Loaded on demand so that every other `hub` command starts without rolldown.
-const checkSize = async (workspacePackage: WorkspacePackage): Promise<ReadinessCheck> =>
-  (await import("../release/bundle-size.ts")).checkBundleSize(workspacePackage);
+const checkSize = async (workspacePackage: WorkspacePackage, timeoutMs?: number): Promise<ReadinessCheck> =>
+  (await import("../release/bundle-size.ts")).checkBundleSize(workspacePackage, { timeoutMs });
 
 function readTagFlag(passthrough: readonly string[]): string | undefined | { error: string } {
   if (passthrough.includes(FROM_TAG_FLAG)) {
@@ -186,7 +186,7 @@ export function createPublishCommand(resolver?: CommandResolver, options: Publis
         ]);
         // After the others rather than beside them: it rebuilds the package,
         // and `npm pack` must not read `dist` while the build rewrites it.
-        const sizeCheck = await (options.checkSize ?? checkSize)(workspacePackage);
+        const sizeCheck = await (options.checkSize ?? checkSize)(workspacePackage, context.options.timeoutMs);
         const readiness = { ...report, checks: [...report.checks, tagCheck, sizeCheck] };
         if (!reportPreflight(context, readiness)) {
           context.reporter.blank();

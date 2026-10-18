@@ -29,6 +29,7 @@ export interface MeasuredEntrypoint {
 
 const CONDITIONS = ["import", "default"] as const;
 const JAVASCRIPT = /\.m?js$/u;
+const SHA256 = /^[0-9a-f]{64}$/u;
 
 function resolveTarget(value: unknown): string | undefined {
   if (typeof value === "string") {
@@ -106,6 +107,9 @@ export function parseSizeReport(contents: string, source: string): SizeReport {
     const { gzip, minified, sha256 } = (size ?? {}) as Record<string, unknown>;
     if (!isNonNegativeInteger(minified) || !isNonNegativeInteger(gzip) || typeof sha256 !== "string") {
       return fail(`"${subpath}" needs integer "minified" and "gzip" and a "sha256" string`);
+    }
+    if (!SHA256.test(sha256)) {
+      return fail(`"${subpath}" has a "sha256" that is not 64 lowercase hex digits`);
     }
     sizes[subpath] = { gzip, minified, sha256 };
   }

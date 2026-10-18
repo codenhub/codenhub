@@ -130,7 +130,7 @@ describe("cutRelease", () => {
   it("bumps the manifest and scaffolds a changelog the package did not have", async () => {
     const workspacePackage = await createPackageOnDisk("0.3.0");
 
-    const result = await cutRelease(workspacePackage, "minor", "2026-09-07", measured);
+    const result = await cutRelease(workspacePackage, "minor", "2026-09-07", { measure: measured });
 
     expect(result.version).toBe("0.4.0");
     expect(result.tag).toBe("@codenhub/error@0.4.0");
@@ -149,11 +149,14 @@ describe("cutRelease", () => {
       throw new Error("did not build");
     };
 
-    await expect(cutRelease(workspacePackage, "minor", "2026-09-07", failing)).rejects.toThrow("did not build");
+    await expect(cutRelease(workspacePackage, "minor", "2026-09-07", { measure: failing })).rejects.toThrow(
+      "did not build",
+    );
     expect(await readFile(join(workspacePackage.directory, "package.json"), "utf8")).toContain('"version": "1.0.0"');
     await expect(readFile(join(workspacePackage.directory, "docs/changelog/index.md"), "utf8")).rejects.toThrow(
       "ENOENT",
     );
+    await expect(readFile(join(workspacePackage.directory, "size.json"), "utf8")).rejects.toThrow("ENOENT");
   });
 
   it("adds to an existing changelog rather than replacing it", async () => {
@@ -164,7 +167,7 @@ describe("cutRelease", () => {
       "---\ntitle: Changelog\ncurated: true\n---\n\n# Changelog\n\n- [1.0.0](1.0.0.md)\n",
     );
 
-    const result = await cutRelease(workspacePackage, "patch", "2026-09-07", measured);
+    const result = await cutRelease(workspacePackage, "patch", "2026-09-07", { measure: measured });
 
     const index = await readFile(join(workspacePackage.directory, "docs/changelog/index.md"), "utf8");
     expect(result.version).toBe("1.0.1");
@@ -174,7 +177,9 @@ describe("cutRelease", () => {
   it("refuses a version that does not move forward, writing nothing", async () => {
     const workspacePackage = await createPackageOnDisk("1.0.0");
 
-    await expect(cutRelease(workspacePackage, "0.9.0", "2026-09-07", measured)).rejects.toThrow("does not come after");
+    await expect(cutRelease(workspacePackage, "0.9.0", "2026-09-07", { measure: measured })).rejects.toThrow(
+      "does not come after",
+    );
     expect(await readFile(join(workspacePackage.directory, "package.json"), "utf8")).toContain('"version": "1.0.0"');
   });
 });

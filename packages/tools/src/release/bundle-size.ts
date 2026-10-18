@@ -69,12 +69,15 @@ export async function measureEntrypoint(file: string, peers: readonly string[]):
 }
 
 /** Builds a package before it is measured. Injected by tests. */
-export type PackageBuilder = (workspacePackage: WorkspacePackage) => Promise<{ isSuccess: boolean; output: string }>;
+export type PackageBuilder = (
+  workspacePackage: WorkspacePackage,
+  timeoutMs?: number,
+) => Promise<{ isSuccess: boolean; output: string }>;
 
-const runBuild: PackageBuilder = async (workspacePackage) => {
+const runBuild: PackageBuilder = async (workspacePackage, timeoutMs) => {
   const outcome = await execute(
     { args: ["run", "build"], command: "pnpm", cwd: workspacePackage.directory },
-    { stdio: "pipe" },
+    { stdio: "pipe", timeoutMs },
   );
   return { isSuccess: outcome.isSuccess, output: outcome.output ?? "" };
 };
@@ -85,6 +88,8 @@ export interface MeasureOptions {
   build?: PackageBuilder;
   /** Entrypoint measurer, defaulting to {@link measureEntrypoint}. */
   measure?: typeof measureEntrypoint;
+  /** Milliseconds before the build is killed, or `undefined` to wait indefinitely. */
+  timeoutMs?: number;
 }
 
 /**
@@ -101,7 +106,7 @@ export async function measurePackage(
   workspacePackage: WorkspacePackage,
   options: MeasureOptions = {},
 ): Promise<SizeReport> {
-  const built = await (options.build ?? runBuild)(workspacePackage);
+  const built = await (options.build ?? runBuild)(workspacePackage, options.timeoutMs);
   if (!built.isSuccess) {
     throw new Error(`${workspacePackage.name} did not build, so its size cannot be measured.\n${built.output}`);
   }
@@ -122,7 +127,7 @@ export async function measurePackage(
  * because every release from this one on records its size; so does any
  * difference in the bundler, an entrypoint's minified length, or its hash.
  * @param workspacePackage Package about to be published.
- * @param options Builder and measurer, injected by tests.
+ * @param options Builder, measurer, and build timeout.
  * @returns A `size` precondition in the shape the preflight reports.
  */
 export async function checkBundleSize(
@@ -130,9 +135,13 @@ export async function checkBundleSize(
   options: MeasureOptions = {},
 ): Promise<ReadinessCheck> {
   const block = (detail: string): ReadinessCheck => ({ detail, name: "size", status: "blocked" });
-  const contents = await readFile(join(workspacePackage.directory, SIZE_FILE), "utf8").catch(() => undefined);
-  if (contents === undefined) {
-    return block(`no ${SIZE_FILE}; cut the release with \`pnpm hub release ${workspacePackage.name} --cut=<version>\``);
+  let contents: string;
+  try {
+    contents = await readFile(join(workspacePackage.directory, SIZE_FILE), "utf8");
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT"
+      ? block(`no ${SIZE_FILE}; cut the release with \`pnpm hub release ${workspacePackage.name} --cut=<version>\``)
+      : block(`${SIZE_FILE} could not be read: ${(error as Error).message}`);
   }
   let recorded: SizeReport;
   let measured: SizeReport;

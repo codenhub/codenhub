@@ -84,7 +84,9 @@ async function runCut(context: CommandContext, requested: string): Promise<numbe
 
   let result;
   try {
-    result = await cutRelease(workspacePackage, requested, new Date().toISOString().slice(0, 10));
+    result = await cutRelease(workspacePackage, requested, new Date().toISOString().slice(0, 10), {
+      timeoutMs: context.options.timeoutMs,
+    });
   } catch (error) {
     context.reporter.error(error instanceof Error ? error.message : String(error));
     return EXIT_FAILURE;
