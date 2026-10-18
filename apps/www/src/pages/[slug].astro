@@ -123,27 +123,28 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
             <CopyButton label="Copy package name" text={entry.name} />
           </div>
         </div>
-        <nav aria-label={`${entry.label} links`} class="package-links">
-          {
-            secondaryLinks.map((link, index) => (
-              <span class="tooltip" data-tooltip-position="bottom">
-                <a
-                  aria-labelledby={`package-link-tip-${index}`}
-                  class="btn ghost edged icon sm"
-                  href={link.href}
-                  rel={link.external ? "noopener noreferrer" : undefined}
-                  target={link.external ? "_blank" : undefined}
-                >
-                  <i aria-hidden="true" class={link.icon} />
-                </a>
-                <span class="tooltip-bubble" id={`package-link-tip-${index}`} role="tooltip">
-                  {link.label}
-                </span>
-              </span>
-            ))
-          }
-          {
-            primaryLink !== undefined && (
+        {
+          // Secondary links exist only beside a primary one, so this covers both.
+          primaryLink !== undefined && (
+            <nav aria-label={`${entry.label} links`} class="package-links">
+              {
+                secondaryLinks.map((link, index) => (
+                  <span class="tooltip" data-tooltip-position="bottom">
+                    <a
+                      aria-labelledby={`package-link-tip-${index}`}
+                      class="btn ghost edged icon sm"
+                      href={link.href}
+                      rel={link.external ? "noopener noreferrer" : undefined}
+                      target={link.external ? "_blank" : undefined}
+                    >
+                      <i aria-hidden="true" class={link.icon} />
+                    </a>
+                    <span class="tooltip-bubble" id={`package-link-tip-${index}`} role="tooltip">
+                      {link.label}
+                    </span>
+                  </span>
+                ))
+              }
               <a
                 class="btn primary sm"
                 href={primaryLink.href}
@@ -153,9 +154,9 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
                 <i aria-hidden="true" class={primaryLink.icon} />
                 {primaryLink.label}
               </a>
-            )
-          }
-        </nav>
+            </nav>
+          )
+        }
         {entry.description !== undefined && <p class="package-description">{entry.description}</p>}
       </header>
 
