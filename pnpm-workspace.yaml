@@ -7,6 +7,7 @@ packages:
 
 catalog:
   "@astrojs/check": ^0.9.10
+  "@astrojs/markdown-remark": 7.3.3
   "@codenhub/error": ^0.2.1
   "@codenhub/jwt": ^0.0.1
   "@codenhub/store": ^0.0.2

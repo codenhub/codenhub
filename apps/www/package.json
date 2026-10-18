@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "catalog:",
+    "@astrojs/markdown-remark": "catalog:",
     "@codenhub/app-shell": "workspace:*",
     "@codenhub/icons": "workspace:*",
     "@codenhub/styles": "workspace:*",

@@ -14,6 +14,7 @@ import InstallTabs from "../components/install-tabs.astro";
 import { catalogPackages, type CatalogPackage } from "../lib/catalog";
 import { formatDate } from "../lib/format";
 import { describeRootSize, formatBytes, npmTarballUrl } from "../lib/package-facts";
+import { renderReadme } from "../lib/readme";
 import { siteConfig } from "../site-config";
 import "../styles/global.css";
 
@@ -84,10 +85,15 @@ const entrypoints = properties.entrypoints.map((subpath) => ({
 }));
 const hasSizes = entrypoints.some((entrypoint) => entrypoint.size !== undefined);
 
+const readmeHtml = entry.readme === undefined ? undefined : await renderReadme(entry.readme.source, entry.readme.baseUrl);
+
 const detailTabs = [
-  ...(entrypoints.length === 0 ? [] : [{ id: "entrypoints", label: "Entry points" }]),
-  { id: "releases", label: "Releases" },
+  ...(readmeHtml === undefined ? [] : [{ icon: "ic-lucide-book-text", id: "readme", label: "README" }]),
+  ...(entrypoints.length === 0 ? [] : [{ icon: "ic-lucide-package-open", id: "entrypoints", label: "Entry points" }]),
+  { icon: "ic-lucide-tags", id: "releases", label: "Releases" },
 ];
+// The first tab shows without JavaScript; the others wait for a click.
+const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
 ---
 
 <BaseLayout
@@ -172,7 +178,7 @@ const detailTabs = [
       <section aria-label="Package details" class="package-section" data-package-tabs>
         <div aria-label="Package details" class="www-tablist" role="tablist">
           {
-            detailTabs.map(({ id, label }, index) => (
+            detailTabs.map(({ icon, id, label }, index) => (
               <button
                 aria-controls={`package-panel-${id}`}
                 aria-selected={index === 0 ? "true" : "false"}
@@ -182,6 +188,7 @@ const detailTabs = [
                 tabindex={index === 0 ? 0 : -1}
                 type="button"
               >
+                <i aria-hidden="true" class={icon} />
                 {label}
               </button>
             ))
@@ -189,10 +196,23 @@ const detailTabs = [
         </div>
 
         {
+          readmeHtml !== undefined && (
+            <div
+              aria-labelledby="package-tab-readme"
+              class="package-panel package-readme"
+              id="package-panel-readme"
+              role="tabpanel"
+              set:html={readmeHtml}
+            />
+          )
+        }
+
+        {
           entrypoints.length > 0 && (
             <div
               aria-labelledby="package-tab-entrypoints"
               class="package-panel"
+              hidden={!isFirstTab("entrypoints")}
               id="package-panel-entrypoints"
               role="tabpanel"
             >
@@ -233,7 +253,7 @@ const detailTabs = [
         <div
           aria-labelledby="package-tab-releases"
           class="package-panel"
-          hidden={entrypoints.length > 0}
+          hidden={!isFirstTab("releases")}
           id="package-panel-releases"
           role="tabpanel"
         >
