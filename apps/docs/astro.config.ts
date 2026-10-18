@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
+import { remarkAlerts } from "@codenhub/app-shell/remark-alerts";
 import lucide from "@codenhub/icons/data/lucide";
 import { viteIcons } from "@codenhub/icons/vite";
 import { snapshotPackagesRoot } from "@codenhub/tools/release";
@@ -11,7 +12,6 @@ import { defineConfig } from "astro/config";
 import { createDocumentationIntegration } from "./src/lib/documentation-integration";
 import { createCodeBlockTransformer } from "./src/lib/markdown/code-blocks";
 import { rehypeMarkdownEnhancements } from "./src/lib/markdown/rehype-enhancements";
-import { remarkAlerts } from "./src/lib/markdown/remark-alerts";
 import { createPublishedDocsSnapshotIntegration } from "./src/lib/published-docs-snapshot-integration";
 import { siteConfig } from "./src/site-config";
 

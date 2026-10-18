@@ -12,6 +12,7 @@
     "./components/theme-toggle.astro": "./src/components/theme-toggle.astro",
     "./package-grid": "./src/package-grid.ts",
     "./package-links": "./src/package-links.ts",
+    "./remark-alerts": "./src/remark-alerts.ts",
     "./nav": "./src/nav.ts",
     "./theme": "./src/theme.ts",
     "./site-config": "./src/site-config.ts",

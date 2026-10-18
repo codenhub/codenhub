@@ -1,5 +1,13 @@
-import type { AstNode } from "./ast";
-import { visitTree } from "./ast";
+/** The subset of an mdast node the transform reads and writes. */
+interface AstNode {
+  children?: AstNode[];
+  data?: {
+    hName?: string;
+    hProperties?: Record<string, unknown>;
+  };
+  type: string;
+  value?: string;
+}
 
 const ALERTS = {
   NOTE: { intent: "info", title: "Note", icon: "<circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/>" },
@@ -76,6 +84,16 @@ function transformBlockquote(node: AstNode): void {
   node.children!.unshift(createAlertTitle(type));
 }
 
+function visitTree(node: AstNode, visitor: (node: AstNode) => void): void {
+  visitor(node);
+  node.children?.forEach((child) => visitTree(child, visitor));
+}
+
+/**
+ * Remark plugin that turns a GitHub-style alert blockquote, such as `> [!WARNING]`,
+ * into an `<aside class="markdown-alert alert {intent}">` with an icon and title.
+ * The host styles `.markdown-alert`, `.markdown-alert-title` and `.markdown-alert-icon`.
+ */
 export function remarkAlerts(): (tree: unknown) => void {
   return (tree) => visitTree(tree as AstNode, transformBlockquote);
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { remarkAlerts } from "./remark-alerts";
+import { remarkAlerts } from "./remark-alerts.ts";
 
 interface TestNode {
   children?: TestNode[];
