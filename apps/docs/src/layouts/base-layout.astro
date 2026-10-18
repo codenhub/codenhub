@@ -44,9 +44,11 @@ const scopedSiteConfig: SiteConfig =
   <SearchPalette slot="actions" />
   <slot />
   <script>
-    import { createCodeCopyController, findCodeCopyStatus } from "../lib/markdown/code-copy";
+    import { createCopyController } from "@codenhub/app-shell/copy-feedback";
 
-    const copyController = createCodeCopyController();
+    import { findCodeCopyStatus } from "../lib/markdown/code-copy";
+
+    const copyController = createCopyController();
 
     if (document.documentElement.dataset.codeCopyReady !== "true") {
       document.documentElement.dataset.codeCopyReady = "true";
@@ -68,7 +70,7 @@ const scopedSiteConfig: SiteConfig =
           return;
         }
 
-        await copyController.copy({ button: copyButton, clipboard: navigator.clipboard, code, status });
+        await copyController.copy({ button: copyButton, clipboard: navigator.clipboard, status, text: code });
       });
     }
   </script>

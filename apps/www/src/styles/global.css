@@ -500,7 +500,10 @@
   white-space: nowrap;
 }
 
-[data-copy] [hidden] {
+/* The icon for the copy state `@codenhub/app-shell/copy-feedback` sets. */
+[data-copy][data-copy-state] [data-copy-icon="idle"],
+[data-copy]:not([data-copy-state="copied"]) [data-copy-icon="copied"],
+[data-copy]:not([data-copy-state="failed"]) [data-copy-icon="failed"] {
   display: none;
 }
 
@@ -584,6 +587,58 @@
 .package-readme table {
   display: block;
   overflow-x: auto;
+}
+
+/* GitHub-style alerts from `@codenhub/app-shell/remark-alerts`, laid out as
+   the documentation site lays them out. The `.alert` surface and its intent
+   class come from the kit; `important` is not a kit intent, so it takes
+   primary's. */
+.package-readme .markdown-alert {
+  display: block;
+  margin-block: 1.5rem;
+}
+
+.package-readme .markdown-alert.important {
+  --intent-color: var(--color-primary);
+  --intent-contrast: var(--color-primary-contrast);
+  --intent-hover: var(--color-primary-hover);
+  --intent-strong: var(--color-primary-strong);
+  --intent-subtle: var(--color-primary-subtle);
+  --intent-border: var(--color-primary);
+}
+
+.package-readme .markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--intent-color);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+}
+
+.package-readme .markdown-alert-title + p {
+  margin-top: 0;
+}
+
+.package-readme .markdown-alert > :last-child {
+  margin-bottom: 0;
+}
+
+.package-readme .markdown-alert :is(p, li) {
+  color: color-mix(in srgb, var(--intent-color) 82%, var(--color-text));
+}
+
+.package-readme .markdown-alert-icon {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* The details tabs sit on the page, not in a box, so they start flush with it. */

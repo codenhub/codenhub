@@ -1,9 +1,9 @@
 import { rehypeHeadingIds } from "@astrojs/markdown-remark";
+import { remarkAlerts } from "@codenhub/app-shell/remark-alerts";
 import { describe, expect, it } from "vitest";
 
 import config from "./astro.config";
 import { rehypeMarkdownEnhancements } from "./src/lib/markdown/rehype-enhancements";
-import { remarkAlerts } from "./src/lib/markdown/remark-alerts";
 import { siteConfig } from "./src/site-config";
 
 interface ConfiguredProcessor {

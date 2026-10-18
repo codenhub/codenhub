@@ -1,4 +1,5 @@
 import { unified } from "@astrojs/markdown-remark";
+import { remarkAlerts } from "@codenhub/app-shell/remark-alerts";
 
 interface MarkdownNode {
   type: string;
@@ -65,14 +66,15 @@ function remarkPackageReadme({ baseUrl, imageBaseUrl }: ReadmeBases) {
 }
 
 /**
- * Renders a package's README to HTML, highlighted like the documentation site.
+ * Renders a package's README to HTML, highlighted and with GitHub-style alerts
+ * like the documentation site.
  * @param source The README's Markdown.
  * @param bases Where its package-relative links and images resolve.
  * @returns The rendered HTML.
  */
 export async function renderReadme(source: string, bases: ReadmeBases): Promise<string> {
   // One page renders each README once, so the renderer is not kept.
-  const renderer = await unified({ remarkPlugins: [remarkPackageReadme(bases)] }).createRenderer({
+  const renderer = await unified({ remarkPlugins: [remarkAlerts, remarkPackageReadme(bases)] }).createRenderer({
     shikiConfig: { theme: "github-dark-default" },
   });
   return (await renderer.render(source)).code;

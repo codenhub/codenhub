@@ -29,6 +29,15 @@ describe("renderReadme", () => {
     expect(html).toContain('href="#usage"');
   });
 
+  it("renders GitHub-style alerts as the documentation site does", async () => {
+    const html = await renderReadme("> [!WARNING]\n> Breaking change.\n", BASES);
+
+    expect(html).not.toContain("[!WARNING]");
+    expect(html).toMatch(/<aside class="markdown-alert alert warning" data-alert-type="warning">/u);
+    expect(html).toMatch(/<p class="markdown-alert-title">.*Warning<\/p>/su);
+    expect(html).toContain("<p>Breaking change.</p>");
+  });
+
   it("highlights code blocks", async () => {
     const html = await renderReadme("```ts\nconst a = 1;\n```\n", BASES);
 
