@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-09-14
+last_updated: 2026-10-18
 scope: "@codenhub/app-shell: what it provides to the three deploy surfaces and the contract each host must satisfy."
 ---
 
@@ -14,7 +14,7 @@ Through `exports`, as source:
 
 - `./layouts/base-layout.astro` — the `<html>` document: head, inline theme bootstrap, skip link, `<SiteHeader>`, page `<slot />`, `<SiteFooter>`, and the theme-switch + footer-year script.
 - `./components/site-header.astro`, `./components/site-footer.astro`, `./components/theme-toggle.astro` — used by the layout; exported so an app can compose them directly if it needs to.
-- `./components/status-badge.astro` — the deprecated/experimental package badge. Used by `apps/www`, `apps/docs`, and `apps/demo` wherever a package catalog shows its status; not used by `packages/*/demo`, since a package demo never lists other packages.
+- `./components/status-badge.astro` — the deprecated/experimental package badge; `compact` draws the icon alone, with the label as its accessible name and native tooltip, for space-tight places such as the index cards. Used by `apps/www`, `apps/docs`, and `apps/demo` wherever a package catalog shows its status; not used by `packages/*/demo`, since a package demo never lists other packages.
 - `./package-grid` — `initPackageGrid()`, the search-filter and name-sort behavior for a package/demo index grid. Wired by `apps/www`, `apps/docs`, and `apps/demo`'s own index pages.
 - `./nav` — `resolveNavLinks(siteConfig)`, the header's cross-surface link list. Pure: takes a `SiteConfig`, returns link/label pairs, touches nothing. `site-header.astro` calls it internally; a non-Astro host calls it too, and renders the result in its own markup — see `docs/internal/vanilla-host-markup.md`.
 - `./theme` — `resolveInitialTheme`, `nextTheme`, `themeToggleAria`, and the shared `THEME_STORAGE_KEY` constant. Pure functions with no DOM or storage access; every consumer, `base-layout.astro` included, writes its own few lines of glue calling them. See "Theme" below and `docs/internal/vanilla-host-markup.md`.

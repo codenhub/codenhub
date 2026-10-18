@@ -1,0 +1,75 @@
+---
+/**
+ * One package in the index grid: a summary that opens the package's own page.
+ *
+ * Top right carries the latest stable version and, for a package that is not
+ * active, its status as an icon. Bottom right carries when the package last
+ * published, which is a release of any kind, pre-releases included.
+ *
+ * @param entry - The package as the catalog describes it.
+ */
+import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
+
+import { formatDate } from "../lib/format";
+import { describeRootSize } from "../lib/package-facts";
+import type { CatalogPackage } from "../lib/catalog";
+import BrandIcon from "./brand-icon.astro";
+
+interface Props {
+  entry: CatalogPackage;
+}
+
+const { entry } = Astro.props;
+const latest = entry.releases.latest;
+const lastRelease = entry.releases.lastPublished;
+const size = describeRootSize(entry.size);
+const haystack = `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLowerCase();
+---
+
+<div class="package-card" data-label={entry.label} data-search={haystack} role="listitem">
+  <a class="package-card-open" href={`/${entry.slug}/`}>
+    <div class="package-card-heading">
+      <div class="package-card-title">
+        {entry.logoUrl !== undefined && <img alt="" class="package-card-logo" src={entry.logoUrl} />}
+        <h3>{entry.label}</h3>
+      </div>
+      <div class="package-card-badges">
+        {latest !== undefined && <span class="badge secondary soft package-card-version">v{latest.version}</span>}
+        {entry.status !== undefined && <StatusBadge compact status={entry.status} />}
+      </div>
+    </div>
+    <p>{entry.description ?? entry.name}</p>
+    {size !== undefined && <p class="package-card-size">{size}</p>}
+  </a>
+  <div class="package-card-links">
+    {
+      entry.links.github !== undefined && (
+        <a
+          aria-label={`${entry.label} on GitHub`}
+          class="package-card-link"
+          href={entry.links.github}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          <BrandIcon brand="github" />
+        </a>
+      )
+    }
+    <a
+      aria-label={`${entry.label} on npm`}
+      class="package-card-link"
+      href={entry.links.npm}
+      rel="noopener noreferrer"
+      target="_blank"
+    >
+      <BrandIcon brand="npm" />
+    </a>
+    {
+      lastRelease !== undefined && (
+        <time class="package-card-updated" datetime={lastRelease.date} title="Last published">
+          {formatDate(lastRelease.date)}
+        </time>
+      )
+    }
+  </div>
+</div>
