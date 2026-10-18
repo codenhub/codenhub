@@ -5,14 +5,16 @@
  * attention harder to spot.
  *
  * @param status - The package's lifecycle status.
+ * @param compact - Show the icon alone, with the label as its accessible name and native tooltip.
  */
 import type { PackageStatus } from "@codenhub/tools/documentation";
 
 interface Props {
   status: PackageStatus;
+  compact?: boolean;
 }
 
-const { status } = Astro.props;
+const { compact = false, status } = Astro.props;
 
 const badges = {
   deprecated: { icon: "ic-lucide-ban", label: "Deprecated", tone: "destructive" },
@@ -24,9 +26,14 @@ const badge = status === "active" ? undefined : badges[status];
 
 {
   badge !== undefined && (
-    <span class:list={["badge", "soft", "status-badge", badge.tone]}>
+    <span
+      aria-label={compact ? badge.label : undefined}
+      class:list={["badge", "soft", "status-badge", badge.tone, { "status-badge-compact": compact }]}
+      role={compact ? "img" : undefined}
+      title={compact ? badge.label : undefined}
+    >
       <i aria-hidden="true" class:list={[badge.icon, "status-badge-icon"]} />
-      {badge.label}
+      {!compact && badge.label}
     </span>
   )
 }
