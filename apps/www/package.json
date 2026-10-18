@@ -22,6 +22,7 @@
     "@codenhub/tools": "workspace:*",
     "@types/node": "catalog:",
     "astro": "catalog:",
+    "jsdom": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
     "wrangler": "catalog:"

@@ -85,7 +85,7 @@ const entrypoints = properties.entrypoints.map((subpath) => ({
 }));
 const hasSizes = entrypoints.some((entrypoint) => entrypoint.size !== undefined);
 
-const readmeHtml = entry.readme === undefined ? undefined : await renderReadme(entry.readme.source, entry.readme.baseUrl);
+const readmeHtml = entry.readme === undefined ? undefined : await renderReadme(entry.readme.source, entry.readme);
 
 const detailTabs = [
   ...(readmeHtml === undefined ? [] : [{ icon: "ic-lucide-book-text", id: "readme", label: "README" }]),

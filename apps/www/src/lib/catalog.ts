@@ -9,6 +9,7 @@ import { parseSizeReport, type ReleaseHistory, type SizeReport } from "@codenhub
 
 import { siteConfig } from "../site-config";
 import { describeProperties, describeReleases, type PackageProperties, type PackageReleases } from "./package-facts";
+import type { ReadmeBases } from "./readme";
 
 /** Outbound links for one package, each present only when its target exists. */
 export interface CatalogLinks {
@@ -34,8 +35,8 @@ export interface CatalogPackage extends PublicPackageSummary {
   /** Site path of the package's logo, when it declares one. */
   logoUrl?: string;
   properties: PackageProperties;
-  /** The package's README, with where its relative links resolve. */
-  readme?: { baseUrl: string; source: string };
+  /** The package's README, with where its package-relative links and images resolve. */
+  readme?: ReadmeBases & { source: string };
   releases: PackageReleases;
   /** Bundle sizes the release recorded, absent for a release cut before sizes were. */
   size?: SizeReport;
@@ -162,6 +163,7 @@ function describePackage(summary: PublicPackageSummary): CatalogPackage {
         : {
             // The release's files on GitHub; the default branch's when there is no stable release to pin.
             baseUrl: `${siteConfig.githubUrl}/blob/${tag ?? "HEAD"}/${workspaceRoot(manifestPath)}/`,
+            imageBaseUrl: `${siteConfig.githubUrl}/raw/${tag ?? "HEAD"}/${workspaceRoot(manifestPath)}/`,
             source: readmeSource,
           },
     releases,

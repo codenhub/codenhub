@@ -33,7 +33,8 @@ export function bindTabs(
 
   root.addEventListener("keydown", (event) => {
     const index = tabs.indexOf(event.target as HTMLButtonElement);
-    if (index === -1) {
+    // A held modifier means a browser shortcut, such as Alt+ArrowLeft for back.
+    if (index === -1 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
       return;
     }
     const next =
