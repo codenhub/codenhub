@@ -11,9 +11,10 @@
     "preview:deploy": "wrangler versions upload",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "astro sync && tsc --noEmit"
+    "typecheck": "astro check"
   },
   "devDependencies": {
+    "@astrojs/check": "catalog:",
     "@astrojs/markdown-remark": "7.2.1",
     "@codenhub/app-shell": "workspace:*",
     "@codenhub/icons": "workspace:*",
