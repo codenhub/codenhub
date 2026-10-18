@@ -155,4 +155,14 @@ function describePackage(summary: PublicPackageSummary): CatalogPackage {
 /** Every listed public package the index presents, in catalog order. */
 export const catalogPackages: CatalogPackage[] = summaries.map(describePackage);
 
+// Each slug is a page path; two packages on one slug would leave one without a page.
+const packagesBySlug = new Map<string, string>();
+for (const entry of catalogPackages) {
+  const other = packagesBySlug.get(entry.slug);
+  if (other !== undefined) {
+    throw new Error(`${other} and ${entry.name} share the slug "${entry.slug}"; give one a different codenhub.slug.`);
+  }
+  packagesBySlug.set(entry.slug, entry.name);
+}
+
 export const documentedCount = catalogPackages.filter((entry) => entry.documentationRoute !== undefined).length;

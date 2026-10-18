@@ -411,6 +411,7 @@
   border: 0;
   border-radius: var(--radius-control);
   background: none;
+  box-shadow: none;
   color: var(--color-text-secondary);
   font: inherit;
   font-size: 0.875rem;
@@ -534,7 +535,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .www-route,
-  .package-card {
+  .package-card,
+  .install-tab {
     transition: none;
   }
 }

@@ -28,7 +28,6 @@ const { links, properties, releases, size } = entry;
 const latest = releases.latest;
 const rootSize = describeRootSize(size);
 
-
 interface Link {
   href: string;
   label: string;
@@ -37,7 +36,7 @@ interface Link {
   external: boolean;
 }
 
-const pageLinks = [
+const pageLinks: (Link | undefined)[] = [
   links.docs === undefined ? undefined : { href: links.docs, label: "Documentation", icon: "ic-lucide-book-open", external: false },
   links.changelog === undefined ? undefined : { href: links.changelog, label: "Changelog", icon: "ic-lucide-history", external: false },
   links.demo === undefined ? undefined : { href: links.demo, label: "Demo", icon: "ic-lucide-play", external: false },
@@ -48,8 +47,13 @@ const pageLinks = [
 
 const yesNo = (value: boolean): string => (value ? "Yes" : "No");
 const facts: [string, string][] = [
-  ["Latest version", latest === undefined ? "Unreleased" : latest.version],
-  ...(releases.history[0] === undefined ? [] : [["Last published", formatDate(releases.history[0].date)] as [string, string]]),
+  [
+    "Latest version",
+    latest !== undefined ? latest.version : releases.history.length === 0 ? "Unreleased" : "No stable release",
+  ],
+  ...(releases.lastPublished === undefined
+    ? []
+    : [["Last published", formatDate(releases.lastPublished.date)] as [string, string]]),
   ...(entry.license === undefined ? [] : [["License", entry.license] as [string, string]]),
   ...(rootSize === undefined ? [] : [["Bundle size", rootSize] as [string, string]]),
   ["Dependencies", properties.dependencyCount === 0 ? "None" : String(properties.dependencyCount)],

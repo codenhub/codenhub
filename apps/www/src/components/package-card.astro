@@ -21,7 +21,7 @@ interface Props {
 
 const { entry } = Astro.props;
 const latest = entry.releases.latest;
-const lastRelease = entry.releases.history[0];
+const lastRelease = entry.releases.lastPublished;
 const size = describeRootSize(entry.size);
 const haystack = `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLowerCase();
 ---

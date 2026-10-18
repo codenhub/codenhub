@@ -20,8 +20,10 @@ export interface PackageProperties {
 
 /** A package's releases, split into what the index shows first and the rest. */
 export interface PackageReleases {
-  /** Every release, newest first, pre-releases included. */
+  /** Every release, highest version first, pre-releases included. */
   history: PackageRelease[];
+  /** The most recently published release, which a backport can make other than the highest version. */
+  lastPublished?: PackageRelease;
   /** Newest stable release, which `npm install` resolves by default. */
   latest?: PackageRelease;
 }
@@ -44,18 +46,26 @@ function entrypointsOf(exportsField: unknown): string[] {
     return ["."];
   }
   const keys = isRecord(exportsField) ? Object.keys(exportsField) : [];
+  const isSubpath = (key: string): boolean => key === "." || key.startsWith("./");
+  if (!keys.some(isSubpath)) {
+    return keys.length > 0 ? ["."] : [];
+  }
   // `./package.json` is exported for tools that read the manifest, not as code to import.
-  const subpaths = keys.filter((key) => (key === "." || key.startsWith("./")) && key !== "./package.json");
-  return subpaths.length === 0 && keys.length > 0 ? ["."] : subpaths;
+  return keys.filter((key) => isSubpath(key) && key !== "./package.json");
 }
 
 /**
  * Reads a package's releases from its history.
- * @param history Releases newest first, as `@codenhub/tools/release` records them.
- * @returns The history and its newest stable release.
+ * @param history Releases highest version first, as `@codenhub/tools/release` records them.
+ * @returns The history, its most recently published release, and its newest stable release.
  */
 export function describeReleases(history: readonly PackageRelease[] = []): PackageReleases {
-  return { history: [...history], latest: history.find((release) => !release.isPrerelease) };
+  const lastPublished = history.reduce<PackageRelease | undefined>(
+    (newest, release) =>
+      newest === undefined || Date.parse(release.date) > Date.parse(newest.date) ? release : newest,
+    undefined,
+  );
+  return { history: [...history], lastPublished, latest: history.find((release) => !release.isPrerelease) };
 }
 
 /**

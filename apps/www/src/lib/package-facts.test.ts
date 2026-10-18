@@ -9,11 +9,20 @@ describe("describeReleases", () => {
       { date: "2026-10-01T00:00:00+00:00", isPrerelease: false, version: "0.3.0" },
     ];
 
-    expect(describeReleases(history)).toEqual({ history, latest: history[1] });
+    expect(describeReleases(history)).toEqual({ history, lastPublished: history[0], latest: history[1] });
+  });
+
+  it("takes the last published release by date, not by version, so a backport counts", () => {
+    const history = [
+      { date: "2026-09-01T00:00:00+00:00", isPrerelease: false, version: "2.0.0" },
+      { date: "2026-10-05T00:00:00+00:00", isPrerelease: false, version: "1.4.1" },
+    ];
+
+    expect(describeReleases(history).lastPublished).toBe(history[1]);
   });
 
   it("has no latest release for a package without one", () => {
-    expect(describeReleases()).toEqual({ history: [], latest: undefined });
+    expect(describeReleases()).toEqual({ history: [], lastPublished: undefined, latest: undefined });
   });
 });
 
@@ -46,6 +55,10 @@ describe("describeProperties", () => {
   it("treats a conditions-only exports map as the root entrypoint", () => {
     expect(describeProperties({ exports: { import: "./index.js", types: "./index.d.ts" } }).entrypoints).toEqual(["."]);
     expect(describeProperties({ exports: "./index.js" }).entrypoints).toEqual(["."]);
+  });
+
+  it("lists no entrypoint for a package that exports only its manifest", () => {
+    expect(describeProperties({ exports: { "./package.json": "./package.json" } }).entrypoints).toEqual([]);
   });
 
   it("does not call a package with a require condition ESM-only", () => {

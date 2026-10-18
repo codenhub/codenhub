@@ -55,14 +55,19 @@ const managers: { brand: Brand; command: string }[] = [
         <button aria-label="Copy command" class="btn secondary ghost icon sm" data-copy={command} title="Copy command" type="button">
           <i aria-hidden="true" class="ic-lucide-copy" data-copy-icon="idle" />
           <i aria-hidden="true" class="ic-lucide-check" data-copy-icon="done" hidden />
+          <i aria-hidden="true" class="ic-lucide-x" data-copy-icon="failed" hidden />
         </button>
       </div>
     ))
   }
+  <span class="sr-only" data-copy-status role="status"></span>
 </div>
 
 <script>
   const STORAGE_KEY = "codenhub:package-manager";
+  // Matches the docs code blocks' copy feedback.
+  const COPY_FEEDBACK_DURATION_MS = 2000;
+  const COPY_LABELS = { done: "Copied", failed: "Copy failed. Try again", idle: "Copy command" } as const;
 
   for (const root of document.querySelectorAll<HTMLElement>("[data-install-tabs]")) {
     const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
@@ -79,6 +84,11 @@ const managers: { brand: Brand; command: string }[] = [
       }
       if (focus) {
         tab.focus();
+      }
+      try {
+        localStorage.setItem(STORAGE_KEY, tab.dataset.manager ?? "");
+      } catch {
+        // The choice just is not remembered.
       }
     };
 
@@ -98,11 +108,6 @@ const managers: { brand: Brand; command: string }[] = [
       const tab = (event.target as Element).closest<HTMLButtonElement>('[role="tab"]');
       if (tab !== null) {
         select(tab, false);
-        try {
-          localStorage.setItem(STORAGE_KEY, tab.dataset.manager ?? "");
-        } catch {
-          // The choice just is not remembered.
-        }
       }
     });
 
@@ -127,26 +132,36 @@ const managers: { brand: Brand; command: string }[] = [
       }
     });
 
+    const status = root.querySelector<HTMLElement>("[data-copy-status]");
     for (const button of root.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
+      let resetTimer: ReturnType<typeof setTimeout> | undefined;
+      const show = (state: keyof typeof COPY_LABELS): void => {
+        for (const icon of button.querySelectorAll<HTMLElement>("[data-copy-icon]")) {
+          icon.hidden = icon.dataset.copyIcon !== state;
+        }
+        button.setAttribute("aria-label", COPY_LABELS[state]);
+        button.title = COPY_LABELS[state];
+      };
+
       button.addEventListener("click", async () => {
+        let state: "done" | "failed" = "done";
         try {
           await navigator.clipboard.writeText(button.dataset.copy ?? "");
         } catch {
-          return;
+          // Denied permission or no clipboard API: say so instead of looking unchanged.
+          state = "failed";
         }
-        const [idle, done] = ["idle", "done"].map((state) =>
-          button.querySelector<HTMLElement>(`[data-copy-icon="${state}"]`),
-        );
-        idle?.toggleAttribute("hidden", true);
-        done?.toggleAttribute("hidden", false);
-        button.setAttribute("aria-label", "Copied");
-        button.title = "Copied";
-        setTimeout(() => {
-          idle?.toggleAttribute("hidden", false);
-          done?.toggleAttribute("hidden", true);
-          button.setAttribute("aria-label", "Copy command");
-          button.title = "Copy command";
-        }, 1500);
+        show(state);
+        if (status !== null) {
+          status.textContent = state === "done" ? "Copied" : "Copy failed";
+        }
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(() => {
+          show("idle");
+          if (status !== null) {
+            status.textContent = "";
+          }
+        }, COPY_FEEDBACK_DURATION_MS);
       });
     }
   }
