@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import ts from "typescript";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -41,31 +41,33 @@ beforeAll(async () => {
     throw new Error("run `pnpm build oidc` first: this test reads dist/");
   }
   const scenarioSource = readFileSync(new URL("tests/scenarios.ts", packageRoot), "utf8");
-  worker = new Miniflare({
-    compatibilityDate: "2026-07-01",
-    modulesRoot: fileURLToPath(packageRoot),
-    modules: [
-      { type: "ESModule", path: "worker.js", contents: WORKER },
-      { type: "ESModule", path: "codenhub-jwt.js", contents: readFileSync(jwtEntry, "utf8") },
-      {
-        type: "ESModule",
-        path: "tests/scenarios.js",
-        contents: ts.transpileModule(scenarioSource, {
-          compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2024 },
-        }).outputText,
-      },
-      ...readdirSync(dist)
-        .filter((file) => file.endsWith(".js"))
-        .map((file) => ({
-          type: "ESModule" as const,
-          path: `dist/${file}`,
-          contents: readFileSync(new URL(file, dist), "utf8").replaceAll(
-            /(from|import)\s*(["'])@codenhub\/jwt\2/g,
-            '$1 "../codenhub-jwt.js"',
-          ),
-        })),
-    ],
-  });
+  worker = new Miniflare(
+    convertV4MiniflareOptions({
+      compatibilityDate: "2026-07-01",
+      modulesRoot: fileURLToPath(packageRoot),
+      modules: [
+        { type: "ESModule", path: "worker.js", contents: WORKER },
+        { type: "ESModule", path: "codenhub-jwt.js", contents: readFileSync(jwtEntry, "utf8") },
+        {
+          type: "ESModule",
+          path: "tests/scenarios.js",
+          contents: ts.transpileModule(scenarioSource, {
+            compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2024 },
+          }).outputText,
+        },
+        ...readdirSync(dist)
+          .filter((file) => file.endsWith(".js"))
+          .map((file) => ({
+            type: "ESModule" as const,
+            path: `dist/${file}`,
+            contents: readFileSync(new URL(file, dist), "utf8").replaceAll(
+              /(from|import)\s*(["'])@codenhub\/jwt\2/g,
+              '$1 "../codenhub-jwt.js"',
+            ),
+          })),
+      ],
+    }),
+  );
   await worker.ready;
 }, 60_000);
 
