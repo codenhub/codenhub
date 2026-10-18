@@ -3,6 +3,7 @@ import BaseLayout from "@codenhub/app-shell/layouts/base-layout.astro";
 import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
 
 import { catalogPackages, type CatalogPackage } from "../lib/catalog";
+import { describeRootSize } from "../lib/package-facts";
 import { siteConfig } from "../site-config";
 import "../styles/global.css";
 
@@ -12,11 +13,13 @@ function toSearchHaystack(entry: CatalogPackage): string {
 
 const releaseDate = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", timeZone: "UTC", year: "numeric" });
 
-/** The card's fact line: latest stable version, its release date, and the license. */
+/** The card's fact line: latest stable version, its release date, its root entrypoint's size, and the license. */
 function toFacts(entry: CatalogPackage): string[] {
   const latest = entry.releases.latest;
+  const size = describeRootSize(entry.size);
   return [
     ...(latest === undefined ? [] : [`v${latest.version}`, releaseDate.format(new Date(latest.date))]),
+    ...(size === undefined ? [] : [size]),
     ...(entry.license === undefined ? [] : [entry.license]),
   ];
 }

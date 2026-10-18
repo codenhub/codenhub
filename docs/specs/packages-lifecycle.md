@@ -207,6 +207,22 @@ Published packages MUST NOT include secrets, local paths, internal docs, test fi
 
 Packages SHOULD publish only files needed by consumers.
 
+### Bundle size
+
+Every release records how much JavaScript each of its entrypoints costs a consumer, so the package index can show it without estimating. `hub release --cut` measures it and writes `size.json` at the package root, which the release commit carries; `hub publish` measures again and refuses to publish when the two disagree. A release cut before this existed has no `size.json`, and the index shows no size for it rather than a guess.
+
+What is measured, and why:
+
+- **Every JavaScript `exports` entrypoint, whole.** Each subpath whose `import` (else `default`) condition names a `.js` or `.mjs` file is bundled from the built `dist` exactly as published, keeping every export the entrypoint has. That is the cost of `import * as all from "<package>/<subpath>"`: a consumer's worst case, which a bundler's tree shaking only lowers. Rejected: per-export, tree-shaken sizes, which multiply the output by the number of exports and answer a question the index card does not ask; landing pages may add them later.
+- **With `dependencies` inlined and `peerDependencies` and Node.js builtins external.** A dependency is code the consumer installs because of this package; a peer is code they already chose, and a builtin is never downloaded.
+- **Minified, then gzipped at level 9.** Minified is what ships to a browser, and gzip is the transfer size people compare.
+- **By rolldown, at the version the lockfile pins.** It is the bundler under tsdown and Vite 8, so the number is what most consumers' builds produce, and it adds no second bundler to the toolchain. Rejected: esbuild, already in the catalog, whose minifier differs from what tsdown and Vite users get.
+- **Not CSS, wildcard subpaths, or `./package.json`.** A CSS entrypoint is not bundled the way JavaScript is, and rolldown's CSS bundling is still experimental, so a CSS number would sit next to JavaScript numbers it cannot be compared with. A wildcard subpath has no single file to measure. A package with no JavaScript entrypoint, such as `@codenhub/styles`, records an empty `size.json` and shows no size.
+
+`size.json` names the bundler and its version, and for each measured subpath the minified byte length, the gzipped byte length, and the SHA-256 of the minified output. The publish check compares the bundler version, the minified length, and the hash, and never the gzipped length: gzip output is not fixed by its input. Node.js bundles Chromium's fork of zlib, which picks its match-finding hash by the CPU features it detects, and any zlib change between Node.js versions can move it too, so identical minified bytes can gzip to different lengths on a maintainer's machine and on the runner, and a gzip comparison would fail a correct release. The hash proves the bytes are the ones that were measured, and the gzip figure follows from them. Rejected: a pure-JavaScript deflate compared exactly, which adds a dependency to make a number reproducible that the hash already pins; and comparing gzip within a tolerance, which is a weaker check with an arbitrary margin.
+
+Only `hub publish` compares the file. Between releases `size.json` records the last release, not the working tree, so `hub check` comparing it would warn on every source change by design. The file is never in the tarball: it describes the published code rather than being part of it, and the `tarball` precondition blocks a release whose `files` would pack it.
+
 ## Versioning
 
 Version changes SHOULD follow semantic versioning:

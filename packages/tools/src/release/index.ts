@@ -16,6 +16,7 @@ export {
   type PublishedSnapshotOptions,
   type ReleaseHistory,
 } from "./published-snapshot.ts";
+export { parseSizeReport, SIZE_FILE, type EntrypointSize, type SizeReport } from "./size-report.ts";
 export {
   materializeTreeAtRef,
   type GitTreeInvocation,

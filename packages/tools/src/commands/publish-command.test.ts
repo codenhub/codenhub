@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { parseArguments } from "../cli/parse-arguments.ts";
 import type { PublishRunner, RevisionResolver } from "../release/publish.ts";
-import type { ReadinessOptions, ReleaseRunner } from "../release/readiness.ts";
+import type { ReadinessCheck, ReadinessOptions, ReleaseRunner } from "../release/readiness.ts";
 import { createReporter } from "../reporting/reporter.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext, type CommandDefinition } from "./definition.ts";
@@ -35,6 +35,8 @@ interface RunResult {
   output: string;
   errors: string;
   published: string[];
+  /** The timeout each size check was handed. */
+  sizeTimeouts: (number | undefined)[];
 }
 
 async function runPublish(
@@ -47,11 +49,13 @@ async function runPublish(
     servedVersion?: string;
     isAlreadyPublished?: boolean;
     revisions?: Record<string, string | undefined>;
+    sizeCheck?: ReadinessCheck;
   } = {},
 ): Promise<RunResult> {
   const lines: string[] = [];
   const errors: string[] = [];
   const published: string[] = [];
+  const sizeTimeouts: (number | undefined)[] = [];
   const publish: PublishRunner = async (workspacePackage) => {
     published.push(workspacePackage.name);
     return { isSuccess: overrides.publishSucceeds ?? true, output: "npm said so" };
@@ -91,11 +95,15 @@ async function runPublish(
     isPublished: async () => overrides.isAlreadyPublished ?? false,
     publish,
     resolveRevision,
+    checkSize: async (_workspacePackage, timeoutMs) => {
+      sizeTimeouts.push(timeoutMs);
+      return overrides.sizeCheck ?? { detail: "size.json matches", name: "size", status: "ready" };
+    },
     readiness: overrides.readiness ?? readiness,
     readPublished: async () => overrides.servedVersion,
   });
   const exitCode = await command.run(context);
-  return { errors: errors.join("\n"), exitCode, output: lines.join("\n"), published };
+  return { errors: errors.join("\n"), exitCode, output: lines.join("\n"), published, sizeTimeouts };
 }
 
 describe("hub publish", () => {
@@ -184,6 +192,25 @@ describe("hub publish", () => {
     });
 
     expect(result.output).toContain("is not newer than the published 2.0.0");
+    expect(result.published).toEqual([]);
+    expect(result.exitCode).toBe(EXIT_FAILURE);
+  });
+
+  it("hands the size check the run's timeout", async () => {
+    const result = await runPublish(
+      [createPackage("@codenhub/error", "1.0.0")],
+      ["--from-tag=@codenhub/error@1.0.0", "--timeout=42"],
+    );
+
+    expect(result.sizeTimeouts).toEqual([42_000]);
+  });
+
+  it("stops when the recorded bundle size does not match the build", async () => {
+    const result = await runPublish([createPackage("@codenhub/error", "1.0.0")], ["--from-tag=@codenhub/error@1.0.0"], {
+      sizeCheck: { detail: "size.json does not match this build", name: "size", status: "blocked" },
+    });
+
+    expect(result.output).toContain("size.json does not match this build");
     expect(result.published).toEqual([]);
     expect(result.exitCode).toBe(EXIT_FAILURE);
   });
