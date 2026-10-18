@@ -408,12 +408,6 @@
   }
 }
 
-.package-link-brand {
-  width: 1rem;
-  height: 1rem;
-  fill: currentcolor;
-}
-
 .package-section > h2 {
   margin: 0 0 1rem;
   font-size: 1.25rem;
@@ -421,31 +415,27 @@
 
 .install-tabs {
   max-width: 44rem;
-  border: 1px solid var(--color-border);
+  padding: 0.375rem;
   border-radius: var(--radius-surface);
-  overflow: hidden;
+  background: var(--color-foreground);
 }
 
 .www-tablist {
   display: flex;
   gap: 0.25rem;
-  padding-inline: 0.5rem;
   overflow-x: auto;
-  box-shadow: inset 0 -1px 0 var(--color-border);
 }
 
-/* Shared by the install tabs and the package details tabs. The active tab is
-   marked by an underline over the tablist's bottom line, as in Vite's docs,
-   rather than a filled pill. Both lines are inset shadows: a border pulled down
-   with a negative margin overflows the scrolling tablist and shows a scrollbar. */
+/* Shared by the install tabs and the package details tabs: no line or fill
+   under the row, and the active tab takes the surface fill. */
 .www-tab {
   display: inline-flex;
   flex: none;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.75rem;
+  padding: 0.375rem 0.75rem;
   border: 0;
-  border-radius: 0;
+  border-radius: var(--radius-control);
   background: none;
   box-shadow: none;
   color: var(--color-text-secondary);
@@ -454,7 +444,7 @@
   cursor: pointer;
   transition:
     color var(--motion-duration-fast, 120ms) var(--motion-ease),
-    box-shadow var(--motion-duration-fast, 120ms) var(--motion-ease);
+    background-color var(--motion-duration-fast, 120ms) var(--motion-ease);
 }
 
 .www-tab:hover,
@@ -463,12 +453,16 @@
 }
 
 .www-tab[aria-selected="true"] {
-  box-shadow: inset 0 -2px 0 var(--color-primary);
-  font-weight: 600;
+  background: var(--color-surface);
 }
 
 .www-tab i {
   --ic-size: 0.875rem;
+}
+
+/* The native button styles give every button the control height. */
+.install-tabs .www-tab {
+  min-height: 0;
 }
 
 .install-tab-icon {
@@ -481,7 +475,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  padding: 0.5rem 0.25rem 0.25rem 0.75rem;
 }
 
 /* `hidden` loses to the `display` above without this. */
@@ -639,11 +633,6 @@
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-/* The details tabs sit on the page, not in a box, so they start flush with it. */
-[data-package-tabs] .www-tablist {
-  padding-inline: 0;
 }
 
 .package-table-wrap {

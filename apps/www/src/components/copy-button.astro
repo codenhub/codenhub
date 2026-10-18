@@ -4,16 +4,18 @@
  *
  * @param text - What the button copies.
  * @param label - Accessible name and tooltip at rest, such as `Copy command`.
+ * @param class - Extra button classes, such as `pill`.
  */
 interface Props {
   text: string;
   label: string;
+  class?: string;
 }
 
-const { text, label } = Astro.props;
+const { text, label, class: className } = Astro.props;
 ---
 
-<button aria-label={label} class="btn secondary ghost icon sm" data-copy={text} title={label} type="button">
+<button aria-label={label} class:list={["btn secondary ghost icon sm", className]} data-copy={text} title={label} type="button">
   <i aria-hidden="true" class="ic-lucide-copy" data-copy-icon="idle"></i>
   <i aria-hidden="true" class="ic-lucide-check" data-copy-icon="copied"></i>
   <i aria-hidden="true" class="ic-lucide-x" data-copy-icon="failed"></i>

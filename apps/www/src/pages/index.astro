@@ -4,7 +4,7 @@ import BaseLayout from "@codenhub/app-shell/layouts/base-layout.astro";
 import BrandIcon from "../components/brand-icon.astro";
 import PackageCard from "../components/package-card.astro";
 import { catalogPackages } from "../lib/catalog";
-import { siteConfig } from "../site-config";
+import { headerConfig, siteConfig } from "../site-config";
 import "../styles/global.css";
 
 interface Route {
@@ -28,7 +28,7 @@ const routes: Route[] = [
 const visibleRoutes = routes.filter((route): route is Route & { href: string } => route.href !== undefined);
 ---
 
-<BaseLayout siteConfig={siteConfig}>
+<BaseLayout siteConfig={headerConfig}>
   <main class="www-main" id="main-content">
     <div class="shell-content">
       <section class="www-hero">
