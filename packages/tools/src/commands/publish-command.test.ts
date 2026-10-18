@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { parseArguments } from "../cli/parse-arguments.ts";
 import type { PublishRunner, RevisionResolver } from "../release/publish.ts";
-import type { ReadinessOptions, ReleaseRunner } from "../release/readiness.ts";
+import type { ReadinessCheck, ReadinessOptions, ReleaseRunner } from "../release/readiness.ts";
 import { createReporter } from "../reporting/reporter.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext, type CommandDefinition } from "./definition.ts";
@@ -47,6 +47,7 @@ async function runPublish(
     servedVersion?: string;
     isAlreadyPublished?: boolean;
     revisions?: Record<string, string | undefined>;
+    sizeCheck?: ReadinessCheck;
   } = {},
 ): Promise<RunResult> {
   const lines: string[] = [];
@@ -91,6 +92,7 @@ async function runPublish(
     isPublished: async () => overrides.isAlreadyPublished ?? false,
     publish,
     resolveRevision,
+    checkSize: async () => overrides.sizeCheck ?? { detail: "size.json matches", name: "size", status: "ready" },
     readiness: overrides.readiness ?? readiness,
     readPublished: async () => overrides.servedVersion,
   });
@@ -184,6 +186,16 @@ describe("hub publish", () => {
     });
 
     expect(result.output).toContain("is not newer than the published 2.0.0");
+    expect(result.published).toEqual([]);
+    expect(result.exitCode).toBe(EXIT_FAILURE);
+  });
+
+  it("stops when the recorded bundle size does not match the build", async () => {
+    const result = await runPublish([createPackage("@codenhub/error", "1.0.0")], ["--from-tag=@codenhub/error@1.0.0"], {
+      sizeCheck: { detail: "size.json does not match this build", name: "size", status: "blocked" },
+    });
+
+    expect(result.output).toContain("size.json does not match this build");
     expect(result.published).toEqual([]);
     expect(result.exitCode).toBe(EXIT_FAILURE);
   });

@@ -10,6 +10,7 @@ import {
   resolveLatestPublishedTag,
   type PackageRelease,
 } from "./published-tags.ts";
+import { SIZE_FILE } from "./size-report.ts";
 import { materializeTreeAtRef } from "./tag-content.ts";
 
 /** Every released package's releases, newest first, keyed by package name. */
@@ -42,8 +43,17 @@ export interface PublishedSnapshotDeps {
 // `docs/`, and resource publication validates the README and `llms` files and
 // serves `LICENSE` and `NOTICE`. Public docs may link nowhere else
 // (`invalid-docs-escape`), so nothing outside this set can be a link target.
-// A declared `codenhub.logo` is kept as well, wherever it sits.
-const ROOT_SURFACES = new Set(["LICENSE", "NOTICE", "README.md", "llms-full.txt", "llms.txt", "package.json"]);
+// A declared `codenhub.logo` is kept as well, wherever it sits, and so is the
+// release's `size.json`, which the package index shows.
+const ROOT_SURFACES = new Set([
+  "LICENSE",
+  "NOTICE",
+  "README.md",
+  "llms-full.txt",
+  "llms.txt",
+  "package.json",
+  SIZE_FILE,
+]);
 const DOCS_DIRECTORY = "docs";
 
 const RELEASES_FILE = "releases.json";

@@ -182,6 +182,15 @@ describe("readPackageReadiness", () => {
     expect(check.detail).toContain("dist/index.js");
   });
 
+  it("blocks a tarball that would pack size.json", async () => {
+    const readPack = async (): Promise<Set<string>> => new Set(["dist/index.js", "dist/index.d.ts", "size.json"]);
+
+    const check = await checkFor(createPackage(), { readPack, run: createRunner("1.1.0") }, "tarball");
+
+    expect(check.status).toBe("blocked");
+    expect(check.detail).toContain("size.json would be packed");
+  });
+
   it("accepts a wildcard entry target the tarball has a match for", async () => {
     const workspacePackage = createPackage({
       exports: {

@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { compareVersions } from "./readiness.ts";
+import { serializeSizeReport, SIZE_FILE, type SizeReport } from "./size-report.ts";
 
 const CHANGELOG_DIR = "docs/changelog";
 const INDEX = `${CHANGELOG_DIR}/index.md`;
@@ -179,29 +180,44 @@ export interface CutResult {
   tag: string;
 }
 
+/** Measures a package's bundle size for its `size.json`. Injected by tests. */
+export type SizeMeasurer = (workspacePackage: WorkspacePackage) => Promise<SizeReport>;
+
+const measureSize: SizeMeasurer = async (workspacePackage) =>
+  // Loaded on demand so that every other `hub` command starts without rolldown.
+  (await import("./bundle-size.ts")).measurePackage(workspacePackage);
+
 /**
- * Raises a package's version and scaffolds the changelog entry that documents it.
+ * Raises a package's version, records its bundle size, and scaffolds the changelog entry that documents it.
  *
  * Nothing is committed and nothing is tagged. The scaffolded page carries
  * headings and TODO bullets, so committing it unread would publish a changelog
  * that says nothing — leaving the working tree dirty is what forces the one part
  * of a release a person has to write.
+ *
+ * The package is built and measured before anything is written, so a build
+ * that fails leaves the working tree as it was. `size.json` is what the
+ * publish check later compares against (`docs/specs/packages-lifecycle.md`,
+ * "Bundle size").
  * @param workspacePackage Package to cut.
  * @param requested A bump name, or an explicit version.
  * @param today Release date in ISO `YYYY-MM-DD` form.
+ * @param measure Size measurer, defaulting to building and bundling the package.
  * @returns What was written and the tag that would publish it.
- * @throws When the version request is unusable or the manifest cannot be rewritten.
+ * @throws When the version request is unusable, the package cannot be measured, or the manifest cannot be rewritten.
  */
 export async function cutRelease(
   workspacePackage: WorkspacePackage,
   requested: string,
   today: string,
+  measure: SizeMeasurer = measureSize,
 ): Promise<CutResult> {
   const current = workspacePackage.manifest.version;
   if (typeof current !== "string") {
     throw new Error(`${workspacePackage.name} has no "version" in its manifest.`);
   }
   const version = resolveNextVersion(current, requested);
+  const size = await measure(workspacePackage);
   const written: string[] = [];
 
   const manifestPath = join(workspacePackage.directory, MANIFEST);
@@ -223,6 +239,9 @@ export async function cutRelease(
   const index = await readFile(indexPath, "utf8").catch(() => undefined);
   await writeFile(indexPath, index === undefined ? buildChangelogIndex(version) : insertChangelogLink(index, version));
   written.push(INDEX);
+
+  await writeFile(join(workspacePackage.directory, SIZE_FILE), serializeSizeReport(size));
+  written.push(SIZE_FILE);
 
   return { tag: `${workspacePackage.name}@${version}`, version, written };
 }

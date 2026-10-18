@@ -1,4 +1,4 @@
-import type { PackageRelease } from "@codenhub/tools/release";
+import type { PackageRelease, SizeReport } from "@codenhub/tools/release";
 
 /** What a consumer can tell about a package from its released manifest, before reading any docs. */
 export interface PackageProperties {
@@ -76,4 +76,35 @@ export function describeProperties(manifest: Record<string, unknown>): PackagePr
     peerDependencies: names(manifest.peerDependencies),
     shipsTypes: typeof manifest.types === "string" || hasCondition(exportsField, "types"),
   };
+}
+
+const SIZE_UNITS = [
+  [1_000_000, "MB"],
+  [1000, "kB"],
+] as const;
+
+/**
+ * Formats a byte count the way bundle sizes are usually quoted, in decimal units.
+ * @param bytes Byte count.
+ * @returns Such as `840 B`, `27.6 kB`, or `16.6 MB`.
+ */
+export function formatBytes(bytes: number): string {
+  const unit = SIZE_UNITS.find(([size]) => bytes >= size);
+  return unit === undefined ? `${bytes} B` : `${(bytes / unit[0]).toFixed(1)} ${unit[1]}`;
+}
+
+/**
+ * Describes what importing a package's root entrypoint costs, from its release's `size.json`.
+ *
+ * A root with no runtime code, such as one that only re-exports types, costs
+ * nothing, so it reads `0 B` rather than the 20 bytes gzip spends on an empty file.
+ * @param size The release's size report, absent for a release cut before sizes were recorded.
+ * @returns Such as `27.6 kB gzip`, or `undefined` when the release has no measured root entrypoint.
+ */
+export function describeRootSize(size: SizeReport | undefined): string | undefined {
+  const root = size?.entrypoints["."];
+  if (root === undefined) {
+    return undefined;
+  }
+  return `${formatBytes(root.minified === 0 ? 0 : root.gzip)} gzip`;
 }

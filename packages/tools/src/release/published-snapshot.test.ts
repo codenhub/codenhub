@@ -112,6 +112,7 @@ describe("buildPublishedSnapshot", () => {
         "llms-full.txt": "full\n",
         "llms.txt": "index\n",
         "package.json": JSON.stringify(DOCS_MANIFEST),
+        "size.json": "{}\n",
         "src/index.ts": "export {};\n",
         "src/index.test.ts": "export {};\n",
         "tsconfig.json": JSON.stringify({ extends: "../../tsconfig.json" }),
@@ -130,6 +131,7 @@ describe("buildPublishedSnapshot", () => {
       "llms-full.txt",
       "llms.txt",
       "package.json",
+      "size.json",
     ]);
     await expect(readdir(path.join(packageDirectory, "docs")).then((entries) => entries.sort())).resolves.toEqual([
       "assets",

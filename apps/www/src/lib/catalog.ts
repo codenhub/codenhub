@@ -5,7 +5,7 @@ import {
   parsePackageMetadata,
   type PublicPackageSummary,
 } from "@codenhub/tools/documentation";
-import type { ReleaseHistory } from "@codenhub/tools/release";
+import { parseSizeReport, type ReleaseHistory, type SizeReport } from "@codenhub/tools/release";
 
 import { siteConfig } from "../site-config";
 import { describeProperties, describeReleases, type PackageProperties, type PackageReleases } from "./package-facts";
@@ -35,6 +35,8 @@ export interface CatalogPackage extends PublicPackageSummary {
   logoUrl?: string;
   properties: PackageProperties;
   releases: PackageReleases;
+  /** Bundle sizes the release recorded, absent for a release cut before sizes were. */
+  size?: SizeReport;
   /** Stable kebab-case identifier from the package metadata. */
   slug: string;
 }
@@ -64,6 +66,14 @@ const llmsPaths = Object.keys(
     ? import.meta.glob("../../.codenhub-published/packages/**/llms.txt", { query: "?raw" })
     : import.meta.glob("../../../../packages/**/llms.txt", { query: "?raw" }),
 );
+// A release's `size.json`, written by `hub release --cut` (docs/specs/packages-lifecycle.md, "Bundle size").
+const sizeModules = import.meta.env.PROD
+  ? import.meta.glob<string>("../../.codenhub-published/packages/**/size.json", {
+      eager: true,
+      import: "default",
+      query: "?raw",
+    })
+  : import.meta.glob<string>("../../../../packages/**/size.json", { eager: true, import: "default", query: "?raw" });
 // The demo site builds from the working tree, so it decides which demos exist.
 const demoRoots = new Set(
   Object.keys(import.meta.glob("../../../../packages/*/demo/package.json")).map((path) =>
@@ -111,6 +121,7 @@ function describePackage(summary: PublicPackageSummary): CatalogPackage {
   const homepage = readString(manifest, "homepage");
   const docs = isDocumented && siteConfig.docsUrl !== undefined ? packageDocsUrl(siteConfig.docsUrl, slug) : undefined;
   const tag = releases.latest === undefined ? undefined : `${summary.name}@${releases.latest.version}`;
+  const sizeContents = sizeModules[`${root}/size.json`];
 
   return {
     ...summary,
@@ -136,6 +147,7 @@ function describePackage(summary: PublicPackageSummary): CatalogPackage {
     logoUrl: metadata?.logo === undefined ? undefined : `/logos/${slug}.svg`,
     properties: describeProperties(manifest),
     releases,
+    size: sizeContents === undefined ? undefined : parseSizeReport(sizeContents, `${root}/size.json`),
     slug,
   };
 }

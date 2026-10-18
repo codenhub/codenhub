@@ -12,7 +12,12 @@ import {
   type RevisionResolver,
   type VersionLookup,
 } from "../release/publish.ts";
-import { readPackageReadiness, type PackageReadiness, type ReadinessOptions } from "../release/readiness.ts";
+import {
+  readPackageReadiness,
+  type PackageReadiness,
+  type ReadinessCheck,
+  type ReadinessOptions,
+} from "../release/readiness.ts";
 import { prepareCapturedOutput } from "../reporting/captured-output.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
 import { EXIT_FAILURE, EXIT_SUCCESS, type CommandContext, type CommandDefinition } from "./definition.ts";
@@ -33,7 +38,13 @@ export interface PublishOptions {
   isPublished?: VersionLookup;
   /** Resolver for the release-tag precondition, defaulting to `git rev-parse`. */
   resolveRevision?: RevisionResolver;
+  /** The bundle-size precondition, defaulting to building and measuring the package. */
+  checkSize?: (workspacePackage: WorkspacePackage) => Promise<ReadinessCheck>;
 }
+
+// Loaded on demand so that every other `hub` command starts without rolldown.
+const checkSize = async (workspacePackage: WorkspacePackage): Promise<ReadinessCheck> =>
+  (await import("../release/bundle-size.ts")).checkBundleSize(workspacePackage);
 
 function readTagFlag(passthrough: readonly string[]): string | undefined | { error: string } {
   if (passthrough.includes(FROM_TAG_FLAG)) {
@@ -173,7 +184,10 @@ export function createPublishCommand(resolver?: CommandResolver, options: Publis
           readPackageReadiness(workspacePackage, { timeoutMs: context.options.timeoutMs, ...options.readiness }),
           checkReleaseTag(workspacePackage, options.resolveRevision),
         ]);
-        const readiness = { ...report, checks: [...report.checks, tagCheck] };
+        // After the others rather than beside them: it rebuilds the package,
+        // and `npm pack` must not read `dist` while the build rewrites it.
+        const sizeCheck = await (options.checkSize ?? checkSize)(workspacePackage);
+        const readiness = { ...report, checks: [...report.checks, tagCheck, sizeCheck] };
         if (!reportPreflight(context, readiness)) {
           context.reporter.blank();
           context.reporter.error(`${workspacePackage.name} is not ready to publish; nothing was published.`);

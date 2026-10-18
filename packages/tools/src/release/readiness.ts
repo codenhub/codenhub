@@ -1,5 +1,6 @@
 import { execute } from "../process/execute.ts";
 import type { WorkspacePackage } from "../workspace/discover.ts";
+import { SIZE_FILE } from "./size-report.ts";
 
 /** Whether one publish precondition is met. */
 export type ReadinessStatus = "ready" | "blocked" | "unknown";
@@ -205,6 +206,11 @@ async function checkTarball(
     packed = await read(workspacePackage.directory, timeoutMs);
   } catch (cause) {
     return { detail: (cause as Error).message, name: "tarball", status: "unknown" };
+  }
+  if (packed.has(SIZE_FILE)) {
+    // It describes the published code rather than being part of it
+    // (`docs/specs/packages-lifecycle.md`, "Bundle size").
+    return { detail: `${SIZE_FILE} would be packed; leave it out of "files"`, name: "tarball", status: "blocked" };
   }
   const missing = listEntryTargets(workspacePackage.manifest).filter((target) => !isEntryTargetPacked(target, packed));
   return missing.length === 0
