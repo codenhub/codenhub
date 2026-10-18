@@ -22,7 +22,7 @@ export interface PackageProperties {
 export interface PackageReleases {
   /** Every release, highest version first, pre-releases included. */
   history: PackageRelease[];
-  /** The most recently published release, which a backport can make other than the highest version. */
+  /** The release whose tagged commit is newest, which stands in for the last publish; a backport can make it other than the highest version. */
   lastPublished?: PackageRelease;
   /** Newest stable release, which `npm install` resolves by default. */
   latest?: PackageRelease;

@@ -36,14 +36,15 @@ interface Link {
   external: boolean;
 }
 
-const pageLinks: (Link | undefined)[] = [
+const linkCandidates: (Link | undefined)[] = [
   links.docs === undefined ? undefined : { href: links.docs, label: "Documentation", icon: "ic-lucide-book-open", external: false },
   links.changelog === undefined ? undefined : { href: links.changelog, label: "Changelog", icon: "ic-lucide-history", external: false },
   links.demo === undefined ? undefined : { href: links.demo, label: "Demo", icon: "ic-lucide-play", external: false },
   links.github === undefined ? undefined : { href: links.github, label: "Source", brand: "github", external: true },
   { href: links.npm, label: "npm", brand: "npm", external: true },
   links.llms === undefined ? undefined : { href: links.llms, label: "llms.txt", icon: "ic-lucide-bot", external: true },
-].filter((link): link is Link => link !== undefined);
+];
+const pageLinks = linkCandidates.filter((link): link is Link => link !== undefined);
 
 const yesNo = (value: boolean): string => (value ? "Yes" : "No");
 const facts: [string, string][] = [

@@ -60,7 +60,7 @@ const managers: { brand: Brand; command: string }[] = [
       </div>
     ))
   }
-  <span class="sr-only" data-copy-status role="status"></span>
+  <span class="visually-hidden" data-copy-status role="status"></span>
 </div>
 
 <script>
@@ -135,6 +135,8 @@ const managers: { brand: Brand; command: string }[] = [
     const status = root.querySelector<HTMLElement>("[data-copy-status]");
     for (const button of root.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
       let resetTimer: ReturnType<typeof setTimeout> | undefined;
+      // Only the latest click may show its result; an older write can settle after it.
+      let generation = 0;
       const show = (state: keyof typeof COPY_LABELS): void => {
         for (const icon of button.querySelectorAll<HTMLElement>("[data-copy-icon]")) {
           icon.hidden = icon.dataset.copyIcon !== state;
@@ -144,6 +146,8 @@ const managers: { brand: Brand; command: string }[] = [
       };
 
       button.addEventListener("click", async () => {
+        const current = ++generation;
+        clearTimeout(resetTimer);
         let state: "done" | "failed" = "done";
         try {
           await navigator.clipboard.writeText(button.dataset.copy ?? "");
@@ -151,11 +155,13 @@ const managers: { brand: Brand; command: string }[] = [
           // Denied permission or no clipboard API: say so instead of looking unchanged.
           state = "failed";
         }
+        if (current !== generation) {
+          return;
+        }
         show(state);
         if (status !== null) {
           status.textContent = state === "done" ? "Copied" : "Copy failed";
         }
-        clearTimeout(resetTimer);
         resetTimer = setTimeout(() => {
           show("idle");
           if (status !== null) {
