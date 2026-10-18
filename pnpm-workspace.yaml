@@ -26,7 +26,7 @@ catalog:
   openid-client: ^6.8.8
   jsdom: ^29.1.1
   miniflare: ^5.20260801.1-alpha
-  oxfmt: ^0.57.0
+  oxfmt: ^0.73.0
   oxlint: ^1.72.0
   prettier: ^3.6.0
   tailwindcss: ^4.3.2

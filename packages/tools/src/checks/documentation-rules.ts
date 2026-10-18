@@ -120,17 +120,15 @@ async function checkDocumentation(
   });
   return [
     ...findings,
-    ...report.issues.map(
-      (issue): Finding => ({
-        code: `documentation/${issue.code}`,
-        location: issue.sourcePath ?? issue.target,
-        message:
-          issue.target === undefined || issue.sourcePath === undefined
-            ? issue.message
-            : `${issue.message} (${issue.target})`,
-        severity: "error",
-      }),
-    ),
+    ...report.issues.map((issue): Finding => ({
+      code: `documentation/${issue.code}`,
+      location: issue.sourcePath ?? issue.target,
+      message:
+        issue.target === undefined || issue.sourcePath === undefined
+          ? issue.message
+          : `${issue.message} (${issue.target})`,
+      severity: "error",
+    })),
   ];
 }
 

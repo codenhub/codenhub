@@ -56,11 +56,10 @@ function toLink(document: PublicDocument): NavLink {
  * @returns Ordered sidebar nodes.
  */
 export function buildNavigationTree(documents: readonly PublicDocument[]): NavNode[] {
-  return orderDocumentSections(documents).map(
-    (section): NavNode =>
-      section.segment === ""
-        ? toLink(section.documents[0])
-        : { items: section.documents.map(toLink), kind: "group", title: section.label },
+  return orderDocumentSections(documents).map((section): NavNode =>
+    section.segment === ""
+      ? toLink(section.documents[0])
+      : { items: section.documents.map(toLink), kind: "group", title: section.label },
   );
 }
 

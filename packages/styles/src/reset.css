@@ -93,21 +93,21 @@
 
   @media (forced-colors: active) {
     input:is(
-      [type="text"],
-      [type="email"],
-      [type="password"],
-      [type="url"],
-      [type="tel"],
-      [type="number"],
-      [type="search"],
-      [type="date"],
-      [type="datetime-local"],
-      [type="month"],
-      [type="week"],
-      [type="time"],
-      [type="checkbox"],
-      [type="radio"]
-    ):focus-visible,
+        [type="text"],
+        [type="email"],
+        [type="password"],
+        [type="url"],
+        [type="tel"],
+        [type="number"],
+        [type="search"],
+        [type="date"],
+        [type="datetime-local"],
+        [type="month"],
+        [type="week"],
+        [type="time"],
+        [type="checkbox"],
+        [type="radio"]
+      ):focus-visible,
     textarea:focus-visible,
     select:focus-visible {
       outline: 2px solid Highlight !important;

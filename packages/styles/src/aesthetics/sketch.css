@@ -378,14 +378,14 @@
 }
 
 .sketch-solo.sketch-rounded:is(
-  button,
-  a[href],
-  [role="button"],
-  summary,
-  input[type="button"],
-  input[type="submit"],
-  input[type="reset"]
-) {
+    button,
+    a[href],
+    [role="button"],
+    summary,
+    input[type="button"],
+    input[type="submit"],
+    input[type="reset"]
+  ) {
   border-radius: var(--sketch-radius-rounded, 26px 10px 24px 11px / 12px 23px 11px 20px);
 }
 

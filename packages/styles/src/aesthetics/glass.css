@@ -262,18 +262,18 @@
      disabled one is dimmed by `opacity`, which makes it a backdrop root, so it
      keeps the ground and the rim and bends nothing. */
   :is(.glass-liquid:not(.glass-solo), .glass-liquid:not(.glass-solo) *):is(.glass, .glass *):is(
-    .card,
-    .panel,
-    .alert,
-    .tooltip-bubble,
-    .surface,
-    .data-table:not(.solid, .ghost)
-  ):not(
-    .glass-liquid :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch),
-    .glass-liquid :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *,
-    .glass-liquid .glass:not(.glass-liquid),
-    .glass-liquid .glass:not(.glass-liquid) *
-  ),
+      .card,
+      .panel,
+      .alert,
+      .tooltip-bubble,
+      .surface,
+      .data-table:not(.solid, .ghost)
+    ):not(
+      .glass-liquid :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch),
+      .glass-liquid :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *,
+      .glass-liquid .glass:not(.glass-liquid),
+      .glass-liquid .glass:not(.glass-liquid) *
+    ),
   .btn.glass-liquid:is(.glass, .glass *) {
     --ui-backdrop: none;
 

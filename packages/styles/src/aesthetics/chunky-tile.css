@@ -241,22 +241,6 @@
    container -- a toast clicked to dismiss -- stays put, the way only `.btn` and
    an opted-in card press under the aesthetic class. */
 .chunky-tile-solo:is(
-  button,
-  a[href],
-  [role="button"],
-  summary,
-  input[type="button"],
-  input[type="submit"],
-  input[type="reset"]
-):active:not(:disabled, [aria-disabled="true"]) {
-  box-shadow:
-    0 0 0 0 var(--_tile-bar),
-    inset 0 0 0 100vmax var(--_solo-fill);
-  transform: translateY(var(--_solo-depth));
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .chunky-tile-solo:is(
     button,
     a[href],
     [role="button"],
@@ -265,6 +249,22 @@
     input[type="submit"],
     input[type="reset"]
   ):active:not(:disabled, [aria-disabled="true"]) {
+  box-shadow:
+    0 0 0 0 var(--_tile-bar),
+    inset 0 0 0 100vmax var(--_solo-fill);
+  transform: translateY(var(--_solo-depth));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chunky-tile-solo:is(
+      button,
+      a[href],
+      [role="button"],
+      summary,
+      input[type="button"],
+      input[type="submit"],
+      input[type="reset"]
+    ):active:not(:disabled, [aria-disabled="true"]) {
     transform: none;
   }
 }
