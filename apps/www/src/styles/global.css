@@ -500,7 +500,10 @@
   white-space: nowrap;
 }
 
-[data-copy] [hidden] {
+/* The icon for the copy state `@codenhub/app-shell/copy-feedback` sets. */
+[data-copy][data-copy-state] [data-copy-icon="idle"],
+[data-copy]:not([data-copy-state="copied"]) [data-copy-icon="copied"],
+[data-copy]:not([data-copy-state="failed"]) [data-copy-icon="failed"] {
   display: none;
 }
 

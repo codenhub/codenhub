@@ -13,55 +13,25 @@ interface Props {
 const { text, label } = Astro.props;
 ---
 
-<button aria-label={label} class="btn secondary ghost icon sm" data-copy={text} data-copy-label={label} title={label} type="button">
+<button aria-label={label} class="btn secondary ghost icon sm" data-copy={text} title={label} type="button">
   <i aria-hidden="true" class="ic-lucide-copy" data-copy-icon="idle"></i>
-  <i aria-hidden="true" class="ic-lucide-check" data-copy-icon="done" hidden></i>
-  <i aria-hidden="true" class="ic-lucide-x" data-copy-icon="failed" hidden></i>
+  <i aria-hidden="true" class="ic-lucide-check" data-copy-icon="copied"></i>
+  <i aria-hidden="true" class="ic-lucide-x" data-copy-icon="failed"></i>
 </button>
 <span class="visually-hidden" data-copy-status role="status"></span>
 
 <script>
-  // Matches the docs code blocks' copy feedback.
-  const COPY_FEEDBACK_DURATION_MS = 2000;
-  const COPY_LABELS = { done: "Copied", failed: "Copy failed. Try again" } as const;
+  import { createCopyController } from "@codenhub/app-shell/copy-feedback";
+
+  const copyController = createCopyController();
 
   for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
-    const status = button.nextElementSibling instanceof HTMLElement ? button.nextElementSibling : null;
-    let resetTimer: ReturnType<typeof setTimeout> | undefined;
-    // Only the latest click may show its result; an older write can settle after it.
-    let generation = 0;
-    const show = (state: "idle" | keyof typeof COPY_LABELS): void => {
-      for (const icon of button.querySelectorAll<HTMLElement>("[data-copy-icon]")) {
-        icon.hidden = icon.dataset.copyIcon !== state;
-      }
-      const label = state === "idle" ? (button.dataset.copyLabel ?? "") : COPY_LABELS[state];
-      button.setAttribute("aria-label", label);
-      button.title = label;
-    };
-
-    button.addEventListener("click", async () => {
-      const current = ++generation;
-      clearTimeout(resetTimer);
-      let state: "done" | "failed" = "done";
-      try {
-        await navigator.clipboard.writeText(button.dataset.copy ?? "");
-      } catch {
-        // Denied permission or no clipboard API: say so instead of looking unchanged.
-        state = "failed";
-      }
-      if (current !== generation) {
-        return;
-      }
-      show(state);
-      if (status !== null) {
-        status.textContent = state === "done" ? "Copied" : "Copy failed";
-      }
-      resetTimer = setTimeout(() => {
-        show("idle");
-        if (status !== null) {
-          status.textContent = "";
-        }
-      }, COPY_FEEDBACK_DURATION_MS);
-    });
+    const status = button.nextElementSibling;
+    if (!(status instanceof HTMLElement)) {
+      continue;
+    }
+    button.addEventListener("click", () =>
+      copyController.copy({ button, clipboard: navigator.clipboard, status, text: button.dataset.copy ?? "" }),
+    );
   }
 </script>
