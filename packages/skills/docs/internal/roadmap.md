@@ -1,14 +1,14 @@
 ---
 status: DRAFT
-last_updated: 2026-07-16
-scope: Publishing preparation for the `@codenhub/skills` package.
+last_updated: 2026-10-18
+scope: `@codenhub/skills` direction.
 ---
 
 # Roadmap
 
 ## Purpose
 
-Define preparation work for publishing the `@codenhub/skills` package to the npm registry.
+Durable direction for `@codenhub/skills`. The repo-wide roadmap is `docs/roadmap.md`.
 
 ## Current Focus
 
@@ -17,5 +17,5 @@ Define preparation work for publishing the `@codenhub/skills` package to the npm
 
 ## Planned
 
-- Publish `@codenhub/skills` to npm.
 - Validate `npx @codenhub/skills@latest` and `pnpm dlx @codenhub/skills@latest` on a clean machine.
+- Add more core skill templates.
