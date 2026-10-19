@@ -188,9 +188,6 @@ importers:
       '@codenhub/icons':
         specifier: workspace:*
         version: link:../../packages/icons
-      '@codenhub/kbd':
-        specifier: workspace:*
-        version: link:../../packages/kbd
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../../packages/styles
@@ -263,6 +260,9 @@ importers:
       '@codenhub/icons':
         specifier: workspace:*
         version: link:../icons
+      '@codenhub/kbd':
+        specifier: workspace:*
+        version: link:../kbd
       '@codenhub/styles':
         specifier: workspace:*
         version: link:../styles

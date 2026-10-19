@@ -27,7 +27,7 @@ const haystack = `${entry.label} ${entry.name} ${entry.description ?? ""}`.toLow
 ---
 
 <div class="package-card" data-label={entry.label} data-search={haystack} role="listitem">
-  <a class="package-card-open" href={`/${entry.slug}/`}>
+  <a class="package-card-open" href={`/packages/${entry.slug}/`}>
     <div class="package-card-heading">
       <div class="package-card-title">
         {entry.logoUrl !== undefined && <img alt="" class="package-card-logo" src={entry.logoUrl} />}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { searchDocumentation, type SearchEntry } from "./search";
+import { searchDocumentation, type SearchEntry } from "./search.ts";
 
 const entries: SearchEntry[] = [
   {

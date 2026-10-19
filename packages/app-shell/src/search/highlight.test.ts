@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toHighlightSegments } from "./highlight";
+import { toHighlightSegments } from "./highlight.ts";
 
 describe("toHighlightSegments", () => {
   it("groups adjacent matches into one run", () => {

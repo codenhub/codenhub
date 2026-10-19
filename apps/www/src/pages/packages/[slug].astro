@@ -4,18 +4,18 @@
  * release. The page is a stack of sections so a package can later contribute
  * its own (docs/roadmap.md, "Package-provided sections").
  */
-import BaseLayout from "@codenhub/app-shell/layouts/base-layout.astro";
+import BaseLayout from "../../layouts/base-layout.astro";
 import StatusBadge from "@codenhub/app-shell/components/status-badge.astro";
 import type { GetStaticPaths } from "astro";
 
-import CopyButton from "../components/copy-button.astro";
-import InstallTabs from "../components/install-tabs.astro";
-import { catalogPackages, type CatalogPackage } from "../lib/catalog";
-import { formatDate } from "../lib/format";
-import { describeRootSize, formatBytes, npmTarballUrl } from "../lib/package-facts";
-import { renderReadme } from "../lib/readme";
-import { headerConfig } from "../site-config";
-import "../styles/global.css";
+import CopyButton from "../../components/copy-button.astro";
+import InstallTabs from "../../components/install-tabs.astro";
+import { catalogPackages, type CatalogPackage } from "../../lib/catalog";
+import { formatDate } from "../../lib/format";
+import { describeRootSize, formatBytes, npmTarballUrl } from "../../lib/package-facts";
+import { renderReadme } from "../../lib/readme";
+import { headerConfig } from "../../site-config";
+import "../../styles/global.css";
 
 export const getStaticPaths = (() =>
   catalogPackages.map((entry) => ({ params: { slug: entry.slug }, props: { entry } }))) satisfies GetStaticPaths;
@@ -108,7 +108,7 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
 >
   <main class="www-main" id="main-content">
     <div class="shell-content package-page">
-      <a class="package-back" href="/"><i aria-hidden="true" class="ic-lucide-arrow-left"></i>All packages</a>
+      <a class="package-back" href="/packages/"><i aria-hidden="true" class="ic-lucide-arrow-left"></i>All packages</a>
 
       <header class="package-header">
         <div class="package-header-main">
@@ -329,7 +329,7 @@ const isFirstTab = (id: string): boolean => detailTabs[0]?.id === id;
 </BaseLayout>
 
 <script>
-  import { bindTabs } from "../lib/tabs";
+  import { bindTabs } from "../../lib/tabs";
 
   for (const root of document.querySelectorAll<HTMLElement>("[data-package-tabs]")) {
     bindTabs(root);

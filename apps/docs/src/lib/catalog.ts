@@ -2,11 +2,9 @@ import { packageDemoUrl, packageNpmUrl } from "@codenhub/app-shell/package-links
 import {
   assertSingleH1,
   buildPackageDefinitions,
-  buildPublicPackageSummaries,
   comparePublicDocuments,
   parsePublicDocumentFrontmatter,
   type PackageStatus,
-  type PublicPackageSummary,
 } from "@codenhub/tools/documentation";
 import type { MarkdownHeading, MarkdownInstance } from "astro";
 
@@ -212,11 +210,3 @@ async function loadCatalog(): Promise<PublicPackage[]> {
 const packageDefinitions = buildPackageDefinitions(manifestModules, Object.keys(documentModules));
 
 export const packages = await loadCatalog();
-
-/**
- * Catalog summaries for the landing page: every published package, listed or
- * not, with its label, description, status, and documentation route. The rich
- * cross-linked catalog lives on `apps/www`; this list only routes into the docs
- * site itself.
- */
-export const publicPackages: PublicPackageSummary[] = buildPublicPackageSummaries(manifestModules, packageDefinitions);

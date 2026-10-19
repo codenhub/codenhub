@@ -80,15 +80,15 @@ describe("documentation chrome", () => {
     expect(html).not.toContain("package-tab");
   });
 
-  it.each(["index.html", "error/index.html"])("provides a skip link and main-content target in %s", async (path) => {
-    const html = await readOutput(path);
+  it("provides a skip link and main-content target", async () => {
+    const html = await readOutput("error/index.html");
 
     expect(html).toContain('class="shell-skip-link" href="#main-content"');
     expect(html).toMatch(/<main[^>]*id="main-content"/);
   });
 
-  it.each(["index.html", "error/index.html"])("renders the shared app-shell chrome in %s", async (path) => {
-    const html = await readOutput(path);
+  it("renders the shared app-shell chrome", async () => {
+    const html = await readOutput("error/index.html");
 
     // Header, footer, and theme toggle come from `@codenhub/app-shell`; this app
     // supplies only the search trigger in the header's actions slot.
@@ -197,18 +197,6 @@ describe("documentation chrome", () => {
     expect(css).toMatch(/\.toc-rail a\[aria-current="true"\]\s*\{[^}]*border-primary/s);
   });
 
-  it("edges the search trigger with the app's shared input border", async () => {
-    const css = await readFile(new URL("../styles/search.css", import.meta.url), "utf8");
-    const triggerRule = css.match(/\.search-trigger\s*\{([^}]*)\}/)?.[1];
-
-    // It carries the shared border token and the plain `border` utility, so it
-    // reads like the catalog's package filter. Still no 44px floor: it stays as
-    // tall as the header's icon buttons rather than growing into a form control.
-    expect(triggerRule).toMatch(/\bborder-border\b/);
-    expect(triggerRule).toMatch(/\bborder\b(?!-)/);
-    expect(triggerRule).not.toContain("44px");
-  });
-
   it("builds the not-found page the deployment is configured to serve", async () => {
     const html = await readOutput("404.html");
     const config = await readFile(new URL("../../wrangler.jsonc", import.meta.url), "utf8");
@@ -229,11 +217,24 @@ describe("documentation chrome", () => {
   it("lists every published page in the sitemap and nothing that is curated away", async () => {
     const sitemap = await readOutput("sitemap.xml");
 
-    expect(sitemap).toContain("<loc>https://docs.codenhub.dev/</loc>");
+    // The root redirects to codenhub.dev/packages/, so it is not a page here.
+    expect(sitemap).not.toContain("<loc>https://docs.codenhub.dev/</loc>");
     expect(sitemap).toContain("<loc>https://docs.codenhub.dev/error/</loc>");
     expect(sitemap).toContain("<loc>https://docs.codenhub.dev/icons/changelog/0.2.0/</loc>");
     // The curated changelog `index.md` has no route, so it is absent here too.
     expect(sitemap).not.toContain("<loc>https://docs.codenhub.dev/icons/changelog/</loc>");
+  });
+
+  it("redirects the root to the package list on codenhub.dev", async () => {
+    const redirects = await readOutput("_redirects");
+
+    expect(redirects.trim()).toBe("/ https://codenhub.dev/packages/ 301");
+  });
+
+  it("lets other origins read the search index", async () => {
+    const headers = await readOutput("_headers");
+
+    expect(headers).toMatch(/^\/search-index\.json\n[ \t]+Access-Control-Allow-Origin: \*$/m);
   });
 
   it("emits a search index covering package sections", async () => {

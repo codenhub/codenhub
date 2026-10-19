@@ -44,4 +44,19 @@ describe("app-shell chrome stylesheet", () => {
     expect(query).toContain("flex-wrap: wrap");
     expect(query).toMatch(/\.shell-actions \{[^}]*width: 100%/s);
   });
+
+  it("edges the search trigger with the shared input border and no 44px floor", () => {
+    const rule = styles.match(/\.shell-search-trigger\s*\{([^}]*)\}/)?.[1];
+
+    // It reads like the surfaces' package filter, and stays as tall as the
+    // header's icon buttons rather than growing into a full form control.
+    expect(rule).toContain("border: 1px solid var(--color-border)");
+    expect(rule).toContain("min-height: 0");
+  });
+
+  it("keeps the search field at 16px so iOS does not zoom on focus", () => {
+    const rule = styles.match(/\.shell-search-input\s*\{([^}]*)\}/)?.[1];
+
+    expect(rule).toContain("font-size: 1rem");
+  });
 });

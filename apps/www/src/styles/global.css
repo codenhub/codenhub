@@ -107,8 +107,15 @@
   margin-bottom: 2rem;
 }
 
-.packages-toolbar h2 {
+.packages-toolbar h1 {
   margin: 0;
+}
+
+.packages-toolbar p {
+  max-width: 40rem;
+  margin: 0.5rem 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
 }
 
 .packages-toolbar-controls {
@@ -576,6 +583,12 @@
 
 .package-readme img {
   max-width: 100%;
+}
+
+/* A long identifier in prose is one unbreakable word; let it wrap rather than
+   widen the page past a phone's viewport. */
+.package-readme :not(pre) > code {
+  overflow-wrap: anywhere;
 }
 
 .package-readme table {

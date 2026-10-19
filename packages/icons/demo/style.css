@@ -491,7 +491,13 @@ body {
 }
 
 @media (max-width: 40rem) {
+  /* The color controls drop below the fields instead of squeezing them. */
+  .demo-toolbar {
+    flex-wrap: wrap;
+  }
+
   .toolbar-fields {
+    flex: 1 1 100%;
     flex-wrap: wrap;
   }
 

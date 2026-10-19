@@ -14,11 +14,11 @@ export interface ShellNavLink {
  * at another origin, so a caller renders each with an outbound-link
  * affordance and `target="_blank"`.
  * @param siteConfig The URLs to resolve links from.
- * @returns Ordered nav links: Hub, then Documentation, then Demo.
+ * @returns Ordered nav links: CodenHub, then Documentation, then Demo.
  */
 export function resolveNavLinks(siteConfig: Pick<SiteConfig, "demoUrl" | "docsUrl" | "wwwUrl">): ShellNavLink[] {
   return [
-    { href: siteConfig.wwwUrl, label: "Hub" },
+    { href: siteConfig.wwwUrl, label: "CodenHub" },
     { href: siteConfig.docsUrl, label: "Documentation" },
     { href: siteConfig.demoUrl, label: "Demo" },
   ].filter((link): link is ShellNavLink => link.href !== undefined);

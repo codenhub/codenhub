@@ -10,9 +10,11 @@ scope: apps/demo's own architecture — this app's implementation of the contrac
 
 ## Shell
 
-`apps/demo` is an Astro app, matching `apps/docs` and `apps/www` rather than introducing a second meta-framework. Its own surface is small — an index linking to every demo — so this is about reusing tooling already paid for in this repository, not about needing Astro's features specifically.
+`apps/demo` is an Astro app, matching `apps/docs` and `apps/www` rather than introducing a second meta-framework. Its own surface is small — a 404 page and `sitemap.xml`, with no index of its own — so this is about reusing tooling already paid for in this repository, not about needing Astro's features specifically.
 
-The header, footer, theme toggle, skip link, and `robots.txt` / `sitemap.xml` bodies come from `@codenhub/app-shell`, the private package the three deploy surfaces share so their chrome reads identically. `apps/demo/src/layouts/base-layout.astro` is a thin wrapper that supplies this surface's `SiteConfig` and adds the documentation link to the header's `actions` slot; everything else in `src/styles/global.css` is this app's own index-page styling. `@codenhub/components` is still not stable enough to build the shell on; revisit that once the package settles.
+The root `/` is not served by this app. `apps/demo/public/_redirects` sends it with a 301 to `https://codenhub.dev/packages/`, the package list on the main site, which Cloudflare Workers static assets apply to asset responses and which accepts an absolute external target. Each demo stays at `/<slug>/`.
+
+The header, footer, theme toggle, skip link, and `robots.txt` / `sitemap.xml` bodies come from `@codenhub/app-shell`, the private package the three deploy surfaces share so their chrome reads identically. `apps/demo/src/layouts/base-layout.astro` is a thin wrapper that supplies this surface's `SiteConfig` and passes its page through, adding nothing to the header: the demo site has no root of its own, so it sets no Documentation link; everything else in `src/styles/global.css` is this app's own styling. `@codenhub/components` is still not stable enough to build the shell on; revisit that once the package settles.
 
 ## Icons
 
@@ -22,10 +24,10 @@ The header, footer, theme toggle, skip link, and `robots.txt` / `sitemap.xml` bo
 
 Discovering every `packages/*/demo/package.json` happens twice, in two independent implementations, the same way `apps/docs` splits page content (`src/lib/catalog.ts`, `import.meta.glob`) from build-time file copying (`src/lib/documentation-integration.ts` and `resource-publisher.ts`, plain Node `fs`). Sharing one implementation between them is not possible: a page's frontmatter is bundled by Vite, so a discovery function it calls must resolve paths through `import.meta.glob` rather than `import.meta.url` arithmetic, which breaks once Vite moves the module into a build chunk. The `astro:build:done` hook that copies each demo's output runs as plain Node instead, outside that bundle, so it uses `readdirSync` directly.
 
-- `src/lib/catalog.ts` globs `packages/*/demo/package.json` for the shell's own pages (`index.astro`, `sitemap.xml.ts`), producing each demo's `slug` and a display `label` derived from its manifest `name`.
+- `src/lib/catalog.ts` globs `packages/*/demo/package.json` for the sitemap (`sitemap.xml.ts`), producing each demo's `slug`.
 - `src/lib/demo-integration.ts` re-discovers the same directories with `readdirSync`, at `astro:build:done`, and copies each one's `dist/` into `apps/demo/dist/<slug>/`. It fails the build if a discovered demo has no built `dist/` yet, rather than silently mounting a stale or missing one.
 
-Both stay in sync automatically as demos are added or removed — neither hand-maintains a list. The one thing that is not automatic is the `workspace:*` dependency itself: pnpm has no wildcard dependency syntax, so `apps/demo/package.json` declares each discovered demo package (`@codenhub/icons-demo` today) by name. Adding a package's `demo/` therefore still means adding one line to `apps/demo/package.json`, which is what lets `hub`'s dependency-level build ordering (`docs/tooling.md`, "Execution order") build that demo, and the package it demonstrates, before `apps/demo` builds.
+Both stay in sync automatically as demos are added or removed — neither hand-maintains a list. The one thing that is not automatic is the `workspace:*` dependency itself: pnpm has no wildcard dependency syntax, so `apps/demo/package.json` declares each discovered demo package by name (`@codenhub/icons-demo`, `@codenhub/styles-demo`, `@codenhub/theme-demo`, and `@codenhub/toaster-demo` today). Adding a package's `demo/` therefore still means adding one line to `apps/demo/package.json`, which is what lets `hub`'s dependency-level build ordering (`docs/tooling.md`, "Execution order") build that demo, and the package it demonstrates, before `apps/demo` builds.
 
 ## Dev mode
 

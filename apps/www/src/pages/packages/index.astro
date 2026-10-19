@@ -1,0 +1,59 @@
+---
+import BaseLayout from "../../layouts/base-layout.astro";
+
+import PackageCard from "../../components/package-card.astro";
+import { catalogPackages } from "../../lib/catalog";
+import { headerConfig } from "../../site-config";
+import "../../styles/global.css";
+---
+
+<BaseLayout
+  description="Every published CodenHub package, with its version, bundle size, and links to its documentation, demo, source, and npm release."
+  siteConfig={headerConfig}
+  title="Packages"
+>
+  <main class="www-main" id="main-content">
+    <div class="shell-content">
+      <section aria-labelledby="packages-title">
+        <div class="packages-toolbar">
+          <div>
+            <h1 id="packages-title">Packages</h1>
+            <p>
+              Every published CodenHub package, with its version, bundle size, and links to its documentation, demo, source, and npm
+              release.
+            </p>
+          </div>
+          <div class="packages-toolbar-controls">
+            <div class="input-group package-search">
+              <i aria-hidden="true" class="ic-lucide-search"></i>
+              <input aria-label="Search packages" id="package-search" placeholder="Search packages…" type="search" />
+            </div>
+            <button
+              aria-label="Sort by name, ascending"
+              aria-pressed="false"
+              class="package-sort"
+              data-sort-direction="asc"
+              id="package-sort"
+              title="Sort by name, ascending"
+              type="button"
+            >
+              <i aria-hidden="true" class="ic-lucide-arrow-down-a-z" data-sort-icon="asc"></i>
+              <i aria-hidden="true" class="ic-lucide-arrow-down-z-a" data-sort-icon="desc" hidden></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="package-grid" id="package-grid" role="list">
+          {catalogPackages.map((entry) => <PackageCard entry={entry} />)}
+        </div>
+        <p class="packages-empty" data-empty-filtered hidden>No packages match your search.</p>
+      </section>
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  import { initPackageGrid } from "@codenhub/app-shell/package-grid";
+
+  initPackageGrid();
+</script>

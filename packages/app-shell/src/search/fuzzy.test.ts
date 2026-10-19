@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { matchFuzzy } from "./fuzzy";
+import { matchFuzzy } from "./fuzzy.ts";
 
 const scoreOf = (query: string, target: string) => matchFuzzy(query, target)?.score;
 

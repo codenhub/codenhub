@@ -11,7 +11,7 @@ describe("resolveNavLinks", () => {
         wwwUrl: "https://codenhub.dev",
       }),
     ).toEqual([
-      { href: "https://codenhub.dev", label: "Hub" },
+      { href: "https://codenhub.dev", label: "CodenHub" },
       { href: "https://docs.codenhub.dev", label: "Documentation" },
       { href: "https://demo.codenhub.dev", label: "Demo" },
     ]);
@@ -19,7 +19,7 @@ describe("resolveNavLinks", () => {
 
   it("omits a link whose URL is unset", () => {
     expect(resolveNavLinks({ docsUrl: "https://docs.codenhub.dev", wwwUrl: "https://codenhub.dev" })).toEqual([
-      { href: "https://codenhub.dev", label: "Hub" },
+      { href: "https://codenhub.dev", label: "CodenHub" },
       { href: "https://docs.codenhub.dev", label: "Documentation" },
     ]);
   });
@@ -35,7 +35,7 @@ describe("resolveNavLinks", () => {
         demoUrl: "https://demo.codenhub.dev",
       }),
     ).toEqual([
-      { href: "https://codenhub.dev", label: "Hub" },
+      { href: "https://codenhub.dev", label: "CodenHub" },
       { href: "https://demo.codenhub.dev", label: "Demo" },
     ]);
   });
