@@ -12,5 +12,5 @@ Durable direction for `@codenhub/error`. The repo-wide roadmap is `docs/roadmap.
 
 ## Planned
 
-- **Canonical translation map** for the built-in registry's message keys.
+- **Canonical translation map** for the built-in presets' message keys.
 - **Framework error-boundary adapters.**
