@@ -11,14 +11,6 @@ Per-skill NOTICE files are included alongside each adapted skill.
 
 ---
 
-frontend-design
-Adapted from: https://github.com/anthropics/claude-plugins-official/tree/main/plugins/frontend-design
-Copyright Anthropic, Inc.
-Licensed under the Apache License, Version 2.0.
-You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
-
----
-
 audit (pull request comment format), caveman, caveman-commit
 Adapted from: https://github.com/JuliusBrussee/caveman
 Copyright (c) 2026 Julius Brussee
