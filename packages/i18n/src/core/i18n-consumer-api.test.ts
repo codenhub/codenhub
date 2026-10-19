@@ -125,4 +125,37 @@ describe("typed translation keys", () => {
 
     expect(i18n.locales).toEqual(["en", "pt"]);
   });
+
+  it("should accept optional string leaves as keys", async () => {
+    interface Messages {
+      greeting?: string;
+      page?: { title?: string };
+    }
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"] as const,
+      loadLocale: (): Messages => ({ greeting: "Hello", page: { title: "Welcome" } }),
+      getLocaleDirection: () => "ltr",
+      isSilent: true,
+    });
+    await i18n.init();
+
+    expect([i18n.t("greeting"), i18n.t("page.title")]).toEqual(["Hello", "Welcome"]);
+    // @ts-expect-error - an optional group is still not a translation
+    expect(i18n.t("page")).toBeUndefined();
+  });
+
+  it("should keep typed keys on the listener's this", async () => {
+    const i18n = createTypedI18n();
+    const titles: (string | undefined)[] = [];
+
+    i18n.addEventListener("ready", function () {
+      titles.push(this.t("home.title"));
+      // @ts-expect-error - the listener's manager keeps the typed keys
+      titles.push(this.t("home.titel"));
+    });
+    await i18n.init();
+
+    expect(titles).toEqual(["Welcome", undefined]);
+  });
 });

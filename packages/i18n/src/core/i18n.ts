@@ -302,7 +302,8 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
  *
  * @example
  * ```ts
- * // src/i18n.ts: create the manager once and import it, or its bound `t`, wherever text is needed.
+ * // src/i18n.ts in a browser application: create the manager once and import it, or its bound `t`, wherever
+ * // text is needed. Servers and builds that render concurrently create one manager per request or page instead.
  * export const i18n = createI18n({
  *   defaultLocale: "en",
  *   locales: ["en", "pt"] as const,

@@ -23,10 +23,17 @@ export interface LocaleDictionaryLimits {
   maxTotalLength?: number;
 }
 
+// Distributes over the property type so an optional leaf (`string | undefined`) still counts as a key.
+type PropertyKeyPath<K extends string, TValue> = TValue extends string
+  ? K
+  : TValue extends undefined
+    ? never
+    : `${K}.${FlattenedKey<TValue>}`;
+
 type FlattenedKey<TMessages> = TMessages extends string
   ? never
   : {
-      [K in keyof TMessages & string]: TMessages[K] extends string ? K : `${K}.${FlattenedKey<TMessages[K]>}`;
+      [K in keyof TMessages & string]-?: PropertyKeyPath<K, TMessages[K]>;
     }[keyof TMessages & string];
 
 /** Dot-separated keys of a dictionary type's string leaves, or any string when the dictionary type is unknown. */
@@ -172,7 +179,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /** Adds a typed lifecycle event listener. */
   addEventListener<K extends keyof I18nEventMap<TLocale>>(
     type: K,
-    callback: (this: I18n<TLocale>, event: I18nEventMap<TLocale>[K]) => void,
+    callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void,
     options?: AddEventListenerOptions | boolean,
   ): void;
   /** Adds a standard event listener for interoperability with EventTarget. */
@@ -185,7 +192,7 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
   /** Removes a typed lifecycle event listener. */
   removeEventListener<K extends keyof I18nEventMap<TLocale>>(
     type: K,
-    callback: (this: I18n<TLocale>, event: I18nEventMap<TLocale>[K]) => void,
+    callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void,
     options?: EventListenerOptions | boolean,
   ): void;
   /** Removes a standard event listener registered through EventTarget. */

@@ -17,7 +17,7 @@ pnpm add @codenhub/i18n
 
 ### Quick start
 
-Create the manager once in an application module and export it with its bound `t`:
+In a browser application, or any runtime with one active locale at a time, create the manager once in an application module and export it with its bound `t`:
 
 ```ts
 // src/i18n.ts

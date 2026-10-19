@@ -10,7 +10,7 @@ pnpm add @codenhub/i18n
 
 ## Usage
 
-Create the manager once in a module of your application and import it, or its `t`, wherever text is needed:
+In a browser application, or any runtime with one active locale at a time, create the manager once in a module and import it, or its `t`, wherever text is needed:
 
 ```ts
 // src/i18n.ts
