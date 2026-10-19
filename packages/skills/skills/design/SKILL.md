@@ -83,6 +83,7 @@ Look at the output before presenting it. Most design failures are obvious in a r
 - Render the work and view it at its real size. For UI, capture a narrow phone width and a common desktop width. For social images and video, view them at the size people meet them, such as a feed thumbnail on a phone.
 - For social images, thumbnails, and posters, also view a copy scaled to about a quarter of its width. The main message must still read.
 - Blur or squint at it. You should see a few distinct blocks, with clearly larger gaps between groups than within them, and the order in which things stand out must match the ranking from the Content step. Without reading, count the sections and the groups in each; if you cannot, the structure is not visible yet.
+- Check that every heading and label sits closer to what it labels than to the item before it. Margins from different elements add up, so a title can end up nearer the previous description than its own.
 - Check contrast numerically: at least 4.5:1 for body text, and 3:1 for text at least 24px (or 18.66px bold) and for meaningful non-text UI such as input borders, icons, and focus rings.
 - Check the smallest text, including labels inside diagrams, charts, and illustrations. Keep it at 12px or larger on screen; text that only works at full zoom is not working.
 - Check every state and variant that exists: hover, focus, active, disabled, empty, loading, error, overflowing content, and both themes when there is a dark mode.
