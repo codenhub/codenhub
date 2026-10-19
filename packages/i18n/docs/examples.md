@@ -32,7 +32,7 @@ const binding = await initializeBrowserI18n({
   observe: true,
 });
 
-console.log(i18n.translate("home.title"));
+console.log(i18n.t("home.title"));
 
 // Run when this browser owner is torn down.
 binding.disconnect();
@@ -87,11 +87,12 @@ export async function renderPage(requestLocale: string) {
   const locale = i18n.resolveLocale(requestLocale) ?? i18n.defaultLocale;
 
   await i18n.init({ locale });
+  const { t } = i18n;
 
   return frameworkRender({
     locale: i18n.locale,
     direction: i18n.direction,
-    title: i18n.translate("page.title"),
+    title: t("page.title"),
   });
 }
 ```
@@ -125,7 +126,7 @@ await Promise.all(
       pathname: route.pathname,
       locale: i18n.locale,
       direction: i18n.direction,
-      title: i18n.translate("page.title"),
+      title: i18n.t("page.title"),
     });
   }),
 );
@@ -190,8 +191,12 @@ const config = {
 
 ### HTTP fetch
 
+`response.json()` returns `any`, so a fetch loader accepts any string key. Declare its return type, such as an imported type of the default dictionary, to type keys:
+
 ```ts
-async function loadLocale(locale: "en" | "pt"): Promise<unknown> {
+import type en from "./locales/en.json";
+
+async function loadLocale(locale: "en" | "pt"): Promise<typeof en> {
   const response = await fetch(`https://example.com/locales/${locale}.json`);
   if (!response.ok) throw new Error(`Locale request failed: ${response.status}`);
   return response.json();

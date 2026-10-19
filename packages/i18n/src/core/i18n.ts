@@ -10,6 +10,7 @@ import type {
   I18nReadyEventDetail,
   LocaleDictionary,
   LocaleDirection,
+  TranslationKey,
 } from "./types";
 
 interface RequiredDictionaries {
@@ -64,8 +65,19 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
   private readonly config: ValidatedI18nConfig<TLocale>;
   private readonly loader: LocaleLoader<TLocale>;
 
+  readonly t: (key: string) => string | undefined;
+
   constructor(config: I18nConfig<TLocale>) {
     super();
+    // Bound so a destructured method, such as `const { t } = i18n`, still reaches its manager.
+    this.init = this.init.bind(this);
+    this.loadLocale = this.loadLocale.bind(this);
+    this.setLocale = this.setLocale.bind(this);
+    this.resolveLocale = this.resolveLocale.bind(this);
+    this.translate = this.translate.bind(this);
+    this.addEventListener = this.addEventListener.bind(this) as I18nInstance<TLocale>["addEventListener"];
+    this.removeEventListener = this.removeEventListener.bind(this) as I18nInstance<TLocale>["removeEventListener"];
+    this.t = this.translate;
     this.config = validateI18nConfig(config);
     this.defaultLocale = this.config.defaultLocale;
     this.locales = this.config.locales;
@@ -288,7 +300,20 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
 /**
  * Creates an isolated runtime-neutral translation manager.
  *
+ * @example
+ * ```ts
+ * // src/i18n.ts: create the manager once and import it, or its bound `t`, wherever text is needed.
+ * export const i18n = createI18n({
+ *   defaultLocale: "en",
+ *   locales: ["en", "pt"] as const,
+ *   loadLocale: (locale) => dictionaries[locale],
+ *   getLocaleDirection: () => "ltr",
+ * });
+ * export const { t } = i18n;
+ * ```
+ *
  * @typeParam TLocale - Union of supported canonical locale identifiers.
+ * @typeParam TMessages - Dictionary type returned by `loadLocale`, inferred to type translation keys.
  * @param config - ASCII locale metadata and injected loading/direction callbacks, as a plain object whose
  * own properties are read. Locales are trimmed,
  * case-insensitively unique, and composed of alphanumeric hyphen-separated subtags. `isSilent` defaults to false.
@@ -296,6 +321,8 @@ class I18nInstance<TLocale extends string> extends EventTarget implements I18n<T
  * @throws {TypeError} When configuration or the initial direction is invalid.
  * Exceptions from the initial direction callback propagate unchanged.
  */
-export function createI18n<TLocale extends string>(config: I18nConfig<TLocale>): I18n<TLocale> {
+export function createI18n<TLocale extends string, TMessages = unknown>(
+  config: I18nConfig<TLocale, TMessages>,
+): I18n<TLocale, TranslationKey<TMessages>> {
   return new I18nInstance(config);
 }

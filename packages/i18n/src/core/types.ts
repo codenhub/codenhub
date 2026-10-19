@@ -23,18 +23,32 @@ export interface LocaleDictionaryLimits {
   maxTotalLength?: number;
 }
 
+type FlattenedKey<TMessages> = TMessages extends string
+  ? never
+  : {
+      [K in keyof TMessages & string]: TMessages[K] extends string ? K : `${K}.${FlattenedKey<TMessages[K]>}`;
+    }[keyof TMessages & string];
+
+/** Dot-separated keys of a dictionary type's string leaves, or any string when the dictionary type is unknown. */
+export type TranslationKey<TMessages> = unknown extends TMessages ? string : FlattenedKey<TMessages>;
+
 /**
  * Runtime-neutral dependencies and supported locale metadata.
  *
  * @typeParam TLocale - Union of supported canonical locale identifiers.
+ * @typeParam TMessages - Dictionary type returned by `loadLocale`; its flattened leaf paths type translation keys.
  */
-export interface I18nConfig<TLocale extends string = string> {
+export interface I18nConfig<TLocale extends string = string, TMessages = unknown> {
   /** Supported ASCII locale used initially and for missing-key fallback; matched after trimming, case-insensitively. */
   defaultLocale: TLocale;
   /** Non-empty, case-insensitively unique ASCII locale identifiers composed of alphanumeric hyphen-separated subtags. */
   locales: readonly TLocale[];
-  /** Loads a flat or nested dictionary through a consumer-selected transport; callback failures become `I18nError`. */
-  loadLocale(locale: TLocale): unknown | Promise<unknown>;
+  /**
+   * Loads a flat or nested dictionary through a consumer-selected transport; callback failures become `I18nError`.
+   * Its declared return type, such as an `as const` object or an imported JSON module, types translation keys;
+   * an `unknown` or `any` return accepts any string key.
+   */
+  loadLocale(locale: TLocale): TMessages | Promise<TMessages>;
   /** Resolves `ltr` or `rtl`; called during creation and state changes, with failures propagated unchanged. */
   getLocaleDirection(locale: TLocale): LocaleDirection;
   /** Suppresses optional missing-key diagnostics without suppressing failures. Defaults to `false`. */
@@ -74,9 +88,13 @@ export interface I18nEventMap<TLocale extends string = string> {
 /**
  * Consumer-owned runtime-neutral translation manager.
  *
+ * @remarks
+ * Every method is bound to its manager, so a destructured method, such as `const { t } = i18n`, keeps working.
+ *
  * @typeParam TLocale - Union of supported canonical locale identifiers.
+ * @typeParam TKey - Union of accepted translation keys, inferred from the configured loader.
  */
-export interface I18n<TLocale extends string = string> {
+export interface I18n<TLocale extends string = string, TKey extends string = string> {
   /** Canonical fallback locale. */
   readonly defaultLocale: TLocale;
   /** Frozen copy of supported canonical locales. */
@@ -146,7 +164,10 @@ export interface I18n<TLocale extends string = string> {
    * @throws {Error} When called before successful initialization.
    * @throws {TypeError} When the key is empty, not a string, longer than 1,000 characters, or contains ASCII controls.
    */
-  translate(key: string): string | undefined;
+  translate(key: TKey): string | undefined;
+
+  /** Short alias of {@link I18n.translate}, the same bound function. */
+  t(key: TKey): string | undefined;
 
   /** Adds a typed lifecycle event listener. */
   addEventListener<K extends keyof I18nEventMap<TLocale>>(

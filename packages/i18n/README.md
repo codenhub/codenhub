@@ -10,7 +10,10 @@ pnpm add @codenhub/i18n
 
 ## Usage
 
+Create the manager once in a module of your application and import it, or its `t`, wherever text is needed:
+
 ```ts
+// src/i18n.ts
 import { createI18n } from "@codenhub/i18n";
 
 const dictionaries = {
@@ -18,18 +21,29 @@ const dictionaries = {
   pt: { home: { title: "Bem-vindo" } },
 } as const;
 
-const i18n = createI18n({
+export const i18n = createI18n({
   defaultLocale: "en",
   locales: ["en", "pt"] as const,
   loadLocale: (locale) => dictionaries[locale],
   getLocaleDirection: () => "ltr",
 });
 
-await i18n.init({ locale: "pt" });
-console.log(i18n.translate("home.title")); // "Bem-vindo"
+export const { t } = i18n;
 ```
 
-`init()` resolves `true` when its state is applied and `false` when a newer operation supersedes it. It rejects when a required loader rejects or returns an invalid dictionary. Await applied initialization before calling `translate()` or `setLocale()`.
+```ts
+// src/main.ts
+import { i18n, t } from "./i18n";
+
+await i18n.init({ locale: "pt" });
+console.log(t("home.title")); // "Bem-vindo"
+```
+
+`t` is a bound alias of `translate()`, and every manager method stays bound when destructured. Keys are typed from the loader's return type, so `t("home.titel")` fails to compile; a loader typed `unknown` or `any`, such as one returning `response.json()`, accepts any string key. `t` checks readiness when called, not when exported, so it works anywhere once `init()` has applied.
+
+`init()` resolves `true` when its state is applied and `false` when a newer operation supersedes it. It rejects when a required loader rejects or returns an invalid dictionary. Await applied initialization before calling `t()` or `setLocale()`.
+
+On a server, create one manager per request instead of a shared module, as the [SSR example](docs/examples.md#ssr) shows.
 
 ## Documentation
 

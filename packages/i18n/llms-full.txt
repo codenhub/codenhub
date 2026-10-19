@@ -12,7 +12,10 @@ pnpm add @codenhub/i18n
 
 ## Usage
 
+Create the manager once in a module of your application and import it, or its `t`, wherever text is needed:
+
 ```ts
+// src/i18n.ts
 import { createI18n } from "@codenhub/i18n";
 
 const dictionaries = {
@@ -20,18 +23,29 @@ const dictionaries = {
   pt: { home: { title: "Bem-vindo" } },
 } as const;
 
-const i18n = createI18n({
+export const i18n = createI18n({
   defaultLocale: "en",
   locales: ["en", "pt"] as const,
   loadLocale: (locale) => dictionaries[locale],
   getLocaleDirection: () => "ltr",
 });
 
-await i18n.init({ locale: "pt" });
-console.log(i18n.translate("home.title")); // "Bem-vindo"
+export const { t } = i18n;
 ```
 
-`init()` resolves `true` when its state is applied and `false` when a newer operation supersedes it. It rejects when a required loader rejects or returns an invalid dictionary. Await applied initialization before calling `translate()` or `setLocale()`.
+```ts
+// src/main.ts
+import { i18n, t } from "./i18n";
+
+await i18n.init({ locale: "pt" });
+console.log(t("home.title")); // "Bem-vindo"
+```
+
+`t` is a bound alias of `translate()`, and every manager method stays bound when destructured. Keys are typed from the loader's return type, so `t("home.titel")` fails to compile; a loader typed `unknown` or `any`, such as one returning `response.json()`, accepts any string key. `t` checks readiness when called, not when exported, so it works anywhere once `init()` has applied.
+
+`init()` resolves `true` when its state is applied and `false` when a newer operation supersedes it. It rejects when a required loader rejects or returns an invalid dictionary. Await applied initialization before calling `t()` or `setLocale()`.
+
+On a server, create one manager per request instead of a shared module, as the [SSR example](docs/examples.md#ssr) shows.
 
 ## Documentation
 
@@ -78,7 +92,10 @@ pnpm add @codenhub/i18n
 
 ### Quick start
 
+Create the manager once in an application module and export it with its bound `t`:
+
 ```ts
+// src/i18n.ts
 import { createI18n } from "@codenhub/i18n";
 
 const dictionaries = {
@@ -86,20 +103,31 @@ const dictionaries = {
   pt: { page: { title: "Bem-vindo" } },
 } as const;
 
-const i18n = createI18n({
+export const i18n = createI18n({
   defaultLocale: "en",
   locales: ["en", "pt"] as const,
   loadLocale: (locale) => dictionaries[locale],
   getLocaleDirection: () => "ltr",
 });
 
+export const { t } = i18n;
+```
+
+Initialize it once at startup, then import `t` wherever text is needed:
+
+```ts
+import { i18n, t } from "./i18n";
+
 await i18n.init({ locale: "pt" });
 
-i18n.translate("page.title"); // "Bem-vindo"
-i18n.translate("page.description"); // "Learn more" from the default locale
+t("page.title"); // "Bem-vindo"
+t("page.description"); // "Learn more" from the default locale
+t("page.titel"); // compile error: keys are typed from the dictionaries
 ```
 
 Core performs no locale detection. Omitting `init({ locale })` selects the configured default. Selecting another locale loads both its dictionary and the default dictionary before applying state, so fallback is deterministic.
+
+Every manager method is bound, so destructured methods keep working, and `t` checks readiness when called rather than when exported. Servers and static builds that render concurrently create one manager per request or page instead of sharing a module.
 
 ### Configuration
 
@@ -154,7 +182,7 @@ const binding = await initializeBrowserI18n({
   observe: true,
 });
 
-console.log(i18n.translate("home.title"));
+console.log(i18n.t("home.title"));
 
 // Run when this browser owner is torn down.
 binding.disconnect();
@@ -209,11 +237,12 @@ export async function renderPage(requestLocale: string) {
   const locale = i18n.resolveLocale(requestLocale) ?? i18n.defaultLocale;
 
   await i18n.init({ locale });
+  const { t } = i18n;
 
   return frameworkRender({
     locale: i18n.locale,
     direction: i18n.direction,
-    title: i18n.translate("page.title"),
+    title: t("page.title"),
   });
 }
 ```
@@ -247,7 +276,7 @@ await Promise.all(
       pathname: route.pathname,
       locale: i18n.locale,
       direction: i18n.direction,
-      title: i18n.translate("page.title"),
+      title: i18n.t("page.title"),
     });
   }),
 );
@@ -312,8 +341,12 @@ const config = {
 
 ### HTTP fetch
 
+`response.json()` returns `any`, so a fetch loader accepts any string key. Declare its return type, such as an imported type of the default dictionary, to type keys:
+
 ```ts
-async function loadLocale(locale: "en" | "pt"): Promise<unknown> {
+import type en from "./locales/en.json";
+
+async function loadLocale(locale: "en" | "pt"): Promise<typeof en> {
   const response = await fetch(`https://example.com/locales/${locale}.json`);
   if (!response.ok) throw new Error(`Locale request failed: ${response.status}`);
   return response.json();
@@ -335,10 +368,10 @@ The root entrypoint is runtime-neutral. It exports `createI18n`, `I18nError`, an
 ### Configuration
 
 ```ts
-interface I18nConfig<TLocale extends string = string> {
+interface I18nConfig<TLocale extends string = string, TMessages = unknown> {
   defaultLocale: TLocale;
   locales: readonly TLocale[];
-  loadLocale(locale: TLocale): unknown | Promise<unknown>;
+  loadLocale(locale: TLocale): TMessages | Promise<TMessages>;
   getLocaleDirection(locale: TLocale): "ltr" | "rtl";
   isSilent?: boolean;
   dictionaryLimits?: LocaleDictionaryLimits;
@@ -352,8 +385,10 @@ interface LocaleDictionaryLimits {
   maxTotalLength?: number; // default 5,000,000
 }
 
-function createI18n<TLocale extends string>(config: I18nConfig<TLocale>): I18n<TLocale>;
+function createI18n<TLocale extends string, TMessages = unknown>(config: I18nConfig<TLocale, TMessages>): I18n<TLocale, TranslationKey<TMessages>>;
 ```
+
+`TranslationKey<TMessages>` is the union of dot-separated paths to the string leaves of the loader's return type, such as `"page.title"` for `{ page: { title: "Welcome" } }`; groups such as `"page"` are not keys. When the loader returns a union, such as `dictionaries[locale]` over several `as const` dictionaries, keys from every member are accepted. A loader whose return type is `unknown` or `any`, such as one returning `response.json()`, accepts any string key; annotate its return type, for example with an imported JSON module type, to type keys. The type is not exported: name a manager's key type with `Parameters<typeof i18n.t>[0]`. Key typing is compile-time only and does not change runtime validation.
 
 The configuration must be a plain object, such as an object literal, and only its own properties are read: a class instance or an object built with `Object.create(defaults)` throws `TypeError`. `locales` must be a non-empty array of conservative ASCII locale identifiers that remain unique case-insensitively after trimming. `defaultLocale` must match one of them. `loadLocale` and `getLocaleDirection` must be functions, and `isSilent`, when provided, must be boolean. Each `dictionaryLimits` entry, when provided, must be a positive safe integer, and an unknown limit name is rejected. Invalid configuration throws `TypeError` during `createI18n()`.
 
@@ -369,6 +404,8 @@ An `I18n<TLocale>` starts with:
 - `locale`: `defaultLocale`.
 - `direction`: `getLocaleDirection(defaultLocale)`.
 - `isReady`: `false`.
+
+Every method, including the listener methods, is bound to its manager, so a destructured method such as `const { t, setLocale } = i18n` keeps working. This makes the recommended pattern for single-locale-owner runtimes, such as a browser application, an application module that exports the manager and its `t`; servers and builds that render concurrently create a manager per request or page instead.
 
 The manager provides EventTarget-compatible `addEventListener()` and `removeEventListener()` methods. Only those listener methods are part of the supported public event API; `dispatchEvent()` and runtime inheritance details are not exposed by `I18n`. `translate()` and `setLocale()` throw `Error` before successful initialization. `loadLocale()` and `resolveLocale()` may be used before initialization.
 
@@ -444,11 +481,14 @@ resolveLocale(value: string): TLocale | undefined;
 
 Trims an untrusted string and returns the canonical case-insensitive exact configured match. It returns `undefined` for blank, unsupported, and runtime non-string values. It does not perform language-subtag matching.
 
-### `translate(key)`
+### `translate(key)` and `t(key)`
 
 ```ts
-translate(key: string): string | undefined;
+translate(key: TKey): string | undefined;
+t(key: TKey): string | undefined;
 ```
+
+`t` is the same bound function as `translate`. `TKey` is the manager's key type, inferred as described under configuration.
 
 Trims a non-empty key, checks the active dictionary, then the default dictionary. A key found only in the default dictionary returns the default text without a warning; compare dictionaries from `loadLocale()` in a test to find untranslated keys, as in the key-parity example. A key missing from both returns `undefined`. Unless `isSilent` is true, the manager warns for a key missing from both dictionaries, once for each of the 1,000 most recent active-locale/key pairs; an evicted pair can warn again. Blank, runtime non-string, longer than 1,000 characters, or ASCII-control-containing keys throw `TypeError`.
 
