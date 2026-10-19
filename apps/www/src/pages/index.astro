@@ -58,7 +58,7 @@ const areas = [
 
 const recentReleases = catalogPackages
   .flatMap((entry) => (entry.releases.lastPublished === undefined ? [] : [{ entry, release: entry.releases.lastPublished }]))
-  .sort((left, right) => right.release.date.localeCompare(left.release.date))
+  .sort((left, right) => Date.parse(right.release.date) - Date.parse(left.release.date))
   .slice(0, 6);
 
 const principles = [

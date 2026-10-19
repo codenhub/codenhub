@@ -4,7 +4,9 @@ import { demoSlugs } from "./catalog";
 
 describe("demoSlugs", () => {
   it("discovers the slug of every package that ships a demo/ directory", () => {
-    expect(demoSlugs).toEqual(expect.arrayContaining(["icons", "styles", "theme", "toaster"]));
+    // Exact, so a demo that stops being discovered fails here. Adding a demo
+    // also means naming it in apps/demo/package.json; update both together.
+    expect(demoSlugs).toEqual(["icons", "styles", "theme", "toaster"]);
   });
 
   it("is sorted so the sitemap is stable across builds", () => {

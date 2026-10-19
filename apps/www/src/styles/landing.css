@@ -122,8 +122,14 @@
   margin-top: 0.5rem;
 }
 
+/* Opaque so the field never shows through it; the hover is restated because
+   this resting fill replaces the one the button kit derives it from. */
 .landing-hero .btn.ghost {
   background: var(--color-background);
+}
+
+.landing-hero .btn.ghost:hover {
+  background: var(--color-surface);
 }
 
 /* Sections */
@@ -362,6 +368,10 @@
   border-color: var(--color-primary-contrast);
   background: var(--color-primary-contrast);
   color: var(--color-primary);
+}
+
+.landing-closing .btn.primary:hover {
+  background: color-mix(in srgb, var(--color-primary-contrast) 88%, var(--color-primary));
 }
 
 .landing-closing .btn.ghost {

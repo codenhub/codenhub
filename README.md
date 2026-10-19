@@ -10,7 +10,7 @@ Shared packages, apps, and project standards for and by [coden.agency](https://c
 
 - `apps/demo`: Deployed app aggregating every package's demo/ output into one surface.
 - `apps/docs`: Documentation site that publishes every package README, public docs, and assets.
-- `apps/www`: Site index for CodenHub: the package list and the entry point to docs, demos, and source.
+- `apps/www`: The CodenHub site: landing page, package list and package pages, and search across the docs.
 
 ### Libraries & Primitives
 

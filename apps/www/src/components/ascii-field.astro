@@ -78,6 +78,10 @@ const { class: className } = Astro.props;
     // Pushes the surface along the whole path since the last event, one cell
     // at a time, so a fast stroke leaves a continuous wake rather than dots.
     host.addEventListener("pointermove", (event) => {
+      if (reducedMotion.matches) {
+        return;
+      }
+
       const next = toCell(event);
       const from = pointer ?? next;
       const steps = Math.min(Math.ceil(Math.hypot(next.x - from.x, (next.y - from.y) * 2)), 40);
@@ -90,7 +94,13 @@ const { class: className } = Astro.props;
     host.addEventListener("pointerleave", () => {
       pointer = undefined;
     });
+    // Under reduced motion nothing animates, so nothing would ever clear a
+    // ripple; the field stays still and ignores the pointer.
     host.addEventListener("pointerdown", (event) => {
+      if (reducedMotion.matches) {
+        return;
+      }
+
       ripples.push({ ...toCell(event), start: now() });
     });
 
@@ -137,12 +147,17 @@ const { class: className } = Astro.props;
       context.globalAlpha = 1;
     };
 
+    // The loop stops itself while the field is off screen or motion is
+    // reduced, and `start` resumes it, so a long visit spends no frames on a
+    // hero nobody can see.
+    let running = false;
     const frame = (timestamp: number) => {
-      if (reducedMotion.matches) {
+      if (reducedMotion.matches || !visible) {
+        running = false;
         return;
       }
 
-      if (visible && timestamp - lastFrame >= FRAME_INTERVAL) {
+      if (timestamp - lastFrame >= FRAME_INTERVAL) {
         lastFrame = timestamp;
         stepWaves(waves);
         draw(now());
@@ -151,25 +166,34 @@ const { class: className } = Astro.props;
       requestAnimationFrame(frame);
     };
 
+    const startLoop = () => {
+      if (!running && visible && !reducedMotion.matches) {
+        running = true;
+        requestAnimationFrame(frame);
+      }
+    };
+
     const redraw = () => {
       resize();
       draw(now());
     };
 
     redraw();
-    requestAnimationFrame(frame);
+    startLoop();
 
     new ResizeObserver(redraw).observe(canvas);
     new IntersectionObserver(([entry]) => {
       visible = entry?.isIntersecting ?? true;
+      startLoop();
     }).observe(canvas);
 
     // The theme switch flips `data-theme`; the glyph color follows it.
     new MutationObserver(redraw).observe(document.documentElement, { attributeFilter: ["data-theme"] });
 
     reducedMotion.addEventListener("change", () => {
+      ripples = [];
       redraw();
-      requestAnimationFrame(frame);
+      startLoop();
     });
   }
 </script>

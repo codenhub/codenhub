@@ -101,7 +101,8 @@ export function createWaves(columns: number, rows: number): Waves {
 /**
  * Pushes the surface down around one point, with a soft edge.
  * @param waves The surface to disturb.
- * @param point Where, in cell coordinates; points off the grid are clipped.
+ * @param point Where, in cell coordinates; the push is clipped to the
+ *   interior, since {@link stepWaves} holds the border cells at rest.
  * @param amount How hard.
  * @param radius How far the push reaches, in cells.
  */
@@ -111,7 +112,7 @@ export function disturbWaves(waves: Waves, point: CellPoint, amount: number, rad
 
   for (let y = Math.round(point.y) - reach; y <= Math.round(point.y) + reach; y += 1) {
     for (let x = Math.round(point.x) - reach; x <= Math.round(point.x) + reach; x += 1) {
-      if (x < 0 || y < 0 || x >= columns || y >= rows) {
+      if (x < 1 || y < 1 || x >= columns - 1 || y >= rows - 1) {
         continue;
       }
 
@@ -125,7 +126,8 @@ export function disturbWaves(waves: Waves, point: CellPoint, amount: number, rad
 
 /**
  * Advances the surface one step: each cell moves toward its neighbours'
- * average and keeps some of its momentum, losing a little to `damping`.
+ * average and keeps some of its momentum, losing a little to `damping`. The
+ * border cells stay at rest, as the surface's fixed edge.
  * @param waves The surface, updated in place.
  * @param damping How much of the motion survives each step, below 1.
  */
@@ -142,6 +144,17 @@ export function stepWaves(waves: Waves, damping = 0.95): void {
         (current[index + columns] ?? 0);
       previous[index] = (neighbours / 2 - (previous[index] ?? 0)) * damping;
     }
+  }
+
+  // Only the interior was written above, so zero the border of the buffer that
+  // becomes current; otherwise a stale value there would flip back every step.
+  for (let x = 0; x < columns; x += 1) {
+    previous[x] = 0;
+    previous[(rows - 1) * columns + x] = 0;
+  }
+  for (let y = 0; y < rows; y += 1) {
+    previous[y * columns] = 0;
+    previous[y * columns + columns - 1] = 0;
   }
 
   waves.previous = current;

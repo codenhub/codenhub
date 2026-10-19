@@ -328,13 +328,11 @@
   }
 
   /* With no cross-surface links there is nothing to share the brand's row
-     with, so the actions stay on it instead of opening a second one. */
-  .shell-header-content:not(:has(.shell-nav)) {
-    flex-wrap: nowrap;
-  }
-
+     with, so the actions keep their own width and stay on it whenever they
+     fit, wrapping below it only on the narrowest screens. */
   .shell-header-content:not(:has(.shell-nav)) .shell-actions {
     width: auto;
+    margin-inline-start: auto;
   }
 }
 

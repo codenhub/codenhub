@@ -12,7 +12,14 @@ interface Props {
 const { indexUrl } = Astro.props;
 ---
 
-<button aria-keyshortcuts="Control+K" class="shell-search-trigger" data-search-trigger type="button">
+<!-- The label names the button where its text is hidden on narrow screens. -->
+<button
+  aria-keyshortcuts="Control+K"
+  aria-label="Search documentation"
+  class="shell-search-trigger"
+  data-search-trigger
+  type="button"
+>
   <svg aria-hidden="true" class="shell-search-icon" viewBox="0 0 24 24">
     <circle cx="11" cy="11" r="7"></circle>
     <path d="m20 20-3.5-3.5"></path>
@@ -69,24 +76,31 @@ const { indexUrl } = Astro.props;
 
     const indexUrl = new URL(dialog.dataset.indexUrl ?? "/search-index.json", location.href);
 
-    let entries: SearchEntry[] | undefined;
+    let loading: Promise<SearchEntry[]> | undefined;
     let results: SearchResult[] = [];
     let activeIndex = 0;
     let latestQuery = 0;
 
-    // Fetched on first open so a reader who never searches never downloads it.
-    // A failed load is not cached, so the next keystroke tries again.
-    const loadEntries = async (): Promise<SearchEntry[]> => {
-      if (entries === undefined) {
-        const response = await fetch(indexUrl);
-        if (!response.ok) {
-          throw new Error(`Search index responded ${response.status}`);
-        }
-
-        entries = (await response.json()) as SearchEntry[];
+    const fetchEntries = async (): Promise<SearchEntry[]> => {
+      const response = await fetch(indexUrl);
+      if (!response.ok) {
+        throw new Error(`Search index responded ${response.status}`);
       }
 
-      return entries;
+      return (await response.json()) as SearchEntry[];
+    };
+
+    // Fetched on first open so a reader who never searches never downloads it.
+    // The open's warm-up and every keystroke share one request while it is in
+    // flight; a failed load is dropped, so the next keystroke tries again.
+    const loadEntries = async (): Promise<SearchEntry[]> => {
+      loading ??= fetchEntries();
+      try {
+        return await loading;
+      } catch (error) {
+        loading = undefined;
+        throw error;
+      }
     };
 
     // Started on open so the index is usually ready by the first keystroke. A

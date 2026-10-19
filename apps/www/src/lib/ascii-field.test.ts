@@ -60,9 +60,17 @@ describe("ascii field", () => {
     expect(waveLift(waves, 10, 10)).toBeLessThan(0.01);
   });
 
-  it("clips a disturbance at the grid's edge", () => {
-    const waves = createWaves(4, 4);
-    expect(() => disturbWaves(waves, { x: -1, y: 5 }, 1, 3)).not.toThrow();
-    expect(waveLift(waves, 0, 3)).toBeGreaterThan(0);
+  it("keeps a disturbance off the fixed border, so nothing flickers there", () => {
+    const waves = createWaves(6, 6);
+    expect(() => disturbWaves(waves, { x: -1, y: 7 }, 1, 3)).not.toThrow();
+    disturbWaves(waves, { x: 0, y: 5 }, 1, 3);
+    expect(waveLift(waves, 0, 5)).toBe(0);
+    expect(waveLift(waves, 1, 4)).toBeGreaterThan(0);
+
+    for (let step = 0; step < 3; step += 1) {
+      stepWaves(waves);
+      expect(waveLift(waves, 0, 5)).toBe(0);
+      expect(waveLift(waves, 5, 0)).toBe(0);
+    }
   });
 });

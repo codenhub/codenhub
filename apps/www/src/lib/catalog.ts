@@ -49,7 +49,7 @@ export interface CatalogPackage extends PublicPackageSummary {
 // which `release-snapshot-integration.ts` writes before Vite scans these globs.
 // It holds only released packages, each exactly as it was at its latest stable
 // release tag, so an unreleased package or change never reaches the index.
-// (docs/ci.md, "The site index")
+// (docs/ci.md, "The main site")
 const manifestModules = import.meta.env.PROD
   ? import.meta.glob<unknown>("../../.codenhub-published/packages/**/package.json", { eager: true, import: "default" })
   : import.meta.glob<unknown>("../../../../packages/**/package.json", { eager: true, import: "default" });

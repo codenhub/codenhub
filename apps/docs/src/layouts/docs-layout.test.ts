@@ -225,6 +225,18 @@ describe("documentation chrome", () => {
     expect(sitemap).not.toContain("<loc>https://docs.codenhub.dev/icons/changelog/</loc>");
   });
 
+  it("redirects the root to the package list on codenhub.dev", async () => {
+    const redirects = await readOutput("_redirects");
+
+    expect(redirects.trim()).toBe("/ https://codenhub.dev/packages/ 301");
+  });
+
+  it("lets other origins read the search index", async () => {
+    const headers = await readOutput("_headers");
+
+    expect(headers).toMatch(/^\/search-index\.json\n\s+Access-Control-Allow-Origin: \*$/m);
+  });
+
   it("emits a search index covering package sections", async () => {
     const entries = JSON.parse(await readOutput("search-index.json")) as {
       route: string;

@@ -51,7 +51,7 @@ describe("app-shell chrome stylesheet", () => {
     // It reads like the surfaces' package filter, and stays as tall as the
     // header's icon buttons rather than growing into a full form control.
     expect(rule).toContain("border: 1px solid var(--color-border)");
-    expect(rule).not.toContain("44px");
+    expect(rule).toContain("min-height: 0");
   });
 
   it("keeps the search field at 16px so iOS does not zoom on focus", () => {
