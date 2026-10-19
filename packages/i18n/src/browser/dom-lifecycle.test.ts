@@ -168,6 +168,36 @@ describe("initializeBrowserI18n document integration", () => {
     binding.disconnect();
   });
 
+  it("translates each observed element once per locale change", async () => {
+    document.body.innerHTML = '<p data-i18n="greeting">First</p><p data-i18n="greeting">Second</p>';
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+    await flushMutations();
+    const translate = vi.spyOn(i18n, "translate");
+
+    await i18n.setLocale("pt-BR");
+    await flushMutations();
+
+    expect(translate).toHaveBeenCalledTimes(2);
+    expect(document.body.textContent).toBe("OlaOla");
+    binding.disconnect();
+  });
+
+  it("restores the fallback of a key removed just before a locale change", async () => {
+    document.body.innerHTML = '<p data-i18n="greeting">Fallback</p>';
+    const paragraph = document.querySelector("p")!;
+    const i18n = createManager();
+    // Registered before the binding, so the key is removed just before the binding retranslates the root.
+    i18n.addEventListener("locale-change", () => paragraph.removeAttribute("data-i18n"));
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+
+    await i18n.setLocale("pt-BR");
+    await flushMutations();
+
+    expect(paragraph.textContent).toBe("Fallback");
+    binding.disconnect();
+  });
+
   it("skips malformed observed keys and continues with other added elements", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const i18n = createManager();

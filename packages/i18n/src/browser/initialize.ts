@@ -216,7 +216,69 @@ export async function initializeBrowserI18n<TLocale extends string>(
       syncDocumentLocale(i18n);
     }
     if (root !== undefined) {
+      // Pending application mutations, such as a removed key, are handled first; the full pass does not restore them.
+      if (observer !== undefined) {
+        handleMutations(observer.takeRecords());
+      }
       domTranslator.translateRoot({ root, translate: (key) => i18n.translate(key) });
+      // The records left are the full pass's own writes, which need no second pass.
+      observer?.takeRecords();
+    }
+  };
+  const handleMutations = (mutations: readonly MutationRecord[]): void => {
+    const observedRoot = root;
+
+    if (observedRoot === undefined) {
+      return;
+    }
+
+    const changedRoots = new Set<Element>();
+    // An element whose last key was removed is not found by an ancestor's scan, so it is translated directly.
+    const keyRemovedElements = new Set<Element>();
+
+    for (const mutation of mutations) {
+      if (mutation.type === "attributes") {
+        const target = mutation.target as Element;
+        changedRoots.add(target);
+        if (!TRANSLATION_KEY_ATTRIBUTES.some((attribute) => target.hasAttribute(attribute))) {
+          keyRemovedElements.add(target);
+        }
+        continue;
+      }
+
+      if (isElement(mutation.target) && mutation.target.hasAttribute("data-i18n")) {
+        changedRoots.add(mutation.target);
+      }
+
+      for (const addedNode of mutation.addedNodes) {
+        if (isElement(addedNode)) {
+          changedRoots.add(addedNode);
+        }
+      }
+    }
+
+    for (const changedRoot of changedRoots) {
+      let ancestor = changedRoot.parentElement;
+      let hasChangedAncestor = false;
+
+      while (ancestor !== null) {
+        if (changedRoots.has(ancestor)) {
+          hasChangedAncestor = true;
+          break;
+        }
+
+        ancestor = ancestor.parentElement;
+      }
+
+      if (hasChangedAncestor && !keyRemovedElements.has(changedRoot)) {
+        continue;
+      }
+
+      domTranslator.translateRoot({
+        root: changedRoot,
+        boundary: observedRoot,
+        translate: (key) => i18n.translate(key),
+      });
     }
   };
   // Later core changes are choices the application made, so they persist when enabled.
@@ -287,56 +349,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
 
     if (observe && root !== undefined) {
       const observedRoot = root;
-      observer = new (getMutationObserver(observedRoot))((mutations) => {
-        const changedRoots = new Set<Element>();
-        // An element whose last key was removed is not found by an ancestor's scan, so it is translated directly.
-        const keyRemovedElements = new Set<Element>();
-
-        for (const mutation of mutations) {
-          if (mutation.type === "attributes") {
-            const target = mutation.target as Element;
-            changedRoots.add(target);
-            if (!TRANSLATION_KEY_ATTRIBUTES.some((attribute) => target.hasAttribute(attribute))) {
-              keyRemovedElements.add(target);
-            }
-            continue;
-          }
-
-          if (isElement(mutation.target) && mutation.target.hasAttribute("data-i18n")) {
-            changedRoots.add(mutation.target);
-          }
-
-          for (const addedNode of mutation.addedNodes) {
-            if (isElement(addedNode)) {
-              changedRoots.add(addedNode);
-            }
-          }
-        }
-
-        for (const changedRoot of changedRoots) {
-          let ancestor = changedRoot.parentElement;
-          let hasChangedAncestor = false;
-
-          while (ancestor !== null) {
-            if (changedRoots.has(ancestor)) {
-              hasChangedAncestor = true;
-              break;
-            }
-
-            ancestor = ancestor.parentElement;
-          }
-
-          if (hasChangedAncestor && !keyRemovedElements.has(changedRoot)) {
-            continue;
-          }
-
-          domTranslator.translateRoot({
-            root: changedRoot,
-            boundary: observedRoot,
-            translate: (key) => i18n.translate(key),
-          });
-        }
-      });
+      observer = new (getMutationObserver(observedRoot))(handleMutations);
       observer.observe(observedRoot, {
         attributes: true,
         attributeFilter: [...TRANSLATION_KEY_ATTRIBUTES],

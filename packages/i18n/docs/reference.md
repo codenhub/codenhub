@@ -36,7 +36,7 @@ function createI18n<TLocale extends string>(config: I18nConfig<TLocale>): I18n<T
 
 The configuration must be a plain object, such as an object literal, and only its own properties are read: a class instance or an object built with `Object.create(defaults)` throws `TypeError`. `locales` must be a non-empty array of conservative ASCII locale identifiers that remain unique case-insensitively after trimming. `defaultLocale` must match one of them. `loadLocale` and `getLocaleDirection` must be functions, and `isSilent`, when provided, must be boolean. Each `dictionaryLimits` entry, when provided, must be a positive safe integer, and an unknown limit name is rejected. Invalid configuration throws `TypeError` during `createI18n()`.
 
-Configuration locale metadata is copied and frozen. Later caller mutations do not alter `defaultLocale`, `locales`, or locale matching. The loading and direction callbacks remain consumer-owned dependencies. Exceptions from `getLocaleDirection` propagate unchanged; the initial call occurs during `createI18n()`, and later calls occur before newly loaded state is applied.
+Configuration locale metadata is copied and frozen. Later caller mutations do not alter `defaultLocale`, `locales`, or locale matching. The loading and direction callbacks remain consumer-owned dependencies and are called with the configuration object as `this`, as `config.loadLocale(locale)` would be. Exceptions from `getLocaleDirection` propagate unchanged; the initial call occurs during `createI18n()`, and later calls occur before newly loaded state is applied.
 
 ### Initial state and properties
 
@@ -129,7 +129,7 @@ Trims an untrusted string and returns the canonical case-insensitive exact confi
 translate(key: string): string | undefined;
 ```
 
-Trims a non-empty key, checks the active dictionary, then the default dictionary. A key missing from both returns `undefined`. Unless `isSilent` is true, the manager warns once for each of the 1,000 most recently missing active-locale/key pairs; an evicted pair can warn again. Blank, runtime non-string, longer than 1,000 characters, or ASCII-control-containing keys throw `TypeError`.
+Trims a non-empty key, checks the active dictionary, then the default dictionary. A key found only in the default dictionary returns the default text without a warning; compare dictionaries from `loadLocale()` in a test to find untranslated keys, as in the key-parity example. A key missing from both returns `undefined`. Unless `isSilent` is true, the manager warns once for each of the 1,000 most recently missing active-locale/key pairs; an evicted pair can warn again. Blank, runtime non-string, longer than 1,000 characters, or ASCII-control-containing keys throw `TypeError`.
 
 The API does not provide interpolation, plural selection, rich messages, number/date formatting, or HTML rendering.
 

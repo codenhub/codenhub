@@ -131,7 +131,28 @@ await Promise.all(
 );
 ```
 
-Loader and dictionary failures reject, allowing the build to fail rather than publishing silently untranslated pages.
+Loader and dictionary failures reject, allowing the build to fail rather than publishing pages without translations. A key missing from a locale but present in the default dictionary does not fail or warn: it renders the default text. Add a key-parity check to catch those before publishing.
+
+## Key-parity check
+
+`translate()` falls back to the default dictionary without a warning, so a key added to the default locale but not yet translated renders default-locale text everywhere else. Compare dictionaries in a test or build step, since `loadLocale()` returns each normalized dictionary without changing manager state:
+
+```ts
+const i18n = createI18n(config);
+const referenceKeys = Object.keys(await i18n.loadLocale(i18n.defaultLocale));
+
+const dictionaries = await Promise.all(i18n.locales.map((locale) => i18n.loadLocale(locale)));
+
+dictionaries.forEach((dictionary, index) => {
+  const missingKeys = referenceKeys.filter((key) => !(key in dictionary));
+
+  if (missingKeys.length > 0) {
+    throw new Error(`${i18n.locales[index]} is missing ${missingKeys.join(", ")}`);
+  }
+});
+```
+
+Keys are flattened, so nested payloads compare as dot-separated keys such as `page.title`.
 
 ## Loader patterns
 
